@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Web · Tất cả lớp</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+button,input{font-family:inherit}
+.app{display:flex;min-height:100vh;background:#F6F7F9;color:#14181F}
+.side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px}
+.nav{display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+.nav.on{background:#E8EEFE;color:#1E43B8}
+.main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.card{background:#fff;border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+.chip{background:#F6F7F9;border-radius:10px;padding:8px 10px;font-size:14px}
+@media (max-width:820px){.app{flex-direction:column}.side{width:auto;border-right:0;border-bottom:1px solid #E6E9EE;flex-direction:row;overflow-x:auto}.nav{white-space:nowrap}.main{padding:20px 16px}}
+</style>
+</helmet>
+<div class="app">
+  <aside class="side">
+    <div style="font-size:18px;font-weight:700;padding:4px 12px 14px;color:#2F5BEA">Lớp của cô Lan</div>
+    <div class="nav on">Tất cả lớp</div>
+    <div class="nav">Học sinh</div>
+    <div class="nav">Báo cáo</div>
+    <div class="nav">Cài đặt</div>
+  </aside>
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+      <div><div style="font-size:14px;color:#4A5361">Học kỳ này · 3 lớp đang mở</div><h1 style="margin:2px 0 0;font-size:30px;font-weight:700;letter-spacing:-0.01em">Tất cả lớp</h1></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input aria-label="Tìm lớp" placeholder="Tìm lớp hoặc học sinh" style="height:48px;width:240px;box-sizing:border-box;border:1.5px solid #D2D7DF;border-radius:14px;padding:0 16px;font-size:15px;background:#fff">
+        <button style="height:48px;padding:0 20px;border:0;border-radius:14px;background:#2F5BEA;color:#fff;font-size:15px;font-weight:600">+ Tạo lớp mới</button>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="card" style="outline:2px solid #2F5BEA">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:20px;font-weight:700">IELTS Foundation</div><span class="pill" style="background:#FFF3D6;color:#8A5300">2 việc cần làm</span></div>
+        <div style="font-size:14px;color:#4A5361">Thứ Tư, Thứ Sáu · 18:30 – 20:00 · Buổi 18/24</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip"><b>10</b> học sinh</span><span class="chip">Chuyên cần <b>94%</b></span><span class="chip">TB <b>7.6</b></span></div>
+        <div style="display:flex;gap:8px"><button style="flex:1;height:44px;border:0;border-radius:12px;background:#2F5BEA;color:#fff;font-size:14px;font-weight:600">Điểm danh hôm nay</button><button style="height:44px;padding:0 16px;border:0;border-radius:12px;background:#E8EEFE;color:#1E43B8;font-size:14px;font-weight:600">Mở lớp</button></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:20px;font-weight:700">Kids Starters</div><span class="pill" style="background:#E7F6EC;color:#14663F">Đã xong</span></div>
+        <div style="font-size:14px;color:#4A5361">Thứ Bảy · 09:00 – 10:30 · Buổi 12/24</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip"><b>14</b> học sinh</span><span class="chip">Chuyên cần <b>91%</b></span><span class="chip">TB <b>8.4</b></span></div>
+        <div style="display:flex;gap:8px"><button style="flex:1;height:44px;border:0;border-radius:12px;background:#F6F7F9;color:#14181F;font-size:14px;font-weight:600">Buổi tiếp: Thứ Bảy 17/10</button><button style="height:44px;padding:0 16px;border:0;border-radius:12px;background:#E8EEFE;color:#1E43B8;font-size:14px;font-weight:600">Mở lớp</button></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:20px;font-weight:700">Giao tiếp người lớn</div><span class="pill" style="background:#F0F2F5;color:#4A5361">Chủ nhật tới</span></div>
+        <div style="font-size:14px;color:#4A5361">Chủ nhật · 19:00 – 20:30 · Buổi 6/16</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip"><b>6</b> học sinh</span><span class="chip">Chuyên cần <b>88%</b></span><span class="chip">TB <b>7.9</b></span></div>
+        <div style="display:flex;gap:8px"><button style="flex:1;height:44px;border:0;border-radius:12px;background:#F6F7F9;color:#14181F;font-size:14px;font-weight:600">Buổi tiếp: Chủ nhật 18/10</button><button style="height:44px;padding:0 16px;border:0;border-radius:12px;background:#E8EEFE;color:#1E43B8;font-size:14px;font-weight:600">Mở lớp</button></div>
+      </div>
+    </div>
+    <div class="card" style="gap:8px">
+      <div style="font-size:16px;font-weight:700">Mỗi lớp là một không gian riêng</div>
+      <div style="font-size:14px;color:#4A5361;line-height:1.55">Danh sách học sinh, buổi học, điểm danh, bài kiểm tra, nhận xét và báo cáo đều thuộc về từng lớp. Một học sinh học hai lớp có hai bảng điểm danh và hai bảng điểm tách biệt; phụ huynh chuyển lớp bằng bộ chọn con trong ứng dụng.</div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tạo bài kiểm tra</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="width:390px;height:844px;box-sizing:border-box;background:#F6F7F9;color:#14181F;display:flex;flex-direction:column;overflow:hidden">
+  <div style="padding:56px 20px 12px;display:flex;align-items:center;gap:8px">
+    <button aria-label="Quay lại" style="width:44px;height:44px;border:0;border-radius:12px;background:#fff;color:#14181F"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+    <h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em">Tạo bài kiểm tra</h1>
+  </div>
+  <div style="flex:1;overflow:hidden;padding:8px 20px 0;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label for="tn" style="font-size:14px;font-weight:600">Tên bài kiểm tra</label>
+      <input id="tn" type="text" value="Unit 6 Test" style="height:52px;box-sizing:border-box;border:1.5px solid #2F5BEA;border-radius:14px;padding:0 16px;font-size:16px;background:#fff">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label for="td" style="font-size:14px;font-weight:600">Ngày kiểm tra</label>
+      <input id="td" type="text" value="23 tháng 10, 2026" style="height:52px;box-sizing:border-box;border:1.5px solid #D2D7DF;border-radius:14px;padding:0 16px;font-size:16px;background:#fff">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:14px;font-weight:600">Thang điểm</div>
+      <div style="display:flex;background:#E6E9EE;border-radius:12px;padding:3px">
+        <div style="flex:1;text-align:center;padding:12px 0;border-radius:10px;background:#fff;font-size:15px;font-weight:600">10 điểm</div>
+        <div style="flex:1;text-align:center;padding:12px 0;font-size:15px;font-weight:600;color:#4A5361">100 điểm</div>
+        <div style="flex:1;text-align:center;padding:12px 0;font-size:15px;font-weight:600;color:#4A5361">A – F</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:14px;font-weight:600">Hệ số khi tính trung bình</div>
+      <div style="display:flex;background:#E6E9EE;border-radius:12px;padding:3px">
+        <div style="flex:1;text-align:center;padding:12px 0;border-radius:10px;background:#fff;font-size:15px;font-weight:600">Hệ số 1</div>
+        <div style="flex:1;text-align:center;padding:12px 0;font-size:15px;font-weight:600;color:#4A5361">Hệ số 2</div>
+      </div>
+      <div style="font-size:13px;color:#4A5361">Bài giữa kỳ, cuối kỳ thường tính hệ số 2.</div>
+    </div>
+    <div style="background:#E8EEFE;border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.5;color:#1E43B8">Phụ huynh sẽ thấy bài này ở mục Điểm số sau khi bạn bấm Lưu điểm trong màn nhập điểm.</div>
+  </div>
+  <div style="padding:10px 20px 40px;display:flex;flex-direction:column;gap:10px">
+    <button style="width:100%;height:52px;border:0;border-radius:14px;background:#2F5BEA;color:#fff;font-size:16px;font-weight:600">Tạo bài và nhập điểm</button>
+    <button style="width:100%;height:48px;border:0;border-radius:14px;background:transparent;color:#4A5361;font-size:16px;font-weight:600">Huỷ</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

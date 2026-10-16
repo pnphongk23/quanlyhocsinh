@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Web · Học sinh và phụ huynh</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+button,input{font-family:inherit}
+.app{display:flex;min-height:100vh;background:#F6F7F9;color:#14181F}
+.side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px}
+.nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+.nav.on{background:#E8EEFE;color:#1E43B8}
+.main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px}
+.card{background:#fff;border-radius:16px;padding:18px 20px}
+table{border-collapse:collapse;width:100%;min-width:620px}
+th{font-size:13px;font-weight:600;color:#4A5361;text-align:left;padding:10px 8px;border-bottom:1px solid #E6E9EE}
+td{padding:10px 8px;border-bottom:1px solid #EEF0F3;font-size:15px}
+.pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+.stat{flex:1;min-width:140px;background:#fff;border-radius:14px;padding:12px 16px}
+@media (max-width:820px){.app{flex-direction:column}.side{width:auto;border-right:0;border-bottom:1px solid #E6E9EE;flex-direction:row;overflow-x:auto}.nav{white-space:nowrap}.main{padding:20px 16px}}
+</style>
+</helmet>
+<div class="app">
+  <aside class="side">
+    <div style="padding:4px 12px 8px;font-size:18px;font-weight:700;color:#2F5BEA">Lớp của cô Lan</div>
+    <div style="background:#F6F7F9;border-radius:12px;padding:10px 12px;margin-bottom:8px"><div style="font-size:12px;color:#4A5361">Đang xem lớp</div><div style="font-size:15px;font-weight:700">IELTS Foundation ▾</div></div>
+    <div class="nav">Điểm danh</div><div class="nav">Bảng điểm</div><div class="nav">Nhận xét</div><div class="nav on">Học sinh</div><div class="nav">Báo cáo</div>
+    <div class="nav" style="margin-top:12px">← Tất cả lớp</div>
+  </aside>
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+      <div><div style="font-size:14px;color:#4A5361">IELTS Foundation</div><h1 style="margin:2px 0 0;font-size:30px;font-weight:700;letter-spacing:-0.01em">Học sinh &amp; phụ huynh</h1></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button style="height:48px;padding:0 18px;border:0;border-radius:14px;background:#E8EEFE;color:#1E43B8;font-size:15px;font-weight:600">Thêm từ lớp khác</button>
+        <button style="height:48px;padding:0 20px;border:0;border-radius:14px;background:#2F5BEA;color:#fff;font-size:15px;font-weight:600">+ Thêm học sinh</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="stat"><div style="font-size:24px;font-weight:700">10</div><div style="font-size:13px;color:#4A5361">đang học</div></div>
+      <div class="stat"><div style="font-size:24px;font-weight:700;color:#14663F">7</div><div style="font-size:13px;color:#4A5361">phụ huynh đã vào</div></div>
+      <div class="stat"><div style="font-size:24px;font-weight:700;color:#8A5300">3</div><div style="font-size:13px;color:#4A5361">chưa kích hoạt</div></div>
+    </div>
+    <div class="card" style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Học sinh</th><th>Phụ huynh</th><th>Lớp đang học</th><th>Chuyên cần</th><th>Tài khoản</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><b>Nguyễn Minh Anh</b></td><td>Mẹ · 0903 *** 412</td><td>IELTS Foundation</td><td>17/18</td><td><span class="pill" style="background:#E7F6EC;color:#14663F">Đã vào app</span></td><td></td></tr>
+          <tr><td><b>Trần Gia Bảo</b></td><td>Chị Hương · 2 con</td><td>IELTS Foundation</td><td>16/18</td><td><span class="pill" style="background:#E7F6EC;color:#14663F">Đã vào app</span></td><td></td></tr>
+          <tr><td><b>Ngô Bảo Ngọc</b></td><td>Chị Hương · cùng tài khoản</td><td>IELTS Foundation, Kids Starters</td><td>15/18</td><td><span class="pill" style="background:#E7F6EC;color:#14663F">Đã vào app</span></td><td></td></tr>
+          <tr><td><b>Lê Khánh Chi</b></td><td>Bố · đã gửi mã hôm qua</td><td>IELTS Foundation</td><td>18/18</td><td><span class="pill" style="background:#FFF3D6;color:#8A5300">Chờ kích hoạt</span></td><td><button style="height:40px;padding:0 14px;border:0;border-radius:10px;background:#FFF3D6;color:#8A5300;font-size:14px;font-weight:600">Gửi lại mã</button></td></tr>
+          <tr><td><b>Phạm Đức Dũng</b></td><td>Chưa có phụ huynh</td><td>IELTS Foundation</td><td>16/18</td><td><span class="pill" style="background:#F0F2F5;color:#4A5361">Chưa mời</span></td><td><button style="height:40px;padding:0 14px;border:0;border-radius:10px;background:#2F5BEA;color:#fff;font-size:14px;font-weight:600">Mời</button></td></tr>
+        </tbody>
+      </table>
+      <div style="font-size:13px;color:#4A5361;padding-top:12px">Hiển thị 5/10 học sinh. Phụ huynh chỉ thấy con của mình, ở mọi lớp con đang học.</div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

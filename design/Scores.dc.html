@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Nhập điểm</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="width:390px;height:844px;box-sizing:border-box;background:#F6F7F9;color:#14181F;display:flex;flex-direction:column;overflow:hidden">
+  <div style="padding:56px 20px 12px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end">
+      <div>
+        <div style="font-size:14px;color:#4A5361">Lớp IELTS Foundation ▾</div>
+        <h1 style="margin:2px 0 0;font-size:26px;font-weight:700;letter-spacing:-0.01em">Điểm số</h1>
+      </div>
+      <button style="height:44px;padding:0 14px;border:0;border-radius:12px;background:#E8EEFE;color:#1E43B8;font-size:14px;font-weight:600">+ Bài mới</button>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:18px;font-weight:700">Unit 5 Test</div>
+        <div style="font-size:14px;color:#4A5361">Ngày 9 tháng 10 · Thang 10 điểm</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:15px;font-weight:600;color:#2F5BEA">Đổi bài<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;color:#4A5361">
+      <span>Đã nhập <b style="color:#14181F">8/10</b> học sinh</span>
+      <span style="color:#8A5300;font-weight:600;background:#FFF3D6;padding:4px 10px;border-radius:999px">Còn 2 em chưa có điểm</span>
+    </div>
+  </div>
+  <div style="flex:1;overflow:hidden;padding:0 20px;display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:6px 6px 6px 12px;min-height:52px"><div style="flex:1;font-size:16px;font-weight:500">Nguyễn Minh Anh</div><input aria-label="Điểm Minh Anh" inputmode="decimal" value="8.5" style="width:72px;height:44px;box-sizing:border-box;border:0;border-radius:12px;background:#F6F7F9;text-align:center;font-size:17px;font-weight:700"></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:6px 6px 6px 12px;min-height:52px"><div style="flex:1;font-size:16px;font-weight:500">Trần Gia Bảo</div><input aria-label="Điểm Gia Bảo" inputmode="decimal" value="7.0" style="width:72px;height:44px;box-sizing:border-box;border:0;border-radius:12px;background:#F6F7F9;text-align:center;font-size:17px;font-weight:700"></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:6px 6px 6px 12px;min-height:52px"><div style="flex:1;font-size:16px;font-weight:500">Lê Khánh Chi</div><input aria-label="Điểm Khánh Chi" inputmode="decimal" value="9.5" style="width:72px;height:44px;box-sizing:border-box;border:0;border-radius:12px;background:#F6F7F9;text-align:center;font-size:17px;font-weight:700"></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:6px 6px 6px 12px;min-height:52px"><div style="flex:1;font-size:16px;font-weight:500">Phạm Đức Dũng</div><input aria-label="Điểm Đức Dũng" inputmode="decimal" value="6.5" style="width:72px;height:44px;box-sizing:border-box;border:0;border-radius:12px;background:#F6F7F9;text-align:center;font-size:17px;font-weight:700"></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:6px 6px 6px 12px;min-height:52px"><div style="flex:1;font-size:16px;font-weight:500">Hoàng Thu Hà</div><input aria-label="Điểm Thu Hà" inputmode="decimal" value="8.0" style="width:72px;height:44px;box-sizing:border-box;border:0;border-radius:12px;background:#F6F7F9;text-align:center;font-size:17px;font-weight:700"></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:6px 6px 6px 12px;min-height:52px;outline:2px solid #2F5BEA"><div style="flex:1;font-size:16px;font-weight:500">Vũ Quang Huy</div><input aria-label="Điểm Quang Huy" inputmode="decimal" value="7.5" style="width:72px;height:44px;box-sizing:border-box;border:1.5px solid #2F5BEA;border-radius:12px;background:#fff;text-align:center;font-size:17px;font-weight:700;color:#1E43B8"></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:6px 6px 6px 12px;min-height:52px"><div style="flex:1;font-size:16px;font-weight:500">Đặng Ngọc Lan</div><span style="height:44px;padding:0 14px;box-sizing:border-box;border-radius:12px;background:#F0F2F5;color:#4A5361;font-size:14px;font-weight:600;display:flex;align-items:center">Vắng thi</span></div>
+    <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:6px 6px 6px 12px;min-height:52px"><div style="flex:1;font-size:16px;font-weight:500">Bùi Tuấn Kiệt</div><input aria-label="Điểm Tuấn Kiệt" inputmode="decimal" placeholder="–" style="width:72px;height:44px;box-sizing:border-box;border:1.5px dashed #B7BEC9;border-radius:12px;background:#fff;text-align:center;font-size:17px;font-weight:700"></div>
+  </div>
+  <div style="padding:10px 20px 8px">
+    <button style="width:100%;height:52px;border:0;border-radius:14px;background:#2F5BEA;color:#fff;font-size:16px;font-weight:600">Lưu điểm</button>
+  </div>
+  <div style="display:flex;padding:0 4px 26px;background:#fff;border-top:1px solid #E6E9EE">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:8px;font-size:12px;font-weight:600;color:#4A5361"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Điểm danh</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:8px;font-size:12px;font-weight:600;color:#2F5BEA;border-top:3px solid #2F5BEA;margin-top:-1px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Điểm số</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:8px;font-size:12px;font-weight:600;color:#4A5361"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Nhận xét</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:8px;font-size:12px;font-weight:600;color:#4A5361"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM21 21v-2a4 4 0 0 0-3-3.9"/></svg>Học sinh</div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:8px;font-size:12px;font-weight:600;color:#4A5361"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6"/></svg>Báo cáo</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

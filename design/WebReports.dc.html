@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Web · Báo cáo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+button{font-family:inherit}
+.app{display:flex;min-height:100vh;background:#F6F7F9;color:#14181F}
+.side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px}
+.nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+.nav.on{background:#E8EEFE;color:#1E43B8}
+.main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px}
+.card{background:#fff;border-radius:16px;padding:18px 20px}
+.item{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3;font-size:15px}
+.pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+@media (max-width:820px){.app{flex-direction:column}.side{width:auto;border-right:0;border-bottom:1px solid #E6E9EE;flex-direction:row;overflow-x:auto}.nav{white-space:nowrap}.main{padding:20px 16px}}
+</style>
+</helmet>
+<div class="app">
+  <aside class="side">
+    <div style="padding:4px 12px 8px;font-size:18px;font-weight:700;color:#2F5BEA">Lớp của cô Lan</div>
+    <div style="background:#F6F7F9;border-radius:12px;padding:10px 12px;margin-bottom:8px"><div style="font-size:12px;color:#4A5361">Đang xem lớp</div><div style="font-size:15px;font-weight:700">IELTS Foundation ▾</div></div>
+    <div class="nav">Điểm danh</div><div class="nav">Bảng điểm</div><div class="nav">Nhận xét</div><div class="nav">Học sinh</div><div class="nav on">Báo cáo</div>
+    <div class="nav" style="margin-top:12px">← Tất cả lớp</div>
+  </aside>
+  <main class="main">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+      <div><div style="font-size:14px;color:#4A5361">IELTS Foundation</div><h1 style="margin:2px 0 0;font-size:30px;font-weight:700;letter-spacing:-0.01em">Báo cáo</h1></div>
+      <div style="display:flex;background:#E6E9EE;border-radius:12px;padding:3px"><div style="padding:11px 18px;border-radius:10px;background:#fff;font-size:15px;font-weight:600">Tháng 10</div><div style="padding:11px 18px;font-size:15px;font-weight:600;color:#4A5361">3 tháng gần nhất</div></div>
+    </div>
+    <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+      <div class="card" style="flex:1.2;min-width:320px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px"><div style="font-size:17px;font-weight:700">Sẵn sàng 7/10 học sinh</div><span class="pill" style="background:#FFF3D6;color:#8A5300">3 em còn thiếu</span></div>
+        <div class="item"><div style="flex:1;font-weight:600">Nguyễn Minh Anh</div><span class="pill" style="background:#E7F6EC;color:#14663F">Sẵn sàng</span></div>
+        <div class="item" style="outline:2px solid #2F5BEA;outline-offset:-2px;border-radius:10px;padding-left:8px;padding-right:8px"><div style="flex:1;font-weight:600">Trần Gia Bảo</div><span class="pill" style="background:#FFF3D6;color:#8A5300">Thiếu nhận xét chung</span></div>
+        <div class="item"><div style="flex:1;font-weight:600">Lê Khánh Chi</div><span class="pill" style="background:#E7F6EC;color:#14663F">Sẵn sàng</span></div>
+        <div class="item"><div style="flex:1;font-weight:600">Phạm Đức Dũng</div><span class="pill" style="background:#FFF3D6;color:#8A5300">Thiếu điểm Unit 5</span></div>
+        <div class="item"><div style="flex:1;font-weight:600">Hoàng Thu Hà</div><span class="pill" style="background:#E7F6EC;color:#14663F">Sẵn sàng</span></div>
+      </div>
+      <div class="card" style="flex:1;min-width:300px;display:flex;flex-direction:column;gap:12px">
+        <div style="font-size:17px;font-weight:700">Trần Gia Bảo · Tháng 10</div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1;background:#F6F7F9;border-radius:12px;padding:10px 12px"><div style="font-size:13px;color:#4A5361">Chuyên cần</div><div style="font-size:18px;font-weight:700">16/18 buổi</div></div>
+          <div style="flex:1;background:#F6F7F9;border-radius:12px;padding:10px 12px"><div style="font-size:13px;color:#4A5361">Điểm trung bình</div><div style="font-size:18px;font-weight:700">7.2/10</div></div>
+        </div>
+        <div style="font-size:14px;font-weight:600">Nhận xét chung của tháng</div>
+        <div style="min-height:90px;border-radius:12px;background:#F6F7F9;padding:12px;font-size:15px;line-height:1.55;color:#8A93A0">Gợi ý từ 4 nhận xét sau buổi học: tập trung tốt, cần luyện nghe thêm…</div>
+        <button style="height:44px;border:0;border-radius:12px;background:#E8EEFE;color:#1E43B8;font-size:14px;font-weight:600">Dùng gợi ý làm bản nháp</button>
+        <div style="display:flex;gap:8px">
+          <button style="flex:1;height:48px;border:0;border-radius:12px;background:#F6F7F9;color:#14181F;font-size:15px;font-weight:600">Xem trước PDF</button>
+          <button style="flex:1.4;height:48px;border:0;border-radius:12px;background:#2F5BEA;color:#fff;font-size:15px;font-weight:600">Phát hành 7 báo cáo</button>
+        </div>
+        <div style="font-size:13px;color:#4A5361">Phụ huynh chỉ thấy báo cáo sau khi bạn phát hành.</div>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

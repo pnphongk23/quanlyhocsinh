@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Đăng nhập</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+button,input{font-family:inherit}
+</style>
+</helmet>
+<div style="width:390px;height:844px;box-sizing:border-box;background:#F6F7F9;color:#14181F;display:flex;flex-direction:column;padding:56px 24px 40px">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:28px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="width:56px;height:56px;border-radius:16px;background:#2F5BEA;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">L</div>
+      <div style="font-size:15px;font-weight:600;color:#4A5361">Lớp tiếng Anh cô Lan</div>
+      <h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.02em">Chào mừng trở lại</h1>
+      <div style="font-size:16px;color:#4A5361;line-height:1.5">Đăng nhập để xem điểm danh, điểm và nhận xét của con.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label for="phone" style="font-size:14px;font-weight:600">Số điện thoại</label>
+        <input id="phone" type="tel" inputmode="tel" placeholder="0903 123 456" style="height:54px;box-sizing:border-box;border:1.5px solid #B7BEC9;border-radius:14px;padding:0 16px;font-size:17px;background:#fff">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label for="pw" style="font-size:14px;font-weight:600">Mật khẩu</label>
+        <div style="position:relative">
+          <input id="pw" type="password" placeholder="Nhập mật khẩu" style="width:100%;height:54px;box-sizing:border-box;border:1.5px solid #B7BEC9;border-radius:14px;padding:0 64px 0 16px;font-size:17px;background:#fff">
+          <button aria-label="Hiện mật khẩu" style="position:absolute;right:4px;top:5px;width:44px;height:44px;border:0;background:transparent;color:#4A5361"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <button style="height:54px;border:0;border-radius:14px;background:#2F5BEA;color:#fff;font-size:17px;font-weight:600;margin-top:4px">Đăng nhập</button>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;color:#1E43B8;padding:4px 2px">
+        <span>Quên mật khẩu?</span>
+        <span>Có mã mời từ cô?</span>
+      </div>
+    </div>
+  </div>
+  <div style="text-align:center;font-size:13px;color:#4A5361;line-height:1.5">Mỗi phụ huynh có tài khoản riêng và chỉ xem được thông tin của con mình.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
