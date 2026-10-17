@@ -1,12 +1,12 @@
 # Đặc tả: App quản lý lớp tiếng Anh
 
-Cập nhật: 2026-10-16 · Trạng thái: bản nháp nghiệp vụ, chờ duyệt các mục "Còn mở".
+Cập nhật: 2026-10-16 · Trạng thái: đã chốt phạm vi bản đầu (mục 8) và luồng mời phụ huynh (mục 4).
 
 ## 1. Tổng quan
 
 App cho giáo viên tiếng Anh dạy lớp riêng tại Việt Nam. Giáo viên có nhiều lớp, mỗi lớp dưới 20 học sinh. Phụ huynh có tài khoản riêng và chỉ xem dữ liệu của con mình.
 
-- **Nền tảng:** PWA, ưu tiên iPhone. Giáo viên có thêm bản web (desktop).
+- **Nền tảng:** PWA, ưu tiên iPhone, gọn nhẹ và dùng được khi mạng ở lớp học chập chờn (offline-first cho thao tác tại lớp). Giáo viên có thêm bản web (desktop). Kiến trúc và stack: [architecture.md](architecture.md).
 - **Ngôn ngữ:** Việt–Anh.
 - **Thiết kế:** artifact https://claude.ai/artifact/45L4h3VhEUQ8Jw2pJd5421 (21 màn: mobile giáo viên, phụ huynh, chung, web giáo viên).
 
@@ -29,14 +29,14 @@ App cho giáo viên tiếng Anh dạy lớp riêng tại Việt Nam. Giáo viên
 
 **Điểm danh và buổi học**
 - Trạng thái: Có mặt, Muộn, Có phép, Vắng.
-- Muộn tính là có đi học. Có phép không bị trừ chuyên cần (còn mở, xem mục 7).
+- Muộn tính là có đi học. Có phép không bị trừ chuyên cần (đã chốt).
 - Cảnh báo giáo viên khi một em vắng 2 buổi liên tiếp.
 - Buổi học có thể hủy, dời, học bù. Số buổi chỉ đếm buổi đã diễn ra.
 - Sửa điểm danh sau khi lưu được, có ghi lịch sử thay đổi.
 
 **Điểm**
 - Vắng thi và chưa nhập điểm: không tính vào trung bình, hiển thị rõ là "chưa có điểm".
-- Sửa điểm sau khi đã phát hành báo cáo: phụ huynh thấy điểm mới ngay; báo cáo cũ cần phát hành lại (còn mở, xem mục 7).
+- Sửa điểm sau khi đã phát hành báo cáo: phụ huynh thấy điểm mới ngay; báo cáo đã phát hành ghi chú "điểm có cập nhật, cần phát hành lại" (đã chốt).
 - Sửa điểm có ghi lịch sử.
 
 **Nhận xét và báo cáo**
@@ -46,8 +46,10 @@ App cho giáo viên tiếng Anh dạy lớp riêng tại Việt Nam. Giáo viên
 - Kỳ báo cáo: theo tháng hoặc 3 tháng gần nhất.
 
 **Tài khoản**
-- Mã mời dùng một lần, hết hạn sau 7 ngày, giáo viên thu hồi được nếu gắn nhầm.
-- Màn kích hoạt chỉ hiện tên con sau khi xác nhận mã hợp lệ.
+- Mời bằng số điện thoại: giáo viên nhập SĐT phụ huynh khi thêm học sinh. Bấm "Mời cả lớp" thì mỗi phụ huynh nhận một link riêng qua SMS hoặc Zalo. Phụ huynh mở link, xác nhận OTP đúng SĐT đó, hệ thống tự liên kết mọi con có cùng SĐT (kể cả khác lớp).
+- Link dùng một lần, hết hạn sau 7 ngày, gửi lại được. Gắn nhầm người thì giáo viên sửa SĐT trên hồ sơ học sinh, liên kết cũ bị gỡ.
+- Dự phòng cho người dùng số khác (ông bà, người đón): mỗi lớp có link hoặc mã QR chung. Phụ huynh nhập tên con, giáo viên duyệt bằng 1 chạm.
+- Màn kích hoạt chỉ hiện tên con sau khi OTP đúng.
 - Phụ huynh chỉ thấy con được cấp quyền.
 
 ## 5. Tính năng theo actor
@@ -77,15 +79,15 @@ Ký hiệu thiết kế (TK): ✓ đã có màn · ◐ có nhưng cần sửa ·
 | | Nhận xét tổng hợp theo tháng hoặc 3 tháng | ✗ |
 | Báo cáo | Chọn kỳ, xem em nào đủ dữ liệu | ✓ |
 | | Xem trước PDF đầy đủ, phát hành, phát hành lại | ◐ |
-| Phụ huynh | Mời qua Zalo hoặc SMS, gửi lại, thu hồi mã | ◐ |
+| Phụ huynh | Nhập SĐT phụ huynh ở hồ sơ học sinh, mời cả lớp qua link riêng, gửi lại, duyệt yêu cầu từ link chung của lớp | ◐ |
 | Tài khoản | Đăng nhập, đổi và quên mật khẩu, ngôn ngữ, cài đặt giáo viên | ✗ |
 
 ### 5.2 Phụ huynh (mobile/PWA)
 
 | Nhóm | Tính năng | TK |
 |---|---|---|
-| Tài khoản | Kích hoạt bằng mã mời, đặt mật khẩu | ✓ |
-| | Đăng nhập, quên mật khẩu | ◐ |
+| Tài khoản | Kích hoạt bằng link mời và OTP (thay cho nhập mã và đặt mật khẩu) | ◐ |
+| | Đăng nhập bằng SĐT và OTP | ◐ |
 | | Hướng dẫn cài PWA, mở bằng Safari | ✗ |
 | Con của tôi | Chuyển giữa các con | ✓ |
 | | Tổng quan: chuyên cần, điểm trung bình, nhận xét mới nhất | ✓ |
@@ -101,13 +103,14 @@ Ký hiệu thiết kế (TK): ✓ đã có màn · ◐ có nhưng cần sửa ·
 | Nhóm | Tính năng |
 |---|---|
 | Phân quyền | Phụ huynh chỉ thấy con được cấp quyền, kiểm tra ở máy chủ. Dữ liệu mỗi lớp tách biệt. |
-| Mã mời | Dùng một lần, hết hạn 7 ngày, thu hồi được. |
+| Lời mời | Link riêng dùng một lần, hết hạn 7 ngày, OTP phải khớp SĐT đã khai. Link chung của lớp cần giáo viên duyệt. |
 | Dữ liệu | Giữ lịch sử khi nghỉ hoặc chuyển lớp; lịch sử sửa điểm và điểm danh. |
 | Tính toán | Trung bình cộng đơn giản; vắng thi và chưa nhập không tính. |
 | Thông báo | Có nhận xét, điểm, báo cáo mới. Thông báo quan trọng gửi thêm qua Zalo hoặc SMS. |
-| Báo cáo PDF | Sinh PDF, bản nháp, phát hành lại. |
+| Báo cáo PDF | Sinh PDF trên máy giáo viên khi phát hành, lưu bản chụp của phiên bản đã phát hành trên máy chủ, bản nháp, phát hành lại. |
 | Song ngữ | Giao diện, lỗi, thông báo, ngày tháng, PDF. |
-| PWA | Cài lên màn hình chính, giữ đăng nhập lâu, đồng bộ lại khi mất mạng. |
+| PWA | Cài lên màn hình chính, giữ đăng nhập lâu. |
+| Offline | Điểm danh, nhập điểm, vắng thi, tạo bài kiểm tra và soạn nhận xét ghi được khi mất mạng, tự đồng bộ khi có mạng. Hiện rõ "Đã lưu trên máy" (chờ đồng bộ) và "Đã đồng bộ". Phụ huynh xem được dữ liệu đã tải kèm thời gian cập nhật. Cần có mạng: OTP, mời và duyệt phụ huynh, gửi nhận xét, phát hành báo cáo. Hai thiết bị sửa cùng một ô: giữ cả hai giá trị và hiện cờ để giáo viên chọn. Không cho đăng xuất khi còn thay đổi chưa đồng bộ. |
 | Trạng thái chung | Đang tải, rỗng, lỗi lưu, mất mạng. |
 
 ## 6. PWA: lưu ý cho phụ huynh
@@ -117,16 +120,48 @@ Ký hiệu thiết kế (TK): ✓ đã có màn · ◐ có nhưng cần sửa ·
 - Face ID không gọi trực tiếp được; dùng passkey (WebAuthn).
 - Cách giảm rắc rối: dùng được ngay không cần cài; đăng nhập bằng số điện thoại cộng mã SMS hoặc Zalo; màn hướng dẫn 3 bước có hình; màn "mở bằng Safari"; thông báo quan trọng gửi thêm qua Zalo hoặc SMS.
 
-## 7. Còn mở
+## 7. Rủi ro của luồng mời bằng SĐT
 
-1. "Có phép" có tính trừ chuyên cần không (đề xuất: không trừ).
-2. Sửa điểm sau phát hành: phụ huynh thấy ngay hay chỉ khi phát hành lại báo cáo (đề xuất: thấy ngay).
+- SĐT có thể đổi chủ hoặc giáo viên nhập sai: bắt buộc OTP, và link chung của lớp phải được giáo viên duyệt.
+- OTP SMS tốn phí từng tin; bản đầu chỉ dùng SMS cho đăng nhập và mời.
+- Link mở trong Zalo không cài được PWA: sau link phải có hướng dẫn "Mở bằng Safari".
 
-## 8. Ngoài phạm vi bản này
+## 8. Phạm vi
 
-Học phí, chat với giáo viên, xin nghỉ trong app, nhập danh sách từ Excel.
+**Bản đầu**
+- Lớp: tạo, sửa, lưu trữ lớp; thang điểm cố định 10.
+- Học sinh: thêm (kèm SĐT phụ huynh), đánh dấu nghỉ, giữ lịch sử; hồ sơ cơ bản.
+- Buổi học: tự sinh theo lịch lặp của lớp; hủy buổi bằng 1 nút.
+- Điểm danh: 4 trạng thái, sửa sau lưu, cảnh báo vắng 2 buổi trong app.
+- Điểm: tạo bài kiểm tra, nhập điểm, vắng thi, trung bình cộng; ghi log sửa điểm trong DB.
+- Nhận xét sau buổi, câu mẫu, giáo viên bấm gửi.
+- Báo cáo theo tháng: xem trước, phát hành, PDF.
+- Phụ huynh: xem điểm danh, điểm, nhận xét, báo cáo của con; chuyển giữa các con.
+- Hệ thống: phân quyền ở máy chủ, thông báo trong app và push.
+- Offline cho điểm danh, nhập điểm, vắng thi, tạo bài kiểm tra, soạn nhận xét (hàng đợi ghi, đồng bộ lại, báo trạng thái lưu).
+- Chạy mobile/PWA, giao diện tiếng Việt.
 
-## 9. Việc thiết kế tiếp theo
+**Làm sau**
+- Bản web giáo viên (màn đầu tiên nên làm: bảng điểm hoặc báo cáo).
+- Lịch tuần đầy đủ, dời buổi, học bù; thêm học sinh từ lớp khác, chuyển lớp, hồ sơ học sinh chi tiết.
+- Nhận xét tổng hợp theo kỳ, báo cáo 3 tháng (có thể gợi ý bằng AI).
+- Giao diện tiếng Anh, passkey.
+- Thông báo qua Zalo hoặc SMS.
+- Màn lịch sử điểm danh và lịch sử sửa điểm.
+
+**Chưa nên làm**
+Học phí, chat với giáo viên, xin nghỉ trong app, nhập danh sách từ Excel, thang điểm tuỳ chỉnh, hiển thị lịch sử sửa điểm cho phụ huynh.
+
+## 9. Phi chức năng
+
+- Gọn nhẹ cho mạng yếu: JS tải ban đầu mục tiêu không quá 200 KB gzip (chưa đo, đo rồi mới siết).
+- Thao tác chính tại lớp (điểm danh, nhập điểm) không chờ mạng.
+- Không mất dữ liệu khi đồng bộ: chỉ xoá thay đổi chờ gửi khi máy chủ đã xác nhận.
+- Không ghi SĐT và nội dung nhận xét vào log lỗi.
+
+## 10. Việc thiết kế tiếp theo
+
+0. Đổi màn kích hoạt sang link mời + OTP; thêm ô SĐT phụ huynh ở form thêm học sinh; thêm màn duyệt yêu cầu từ link chung.
 
 1. Bỏ "TB lớp" khỏi màn Điểm số phụ huynh.
 2. Bỏ hệ số ở màn Tạo bài kiểm tra và Bảng điểm web.
