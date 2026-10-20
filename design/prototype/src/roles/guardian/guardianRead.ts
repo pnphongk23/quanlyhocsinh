@@ -93,18 +93,22 @@ export function childAttendanceMonth(
         session.status === "held" && session.date.slice(0, 7) === month,
     )
     .sort((a, b) => compareSessions(b, a))
-    .map((session) => {
+    .flatMap((session) => {
+      const number = sessionNumber(session);
+      if (number === null) return [];
       const record = state.attendance.find(
         (item) =>
           item.sessionId === session.id && item.studentId === studentId,
       );
-      return {
-        session,
-        number: sessionNumber(session),
-        status: record?.status ?? null,
-        note: record?.note ?? "",
-        lateAt: record?.lateAt ?? null,
-      };
+      return [
+        {
+          session,
+          number,
+          status: record?.status ?? null,
+          note: record?.note ?? "",
+          lateAt: record?.lateAt ?? null,
+        },
+      ];
     });
   const count = (status: AttendanceStatus) =>
     rows.filter((row) => row.status === status).length;

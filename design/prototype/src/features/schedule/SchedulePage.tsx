@@ -8,7 +8,8 @@ import {
 } from "../../data/sessionGroups";
 import { listClasses } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
-import { sessionNumber } from "../../data/repositories/sessions";
+import { sessionNumber,
+  sessionPrefix } from "../../data/repositories/sessions";
 import {
   formatDayMonth,
   formatWeekdayDate,
@@ -27,7 +28,7 @@ import s from "./schedule.module.css";
 
 type View = "day" | "month";
 const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-type CalendarEntry = ScheduleEntry & { sessionNumber: number };
+type CalendarEntry = ScheduleEntry;
 type Lead = (entry: CalendarEntry) => string;
 
 const toneClass: Record<PillTone, string> = {
@@ -71,7 +72,7 @@ function getEntries(): CalendarEntry[] {
 }
 
 function sessionMeta(entry: CalendarEntry): string {
-  const parts = [`Buổi ${entry.sessionNumber}`];
+  const parts = [sessionPrefix(entry.session)];
   if (entry.session.origin === "manual") {
     const note = entry.session.note?.trim();
     parts.push(note || "Buổi lẻ");

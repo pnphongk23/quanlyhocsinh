@@ -268,7 +268,10 @@ export default function CommentsPanel({
   if (!rows.length)
     return <EmptyState title="Không có học sinh để nhận xét" />;
 
-  const sessionNo = sessionNumber(session);
+  const currentNumber = sessionNumber(session);
+  if (currentNumber === null)
+    return <EmptyState title="Buổi học đã hủy nên không có phiếu buổi học" />;
+  const sessionNo: number = currentNumber;
   const sessionDate = session.date;
   const sheetHomework: SheetHomework | null = openRow
     ? {

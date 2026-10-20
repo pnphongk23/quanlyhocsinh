@@ -4,7 +4,7 @@ import { useStore } from "../../data/store";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useSaveStatus } from "../../shared/SaveStatus";
 import { listStudentsForSession, studentAbsenceWarning } from "../../data/repositories/students";
-import { getSession, sessionNumber } from "../../data/repositories/sessions";
+import { getSession, sessionPrefix } from "../../data/repositories/sessions";
 import {
   listAttendance,
   saveAttendanceBatch,
@@ -322,7 +322,7 @@ export default function AttendancePanel({
           {desktop && (
             <div className={s.cardHead}>
               <p className={s.cardTitle}>
-                Buổi {sessionNumber(session)} · {formatWeekdayDate(session.date)}
+                {sessionPrefix(session)} · {formatWeekdayDate(session.date)}
                 {session.time ? ` · ${session.time}` : ""}
               </p>
               <p className={s.cardSummary}>

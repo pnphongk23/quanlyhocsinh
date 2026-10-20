@@ -9,7 +9,7 @@ import {
   classAttendanceRate,
   listStudents,
 } from "../../data/repositories/students";
-import { listPlannedSessions, sessionNumber } from "../../data/repositories/sessions";
+import { listPlannedSessions, sessionPrefix } from "../../data/repositories/sessions";
 import { useAccess } from "../../data/repositories/access";
 import { useStore } from "../../data/store";
 import type { Class } from "../../data/types";
@@ -123,7 +123,7 @@ export default function ClassListPage() {
           <div className={s.todayText}>
             <p className={s.todayEyebrow}>Hôm nay · {todayClass.time}</p>
             <p className={s.todayTitle}>
-              {todayClass.name} · Buổi {sessionNumber(todaySession)}
+              {todayClass.name} · {sessionPrefix(todaySession)}
             </p>
           </div>
           <LinkButton

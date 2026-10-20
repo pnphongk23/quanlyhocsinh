@@ -8,7 +8,7 @@ import {
   listLectureSessions,
   restoreLecture,
 } from "../../data/repositories/lectures";
-import { sessionNumber } from "../../data/repositories/sessions";
+import { sessionPrefix } from "../../data/repositories/sessions";
 import { getMember } from "../../data/repositories/staff";
 import { useStore } from "../../data/store";
 import { formatDate } from "../../shared/format";
@@ -237,7 +237,7 @@ export default function LectureDetailPage() {
                 >
                   <span className={s.sessionClass}>{className}</span>
                   <span className={s.sessionMeta}>
-                    Buổi {sessionNumber(session)} · {formatDate(session.date)}
+                    {sessionPrefix(session)} · {formatDate(session.date)}
                     {session.status === "cancelled" ? " · Đã hủy" : ""}
                   </span>
                 </Link>

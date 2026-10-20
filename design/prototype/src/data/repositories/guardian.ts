@@ -33,7 +33,7 @@ import {
   buildMonthlyStudentReport,
   type MonthlyStudentReport,
   type MonthlyStudentReportData,
-} from "../../features/reports/reportModel";
+} from "../reportModel";
 
 /**
  * Repository ĐỌC cho role phụ huynh (màn phụ huynh, spec mục 5.2).
@@ -121,6 +121,8 @@ function buildTicket(state: StoreState, comment: Comment): ChildTicket | null {
   if (comment.status !== "sent" || comment.stars === null) return null;
   const session = state.sessions.find((item) => item.id === comment.sessionId);
   if (!session) return null;
+  const number = sessionNumber(session);
+  if (number === null) return null;
   const giving = previousHomeworkSession(state.sessions, session.id);
   const sections = giving
     ? homeworkSectionsFor(state, giving.id).map((section) => ({
@@ -133,7 +135,7 @@ function buildTicket(state: StoreState, comment: Comment): ChildTicket | null {
   return {
     comment,
     session,
-    sessionNumber: sessionNumber(session),
+    sessionNumber: number,
     date: session.date,
     stars: comment.stars,
     template: starTemplate(comment.stars) ?? "",
@@ -188,8 +190,8 @@ export interface ChildHomeworkGrading {
   state: "exists" | "moved" | "none";
   session: Session | null;
   sessionNumber: number | null;
-  /** Buổi bị hủy nằm giữa buổi giao bài và buổi chấm (ảnh 34: "Buổi 19 · 21/10 đã hủy"). */
-  cancelled: Array<{ session: Session; sessionNumber: number }>;
+  /** Buổi bị hủy nằm giữa buổi giao bài và buổi chấm; không có số buổi, hiện theo ngày (vd. "Buổi bù · 16/10 · Đã huỷ"). */
+  cancelled: Array<{ session: Session }>;
 }
 
 /** Một phần BTVN trong bài tập của con. */
@@ -228,13 +230,14 @@ export function getChildHomework(
   const state = getStore();
   return state.sessions
     .filter((session) => session.classId === student.classId)
-    .filter((session) => session.status !== "cancelled")
     .filter((session) => session.date >= student.enrolledAt)
     .filter((session) => !student.leftAt || session.date <= student.leftAt)
     .filter((session) => !sessionId || session.id === sessionId)
     .filter((session) => homeworkSectionsFor(state, session.id).length > 0)
     .sort((a, b) => compareSessions(b, a))
-    .map((session) => {
+    .flatMap((session) => {
+      const number = sessionNumber(session);
+      if (number === null) return [];
       const plan = gradingSessionPlan(state.sessions, session.id);
       const ticketSent = plan.session
         ? state.comments.some(
@@ -255,9 +258,9 @@ export function getChildHomework(
             : null,
         }),
       );
-      return {
+      return [{
         session,
-        sessionNumber: sessionNumber(session),
+        sessionNumber: number,
         date: session.date,
         sections,
         grading: {
@@ -268,12 +271,9 @@ export function getChildHomework(
               : "exists",
           session: plan.session,
           sessionNumber: plan.session ? sessionNumber(plan.session) : null,
-          cancelled: plan.cancelled.map((item) => ({
-            session: item,
-            sessionNumber: sessionNumber(item),
-          })),
+          cancelled: plan.cancelled.map((item) => ({ session: item })),
         },
-      } satisfies ChildHomework;
+      } satisfies ChildHomework];
     });
 }
 

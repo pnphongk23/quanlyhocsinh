@@ -2,6 +2,7 @@ import type {
   ChildHomework,
   ChildHomeworkSection,
 } from "../../data/repositories/guardian";
+import { sessionPrefix } from "../../data/repositories/sessions";
 import GuardianIcon, { homeworkIcon } from "./GuardianIcon";
 import {
   dayMonth,
@@ -78,6 +79,6 @@ export function gradingLine(item: ChildHomework): string {
 export function cancelledFlags(item: ChildHomework): string[] {
   return item.grading.cancelled.map(
     (entry) =>
-      `Buổi ${entry.sessionNumber} · ${dayMonth(entry.session.date)} đã hủy`,
+      `${sessionPrefix(entry.session)} · ${dayMonth(entry.session.date)} · Đã huỷ`,
   );
 }

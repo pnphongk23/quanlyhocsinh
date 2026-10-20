@@ -1,6 +1,6 @@
 # Phiếu buổi học + BTVN: thiết kế → prototype → deploy
 
-Trạng thái: đang làm · Cập nhật: 2026-10-20
+Trạng thái: prototype xong, chờ quyết định về PDF thật · Cập nhật: 2026-10-20
 
 ## Mục tiêu
 Prototype `design/prototype` làm đúng spec mục 4 (Nhận xét theo sao, Phiếu buổi học, BTVN, bỏ Vắng thi, 3 tab buổi học, bottom sheet nhận xét). Lương bị ẩn. Bản mới được deploy lên Cloudflare Pages.
@@ -12,7 +12,7 @@ Prototype `design/prototype` làm đúng spec mục 4 (Nhận xét theo sao, Phi
    - Chỉ ẩn Lương (`/luong`, `/luong/:memberId`, `features/payroll`), giữ Lịch dạy (`/lich-day`).
    - Ẩn lối vào, giữ code: thêm một cờ tính năng (ví dụ `features.payroll = false`) đặt một chỗ; khi tắt thì bỏ mọi mục menu, nút, link, thẻ ở Cài đặt và chỗ khác dẫn tới Lương; truy cập thẳng `/luong*` thì chuyển về trang chính. Code và test của payroll vẫn giữ, test vẫn chạy.
    - Thêm test: khi cờ tắt thì không có link tới /luong và route /luong chuyển hướng.
-4. [xong 2026-10-20] Kiểm chứng (controller chạy lại): typecheck sạch, 440/440 test, build OK; xem thử 3 tab buổi học, bottom sheet (nháp), tab BTVN (mặc định buổi trước, vắng buổi giao bài), /luong → /lop, Cài đặt không còn Lương, app phụ huynh /ph qua vai trò Phụ huynh. Lỗi đã biết: danh sách buổi GV và màn PH đều hiện buổi bù bị hủy 16/10 là "Buổi 9", trùng số với buổi 19/10.
+4. [xong 2026-10-20] Kiểm chứng (controller chạy lại): typecheck sạch, 440/440 test, build OK; xem thử 3 tab buổi học, bottom sheet (nháp), tab BTVN (mặc định buổi trước, vắng buổi giao bài), /luong → /lop, Cài đặt không còn Lương, app phụ huynh /ph qua vai trò Phụ huynh. Lỗi đã biết (đã sửa ở mục "Đợt sửa tiếp theo"): danh sách buổi GV và màn PH hiện buổi bù bị hủy 16/10 là "Buổi 9", trùng số với buổi 19/10.
    Kiểm chứng ban đầu: typecheck, test, build; `npx vite preview` mở các màn buổi học (3 tab), bottom sheet, tab BTVN, màn phụ huynh, kiểm tra không còn lối vào Lương; so ảnh với bộ ảnh cuối.
 5. [xong 2026-10-20] Deploy: https://534e1616.quanlyhocsinh-proto.pages.dev (bản chính https://quanlyhocsinh-proto.pages.dev phục vụ đúng bundle index-B2Cmr3Od.js); /, /lop/…?tab=btvn, /ph, /luong → 200. Lệnh: `cd design/prototype && npx wrangler pages deploy dist --project-name quanlyhocsinh-proto --branch main --commit-dirty=true` (lệnh đã dùng ở plans/20261018-staff-tuition-scores). Sau đó `curl -sI` URL deployment và vài route (/, route buổi học, /luong phải chuyển hướng) → 200.
 6. Báo người dùng: URL, kết quả test/build, ảnh so sánh, chỗ còn lệch. Không commit/push git nếu người dùng chưa bảo.
@@ -33,6 +33,15 @@ Chỗ còn lệch ảnh / chưa làm:
 - "Xem trước PDF", "Tải PDF" dùng bản xem trước màn hình / `window.print()`, chưa sinh PDF thật.
 - Ảnh chuẩn không có Điểm danh và Điểm số của phụ huynh: làm tối giản.
 - Avatar theo quy ước app (ảnh dùng chữ mẫu); thẻ "đã rời lớp" ở cuối danh sách (ảnh 47 đặt giữa); thẻ "Người dạy" còn ở tab Điểm danh.
-- Băng buổi hủy 16/10 còn hiện "Buổi 9" trùng số buổi chấm 19/10 ở màn phụ huynh (`sessionNumber()` bỏ qua buổi hủy).
+- [đã sửa] Buổi hủy trùng số buổi: xem "Đợt sửa tiếp theo".
 - Số liệu mẫu lệch ảnh vì prototype tính thật từ seed (vd 1/10 sẵn sàng thay vì 7/10); localStorage cũ cần "Đặt lại dữ liệu mẫu" để thấy BTVN seed.
-- `guardian.ts` import `features/reports/reportModel` (ngược tầng), nên chuyển `reportModel` sang `src/data` về sau.
+- [đã sửa] `reportModel` đã chuyển sang `src/data`.
+
+## Đợt sửa tiếp theo (2026-10-20)
+- Sửa: `sessionNumber()` (`src/data/repositories/sessions.ts`) chỉ đếm buổi chưa hủy và trả `null` cho buổi hủy; thêm `sessionPrefix()` cho nhãn hiển thị ("Buổi 9"; buổi hủy: "Buổi bù" hoặc "Buổi học", đi kèm ngày và "Đã huỷ"). Các màn GV (danh sách buổi, chi tiết buổi, điểm danh, lịch, bài giảng, BTVN, danh sách lớp) và phụ huynh dùng nhãn mới. Buổi hủy không có phiếu: phụ huynh không nhận phiếu, bảng điểm danh và BTVN của buổi hủy; màn Nhận xét GV của buổi hủy hiện trạng thái rỗng. Băng "buổi chấm bị hủy" ở phụ huynh: "Buổi bù · 16/10 · Đã huỷ".
+- Test: thêm test buổi hủy nằm giữa hai buổi thật (số không trùng, liên tục) và `sessionPrefix`; sửa test cũ đang khẳng định buổi hủy có số.
+- Refactor: `reportModel` (và test) chuyển từ `src/features/reports` sang `src/data`, `guardian.ts` hết import ngược tầng. Không đổi hành vi.
+- Giữ (không sửa): thẻ "Người dạy" ở tab Điểm danh (là lối vào đổi người dạy / dạy thay, ảnh 60 không nói chuyển đi đâu; bỏ là mất lối vào); thẻ "đã rời lớp" ở cuối danh sách (spec không quy định vị trí, seed có em rời lớp là em cuối nên xếp theo danh sách lớp cũng cho kết quả giống); avatar theo quy ước app; kỳ "3 tháng gần nhất" bỏ theo spec mục 8.
+- Chờ hỏi người dùng: làm PDF thật ở prototype hay giữ `window.print()` (spec mục 8 Bản đầu có "PDF"; architecture nói sinh PDF trên máy giáo viên khi phát hành). Chưa làm.
+- Kiểm chứng: `npm run typecheck` sạch; `npm test` 45 file / 442 test pass; `npm run build` OK. Mở `vite preview`: danh sách buổi 6a chỉ còn một "Buổi 9" (19/10), buổi 16/10 là "Buổi bù … Đã huỷ"; phụ huynh `/ph/btvn/6a-session-7` hiện "Cô chấm ở buổi 9" và "Buổi bù · 16/10 · Đã huỷ".
+- Deploy: https://quanlyhocsinh-proto.pages.dev (deployment a40650ff); /, /lop/6a/buoi-hoc, /lop/6a/buoi-hoc/6a-session-7?tab=btvn, /ph, /luong → 200 (cả URL chính và URL deployment); bundle index-oIbeppvp.js trên URL chính trùng SHA-256 với `dist/assets`.

@@ -5,7 +5,7 @@ export interface ScheduleEntry {
   session: Session;
   className: string;
   time: string;
-  sessionNumber: number;
+  sessionNumber: number | null;
   studentCount: number;
 }
 

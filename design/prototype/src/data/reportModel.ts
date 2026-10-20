@@ -2,8 +2,8 @@ import {
   HOMEWORK_KINDS,
   HOMEWORK_KIND_LABELS,
   gradingSessionFor,
-} from "../../data/homework";
-import { averageScore } from "../../data/logic";
+} from "./homework";
+import { averageScore } from "./logic";
 import type {
   Attendance,
   Comment,
@@ -16,7 +16,7 @@ import type {
   StarLevel,
   Student,
   Test,
-} from "../../data/types";
+} from "./types";
 
 /** Dữ liệu thô của MỘT lớp dùng để dựng báo cáo tháng của một em. */
 export interface MonthlyStudentReportData {

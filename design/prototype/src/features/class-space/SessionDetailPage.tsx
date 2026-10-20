@@ -12,7 +12,7 @@ import {
   getSession,
   getSessionClass,
   hasSession,
-  sessionNumber,
+  sessionPrefix,
   setSessionStatus,
 } from "../../data/repositories/sessions";
 import { listMembers, listRoles } from "../../data/repositories/staff";
@@ -304,7 +304,7 @@ export default function SessionDetailPage() {
             <p className={s.eyebrow}>{klass?.name ?? "Lớp học"}</p>
             <div className={s.titleLine}>
               <h1 className={s.title}>
-                Buổi {sessionNumber(session)} · {formatDayMonth(session.date)}
+                {sessionPrefix(session)} · {formatDayMonth(session.date)}
               </h1>
               {cancelled && <Pill tone="warning">Đã huỷ</Pill>}
             </div>
@@ -391,7 +391,7 @@ export default function SessionDetailPage() {
             <div className={s.dateCard}>
               <p className={s.dateTitle}>{formatWeekdayDate(session.date)}</p>
               <p className={s.dateMeta}>
-                Buổi {sessionNumber(session)} · đã huỷ
+                {sessionPrefix(session)} · đã huỷ
               </p>
             </div>
             <div className={s.emptyBlock}>

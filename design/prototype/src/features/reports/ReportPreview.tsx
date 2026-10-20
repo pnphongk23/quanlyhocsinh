@@ -1,7 +1,7 @@
 import { formatDate } from "../../shared/format";
 import { Button, Icon } from "../../shared/ui";
 import { formatScoreDot } from "../scores/scoreReport";
-import type { MonthlyStudentReport } from "./reportModel";
+import type { MonthlyStudentReport } from "../../data/reportModel";
 import { reportMonthTitle } from "./reviewStatus";
 import styles from "./ReportsPage.module.css";
 

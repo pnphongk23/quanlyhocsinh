@@ -4,7 +4,7 @@ import { getClass } from "../../data/repositories/classes";
 import {
   cancelSession,
   listSessions,
-  sessionNumber,
+  sessionPrefix,
 } from "../../data/repositories/sessions";
 import { listSessionLectures } from "../../data/repositories/lectures";
 import { splitSessions } from "../../data/sessionGroups";
@@ -78,7 +78,7 @@ export default function SessionsTab() {
         <Link className={s.sessionRow} to={`/lop/${classId}/buoi-hoc/${session.id}`}>
           <span className={s.sessionInfo}>
             <span className={s.sessionTitle}>
-              Buổi {sessionNumber(session)} · {formatWeekdayDate(session.date)}
+              {sessionPrefix(session)} · {formatWeekdayDate(session.date)}
             </span>
             <span className={s.sessionMeta}>
               {session.time ?? klass?.time}
@@ -171,7 +171,7 @@ export default function SessionsTab() {
               <article className={s.currentCard}>
                 <div className={s.currentInfo}>
                   <p className={s.currentTitle}>
-                    Buổi {sessionNumber(spotlight)} ·{" "}
+                    {sessionPrefix(spotlight)} ·{" "}
                     {formatWeekdayDate(spotlight.date)}
                   </p>
                   <p className={s.currentMeta}>

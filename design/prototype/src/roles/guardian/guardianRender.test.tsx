@@ -208,7 +208,7 @@ describe("PH · Phiếu buổi học (ảnh 08)", () => {
     expect(html).toContain("Workbook trang 38–39");
     expect(html).toContain("BTVN mới");
     expect(html).toContain("Cô chấm ở buổi 9 · Thứ Hai 19/10");
-    expect(html).toContain("Buổi 9 · 16/10 đã hủy");
+    expect(html).toContain("Buổi bù · 16/10 · Đã huỷ");
     expect(html).toContain("Unit 6 · 15 từ chủ đề Travel");
     expect(html).toContain("Kể về chuyến đi gần nhất");
   });
@@ -331,7 +331,7 @@ describe("PH · Bài tập về nhà của con (ảnh 09, 34, 35)", () => {
     );
     expect(html).toContain("Buổi 8 · 14/10");
     expect(html).toContain("Cô chấm ở buổi 9 · Thứ Hai 19/10");
-    expect(html).toContain("Buổi 9 · 16/10 đã hủy");
+    expect(html).toContain("Buổi bù · 16/10 · Đã huỷ");
     expect(html).not.toContain("Các buổi trước");
     expect(html).not.toContain("Buổi 10 · 25/10");
   });

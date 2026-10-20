@@ -1,5 +1,5 @@
 import type { Report } from "../../data/types";
-import type { MonthlyStudentReport } from "./reportModel";
+import type { MonthlyStudentReport } from "../../data/reportModel";
 
 /**
  * Trạng thái một dòng trong màn Duyệt & phát hành báo cáo (ảnh 13, 26).

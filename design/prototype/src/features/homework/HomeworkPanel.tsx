@@ -21,6 +21,7 @@ import { getStudent } from "../../data/repositories/students";
 import {
   getSessionClass,
   sessionNumber,
+  sessionPrefix,
 } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
 import { useSaveStatus } from "../../shared/SaveStatus";
@@ -299,7 +300,7 @@ export default function HomeworkPanel({
         <div className={styles.card}>
           <div>
             <p className={styles.cardTitle}>
-              BTVN buổi {sessionNumber(previous.givingSession ?? session)} ·{" "}
+              BTVN {sessionPrefix(previous.givingSession ?? session).toLowerCase()} ·{" "}
               {formatDayMonth(
                 (previous.givingSession ?? session).date,
               )}
@@ -425,7 +426,7 @@ export default function HomeworkPanel({
 
   const todayGradingText = (plan: HomeworkGradingPlan) =>
     plan.session ? (
-      <span>chấm ở buổi {sessionNumber(plan.session)}</span>
+      <span>chấm ở {sessionPrefix(plan.session).toLowerCase()}</span>
     ) : (
       <b className={styles.warningText}>Chưa có buổi chấm</b>
     );

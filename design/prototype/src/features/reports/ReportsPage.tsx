@@ -29,7 +29,7 @@ import {
 } from "../../shared/ui";
 import { formatScoreDot } from "../scores/scoreReport";
 import ReportPreview from "./ReportPreview";
-import { buildMonthlyStudentReport, type MonthlyStudentReport } from "./reportModel";
+import { buildMonthlyStudentReport, type MonthlyStudentReport } from "../../data/reportModel";
 import {
   monthOptionLabel,
   monthPeriodLabel,

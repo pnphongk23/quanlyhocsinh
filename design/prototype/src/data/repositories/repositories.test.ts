@@ -5,7 +5,7 @@ import { saveScore } from "./scores";
 import { saveAttendance, saveAttendanceBatch } from "./attendance";
 import { login, logout } from "./auth";
 import { markStudentLeft, classAttendanceRate } from "./students";
-import { listPlannedSessions, sessionNumber, cancelSession, createExtraSession, updateExtraSession, previewScheduleChange, updateClassSchedule } from "./sessions";
+import { listPlannedSessions, sessionNumber, sessionPrefix, cancelSession, createExtraSession, updateExtraSession, previewScheduleChange, updateClassSchedule } from "./sessions";
 import { updateClass } from "./classes";
 import { getSaveStatus, scheduleSync } from "../outbox";
 const memory = new Map<string, string>();
@@ -194,7 +194,29 @@ describe("Hàm dùng chung cho lịch, số buổi và chuyên cần", () => {
     ).toBe(7);
     expect(
       sessionNumber(getStore().sessions.find((s) => s.id === "6a-session-3")!),
-    ).toBeGreaterThan(0);
+    ).toBeNull();
+  });
+  it("buổi hủy nằm giữa hai buổi thật không có số, các buổi còn lại không trùng số", () => {
+    const sessions = getStore().sessions.filter((s) => s.classId === "6a");
+    const byId = (id: string) => sessions.find((s) => s.id === id)!;
+    const cancelled = byId("6a-extra-cancelled");
+    expect(cancelled.date > byId("6a-session-7").date).toBe(true);
+    expect(cancelled.date < byId("6a-session-8").date).toBe(true);
+    expect(sessionNumber(cancelled)).toBeNull();
+    expect(sessionNumber(byId("6a-session-7"))).toBe(8);
+    expect(sessionNumber(byId("6a-session-8"))).toBe(9);
+    const numbers = sessions
+      .filter((s) => s.status !== "cancelled")
+      .map((s) => sessionNumber(s));
+    expect(new Set(numbers).size).toBe(numbers.length);
+    expect(Math.max(...(numbers as number[]))).toBe(numbers.length);
+  });
+  it("sessionPrefix: buổi hủy hiện theo loại buổi, không có số", () => {
+    const find = (id: string) => getStore().sessions.find((s) => s.id === id)!;
+    expect(sessionPrefix(find("6a-session-8"))).toBe("Buổi 9");
+    expect(sessionPrefix(find("6a-extra-cancelled"))).toBe("Buổi bù");
+    cancelSession("6a-session-3");
+    expect(sessionPrefix(find("6a-session-3"))).toBe("Buổi học");
   });
   it("classAttendanceRate tính trên buổi đã diễn ra và trả null khi chưa có buổi", () => {
     expect(classAttendanceRate("6a")).toBeCloseTo((100 * 75) / 77, 5);

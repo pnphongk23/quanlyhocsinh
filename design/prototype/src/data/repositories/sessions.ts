@@ -195,13 +195,19 @@ export function listPlannedSessions(classId?: string): Session[] {
     )
       .sort((a, b) => `${a.date} ${a.time ?? "00:00"}`.localeCompare(`${b.date} ${b.time ?? "00:00"}`));
 }
-export function sessionNumber(session: Session): number {
-  const all = getStore()
-      .sessions.filter((item) => item.classId === session.classId)
-      .sort((a, b) => `${a.date} ${a.time ?? "00:00"}`.localeCompare(`${b.date} ${b.time ?? "00:00"}`));
-  const ordered =
-    session.status === "cancelled"
-      ? all
-      : all.filter((item) => item.status !== "cancelled");
+/** Số buổi chỉ đếm buổi chưa hủy (spec mục 4); buổi đã hủy không có số. */
+export function sessionNumber(session: Session): number | null {
+  if (session.status === "cancelled") return null;
+  const ordered = getStore()
+    .sessions.filter(
+      (item) => item.classId === session.classId && item.status !== "cancelled",
+    )
+    .sort((a, b) => `${a.date} ${a.time ?? "00:00"}`.localeCompare(`${b.date} ${b.time ?? "00:00"}`));
   return ordered.findIndex((item) => item.id === session.id) + 1;
+}
+/** Nhãn đứng trước ngày: "Buổi 9", hoặc "Buổi bù" / "Buổi học" khi buổi đã hủy (không có số). */
+export function sessionPrefix(session: Session): string {
+  const number = sessionNumber(session);
+  if (number !== null) return `Buổi ${number}`;
+  return session.makeup ? "Buổi bù" : "Buổi học";
 }

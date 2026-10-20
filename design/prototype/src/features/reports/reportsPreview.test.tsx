@@ -8,7 +8,7 @@ import { getStore, replaceStore } from "../../data/store";
 import type { StoreState } from "../../data/types";
 import ReportPreview from "./ReportPreview";
 import ReportsPage from "./ReportsPage";
-import { buildMonthlyStudentReport, type MonthlyStudentReport } from "./reportModel";
+import { buildMonthlyStudentReport, type MonthlyStudentReport } from "../../data/reportModel";
 
 /** Bỏ các comment phân cách React chèn giữa hai text node khi render tĩnh. */
 const text = (html: string) => html.replace(/<!-- -->/g, "");
