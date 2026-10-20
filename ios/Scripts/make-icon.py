@@ -6,8 +6,8 @@ Cần Pillow (`python3 -m pip install --user pillow`). Không cần Xcode.
 
 Kết quả (ghi đè mỗi lần chạy):
   QuanLyLop/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png   (1024x1024)
-  QuanLyLop/Resources/Assets.xcassets/AccentColor.colorset/Contents.json  (#2B5CE6)
-  QuanLyLop/Resources/Assets.xcassets/LaunchBackground.colorset/Contents.json (#2B5CE6)
+  QuanLyLop/Resources/Assets.xcassets/AccentColor.colorset/Contents.json  (#2F5BEA)
+  QuanLyLop/Resources/Assets.xcassets/LaunchBackground.colorset/Contents.json (#2F5BEA)
   QuanLyLop/Resources/Assets.xcassets/Contents.json
 """
 
@@ -18,8 +18,8 @@ import pathlib
 
 from PIL import Image, ImageDraw
 
-# Xanh chính theo brief (prototype dùng #2F5BEA; brief chốt #2B5CE6).
-BRAND_BLUE = (0x2B, 0x5C, 0xE6)
+# Xanh chính theo prototype (design/prototype/src/shared/styles/tokens.css, --color-primary).
+BRAND_BLUE = (0x2F, 0x5B, 0xEA)
 WHITE = (255, 255, 255)
 
 SIZE = 1024

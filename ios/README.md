@@ -82,9 +82,9 @@ tên app đi qua `InfoPlist.xcstrings`. Chưa có ngôn ngữ thứ hai.
 
 ## Icon và màu
 
-`python3 ios/Scripts/make-icon.py` sinh lại `AppIcon` (nền `#2B5CE6`, hình sách mở) và các colorset
-`AccentColor`, `LaunchBackground`. Màu chính hiện dùng `#2B5CE6` theo brief; prototype đang dùng
-`#2F5BEA` (`design/prototype/src/shared/styles/tokens.css`) — cần chốt một mã khi làm giao diện thật.
+`python3 ios/Scripts/make-icon.py` sinh lại `AppIcon` (nền `#2F5BEA`, hình sách mở) và các colorset
+`AccentColor`, `LaunchBackground`. Màu chính dùng `#2F5BEA` — rgb(47, 91, 234) — theo prototype
+(`design/prototype/src/shared/styles/tokens.css`, `--color-primary`).
 
 ## Chưa có (đúng phạm vi bản nền)
 
