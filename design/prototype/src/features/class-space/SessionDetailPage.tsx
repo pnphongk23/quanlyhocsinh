@@ -446,7 +446,7 @@ export default function SessionDetailPage() {
               canAccessClass(classId) && (
                 <SessionLecturesPanel sessionId={session.id} />
               )}
-            {session.status === "planned" && canWrite && (
+            {session.status === "planned" && canWrite && tab !== "btvn" && (
               <div className={s.detailActions}>
                 <Button
                   variant="danger"

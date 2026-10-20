@@ -9,7 +9,7 @@ import {
 import { createSeed } from "../../data/seed";
 import { replaceStore, useStore } from "../../data/store";
 import type { HomeworkKind } from "../../data/types";
-import HomeworkPanel, { AddGradingSessionSheet } from "./HomeworkPanel";
+import HomeworkPanel from "./HomeworkPanel";
 import type { HomeworkView } from "./homeworkModel";
 
 function Harness({ initialView }: { initialView?: HomeworkView }) {
@@ -148,46 +148,13 @@ describe("Tab Bài tập về nhà · Bài tập hôm nay (ảnh 51, 53, 57, 58)
     expect(html).toContain("còn 2 loại");
   });
 
-  it("chưa có buổi chấm thì có nút Thêm buổi vào lịch", () => {
-    const html = renderPanel("ielts-session-8", { initialView: "today" });
-    expect(html).toContain("Thêm buổi vào lịch");
-  });
-
-  it("có buổi chấm thì không hiện nút Thêm buổi vào lịch", () => {
-    const html = renderPanel("6a-session-7", { initialView: "today" });
-    expect(html).toContain("chấm ở buổi 9");
-    expect(html).not.toContain("Thêm buổi vào lịch");
-  });
-
-  it("mở modal thêm buổi lẻ sẵn có của tab Buổi học", () => {
-    const html = renderToStaticMarkup(
-      <MemoryRouter>
-        <AddGradingSessionSheet
-          open
-          classId="ielts"
-          classTime="19:30"
-          onClose={() => {}}
-        />
-      </MemoryRouter>,
+  it("không có nút Thêm buổi vào lịch ở tab Bài tập về nhà", () => {
+    expect(renderPanel("ielts-session-8", { initialView: "today" })).not.toContain(
+      "Thêm buổi vào lịch",
     );
-    expect(html).toContain("Thêm buổi lẻ");
-    expect(html).toContain("Tạo một buổi học ngoài lịch lặp của lớp.");
-    expect(html).toContain("Giờ học");
-    expect(html).toContain("Lưu buổi học");
-  });
-
-  it("modal thêm buổi lẻ không render khi chưa mở", () => {
-    const html = renderToStaticMarkup(
-      <MemoryRouter>
-        <AddGradingSessionSheet
-          open={false}
-          classId="ielts"
-          classTime="19:30"
-          onClose={() => {}}
-        />
-      </MemoryRouter>,
+    expect(renderPanel("6a-session-7", { initialView: "today" })).not.toContain(
+      "Thêm buổi vào lịch",
     );
-    expect(html).toBe("");
   });
 
   it("đủ bốn loại thì ẩn nút Thêm phần", () => {

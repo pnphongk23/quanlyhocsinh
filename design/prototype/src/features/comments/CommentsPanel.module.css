@@ -330,6 +330,11 @@
   background: var(--color-warning-soft);
 }
 
+/* Viền focus nằm trong ô để khung sheet không cắt ô sao đầu tiên. */
+.starOption:focus-visible {
+  outline-offset: -4px;
+}
+
 .starOption:disabled {
   opacity: 0.6;
 }

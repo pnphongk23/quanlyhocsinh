@@ -33,7 +33,6 @@ import type {
   HomeworkSection,
   Session,
 } from "../../data/types";
-import AddSessionModal from "../class-space/AddSessionModal";
 import {
   DELETE_ALLOWED_MESSAGE,
   addPartLabel,
@@ -153,14 +152,12 @@ export default function HomeworkPanel({
   const [selectedKind, setSelectedKind] =
     useState<HomeworkKind | null>(partFromUrl);
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [addSessionOpen, setAddSessionOpen] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     setSelectedKind(partFromUrl);
     setView(initialView);
     setEditor(null);
-    setAddSessionOpen(false);
     setError("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.id]);
@@ -533,15 +530,6 @@ export default function HomeworkPanel({
             </button>
           )}
         </div>
-        {grading.state === "none" && canWrite && (
-          <button
-            type="button"
-            className={styles.softButton}
-            onClick={() => setAddSessionOpen(true)}
-          >
-            Thêm buổi vào lịch
-          </button>
-        )}
       </>
     );
   })();
@@ -569,13 +557,6 @@ export default function HomeworkPanel({
       )}
       {view === "previous" ? previousBody : todayBody}
 
-      <AddGradingSessionSheet
-        open={addSessionOpen}
-        classId={session.classId}
-        classTime={classTime}
-        onClose={() => setAddSessionOpen(false)}
-      />
-
       {editor && (editor.mode === "add" || editingSection) && (
         <SectionEditor
           key={editor.mode === "edit" ? editor.id : `add-${editor.kind}`}
@@ -591,32 +572,6 @@ export default function HomeworkPanel({
         />
       )}
     </section>
-  );
-}
-
-/**
- * Nút "Thêm buổi vào lịch" của trạng thái Chưa có buổi chấm (ảnh 58) dùng lại
- * luồng thêm buổi lẻ sẵn có ở tab Buổi học. Tách riêng để test được phần nối
- * modal khi mở.
- */
-export function AddGradingSessionSheet({
-  open,
-  classId,
-  classTime,
-  onClose,
-}: {
-  open: boolean;
-  classId: string;
-  classTime: string;
-  onClose: () => void;
-}) {
-  if (!open) return null;
-  return (
-    <AddSessionModal
-      classId={classId}
-      classTime={classTime}
-      onClose={onClose}
-    />
   );
 }
 
