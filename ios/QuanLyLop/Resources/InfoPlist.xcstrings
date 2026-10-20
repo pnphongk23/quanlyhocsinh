@@ -1,0 +1,30 @@
+{
+  "sourceLanguage" : "vi",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Tên app trên màn hình chính. Tên tạm.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quản lý lớp"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Tên ngắn của bundle. Tên tạm.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quản lý lớp"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -1,0 +1,5 @@
+// Môi trường production. Chưa có tên miền thật: thay API_BASE_URL khi có.
+#include "Base.xcconfig"
+
+APP_ENVIRONMENT = Production
+API_BASE_URL = https:/$()/api.invalid

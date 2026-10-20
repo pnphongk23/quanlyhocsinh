@@ -1,0 +1,17 @@
+# Xcode sinh ra: không commit (nguồn chuẩn là project.yml + `xcodegen generate`).
+QuanLyLop.xcodeproj/
+
+# Kết quả build
+build/
+DerivedData/
+*.xcresult
+*.ipa
+*.dSYM.zip
+
+# Trạng thái người dùng của Xcode
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store

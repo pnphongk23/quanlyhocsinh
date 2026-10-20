@@ -1,0 +1,54 @@
+{
+  "sourceLanguage" : "vi",
+  "strings" : {
+    "app.name" : {
+      "comment" : "Tên app hiển thị trong app. Tên tạm, đổi cùng lúc với CFBundleDisplayName.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quản lý lớp"
+          }
+        }
+      }
+    },
+    "launch.configError" : {
+      "comment" : "Hiện khi không đọc được AppEnvironment/APIBaseURL trong Info.plist.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không đọc được cấu hình môi trường. Kiểm tra Config/*.xcconfig rồi build lại."
+          }
+        }
+      }
+    },
+    "launch.environment" : {
+      "comment" : "Nhãn cạnh tên môi trường Staging/Production.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Môi trường"
+          }
+        }
+      }
+    },
+    "launch.tagline" : {
+      "comment" : "Dòng phụ dưới tên app ở màn khởi động.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nền ứng dụng đang được chuẩn bị"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

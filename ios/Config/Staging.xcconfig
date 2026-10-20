@@ -1,0 +1,7 @@
+// Môi trường staging (mặc định khi build/run).
+// Chưa có backend: dùng tên miền giả `.invalid` (RFC 2606) để không gọi nhầm.
+// Trong xcconfig, `//` mở đầu chú thích, nên viết URL bằng `https:/$()/...`.
+#include "Base.xcconfig"
+
+APP_ENVIRONMENT = Staging
+API_BASE_URL = https:/$()/staging.invalid

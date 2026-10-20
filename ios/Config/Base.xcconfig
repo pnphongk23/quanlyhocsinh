@@ -1,0 +1,6 @@
+// Cấu hình dùng chung cho mọi môi trường.
+// Bundle id TẠM cho bản nền, đổi ở đây khi có bundle id chính thức.
+PRODUCT_BUNDLE_IDENTIFIER = vn.quanlylop.app
+
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
