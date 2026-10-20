@@ -21,9 +21,9 @@ export interface ReportPreviewProps {
 }
 
 /**
- * Bản xem trước báo cáo tháng của một em (ảnh 07): chuyên cần, điểm trung bình,
- * số buổi 3/2/1 sao, kết quả BTVN theo từng phần, điểm từng bài và nhận xét
- * chung. BTVN không quy ra điểm; không hiện trung bình lớp (spec 3.1/4).
+ * Bản xem trước báo cáo tháng của một em (ảnh 07): chuyên cần, số bài đã có
+ * điểm, số buổi 3/2/1 sao, kết quả BTVN theo từng phần, điểm từng bài và nhận
+ * xét chung. BTVN không quy ra điểm; không có trung bình (spec 3.1/4).
  */
 export default function ReportPreview({
   report,
@@ -71,13 +71,11 @@ export default function ReportPreview({
           <small>{attendanceParts.join(" · ")}</small>
         </div>
         <div className={styles.statCard}>
-          <span>Điểm trung bình</span>
+          <span>Bài kiểm tra</span>
           <strong>
-            {report.average === null
-              ? "Chưa có điểm"
-              : `${formatScoreDot(report.average)}/10`}
+            {report.gradedTestCount}/{report.tests.length} bài
           </strong>
-          <small>{report.gradedTestCount} bài kiểm tra</small>
+          <small>đã có điểm</small>
         </div>
       </div>
 
@@ -168,7 +166,7 @@ export default function ReportPreview({
                 </span>
                 <strong>
                   {score && score.value !== null
-                    ? formatScoreDot(score.value)
+                    ? `${formatScoreDot(score.value)}/${test.max}`
                     : "Chưa có điểm"}
                 </strong>
               </li>
@@ -180,7 +178,7 @@ export default function ReportPreview({
           </p>
         )}
         <p className={styles.blockFootnote}>
-          Chưa có điểm không tính vào trung bình.
+          Bài chưa có điểm cần chấm trước khi phát hành.
         </p>
       </section>
 

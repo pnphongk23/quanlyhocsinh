@@ -120,14 +120,14 @@ const data: MonthlyStudentReportData = {
 };
 
 describe("buildMonthlyStudentReport", () => {
-  it("tính chuyên cần, điểm từng bài và trung bình", () => {
+  it("tính chuyên cần và điểm từng bài", () => {
     const result = buildMonthlyStudentReport(student, "2026-10", data)!;
     expect(result.sessions.map((session) => session.id)).toEqual([
       "session-1",
       "session-2",
     ]);
     expect(result.tests.map(({ test }) => test.id)).toEqual(["test-1", "test-2"]);
-    expect(result.average).toBe(8.5);
+    expect(result.tests.map(({ score }) => score?.value)).toEqual([8, 9]);
     expect(result.gradedTestCount).toBe(2);
     expect(result.attendanceCount).toBe(1);
     expect(result.lateCount).toBe(0);
@@ -138,6 +138,15 @@ describe("buildMonthlyStudentReport", () => {
     expect(result.generalComment).toBe(
       "Con chăm chỉ, tiến bộ rõ ở kỹ năng nghe.",
     );
+  });
+
+  it("không còn trường trung bình, vẫn giữ danh sách bài và điểm từng bài", () => {
+    const result = buildMonthlyStudentReport(student, "2026-10", data)!;
+    expect(result).not.toHaveProperty("average");
+    expect(result.tests.map(({ test, score }) => [test.name, score?.value])).toEqual([
+      ["Từ vựng", 8],
+      ["Nghe", 9],
+    ]);
   });
 
   it("đếm số buổi đạt 3/2/1 sao chỉ trên phiếu đã gửi trong tháng", () => {
@@ -169,17 +178,16 @@ describe("buildMonthlyStudentReport", () => {
         total: 1,
       },
     ]);
-    // BTVN không quy ra điểm và không vào trung bình.
-    expect(result.average).toBe(8.5);
+    // BTVN không quy ra điểm.
+    expect(result.homework.every((row) => row.total > 0)).toBe(true);
   });
 
-  it("Chưa có điểm không vào trung bình nhưng vẫn là dữ liệu còn thiếu", () => {
+  it("Chưa có điểm vẫn là dữ liệu còn thiếu để phát hành", () => {
     const result = buildMonthlyStudentReport(student, "2026-10", {
       ...data,
       scores: [scores[0], { ...scores[1], value: null }],
     })!;
     expect(result.tests[1].score?.value).toBeNull();
-    expect(result.average).toBe(8);
     expect(result.gradedTestCount).toBe(1);
     expect(result.ready).toBe(false);
     expect(result.missing).toEqual(["Thiếu điểm Nghe"]);
@@ -195,7 +203,7 @@ describe("buildMonthlyStudentReport", () => {
       ],
       generalComment: "   ",
     })!;
-    expect(result.average).toBeNull();
+    expect(result.gradedTestCount).toBe(0);
     expect(result.ready).toBe(false);
     expect(result.missing).toEqual([
       "Thiếu điểm danh",
@@ -233,9 +241,23 @@ describe("buildMonthlyStudentReport", () => {
     })!;
     expect(result.sessions.map((session) => session.id)).toEqual(["session-2"]);
     expect(result.tests.map(({ test }) => test.id)).toEqual(["test-2"]);
-    expect(result.average).toBe(7);
+    expect(result.tests[0].score?.value).toBe(7);
     expect(result.stars.ticketCount).toBe(1);
     expect(result.ready).toBe(true);
+  });
+
+  it("bài đã lưu trữ không vào báo cáo và không bị báo thiếu điểm", () => {
+    const result = buildMonthlyStudentReport(student, "2026-10", {
+      ...data,
+      tests: tests.map((test) =>
+        test.id === "test-2" ? { ...test, archived: true } : test,
+      ),
+      scores: [{ ...scores[0], value: 8 }],
+    })!;
+    expect(result.tests.map(({ test }) => test.id)).toEqual(["test-1"]);
+    expect(result.gradedTestCount).toBe(1);
+    expect(result.ready).toBe(true);
+    expect(result.missing).toEqual([]);
   });
 
   it("trả null khi em chưa vào lớp hoặc đã rời lớp trước tháng báo cáo", () => {

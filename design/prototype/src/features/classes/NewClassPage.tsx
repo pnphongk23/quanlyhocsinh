@@ -70,7 +70,7 @@ export default function NewClassPage() {
         />
         {/* 10-gv-tao-lop-moi: chỉ còn dòng ghi chú thang điểm, không còn segmented */}
         <p className={s.scaleNote}>
-          Điểm theo thang 10 cho mọi bài kiểm tra.
+          Mỗi bài kiểm tra có thang điểm riêng, mặc định 15; sửa được khi tạo bài.
         </p>
         <div className={s.studentNote}>
           <p className={s.studentNoteTitle}>Thêm học sinh vào lớp</p>

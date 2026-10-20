@@ -48,26 +48,9 @@ export function monthLabel(month: string): string {
   return `Tháng ${Number(month.slice(5, 7))}`;
 }
 
-/** "tháng 9" (dùng trong câu so sánh) */
-export function monthName(month: string): string {
-  return `tháng ${Number(month.slice(5, 7))}`;
-}
-
-/** Tháng trước của "2026-10" → "2026-09". */
-export function previousMonthOf(month: string): string {
-  const [year, monthNumber] = month.split("-").map(Number);
-  const date = new Date(year, monthNumber - 2, 1, 12);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
 /** Điểm theo dấu chấm như ảnh: "7.2"; null = "Chưa có điểm". */
 export function scoreText(value: number | null): string {
   return value === null ? "Chưa có điểm" : value.toFixed(1);
-}
-
-/** "7.2/10" */
-export function scoreOverTen(value: number | null): string {
-  return value === null ? "Chưa có điểm" : `${value.toFixed(1)}/10`;
 }
 
 export const starText: Record<StarLevel, string> = {

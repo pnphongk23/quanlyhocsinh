@@ -1,25 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
-  averageScore,
   attendanceRate,
   hasAbsenceWarning,
   isFutureSession,
   orderScoreGridStudents,
 } from "./logic";
 import { createSeed } from "./seed";
-describe("Trung bình cộng", () => {
-  it("bỏ ô trống, giữ điểm 0", () =>
-    expect(
-      averageScore([
-        { value: 0 },
-        { value: 8 },
-        { value: null },
-        { value: null },
-      ]),
-    ).toBe(4));
-  it("không có điểm trả null", () =>
-    expect(averageScore([{ value: null }, { value: null }])).toBeNull());
-});
 describe("Bảng điểm", () => {
   it("giữ học sinh đang học trước học sinh đã nghỉ", () => {
     const students = [

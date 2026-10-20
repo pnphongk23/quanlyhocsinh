@@ -27,7 +27,6 @@ import {
   PageHeader,
   Pill,
 } from "../../shared/ui";
-import { formatScoreDot } from "../scores/scoreReport";
 import ReportPreview from "./ReportPreview";
 import { buildMonthlyStudentReport, type MonthlyStudentReport } from "../../data/reportModel";
 import {
@@ -581,7 +580,7 @@ export default function ReportsPage() {
   );
 }
 
-/** Khối chuyên cần, điểm trung bình và lý do còn thiếu dữ liệu của một em. */
+/** Khối chuyên cần, số bài đã có điểm và lý do còn thiếu dữ liệu của một em. */
 function ReportFacts({ report }: { report: MonthlyStudentReport }) {
   return (
     <>
@@ -594,13 +593,11 @@ function ReportFacts({ report }: { report: MonthlyStudentReport }) {
           <small>{attendanceDetail(report)}</small>
         </div>
         <div className={styles.statCard}>
-          <span>Điểm trung bình</span>
+          <span>Bài kiểm tra</span>
           <strong>
-            {report.average === null
-              ? "Chưa có điểm"
-              : `${formatScoreDot(report.average)}/10`}
+            {report.gradedTestCount}/{report.tests.length} bài
           </strong>
-          <small>{report.gradedTestCount} bài kiểm tra</small>
+          <small>đã có điểm</small>
         </div>
       </div>
     </>

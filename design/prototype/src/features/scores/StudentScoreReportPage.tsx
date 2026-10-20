@@ -15,7 +15,8 @@ import {
 import {
   classScoreReport,
   formatScoreDot,
-  formatSignedScore,
+  formatSignedPercent,
+  scorePercent,
   studentScoreReport,
 } from "./scoreReport";
 import s from "./scoreReport.module.css";
@@ -26,19 +27,19 @@ const PAD_LEFT = 20;
 const PAD_RIGHT = 20;
 const PAD_TOP = 30;
 const PAD_BOTTOM = 30;
-const MAX_SCORE = 10;
 const PLOT_WIDTH = CHART_WIDTH - PAD_LEFT - PAD_RIGHT;
 const BASELINE = CHART_HEIGHT - PAD_BOTTOM;
 
 interface TrendSlot {
   date: string;
   value: number | null;
+  max: number;
 }
 
 /**
- * Xu hướng điểm theo ngày, thang 0–10. Mỗi bài giữ đúng một vị trí; bài chưa có
- * điểm ghi "Chưa" và KHÔNG nối đường giả thành điểm 0 — đường chỉ nối hai bài
- * có điểm liền nhau.
+ * Xu hướng điểm theo ngày, chuẩn hoá theo thang điểm từng bài (trục 0–100%).
+ * Mỗi bài giữ đúng một vị trí; bài chưa có điểm ghi "Chưa" và KHÔNG nối đường
+ * giả thành điểm 0 — đường chỉ nối hai bài có điểm liền nhau.
  */
 function ScoreTrend({ slots }: { slots: TrendSlot[] }) {
   if (!slots.length)
@@ -47,14 +48,17 @@ function ScoreTrend({ slots }: { slots: TrendSlot[] }) {
     slots.length <= 1
       ? PAD_LEFT + PLOT_WIDTH / 2
       : PAD_LEFT + (PLOT_WIDTH * index) / (slots.length - 1);
-  const yFor = (value: number) =>
-    PAD_TOP +
-    (BASELINE - PAD_TOP) *
-      (1 - Math.min(MAX_SCORE, Math.max(0, value)) / MAX_SCORE);
+  const yFor = (slot: TrendSlot) => {
+    const percent = Math.min(
+      100,
+      Math.max(0, scorePercent(slot.value as number, slot.max)),
+    );
+    return PAD_TOP + (BASELINE - PAD_TOP) * (1 - percent / 100);
+  };
   const points = slots.map((slot, index) => ({
     ...slot,
     x: xFor(index),
-    y: slot.value === null ? null : yFor(slot.value),
+    y: slot.value === null ? null : yFor(slot),
   }));
   const segments: string[] = [];
   for (let index = 1; index < points.length; index++) {
@@ -72,7 +76,7 @@ function ScoreTrend({ slots }: { slots: TrendSlot[] }) {
       className={s.chart}
       viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
       role="img"
-      aria-label={`Biểu đồ điểm ${slots.length} bài, ${scoredCount} bài có điểm, thang 0 đến 10`}
+      aria-label={`Biểu đồ điểm ${slots.length} bài, ${scoredCount} bài có điểm, thang 0 đến 100%`}
     >
       <line
         className={s.chartBase}
@@ -95,7 +99,7 @@ function ScoreTrend({ slots }: { slots: TrendSlot[] }) {
                 y={point.y - 9}
                 textAnchor="middle"
               >
-                {formatScoreDot(point.value as number)}
+                {Math.round(scorePercent(point.value as number, point.max))}%
               </text>
             </>
           ) : (
@@ -193,10 +197,11 @@ export default function StudentScoreReportPage() {
   const slots: TrendSlot[] = report.rows.map((row) => ({
     date: row.test.date,
     value: row.value,
+    max: row.test.max,
   }));
   const shortName = student.name.trim().split(/\s+/).slice(-1)[0] ?? student.name;
   const deltaText =
-    report.latestDelta === null ? null : formatSignedScore(report.latestDelta);
+    report.latestDelta === null ? null : formatSignedPercent(report.latestDelta);
 
   return (
     <section className={s.page}>
@@ -241,20 +246,6 @@ export default function StudentScoreReportPage() {
       <Card className={s.summaryCard}>
         <div className={s.summary}>
           <div className={s.summaryBox}>
-            <span className={s.summaryLabel}>Điểm trung bình</span>
-            {report.average === null ? (
-              <>
-                <span className={s.summaryEmpty}>—</span>
-                <span className={s.summaryCaption}>Chưa có điểm</span>
-              </>
-            ) : (
-              <span className={s.summaryValue}>
-                {formatScoreDot(report.average)}
-                <span className={s.summaryUnit}>/10</span>
-              </span>
-            )}
-          </div>
-          <div className={`${s.summaryBox} ${s.summaryBoxEnd}`}>
             <span className={s.summaryLabel}>Bài gần nhất</span>
             {deltaText === null ? (
               <>
@@ -276,13 +267,13 @@ export default function StudentScoreReportPage() {
                 >
                   <TrendIcon
                     direction={
-                      (report.latestDelta as number) > 0 ? "up" : "down"
+                      (report.latestDelta as number) < 0 ? "down" : "up"
                     }
                   />
                   {deltaText}
                 </span>
                 <span className={s.summaryCaption}>
-                  Bài gần nhất {deltaText} so với bài trước
+                  So với bài có điểm trước đó
                 </span>
               </>
             )}
@@ -314,7 +305,7 @@ export default function StudentScoreReportPage() {
                 ) : (
                   <span className={s.testScore}>
                     {formatScoreDot(row.value)}
-                    <span className={s.testScoreUnit}>/10</span>
+                    <span className={s.testScoreUnit}>/{row.test.max}</span>
                   </span>
                 )}
               </li>

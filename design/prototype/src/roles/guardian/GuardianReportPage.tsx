@@ -5,16 +5,16 @@ import {
   defaultChildMonth,
   publishedReportMonths,
 } from "./guardianRead";
-import { monthLabel, scoreText } from "./guardianFormat";
+import { longDayMonth, monthLabel } from "./guardianFormat";
 import { ChildEmpty, StarRow } from "./guardianUi";
 import g from "./guardian.module.css";
 
 const REPUBLISH_NOTICE = "Điểm có cập nhật, cần phát hành lại";
 
 /**
- * PH · Báo cáo tháng (ảnh 10): chuyên cần, điểm trung bình, nhận xét theo sao
- * và bảng BTVN theo phần. Chỉ hiện khi giáo viên ĐÃ phát hành; phát hành lại
- * khi điểm có cập nhật thì hiện cờ nhắc.
+ * PH · Báo cáo tháng (ảnh 10): chuyên cần, điểm từng bài, nhận xét theo sao và
+ * bảng BTVN theo phần. Chỉ hiện khi giáo viên ĐÃ phát hành; phát hành lại khi
+ * điểm có cập nhật thì hiện cờ nhắc.
  */
 export default function GuardianReportPage() {
   const { child, error } = useGuardianContext();
@@ -105,9 +105,11 @@ export default function GuardianReportPage() {
           <span className={g.statSub}>{body.lateCount} muộn</span>
         </Card>
         <Card className={g.statCard}>
-          <span className={g.statLabel}>Điểm trung bình</span>
-          <strong className={g.statValue}>{scoreText(body.average)}/10</strong>
-          <span className={g.statSub}>{body.gradedTestCount} bài kiểm tra</span>
+          <span className={g.statLabel}>Bài kiểm tra</span>
+          <strong className={g.statValue}>
+            {body.gradedTestCount}/{body.tests.length} bài
+          </strong>
+          <span className={g.statSub}>đã có điểm</span>
         </Card>
       </div>
 
@@ -172,6 +174,33 @@ export default function GuardianReportPage() {
         <p className={g.reportNote}>
           Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.
         </p>
+      </Card>
+
+      <Card className={g.card}>
+        <div className={g.cardHead}>
+          <h2>Điểm từng bài</h2>
+        </div>
+        {body.tests.length === 0 ? (
+          <p className={g.muted}>Không có bài kiểm tra trong tháng này.</p>
+        ) : (
+          <ul className={g.scoreList}>
+            {body.tests.map(({ test, score }) => (
+              <li key={test.id} className={g.scoreRow}>
+                <span className={g.scoreName}>
+                  {test.name}
+                  <span className={g.scoreDate}>
+                    {longDayMonth(test.date)}
+                  </span>
+                </span>
+                <b className={g.scoreValue}>
+                  {score && score.value !== null
+                    ? `${score.value.toFixed(1)}/${test.max}`
+                    : "Chưa có điểm"}
+                </b>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Button

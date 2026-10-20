@@ -257,7 +257,7 @@ describe("BTVN của con", () => {
 });
 
 describe("Tổng quan của con", () => {
-  it("trả chuyên cần, trung bình tháng, chênh tháng trước, nhận xét mới nhất và điểm gần đây", () => {
+  it("trả chuyên cần, nhận xét mới nhất và điểm gần đây, không còn trường trung bình", () => {
     withStore();
     const overview = getChildOverview("6a-student-1", "2026-10")!;
     expect(overview.className).toBe("Tiếng Anh giao tiếp 6A");
@@ -268,9 +268,10 @@ describe("Tổng quan của con", () => {
       excused: 1,
       absent: 0,
     });
-    expect(overview.average).toBe(9);
-    expect(overview.previousMonthAverage).toBe(7);
-    expect(overview.averageChange).toBeCloseTo(2, 10);
+    // Không còn trung bình và chênh lệch trung bình tháng trước.
+    expect(overview).not.toHaveProperty("average");
+    expect(overview).not.toHaveProperty("previousMonthAverage");
+    expect(overview).not.toHaveProperty("averageChange");
     expect(overview.latestComment?.session.id).toBe("6a-session-7");
     const dates = overview.recentScores.map((item) => item.date);
     expect([...dates].sort().reverse()).toEqual(dates);
@@ -285,6 +286,18 @@ describe("Tổng quan của con", () => {
     ]);
     // "Điều cô muốn chia sẻ": nhận xét chung của báo cáo đã phát hành mới nhất.
     expect(overview.teacherNote).toContain("Tháng này con tiến bộ");
+  });
+
+  it("bài đã lưu trữ không vào điểm gần đây của con", () => {
+    withStore((state) => {
+      state.tests.find((test) => test.id === "6a-test-3")!.archived = true;
+    });
+    const overview = getChildOverview("6a-student-1", "2026-10")!;
+    expect(overview.recentScores.map((item) => item.test.id)).toEqual([
+      "6a-test-2",
+      "6a-test-1",
+      "6a-test-0",
+    ]);
   });
 
   it("không lẫn điểm của em khác trong lớp", () => {
@@ -413,6 +426,25 @@ describe("Báo cáo tháng của con", () => {
     expect(published.body.generalComment).toBe(
       "Con chăm chỉ và có tiến bộ.",
     );
+  });
+
+  it("bài đã lưu trữ không vào báo cáo tháng và không bị báo thiếu điểm", () => {
+    withStore((state) => {
+      const test = state.tests.find((item) => item.id === "6a-test-1")!;
+      test.archived = true;
+      // Bài đã lưu trữ còn thiếu điểm cũng không bị báo "Thiếu điểm".
+      const score = state.scores.find(
+        (item) => item.id === "6a-student-1-score-1",
+      )!;
+      score.value = null;
+    });
+    const report = getChildMonthlyReport("6a-student-1", "2026-10")!;
+    expect(report.body.tests.map(({ test }) => test.id)).toEqual([
+      "6a-test-2",
+      "6a-test-3",
+    ]);
+    expect(report.body.gradedTestCount).toBe(2);
+    expect(report.body.missing).toEqual([]);
   });
 
   it("báo cáo đã phát hành nhưng còn thiếu nhận xét chung thì báo thiếu", () => {

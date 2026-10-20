@@ -1,4 +1,4 @@
-import type { Attendance, Score, Session, StarLevel, Student } from "./types";
+import type { Attendance, Session, StarLevel, Student } from "./types";
 
 /**
  * Câu mẫu cố định theo mức sao (spec mục 4 "Nhận xét và báo cáo").
@@ -35,14 +35,6 @@ export function isFutureSession(date: string, today = new Date()): boolean {
   return date > todayISO;
 }
 
-export function averageScore(scores: Pick<Score, "value">[]): number | null {
-  const values = scores
-    .filter((s) => s.value !== null)
-    .map((s) => s.value as number);
-  return values.length
-    ? values.reduce((a, b) => a + b, 0) / values.length
-    : null;
-}
 export function attendanceRate(
   records: Pick<Attendance, "status">[],
 ): number | null {

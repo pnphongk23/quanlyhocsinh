@@ -3,7 +3,6 @@ import {
   HOMEWORK_KIND_LABELS,
   gradingSessionFor,
 } from "./homework";
-import { averageScore } from "./logic";
 import type {
   Attendance,
   Comment,
@@ -60,8 +59,6 @@ export interface MonthlyStudentReport {
   sessions: Session[];
   attendance: Attendance[];
   tests: Array<{ test: Test; score: Score | undefined }>;
-  /** Trung bình cộng các bài có điểm; null khi chưa có điểm nào. */
-  average: number | null;
   /** Số bài kiểm tra đã có điểm (tử số của "n bài kiểm tra"). */
   gradedTestCount: number;
   /** Số buổi có mặt hoặc muộn. */
@@ -103,14 +100,13 @@ function monthBounds(month: string): { start: string; end: string } {
 
 /**
  * Dựng nội dung báo cáo tháng của một em (spec mục 4 "Nhận xét và báo cáo"):
- * chuyên cần, điểm từng bài + trung bình, số buổi đạt 3/2/1 sao, kết quả BTVN
- * theo từng loại phần và nhận xét chung.
+ * chuyên cần, điểm từng bài, số buổi đạt 3/2/1 sao, kết quả BTVN theo từng loại
+ * phần và nhận xét chung.
  *
- * - `Chưa có điểm` (value null) không tính vào trung bình nhưng vẫn là dữ liệu
- *   còn thiếu để phát hành báo cáo.
+ * - `Chưa có điểm` (value null) là dữ liệu còn thiếu để phát hành báo cáo.
  * - Chỉ phiếu buổi học đã gửi mới vào phần sao.
  * - BTVN chỉ tính phần giao trong tháng đã được chấm VÀ phiếu của buổi chấm đã
- *   gửi cho em đó; BTVN không quy ra điểm và không vào trung bình.
+ *   gửi cho em đó; BTVN không quy ra điểm.
  * - Trả null khi em chưa vào lớp hoặc đã rời lớp trước tháng báo cáo.
  */
 export function buildMonthlyStudentReport(
@@ -148,6 +144,7 @@ export function buildMonthlyStudentReport(
     .filter(
       (test) =>
         test.classId === student.classId &&
+        test.archived !== true &&
         test.date >= start &&
         test.date <= end &&
         inStudentRange(test.date),
@@ -224,7 +221,6 @@ export function buildMonthlyStudentReport(
   const generalComment = data.generalComment.trim();
   if (!generalComment) missing.push("Thiếu nhận xét chung");
 
-  const average = averageScore(tests.flatMap(({ score }) => (score ? [score] : [])));
   const countStatus = (status: Attendance["status"]) =>
     attendance.filter((row) => row.status === status).length;
 
@@ -234,7 +230,6 @@ export function buildMonthlyStudentReport(
     sessions,
     attendance,
     tests,
-    average,
     gradedTestCount: tests.filter(({ score }) => score?.value != null).length,
     attendanceCount: countStatus("present") + countStatus("late"),
     lateCount: countStatus("late"),

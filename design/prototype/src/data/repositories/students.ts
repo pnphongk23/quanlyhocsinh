@@ -9,7 +9,7 @@ import {
   requireClassAccess,
   substitutedSessionIds,
 } from "./access";
-import { averageScore, attendanceRate, hasAbsenceWarning } from "../logic";
+import { attendanceRate, hasAbsenceWarning } from "../logic";
 
 /** Học sinh của lớp trong phạm vi vai trò đang dùng. */
 export const listStudents = (classId: string, includeLeft = true): Student[] =>
@@ -92,11 +92,6 @@ export function markStudentLeft(id: string, leftAt: string): void {
     Object.assign(requireStudent(id, d), { status: "left", leftAt });
   });
 }
-export const studentAverage = (id: string): number | null => {
-  const student = getStore().students.find((s) => s.id === id);
-  if (!student || !canAccessClass(student.classId)) return null;
-  return averageScore(getStore().scores.filter((s) => s.studentId === id));
-};
 export const studentAttendanceRate = (id: string): number | null => {
   const student = getStore().students.find((s) => s.id === id);
   if (!student || !canAccessClass(student.classId)) return null;

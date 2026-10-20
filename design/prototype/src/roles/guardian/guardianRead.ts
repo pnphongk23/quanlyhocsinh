@@ -124,18 +124,16 @@ export function childAttendanceMonth(
 
 export interface ChildScoreRow {
   test: Test;
-  /** null = "Chưa có điểm" (không tính vào trung bình). */
+  /** null = "Chưa có điểm". */
   value: number | null;
 }
 
 export interface ChildScoresMonth {
   month: string;
-  /** Trung bình cộng bài đã có điểm của CON (không phải trung bình lớp). */
-  average: number | null;
   rows: ChildScoreRow[];
 }
 
-/** Điểm từng bài của con trong một tháng; không có trung bình lớp (quy tắc 3.1). */
+/** Điểm từng bài của con trong một tháng; không có trung bình nào (quy tắc 3.1). */
 export function childScoresMonth(
   studentId: string,
   month: string,
@@ -147,6 +145,7 @@ export function childScoresMonth(
     .filter(
       (test) =>
         test.classId === child.student.classId &&
+        test.archived !== true &&
         test.date.slice(0, 7) === month,
     )
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -157,13 +156,7 @@ export function childScoresMonth(
           (score) => score.testId === test.id && score.studentId === studentId,
         )?.value ?? null,
     }));
-  const graded = rows.filter(
-    (row): row is { test: Test; value: number } => row.value !== null,
-  );
-  const average = graded.length
-    ? graded.reduce((sum, row) => sum + row.value, 0) / graded.length
-    : null;
-  return { month, average, rows };
+  return { month, rows };
 }
 
 /** Giáo viên chính của lớp con (để hiện "Nhận xét của cô Lan", ảnh 08). */

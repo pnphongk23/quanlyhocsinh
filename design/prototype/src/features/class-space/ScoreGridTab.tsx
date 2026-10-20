@@ -4,7 +4,7 @@ import { listStudents } from "../../data/repositories/students";
 import { listTests } from "../../data/repositories/tests";
 import { listScores } from "../../data/repositories/scores";
 import { useAccess } from "../../data/repositories/access";
-import { averageScore, orderScoreGridStudents } from "../../data/logic";
+import { orderScoreGridStudents } from "../../data/logic";
 import { formatDayMonth, formatScore } from "../../shared/format";
 import { Card, LinkButton, NoAccess } from "../../shared/ui";
 import { ChartIcon } from "../scores/ScoreIcons";
@@ -80,12 +80,11 @@ export default function ScoreGridTab() {
                   >
                     <span>{test.name}</span>
                     <span className={s.testDate}>
-                      {formatDayMonth(test.date)} · thang 10
+                      {formatDayMonth(test.date)} · thang {test.max}
                     </span>
                   </Link>
                 </th>
               ))}
-              <th>Trung bình</th>
             </tr>
           </thead>
           <tbody>
@@ -94,9 +93,6 @@ export default function ScoreGridTab() {
                 listScores(test.id).find(
                   (score) => score.studentId === student.id,
                 ),
-              );
-              const average = averageScore(
-                scores.flatMap((score) => (score ? [score] : [])),
               );
               return (
                 <tr
@@ -128,13 +124,6 @@ export default function ScoreGridTab() {
                       </td>
                     );
                   })}
-                  <td className={s.averageCell}>
-                    {average === null ? (
-                      <span className={s.averageEmpty}>Chưa có điểm</span>
-                    ) : (
-                      <b>{formatScore(average)}</b>
-                    )}
-                  </td>
                 </tr>
               );
             })}
@@ -142,8 +131,7 @@ export default function ScoreGridTab() {
         </table>
         <p className={s.gridNote}>
           Hiển thị {activeCount} học sinh đang học và {leftCount} học sinh đã
-          nghỉ. Nhập 7,5 hoặc 7.5 · điểm từ 0 đến 10. Trung bình là trung bình
-          cộng; bài chưa có điểm không tính.
+          nghỉ. Nhập 7,5 hoặc 7.5.
         </p>
       </Card>
     </div>

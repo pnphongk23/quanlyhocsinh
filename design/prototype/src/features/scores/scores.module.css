@@ -222,6 +222,13 @@
   text-decoration: none;
   white-space: nowrap;
 }
+/* Sửa/xoá bài ngay dưới thẻ bài, đủ chỗ trên khung 390px */
+.testActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
 .columns {
   display: flex;
   align-items: center;
@@ -522,13 +529,6 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--color-warning);
-}
-.averageCell {
-  font-weight: 700;
-}
-.averageEmpty {
-  font-size: 13px;
-  color: var(--color-muted);
 }
 .gridNote {
   padding-top: 12px;

@@ -301,11 +301,6 @@ export interface ChildOverview {
   month: string;
   /** null khi role phụ huynh bị tắt nhóm Buổi học và điểm danh. */
   attendance: ChildOverviewAttendance | null;
-  /** Trung bình cộng các bài có điểm trong tháng; null khi tắt nhóm Điểm hoặc chưa có điểm. */
-  average: number | null;
-  previousMonthAverage: number | null;
-  /** Trung bình tháng này trừ tháng trước; null khi thiếu một trong hai. */
-  averageChange: number | null;
   /** Phiếu đã gửi gần nhất (mức sao + câu mẫu + ghi chú); null khi chưa có. */
   latestComment: ChildTicket | null;
   /** Điểm gần đây, mới nhất trước (chỉ bài đã có điểm). */
@@ -339,15 +334,6 @@ function latestPublishedComment(
   return note ? note : null;
 }
 
-function previousMonth(month: string): string {
-  const [year, monthNumber] = month.split("-").map(Number);
-  const date = new Date(year, monthNumber - 2, 1, 12);
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-  ].join("-");
-}
-
 /** Dữ liệu thô của lớp con, đã lọc theo học sinh (không lẫn em khác). */
 function studentReportData(
   state: StoreState,
@@ -358,7 +344,9 @@ function studentReportData(
     (session) => session.classId === student.classId,
   );
   const sessionIds = new Set(sessions.map((session) => session.id));
-  const tests = state.tests.filter((test) => test.classId === student.classId);
+  const tests = state.tests.filter(
+    (test) => test.classId === student.classId && test.archived !== true,
+  );
   return {
     sessions,
     attendance: state.attendance.filter(
@@ -380,9 +368,8 @@ function studentReportData(
 }
 
 /**
- * Tổng quan của con trong tháng: chuyên cần, trung bình tháng và chênh so tháng
- * trước, nhận xét mới nhất theo sao, điểm gần đây. Trả null khi em chưa vào lớp
- * hoặc đã rời lớp trước tháng đó.
+ * Tổng quan của con trong tháng: chuyên cần, nhận xét mới nhất theo sao, điểm gần
+ * đây. Trả null khi em chưa vào lớp hoặc đã rời lớp trước tháng đó.
  */
 export function getChildOverview(
   studentId: string,
@@ -397,16 +384,9 @@ export function getChildOverview(
   const data = studentReportData(state, student);
   const current = buildMonthlyStudentReport(student, month, data);
   if (!current) return null;
-  const previous = buildMonthlyStudentReport(
-    student,
-    previousMonth(month),
-    data,
-  );
-  const average = canScores ? current.average : null;
-  const previousMonthAverage = canScores ? (previous?.average ?? null) : null;
   const recentScores: ChildOverviewScore[] = canScores
     ? state.tests
-        .filter((test) => test.classId === student.classId)
+        .filter((test) => test.classId === student.classId && !test.archived)
         .flatMap((test) => {
           const score = state.scores.find(
             (item) =>
@@ -437,12 +417,6 @@ export function getChildOverview(
           absent: current.absentCount,
         }
       : null,
-    average,
-    previousMonthAverage,
-    averageChange:
-      average !== null && previousMonthAverage !== null
-        ? average - previousMonthAverage
-        : null,
     latestComment,
     recentScores,
     teacherNote,

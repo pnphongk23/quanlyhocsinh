@@ -254,6 +254,7 @@ export function createSeed(): StoreState {
         name: ["Từ vựng", "Ngữ pháp", "Nghe", "Nói"][j],
         date: dates[j + 3],
         max: 10,
+        archived: false,
       });
   }
   seedComments(state);

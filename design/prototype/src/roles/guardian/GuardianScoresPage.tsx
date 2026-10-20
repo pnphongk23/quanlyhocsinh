@@ -6,14 +6,14 @@ import {
   childScoresMonth,
   defaultChildMonth,
 } from "./guardianRead";
-import { longDayMonth, monthLabel, scoreText } from "./guardianFormat";
+import { longDayMonth, scoreText } from "./guardianFormat";
 import { ChildEmpty, MonthSwitch } from "./guardianUi";
 import g from "./guardian.module.css";
 
 /**
- * PH · Điểm số (tối giản): điểm từng bài của con theo tháng, trung bình của
- * chính con. Không hiện trung bình lớp (spec quy tắc 3.1); ảnh chuẩn không có
- * màn này nên làm theo bản thiết kế cũ (design/reference/110-ph-diem-so.html).
+ * PH · Điểm số (tối giản): điểm từng bài của con theo tháng. Không hiện trung
+ * bình nào (spec quy tắc 3.1); ảnh chuẩn không có màn này nên làm theo bản thiết
+ * kế cũ (design/reference/110-ph-diem-so.html).
  */
 export default function GuardianScoresPage() {
   const { child, error } = useGuardianContext();
@@ -63,25 +63,16 @@ export default function GuardianScoresPage() {
 
       {data && (
         <>
-          <Card className={g.statCard}>
-            <span className={g.statLabel}>
-              Điểm trung bình {monthLabel(current).toLowerCase()}
-            </span>
-            <strong className={g.statValue}>
-              {scoreText(data.average)}
-              {data.average !== null && <span className={g.statUnit}>/10</span>}
-            </strong>
-            <span className={g.statSub}>
-              {data.rows.filter((row) => row.value !== null).length} bài có điểm
-            </span>
-          </Card>
-
           {data.rows.length === 0 ? (
             <p className={g.muted}>Chưa có bài kiểm tra nào trong tháng này.</p>
           ) : (
             <Card className={g.card}>
               <div className={g.cardHead}>
                 <h2>Điểm từng bài</h2>
+                <span className={g.statSub}>
+                  {data.rows.filter((row) => row.value !== null).length} bài có
+                  điểm
+                </span>
               </div>
               <ul className={g.scoreList}>
                 {data.rows.map((row) => (
@@ -93,7 +84,9 @@ export default function GuardianScoresPage() {
                       </span>
                     </span>
                     <b className={g.scoreValue}>
-                      {row.value === null ? "Chưa có điểm" : `${scoreText(row.value)}/10`}
+                      {row.value === null
+                        ? "Chưa có điểm"
+                        : `${scoreText(row.value)}/${row.test.max}`}
                     </b>
                   </li>
                 ))}

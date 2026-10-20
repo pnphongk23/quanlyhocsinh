@@ -1,6 +1,6 @@
 # Đặc tả: App quản lý lớp tiếng Anh
 
-Cập nhật: 2026-10-20 · Trạng thái: đã chốt phạm vi bản đầu (mục 8) và luồng mời phụ huynh (mục 4). Nhận xét theo sao, bài tập về nhà và bỏ Vắng thi đã chốt 2026-10-19; nhận xét và BTVN gửi chung trong Phiếu buổi học, màn buổi học có 3 tab Điểm danh / Nhận xét / Bài tập về nhà (đã chốt 2026-10-20). Bài giảng, role tuỳ chỉnh và tài khoản nhân sự (mục 4, 8) đã chốt hướng, chờ duyệt chi tiết. Nhân sự (phân công, dạy thay, lịch dạy, lương), học phí và báo cáo điểm (mục 4) là thiết kế trước, chờ duyệt.
+Cập nhật: 2026-10-20 · Trạng thái: đã chốt phạm vi bản đầu (mục 8) và luồng mời phụ huynh (mục 4). Nhận xét theo sao, bài tập về nhà và bỏ Vắng thi đã chốt 2026-10-19; nhận xét và BTVN gửi chung trong Phiếu buổi học, màn buổi học có 3 tab Điểm danh / Nhận xét / Bài tập về nhà (đã chốt 2026-10-20); mỗi bài kiểm tra có điểm tối đa riêng, sửa và xoá được bài kiểm tra (chưa có điểm thì xoá hẳn, đã có điểm thì lưu trữ), bỏ điểm trung bình ở mọi nơi (đã chốt 2026-10-20). Bài giảng, role tuỳ chỉnh và tài khoản nhân sự (mục 4, 8) đã chốt hướng, chờ duyệt chi tiết. Nhân sự (phân công, dạy thay, lịch dạy, lương), học phí và báo cáo điểm (mục 4) là thiết kế trước, chờ duyệt.
 
 ## 1. Tổng quan
 
@@ -24,10 +24,9 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
 
 ## 3. Quy tắc nghiệp vụ đã chốt
 
-1. **Điểm lớp:** phụ huynh chỉ thấy điểm của con. Không hiển thị điểm trung bình lớp.
-2. **Điểm trung bình:** trung bình cộng đơn giản, mọi bài ngang nhau, không có hệ số.
-3. **Học sinh nghỉ hoặc chuyển lớp:** giữ lịch sử, đánh dấu "đã nghỉ", lưu ngày vào lớp và ngày rời lớp. Không xóa dữ liệu điểm danh, điểm cũ.
-4. **Học phí:** ngoài phạm vi bản này. Quy tắc học phí ở mục 4 là thiết kế trước, chưa triển khai.
+1. **Điểm lớp:** phụ huynh chỉ thấy điểm của con. Không hiển thị điểm trung bình ở bất kỳ đâu (đã chốt 2026-10-20).
+2. **Học sinh nghỉ hoặc chuyển lớp:** giữ lịch sử, đánh dấu "đã nghỉ", lưu ngày vào lớp và ngày rời lớp. Không xóa dữ liệu điểm danh, điểm cũ.
+3. **Học phí:** ngoài phạm vi bản này. Quy tắc học phí ở mục 4 là thiết kế trước, chưa triển khai.
 
 ## 4. Quy tắc đề xuất (chờ duyệt)
 
@@ -40,7 +39,10 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
 - Chỉ điểm danh được từ ngày học trở đi. Buổi chưa tới ngày chỉ xem hoặc hủy (đã chốt 2026-10-18).
 
 **Điểm**
-- Không có trạng thái "Vắng thi" (đã chốt 2026-10-19). Mỗi học sinh ở mỗi bài chỉ có điểm hoặc "Chưa có điểm"; em vắng buổi kiểm tra cũng là "Chưa có điểm". Chưa có điểm không tính vào trung bình.
+- Không có trạng thái "Vắng thi" (đã chốt 2026-10-19). Mỗi học sinh ở mỗi bài chỉ có điểm hoặc "Chưa có điểm"; em vắng buổi kiểm tra cũng là "Chưa có điểm". "Chưa có điểm" chỉ là trạng thái của ô điểm.
+- Điểm tối đa theo từng bài kiểm tra (đã chốt 2026-10-20): số nguyên 1..1000, mặc định 15 khi tạo bài, sửa được ở form tạo bài. Lớp không còn thang điểm chung. Dữ liệu cũ (seed, localStorage) giữ điểm tối đa 10, không migrate.
+- Sửa bài kiểm tra (đã chốt 2026-10-20): tên, ngày, điểm tối đa; không cho hạ điểm tối đa xuống dưới điểm cao nhất đã nhập của bài đó.
+- Xoá bài kiểm tra (đã chốt 2026-10-20): chưa có điểm nào (mọi ô là "Chưa có điểm") thì xoá hẳn; đã có điểm (kể cả 0) thì lưu trữ bằng cờ "archived", không xoá cứng. Bài lưu trữ ẩn khỏi bảng điểm, nhập điểm, báo cáo và app phụ huynh, không tính vào đâu; chưa có màn khôi phục. Hộp xác nhận nói rõ sẽ xoá hay lưu trữ. Cần quyền nhóm Điểm mức Sửa và quyền vào lớp như tạo bài.
 - Sửa điểm sau khi đã phát hành báo cáo: phụ huynh thấy điểm mới ngay; báo cáo đã phát hành ghi chú "điểm có cập nhật, cần phát hành lại" (đã chốt).
 - Sửa điểm có ghi lịch sử.
 
@@ -59,7 +61,7 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
 - Gửi phiếu khi em còn phần BTVN chưa chấm: được gửi, hộp xác nhận nhắc số phần chưa chấm; phụ huynh thấy "Chưa chấm" cho tới khi giáo viên chấm (đã chốt 2026-10-19).
 - Phiếu của một buổi chỉ gồm học sinh đang học vào ngày đó (ngày vào lớp ≤ ngày buổi ≤ ngày rời lớp); phiếu cũ của em đã nghỉ vẫn giữ (đã chốt 2026-10-19).
 - Báo cáo chỉ phụ huynh thấy sau khi giáo viên phát hành.
-- Nội dung báo cáo: chuyên cần, điểm từng bài, trung bình, số buổi đạt 3/2/1 sao, kết quả BTVN theo từng phần (số lần Hoàn thành tốt / Hoàn thành / Chưa hoàn thành), nhận xét chung. BTVN không quy ra điểm, không tính vào trung bình. Có bản nháp, cho phép phát hành lại.
+- Nội dung báo cáo: chuyên cần, điểm từng bài, số buổi đạt 3/2/1 sao, kết quả BTVN theo từng phần (số lần Hoàn thành tốt / Hoàn thành / Chưa hoàn thành), nhận xét chung. BTVN không quy ra điểm. Có bản nháp, cho phép phát hành lại.
 - Kỳ báo cáo: theo tháng hoặc 3 tháng gần nhất.
 
 **Bài tập về nhà (BTVN)** (đã chốt 2026-10-19)
@@ -97,13 +99,13 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
 - Lịch dạy theo tuần: liệt kê buổi một người dạy chính / trợ giảng / dạy thay, buổi bị thay (gạch, ghi "Được thay bởi …"), buổi hủy. Admin chọn được mọi người; nhân sự khác chỉ xem lịch của mình.
 - Lương theo buổi. Chỉ tính buổi người đó thực sự dạy (đã diễn ra, là người dạy thực tế sau dạy thay); buổi hủy, kể cả hủy sát giờ, không tính lương, không phụ cấp (đã chốt 2026-10-18). Mỗi người có đơn giá dạy chính và đơn giá trợ giảng (VND/buổi). Lương tháng = Σ buổi đã diễn ra trong tháng × đơn giá theo vị trí + khoản điều chỉnh (thưởng/trừ, có ghi chú). Buổi hủy, buổi chưa diễn ra không tính (buổi chưa diễn ra hiện "dự kiến"). Chưa có đơn giá → cảnh báo "Chưa đặt đơn giá". Bảng lương tháng: Nháp → Đã chốt (khóa sửa). Admin quản lý toàn bộ. Giáo viên, trợ giảng xem bảng lương của chính mình, chỉ đọc (cả tháng Nháp và Đã chốt, ghi rõ trạng thái); không thấy lương người khác (đã chốt 2026-10-18).
 
-**Học phí** (đề xuất, chờ duyệt; thiết kế trước, xem quy tắc 3.4)
+**Học phí** (đề xuất, chờ duyệt; thiết kế trước, xem quy tắc 3.3)
 - Học phí theo buổi: mỗi lớp có học phí/buổi và tuỳ chọn "Tính phí buổi vắng không phép" (mặc định bật). Buổi tính phí = buổi đã diễn ra trong tháng, trong khoảng ngày vào lớp..ngày rời lớp, trạng thái Có mặt/Muộn (+ Vắng nếu tuỳ chọn bật). Có phép và buổi hủy không tính. Buổi học bù (buổi lẻ đánh dấu "Học bù") có tính phí hay không do Admin chọn theo lớp bằng tuỳ chọn "Tính phí buổi học bù", mặc định bật (đã chốt 2026-10-18). Giảm học phí theo % từng học sinh. Phải thu làm tròn đến 1.000 đ.
 - (Team đề xuất) Phiếu học phí theo tháng mỗi học sinh; ghi nhận thu (số tiền, ngày, tiền mặt/chuyển khoản, ghi chú; nhiều lần); trạng thái Chưa thu / Thu một phần / Đã thu đủ; công nợ = tổng còn thiếu các tháng trước; gửi thông báo học phí cho phụ huynh (từng em hoặc cả lớp, cần mạng); số tiền đổi sau khi gửi (sửa điểm danh) → ghi "Số tiền đã thay đổi, cần gửi lại". Tháng chưa hết hiện "Tạm tính". Chỉ Admin. Role khác Admin, kể cả giáo viên của lớp, không xem được học phí của học viên (đã chốt 2026-10-18). Không có gói học phí trả trước theo số buổi (đã chốt 2026-10-18). Phụ huynh xem phiếu và lịch sử thu (chỉ thiết kế ở Claude Design).
 
 **Báo cáo điểm** (đề xuất, chờ duyệt)
-- Báo cáo điểm từng học viên: mỗi em các bài theo ngày (điểm / Chưa có điểm), trung bình (quy tắc 3.2), xu hướng (biểu đồ đường), chênh lệch bài gần nhất.
-- (Team đề xuất) Báo cáo tổng hợp lớp cho giáo viên: phân bố trung bình học sinh theo dải (<5, 5–6,4, 6,5–7,9, 8–10), tiến độ nhập điểm từng bài (đã có điểm / chưa có điểm), danh sách "Cần chú ý" (TB < 5; hoặc bài gần nhất giảm ≥ 2 điểm so với bài có điểm trước đó; hoặc ≥ 2 bài chưa có điểm). KHÔNG hiện trung bình lớp hay trung bình từng bài (theo quy tắc 3.1).
+- Báo cáo điểm từng học viên (đã chốt 2026-10-20): mỗi em các bài theo ngày (điểm / điểm tối đa của bài, hoặc "Chưa có điểm"), xu hướng (biểu đồ đường chuẩn hoá theo điểm tối đa của từng bài), chênh lệch bài gần nhất so với bài có điểm trước đó tính theo % thang điểm, hiện dạng "+13%" / "−7%". So sánh giữa các bài luôn theo % thang điểm (score/max) vì mỗi bài có điểm tối đa riêng. Không có điểm trung bình.
+- (Team đề xuất) Báo cáo tổng hợp lớp cho giáo viên: tiến độ nhập điểm từng bài (đã có điểm / chưa có điểm), danh sách "Cần chú ý" chỉ còn hai lý do (đã chốt 2026-10-20): (a) từ 2 bài chưa có điểm trở lên; (b) bài gần nhất giảm từ 20% thang điểm trở lên so với bài có điểm trước đó. Không còn lý do trung bình dưới 5, khối phân bố học sinh theo dải trung bình bỏ hẳn. KHÔNG hiện trung bình lớp hay trung bình từng bài (theo quy tắc 3.1).
 
 **Tài khoản**
 - Nhân sự (giáo viên, trợ giảng, role khác): Admin mời bằng số điện thoại, chọn role và các lớp được gán. Link dùng một lần, hết hạn 7 ngày, OTP phải khớp SĐT, gửi lại được, như luồng mời phụ huynh. Người tạo workspace là Admin đầu tiên.
@@ -122,7 +124,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | Nhóm | Tính năng | TK |
 |---|---|---|
 | Lớp học | Danh sách lớp, việc cần làm hôm nay | ✓ |
-| | Tạo lớp (tên, ngày giờ học, thang điểm mặc định) | ✓ |
+| | Tạo lớp (tên, ngày giờ học) | ✓ |
 | | Sửa lớp, đóng hoặc lưu trữ lớp | ✗ |
 | | Chuyển nhanh giữa các lớp | ◐ |
 | Lịch & buổi học | Lịch buổi học theo tuần | ✗ |
@@ -133,7 +135,8 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | Điểm danh | Điểm danh theo buổi | ✓ |
 | | Ghi chú giờ đến muộn, sửa sau lưu, cảnh báo khi rời màn còn nhập dở chưa bấm Lưu | ✗ |
 | | Lịch sử điểm danh, cảnh báo vắng 2 buổi liên tiếp | ◐ |
-| Điểm số | Tạo bài kiểm tra (tên, ngày, thang điểm; bỏ hệ số) | ✓ |
+| Điểm số | Tạo bài kiểm tra (tên, ngày, điểm tối đa — mặc định 15; bỏ hệ số) | ✓ |
+| | Sửa, xoá (lưu trữ) bài kiểm tra | ✓ |
 | | Nhập điểm, bảng điểm cả lớp | ✓ |
 | | Sửa điểm có lịch sử | ✗ |
 | Nhận xét | Nhận xét sau buổi theo 3 mức sao + ghi chú, gửi phụ huynh | ◐ mobile, ✗ web |
@@ -149,7 +152,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | | Lịch dạy theo tuần của từng người; nhân sự xem lịch của mình | ✗ |
 | | Đơn giá theo buổi, bảng lương tháng, khoản điều chỉnh, chốt bảng lương; giáo viên, trợ giảng xem lương của mình (chỉ đọc) | ✗ |
 | Học phí (Admin) | Học phí theo buổi, giảm theo %, phiếu tháng, ghi nhận thu, công nợ, thông báo phụ huynh | ✗ |
-| Báo cáo điểm | Báo cáo điểm từng học sinh; báo cáo tổng hợp lớp (phân bố, tiến độ nhập, cần chú ý) | ✗ |
+| Báo cáo điểm | Báo cáo điểm từng học sinh; báo cáo tổng hợp lớp (tiến độ nhập, cần chú ý) | ✗ |
 
 ### 5.2 Phụ huynh (mobile/PWA)
 
@@ -159,9 +162,9 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | | Đăng nhập bằng SĐT và OTP | ◐ |
 | | Hướng dẫn cài PWA, mở bằng Safari | ✗ |
 | Con của tôi | Chuyển giữa các con | ✓ |
-| | Tổng quan: chuyên cần, điểm trung bình, nhận xét mới nhất | ✓ |
+| | Tổng quan: chuyên cần, điểm bài mới nhất, nhận xét mới nhất | ✓ |
 | Điểm danh | Xem theo tháng, thống kê, ghi chú từng buổi | ✓ |
-| Điểm số | Điểm từng bài và xu hướng của con (bỏ TB lớp) | ◐ |
+| Điểm số | Điểm từng bài và xu hướng của con | ◐ |
 | Nhận xét | Nhận xét từng buổi (mức sao, ghi chú) | ◐ |
 | BTVN | Xem đề BTVN ngay khi giao; xem kết quả chấm sau khi giáo viên gửi | ✗ |
 | | Nhận xét tổng hợp theo kỳ | ✗ |
@@ -177,7 +180,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | Phân quyền | Quyền theo role và phạm vi (lớp được gán, con được liên kết), kiểm tra ở máy chủ. Phụ huynh chỉ thấy con được cấp quyền. Dữ liệu mỗi lớp tách biệt. |
 | Lời mời | Link riêng dùng một lần, hết hạn 7 ngày, OTP phải khớp SĐT đã khai. Link chung của lớp cần giáo viên duyệt. |
 | Dữ liệu | Giữ lịch sử khi nghỉ hoặc chuyển lớp; lịch sử sửa điểm và điểm danh. |
-| Tính toán | Trung bình cộng đơn giản; bài chưa có điểm không tính. |
+| Tính toán | Mỗi bài kiểm tra có điểm tối đa riêng; so sánh giữa các bài theo % thang điểm (score/max); bài chưa có điểm không tính vào đâu. |
 | Thông báo | Có nhận xét, BTVN, điểm, báo cáo mới. Thông báo quan trọng gửi thêm qua Zalo hoặc SMS. |
 | Báo cáo PDF | Sinh PDF trên máy giáo viên khi phát hành, lưu bản chụp của phiên bản đã phát hành trên máy chủ, bản nháp, phát hành lại. |
 | Song ngữ | Giao diện, lỗi, thông báo, ngày tháng, PDF. |
@@ -201,11 +204,11 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 ## 8. Phạm vi
 
 **Bản đầu**
-- Lớp: tạo, sửa, lưu trữ lớp; thang điểm cố định 10.
+- Lớp: tạo, sửa, lưu trữ lớp; điểm tối đa khai theo từng bài kiểm tra (mặc định 15, sửa được), không còn thang điểm cố định của lớp.
 - Học sinh: thêm (kèm SĐT phụ huynh), đánh dấu nghỉ, giữ lịch sử; hồ sơ cơ bản.
 - Buổi học: tự sinh theo lịch lặp của lớp; hủy buổi bằng 1 nút; sửa lịch lặp của lớp (chỉ đổi các buổi chưa diễn ra, giữ buổi đã diễn ra, đã hủy và buổi lẻ); thêm buổi lẻ ngoài lịch lặp; màn Buổi học chia "buổi hiện tại" và "các buổi đã qua"; tab Lịch xem theo ngày và theo tháng (đã chốt 2026-10-18).
 - Điểm danh: 4 trạng thái, sửa sau lưu, cảnh báo vắng 2 buổi trong app.
-- Điểm: tạo bài kiểm tra, nhập điểm, trung bình cộng; ghi log sửa điểm trong DB.
+- Điểm: tạo, sửa, xoá (lưu trữ) bài kiểm tra với điểm tối đa riêng mặc định 15; nhập điểm; ghi log sửa điểm trong DB.
 - Nhận xét sau buổi theo 3 mức sao + ghi chú, giáo viên bấm gửi.
 - BTVN: giao theo phần ở buổi N, chấm ở buổi N+1, phụ huynh xem đề và kết quả đã gửi.
 - Báo cáo theo tháng: xem trước, phát hành, PDF; có đếm sao và kết quả BTVN.
@@ -225,7 +228,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Màn quản lý nhân sự và role: mời giáo viên, trợ giảng, tạo role tuỳ chỉnh, ma trận quyền, gán lớp.
 
 **Chưa nên làm**
-Học phí, chat với giáo viên, xin nghỉ trong app, nhập danh sách từ Excel, thang điểm tuỳ chỉnh, hiển thị lịch sử sửa điểm cho phụ huynh.
+Học phí, chat với giáo viên, xin nghỉ trong app, nhập danh sách từ Excel, hiển thị lịch sử sửa điểm cho phụ huynh.
 
 ## 9. Phi chức năng
 

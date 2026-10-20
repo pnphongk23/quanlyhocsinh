@@ -8,10 +8,8 @@ import { Card, LinkButton, NoAccess, PageHeader, Pill } from "../../shared/ui";
 import { ChartIcon } from "./ScoreIcons";
 import {
   classScoreReport,
-  formatScoreDot,
-  formatSignedScore,
+  formatSignedPercent,
   type ClassScoreReport,
-  type ScoreDistributionBand,
   type ScoreProgress,
   type StudentScoreReport,
 } from "./scoreReport";
@@ -21,7 +19,7 @@ const WORKSPACE_NAME = "Lớp của cô Lan";
 
 /** Quy tắc "Cần chú ý" hiện dưới tiêu đề (ảnh 22–25). */
 const ATTENTION_RULE =
-  "Gồm em có: trung bình dưới 5; hoặc bài gần nhất giảm từ 2 điểm trở lên so với bài có điểm trước đó; hoặc từ 2 bài chưa có điểm.";
+  "Gồm em có: bài gần nhất giảm từ 20% thang trở lên so với bài có điểm trước đó; hoặc từ 2 bài chưa có điểm.";
 
 /** Mũi tên xu hướng nhỏ cạnh chênh lệch điểm (xanh tăng, đỏ giảm). */
 function TrendIcon({ direction }: { direction: "up" | "down" }) {
@@ -55,7 +53,7 @@ function TrendDelta({ delta }: { delta: number | null }) {
     return (
       <span className={`${s.delta} ${s.deltaFlat}`}>
         <TrendIcon direction="up" />
-        {formatSignedScore(delta)}
+        {formatSignedPercent(delta)}
       </span>
     );
   return (
@@ -64,7 +62,7 @@ function TrendDelta({ delta }: { delta: number | null }) {
       data-direction={delta > 0 ? "up" : "down"}
     >
       <TrendIcon direction={delta > 0 ? "up" : "down"} />
-      {formatSignedScore(delta)}
+      {formatSignedPercent(delta)}
     </span>
   );
 }
@@ -77,8 +75,8 @@ function TrendArrow({ delta }: { delta: number | null }) {
       className={`${s.delta} ${delta > 0 ? s.deltaUp : s.deltaDown}`}
       aria-label={
         delta > 0
-          ? `Tăng ${formatSignedScore(delta)} so với bài trước`
-          : `Giảm ${Math.abs(delta).toFixed(1)} so với bài trước`
+          ? `Tăng ${delta}% so với bài trước`
+          : `Giảm ${Math.abs(delta)}% so với bài trước`
       }
     >
       <TrendIcon direction={delta > 0 ? "up" : "down"} />
@@ -102,42 +100,6 @@ function Avatar({ name }: { name: string }) {
     <span className={s.avatar} aria-hidden="true">
       {initialsOf(name)}
     </span>
-  );
-}
-
-function DistributionPanel({
-  distribution,
-  averageCount,
-  showMeta,
-}: {
-  distribution: ScoreDistributionBand[];
-  averageCount: number;
-  showMeta: boolean;
-}) {
-  const maxBand = Math.max(1, ...distribution.map((band) => band.count));
-  return (
-    <Card className={s.section}>
-      <div className={s.sectionHead}>
-        <h3 className={s.sectionTitle}>Điểm trung bình học sinh</h3>
-        {showMeta && (
-          <span className={s.sectionMeta}>{averageCount} học sinh</span>
-        )}
-      </div>
-      <ul className={s.bandList}>
-        {distribution.map((band) => (
-          <li className={s.band} key={band.label}>
-            <span className={s.bandLabel}>{band.label}</span>
-            <span className={s.track} aria-hidden="true">
-              <span
-                className={`${s.fill} ${band.label === "< 5" ? s.fillLow : ""}`}
-                style={{ width: `${(band.count / maxBand) * 100}%` }}
-              />
-            </span>
-            <span className={s.bandCount}>{band.count}</span>
-          </li>
-        ))}
-      </ul>
-    </Card>
   );
 }
 
@@ -242,15 +204,15 @@ function EmptyReport({ classId }: { classId: string }) {
       </span>
       <h2 className={s.emptyTitle}>Chưa có điểm để báo cáo</h2>
       <p className={s.emptyText}>
-        Nhập điểm cho ít nhất một bài kiểm tra để xem phân bố và danh sách cần
-        chú ý.
+        Nhập điểm cho ít nhất một bài kiểm tra để xem tiến độ nhập điểm và danh
+        sách cần chú ý.
       </p>
       <LinkButton to={`/lop/${classId}/diem`}>Nhập điểm</LinkButton>
     </div>
   );
 }
 
-/** Báo cáo điểm của lớp (quy tắc 3.1/3.2): không có trung bình lớp. */
+/** Báo cáo điểm của lớp (quy tắc 3.1): không có trung bình nào. */
 export default function ScoreReportPage() {
   const state = useStore();
   const { classId = "" } = useParams();
@@ -279,9 +241,6 @@ export default function ScoreReportPage() {
     );
 
   const report = classScoreReport(state, classId);
-  const averageCount = report.students.filter(
-    (row) => row.average !== null,
-  ).length;
   const hasScore = report.progress.some((item) => item.scored > 0);
   const attentionIds = new Set(
     report.attention.map((item) => item.student.id),
@@ -349,7 +308,6 @@ export default function ScoreReportPage() {
               <thead>
                 <tr>
                   <th scope="col">Học sinh</th>
-                  <th scope="col">TB</th>
                   <th scope="col">Bài có điểm</th>
                   <th scope="col">Bài gần nhất</th>
                   <th scope="col">Ghi chú</th>
@@ -369,9 +327,6 @@ export default function ScoreReportPage() {
                         >
                           {row.student.name}
                         </Link>
-                      </td>
-                      <td className={s.tdScore}>
-                        {row.average === null ? "—" : formatScoreDot(row.average)}
                       </td>
                       <td className={s.tdMuted}>
                         {scoredCount}/{row.rows.length}
@@ -393,11 +348,6 @@ export default function ScoreReportPage() {
             <p className={s.tableNote}>{ATTENTION_RULE}</p>
           </div>
           <div className={s.sidePanels}>
-            <DistributionPanel
-              distribution={report.distribution}
-              averageCount={averageCount}
-              showMeta={false}
-            />
             <ProgressPanel progress={report.progress} />
             <AttentionPanel attention={report.attention} classId={classId} />
           </div>
@@ -409,11 +359,6 @@ export default function ScoreReportPage() {
   return (
     <div className={s.page}>
       {header}
-      <DistributionPanel
-        distribution={report.distribution}
-        averageCount={averageCount}
-        showMeta
-      />
       <ProgressPanel progress={report.progress} />
       <AttentionPanel attention={report.attention} classId={classId} />
       <section className={s.studentSection}>
@@ -457,9 +402,6 @@ function StudentRow({
         </span>
       </span>
       <TrendArrow delta={row.latestDelta} />
-      <span className={s.studentAverage}>
-        {row.average === null ? "—" : formatScoreDot(row.average)}
-      </span>
       <span className={s.chevron} aria-hidden="true">
         ›
       </span>

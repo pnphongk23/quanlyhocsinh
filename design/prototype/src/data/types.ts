@@ -38,13 +38,19 @@ export interface Test {
   classId: string;
   name: string;
   date: string;
-  max: 10;
+  /** Thang điểm của bài: số nguyên 1..1000. Bài tạo mới mặc định 15. */
+  max: number;
+  /**
+   * Bài đã lưu trữ: còn học sinh có điểm (kể cả 0) nên không xoá cứng.
+   * Thiếu trường (dữ liệu localStorage cũ) nghĩa là chưa lưu trữ.
+   */
+  archived?: boolean;
 }
 export interface Score {
   id: string;
   testId: string;
   studentId: string;
-  /** null = Chưa có điểm (không tính vào trung bình). */
+  /** null = Chưa có điểm. */
   value: number | null;
 }
 /** Mức sao của nhận xét sau buổi: 1, 2 hoặc 3 sao. */

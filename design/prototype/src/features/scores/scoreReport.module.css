@@ -82,12 +82,6 @@
   font-weight: 700;
   line-height: 1.3;
 }
-.sectionMeta {
-  flex: none;
-  color: var(--color-muted);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
 .avatar {
   display: grid;
   flex: none;
@@ -105,49 +99,6 @@
   color: var(--color-muted);
   font-size: 20px;
   line-height: 1;
-}
-
-/* Phân bố trung bình theo dải */
-.bandList {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.band {
-  display: grid;
-  grid-template-columns: 78px minmax(0, 1fr) 26px;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-.bandLabel {
-  color: var(--color-muted);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.track {
-  display: block;
-  height: 10px;
-  border-radius: var(--radius-pill);
-  background: var(--color-bg);
-  overflow: hidden;
-}
-.fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--color-primary);
-}
-.fillLow {
-  background: var(--color-error);
-}
-.bandCount {
-  font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  text-align: end;
 }
 
 /* Tiến độ nhập điểm từng bài */
@@ -305,15 +256,6 @@
   color: var(--color-muted);
   font-size: 13px;
 }
-.studentAverage {
-  flex: none;
-  min-width: 26px;
-  font-size: 16px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  text-align: end;
-}
-
 /* Chênh lệch điểm */
 .delta {
   display: inline-flex;
@@ -395,16 +337,10 @@
 .rowLink:hover {
   text-decoration: underline;
 }
-.tdScore {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
 .table th:nth-child(2),
 .table td:nth-child(2),
 .table th:nth-child(3),
-.table td:nth-child(3),
-.table th:nth-child(4),
-.table td:nth-child(4) {
+.table td:nth-child(3) {
   text-align: center;
 }
 .tdMuted {
@@ -515,25 +451,9 @@
   gap: 2px;
   min-width: 0;
 }
-.summaryBoxEnd {
-  justify-items: end;
-  text-align: end;
-}
 .summaryLabel {
   color: var(--color-muted);
   font-size: 13px;
-}
-.summaryValue {
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1.05;
-  font-variant-numeric: tabular-nums;
-}
-.summaryUnit {
-  margin-left: 2px;
-  color: var(--color-muted);
-  font-size: 14px;
-  font-weight: 600;
 }
 .summaryEmpty {
   color: var(--color-muted);

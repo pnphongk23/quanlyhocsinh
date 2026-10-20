@@ -20,7 +20,7 @@ import {
   listPlannedSessions,
   listSessions,
 } from "./sessions";
-import { getStudent, listStudents, listStudentsForSession, studentAverage } from "./students";
+import { getStudent, listStudents, listStudentsForSession } from "./students";
 import { listTests } from "./tests";
 import { listScores, saveScore } from "./scores";
 import { listAttendance, saveAttendanceBatch } from "./attendance";
@@ -109,8 +109,7 @@ describe("Phạm vi lớp: cô Lan chỉ có 6A", () => {
     expect(listComments("ielts")).toEqual([]);
     expect(listReports("ielts")).toEqual([]);
     expect(listSessionLectures("ielts-session-0")).toEqual([]);
-    expect(studentAverage("ielts-student-0")).toBeNull();
-    expect(listPlannedSessions("ielts")).toEqual([]);
+      expect(listPlannedSessions("ielts")).toEqual([]);
     expect(canAccessClass("ielts")).toBe(false);
     expect(canAccessSession("ielts-session-0")).toBe(false);
   });
@@ -232,8 +231,7 @@ describe("Ngoại lệ dạy thay đúng một buổi", () => {
     expect(listComments("ielts")).toEqual([]);
     expect(listReports("ielts")).toEqual([]);
     expect(listSessionLectures("ielts-session-0")).toEqual([]);
-    expect(studentAverage("ielts-student-0")).toBeNull();
-    expect(() => cancelSession("ielts-session-0")).toThrow(CLASS_ACCESS_ERROR);
+      expect(() => cancelSession("ielts-session-0")).toThrow(CLASS_ACCESS_ERROR);
     expect(() => updateClass("ielts", { name: "X" })).toThrow(CLASS_ACCESS_ERROR);
   });
 

@@ -14,13 +14,15 @@ export function saveScore(input: Omit<Score, "id">): Score {
   const test = requireTest(input.testId),
     student = requireStudent(input.studentId);
   requireClassAccess(test.classId);
+  if (test.archived)
+    throw new Error("Bài kiểm tra đã lưu trữ, không nhập điểm được.");
   if (student.classId !== test.classId || !eligible(student, test.date))
     throw new Error("Học sinh không thuộc bài kiểm tra này.");
   if (
     input.value !== null &&
-    (!Number.isFinite(input.value) || input.value < 0 || input.value > 10)
+    (!Number.isFinite(input.value) || input.value < 0 || input.value > test.max)
   )
-    throw new Error("Điểm phải từ 0 đến 10.");
+    throw new Error(`Điểm phải từ 0 đến ${test.max}.`);
   const old = getStore().scores.find(
     (s) => s.testId === input.testId && s.studentId === input.studentId,
   );

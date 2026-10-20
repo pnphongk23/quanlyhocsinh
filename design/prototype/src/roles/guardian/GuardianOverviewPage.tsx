@@ -7,8 +7,6 @@ import { defaultChildMonth } from "./guardianRead";
 import {
   longDayMonth,
   monthLabel,
-  monthName,
-  previousMonthOf,
   scoreText,
 } from "./guardianFormat";
 import {
@@ -18,7 +16,7 @@ import {
 } from "./guardianUi";
 import g from "./guardian.module.css";
 
-/** PH · Tổng quan (ảnh 15): chuyên cần, điểm trung bình, lời cô, phiếu mới nhất. */
+/** PH · Tổng quan (ảnh 15): chuyên cần, lời cô, phiếu mới nhất, điểm gần đây. */
 export default function GuardianOverviewPage() {
   const access = useAccess();
   const { child, error } = useGuardianContext();
@@ -41,9 +39,6 @@ export default function GuardianOverviewPage() {
   const canAttendance = access.can("sessions_attendance", "read");
   const canScores = access.can("scores", "read");
   const attendance = canAttendance ? (overview?.attendance ?? null) : null;
-  const average = canScores ? (overview?.average ?? null) : null;
-  const change = overview?.averageChange ?? null;
-  const previousAverage = overview?.previousMonthAverage ?? null;
   const latest = overview?.latestComment ?? null;
   const teacherNote = overview?.teacherNote ?? null;
   const recentScores = canScores ? (overview?.recentScores.slice(0, 3) ?? []) : [];
@@ -55,34 +50,17 @@ export default function GuardianOverviewPage() {
       />
       <ChildChips />
 
-      {(attendance || average !== null) && (
+      {attendance && (
         <div className={g.statRow}>
-          {attendance && (
-            <Card className={g.statCard}>
-              <span className={g.statLabel}>Đi học</span>
-              <strong className={g.statValue}>
-                {attendance.attended}/{attendance.total}
-              </strong>
-              <span className={g.statSub}>
-                buổi · {attendance.late} muộn, {attendance.excused} có phép
-              </span>
-            </Card>
-          )}
-          {canScores && (
-            <Card className={g.statCard}>
-              <span className={g.statLabel}>Điểm trung bình</span>
-              <strong className={g.statValue}>
-                {scoreText(average)}
-                {average !== null && <span className={g.statUnit}>/10</span>}
-              </strong>
-              {change !== null && previousAverage !== null && (
-                <span className={change < 0 ? g.trendDown : g.trendUp}>
-                  {change < 0 ? "▼" : "▲"} {Math.abs(change).toFixed(1)} so với{" "}
-                  {monthName(previousMonthOf(month))}
-                </span>
-              )}
-            </Card>
-          )}
+          <Card className={g.statCard}>
+            <span className={g.statLabel}>Đi học</span>
+            <strong className={g.statValue}>
+              {attendance.attended}/{attendance.total}
+            </strong>
+            <span className={g.statSub}>
+              buổi · {attendance.late} muộn, {attendance.excused} có phép
+            </span>
+          </Card>
         </div>
       )}
 
@@ -134,7 +112,9 @@ export default function GuardianOverviewPage() {
                       {longDayMonth(item.date)}
                     </span>
                   </span>
-                  <b className={g.scoreValue}>{scoreText(item.value)}/10</b>
+                  <b className={g.scoreValue}>
+                    {scoreText(item.value)}/{item.test.max}
+                  </b>
                 </li>
               ))}
             </ul>

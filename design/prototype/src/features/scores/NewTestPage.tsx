@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useStore } from "../../data/store";
-import { createTest } from "../../data/repositories/tests";
+import { createTest, DEFAULT_TEST_MAX } from "../../data/repositories/tests";
 import { getClass } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
 import { useSaveStatus } from "../../shared/SaveStatus";
@@ -19,6 +19,7 @@ export default function NewTestPage() {
   const classItem = getClass(classId);
   const [name, setName] = useState("");
   const [date, setDate] = useState(() => todayISO());
+  const [max, setMax] = useState(String(DEFAULT_TEST_MAX));
   const [error, setError] = useState("");
   const listPath = `/lop/${classId}/bai-kiem-tra`;
 
@@ -40,7 +41,7 @@ export default function NewTestPage() {
       return;
     }
     try {
-      const test = createTest({ classId, name, date });
+      const test = createTest({ classId, name, date, max: Number(max.trim()) });
       setError("");
       clearStatus();
       navigate(`/lop/${classId}/bai-kiem-tra/${test.id}`);
@@ -78,8 +79,24 @@ export default function NewTestPage() {
           }}
           required
         />
+        <Input
+          label="Điểm tối đa"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={1000}
+          step={1}
+          value={max}
+          onChange={(event) => {
+            setMax(event.target.value);
+            markUnsaved();
+            setError("");
+          }}
+          required
+        />
         <p className={s.hint}>
-          Điểm theo thang 10. Trung bình là trung bình cộng đơn giản.
+          Mỗi bài có thang điểm riêng, mặc định {DEFAULT_TEST_MAX}. Sửa được lúc
+          tạo bài hoặc khi sửa bài.
         </p>
         {error && (
           <p role="alert" className={s.errorBanner}>

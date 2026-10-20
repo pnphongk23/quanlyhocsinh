@@ -12,20 +12,13 @@ export interface StudentScoreRow {
 export interface StudentScoreReport {
   student: Student;
   rows: StudentScoreRow[];
-  average: number | null;
-  /** Các điểm đã có, theo thứ tự ngày; dùng cho biểu đồ xu hướng. */
-  trend: number[];
   /**
-   * Chênh lệch của bài gần nhất (theo ngày) so với bài có điểm liền trước.
-   * Null khi bài gần nhất chưa có điểm (dùng cho cột "Bài gần nhất" và quy tắc
-   * "cần chú ý").
+   * Chênh lệch của bài gần nhất (theo ngày) so với bài có điểm liền trước, tính
+   * theo phần trăm thang điểm của hai bài, làm tròn số nguyên: bài trước 80%
+   * thang, bài gần nhất 60% thang → −20. Null khi bài gần nhất chưa có điểm hoặc
+   * chưa đủ hai bài có điểm (dùng cho cột "Bài gần nhất" và quy tắc "cần chú ý").
    */
   latestDelta: number | null;
-}
-
-export interface ScoreDistributionBand {
-  label: string;
-  count: number;
 }
 
 export interface ScoreProgress {
@@ -41,17 +34,12 @@ export interface ScoreAttention {
 
 export interface ClassScoreReport {
   students: StudentScoreReport[];
-  distribution: ScoreDistributionBand[];
   progress: ScoreProgress[];
   attention: ScoreAttention[];
 }
 
-const DISTRIBUTION_LABELS = [
-  "< 5",
-  "5 – 6.4",
-  "6.5 – 7.9",
-  "8 – 10",
-];
+/** Ngưỡng "cần chú ý": bài gần nhất giảm từ 20% thang trở lên. */
+const ATTENTION_DROP_PERCENT = 20;
 
 /**
  * Điểm trong báo cáo điểm hiển thị dấu chấm (7.2, 6.5 – 7.9) theo ảnh thiết kế.
@@ -61,21 +49,23 @@ export function formatScoreDot(value: number): string {
   return value.toFixed(1);
 }
 
-/** Chênh lệch có dấu: "+0.2", "−2.5", "0.0". */
-export function formatSignedScore(delta: number): string {
-  if (delta > 0) return `+${delta.toFixed(1)}`;
-  if (delta < 0) return `−${Math.abs(delta).toFixed(1)}`;
-  return delta.toFixed(1);
+/** Điểm theo phần trăm thang của bài: value / max × 100. */
+export function scorePercent(value: number, max: number): number {
+  if (max <= 0) return 0;
+  return (value / max) * 100;
 }
 
-function distributionLabel(average: number): string {
-  if (average < 5) return DISTRIBUTION_LABELS[0];
-  if (average < 6.5) return DISTRIBUTION_LABELS[1];
-  if (average < 8) return DISTRIBUTION_LABELS[2];
-  return DISTRIBUTION_LABELS[3];
+/** Chênh lệch phần trăm thang có dấu: "+13%", "−7%", "0%". */
+export function formatSignedPercent(delta: number): string {
+  if (delta > 0) return `+${delta}%`;
+  if (delta < 0) return `−${Math.abs(delta)}%`;
+  return "0%";
 }
 
-/** Điểm của một học sinh theo từng bài của lớp, sắp theo ngày; TB theo quy tắc 3.2. */
+/** Bài đã lưu trữ không hiện ở bất kỳ đâu; thiếu trường nghĩa là chưa lưu trữ. */
+const isArchived = (test: Test): boolean => test.archived === true;
+
+/** Điểm của một học sinh theo từng bài của lớp, sắp theo ngày. */
 export function studentScoreReport(
   state: StoreState,
   studentId: string,
@@ -84,7 +74,7 @@ export function studentScoreReport(
   if (!student) throw new Error("Không tìm thấy học sinh.");
 
   const tests = state.tests
-    .filter((test) => test.classId === student.classId)
+    .filter((test) => test.classId === student.classId && !isArchived(test))
     .sort(
       (a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id),
     );
@@ -96,25 +86,26 @@ export function studentScoreReport(
     test,
     value: scores.get(test.id)?.value ?? null,
   }));
-  // Quy tắc 3.2: trung bình cộng các bài đã có điểm, bài chưa có điểm không tính.
-  const trend = rows
-    .map((row) => row.value)
-    .filter((value): value is number => value !== null);
-  const average = trend.length
-    ? trend.reduce((total, value) => total + value, 0) / trend.length
-    : null;
-  const lastRow = rows[rows.length - 1];
-  const latestDelta =
-    lastRow && lastRow.value !== null && trend.length >= 2
-      ? trend[trend.length - 1] - trend[trend.length - 2]
-      : null;
-  return { student, rows, average, trend, latestDelta };
+
+  const lastIndex = rows.length - 1;
+  const last = rows[lastIndex];
+  let latestDelta: number | null = null;
+  if (last && last.value !== null) {
+    const previous = [...rows.slice(0, lastIndex)]
+      .reverse()
+      .find((row) => row.value !== null);
+    if (previous && previous.value !== null)
+      latestDelta = Math.round(
+        scorePercent(last.value, last.test.max) -
+          scorePercent(previous.value, previous.test.max),
+      );
+  }
+  return { student, rows, latestDelta };
 }
 
 /**
- * Báo cáo tổng hợp lớp (quy tắc 3.1): chỉ có dữ liệu từng học sinh, phân bố trung
- * bình theo dải, tiến độ nhập điểm và danh sách cần chú ý.
- * Không tính trung bình lớp hay trung bình từng bài.
+ * Báo cáo tổng hợp lớp: dữ liệu từng học sinh, tiến độ nhập điểm và danh sách
+ * cần chú ý. Không có trung bình lớp hay trung bình từng bài (quy tắc 3.1).
  */
 export function classScoreReport(
   state: StoreState,
@@ -125,22 +116,13 @@ export function classScoreReport(
     .sort((a, b) => a.name.localeCompare(b.name, "vi"))
     .map((student) => studentScoreReport(state, student.id));
 
-  const distribution = DISTRIBUTION_LABELS.map((label) => ({
-    label,
-    count: students.filter(
-      (report) =>
-        report.average !== null &&
-        distributionLabel(report.average) === label,
-    ).length,
-  }));
-
   // Tiến độ nhập điểm tính trên toàn bộ danh sách lớp, kể cả học sinh đã nghỉ,
   // để khớp bảng điểm của lớp.
   const roster = state.students
     .filter((student) => student.classId === classId)
     .map((student) => studentScoreReport(state, student.id));
   const tests = state.tests
-    .filter((test) => test.classId === classId)
+    .filter((test) => test.classId === classId && !isArchived(test))
     .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
   const progress: ScoreProgress[] = tests.map((test) => {
     const values = roster.map(
@@ -151,22 +133,23 @@ export function classScoreReport(
   });
 
   /**
-   * "Cần chú ý" theo quy tắc 3.1: trung bình dưới 5; hoặc bài gần nhất giảm từ
-   * 2 điểm trở lên so với bài có điểm trước đó; hoặc từ 2 bài chưa có điểm.
+   * "Cần chú ý" chỉ còn hai lý do: bài gần nhất giảm từ 20% thang trở lên so với
+   * bài có điểm trước đó; hoặc từ 2 bài chưa có điểm.
    */
   const attention: ScoreAttention[] = [];
   for (const report of students) {
     const reasons: string[] = [];
-    if (report.average !== null && report.average < 5)
-      reasons.push(`Trung bình ${formatScoreDot(report.average)}, dưới 5`);
-    if (report.latestDelta !== null && report.latestDelta <= -2)
+    if (
+      report.latestDelta !== null &&
+      report.latestDelta <= -ATTENTION_DROP_PERCENT
+    )
       reasons.push(
-        `Bài gần nhất giảm ${formatScoreDot(Math.abs(report.latestDelta))} điểm`,
+        `Bài gần nhất giảm ${Math.abs(report.latestDelta)}% so với bài trước`,
       );
     const missing = report.rows.filter((row) => row.value === null).length;
     if (missing >= 2) reasons.push(`${missing} bài chưa có điểm`);
     if (reasons.length) attention.push({ student: report.student, reasons });
   }
 
-  return { students, distribution, progress, attention };
+  return { students, progress, attention };
 }

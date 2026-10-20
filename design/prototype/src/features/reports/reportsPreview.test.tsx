@@ -68,13 +68,14 @@ describe("bản xem trước báo cáo tháng (ảnh 07)", () => {
         onBack={() => {}}
       />,
     );
-    // Tiêu đề + chuyên cần + trung bình (không có trung bình lớp).
+    // Tiêu đề + chuyên cần + số bài đã có điểm (không có trung bình).
     expect(html).toContain("Báo cáo tháng 10");
     expect(html).toContain("Xem trước · Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
     expect(html).toContain("Chuyên cần");
-    expect(html).toContain("Điểm trung bình");
-    expect(html).toContain("/10");
-    expect(html).not.toContain("Trung bình lớp");
+    expect(html).toContain("Bài kiểm tra");
+    expect(html).toContain("3/3 bài");
+    expect(html).not.toContain("trung bình");
+    expect(html).not.toContain("TB");
     // Khối sao 3/2/1 theo số buổi có phiếu.
     expect(html).toContain("Nhận xét theo sao");
     expect(html).toContain("4 buổi có phiếu");
@@ -93,9 +94,11 @@ describe("bản xem trước báo cáo tháng (ảnh 07)", () => {
     expect(html).toContain(
       "Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.",
     );
-    // Điểm từng bài + nhận xét chung.
+    // Điểm từng bài dạng value/max + nhận xét chung.
     expect(html).toContain("Điểm từng bài");
-    expect(html).toContain("Chưa có điểm không tính vào trung bình.");
+    expect(html).toContain("8.0/10");
+    expect(html).toContain("10.0/10");
+    expect(html).toContain("Bài chưa có điểm cần chấm trước khi phát hành.");
     expect(html).toContain("Nhận xét chung");
     expect(html).toContain("Tháng này con tiến bộ ở kỹ năng nghe");
     expect(html).toContain("Phát hành lại");
@@ -113,6 +116,7 @@ describe("bản xem trước báo cáo tháng (ảnh 07)", () => {
       />,
     );
     expect(html).toContain("Chưa có điểm");
+    expect(html).toContain("2/3 bài");
     expect(html).not.toMatch(/vắng thi/i);
   });
 });

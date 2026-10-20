@@ -16,8 +16,19 @@ function setScores(
   });
 }
 
+/** Đổi thang điểm của một bài trong dữ liệu mẫu (mặc định mọi bài là thang 10). */
+function setTestMax(
+  state: ReturnType<typeof createSeed>,
+  testId: string,
+  max: number,
+) {
+  const test = state.tests.find((item) => item.id === testId);
+  if (!test) throw new Error("Thiếu bài kiểm tra mẫu");
+  test.max = max;
+}
+
 describe("Báo cáo điểm một học sinh", () => {
-  it("xếp bài theo ngày, tính TB, xu hướng và chênh lệch bài gần nhất", () => {
+  it("xếp bài theo ngày và tính chênh lệch phần trăm thang của bài gần nhất", () => {
     const state = createSeed();
     const report = studentScoreReport(state, "6a-student-0");
     expect(report.rows.map((row) => row.test.id)).toEqual([
@@ -27,31 +38,23 @@ describe("Báo cáo điểm một học sinh", () => {
       "6a-test-3",
     ]);
     expect(report.rows.map((row) => row.value)).toEqual([6, 7, 8, 9]);
-    expect(report.trend).toEqual([6, 7, 8, 9]);
-    expect(report.average).toBe(7.5);
-    expect(report.latestDelta).toBe(1);
+    // 8/10 → 9/10 là tăng 10% thang.
+    expect(report.latestDelta).toBe(10);
   });
 
-  it("chỉ có điểm hoặc chưa có điểm: không còn trạng thái Vắng thi", () => {
+  it("chỉ có điểm hoặc chưa có điểm, không còn trường trung bình", () => {
     const state = createSeed();
     const report = studentScoreReport(state, "6a-student-3");
     // Mỗi dòng chỉ gồm bài và điểm (null = chưa có điểm), không còn `state`/`absent`.
     expect(Object.keys(report.rows[3])).toEqual(["test", "value"]);
-    expect(Object.keys(report)).toEqual([
-      "student",
-      "rows",
-      "average",
-      "trend",
-      "latestDelta",
-    ]);
+    expect(Object.keys(report)).toEqual(["student", "rows", "latestDelta"]);
+    expect(report).not.toHaveProperty("average");
   });
 
-  it("bài không có điểm (kể cả vắng buổi kiểm tra) không tính vào TB", () => {
+  it("bài không có điểm (kể cả vắng buổi kiểm tra) không tạo chênh lệch", () => {
     const state = createSeed();
     const report = studentScoreReport(state, "6a-student-3");
     expect(report.rows[3].value).toBeNull();
-    expect(report.trend).toEqual([9, 10, 6]);
-    expect(report.average).toBeCloseTo(25 / 3);
     // Bài gần nhất chưa có điểm nên không có chênh lệch.
     expect(report.latestDelta).toBeNull();
   });
@@ -66,7 +69,6 @@ describe("Báo cáo điểm một học sinh", () => {
     expect(withoutRecord.rows.map((row) => row.value)).toEqual(
       withRecord.rows.map((row) => row.value),
     );
-    expect(withoutRecord.average).toBe(withRecord.average);
     expect(withoutRecord.latestDelta).toBe(withRecord.latestDelta);
   });
 
@@ -77,16 +79,13 @@ describe("Báo cáo điểm một học sinh", () => {
     );
     const report = studentScoreReport(state, "6a-student-0");
     expect(report.rows[3].value).toBeNull();
-    expect(report.average).toBe(7);
+    expect(report.latestDelta).toBeNull();
   });
 
   it("chưa đủ hai bài có điểm thì không có chênh lệch", () => {
     const state = createSeed();
     setScores(state, "6a-student-0", [null, null, null, 9]);
-    const report = studentScoreReport(state, "6a-student-0");
-    expect(report.trend).toEqual([9]);
-    expect(report.average).toBe(9);
-    expect(report.latestDelta).toBeNull();
+    expect(studentScoreReport(state, "6a-student-0").latestDelta).toBeNull();
   });
 
   it("latestDelta chỉ tính khi bài gần nhất có điểm", () => {
@@ -94,8 +93,41 @@ describe("Báo cáo điểm một học sinh", () => {
     // 6a-student-4: ba bài có điểm rồi bài cuối chưa có điểm.
     expect(studentScoreReport(state, "6a-student-4").latestDelta).toBeNull();
 
-    // 6a-student-2: bài cuối có điểm 6 sau bài 10 → −4.
-    expect(studentScoreReport(state, "6a-student-2").latestDelta).toBe(-4);
+    // 6a-student-2: bài cuối 6/10 sau bài 10/10 → −40%.
+    expect(studentScoreReport(state, "6a-student-2").latestDelta).toBe(-40);
+  });
+
+  it("chênh lệch tính theo phần trăm thang của từng bài, không theo điểm thô", () => {
+    const state = createSeed();
+    // Bài trước 50/50 (100%), bài gần nhất 8/10 (80%) → giảm 20% thang.
+    setTestMax(state, "6a-test-2", 50);
+    setScores(state, "6a-student-0", [null, null, 50, 8]);
+    expect(studentScoreReport(state, "6a-student-0").latestDelta).toBe(-20);
+  });
+
+  it("chênh lệch phần trăm được làm tròn số nguyên", () => {
+    const state = createSeed();
+    // 8/10 (80%) → 14/15 (93,3%) → +13.
+    setTestMax(state, "6a-test-3", 15);
+    setScores(state, "6a-student-0", [null, null, 8, 14]);
+    expect(studentScoreReport(state, "6a-student-0").latestDelta).toBe(13);
+  });
+
+  it("bài đã lưu trữ biến mất khỏi báo cáo của một học sinh", () => {
+    const state = createSeed();
+    const before = studentScoreReport(state, "6a-student-0");
+    expect(before.rows).toHaveLength(4);
+
+    state.tests.find((test) => test.id === "6a-test-1")!.archived = true;
+    const after = studentScoreReport(state, "6a-student-0");
+    // Giảm đúng một bài, không còn điểm 7 của bài đã lưu trữ.
+    expect(after.rows).toHaveLength(before.rows.length - 1);
+    expect(after.rows.map((row) => row.test.id)).toEqual([
+      "6a-test-0",
+      "6a-test-2",
+      "6a-test-3",
+    ]);
+    expect(after.rows.some((row) => row.value === 7)).toBe(false);
   });
 
   it("báo lỗi khi không tìm thấy học sinh", () => {
@@ -106,30 +138,15 @@ describe("Báo cáo điểm một học sinh", () => {
 });
 
 describe("Báo cáo điểm tổng hợp lớp", () => {
-  it("chỉ lấy học sinh đang học, phân bố theo dải và không có TB lớp", () => {
+  it("chỉ lấy học sinh đang học và không còn khối phân bố", () => {
     const state = createSeed();
     const report = classScoreReport(state, "6a");
     expect(report.students).toHaveLength(9);
     expect(
       report.students.some((item) => item.student.id === "6a-student-9"),
     ).toBe(false);
-    expect(report.distribution).toEqual([
-      { label: "< 5", count: 0 },
-      { label: "5 – 6.4", count: 0 },
-      { label: "6.5 – 7.9", count: 3 },
-      { label: "8 – 10", count: 6 },
-    ]);
-    expect(
-      report.distribution.reduce((total, band) => total + band.count, 0),
-    ).toBe(
-      report.students.filter((item) => item.average !== null).length,
-    );
-    expect(Object.keys(report)).toEqual([
-      "students",
-      "distribution",
-      "progress",
-      "attention",
-    ]);
+    expect(Object.keys(report)).toEqual(["students", "progress", "attention"]);
+    expect(report).not.toHaveProperty("distribution");
   });
 
   it("tiến độ nhập điểm từng bài chỉ đếm có điểm và chưa có điểm", () => {
@@ -159,34 +176,39 @@ describe("Báo cáo điểm tổng hợp lớp", () => {
         reasons: item.reasons,
       })),
     ).toEqual([
-      { name: "Bùi Tuấn Kiệt", reasons: ["Bài gần nhất giảm 4.0 điểm"] },
-      { name: "Lê Khánh Chi", reasons: ["Bài gần nhất giảm 4.0 điểm"] },
+      { name: "Bùi Tuấn Kiệt", reasons: ["Bài gần nhất giảm 40% so với bài trước"] },
+      { name: "Lê Khánh Chi", reasons: ["Bài gần nhất giảm 40% so với bài trước"] },
     ]);
   });
 
-  it("cần chú ý khi trung bình dưới 5", () => {
-    const state = createSeed();
-    setScores(state, "6a-student-0", [4, 4, 4, 4]);
-    expect(
-      classScoreReport(state, "6a").attention.find(
-        (item) => item.student.id === "6a-student-0",
-      )?.reasons,
-    ).toEqual(["Trung bình 4.0, dưới 5"]);
-  });
-
-  it("cần chú ý khi bài gần nhất giảm từ 2 điểm trở lên", () => {
+  it("cần chú ý khi bài gần nhất giảm từ 20% thang trở lên", () => {
     const state = createSeed();
     setScores(state, "6a-student-0", [8, 8, 8, 6]);
     expect(
       classScoreReport(state, "6a").attention.find(
         (item) => item.student.id === "6a-student-0",
       )?.reasons,
-    ).toEqual(["Bài gần nhất giảm 2.0 điểm"]);
+    ).toEqual(["Bài gần nhất giảm 20% so với bài trước"]);
   });
 
-  it("giảm dưới 2 điểm hoặc bài gần nhất chưa có điểm thì không tính lý do giảm", () => {
+  it("ngưỡng giảm tính theo phần trăm thang của bài", () => {
     const state = createSeed();
-    // Giảm 1.5 điểm: chưa tới ngưỡng.
+    // 9/10 (90%) → 14/20 (70%) → giảm 20% thang dù điểm thô tăng.
+    setTestMax(state, "6a-test-3", 20);
+    setScores(state, "6a-student-0", [null, null, 9, 14]);
+    expect(
+      classScoreReport(state, "6a").attention.find(
+        (item) => item.student.id === "6a-student-0",
+      )?.reasons,
+    ).toEqual([
+      "Bài gần nhất giảm 20% so với bài trước",
+      "2 bài chưa có điểm",
+    ]);
+  });
+
+  it("giảm dưới 20% thang hoặc bài gần nhất chưa có điểm thì không tính lý do giảm", () => {
+    const state = createSeed();
+    // Giảm 1.5 điểm trên thang 10 = 15%: chưa tới ngưỡng.
     setScores(state, "6a-student-0", [8, 8, 8, 6.5]);
     expect(
       classScoreReport(state, "6a").attention.some(
@@ -203,6 +225,22 @@ describe("Báo cáo điểm tổng hợp lớp", () => {
     ).toBeUndefined();
   });
 
+  it("không còn lý do trung bình dưới 5", () => {
+    const state = createSeed();
+    setScores(state, "6a-student-0", [4, 4, 4, 4]);
+    expect(
+      classScoreReport(state, "6a").attention.some(
+        (item) => item.student.id === "6a-student-0",
+      ),
+    ).toBe(false);
+    expect(
+      classScoreReport(state, "6a")
+        .attention.flatMap((item) => item.reasons)
+        .join(" ")
+        .toLocaleLowerCase("vi"),
+    ).not.toContain("trung bình");
+  });
+
   it("cần chú ý khi từ 2 bài chưa có điểm", () => {
     const state = createSeed();
     setScores(state, "6a-student-2", [8, 8, null, null]);
@@ -213,7 +251,7 @@ describe("Báo cáo điểm tổng hợp lớp", () => {
     ).toEqual(["2 bài chưa có điểm"]);
   });
 
-  it("một em có thể có nhiều lý do, xếp theo thứ tự TB, giảm điểm, chưa có điểm", () => {
+  it("một em có thể có hai lý do, xếp theo thứ tự giảm điểm rồi chưa có điểm", () => {
     const state = createSeed();
     setScores(state, "6a-student-5", [null, null, 6, 1]);
     expect(
@@ -221,8 +259,7 @@ describe("Báo cáo điểm tổng hợp lớp", () => {
         (item) => item.student.id === "6a-student-5",
       )?.reasons,
     ).toEqual([
-      "Trung bình 3.5, dưới 5",
-      "Bài gần nhất giảm 5.0 điểm",
+      "Bài gần nhất giảm 50% so với bài trước",
       "2 bài chưa có điểm",
     ]);
 
@@ -231,20 +268,35 @@ describe("Báo cáo điểm tổng hợp lớp", () => {
       classScoreReport(state, "6a").attention.find(
         (item) => item.student.id === "6a-student-6",
       )?.reasons,
-    ).toEqual(["Trung bình 2.5, dưới 5", "2 bài chưa có điểm"]);
+    ).toEqual(["2 bài chưa có điểm"]);
   });
 
-  it("học sinh chưa có TB không vào dải nào nhưng vẫn tính tiến độ", () => {
+  it("bài đã lưu trữ không vào báo cáo, tiến độ hay danh sách cần chú ý", () => {
+    const state = createSeed();
+    setScores(state, "6a-student-0", [null, null, 8, 9]);
+    expect(
+      classScoreReport(state, "6a").attention.some(
+        (item) => item.student.id === "6a-student-0",
+      ),
+    ).toBe(true);
+
+    // Lưu trữ hai bài còn thiếu điểm: em này không còn lý do nào.
+    state.tests.find((test) => test.id === "6a-test-0")!.archived = true;
+    state.tests.find((test) => test.id === "6a-test-1")!.archived = true;
+    const report = classScoreReport(state, "6a");
+    expect(report.progress.map((item) => item.test.id)).toEqual([
+      "6a-test-2",
+      "6a-test-3",
+    ]);
+    expect(
+      report.attention.some((item) => item.student.id === "6a-student-0"),
+    ).toBe(false);
+  });
+
+  it("học sinh chưa có điểm vẫn tính tiến độ", () => {
     const state = createSeed();
     setScores(state, "6a-student-0", [null, null, null, null]);
     const report = classScoreReport(state, "6a");
-    expect(
-      report.students.find((item) => item.student.id === "6a-student-0")
-        ?.average,
-    ).toBeNull();
-    expect(
-      report.distribution.reduce((total, band) => total + band.count, 0),
-    ).toBe(8);
     expect(
       report.progress.find((item) => item.test.id === "6a-test-3"),
     ).toMatchObject({ scored: 7, missing: 3 });
@@ -261,11 +313,11 @@ describe("Báo cáo điểm tổng hợp lớp", () => {
     ).toBe(false);
   });
 
-  it("lớp chưa có điểm vẫn trả báo cáo rỗng theo dải", () => {
+  it("lớp chưa có điểm vẫn trả báo cáo rỗng", () => {
     const state = createSeed();
     state.scores = [];
     const report = classScoreReport(state, "6a");
-    expect(report.distribution.map((band) => band.count)).toEqual([0, 0, 0, 0]);
+    expect(report.students).toHaveLength(9);
     expect(report.attention).toHaveLength(9);
     expect(report.attention[0].reasons).toEqual(["4 bài chưa có điểm"]);
     expect(report.progress[0]).toMatchObject({ scored: 0, missing: 10 });

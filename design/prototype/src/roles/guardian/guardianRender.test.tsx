@@ -12,6 +12,7 @@ import {
   listMyChildren,
 } from "../../data/repositories/guardian";
 import { GuardianProvider } from "./guardianContext";
+import { childScoresMonth } from "./guardianRead";
 import GuardianOverviewPage from "./GuardianOverviewPage";
 import GuardianAttendancePage from "./GuardianAttendancePage";
 import GuardianScoresPage from "./GuardianScoresPage";
@@ -70,7 +71,7 @@ function renderPath(path: string, route: string, node: ReactElement): string {
 }
 
 describe("PH · Tổng quan (ảnh 15)", () => {
-  it("chuyên cần, điểm trung bình, lời cô, nhận xét mới nhất và điểm gần đây", () => {
+  it("chuyên cần, lời cô, nhận xét mới nhất và điểm gần đây, không có trung bình", () => {
     seedGuardian();
     const html = renderPage(<GuardianOverviewPage />);
     expect(html).toContain("Tiếng Anh giao tiếp 6A · Tháng 10");
@@ -78,9 +79,8 @@ describe("PH · Tổng quan (ảnh 15)", () => {
     expect(html).toContain("Đi học");
     expect(html).toContain("3/4");
     expect(html).toContain("buổi · 0 muộn, 1 có phép");
-    expect(html).toContain("Điểm trung bình");
-    expect(html).toContain("9.0");
-    expect(html).toContain("▲ 2.0 so với tháng 9");
+    expect(html).not.toContain("trung bình");
+    expect(html).not.toContain("TB");
     expect(html).toContain("Điều cô muốn chia sẻ");
     expect(html).toContain("Tháng này con tiến bộ ở kỹ năng nghe");
     expect(html).toContain("Nhận xét mới nhất");
@@ -92,6 +92,8 @@ describe("PH · Tổng quan (ảnh 15)", () => {
       "Hôm nay con xung phong kể chuyện trước lớp rất tự tin.",
     );
     expect(html).toContain("Điểm gần đây");
+    // Điểm từng bài trên thang của bài.
+    expect(html).toContain("10.0/10");
     expect(html).toContain("Xem tất cả");
     // Không có nút sửa/gửi: phụ huynh chỉ đọc.
     expect(html).not.toContain("Lưu");
@@ -142,7 +144,7 @@ describe("PH · Tổng quan (ảnh 15)", () => {
     );
   });
 
-  it("nhóm Điểm bị tắt thì không hiện điểm trung bình hay điểm gần đây", () => {
+  it("nhóm Điểm bị tắt thì không hiện điểm gần đây", () => {
     const state = createSeed();
     state.roles = state.roles.map((role) =>
       role.kind === "guardian"
@@ -153,10 +155,25 @@ describe("PH · Tổng quan (ảnh 15)", () => {
     switchRole(MEMBER_IDS.lanGuardian);
     const html = renderPage(<GuardianOverviewPage />);
     expect(html).toContain("Đi học");
-    expect(html).not.toContain("Điểm trung bình");
     expect(html).not.toContain("Điểm gần đây");
-    // Không có trung bình lớp trong mọi trường hợp (quy tắc 3.1).
-    expect(html).not.toContain("Trung bình lớp");
+    // Không có trung bình nào trong mọi trường hợp (quy tắc 3.1).
+    expect(html).not.toContain("trung bình");
+    expect(html).not.toContain("TB");
+  });
+
+  it("bài đã lưu trữ không vào điểm từng bài của con", () => {
+    const state = createSeed();
+    state.tests.find((test) => test.id === "6a-test-2")!.archived = true;
+    replaceStore(state);
+    switchRole(MEMBER_IDS.lanGuardian);
+    const scores = childScoresMonth("6a-student-1", "2026-10");
+    expect(scores.rows.map((row) => row.test.id)).toEqual([
+      "6a-test-3",
+      "6a-test-1",
+    ]);
+    const html = renderPage(<GuardianScoresPage />);
+    expect(html).not.toContain("Nghe");
+    expect(html).not.toContain("9.0/10");
   });
 });
 
@@ -338,7 +355,7 @@ describe("PH · Bài tập về nhà của con (ảnh 09, 34, 35)", () => {
 });
 
 describe("PH · Báo cáo tháng (ảnh 10)", () => {
-  it("chuyên cần, điểm trung bình, sao 3/2/1 và bảng BTVN theo phần", () => {
+  it("chuyên cần, điểm từng bài, sao 3/2/1 và bảng BTVN theo phần", () => {
     seedGuardian();
     const html = renderPage(<GuardianReportPage />);
     expect(html).toContain("Trần Gia Bảo");
@@ -348,9 +365,12 @@ describe("PH · Báo cáo tháng (ảnh 10)", () => {
     expect(html).toContain("Chuyên cần");
     expect(html).toContain("3/4 buổi");
     expect(html).toContain("0 muộn");
-    expect(html).toContain("Điểm trung bình");
-    expect(html).toContain("9.0/10");
-    expect(html).toContain("3 bài kiểm tra");
+    expect(html).not.toContain("trung bình");
+    expect(html).not.toContain("TB");
+    expect(html).toContain("3/3 bài");
+    // Điểm từng bài dạng value/max, bài chưa có điểm ghi rõ.
+    expect(html).toContain("Điểm từng bài");
+    expect(html).toContain("10.0/10");
     expect(html).toContain("Nhận xét theo sao");
     expect(html).toContain("4 buổi có phiếu");
     expect(html).toContain("Tính trên các phiếu đã gửi.");
@@ -407,18 +427,32 @@ describe("PH · Điểm danh và Điểm số (tối giản, dữ liệu thật 
     expect(html).not.toContain("Nguyễn Minh Anh");
   });
 
-  it("Điểm số: điểm từng bài của con và trung bình của con, không có TB lớp", () => {
+  it("Điểm số: chỉ điểm từng bài của con dạng value/max, không có trung bình", () => {
     seedGuardian();
     const html = renderPage(<GuardianScoresPage />);
     expect(html).toContain("Điểm số");
-    expect(html).toContain("Điểm trung bình tháng 10");
-    expect(html).toContain("9.0");
     expect(html).toContain("Điểm từng bài");
+    expect(html).toContain("3 bài có điểm");
     expect(html).toContain("Ngữ pháp");
     expect(html).toContain("8.0/10");
     expect(html).toContain("Nói");
     expect(html).toContain("10.0/10");
-    expect(html).not.toContain("TB lớp");
-    expect(html).not.toContain("Trung bình lớp");
+    expect(html).not.toContain("trung bình");
+    expect(html).not.toContain("TB");
+  });
+
+  it("bài đã lưu trữ không vào điểm từng bài của con", () => {
+    const state = createSeed();
+    state.tests.find((test) => test.id === "6a-test-2")!.archived = true;
+    replaceStore(state);
+    switchRole(MEMBER_IDS.lanGuardian);
+    const scores = childScoresMonth("6a-student-1", "2026-10");
+    expect(scores.rows.map((row) => row.test.id)).toEqual([
+      "6a-test-3",
+      "6a-test-1",
+    ]);
+    const html = renderPage(<GuardianScoresPage />);
+    expect(html).not.toContain("Nghe");
+    expect(html).not.toContain("9.0/10");
   });
 });
