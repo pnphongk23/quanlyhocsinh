@@ -1,0 +1,298 @@
+/*
+ * Phân công giảng dạy (Admin): thẻ lớp ở mobile 390px, bảng ở desktop,
+ * modal chọn 1 GV chính + nhiều trợ giảng (chỉ ghi khi bấm "Lưu phân công").
+ */
+.page {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  min-width: 0;
+}
+.subtitle {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Mobile: thẻ lớp */
+.grid {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.cardInfo {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+.className {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.classMeta {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.editButton {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  cursor: pointer;
+}
+.chooseButton {
+  flex: none;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.divider {
+  height: 1px;
+  background: var(--color-border);
+}
+.rows {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.rowLabel {
+  flex: none;
+  width: 76px;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.rowValue {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.rowEmpty {
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+/* Desktop: bảng */
+.table {
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.2fr 1.3fr 1fr 1fr auto;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.tableRow:last-child {
+  border-bottom: 0;
+}
+.tableHead {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.tableClass {
+  font-size: 15px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.tableText {
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.tableHint {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.tableAction {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Modal phân công */
+.form {
+  display: grid;
+  gap: 16px;
+}
+.group {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.label {
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-row);
+  background: var(--color-bg);
+  cursor: pointer;
+}
+.optionOn {
+  background: var(--color-primary-soft);
+}
+.optionDisabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.optionInput {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+.optionText {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.optionName {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.optionRole {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.staffEmpty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 16px 0 4px;
+  text-align: center;
+}
+.staffEmptyTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.staffEmptyText {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.editButton:focus-visible,
+.chooseButton:focus-visible,
+.option:focus-within {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    gap: 16px;
+  }
+}
+
+/*
+ * NIT: trạng thái rỗng (EmptyState dùng chung) canh giữa vùng còn lại ở
+ * mobile và có vòng tròn biểu tượng, không đổi component dùng chung.
+ */
+@media (max-width: 1023px) {
+  .page > :global([class*="empty"]) {
+    align-self: center;
+    width: 100%;
+    min-height: calc(100dvh - var(--tabbar-height) - 240px);
+    align-content: center;
+  }
+  .page > :global([class*="empty"])::before {
+    content: "";
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--color-primary-soft)
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e43b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'/><path d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'/></svg>")
+      center / 28px 28px no-repeat;
+  }
+}

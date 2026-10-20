@@ -1,0 +1,25 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.unsaved {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.local {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+.synced {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.error {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}

@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UX Foundation &amp; UI Foundation</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;700&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F8FAFC;--surf:#FFFFFF;--ink:#0F172A;--muted:#475569;--line:#94A3B8;--soft:#E2E8F0;
+  --accent:#1D4ED8;--accent-ink:#1E3A8A;--accent-soft:#DBEAFE;
+  --red:#991B1B;--red-soft:#FEF2F2;--green:#14532D;--green-soft:#F0FDF4;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:#0F172A;font-family:"Be Vietnam Pro",-apple-system,"SF Pro Text","Segoe UI",Roboto,sans-serif;font-weight:400;color:var(--ink);-webkit-font-smoothing:antialiased;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+h1,h2,h3,p,ul,ol{margin:0}
+ul,ol{padding:0;list-style:none}
+b,strong{font-weight:700}
+.ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- engine ---------- */
+#stage{position:fixed;inset:0;overflow:hidden}
+#deck{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+.slide{position:absolute;left:0;top:0;width:1920px;height:1080px;background:var(--bg);overflow:hidden;font-size:32px;line-height:1.4;opacity:0;visibility:hidden}
+.slide.active{opacity:1;visibility:visible;transition:opacity .18s ease}
+.notes{display:none}
+#notesPanel{display:none;position:fixed;left:0;right:0;bottom:0;height:28vh;background:#0F172A;color:#E2E8F0;border-top:3px solid var(--accent);padding:12px 32px;overflow:auto;font-size:20px;line-height:1.5;z-index:10}
+#notesPanel.open{display:block}
+#notesPanel h3{font-size:16px;color:#BFDBFE;font-weight:700;margin-bottom:6px}
+#notesPanel p{margin:0 0 .5em}
+.foot{position:absolute;left:96px;right:96px;bottom:32px;height:40px;display:flex;align-items:center;justify-content:space-between;font-size:24px;line-height:1.4;color:var(--muted)}
+.prog{display:flex;align-items:center;gap:8px}
+.prog span{margin-right:8px}
+.prog li{width:48px;height:36px;border:2px solid var(--muted);border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:24px;color:var(--muted)}
+.prog li.past{background:var(--accent-soft);border-color:var(--accent-ink);color:var(--ink)}
+.prog li.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.num{font-weight:700;color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.slide,.slide.active{transition:none}.spin{animation:none!important}}
+@media print{
+  html,body{width:1920px;height:auto;background:#fff}
+  #stage{position:static;overflow:visible}
+  #deck{position:static;transform:none!important;width:1920px;height:auto}
+  .slide{position:relative;opacity:1!important;visibility:visible!important;transition:none;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  #notesPanel,.notes{display:none!important}
+}
+@page{size:1920px 1080px;margin:0}
+
+/* ---------- layout ---------- */
+.hl{position:absolute;left:96px;top:96px;width:1728px;height:150px;font-size:60px;line-height:72px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.body{position:absolute;left:96px;top:272px;width:1728px;height:712px}
+.l1{position:absolute;left:96px;top:0;bottom:0;width:1040px;display:flex;flex-direction:column;justify-content:center;gap:40px}
+.kicker{font-size:36px;font-weight:700;color:var(--accent)}
+.hl-big{font-size:88px;line-height:108px;font-weight:700;letter-spacing:-.015em}
+.sub{font-size:36px;color:var(--muted)}
+.tagline{font-size:72px;line-height:92px;font-weight:700;color:var(--accent)}
+.l1-art{position:absolute;left:1224px;top:140px;width:600px;height:800px;display:flex}
+
+/* tags, metrics, callouts */
+.tag{display:inline-flex;align-items:center;gap:12px;height:56px;padding:0 24px 0 16px;border:3px solid var(--ink);border-radius:28px;font-weight:700;font-size:32px;background:#fff;flex:none}
+.tag .ic{font-size:32px}
+.tag.bad{border-color:var(--red);color:var(--red);background:var(--red-soft)}
+.tag.good{border-color:var(--green);color:var(--green);background:var(--green-soft)}
+.th{display:flex;align-items:center;gap:20px;min-height:56px}
+.co{display:inline-flex;flex:none;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;font-style:normal;font-weight:700;font-size:28px;line-height:1;align-items:center;justify-content:center}
+.lg{display:inline-flex;align-items:center;gap:12px;font-size:28px;line-height:1.2;color:var(--ink)}
+.metric{display:flex;align-items:center;min-height:48px;font-size:32px;font-weight:700;line-height:1.2}
+.foot24{font-size:24px;color:var(--muted);line-height:1.3}
+.ba{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr);gap:48px}
+.ba.tight{gap:32px}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0;min-height:0}
+.col>.screen{flex:1 1 0}
+
+/* mock primitives */
+.screen{position:relative;display:flex;flex-direction:column;background:#fff;border:4px solid var(--ink);border-radius:36px;overflow:hidden;font-size:32px;line-height:1.3;min-height:0;min-width:0}
+.col.bad>.screen{border-color:var(--red)}
+.col.good>.screen{border-color:var(--green)}
+.ab{display:flex;align-items:center;gap:16px;height:88px;padding:0 24px;border-bottom:2px solid var(--soft);font-weight:700;font-size:36px;flex:none}
+.ab .ic{font-size:36px}
+.ab .sp{flex:1}
+.rw{display:flex;align-items:center;gap:20px;padding:12px 24px;min-height:88px;flex:none}
+.rw+.rw{border-top:2px solid var(--soft)}
+.av{flex:none;width:56px;height:56px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-size:28px;display:flex;align-items:center;justify-content:center}
+.av.lg2{width:120px;height:120px;font-size:48px}
+.nm{font-size:32px;line-height:1.25}
+.sb{font-size:28px;line-height:1.25;color:var(--muted)}
+.fl{flex:1;min-width:0}
+.tg{flex:none;width:56px;height:56px;border-radius:16px;border:3px solid var(--line);display:flex;align-items:center;justify-content:center;color:#fff;font-size:36px}
+.tg.on{background:var(--accent);border-color:var(--accent)}
+.btn{display:flex;align-items:center;justify-content:center;gap:12px;height:88px;border-radius:20px;background:var(--accent);color:#fff;font-weight:700;font-size:32px;padding:0 32px;flex:none;border:3px solid var(--accent)}
+.btn .ic{font-size:36px}
+.btn.line{background:#fff;color:var(--accent-ink)}
+.btn.red{background:var(--red);border-color:var(--red)}
+.pad{padding:24px}
+.inp{display:flex;align-items:center;height:60px;border:3px solid var(--muted);border-radius:16px;padding:0 20px;font-size:32px;background:#fff;flex:none}
+.lbl{font-size:28px;line-height:1.2;color:var(--muted);margin-bottom:4px}
+.tabbar{display:flex;border-top:2px solid var(--soft);margin-top:auto;background:#fff;flex:none}
+.tabbar .t{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 12px;font-size:28px;line-height:1.2;color:var(--muted)}
+.tabbar .t .ic{font-size:40px}
+.tabbar .t.on{color:var(--accent);font-weight:700}
+.tabbar.top{margin-top:0;border-top:0;border-bottom:2px solid var(--soft)}
+.spacer{flex:1}
+.chipx{display:inline-flex;align-items:center;gap:8px;height:56px;padding:0 20px;border:3px solid var(--line);border-radius:28px;font-size:28px;font-weight:700;color:var(--ink)}
+.chipx.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+.cap{font-size:32px;line-height:1.25}
+.cap b{display:block}
+.cap span{font-size:32px;color:var(--muted)}
+
+/* S1 / S2 */
+.pretty{background:#fff}
+.lgrow{display:flex;gap:32px;min-height:48px;align-items:center}
+.hero{margin:20px;padding:24px;border-radius:32px;background:var(--accent-soft);position:relative;overflow:hidden}
+.hero h4{margin:0;font-size:36px;line-height:1.2}
+.hero p{font-size:28px;color:var(--line);margin-top:8px}
+.hero .orb{position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(29,78,216,.18)}
+.tiny{display:flex;gap:28px;padding:8px 28px}
+.tiny i{width:48px;height:48px;border-radius:50%;border:2px solid var(--soft);color:var(--line);display:flex;align-items:center;justify-content:center;font-size:24px;font-style:normal}
+.deco{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:12px 20px}
+.deco div{height:132px;border-radius:28px;background:var(--bg);border:2px solid var(--soft);padding:16px;font-size:28px;color:var(--line);position:relative;overflow:hidden}
+.deco div:before{content:"";position:absolute;right:-30px;bottom:-30px;width:100px;height:100px;border-radius:50%;background:rgba(29,78,216,.10)}
+
+/* agenda */
+.agwrap{display:grid;grid-template-columns:1fr;gap:64px;grid-template-rows:minmax(0,1fr)}
+.ag li{display:flex;align-items:center;gap:32px;height:112px;font-size:44px;font-weight:700;border-bottom:2px solid var(--soft);color:var(--muted);position:relative}
+.ag .k{width:72px;height:72px;border-radius:50%;border:3px solid var(--muted);display:flex;align-items:center;justify-content:center;font-size:36px;flex:none}
+.ag .t{flex:1}
+.ag .m{font-size:44px}
+.ag li.cur{color:var(--ink);border-bottom-color:var(--accent)}
+.ag li.cur .k{background:var(--accent);border-color:var(--accent);color:#fff}
+.ag li.cur:before{content:"";position:absolute;left:-24px;top:16px;bottom:16px;width:8px;border-radius:4px;background:var(--accent)}
+.ag li.cur .m{color:var(--accent)}
+.ag .sm{display:block;font-size:32px;font-weight:400;color:var(--muted)}
+.tline{display:flex;gap:8px;height:88px;margin-top:64px}
+.tline i{display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700;font-size:32px;border-radius:12px;color:#fff}
+.sources{display:flex;flex-direction:column;gap:24px;justify-content:flex-start}
+.sources .src{padding:24px 32px;border:3px solid var(--ink);border-radius:24px;background:#fff;font-size:40px;font-weight:700}
+.sources .src.gu{border-style:dashed;border-color:var(--muted);color:var(--muted)}
+.sources p{font-size:36px;font-weight:700;color:var(--accent-ink)}
+.divwrap{display:grid;grid-template-columns:480px 1fr;gap:64px;grid-template-rows:minmax(0,1fr)}
+.bigk{font-size:440px;line-height:1;font-weight:700;color:var(--accent);letter-spacing:-.04em}
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:32px}
+.pillars li{display:flex;align-items:center;gap:12px;height:72px;padding:0 20px;border:3px solid var(--ink);border-radius:36px;background:#fff;font-weight:700;font-size:32px}
+.pillars{counter-reset:p}
+.pillars li:before{counter-increment:p;content:counter(p);width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;font-size:28px;line-height:1;display:flex;align-items:center;justify-content:center;flex:none}
+
+/* S5 */
+.gridgoal{display:grid;grid-template-columns:760px 1fr;gap:64px;grid-template-rows:minmax(0,1fr)}
+.goal{display:flex;flex-direction:column;justify-content:center;gap:24px}
+.goal .q{font-size:44px;line-height:1.3}
+.goal .blank{font-size:48px;line-height:1.3;font-weight:700;color:var(--accent-ink);border-bottom:6px solid var(--accent);padding-bottom:8px}
+.goal .hint{display:flex;align-items:center;gap:12px;font-size:32px;color:var(--muted)}
+.cut{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:12px 24px;padding:12px 20px;border:3px dashed var(--muted);border-radius:16px;color:var(--muted);flex:none}
+.cut span{text-decoration:line-through;text-decoration-thickness:3px}
+.cut .ic{font-size:36px;color:var(--ink)}
+
+/* S6 flow */
+.flowwrap{position:relative;width:1704px;height:640px;margin:0 auto}
+.nd{position:absolute;width:264px;height:160px;border:3px solid var(--ink);border-radius:24px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-weight:700;font-size:32px;line-height:1.2;text-align:center;padding:12px}
+.nd .n{width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;font-size:28px;display:flex;align-items:center;justify-content:center}
+.nd.err{border-style:dashed}
+.nd.err .n{background:#fff;color:var(--ink);border:3px solid var(--ink)}
+.nd.err .n .ic{font-size:30px}
+.flowwrap svg.lines{position:absolute;left:0;top:0;width:1704px;height:640px;overflow:visible}
+.fcal{position:absolute;display:flex;align-items:center;gap:12px;font-size:32px;line-height:1.2;width:560px}
+
+/* L5 */
+.l5{display:grid;grid-template-columns:560px 1fr;gap:48px;grid-template-rows:minmax(0,1fr)}
+.rule{background:#fff;border:3px solid var(--ink);border-radius:32px;padding:40px;display:flex;flex-direction:column;gap:16px}
+.rn{font-size:112px;line-height:1.3;font-weight:700;color:var(--accent)}
+.rname{font-size:48px;line-height:1.2;font-weight:700}
+.rdef{font-size:36px;line-height:1.35}
+.niel{margin-top:16px;padding-top:20px;border-top:3px solid var(--soft);display:flex;flex-direction:column;gap:12px;font-size:32px;line-height:1.3}
+.niel li{display:flex;gap:12px}
+.niel li i{font-style:normal;font-weight:700;color:var(--accent)}
+.tilegrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px 24px}
+.tile{height:88px;border:3px solid var(--line);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;text-align:center;padding:0 8px;background:#fff}
+.tile.big{grid-column:1 / 3;height:120px;background:var(--accent);border-color:var(--accent);color:#fff;font-size:36px}
+.tile.more{grid-column:1 / 3;height:72px;font-weight:400;color:var(--muted);justify-content:space-between;padding:0 24px}
+
+/* S13 */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:32px;grid-template-rows:minmax(0,1fr)}
+.g4 .cell{display:flex;flex-direction:column;gap:16px;min-height:0;min-width:0}
+.g4 .cell>.screen{flex:1 1 0;border-radius:32px}
+.cl{font-size:32px;font-weight:700;text-align:center}
+.sk{height:28px;border-radius:14px;background:var(--soft)}
+.sk.c{width:56px;height:56px;border-radius:50%;flex:none}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:24px}
+.center .ic{font-size:80px;color:var(--muted)}
+.center .tt{font-size:32px;font-weight:700;line-height:1.25}
+.banner{display:flex;align-items:center;gap:12px;padding:12px 24px;background:var(--soft);font-size:28px;font-weight:700;flex:none}
+.banner .ic{font-size:32px}
+.stale{padding:12px 24px;font-size:28px;color:var(--muted);flex:none}
+
+/* long names / dialogs */
+.nmc{width:380px}
+.nmc.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nmc.two{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.score{width:96px;text-align:right;font-weight:700;font-size:36px;flex:none;font-variant-numeric:tabular-nums}
+.veil{position:absolute;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:32px}
+.dlg{background:#fff;border-radius:28px;padding:28px;width:100%;display:flex;flex-direction:column;gap:12px}
+.dlg h4{margin:0;font-size:36px;line-height:1.2}
+.dlg p{font-size:28px;color:var(--muted)}
+.dlg .acts{display:flex;gap:16px;margin-top:8px}
+.dlg .acts .btn{flex:1;height:80px;padding:0}
+.toast{position:absolute;left:24px;right:24px;bottom:24px;display:flex;align-items:center;gap:16px;background:var(--ink);color:#fff;border-radius:20px;padding:0 24px;height:96px;font-size:32px}
+.toast .ic{font-size:36px}
+.toast b{margin-left:auto;display:flex;align-items:center;gap:8px;color:#BFDBFE}
+
+/* forms */
+.form{padding:28px}
+.form .fg+.fg{margin-top:16px}
+.form.groups .fg+.fg:not(.gap){margin-top:12px}
+.form.lines .fg+.fg{border-top:2px solid var(--muted);padding-top:16px}
+.form.groups .fg.gap{margin-top:80px}
+.hits{display:flex;padding:0 24px 24px}
+.hit{width:40px;height:40px;border:2px dashed var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--ink);flex:none}
+.hits.sm .hit{margin-right:4px}
+.hits.lg .hit{width:88px;height:88px;border-radius:16px;margin-right:16px;font-size:40px}
+.tl{font-size:32px}
+
+/* spacing */
+.sprows{display:grid;grid-template-columns:96px 1fr;gap:0;align-items:center}
+.sprow{display:contents}
+.sprow .bar{height:44px;background:var(--accent);border-radius:8px}
+.spl{display:grid;grid-template-columns:1fr;row-gap:12px}
+.spl .r{display:grid;grid-template-columns:100px 1fr 280px;align-items:center;gap:24px;height:104px}
+.spl .v{font-size:48px;font-weight:700;text-align:right}
+.spl .u{font-size:32px;color:var(--muted)}
+.spc{width:760px;background:#fff;border:4px solid var(--ink);border-radius:24px;overflow:hidden}
+.spc .band{display:flex;align-items:center;justify-content:center;background:var(--accent-soft);border-top:2px dashed var(--accent);border-bottom:2px dashed var(--accent);font-size:28px;font-weight:700;line-height:1;color:var(--accent-ink)}
+.spc .it{padding:0 24px}
+.spc .nme{font-size:36px;font-weight:700;line-height:48px;display:block}
+.spc .sbl{font-size:32px;line-height:40px;color:var(--muted);display:block}
+.spc .btn{width:100%}
+
+/* type table */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+.tbl th{font-size:28px;font-weight:700;color:var(--muted);text-align:left;padding:0 24px 12px;border-bottom:3px solid var(--ink)}
+.tbl td{padding:22px 24px;border-bottom:2px solid var(--soft);vertical-align:middle;background:#fff}
+.tbl td.role{font-weight:700;font-size:36px}
+.tbl td.num{font-size:36px;font-weight:700}
+.tbl tr.focus td{background:var(--accent-soft);border-bottom-color:var(--accent)}
+code,.code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:32px;background:var(--soft);padding:2px 12px;border-radius:8px}
+.swatch{display:inline-flex;align-items:center;justify-content:center;width:200px;height:72px;border-radius:12px;border:2px solid var(--line);font-size:36px;font-weight:700}
+.pass{display:inline-flex;align-items:center;gap:8px;font-weight:700}
+.pass .ic{font-size:36px;color:var(--accent)}
+
+/* touch targets */
+.tt3{display:flex;align-items:flex-end;justify-content:center;gap:96px;height:480px}
+.tbox{display:flex;flex-direction:column;align-items:center;gap:24px}
+.sq{background:var(--accent-soft);border:4px dashed var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--accent-ink)}
+.tbox .big{font-size:56px;font-weight:700;line-height:1.25}
+.tbox .who{font-size:32px;color:var(--muted);text-align:center;line-height:1.25;min-height:80px}
+
+/* controls */
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:24px}
+.g5 .cellc{background:#fff;border:3px solid var(--soft);border-radius:28px;padding:64px 24px 48px;display:flex;flex-direction:column;gap:48px;align-items:stretch}
+.g5 .btn{padding:0 16px;font-size:32px}
+.btn.press{background:var(--accent-ink);border-color:var(--accent-ink);transform:scale(.96)}
+.btn.focus{outline:5px solid var(--ink);outline-offset:5px}
+.btn.dis{background:var(--soft);border-color:var(--soft);color:#64748B}
+.spin{animation:spin 1s linear infinite;transform-origin:50% 50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+.arow{display:flex;align-items:center;gap:32px;margin-top:72px;font-size:32px}
+.arow .ibtn{width:88px;height:88px;border:3px solid var(--ink);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:44px;background:#fff}
+
+/* S23 */
+.gs{filter:grayscale(1);flex:1}
+.dot{width:32px;height:32px;border-radius:50%;flex:none}
+.dot.g{background:#15803D}.dot.r{background:#B91C1C}
+.pill{display:inline-flex;align-items:center;gap:8px;height:56px;padding:0 20px 0 14px;border-radius:28px;border:3px solid;font-weight:700;font-size:28px;flex:none}
+.pill .ic{font-size:30px}
+.pill.g{color:var(--green);border-color:#15803D;background:var(--green-soft)}
+.pill.r{color:var(--red);border-color:#B91C1C;background:var(--red-soft)}
+
+/* nested cards */
+.nest1{margin:28px;padding:24px;border-radius:32px;background:#fff;box-shadow:0 24px 48px rgba(15,23,42,.25),0 4px 8px rgba(15,23,42,.2)}
+.nest2{padding:24px;border-radius:24px;background:#fff;box-shadow:0 14px 28px rgba(15,23,42,.25),0 3px 6px rgba(15,23,42,.2)}
+.nest3{padding:16px;border-radius:16px;background:#fff;box-shadow:0 8px 16px rgba(15,23,42,.3),0 2px 4px rgba(15,23,42,.2);margin-top:16px}
+.flatc{padding:28px;display:flex;flex-direction:column;gap:20px}
+.ttl{font-size:44px;font-weight:700;line-height:1.2}
+
+/* C */
+.cwrap{display:grid;grid-template-columns:1020px 1fr;gap:48px;grid-template-rows:minmax(0,1fr)}
+.cgrp{font-size:32px;font-weight:700;color:var(--accent-ink);margin-bottom:8px}
+.cl8{display:flex;flex-direction:column;gap:8px}
+.cl8 li{display:flex;gap:16px;align-items:flex-start;font-size:32px;line-height:1.3}
+.cb{flex:none;width:36px;height:36px;border:3px solid var(--ink);border-radius:8px;margin-top:3px;background:#fff}
+.scard{background:#fff;border:3px solid var(--ink);border-radius:28px;padding:32px;display:flex;flex-direction:column;gap:14px}
+.scard h3{font-size:36px;line-height:1.2}
+.axis{display:flex;align-items:center;gap:12px;font-size:32px;line-height:1.2}
+.axis .nmx{flex:1}
+.axis i{font-style:normal;width:52px;height:52px;border:3px solid var(--ink);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:28px;flex:none}
+.rulebox{margin-top:6px;padding:16px 20px;border-radius:16px;background:var(--accent-soft);border:3px solid var(--accent);font-weight:700;font-size:32px;line-height:1.3;color:var(--accent-ink)}
+.habits{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.habit{display:flex;gap:20px;align-items:flex-start;background:#fff;border:3px solid var(--ink);border-radius:24px;padding:24px;font-size:32px;line-height:1.3;font-weight:700}
+.habit i{font-style:normal;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:32px;display:flex;align-items:center;justify-content:center;flex:none}
+.res{margin-top:40px;display:flex;flex-direction:column;gap:6px}
+.res li{display:grid;grid-template-columns:500px 1fr;align-items:baseline;gap:24px;font-size:32px;line-height:1.4;padding:8px 0;border-bottom:2px solid var(--soft)}
+.res li b{font-size:32px}
+.res li span{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:30px;color:var(--accent-ink);overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+<symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2.5 9a15 15 0 0 1 19 0M6 12.8a10 10 0 0 1 12 0M9.4 16.4a5 5 0 0 1 5.2 0M12 20v.01"/><path d="M4 4l16 16"/></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20l1-4.5L16 4.5 19.5 8 8.5 19z"/></symbol>
+<symbol id="i-msg" viewBox="0 0 24 24"><path d="M4 5h16v11H10l-5 4v-4H4z"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14a6.5 6.5 0 0 1 3 6"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></symbol>
+<symbol id="i-score" viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></symbol>
+<symbol id="i-load" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4z"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></symbol>
+</defs></svg>
+
+<div id="stage">
+<main id="deck">
+
+<!-- ===================== 0. MỞ ĐẦU ===================== -->
+
+<!-- 1 -->
+<section class="slide" data-layout="L1" data-part="0" data-min="1" data-nofoot>
+  <div class="l1">
+    <p class="kicker">UX Foundation &amp; UI Foundation</p>
+    <h1 class="hl-big">UI tốt là UI mà người dùng không phải suy nghĩ khi dùng</h1>
+    <p class="sub">Bài giảng 45 phút, ví dụ xuyên suốt: app quản lý lớp tiếng Anh</p>
+  </div>
+  <div class="l1-art" aria-hidden="true">
+    <div class="screen" style="flex:1">
+      <div class="ab"><span>Điểm danh · Lớp 6A</span></div>
+      <div class="rw"><span class="av">MA</span><div class="fl"><div class="nm">Nguyễn Minh Anh</div></div><i class="tg on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></i></div>
+      <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div></div><i class="tg on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></i></div>
+      <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thị Thanh Thảo</div></div><i class="tg"></i></div>
+      <div class="rw"><span class="av">NM</span><div class="fl"><div class="nm">Phạm Hoàng Nhật Minh</div></div><i class="tg on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></i></div>
+      <div class="spacer"></div>
+      <div class="pad"><div class="btn">Lưu điểm danh</div></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Mở bài bằng câu chốt: UI tốt là UI mà người dùng không phải nghĩ. Giới thiệu ví dụ xuyên suốt cả buổi là app quản lý lớp tiếng Anh cho giáo viên dạy lớp riêng ở Việt Nam, thường dùng một tay trên điện thoại giữa giờ dạy. Nói rõ UX là toàn bộ trải nghiệm để hoàn thành một việc, kể cả lúc chờ, lúc lỗi, lúc mất mạng; còn UI là lớp người dùng nhìn và chạm vào.</p>
+  </aside>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-layout="L3" data-part="0" data-min="1">
+  <h2 class="hl">Màn hình đẹp vẫn có thể hỏng trải nghiệm khi dùng thật</h2>
+  <div class="body ba">
+    <div class="col">
+      <div class="th"><span class="tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-eye"/></svg>Đẹp nhưng khó dùng</span></div>
+      <div class="screen pretty" aria-hidden="true">
+        <div class="hero" data-clip style="padding:36px 32px"><span class="orb"></span><h4 style="font-size:60px;line-height:1.25">Chào buổi sáng, cô Lan</h4><p>Hôm nay bạn có ba lớp học</p><i class="co" style="position:absolute;right:20px;bottom:20px">1</i></div>
+        <div class="deco"><div data-clip>Khám phá</div><div data-clip>Xem thêm</div></div>
+        <div class="spacer"></div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:0 28px 24px;color:#94A3B8;font-size:28px"><i class="co">2</i><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-cal"/></svg>Điểm danh</div>
+      </div>
+      <div class="lgrow"><span class="lg"><i class="co">1</i>Lời chào quá to</span><span class="lg"><i class="co">2</i>Việc chính bị chìm</span></div>
+    </div>
+    <div class="col">
+      <div class="th"><span class="tag"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-bolt"/></svg>Giản dị nhưng xong việc</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Điểm danh · Lớp 6A</span></div>
+        <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div></div><i class="tg on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></i></div>
+        <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thị Thanh Thảo</div></div><i class="tg"></i></div>
+        <div class="rw"><span class="av">NM</span><div class="fl"><div class="nm">Phạm Hoàng Nhật Minh</div></div><i class="tg on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></i></div>
+        <div class="spacer"></div>
+        <div class="pad"><div class="btn">Lưu điểm danh</div></div>
+      </div>
+      <div class="lgrow"><span class="lg" style="font-weight:700">Việc chính hiện ngay, rõ ràng</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Cho khán giả nhìn hai màn hình trong 3 giây rồi hỏi: nếu phải điểm danh một lớp 16 em khi đang đứng lớp, bạn muốn dùng cái nào? Màn bên trái đẹp nhưng lời chào chiếm gần hết chỗ, còn việc chính (Điểm danh) nhỏ, nhạt và bị đẩy xuống đáy. Màn bên phải giản dị nhưng xong việc trong vài chạm. Chốt: đẹp và dễ dùng là hai thứ khác nhau, một màn hình có thể đẹp mà hỏng UX và ngược lại.</p>
+  </aside>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-layout="L2" data-part="0" data-min="1">
+  <h2 class="hl">Bốn phần trong 45 phút, đi từ người dùng đến từng pixel</h2>
+  <div class="body">
+    <div class="agwrap" style="height:480px;margin-top:16px">
+      <div>
+        <ul class="ag">
+          <li><span class="k">0</span><span class="t">Mở đầu</span><span class="m">3'</span></li>
+          <li><span class="k">A</span><span class="t">UX Foundation</span><span class="m">17'</span></li>
+          <li><span class="k">B</span><span class="t">UI Foundation</span><span class="m">20'</span></li>
+          <li><span class="k">C</span><span class="t">Tổng kết</span><span class="m">5'</span></li>
+        </ul>
+      </div>
+      </div>
+    <div class="tline" aria-hidden="true">
+      <i style="flex:3;background:var(--muted)">0</i>
+      <i style="flex:17;background:var(--accent)">A</i>
+      <i style="flex:20;background:var(--accent-ink)">B</i>
+      <i style="flex:5;background:var(--muted)">C</i>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Nêu lịch trình: mở đầu 3 phút, UX 17 phút, UI 20 phút, tổng kết 5 phút. Q&amp;A để ngoài 45 phút; nếu bắt buộc gói trong 45 phút thì cắt phần trạng thái (A4) còn 2 phút và hoàn thiện (B6) còn 1 phút. Phân biệt ba loại căn cứ khi thiết kế: bằng chứng (research, số đo, chuẩn), quy ước (nền tảng, design system) và gu. Gu là thật nhưng không phải bằng chứng, nên cần nói rõ khi mình đang dùng gu, và đừng coi nó là lý lẽ thay cho bằng chứng.</p>
+  </aside>
+</section>
+
+<!-- ===================== A. UX FOUNDATION (17') ===================== -->
+
+<!-- 4 -->
+<section class="slide" data-layout="L2" data-part="A" data-min="0.5">
+  <h2 class="hl">UX quyết định làm gì và theo thứ tự nào, trước khi vẽ</h2>
+  <div class="body divwrap">
+    <div class="bigk" aria-hidden="true">A</div>
+    <ul class="ag">
+      <li><span class="k">0</span><span class="t">Mở đầu</span><span class="m">3'</span></li>
+      <li class="cur"><span class="k">A</span><span class="t">UX Foundation<span class="sm">Mục tiêu, luồng, nguyên tắc, trạng thái</span></span><span class="m">17'</span></li>
+      <li><span class="k">B</span><span class="t">UI Foundation</span><span class="m">20'</span></li>
+      <li><span class="k">C</span><span class="t">Tổng kết</span><span class="m">5'</span></li>
+    </ul>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 0,5 phút.</p>
+    <p>Chuyển sang phần UX: bốn mảnh theo thứ tự là mục tiêu của màn hình, luồng và điều hướng, nguyên tắc tâm lý, và thiết kế cho mọi trạng thái. Nhắc lại rằng UX trả lời câu hỏi làm cái gì và theo thứ tự nào, nên phải làm trước khi nghĩ đến màu sắc hay font.</p>
+  </aside>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-layout="L3" data-part="A" data-min="2.5">
+  <h2 class="hl">Mỗi màn hình chỉ nên có đúng một mục tiêu chính</h2>
+  <div class="body gridgoal">
+    <div class="goal">
+      <p class="q">Người dùng đến màn hình này để</p>
+      <p class="blank">điểm danh cả lớp bằng một tay</p>
+      <p class="hint"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Gạch bỏ mọi thứ không phục vụ câu này.</p>
+    </div>
+    <div class="screen" aria-hidden="true">
+      <div class="ab"><span>Điểm danh · Lớp 6A</span></div>
+      <div class="cut"><span>Nâng cấp Premium, giảm 30%</span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg></div>
+      <div class="cut"><span>Doanh thu tháng 10</span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg></div>
+      <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div></div><i class="tg on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></i></div>
+      <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thị Thanh Thảo</div></div><i class="tg"></i></div>
+      <div class="rw"><span class="av">NM</span><div class="fl"><div class="nm">Phạm Hoàng Nhật Minh</div></div><i class="tg on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></i></div>
+      <div class="spacer"></div>
+      <div class="pad"><div class="btn">Lưu điểm danh</div></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 2,5 phút.</p>
+    <p>Dẫn khán giả điền câu: người dùng đến màn hình này để ___. Với giáo viên đứng lớp, mục tiêu là điểm danh cả lớp bằng một tay, mạng có thể chập chờn. Đây là cách nghĩ jobs-to-be-done: người dùng thuê sản phẩm để làm một việc trong một bối cảnh cụ thể. Mời khán giả gọi tên những thứ trên màn hình không phục vụ câu đó (banner nâng cấp, biểu đồ doanh thu) rồi gạch bỏ hoặc dời đi chỗ khác.</p>
+    <p>Research tối thiểu: hỏi vài người dùng thật, quan sát họ làm việc, xem sản phẩm cùng loại để rút ra nguyên tắc chứ không chép pixel.</p>
+  </aside>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-layout="L3" data-part="A" data-min="2">
+  <h2 class="hl">Luồng điểm danh tốt có năm bước và đường lui khi lỗi</h2>
+  <div class="body">
+    <div class="flowwrap" aria-hidden="true">
+      <svg class="lines" viewBox="0 0 1704 640" aria-hidden="true" focusable="false">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1l8 4-8 4z" fill="#0F172A"/></marker></defs>
+        <g stroke="#0F172A" stroke-width="4" fill="none" stroke-linecap="round" marker-end="url(#ah)">
+          <path d="M272 80H352"/><path d="M632 80H712"/><path d="M992 80H1072"/><path d="M1352 80H1432"/>
+        </g>
+        <g stroke="#0F172A" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="4 12" marker-end="url(#ah)">
+          <path d="M1500 168V312"/>
+          <path d="M1432 400H1352"/><path d="M1072 400H992"/>
+          <path d="M852 312V250H1644V168"/>
+        </g>
+      </svg>
+      <div class="nd" style="left:0;top:0"><span class="n">1</span>Mở lớp</div>
+      <div class="nd" style="left:360px;top:0"><span class="n">2</span>Chọn buổi</div>
+      <div class="nd" style="left:720px;top:0"><span class="n">3</span>Đánh dấu</div>
+      <div class="nd" style="left:1080px;top:0"><span class="n">4</span>Xem lại</div>
+      <div class="nd" style="left:1440px;top:0"><span class="n">5</span>Lưu</div>
+      <div class="nd err" style="left:1440px;top:320px"><span class="n"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg></span>Lưu lỗi</div>
+      <div class="nd err" style="left:1080px;top:320px"><span class="n"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></span>Giữ dữ liệu</div>
+      <div class="nd err" style="left:720px;top:320px"><span class="n"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-undo"/></svg></span>Thử lại</div>
+      <div class="fcal" style="left:360px;top:196px;width:440px"><i class="co">1</i>Dễ chọn nhầm buổi</div>
+      <div class="fcal" style="left:1080px;top:508px"><i class="co">2</i>Không mất dữ liệu</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 2 phút.</p>
+    <p>Vẽ luồng chuẩn (happy path) trước: mở lớp, chọn buổi, đánh dấu từng em, xem lại, lưu. Sau đó mới vẽ luồng lỗi: khi lưu thất bại thì giữ nguyên dữ liệu đã nhập, báo rõ và cho thử lại. Chỉ ra điểm hay lạc: bước chọn buổi, vì dễ chọn nhầm buổi cũ. Nhấn mạnh nút Back luôn phải chạy được; chỉ chặn khi có dữ liệu chưa lưu và phải hỏi xác nhận. IA (kiến trúc thông tin) nghĩa là nhóm và đặt tên theo cách người dùng nghĩ, không theo cấu trúc database.</p>
+  </aside>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-layout="L6" data-part="A" data-min="1.5">
+  <h2 class="hl">Tab, push và sheet có nghĩa khác nhau, đừng dùng lẫn lộn</h2>
+  <div class="body" style="display:grid;grid-template-columns:repeat(3,540px);gap:48px;grid-template-rows:minmax(0,1fr)">
+    <div class="col">
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Lớp học</span></div>
+        <div class="rw"><div class="fl"><div class="nm">Lớp 6A</div><div class="sb">Thứ 3, 5 · 16 em</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-next"/></svg></div>
+        <div class="rw"><div class="fl"><div class="nm">Lớp 7B</div><div class="sb">Thứ 2, 4 · 12 em</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-next"/></svg></div>
+        <div class="spacer"></div>
+        <div class="tabbar"><div class="t on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-users"/></svg>Lớp</div><div class="t"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-cal"/></svg>Điểm danh</div><div class="t"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-score"/></svg>Điểm</div></div>
+      </div>
+      <div class="cap"><b>Tab</b><span>Điểm đến ngang hàng</span></div>
+    </div>
+    <div class="col">
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span style="color:var(--accent);display:flex;align-items:center"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-back"/></svg></span><span>Lớp 6A</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 0"><span class="av lg2">GB</span><div class="nm" style="font-weight:700">Trần Gia Bảo</div></div>
+        <div class="rw"><div class="fl"><div class="nm">Điểm danh</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-next"/></svg></div>
+        <div class="rw"><div class="fl"><div class="nm">Bảng điểm</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-next"/></svg></div>
+      </div>
+      <div class="cap"><b>Push</b><span>Đi sâu vào nội dung</span></div>
+    </div>
+    <div class="col">
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Lớp 6A</span></div>
+        <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div></div></div>
+        <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thị Thanh Thảo</div></div></div>
+        <div class="veil" style="align-items:flex-end;padding:0">
+          <div style="background:#fff;width:100%;border-radius:32px 32px 0 0;padding:20px 24px 28px;display:flex;flex-direction:column;gap:16px">
+            <div style="width:80px;height:8px;border-radius:4px;background:var(--line);align-self:center"></div>
+            <div class="nm" style="font-weight:700;font-size:36px">Nhận xét nhanh</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap"><span class="chipx on">Chăm chỉ</span><span class="chipx">Cần cố gắng</span></div>
+            <div class="btn">Lưu nhận xét</div>
+          </div>
+        </div>
+      </div>
+      <div class="cap"><b>Sheet</b><span>Việc chen ngang ngắn</span></div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1,5 phút.</p>
+    <p>Tab là các điểm đến ngang hàng, không phải các bước tuần tự. Push dùng để đi sâu vào nội dung con và luôn có nút Back. Sheet dành cho việc chen ngang ngắn, xong là quay về ngữ cảnh cũ; modal hoặc overlay dùng khi ngữ cảnh bên dưới vẫn còn liên quan. Dùng sai ngữ nghĩa (ví dụ nhét cả một quy trình dài vào sheet) làm người dùng mất phương hướng. Nhắc nhanh về Back: chỉ chặn khi có dữ liệu chưa lưu và phải hỏi xác nhận.</p>
+  </aside>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-layout="L4" data-part="A" data-min="1.5">
+  <h2 class="hl">Chỉ hiện chi tiết khi cần giúp danh sách gọn và dễ quét</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh · Lớp 6A</span></div>
+        <div class="rw" style="align-items:flex-start"><span class="av">GB</span><div class="fl"><div class="nm" style="font-weight:700">Trần Gia Bảo</div><div class="sb">Sinh: 12/03/2014</div><div class="sb">Phụ huynh: chị Hà</div><div class="sb">Học phí: đã đóng</div></div></div>
+        <div class="rw" style="align-items:flex-start"><span class="av">TT</span><div class="fl"><div class="nm" style="font-weight:700">Lê Thị Thanh Thảo</div><div class="sb">Sinh: 05/09/2013</div><div class="sb">Phụ huynh: anh Long</div><div class="sb">Học phí: còn nợ</div></div></div>
+      </div>
+      <div class="metric">Thấy 2 em trên màn hình</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span><span class="lg"><i class="co">1</i>Chạm để xem thêm</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh · Lớp 6A</span></div>
+        <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-down"/></svg></div>
+        <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thị Thanh Thảo</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-down"/></svg></div>
+        <div class="rw"><span class="av">NM</span><div class="fl"><div class="nm">Phạm Hoàng Nhật Minh</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-down"/></svg></div>
+        <div class="rw"><span class="av">MA</span><div class="fl"><div class="nm">Nguyễn Minh Anh</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-down"/></svg></div>
+        <div class="rw"><span class="av">MK</span><div class="fl"><div class="nm">Đỗ Minh Khôi</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-down"/></svg></div>
+      </div>
+      <div class="metric">Thấy 5 em trên màn hình</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1,5 phút.</p>
+    <p>Biến duy nhất là mức độ hiển thị chi tiết; nội dung dữ liệu giữ nguyên. Progressive disclosure nghĩa là chỉ hiện chi tiết khi người dùng cần, vì danh sách phải quét được nhanh. Bản bên trái trộn thông tin hiếm khi cần với thông tin cần mỗi lần mở. Lưu ý: không đưa số điện thoại phụ huynh lên danh sách; chi tiết nhạy cảm chỉ mở khi có lý do rõ ràng.</p>
+  </aside>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-layout="L5" data-part="A" data-min="1">
+  <h2 class="hl">Theo quy ước quen thuộc để người dùng khỏi phải học lại</h2>
+  <div class="body l5">
+    <div class="rule"><span class="rn">01</span><span class="rname">Luật Jakob</span><p class="rdef">Người dùng mong app của bạn chạy giống những app họ đã quen.</p></div>
+    <div class="ba tight">
+      <div class="col bad">
+        <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+        <div class="screen" aria-hidden="true">
+          <div class="tabbar top"><div class="t on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-users"/></svg>Lớp</div><div class="t"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-cal"/></svg>Điểm danh</div></div>
+          <div class="rw"><div class="fl"><div class="nm">Lớp 6A</div><div class="sb">Thứ 3, 5</div></div></div>
+          <div class="rw"><div class="fl"><div class="nm">Lớp 7B</div><div class="sb">Thứ 2, 4</div></div></div>
+        </div>
+        <div class="metric">Lệch quy ước iOS</div>
+      </div>
+      <div class="col good">
+        <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+        <div class="screen" aria-hidden="true">
+          <div class="rw"><div class="fl"><div class="nm">Lớp 6A</div><div class="sb">Thứ 3, 5</div></div></div>
+          <div class="rw"><div class="fl"><div class="nm">Lớp 7B</div><div class="sb">Thứ 2, 4</div></div></div>
+          <div class="tabbar"><div class="t on"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-users"/></svg>Lớp</div><div class="t"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-cal"/></svg>Điểm danh</div></div>
+        </div>
+        <div class="metric">Đúng quy ước iOS: tab ở đáy</div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Luật Jakob (Jakob Nielsen): người dùng dành phần lớn thời gian trên app khác, nên họ mong app của bạn chạy giống những app họ đã quen. Biến duy nhất là vị trí thanh tab; trên iOS và Android điều hướng chính theo quy ước nằm ở đáy màn hình, gần ngón cái. Tab ở trên là quy ước hợp lệ trên Android; điểm cần nhớ là theo quy ước của nền tảng mình nhắm tới, ở đây là iOS. Tự chế điều hướng lạ chỉ đáng khi có bằng chứng nó tốt hơn; còn không thì ưu tiên quy ước của nền tảng.</p>
+  </aside>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-layout="L5" data-part="A" data-min="1.5">
+  <h2 class="hl">Giảm và nhóm lựa chọn để người dùng chọn nhanh hơn</h2>
+  <div class="body l5">
+    <div class="rule"><span class="rn">02</span><span class="rname">Luật Hick</span><p class="rdef">Càng nhiều lựa chọn, quyết định càng chậm.</p></div>
+    <div class="ba tight">
+      <div class="col bad">
+        <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+        <div class="screen" aria-hidden="true">
+          <div class="ab"><span>Lớp 6A</span></div>
+          <div class="tilegrid">
+            <div class="tile">Điểm danh</div><div class="tile">Nhập điểm</div>
+            <div class="tile">Nhận xét</div><div class="tile">Học phí</div>
+            <div class="tile">Lịch học</div><div class="tile">Báo cáo</div>
+            <div class="tile">Danh sách</div><div class="tile">Cài đặt</div>
+          </div>
+        </div>
+        <div class="metric">8 lựa chọn ngang hàng</div>
+      </div>
+      <div class="col good">
+        <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+        <div class="screen" aria-hidden="true">
+          <div class="ab"><span>Lớp 6A</span></div>
+          <div class="tilegrid">
+            <div class="tile big">Điểm danh</div>
+            <div class="tile">Nhập điểm</div><div class="tile">Nhận xét</div>
+            <div class="tile more"><span>Khác</span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-next"/></svg></div>
+          </div>
+        </div>
+        <div class="metric">4 lựa chọn, có nhóm</div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1,5 phút.</p>
+    <p>Luật Hick (Hick-Hyman, 1952): thời gian ra quyết định tăng theo số lượng và độ phức tạp của lựa chọn. Biến duy nhất là số lựa chọn hiển thị cùng lúc: tám ô ngang hàng so với một việc chính, hai việc phụ và một mục Khác. Cách dùng: giảm lựa chọn, nhóm lại, làm nổi bật việc hay làm nhất. Lưu ý: con số 7±2 của Miller hay bị dùng sai để bào chữa cho giới hạn số mục; nên nói về giảm tải nhận thức thay vì một con số cứng.</p>
+  </aside>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-layout="L5" data-part="A" data-min="1">
+  <h2 class="hl">Làm nút quan trọng to hơn và gần ngón tay hơn</h2>
+  <div class="body l5">
+    <div class="rule"><span class="rn">03</span><span class="rname">Luật Fitts</span><p class="rdef">Mục tiêu càng to và càng gần thì càng dễ bấm.</p></div>
+    <div class="ba tight">
+      <div class="col bad">
+        <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+        <div class="screen" aria-hidden="true">
+          <div class="ab"><span>Nhận xét</span></div>
+          <div class="pad"><div class="lbl">Trần Gia Bảo</div><div class="nm" style="border:3px solid var(--muted);border-radius:16px;padding:16px 20px;height:176px">Tiến bộ rõ ở phần nói.</div></div>
+          <div class="spacer"></div>
+          <div style="display:flex;justify-content:flex-end;padding:0 24px 24px"><span style="border:2px dashed var(--accent);border-radius:8px;padding:6px 14px;font-size:28px;font-weight:700;color:var(--accent-ink)">Lưu</span></div>
+        </div>
+        <div class="metric">Vùng bấm nhỏ</div>
+      </div>
+      <div class="col good">
+        <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+        <div class="screen" aria-hidden="true">
+          <div class="ab"><span>Nhận xét</span></div>
+          <div class="pad"><div class="lbl">Trần Gia Bảo</div><div class="nm" style="border:3px solid var(--muted);border-radius:16px;padding:16px 20px;height:176px">Tiến bộ rõ ở phần nói.</div></div>
+          <div class="spacer"></div>
+          <div class="pad"><div class="btn">Lưu</div></div>
+        </div>
+        <div class="metric">Vùng bấm to, dưới ngón cái</div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Luật Fitts (1954): thời gian chạm tới mục tiêu phụ thuộc khoảng cách và kích thước của nó, nên mục tiêu càng to và càng gần càng dễ bấm. Biến duy nhất ở đây là kích thước vùng bấm của hành động chính; cả hai nằm ở đáy màn hình, nơi ngón cái với tới. Nối sang phần B4: con số cụ thể là 44pt (Apple), 48dp (Material), tối thiểu 24×24px theo WCAG 2.2.</p>
+  </aside>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-layout="L5" data-part="A" data-min="1.5">
+  <h2 class="hl">Để người dùng chọn từ danh sách thay vì tự nhớ</h2>
+  <div class="body l5">
+    <div class="rule" style="gap:12px">
+      <span class="rn" style="font-size:80px;line-height:1.3">04</span><span class="rname" style="font-size:44px">Nhận ra hơn nhớ lại</span>
+      <ul class="niel">
+        <li><i>1</i>Hiển thị trạng thái hệ thống</li>
+        <li><i>2</i>Ngăn lỗi hơn báo lỗi</li>
+        <li><i>3</i>Nhất quán, theo chuẩn</li>
+      </ul>
+    </div>
+    <div class="ba tight">
+      <div class="col bad">
+        <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+        <div class="screen" aria-hidden="true">
+          <div class="ab"><span>Thêm buổi học</span></div>
+          <div class="pad"><div class="lbl">Mã lớp</div><div class="inp" style="color:var(--muted)">Gõ mã, vd 6A-T35</div></div>
+        </div>
+      </div>
+      <div class="col good">
+        <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+        <div class="screen" aria-hidden="true">
+          <div class="ab"><span>Thêm buổi học</span></div>
+          <div class="pad"><div class="lbl">Lớp</div></div>
+          <div class="rw" style="background:var(--accent-soft)"><div class="fl"><div class="nm" style="font-weight:700">Lớp 6A</div><div class="sb">Thứ 3, 5</div></div><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg></div>
+          <div class="rw"><div class="fl"><div class="nm">Lớp 7B</div><div class="sb">Thứ 2, 4</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1,5 phút.</p>
+    <p>Nhận ra dễ hơn nhớ lại (recognition over recall): đưa lựa chọn ra cho người dùng thay vì bắt họ nhớ mã lớp rồi gõ. Biến duy nhất là cách nhập: gõ tay so với chọn từ danh sách. Cột trái là ba heuristic của Nielsen đáng nhớ nhất: hiển thị trạng thái hệ thống (đang lưu, đã lưu, đang ngoại tuyến); ngăn lỗi tốt hơn báo lỗi (dạng chọn thì không thể gõ sai); nhất quán và tuân thủ chuẩn (cùng việc thì cùng cách làm). Trong 10 heuristic của NN/g, đây là ba cái dễ áp dụng ngay.</p>
+  </aside>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-layout="L6" data-part="A" data-min="2">
+  <h2 class="hl">Thiết kế đủ bốn trạng thái: tải, trống, lỗi, ngoại tuyến</h2>
+  <div class="body g4">
+    <div class="cell">
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh</span></div>
+        <div class="rw"><span class="sk c"></span><div class="fl" style="display:flex;flex-direction:column;gap:10px"><div class="sk" style="width:80%"></div><div class="sk" style="width:50%"></div></div></div>
+        <div class="rw"><span class="sk c"></span><div class="fl" style="display:flex;flex-direction:column;gap:10px"><div class="sk" style="width:70%"></div><div class="sk" style="width:40%"></div></div></div>
+        <div class="rw"><span class="sk c"></span><div class="fl" style="display:flex;flex-direction:column;gap:10px"><div class="sk" style="width:85%"></div><div class="sk" style="width:55%"></div></div></div>
+        <div class="rw"><span class="sk c"></span><div class="fl" style="display:flex;flex-direction:column;gap:10px"><div class="sk" style="width:60%"></div><div class="sk" style="width:45%"></div></div></div>
+      </div>
+      <div class="cl">Đang tải</div>
+    </div>
+    <div class="cell">
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh</span></div>
+        <div class="center"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-users"/></svg><div class="tt">Lớp chưa có học sinh</div><div class="btn" style="width:100%">Thêm học sinh</div></div>
+      </div>
+      <div class="cl">Trống</div>
+    </div>
+    <div class="cell">
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh</span></div>
+        <div class="center"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg><div class="tt">Không tải được danh sách</div><div class="btn line" style="width:100%">Thử lại</div></div>
+      </div>
+      <div class="cl">Lỗi</div>
+    </div>
+    <div class="cell">
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh</span></div>
+        <div class="banner"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-wifi"/></svg>Đang ngoại tuyến</div>
+        <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div></div></div>
+        <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thanh Thảo</div></div></div>
+        <div class="rw"><span class="av">MK</span><div class="fl"><div class="nm">Đỗ Minh Khôi</div></div></div>
+        <div class="stale">Cập nhật 10:42</div>
+      </div>
+      <div class="cl">Ngoại tuyến</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 2 phút.</p>
+    <p>Đừng chỉ thiết kế cho ảnh chụp lý tưởng. Danh sách học sinh cần ít nhất bốn trạng thái này: đang tải (khung xương), trống (chỉ ra việc làm tiếp), lỗi (nói cách thử lại) và ngoại tuyến (vẫn hiện dữ liệu cũ kèm mốc cập nhật). Danh sách đầy đủ còn có partial, dữ liệu cũ và success. Với control thì có default, hover, focus, pressed, selected, disabled; phần này sẽ gặp lại ở B4. Câu hỏi để khán giả tự kiểm tra: mất mạng giữa buổi dạy thì app của bạn trông thế nào?</p>
+  </aside>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-layout="L4" data-part="A" data-min="1">
+  <h2 class="hl">Tên dài và danh sách dài phải được thử với nội dung thật</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Bảng điểm · Lớp 6A</span></div>
+        <div class="rw"><span class="av">QN</span><div class="fl"><div class="nmc one" data-clip>Nguyễn Hoàng Phương Quỳnh Như An</div></div><span class="score">8,5</span></div>
+        <div class="rw"><span class="av">QN</span><div class="fl"><div class="nmc one" data-clip>Nguyễn Hoàng Phương Quỳnh Như Ý</div></div><span class="score">7,0</span></div>
+        <div class="rw"><span class="av">GB</span><div class="fl"><div class="nmc one" data-clip>Trần Gia Bảo</div></div><span class="score">9,0</span></div>
+      </div>
+      <div class="metric">Hai em trông giống hệt nhau</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Bảng điểm · Lớp 6A</span></div>
+        <div class="rw"><span class="av">QN</span><div class="fl"><div class="nmc two" data-clip>Nguyễn Hoàng Phương Quỳnh Như An</div></div><span class="score">8,5</span></div>
+        <div class="rw"><span class="av">QN</span><div class="fl"><div class="nmc two" data-clip>Nguyễn Hoàng Phương Quỳnh Như Ý</div></div><span class="score">7,0</span></div>
+        <div class="rw"><span class="av">GB</span><div class="fl"><div class="nmc two" data-clip>Trần Gia Bảo</div></div><span class="score">9,0</span></div>
+      </div>
+      <div class="metric">Phân biệt được từng em</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Dữ liệu mẫu ngắn và đẹp che giấu lỗi. Hai học sinh có tên dài giống nhau chỉ khác chữ cuối bị cắt thành cùng một chuỗi, người dùng không phân biệt được. Biến duy nhất là cách xử lý tên dài: một dòng cắt bằng dấu ba chấm so với cho xuống tối đa hai dòng. Hãy thử với nội dung thật: tên rất dài, số rất lớn, danh sách 0 phần tử và 500 phần tử. Cột điểm dùng số tabular để các chữ số thẳng hàng, dễ so sánh.</p>
+  </aside>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-layout="L4" data-part="A" data-min="1">
+  <h2 class="hl">Cho phép hoàn tác tốt hơn việc hỏi xác nhận mọi lần xóa</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Các buổi học</span></div>
+        <div class="rw"><div class="fl"><div class="nm">Buổi 11 · Thứ 3, 07/10</div></div></div>
+        <div class="rw"><div class="fl"><div class="nm">Buổi 12 · Thứ 5, 09/10</div></div></div>
+        <div class="rw"><div class="fl"><div class="nm">Buổi 13 · Thứ 3, 14/10</div></div></div>
+        <div class="veil"><div class="dlg"><h4>Xóa buổi 12?</h4><p>Bạn có chắc chắn không?</p><div class="acts"><div class="btn line">Hủy</div><div class="btn red">Xóa</div></div></div></div>
+      </div>
+      <div class="metric">Hỏi lại ở mọi lần xóa</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Các buổi học</span></div>
+        <div class="rw"><div class="fl"><div class="nm">Buổi 11 · Thứ 3, 07/10</div></div></div>
+        <div class="rw"><div class="fl"><div class="nm">Buổi 13 · Thứ 3, 14/10</div></div></div>
+        <div class="toast"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-trash"/></svg><span>Đã xóa buổi 12</span><b><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-undo"/></svg>Hoàn tác</b></div>
+      </div>
+      <div class="metric">Xóa ngay, lấy lại được</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Hộp thoại xác nhận bị bấm qua theo phản xạ nên bảo vệ rất yếu; hoàn tác thì vừa nhanh vừa thật sự an toàn. Biến duy nhất là cơ chế bảo vệ: hỏi trước hay cho lấy lại sau. Nếu thao tác không thể hoàn tác (xóa vĩnh viễn dữ liệu, gửi tin cho phụ huynh) thì vẫn cần xác nhận, và câu hỏi phải nói rõ hậu quả. Ưu tiên: ngăn lỗi, rồi hoàn tác, rồi mới đến xác nhận.</p>
+  </aside>
+</section>
+
+<!-- ===================== B. UI FOUNDATION (20') ===================== -->
+
+<!-- 16 -->
+<section class="slide" data-layout="L2" data-part="B" data-min="0.5">
+  <h2 class="hl">UI làm cho giao diện dễ thấy, dễ hiểu, dễ bấm</h2>
+  <div class="body divwrap">
+    <div class="bigk" aria-hidden="true">B</div>
+    <div>
+      <ul class="ag">
+        <li><span class="k">0</span><span class="t">Mở đầu</span><span class="m">3'</span></li>
+        <li><span class="k">A</span><span class="t">UX Foundation</span><span class="m">17'</span></li>
+        <li class="cur"><span class="k">B</span><span class="t">UI Foundation</span><span class="m">20'</span></li>
+        <li><span class="k">C</span><span class="t">Tổng kết</span><span class="m">5'</span></li>
+      </ul>
+      <ol class="pillars">
+        <li>Bố cục</li><li>Chữ</li><li>Màu</li>
+        <li>Component</li><li>Câu chữ</li><li>Hoàn thiện</li>
+      </ol>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 0,5 phút.</p>
+    <p>Sáu trụ cột của UI, trình bày theo thứ tự ưu tiên khi làm: bố cục và khoảng cách, typography, màu sắc, component và tương tác, chữ trên giao diện, rồi mới hoàn thiện và chuyển động. Cấu trúc trước, polish sau. Accessibility không tách thành một phần riêng mà lồng vào từng trụ cột.</p>
+  </aside>
+</section>
+
+<!-- 17 -->
+<section class="slide" data-layout="L4" data-part="B" data-min="2">
+  <h2 class="hl">Nhóm nội dung bằng khoảng trắng, không bằng đường kẻ</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen form lines" aria-hidden="true">
+        <div class="fg"><div class="lbl">Họ và tên</div><div class="inp">Nguyễn Minh Anh</div></div>
+        <div class="fg"><div class="lbl">Ngày sinh</div><div class="inp">12/03/2014</div></div>
+        <div class="fg"><div class="lbl">Phụ huynh</div><div class="inp">Chị Trần Thu Hà</div></div>
+        <div class="fg"><div class="lbl">Lớp</div><div class="inp">Lớp 6A</div></div>
+      </div>
+      <div class="metric">3 đường kẻ, mọi ô cách đều</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span><span class="lg"><i class="co">1</i>Gần nhau là cùng nhóm</span></div>
+      <div class="screen form groups" aria-hidden="true">
+        <div class="fg"><div class="lbl">Họ và tên</div><div class="inp">Nguyễn Minh Anh</div></div>
+        <div class="fg"><div class="lbl">Ngày sinh</div><div class="inp">12/03/2014</div></div>
+        <div class="fg gap"><div class="lbl">Phụ huynh</div><div class="inp">Chị Trần Thu Hà</div></div>
+        <div class="fg"><div class="lbl">Lớp</div><div class="inp">Lớp 6A</div></div>
+      </div>
+      <div class="metric">0 đường kẻ, 2 nhóm rõ ràng</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 2 phút.</p>
+    <p>Cùng một form, biến duy nhất là cách tách nhóm: đường kẻ so với khoảng trắng. Khoảng cách trong nhóm phải nhỏ hơn khoảng cách giữa các nhóm; nguyên lý Gestalt nói những thứ gần nhau được hiểu là cùng nhóm. Ngoài ra: căn theo cạnh chung, sắp xếp theo mức độ quan trọng để thứ bậc thị giác dẫn mắt đúng thứ tự. Tách rõ control và nội dung: nội dung được tràn mép (bleed), control cách mép một khoảng, tôn trọng safe area; và luôn tính trước trường hợp nội dung dài ra hoặc chữ được phóng to.</p>
+  </aside>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-layout="L7" data-part="B" data-min="1.5">
+  <h2 class="hl">Mọi khoảng cách nên là bội số của 4 hoặc 8 điểm</h2>
+  <div class="body" style="display:grid;grid-template-columns:820px 1fr;gap:48px;grid-template-rows:minmax(0,1fr)">
+    <div class="spl" aria-hidden="true">
+      <div class="r"><span class="v">4</span><span style="height:44px;width:32px;background:var(--accent);border-radius:6px"></span><span class="u">icon và chữ</span></div>
+      <div class="r"><span class="v">8</span><span style="height:44px;width:64px;background:var(--accent);border-radius:6px"></span><span class="u">trong một nhóm</span></div>
+      <div class="r"><span class="v">16</span><span style="height:44px;width:128px;background:var(--accent);border-radius:6px"></span><span class="u">lề trong thẻ</span></div>
+      <div class="r"><span class="v">24</span><span style="height:44px;width:192px;background:var(--accent);border-radius:6px"></span><span class="u">giữa các nhóm</span></div>
+      <div class="r"><span class="v">32</span><span style="height:44px;width:256px;background:var(--accent);border-radius:6px"></span><span class="u">giữa các khối</span></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;align-items:center">
+      <div class="spc" aria-hidden="true">
+        <div class="band" style="height:96px">24</div>
+        <div class="it"><span class="nme">Trần Gia Bảo</span></div>
+        <div class="band" style="height:32px" data-clip>8</div>
+        <div class="it"><span class="sbl">Lớp 6A · Có mặt 14/16</span></div>
+        <div class="band" style="height:96px">24</div>
+        <div class="it"><div class="btn">Xem hồ sơ</div></div>
+        <div class="band" style="height:96px">24</div>
+      </div>
+      <p class="foot24">Hình phóng 4 lần, số đo tính bằng điểm.</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1,5 phút.</p>
+    <p>Hệ khoảng cách 4/8pt: chọn một thang nhỏ (4, 8, 16, 24, 32...) và chỉ dùng các giá trị trong thang, thay vì mỗi chỗ một số lẻ. Thang ở đây là ví dụ minh họa, không phải chuẩn bắt buộc; điều cần giữ là tính nhất quán và bội số của 4 hoặc 8. Hình bên phải cho thấy cùng một thẻ học sinh: 8 giữa hai dòng trong nhóm, 24 giữa các nhóm và với mép thẻ. Thang này giúp cả đội chọn nhanh, thiết kế và code khớp nhau.</p>
+  </aside>
+</section>
+
+<!-- 19 -->
+<section class="slide" data-layout="L4" data-part="B" data-min="2">
+  <h2 class="hl">Ba cỡ chữ và hai độ đậm là đủ để dẫn mắt</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen" aria-hidden="true">
+        <div style="padding:28px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:56px;font-weight:700;line-height:1.3">Lớp 6A</div>
+          <div style="font-size:44px;font-style:italic;line-height:1.2">Buổi 12 · Thứ 3</div>
+          <div style="font-size:36px;font-weight:700;font-style:italic;line-height:1.2">Điểm danh</div>
+          <div style="font-size:32px;line-height:1.3">Có mặt 14/16 học sinh, vắng hai em có phép.</div>
+          <div style="font-size:28px;font-weight:700;line-height:1.3;color:var(--muted)">Cập nhật lúc 17:30</div>
+        </div>
+      </div>
+      <div class="metric">5 cỡ chữ, 4 kiểu chữ</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+      <div class="screen" aria-hidden="true">
+        <div style="padding:28px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:44px;font-weight:700;line-height:1.2">Lớp 6A</div>
+          <div style="font-size:32px;font-weight:700;line-height:1.3">Buổi 12 · Thứ 3</div>
+          <div style="font-size:32px;line-height:1.4;margin-top:12px">Có mặt 14/16 học sinh, vắng hai em có phép.</div>
+          <div style="font-size:28px;line-height:1.4;color:var(--muted)">Cập nhật lúc 17:30</div>
+        </div>
+      </div>
+      <div class="metric">3 cỡ chữ, 2 kiểu chữ</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 2 phút.</p>
+    <p>Chữ chiếm phần lớn giao diện, làm đúng chữ là đúng được một nửa. Cùng một đoạn nội dung, biến duy nhất là số cỡ và số kiểu chữ: bản trái dùng 5 cỡ và 4 kiểu (thường, đậm, nghiêng, đậm nghiêng), bản phải chỉ 3 cỡ và 2 độ đậm. Trong thực tế, bản trái tương ứng với kiểu 5 size và 4 weight; deck này chỉ nạp hai weight nên minh họa bằng kiểu chữ. Ít font, ít size, ít weight; mỗi cấp chữ có một vai trò rõ ràng, và heading giảm dần theo cấp.</p>
+  </aside>
+</section>
+
+<!-- 20 -->
+<section class="slide" data-layout="L7" data-part="B" data-min="2">
+  <h2 class="hl">Đặt tên cỡ chữ theo vai trò và giữ body từ 16px</h2>
+  <div class="body" aria-hidden="false">
+    <table class="tbl">
+      <colgroup><col style="width:240px"><col style="width:760px"><col style="width:728px"></colgroup>
+      <thead><tr><th>Vai trò</th><th>Mẫu</th><th>Cỡ ví dụ</th></tr></thead>
+      <tbody>
+        <tr><td class="role">Title</td><td><span style="font-size:56px;font-weight:700;line-height:1.2">Điểm danh lớp 6A</span></td><td class="num">28 px</td></tr>
+        <tr><td class="role">Heading</td><td><span style="font-size:40px;font-weight:700;line-height:1.2">Buổi 12 · Thứ 3</span></td><td class="num">20 px</td></tr>
+        <tr class="focus"><td class="role">Body</td><td><span style="font-size:32px;line-height:1.5">Có mặt 14/16 học sinh, vắng hai em có phép.</span></td><td class="num">≥ 16 px web · 17 pt iOS<br><span style="font-size:32px;font-weight:400;color:var(--accent-ink)">Dòng giãn 1.4–1.6</span></td></tr>
+        <tr><td class="role">Caption</td><td><span style="font-size:28px;color:var(--muted);line-height:1.4">Cập nhật lúc 17:30</span></td><td class="num">14 px</td></tr>
+      </tbody>
+    </table>
+    <p class="foot24" style="margin-top:20px">Mẫu phóng 2 lần so với app thật.</p>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 2 phút.</p>
+    <p>Đặt tên type scale theo vai trò (title, heading, body, caption), không theo con số, để đổi cỡ ở một chỗ là đổi cả hệ thống. Body tối thiểu khoảng 16px trên web và 17pt trên iOS, và phải hỗ trợ phóng to chữ; line-height của body thoáng khoảng 1.4 đến 1.6, heading chặt hơn. Các cỡ 28, 20, 14px trong bảng chỉ là ví dụ minh họa. Thêm hai chi tiết cho app điểm số: dùng số tabular để cột điểm thẳng hàng, và cắt chữ (truncation) có chủ đích, như slide về tên dài.</p>
+  </aside>
+</section>
+
+<!-- 21 -->
+<section class="slide" data-layout="L4" data-part="B" data-min="1.5">
+  <h2 class="hl">Chữ xám nhạt trên nền trắng là chữ không ai đọc nổi</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh · Lớp 6A</span></div>
+        <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div><div class="sb" style="color:#94A3B8">Có mặt 14/16 · Điểm gần nhất 9,0</div></div></div>
+        <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thị Thanh Thảo</div><div class="sb" style="color:#94A3B8">Có mặt 12/16 · Điểm gần nhất 7,5</div></div></div>
+        <div class="rw"><span class="av">NM</span><div class="fl"><div class="nm">Phạm Hoàng Nhật Minh</div><div class="sb" style="color:#94A3B8">Có mặt 16/16 · Điểm gần nhất 8,5</div></div></div>
+      </div>
+      <div class="metric">Tương phản 2.6:1</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh · Lớp 6A</span></div>
+        <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div><div class="sb">Có mặt 14/16 · Điểm gần nhất 9,0</div></div></div>
+        <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thị Thanh Thảo</div><div class="sb">Có mặt 12/16 · Điểm gần nhất 7,5</div></div></div>
+        <div class="rw"><span class="av">NM</span><div class="fl"><div class="nm">Phạm Hoàng Nhật Minh</div><div class="sb">Có mặt 16/16 · Điểm gần nhất 8,5</div></div></div>
+      </div>
+      <div class="metric">Tương phản 7.6:1</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1,5 phút.</p>
+    <p>Biến duy nhất là màu của chữ phụ: #94A3B8 so với #475569, cùng trên nền trắng, đo được 2.6:1 và 7.6:1. WCAG yêu cầu chữ thường tối thiểu 4.5:1, nên bản trái trượt. Tương phản phải đo trên cặp màu thực tế hiển thị, và dưới ánh nắng hoặc máy chiếu thì màu nhạt mất nét còn nhanh hơn. Một màu nhấn chính, một họ màu trung tính; không trộn nhiều họ xám.</p>
+  </aside>
+</section>
+
+<!-- 22 -->
+<section class="slide" data-layout="L7" data-part="B" data-min="1.5">
+  <h2 class="hl">Chữ thường cần 4.5:1, chữ lớn và thành phần UI cần 3:1</h2>
+  <div class="body">
+    <table class="tbl">
+      <colgroup><col style="width:300px"><col style="width:300px"><col style="width:330px"><col style="width:360px"><col style="width:438px"></colgroup>
+      <thead><tr><th>Vai trò</th><th>Mẫu</th><th>Đo được</th><th>Ngưỡng WCAG</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>text</code></td><td><span class="swatch" style="background:#fff;color:#0F172A">Aa</span></td><td class="num">17.9:1</td><td class="num">≥ 4.5:1</td><td><span class="pass"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Đạt</span></td></tr>
+        <tr><td><code>muted</code></td><td><span class="swatch" style="background:#fff;color:#475569">Aa</span></td><td class="num">7.6:1</td><td class="num">≥ 4.5:1</td><td><span class="pass"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Đạt</span></td></tr>
+        <tr><td><code>primary</code></td><td><span class="swatch" style="background:#1D4ED8;color:#fff;border-color:#1D4ED8">Aa</span></td><td class="num">6.7:1</td><td class="num">≥ 4.5:1</td><td><span class="pass"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Đạt</span></td></tr>
+        <tr><td><code>border</code></td><td><span class="swatch" style="background:#fff;border:4px solid #64748B;color:#0F172A"></span></td><td class="num">4.8:1</td><td class="num">≥ 3:1</td><td><span class="pass"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Đạt</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1,5 phút.</p>
+    <p>Ngưỡng của WCAG: chữ thường tối thiểu 4.5:1; chữ lớn và thành phần giao diện (viền ô nhập, icon, trạng thái control) tối thiểu 3:1. Cột bên trái là cách đặt tên màu theo ngữ nghĩa (text, muted, primary, border, và sau này surface, danger, success) thay vì theo tên màu như xanh dương hay xám. Mỗi vai trò đi cùng một cặp màu đã đo. Nâng cấp (nhắc qua): OKLCH giúp tạo dải màu đều và làm chế độ tối dễ hơn.</p>
+  </aside>
+</section>
+
+<!-- 23 -->
+<section class="slide" data-layout="L4" data-part="B" data-min="1">
+  <h2 class="hl">Đừng chỉ dùng màu làm tín hiệu, hãy thêm icon và chữ</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Điểm danh · Lớp 6A</span></div>
+        <div class="gs">
+          <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div></div><span class="dot g"></span></div>
+          <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thị Thanh Thảo</div></div><span class="dot r"></span></div>
+          <div class="rw"><span class="av">NM</span><div class="fl"><div class="nm">Phạm Hoàng Nhật Minh</div></div><span class="dot g"></span></div>
+          <div class="rw"><span class="av">MA</span><div class="fl"><div class="nm">Nguyễn Minh Anh</div></div><span class="dot r"></span></div>
+        </div>
+      </div>
+      <div class="metric">Thang xám: khó phân biệt</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Điểm danh · Lớp 6A</span></div>
+        <div class="gs">
+          <div class="rw"><span class="av">GB</span><div class="fl"><div class="nm">Trần Gia Bảo</div></div><span class="pill g"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Có mặt</span></div>
+          <div class="rw"><span class="av">TT</span><div class="fl"><div class="nm">Lê Thị Thanh Thảo</div></div><span class="pill r"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Vắng</span></div>
+          <div class="rw"><span class="av">NM</span><div class="fl"><div class="nm">Phạm Hoàng Nhật Minh</div></div><span class="pill g"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Có mặt</span></div>
+          <div class="rw"><span class="av">MA</span><div class="fl"><div class="nm">Nguyễn Minh Anh</div></div><span class="pill r"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Vắng</span></div>
+        </div>
+      </div>
+      <div class="metric">Thang xám: vẫn đọc rõ</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Cả hai màn hình đang được hiển thị ở thang xám để mô phỏng người khó phân biệt màu, hoặc màn hình dưới nắng. Biến duy nhất là thông tin được mã hóa thêm bằng icon và chữ. Một số người mù màu không phân biệt được đỏ và xanh; ngoài ra màu còn mang nghĩa khác nhau giữa các văn hóa. Luôn kèm icon hoặc chữ, và đừng nhầm với nhãn Trước/Sau trên slide này: chúng cũng dùng icon, chữ và viền chứ không chỉ màu.</p>
+  </aside>
+</section>
+
+<!-- 24 -->
+<section class="slide" data-layout="L7" data-part="B" data-min="1">
+  <h2 class="hl">Vùng chạm đủ lớn: 44pt trên Apple, 48dp trên Material</h2>
+  <div class="body">
+    <div class="tt3" aria-hidden="true">
+      <div class="tbox"><div class="sq" style="width:144px;height:144px;font-size:72px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg></div><span class="big">24 px</span><span class="who">WCAG 2.2<br>tối thiểu</span></div>
+      <div class="tbox"><div class="sq" style="width:264px;height:264px;font-size:132px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg></div><span class="big">44 pt</span><span class="who">Apple</span></div>
+      <div class="tbox"><div class="sq" style="width:288px;height:288px;font-size:144px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg></div><span class="big">48 dp</span><span class="who">Material</span></div>
+    </div>
+    <p style="text-align:center;font-size:36px;margin-top:40px">Giữa các vùng chạm cần đủ khoảng cách.</p>
+    <p class="foot24" style="text-align:center;margin-top:12px">Hình vẽ phóng 6 lần, đúng tỷ lệ.</p>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Ba con số cần nhớ: Apple khuyến nghị vùng chạm tối thiểu 44×44pt, Material là 48×48dp, còn WCAG 2.2 đặt mức tối thiểu tuyệt đối 24×24 CSS px. Nên nhắm mức 44 đến 48 cho thao tác hay dùng, còn 24 là sàn pháp lý chứ không phải mục tiêu. Hình vẽ theo đúng tỷ lệ để khán giả thấy khoảng cách giữa các mức. Nhắc lại điều ở Fitts: vùng chạm lớn và đủ khoảng cách giúp tránh bấm nhầm, nhất là khi dùng một tay.</p>
+  </aside>
+</section>
+
+<!-- 25 -->
+<section class="slide" data-layout="L4" data-part="B" data-min="1">
+  <h2 class="hl">Icon nhỏ sát nhau khiến người dùng bấm nhầm</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span><span class="lg"><i class="co">1</i>Vùng chạm chồng nhau</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="rw" style="padding-top:24px"><span class="av">NM</span><div class="fl"><div class="nm" style="font-weight:700">Phạm Hoàng Nhật Minh</div><div class="sb">Lớp 6A</div></div></div>
+        <div class="hits sm" style="padding-top:12px"><span class="hit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg></span><span class="hit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-msg"/></svg></span><span class="hit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-trash"/></svg></span><span class="hit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-more"/></svg></span></div>
+      </div>
+      <div class="metric">Vùng chạm 20pt, cách 2pt</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span><span class="lg"><i class="co">1</i>Vùng chạm đủ lớn</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="rw" style="padding-top:24px"><span class="av">NM</span><div class="fl"><div class="nm" style="font-weight:700">Phạm Hoàng Nhật Minh</div><div class="sb">Lớp 6A</div></div></div>
+        <div class="hits lg" style="padding-top:12px"><span class="hit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-edit"/></svg></span><span class="hit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-msg"/></svg></span><span class="hit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-trash"/></svg></span><span class="hit"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-more"/></svg></span></div>
+      </div>
+      <div class="metric">Vùng chạm 44pt, cách 8pt</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Đường nét đứt cho thấy vùng chạm thật của mỗi icon; icon giữ nguyên kích thước hiển thị, chỉ vùng chạm và khoảng cách thay đổi. Ở bản trái, vùng chạm khoảng 20pt chồng sát nhau nên ngón tay dễ trúng nút xóa khi định bấm sửa. Mock được phóng 2 lần, nên 88px trong hình tương ứng 44pt. Mọi control cần có nhãn; icon không có chữ thì phải có tên truy cập cho screen reader, ví dụ aria-label.</p>
+  </aside>
+</section>
+
+<!-- 26 -->
+<section class="slide" data-layout="L6" data-part="B" data-min="1">
+  <h2 class="hl">Mỗi nút cần phản hồi ngay: nhấn, tải, focus và vô hiệu</h2>
+  <div class="body">
+    <div class="g5" aria-hidden="true">
+      <div class="cellc"><div class="btn">Lưu điểm</div><div class="cl">Mặc định</div></div>
+      <div class="cellc"><div class="btn press">Lưu điểm</div><div class="cl">Đang nhấn</div></div>
+      <div class="cellc"><div class="btn focus">Lưu điểm</div><div class="cl">Focus</div></div>
+      <div class="cellc"><div class="btn"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-load"/></svg>Đang lưu</div><div class="cl">Đang tải</div></div>
+      <div class="cellc"><div class="btn dis">Lưu điểm</div><div class="cl">Vô hiệu</div></div>
+    </div>
+    <div class="arow" aria-hidden="true">
+      <span class="ibtn"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-trash"/></svg></span><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-next"/></svg><span class="code">aria-label="Xóa học sinh"</span>
+      <span>Icon không chữ cần tên truy cập.</span>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Phản hồi tức thì: trạng thái pressed ngay khi chạm, trạng thái loading khi hành động mất thời gian, và focus ring nhìn thấy được khi dùng bàn phím. Nút vô hiệu thì nên giải thích vì sao đang bị khóa nếu có thể. Ưu tiên control native và quen thuộc trước khi tự chế, vì chúng đã có sẵn các trạng thái và hỗ trợ truy cập. Hàng dưới nhắc rằng icon không có chữ cần tên truy cập được để screen reader đọc ra.</p>
+  </aside>
+</section>
+
+<!-- 27 -->
+<section class="slide" data-layout="L4" data-part="B" data-min="2">
+  <h2 class="hl">Nút nói rõ kết quả, và lỗi nói rõ cách sửa</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Nhập điểm</span></div>
+        <div class="pad">
+          <div class="lbl">Điểm bài kiểm tra</div>
+          <div class="inp" style="border-color:var(--red)">11</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--red);font-weight:700;font-size:28px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>Lỗi!</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="pad"><div class="btn">OK</div></div>
+      </div>
+      <div class="metric">Người dùng phải tự đoán</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Nhập điểm</span></div>
+        <div class="pad">
+          <div class="lbl">Điểm bài kiểm tra</div>
+          <div class="inp" style="border-color:var(--red)">11</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--red);font-weight:700;font-size:28px"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg>Điểm phải từ 0 đến 10.</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="pad"><div class="btn">Lưu điểm</div></div>
+      </div>
+      <div class="metric">Biết ngay cách sửa</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 2 phút.</p>
+    <p>Biến duy nhất là câu chữ trên cùng một màn hình nhập điểm. Nút bắt đầu bằng động từ và nói rõ kết quả: Lưu điểm thay vì OK. Thông báo lỗi nói cách sửa và đặt ngay cạnh chỗ bị lỗi, kèm icon chứ không chỉ chữ đỏ. Câu chữ cũng là UI: nói trực tiếp với người dùng, từ ngữ đơn giản và một bộ từ vựng thống nhất trong cả luồng. Với phần cài đặt, nên mô tả trạng thái BẬT thay vì chỉ dán nhãn trừu tượng.</p>
+  </aside>
+</section>
+
+<!-- 28 -->
+<section class="slide" data-layout="L4" data-part="B" data-min="1">
+  <h2 class="hl">Màn hình trống nên chỉ ra việc cần làm tiếp theo</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh · Lớp 6A</span></div>
+        <div class="center"><div class="sb" style="font-size:32px">Không có dữ liệu.</div></div>
+      </div>
+      <div class="metric">Không chỉ ra việc tiếp theo</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="ab"><span>Học sinh · Lớp 6A</span></div>
+        <div class="center"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-users"/></svg><div class="tt">Lớp 6A chưa có học sinh</div><div class="sb" style="font-size:28px">Thêm học sinh đầu tiên để bắt đầu điểm danh.</div><div class="btn">Thêm học sinh</div></div>
+      </div>
+      <div class="metric">Có nút để làm ngay</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Màn hình trống là cơ hội hướng dẫn, không phải ngõ cụt. Bản trái chỉ báo tình trạng; bản phải nói điều gì đang xảy ra, vì sao quan trọng và có nút làm ngay việc kế tiếp. Biến duy nhất là nội dung màn hình trống. Nhắc lại liên hệ với phần A4: empty là một trong bốn trạng thái bắt buộc phải thiết kế.</p>
+  </aside>
+</section>
+
+<!-- 29 -->
+<section class="slide" data-layout="L4" data-part="B" data-min="2">
+  <h2 class="hl">Giao diện phẳng gọn tốt hơn card lồng card nhiều bóng đổ</h2>
+  <div class="body ba">
+    <div class="col bad">
+      <div class="th"><span class="tag bad"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg>Trước</span></div>
+      <div class="screen" aria-hidden="true" style="background:var(--bg)">
+        <div class="nest1">
+          <div class="nest2">
+            <div class="ttl">Lớp 6A</div>
+            <div class="sb">16 học sinh · 17:30 hôm nay</div>
+            <div class="nest3"><div class="btn">Điểm danh</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="metric">Card lồng 3 lớp, 3 bóng đổ</div>
+    </div>
+    <div class="col good">
+      <div class="th"><span class="tag good"><svg class="ic" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Sau</span></div>
+      <div class="screen" aria-hidden="true">
+        <div class="flatc">
+          <div class="ttl">Lớp 6A</div>
+          <div class="sb" style="margin-top:-12px">16 học sinh · 17:30 hôm nay</div>
+          <div class="btn">Điểm danh</div>
+        </div>
+      </div>
+      <div class="metric">Không card lồng, không bóng đổ</div>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 2 phút.</p>
+    <p>Polish chỉ làm sau khi mọi thứ đã đúng. Biến duy nhất ở đây là độ nổi: ba lớp card với ba bóng đổ so với một mặt phẳng. Bóng đổ thể hiện độ nổi, đường viền thể hiện cấu trúc; khi mọi thứ đều nổi thì không còn gì nổi bật. Các việc polish khác: bo góc đồng tâm (radius ngoài bằng radius trong cộng padding); mỗi animation cần một mục đích như phản hồi, chuyển trạng thái hoặc định hướng, thao tác lặp nhiều thì animation phải tinh tế, và tôn trọng cài đặt reduced-motion. Tránh gradient, glow, glass và emoji làm icon khi không có lý do.</p>
+  </aside>
+</section>
+
+<!-- ===================== C. TỔNG KẾT (5') ===================== -->
+
+<!-- 30 -->
+<section class="slide" data-layout="L8" data-part="C" data-min="2.5">
+  <h2 class="hl">Tám câu hỏi giúp bạn kiểm tra một màn hình trước khi giao</h2>
+  <div class="body cwrap" style="height:660px">
+    <div>
+      <p class="cgrp">UX</p>
+      <ul class="cl8">
+        <li><i class="cb"></i>Viết được câu “Người dùng đến đây để ___”</li>
+        <li><i class="cb"></i>Flow có cả luồng lỗi và nút Back chạy đúng</li>
+        <li><i class="cb"></i>Có đủ trạng thái loading / empty / error / offline</li>
+      </ul>
+      <p class="cgrp" style="margin-top:20px">UI</p>
+      <ul class="cl8">
+        <li><i class="cb"></i>Thứ bậc rõ ràng: nhóm bằng khoảng trắng, căn theo cạnh chung</li>
+        <li><i class="cb"></i>Type scale gọn, chữ body đủ to</li>
+        <li><i class="cb"></i>Màu theo ngữ nghĩa, tương phản ≥ 4.5:1, không chỉ dựa vào màu</li>
+        <li><i class="cb"></i>Vùng chạm đủ lớn, có focus ring và nhãn</li>
+        <li><i class="cb"></i>Nút bắt đầu bằng động từ, lỗi nói cách sửa</li>
+      </ul>
+    </div>
+    <div class="scard">
+      <h3>Tự chấm 5 trục, mỗi trục 0–2</h3>
+      <div class="axis"><span class="nmx">Rõ việc cần làm</span><i>0</i><i>1</i><i>2</i></div>
+      <div class="axis"><span class="nmx">Thứ bậc thông tin</span><i>0</i><i>1</i><i>2</i></div>
+      <div class="axis"><span class="nmx">Độ phủ trạng thái</span><i>0</i><i>1</i><i>2</i></div>
+      <div class="axis"><span class="nmx">Accessibility</span><i>0</i><i>1</i><i>2</i></div>
+      <div class="axis"><span class="nmx">Nhất quán thị giác</span><i>0</i><i>1</i><i>2</i></div>
+      <p class="rulebox">Đạt khi từ 8/10 trở lên và không trục nào bằng 0.</p>
+    </div>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 2,5 phút.</p>
+    <p>Đây là slide mang về: tám dòng chia thành ba câu cho UX và năm câu cho UI. Hướng dẫn tự chấm nhanh năm trục, mỗi trục 0 đến 2 điểm: rõ việc cần làm, thứ bậc thông tin, độ phủ trạng thái, accessibility và nhất quán thị giác. Đạt khi tổng từ 8/10 trở lên và không trục nào bằng 0. Mời khán giả chọn một màn hình trong app của mình và tự chấm ngay trong 60 giây; đây là ngoại lệ về lượng chữ của slide checklist.</p>
+  </aside>
+</section>
+
+<!-- 31 -->
+<section class="slide" data-layout="L8" data-part="C" data-min="1">
+  <h2 class="hl">Ba thói quen và sáu nguồn giúp bạn tiếp tục sau buổi này</h2>
+  <div class="body">
+    <ol class="habits">
+      <li class="habit"><i>1</i><span>Viết câu mục tiêu trước khi vẽ</span></li>
+      <li class="habit"><i>2</i><span>Luôn vẽ trạng thái empty và error</span></li>
+      <li class="habit"><i>3</i><span>Thử bằng bàn phím hoặc chữ phóng to trước khi merge</span></li>
+    </ol>
+    <ul class="res">
+      <li><b>Laws of UX</b><span>https://lawsofux.com</span></li>
+      <li><b>NN/g 10 heuristics</b><span>https://www.nngroup.com/articles/ten-usability-heuristics/</span></li>
+      <li><b>Apple HIG</b><span>https://developer.apple.com/design/human-interface-guidelines/</span></li>
+      <li><b>Material 3</b><span>https://m3.material.io/</span></li>
+      <li><b>WCAG 2.2</b><span>https://www.w3.org/TR/WCAG22/</span></li>
+      <li><b>interfaces.dev / jakubkrehel</b><span>https://github.com/jakubkrehel/skills</span></li>
+    </ul>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1 phút.</p>
+    <p>Ba thói quen đủ nhỏ để làm ngay: viết câu mục tiêu trước khi vẽ; luôn vẽ trạng thái empty và error; thử dùng app chỉ bằng bàn phím hoặc chữ phóng to trước khi merge. Sáu nguồn bên dưới là nơi tổng hợp nội dung buổi này: Laws of UX, mười heuristic của NN/g, Apple HIG, Material 3, WCAG 2.2 và bộ skill của jakubkrehel. Gửi danh sách này vào kênh chung sau buổi để mọi người mở được liên kết.</p>
+  </aside>
+</section>
+
+<!-- 32 -->
+<section class="slide" data-layout="L1" data-part="C" data-min="1.5">
+  <div class="l1" style="width:1500px">
+    <h2 class="hl-big" style="font-size:72px;line-height:88px">UX quyết định làm gì, UI làm cho dễ thấy, dễ hiểu, dễ bấm</h2>
+    <p class="tagline">Giải bài toán trước, trang trí sau.</p>
+  </div>
+  <aside class="notes">
+    <p>Thời lượng: 1,5 phút.</p>
+    <p>Đọc câu chốt cả bài: UX quyết định làm cái gì và theo thứ tự nào; UI quyết định làm cho nó dễ thấy, dễ hiểu, dễ bấm. Giải bài toán trước, trang trí sau. Dừng lại vài giây cho câu cuối rồi cảm ơn khán giả. Q&amp;A nằm ngoài 45 phút; nếu còn thời gian có thể quay lại slide 30 để mời một bạn tự chấm màn hình của mình.</p>
+  </aside>
+</section>
+
+</main>
+</div>
+
+<div id="notesPanel" role="region" aria-label="Ghi chú diễn giả" aria-live="off"></div>
+
+<script>
+(function () {
+  'use strict';
+  var deckEl = document.getElementById('deck');
+  var panel = document.getElementById('notesPanel');
+  var slides = Array.prototype.slice.call(deckEl.querySelectorAll('.slide'));
+  var N = slides.length;
+  var cur = 1;
+  var notesOpen = false;
+  var PARTS = ['0', 'A', 'B', 'C'];
+
+  function buildFooters() {
+    slides.forEach(function (s, i) {
+      s.setAttribute('role', 'group');
+      s.setAttribute('aria-roledescription', 'slide');
+      s.setAttribute('aria-label', 'Slide ' + (i + 1) + ' trên ' + N);
+      if (s.hasAttribute('data-nofoot')) return;
+      var part = s.getAttribute('data-part');
+      var pi = PARTS.indexOf(part);
+      var li = PARTS.map(function (p, k) {
+        var c = k < pi ? 'past' : (k === pi ? 'on' : '');
+        return '<li class="' + c + '"' + (k === pi ? ' aria-current="true"' : '') + '>' + p + '</li>';
+      }).join('');
+      var f = document.createElement('footer');
+      f.className = 'foot';
+      f.innerHTML = '<div class="prog" aria-label="Phần ' + part + '"><span>Phần</span><ol style="display:flex;gap:8px">' + li + '</ol></div><div class="num">' + (i + 1) + ' / ' + N + '</div>';
+      s.appendChild(f);
+    });
+  }
+
+  function fit() {
+    var w = window.innerWidth;
+    var h = window.innerHeight * (notesOpen ? 0.72 : 1);
+    var k = Math.min(w / 1920, h / 1080);
+    var x = (w - 1920 * k) / 2;
+    var y = (h - 1080 * k) / 2;
+    deckEl.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + k + ')';
+  }
+
+  function renderNotes() {
+    var a = slides[cur - 1].querySelector('aside.notes');
+    panel.innerHTML = '<h3>Ghi chú diễn giả · slide ' + cur + ' / ' + N + '</h3>' + (a ? a.innerHTML : '');
+    panel.scrollTop = 0;
+  }
+
+  function go(n) {
+    n = parseInt(n, 10);
+    if (isNaN(n)) n = 1;
+    n = Math.max(1, Math.min(N, n));
+    slides.forEach(function (s, i) {
+      var on = (i === n - 1);
+      s.classList.toggle('active', on);
+      s.setAttribute('aria-hidden', on ? 'false' : 'true');
+    });
+    cur = n;
+    try { history.replaceState(null, '', '#' + n); } catch (e) { if (location.protocol !== 'data:') location.hash = String(n); }
+    if (notesOpen) renderNotes();
+    return cur;
+  }
+
+  function toggleNotes() {
+    notesOpen = !notesOpen;
+    panel.classList.toggle('open', notesOpen);
+    if (notesOpen) renderNotes();
+    fit();
+  }
+
+  function pathOf(el, root) {
+    var parts = [];
+    while (el && el !== root) {
+      var t = el.tagName.toLowerCase();
+      if (el.classList && el.classList.length) t += '.' + Array.prototype.join.call(el.classList, '.');
+      var p = el.parentElement;
+      if (p) t += ':nth-child(' + (Array.prototype.indexOf.call(p.children, el) + 1) + ')';
+      parts.unshift(t);
+      el = p;
+    }
+    return parts.join(' > ');
+  }
+
+  function checkOverflow() {
+    var saved = deckEl.style.transform;
+    deckEl.style.transform = 'none';
+    var out = [];
+    var d = deckEl.getBoundingClientRect();
+    slides.forEach(function (s, i) {
+      var els = [s].concat(Array.prototype.slice.call(s.querySelectorAll('*')));
+      els.forEach(function (el) {
+        if (el.closest('.notes')) return;
+        var inSvg = el.closest('svg') && el.tagName.toLowerCase() !== 'svg';
+        if (inSvg) return;
+        var r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return;
+        var sel = null, why = '';
+        if (el !== s && (r.left < d.left - 1 || r.top < d.top - 1 || r.right > d.right + 1 || r.bottom > d.bottom + 1)) {
+          sel = pathOf(el, deckEl); why = 'outside-canvas';
+        } else if (el.tagName.toLowerCase() !== 'svg' && !el.hasAttribute('data-clip') && el.clientWidth > 0 && el.clientHeight > 0 &&
+          (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1)) {
+          sel = pathOf(el, deckEl); why = 'content-overflow ' + el.scrollWidth + 'x' + el.scrollHeight + ' > ' + el.clientWidth + 'x' + el.clientHeight;
+        }
+        if (sel) out.push({ slide: i + 1, selector: sel, reason: why });
+      });
+    });
+    deckEl.style.transform = saved;
+    return out;
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === ' ' || k === 'Spacebar' || k === 'PageDown') { e.preventDefault(); go(cur + 1); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp') { e.preventDefault(); go(cur - 1); }
+    else if (k === 'Home') { e.preventDefault(); go(1); }
+    else if (k === 'End') { e.preventDefault(); go(N); }
+    else if (k === 'n' || k === 'N') { e.preventDefault(); toggleNotes(); }
+  });
+  window.addEventListener('resize', fit);
+  window.addEventListener('hashchange', function () {
+    var n = parseInt(location.hash.replace('#', ''), 10);
+    if (!isNaN(n) && n !== cur) go(n);
+  });
+
+  window.deck = {
+    go: go,
+    get count() { return N; },
+    get current() { return cur; },
+    checkOverflow: checkOverflow
+  };
+
+  buildFooters();
+  fit();
+  var start = parseInt(location.hash.replace('#', ''), 10);
+  go(isNaN(start) ? 1 : start);
+})();
+</script>
+</body>
+</html>

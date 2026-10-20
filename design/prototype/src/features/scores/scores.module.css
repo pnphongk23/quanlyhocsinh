@@ -1,0 +1,564 @@
+/* Trang tạo bài kiểm tra (design/reference/19-gv-tao-bai-kiem-tra.html) */
+.formPage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 520px;
+  min-width: 0;
+}
+/* Nút chính nằm sát đáy màn (design/reference/19-gv-tao-bai-kiem-tra.html).
+   44px = đệm trên/dưới của vùng nội dung trong TeacherShell. */
+@media (max-width: 1023px) {
+  .formPage {
+    min-height: calc(
+      100dvh - var(--tabbar-height) - env(safe-area-inset-bottom) - 44px
+    );
+  }
+  .form {
+    flex: 1;
+  }
+  .actions {
+    margin-top: auto;
+  }
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.hint {
+  font-size: 14px;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.actions {
+  display: grid;
+  gap: 8px;
+}
+.cancelButton {
+  min-height: 48px;
+  border-radius: var(--radius-button);
+  font-size: 16px;
+}
+
+/* Thông báo lỗi (design/reference/78-trang-thai-loi-luu.html) */
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 8px 0 16px;
+  border-radius: 12px;
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-size: 14px;
+  font-weight: 600;
+}
+.errorBannerText {
+  flex: 1;
+  min-width: 0;
+}
+.retryButton {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-error);
+  color: var(--color-on-primary);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Trạng thái rỗng của tab điểm (design/reference/75-...) */
+.emptyScore {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 40px;
+  text-align: center;
+}
+/* Căn giữa trong khoảng trống còn lại giữa dải tab của lớp và thanh tab dưới
+   (design/reference/75). 156px = phần đầu lớp + đệm nội dung hai đầu. */
+@media (max-width: 1023px) {
+  .emptyScore {
+    min-height: calc(
+      100dvh - var(--tabbar-height) - env(safe-area-inset-bottom) - 156px
+    );
+  }
+}
+@media (min-width: 1024px) {
+  .emptyScore {
+    min-height: 420px;
+  }
+}
+.emptyIcon {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+.emptyText {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.emptyTitle {
+  font-size: 20px;
+  font-weight: 700;
+}
+.emptyDesc {
+  font-size: 16px;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.emptyActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Tab Bài kiểm tra */
+.tab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.tabHead {
+  display: flex;
+  justify-content: flex-end;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* Thẻ bài kiểm tra (design/reference/20-gv-nhap-diem.html) */
+.testRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.testInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.testName {
+  font-size: 18px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.testMeta {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+/* Nhập điểm một bài (design/reference/20, 21, 22) */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.testCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.testCardText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.testCardName {
+  font-size: 18px;
+  font-weight: 700;
+}
+.testCardMeta {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.switchTest {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-primary-ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.columns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -4px;
+  padding: 0 4px 0 12px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.colStudent {
+  flex: 1;
+  min-width: 0;
+}
+.colScore {
+  width: 64px;
+  text-align: center;
+}
+.studentList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.studentRow {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+.studentRowMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 12px;
+}
+.studentRow:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+.studentRowInvalid {
+  outline: 2px solid var(--color-error);
+  outline-offset: -2px;
+}
+.studentNameBox {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.studentName {
+  font-size: 16px;
+  font-weight: 500;
+}
+.studentMissing {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-warning);
+}
+.scoreInput {
+  width: 64px;
+  height: 44px;
+  min-height: 44px;
+  flex: none;
+  padding: 0;
+  box-sizing: border-box;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.scoreInput::placeholder {
+  color: var(--color-placeholder);
+}
+.scoreInputEmpty {
+  border: 1.5px dashed var(--color-input-border-strong);
+  background: var(--color-surface);
+  color: var(--color-muted);
+}
+.scoreInput:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+  color: var(--color-primary-ink);
+}
+.scoreInputInvalid,
+.scoreInputInvalid:focus {
+  border-style: solid;
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+.rowError {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-error);
+}
+.draftNotice {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 14px;
+}
+.draftNotice a {
+  color: inherit;
+  font-weight: 700;
+}
+.saveBar {
+  position: sticky;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+  background: var(--color-bg);
+}
+.saveReason {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-error);
+  text-align: center;
+}
+.saveReasonMuted {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+.saveButton {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 16px;
+  font-weight: 600;
+}
+.saveButton:disabled {
+  opacity: 1;
+  background: var(--color-input-border);
+  color: var(--color-muted);
+}
+.desktopSaveRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Hộp thoại chưa lưu (design/reference/80-trang-thai-chua-luu-hoi-khi-roi-man.html) */
+.confirmDialog {
+  width: min(520px, calc(100% - 32px));
+  padding: 24px;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+/* Chỉ đổi cách xếp khi hộp thoại thật sự mở; đặt ngoài [open] sẽ ghi đè
+   `dialog:not([open]) { display: none }` của trình duyệt. */
+.confirmDialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.confirmDialog::backdrop {
+  background: var(--color-scrim);
+}
+.confirmTitle {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.confirmBody {
+  font-size: 16px;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.confirmActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.confirmButton {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.confirmPrimary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.confirmDiscard {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+.confirmStay {
+  background: var(--color-neutral-soft);
+  color: var(--color-text);
+}
+
+/* Bảng điểm cả lớp (design/reference/90-web-bang-diem.html) */
+.gridHead {
+  display: flex;
+  justify-content: flex-end;
+}
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+.table th {
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  vertical-align: top;
+}
+.table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.table th:first-child,
+.table td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--color-surface);
+  text-align: left;
+}
+.table th:first-child {
+  z-index: 1;
+}
+.studentCell {
+  font-weight: 500;
+  white-space: nowrap;
+}
+.leftStudent {
+  opacity: 0.62;
+}
+.leftStudentLabel {
+  margin-inline-start: 8px;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.testLink {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tap);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.testDate {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.cellEmpty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 44px;
+  border: 1.5px dashed var(--color-input-border-strong);
+  border-radius: 8px;
+  color: var(--color-muted);
+  font-size: 15px;
+  font-weight: 700;
+}
+.cellMissing {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-warning);
+}
+.averageCell {
+  font-weight: 700;
+}
+.averageEmpty {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.gridNote {
+  padding-top: 12px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+@media (min-width: 1024px) {
+  .page,
+  .tab {
+    gap: 18px;
+  }
+  .studentList {
+    max-width: 720px;
+  }
+  .tabHead a,
+  .gridHead a {
+    min-height: 48px;
+    padding: 0 18px;
+    border-radius: var(--radius-button);
+    font-size: 15px;
+  }
+  .saveBar {
+    position: static;
+    padding: 0;
+    background: transparent;
+  }
+  .actions {
+    grid-template-columns: auto auto;
+    justify-content: start;
+    align-items: center;
+    gap: 12px;
+  }
+}

@@ -1,0 +1,561 @@
+/*
+ * Bảng lương (Admin) và chi tiết lương một người: chọn tháng, tổng chi, cảnh báo
+ * thiếu đơn giá, thẻ/ bảng theo người, buổi đã tính + dự kiến, điều chỉnh, đơn giá.
+ * Mobile 390px + desktop.
+ */
+.page {
+  display: grid;
+  gap: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  min-width: 0;
+  width: 100%;
+}
+.pageNarrow {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  min-width: 0;
+  width: 100%;
+}
+
+/* Chọn tháng */
+.monthCard {
+  padding: 10px 12px;
+}
+.monthHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.monthTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Khối tổng chi */
+.totalCard {
+  display: grid;
+  gap: 2px;
+}
+.totalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.statLabel {
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.statAmount {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.totalAmount {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.meta {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Điều hướng tháng + chốt trên desktop */
+.headerNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.headerMonth {
+  min-width: 132px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Ba thẻ số liệu trên desktop */
+.statRow {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.statCard {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 14px 16px;
+}
+.statCard > span {
+  justify-self: start;
+}
+.statCard .statAmount {
+  font-size: 24px;
+}
+
+/* Cảnh báo thiếu đơn giá */
+.bannerWarning,
+.bannerError {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.bannerWarning {
+  border: 1px solid #f0d39a;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.bannerWarning strong {
+  font-weight: 700;
+}
+.bannerError {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+.bannerError > span {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* Danh sách thẻ lương trên mobile */
+.list {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.rowLink {
+  display: block;
+  min-width: 0;
+  border-radius: var(--radius-card);
+  color: inherit;
+  text-decoration: none;
+}
+.rowLink:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.summaryCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 64px;
+  padding: 12px 14px;
+}
+.avatar {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.summaryMain {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+.summaryName {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.amountBox {
+  display: grid;
+  flex: none;
+  justify-items: end;
+  gap: 2px;
+}
+.amountBox strong {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.adjPositive {
+  color: var(--color-success);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.adjNegative {
+  color: var(--color-error);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.adjNone {
+  color: var(--color-muted);
+}
+
+/* Bảng trên web */
+.tableWrap {
+  padding: 6px 20px;
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.table th {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.table th:nth-child(1) {
+  width: 30%;
+}
+.table th:nth-child(2),
+.table th:nth-child(3),
+.table th:nth-child(4) {
+  width: 12%;
+}
+.table th:nth-child(5) {
+  width: 18%;
+}
+.table th:nth-child(6) {
+  width: 16%;
+  text-align: right;
+}
+.table td {
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 14px;
+  vertical-align: middle;
+}
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table td:nth-child(1) {
+  display: grid;
+  gap: 4px;
+}
+.table td:nth-child(6) {
+  text-align: right;
+}
+.tableLink {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.tableLink:hover,
+.tableLink:focus-visible {
+  color: var(--color-primary-ink);
+  text-decoration: underline;
+}
+.tableTags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.tableTotal {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Chi tiết: các khối */
+.block {
+  display: grid;
+  gap: 10px;
+}
+.sectionTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.blockHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.blockHead .sectionTitle {
+  flex: 1;
+}
+
+/* Đơn giá */
+.rateRows {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rateRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.rateRow:last-child {
+  border-bottom: 0;
+}
+.rateText {
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  min-width: 0;
+}
+.rateRow strong {
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.unpriced {
+  color: var(--color-warning);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Danh sách buổi dạy */
+.sessionList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sessionRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.sessionRow:last-child {
+  border-bottom: 0;
+}
+.sessionDate {
+  width: 44px;
+  flex: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.sessionClass {
+  flex: 1 1 0%;
+  width: 0;
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lineTags {
+  display: flex;
+  gap: 4px;
+  flex: none;
+  flex-wrap: wrap;
+}
+.sessionAmount {
+  flex: none;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.moreLink {
+  justify-self: center;
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--color-primary-ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.moreLink:focus-visible,
+.collapseHead:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Buổi dự kiến có thể thu gọn */
+.collapseHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.collapseText {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.collapseText strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+.collapseHead > svg {
+  flex: none;
+  color: var(--color-muted);
+}
+
+/* Điều chỉnh */
+.adjustList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adjustRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.adjustRow:last-child {
+  border-bottom: 0;
+}
+.adjustText {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.adjustText strong {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.adjustAmount {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.adjustAmountNegative {
+  color: var(--color-error);
+}
+
+/* Chân trang khi bảng lương đã chốt */
+.lockNote {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  background: var(--color-neutral-soft);
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Biểu mẫu trong Sheet/Modal */
+.form {
+  display: grid;
+  gap: 16px;
+}
+.note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.noticeSuccess {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.modalActions {
+  display: grid;
+  gap: 8px;
+}
+
+/* Ô tiền có hậu tố đ/buổi */
+.moneyField {
+  position: relative;
+}
+.moneyInput {
+  padding-right: 72px;
+}
+.suffix {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  color: var(--color-muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* Thanh chốt dính đáy trên mobile */
+.stickyBar {
+  position: sticky;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  z-index: 5;
+  padding: 8px 0;
+  background: var(--color-bg);
+}
+@media (min-width: 1024px) {
+  .stickyBar {
+    display: none;
+  }
+  .page {
+    padding-bottom: 24px;
+  }
+}

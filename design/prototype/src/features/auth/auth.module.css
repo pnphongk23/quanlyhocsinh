@@ -1,0 +1,207 @@
+.page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.logo {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 24px;
+  font-weight: 700;
+}
+.brandName {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.description {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+.form {
+  display: grid;
+  gap: 14px;
+}
+.field {
+  display: grid;
+  gap: 6px;
+}
+.field > label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.input {
+  width: 100%;
+  height: 54px;
+  padding: 0 16px;
+  border: 1.5px solid var(--color-input-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 17px;
+}
+.input::placeholder {
+  color: var(--color-placeholder);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.passwordWrap {
+  position: relative;
+}
+.passwordInput {
+  padding-right: 64px;
+}
+.eye {
+  position: absolute;
+  right: 4px;
+  top: 5px;
+  width: var(--tap);
+  height: var(--tap);
+  min-height: var(--tap);
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+}
+.submit {
+  height: 54px;
+  min-height: 54px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 17px;
+  font-weight: 600;
+}
+.error {
+  color: var(--color-error);
+  font-size: 14px;
+}
+.footer {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-muted);
+  text-align: center;
+}
+@media (min-width: 1024px) {
+  .page {
+    min-height: calc(100dvh - 32px);
+    margin: 16px;
+  }
+  .card {
+    padding: 28px 24px;
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+}
+
+/* Chọn vai trò */
+.pickerPage {
+  width: min(100%, 560px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: calc(16px + env(safe-area-inset-top)) 20px
+    calc(24px + env(safe-area-inset-bottom));
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.notice {
+  padding: 12px 14px;
+  border-radius: var(--radius-row);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pickerIntro {
+  color: var(--color-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.roleList {
+  display: grid;
+  gap: 12px;
+}
+.roleList .roleCard {
+  padding: 0;
+}
+.roleButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+}
+.roleAvatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+.roleText {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.roleName {
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.roleMeta {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.roleChevron {
+  display: grid;
+  width: var(--tap);
+  height: var(--tap);
+  flex: none;
+  place-items: center;
+  color: var(--color-muted);
+}

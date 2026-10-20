@@ -1,0 +1,230 @@
+/*
+ * Khu "Người dạy" trong chi tiết buổi học: mỗi vị trí một dòng có avatar,
+ * nhãn vị trí, tên; dòng dạy thay ghi "Thay … · Lý do: …" và nhãn "Dạy thay".
+ * Modal đổi người dạy: chọn vị trí, chọn một người thay, nhập lý do bắt buộc.
+ */
+.teachers {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.teachersHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.teachersTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.teacherRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.avatarEmpty {
+  background: var(--color-bg);
+  color: var(--color-muted);
+}
+.teacherText {
+  display: grid;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+}
+.teacherPosition {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.teacherName {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.substituteNote {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.lockedNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.lockedNote svg {
+  flex: none;
+  margin-top: 1px;
+}
+.teachersError {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+.cancelSubstitute {
+  width: 100%;
+}
+
+/* Modal đổi người dạy */
+.form {
+  display: grid;
+  gap: 16px;
+}
+.group {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.field > span,
+.label {
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.holderLine {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.holderLine strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-row);
+  background: var(--color-bg);
+  cursor: pointer;
+}
+.optionOn {
+  background: var(--color-primary-soft);
+}
+.optionDisabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.optionInput {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+.optionText {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.optionName {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.optionRole {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 16px;
+}
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 16px;
+}
+.input::placeholder {
+  color: var(--color-placeholder);
+}
+.select:focus,
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.hint {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.formActions {
+  display: grid;
+}
+.error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.option:focus-within {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1024px) {
+  .teachers {
+    gap: 14px;
+  }
+}

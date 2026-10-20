@@ -1,0 +1,134 @@
+/*
+ * Khung chi tiết lớp: 11-gv-chi-tiet-lop-buoi-hoc (đầu màn trắng, nút back
+ * trong suốt 44px, tên lớp 22/700, hàng tab cao 48 chữ 13/600 gạch chân 3px)
+ * và 12-gv-chi-tiet-lop-menu cho menu "...".
+ */
+.space {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: -12px -20px -16px;
+}
+
+.header {
+  flex: 0 0 auto;
+  background: var(--color-surface);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 12px 4px;
+}
+
+.iconButton {
+  width: var(--tap);
+  height: var(--tap);
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: transparent;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuWrap {
+  position: relative;
+  flex: none;
+  display: flex;
+}
+
+.subTabs {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  padding: 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.subTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.subTab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 8px;
+  margin-bottom: -1px;
+  border-bottom: 3px solid transparent;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.subTabActive {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 20px 0;
+}
+
+.error {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: var(--radius-button);
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@media (min-width: 1024px) {
+  .space {
+    margin: 0;
+    gap: 16px;
+  }
+
+  .header {
+    border-radius: var(--radius-card);
+  }
+
+  .headerRow {
+    padding: 16px 20px 4px;
+  }
+
+  .subTabs {
+    padding: 0 20px;
+    justify-content: flex-start;
+    overflow: visible;
+  }
+
+  .body {
+    padding: 0;
+    gap: 16px;
+  }
+}

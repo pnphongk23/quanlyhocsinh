@@ -1,0 +1,151 @@
+import { Link, useParams } from "react-router-dom";
+import { useStore } from "../../data/store";
+import { listStudents } from "../../data/repositories/students";
+import { listTests } from "../../data/repositories/tests";
+import { listScores } from "../../data/repositories/scores";
+import { useAccess } from "../../data/repositories/access";
+import { averageScore, orderScoreGridStudents } from "../../data/logic";
+import { formatDayMonth, formatScore } from "../../shared/format";
+import { Card, LinkButton, NoAccess } from "../../shared/ui";
+import { ChartIcon } from "../scores/ScoreIcons";
+import reportS from "../scores/scoreReport.module.css";
+import s from "../scores/scores.module.css";
+
+export default function ScoreGridTab() {
+  useStore();
+  const { classId = "" } = useParams();
+  const access = useAccess();
+  const students = orderScoreGridStudents(listStudents(classId));
+  const activeCount = students.filter(
+    (student) => student.status === "active",
+  ).length;
+  const leftCount = students.filter(
+    (student) => student.status === "left",
+  ).length;
+  const tests = [...listTests(classId)].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+
+  if (!access.can("scores", "read")) return <NoAccess what="bảng điểm" />;
+  const canWrite = access.can("scores", "write");
+
+  // Trạng thái rỗng: design/reference/75-trang-thai-rong-chua-co-bai-kiem-tra.html
+  if (!tests.length)
+    return (
+      <div className={s.emptyScore}>
+        <span className={s.emptyIcon}>
+          <ChartIcon size={32} />
+        </span>
+        <div className={s.emptyText}>
+          <p className={s.emptyTitle}>Chưa có bài kiểm tra</p>
+          <p className={s.emptyDesc}>
+            Tạo bài kiểm tra đầu tiên, sau đó nhập điểm cho cả lớp.
+          </p>
+        </div>
+        {canWrite && (
+          <div className={s.emptyActions}>
+            <LinkButton size="lg" to={`/lop/${classId}/bai-kiem-tra/moi`}>
+              Tạo bài kiểm tra
+            </LinkButton>
+          </div>
+        )}
+      </div>
+    );
+
+  return (
+    <div className={s.tab}>
+      <div className={`${s.gridHead} ${reportS.tabActions}`}>
+        <LinkButton variant="secondary" to={`/lop/${classId}/bao-cao-diem`}>
+          Báo cáo điểm
+        </LinkButton>
+        {canWrite && (
+          <LinkButton
+            variant="secondary"
+            to={`/lop/${classId}/bai-kiem-tra/moi`}
+          >
+            + Bài kiểm tra mới
+          </LinkButton>
+        )}
+      </div>
+      <Card className={s.tableWrap}>
+        <table className={s.table}>
+          <thead>
+            <tr>
+              <th>Học sinh</th>
+              {tests.map((test) => (
+                <th key={test.id}>
+                  <Link
+                    className={s.testLink}
+                    to={`/lop/${classId}/bai-kiem-tra/${test.id}`}
+                  >
+                    <span>{test.name}</span>
+                    <span className={s.testDate}>
+                      {formatDayMonth(test.date)} · thang 10
+                    </span>
+                  </Link>
+                </th>
+              ))}
+              <th>Trung bình</th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((student) => {
+              const scores = tests.map((test) =>
+                listScores(test.id).find(
+                  (score) => score.studentId === student.id,
+                ),
+              );
+              const average = averageScore(
+                scores.flatMap((score) => (score ? [score] : [])),
+              );
+              return (
+                <tr
+                  key={student.id}
+                  className={
+                    student.status === "left" ? s.leftStudent : undefined
+                  }
+                >
+                  <td className={s.studentCell}>
+                    {student.name}
+                    {student.status === "left" && (
+                      <span className={s.leftStudentLabel}> Đã nghỉ</span>
+                    )}
+                  </td>
+                  {tests.map((test, index) => {
+                    const score = scores[index];
+                    return (
+                      <td key={test.id}>
+                        {score && score.value !== null ? (
+                          formatScore(score.value)
+                        ) : (
+                          <>
+                            <span className={s.cellEmpty} aria-hidden="true">
+                              –
+                            </span>
+                            <span className={s.cellMissing}>Chưa có điểm</span>
+                          </>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className={s.averageCell}>
+                    {average === null ? (
+                      <span className={s.averageEmpty}>Chưa có điểm</span>
+                    ) : (
+                      <b>{formatScore(average)}</b>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p className={s.gridNote}>
+          Hiển thị {activeCount} học sinh đang học và {leftCount} học sinh đã
+          nghỉ. Nhập 7,5 hoặc 7.5 · điểm từ 0 đến 10. Trung bình là trung bình
+          cộng; bài chưa có điểm không tính.
+        </p>
+      </Card>
+    </div>
+  );
+}

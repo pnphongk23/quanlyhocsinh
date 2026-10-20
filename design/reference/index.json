@@ -1,0 +1,746 @@
+[
+ {
+  "file": "01-gv-di-dong.html",
+  "label": "GV · di động",
+  "w": 317,
+  "h": 71
+ },
+ {
+  "file": "02-dang-nhap-va-kich-hoat.html",
+  "label": "Đăng nhập và kích hoạt",
+  "w": 340,
+  "h": 40
+ },
+ {
+  "file": "03-dang-nhap.html",
+  "label": "Đăng nhập",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "04-kich-hoat-bang-link-moi-1-3-xac-nhan-otp.html",
+  "label": "Kích hoạt bằng link mời · 1/3 Xác nhận OTP",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "05-kich-hoat-bang-link-moi-2-3-xac-nhan-ho-so.html",
+  "label": "Kích hoạt bằng link mời · 2/3 Xác nhận hồ sơ",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "06-kich-hoat-bang-link-moi-3-3-hoan-tat.html",
+  "label": "Kích hoạt bằng link mời · 3/3 Hoàn tất",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "07-chon-vai-tro-sau-dang-nhap.html",
+  "label": "Chọn vai trò sau đăng nhập",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "08-lop.html",
+  "label": "Lớp",
+  "w": 58,
+  "h": 40
+ },
+ {
+  "file": "09-gv-lop-cua-toi.html",
+  "label": "GV · Lớp của tôi",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "10-gv-tao-lop-moi.html",
+  "label": "GV · Tạo lớp mới",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "11-gv-chi-tiet-lop-buoi-hoc.html",
+  "label": "GV · Chi tiết lớp · Buổi học",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "12-gv-chi-tiet-lop-menu.html",
+  "label": "GV · Chi tiết lớp · Menu ...",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "13-buoi-hoc-va-diem-danh.html",
+  "label": "Buổi học và điểm danh",
+  "w": 331,
+  "h": 40
+ },
+ {
+  "file": "14-gv-lich-theo-ngay.html",
+  "label": "GV · Lịch · Theo ngày",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "15-gv-lich-theo-thang.html",
+  "label": "GV · Lịch · Theo tháng",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "16-gv-diem-danh.html",
+  "label": "GV · Điểm danh",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "17-gv-buoi-chua-toi-ngay-hoc.html",
+  "label": "GV · Buổi · Chưa tới ngày học",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "18-diem.html",
+  "label": "Điểm",
+  "w": 78,
+  "h": 40
+ },
+ {
+  "file": "19-gv-tao-bai-kiem-tra.html",
+  "label": "GV · Tạo bài kiểm tra",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "20-gv-nhap-diem.html",
+  "label": "GV · Nhập điểm",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "21-gv-nhap-diem-ban-phim.html",
+  "label": "GV · Nhập điểm · bàn phím",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "22-gv-nhap-diem-loi-gia-tri.html",
+  "label": "GV · Nhập điểm · lỗi giá trị",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "23-nhan-xet-va-bao-cao.html",
+  "label": "Nhận xét và báo cáo",
+  "w": 297,
+  "h": 40
+ },
+ {
+  "file": "24-gv-nhan-xet.html",
+  "label": "GV · Nhận xét",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "25-gv-nhan-xet-gui-khi-mat-mang.html",
+  "label": "GV · Nhận xét · Gửi khi mất mạng",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "26-gv-duyet-phat-hanh-bao-cao.html",
+  "label": "GV · Duyệt & phát hành báo cáo",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "27-gv-bao-cao-xac-nhan-phat-hanh.html",
+  "label": "GV · Báo cáo · xác nhận phát hành",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "28-gv-bao-cao-da-phat-hanh.html",
+  "label": "GV · Báo cáo · đã phát hành",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "29-gv-bao-cao-can-phat-hanh-lai.html",
+  "label": "GV · Báo cáo · Cần phát hành lại",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "30-hoc-sinh.html",
+  "label": "Học sinh",
+  "w": 127,
+  "h": 40
+ },
+ {
+  "file": "31-gv-chi-tiet-lop-hoc-sinh.html",
+  "label": "GV · Chi tiết lớp · Học sinh",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "32-gv-chi-tiet-lop-hoc-sinh-menu.html",
+  "label": "GV · Chi tiết lớp · Học sinh · menu",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "33-gv-chi-tiet-lop-danh-dau-nghi.html",
+  "label": "GV · Chi tiết lớp · Đánh dấu nghỉ",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "34-gv-hoc-sinh-moi-phu-huynh.html",
+  "label": "GV · Học sinh & mời phụ huynh",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "35-gv-them-hoc-sinh.html",
+  "label": "GV · Thêm học sinh",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "36-gv-them-hoc-sinh-dan-danh-sach.html",
+  "label": "GV · Thêm học sinh · dán danh sách",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "37-gv-duyet-yeu-cau-tham-gia.html",
+  "label": "GV · Duyệt yêu cầu tham gia",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "38-bai-giang.html",
+  "label": "Bài giảng",
+  "w": 136,
+  "h": 40
+ },
+ {
+  "file": "39-gv-bai-giang-thu-vien.html",
+  "label": "GV · Bài giảng · Thư viện",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "40-gv-bai-giang-thu-vien-tat-ca.html",
+  "label": "GV · Bài giảng · Thư viện · Tất cả",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "41-gv-bai-giang-thu-vien-da-luu-tru.html",
+  "label": "GV · Bài giảng · Thư viện · Đã lưu trữ",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "42-gv-bai-giang-thu-vien-rong.html",
+  "label": "GV · Bài giảng · Thư viện · Rỗng",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "43-gv-bai-giang-thu-vien-dang-tai.html",
+  "label": "GV · Bài giảng · Thư viện · Đang tải",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "44-gv-bai-giang-thu-vien-loi.html",
+  "label": "GV · Bài giảng · Thư viện · Lỗi",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "45-gv-bai-giang-soan-bai-giang.html",
+  "label": "GV · Bài giảng · Soạn bài giảng",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "46-gv-bai-giang-soan-dang-tai-tep.html",
+  "label": "GV · Bài giảng · Soạn · Đang tải tệp",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "47-gv-bai-giang-soan-loi-tai-tep.html",
+  "label": "GV · Bài giảng · Soạn · Lỗi tải tệp",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "48-gv-bai-giang-soan-offline.html",
+  "label": "GV · Bài giảng · Soạn · Offline",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "49-gv-bai-giang-chi-tiet.html",
+  "label": "GV · Bài giảng · Chi tiết",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "50-gv-bai-giang-chi-tiet-menu.html",
+  "label": "GV · Bài giảng · Chi tiết · Menu ...",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "51-gv-bai-giang-chi-tiet-luu-tru.html",
+  "label": "GV · Bài giảng · Chi tiết · Lưu trữ",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "52-gv-bai-giang-dang-dung-o-6-buoi.html",
+  "label": "GV · Bài giảng · Đang dùng ở 6 buổi",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "53-gv-buoi-bai-giang-da-gan.html",
+  "label": "GV · Buổi · Bài giảng đã gắn",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "54-gv-buoi-chua-co-bai-giang.html",
+  "label": "GV · Buổi · Chưa có bài giảng",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "55-gv-buoi-chon-bai-giang.html",
+  "label": "GV · Buổi · Chọn bài giảng",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "56-nhan-su-va-role.html",
+  "label": "Nhân sự và role",
+  "w": 222,
+  "h": 40
+ },
+ {
+  "file": "57-gv-nhan-su.html",
+  "label": "GV · Nhân sự",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "58-gv-nhan-su-khong-tim-thay.html",
+  "label": "GV · Nhân sự · Không tìm thấy",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "59-gv-moi-nhan-su.html",
+  "label": "GV · Mời nhân sự",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "60-gv-moi-nhan-su-chon-lop.html",
+  "label": "GV · Mời nhân sự · Chọn lớp",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "61-gv-moi-nhan-su-link-moi.html",
+  "label": "GV · Mời nhân sự · Link mời",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "62-gv-thanh-vien-chi-tiet.html",
+  "label": "GV · Thành viên · Chi tiết",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "63-gv-thanh-vien-vo-hieu-hoa.html",
+  "label": "GV · Thành viên · Vô hiệu hoá",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "64-gv-role-danh-sach.html",
+  "label": "GV · Role · Danh sách",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "65-gv-role-tao-role.html",
+  "label": "GV · Role · Tạo role",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "66-gv-role-sua-role-nhan-su.html",
+  "label": "GV · Role · Sửa role nhân sự",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "67-gv-role-sua-role-phu-huynh.html",
+  "label": "GV · Role · Sửa role phụ huynh",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "68-gv-role-admin-co-dinh.html",
+  "label": "GV · Role · Admin (cố định)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "69-gv-role-canh-bao-thay-doi.html",
+  "label": "GV · Role · Cảnh báo thay đổi",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "70-cai-dat.html",
+  "label": "Cài đặt",
+  "w": 106,
+  "h": 40
+ },
+ {
+  "file": "71-gv-cai-dat.html",
+  "label": "GV · Cài đặt",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "72-gv-cai-dat-doi-vai-tro.html",
+  "label": "GV · Cài đặt · Đổi vai trò",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "73-trang-thai-chung.html",
+  "label": "Trạng thái chung",
+  "w": 243,
+  "h": 40
+ },
+ {
+  "file": "74-trang-thai-rong-lop-chua-co-hoc-sinh.html",
+  "label": "Trạng thái · Rỗng · Lớp chưa có học sinh",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "75-trang-thai-rong-chua-co-bai-kiem-tra.html",
+  "label": "Trạng thái · Rỗng · Chưa có bài kiểm tra",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "76-trang-thai-rong-buoi-bi-huy.html",
+  "label": "Trạng thái · Rỗng · Buổi bị huỷ",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "77-trang-thai-dang-tai.html",
+  "label": "Trạng thái · Đang tải",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "78-trang-thai-loi-luu.html",
+  "label": "Trạng thái · Lỗi lưu",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "79-trang-thai-mat-mang.html",
+  "label": "Trạng thái · Mất mạng",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "80-trang-thai-chua-luu-hoi-khi-roi-man.html",
+  "label": "Trạng thái · Chưa lưu · hỏi khi rời màn",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "81-trang-thai-nut-bi-vo-hieu-hoa.html",
+  "label": "Trạng thái · Nút bị vô hiệu hoá",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "82-trang-thai-hop-xac-nhan-nguy-hiem.html",
+  "label": "Trạng thái · Hộp xác nhận nguy hiểm",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "83-gv-khong-du-quyen-man-bi-khoa.html",
+  "label": "GV · Không đủ quyền · Màn bị khoá",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "84-gv-khong-du-quyen-nut-bi-khoa.html",
+  "label": "GV · Không đủ quyền · Nút bị khoá",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "85-gv-quyen-bi-thu-hoi.html",
+  "label": "GV · Quyền bị thu hồi",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "86-web.html",
+  "label": "Web",
+  "w": 124,
+  "h": 71
+ },
+ {
+  "file": "87-lop-diem-danh-diem-bao-cao.html",
+  "label": "Lớp, điểm danh, điểm, báo cáo",
+  "w": 459,
+  "h": 40
+ },
+ {
+  "file": "88-web-tat-ca-lop.html",
+  "label": "Web · Tất cả lớp",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "89-web-diem-danh-lop.html",
+  "label": "Web · Điểm danh lớp",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "90-web-bang-diem.html",
+  "label": "Web · Bảng điểm",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "91-web-bao-cao.html",
+  "label": "Web · Báo cáo",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "92-web-bao-cao-xac-nhan-phat-hanh.html",
+  "label": "Web · Báo cáo · xác nhận phát hành",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "93-hoc-sinh.html",
+  "label": "Học sinh",
+  "w": 127,
+  "h": 40
+ },
+ {
+  "file": "94-web-hoc-sinh-phu-huynh.html",
+  "label": "Web · Học sinh & phụ huynh",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "95-web-them-hoc-sinh.html",
+  "label": "Web · Thêm học sinh",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "96-web-them-hoc-sinh-dan-danh-sach.html",
+  "label": "Web · Thêm học sinh · dán danh sách",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "97-web-them-tu-lop-khac.html",
+  "label": "Web · Thêm từ lớp khác",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "98-bai-giang.html",
+  "label": "Bài giảng",
+  "w": 136,
+  "h": 40
+ },
+ {
+  "file": "99-web-thu-vien-bai-giang.html",
+  "label": "Web · Thư viện bài giảng",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "100-web-soan-bai-giang.html",
+  "label": "Web · Soạn bài giảng",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "101-nhan-su-va-role.html",
+  "label": "Nhân sự và role",
+  "w": 222,
+  "h": 40
+ },
+ {
+  "file": "102-web-nhan-su.html",
+  "label": "Web · Nhân sự",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "103-web-danh-sach-role.html",
+  "label": "Web · Danh sách role",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "104-web-role-ma-tran-quyen.html",
+  "label": "Web · Role · Ma trận quyền",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "105-web-role-ma-tran-quyen-phu-huynh.html",
+  "label": "Web · Role · Ma trận quyền · Phụ huynh",
+  "w": 1360,
+  "h": 860
+ },
+ {
+  "file": "106-ph-di-dong.html",
+  "label": "PH · di động",
+  "w": 310,
+  "h": 71
+ },
+ {
+  "file": "107-phu-huynh.html",
+  "label": "Phụ huynh",
+  "w": 153,
+  "h": 40
+ },
+ {
+  "file": "108-ph-tong-quan.html",
+  "label": "PH · Tổng quan",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "109-ph-diem-danh.html",
+  "label": "PH · Điểm danh",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "110-ph-diem-so.html",
+  "label": "PH · Điểm số",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "111-ph-nhan-xet.html",
+  "label": "PH · Nhận xét",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "112-ph-bao-cao.html",
+  "label": "PH · Báo cáo",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "113-ph-bai-giang-cua-buoi.html",
+  "label": "PH · Bài giảng của buổi",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "114-ph-bai-giang-an-tat-quyen.html",
+  "label": "PH · Bài giảng ẩn (tắt quyền)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "115-ph-mo-bang-safari.html",
+  "label": "PH · Mở bằng Safari",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "116-cai-dat.html",
+  "label": "Cài đặt",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "117-luu-tru-cu.html",
+  "label": "Lưu trữ (cũ)",
+  "w": 298,
+  "h": 71
+ },
+ {
+  "file": "118-gv-menu-hoc-sinh-cu.html",
+  "label": "GV · Menu học sinh (cũ)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "119-gv-danh-dau-nghi-cu.html",
+  "label": "GV · Đánh dấu nghỉ (cũ)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "120-gv-chon-lop-cu.html",
+  "label": "GV · Chọn lớp (cũ)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "121-gv-diem-danh-chon-trang-thai-cu.html",
+  "label": "GV · Điểm danh · chọn trạng thái (cũ)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "122-trang-thai-trang-thai-luu-cu.html",
+  "label": "Trạng thái · Trạng thái lưu (cũ)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "123-trang-thai-loi-luu-cu.html",
+  "label": "Trạng thái · Lỗi lưu (cũ)",
+  "w": 390,
+  "h": 844
+ },
+ {
+  "file": "124-trang-thai-mat-mang-cu.html",
+  "label": "Trạng thái · Mất mạng (cũ)",
+  "w": 390,
+  "h": 844
+ }
+]

@@ -1,0 +1,9 @@
+.DS_Store
+node_modules/
+dist/
+.wrangler/
+.claude/scheduled_tasks.lock
+
+# Bản export HTML trung gian của từng vòng review thiết kế (lấy lại được từ Claude Design);
+# chỉ giữ source/final làm nguồn chuẩn.
+plans/design-review/*/source/round-*/

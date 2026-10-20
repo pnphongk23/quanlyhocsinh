@@ -1,0 +1,449 @@
+.page {
+  display: grid;
+  gap: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  min-width: 0;
+}
+.pageNarrow {
+  display: grid;
+  gap: 14px;
+  max-width: 560px;
+  min-width: 0;
+}
+.stats {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.rowLink {
+  display: block;
+  min-width: 0;
+  border-radius: var(--radius-card);
+  color: inherit;
+  text-decoration: none;
+}
+.rowLink:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+}
+.entryText {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.entryText strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+.entryText span {
+  color: var(--color-muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.entry > svg {
+  flex: none;
+  color: var(--color-muted);
+}
+
+/* Danh sách thành viên, vai trò */
+.list {
+  display: grid;
+  gap: 8px;
+}
+.member {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px;
+}
+.avatar {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.details {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.nameRow strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.details span {
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.details span:last-child {
+  font-size: 13px;
+}
+
+/* Bảng trên web */
+.tableWrap {
+  padding: 8px 16px;
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.table th {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.table th:nth-child(1) {
+  width: 34%;
+}
+.table th:nth-child(2) {
+  width: 22%;
+}
+.table th:nth-child(3) {
+  width: 24%;
+}
+.table th:nth-child(4) {
+  width: 20%;
+}
+.table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--color-divider);
+  vertical-align: middle;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.table td:first-child strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.table td small {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.tableLink {
+  color: var(--color-text);
+  text-decoration: none;
+}
+.tableLink:hover,
+.tableLink:focus-visible {
+  color: var(--color-primary-ink);
+  text-decoration: underline;
+}
+
+/* Tìm kiếm */
+.searchRow {
+  display: grid;
+  gap: 8px;
+  max-width: 440px;
+}
+
+/* Biểu mẫu */
+.form {
+  display: grid;
+  gap: 16px;
+}
+.field {
+  display: grid;
+  gap: 6px;
+}
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.noticeWarning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.noticeSuccess {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.actions {
+  display: grid;
+  gap: 8px;
+}
+.stickyBar {
+  position: sticky;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  z-index: 5;
+  padding: 8px 0;
+  background: var(--color-bg);
+}
+@media (min-width: 1024px) {
+  .stickyBar {
+    position: static;
+    padding: 0;
+    background: transparent;
+  }
+}
+
+/* Chọn một trong nhiều lựa chọn (vai trò) */
+.optionList {
+  display: grid;
+  gap: 8px;
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-row);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+.option:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.optionMain {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.optionMain strong {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.optionMain span {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.optionMark {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  place-items: center;
+  border: 1.5px solid var(--color-input-border-strong);
+  border-radius: 50%;
+  color: var(--color-on-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+.optionOn {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+.optionOn .optionMark {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+.option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Chọn nhiều lớp */
+.checkList {
+  display: grid;
+  gap: 8px;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-row);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+.check:has(input:focus-visible) {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.check input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--color-primary);
+}
+.checkText {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.checkText strong {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.checkText span {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.checkDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Link mời */
+.linkBox {
+  display: grid;
+  gap: 8px;
+}
+.linkValue {
+  padding: 12px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+/* Ma trận quyền */
+.matrix {
+  display: grid;
+  gap: 12px;
+}
+.matrixRow {
+  display: grid;
+  gap: 8px;
+}
+.matrixLabel {
+  font-size: 15px;
+  font-weight: 600;
+}
+.sectionTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.roleCard {
+  display: grid;
+  gap: 10px;
+}
+.roleHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.roleHead strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.roleMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.summary {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.locked {
+  opacity: 0.65;
+}
+.lockedInput {
+  background: var(--color-bg);
+  color: var(--color-muted);
+}
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 560px) {
+  .member {
+    gap: 10px;
+    padding: 10px;
+  }
+  .details span {
+    font-size: 13px;
+  }
+  .details span:last-child {
+    font-size: 12px;
+  }
+}

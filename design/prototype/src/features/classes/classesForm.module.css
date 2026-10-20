@@ -1,0 +1,115 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 520px;
+  min-height: calc(
+    100dvh - var(--tabbar-height) - env(safe-area-inset-bottom) - 28px
+  );
+}
+
+/* 10-gv-tao-lop-moi: các trường cách nhau 16px, nút "Tạo lớp" nằm sát đáy màn */
+.form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 16px;
+}
+
+.form > span {
+  justify-self: start;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 10: 7 ô ngày, cao 44, bo 12, khe 8 */
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.day {
+  min-width: 44px;
+  min-height: var(--tap);
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 380px) {
+  .dayGrid {
+    grid-template-columns: repeat(4, minmax(44px, 1fr));
+  }
+}
+
+.dayActive {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.scaleNote {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.studentNote {
+  display: grid;
+  gap: 6px;
+}
+
+.studentNoteTitle {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.studentNoteText {
+  padding: 12px 14px;
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.error {
+  color: var(--color-error);
+  font-size: 14px;
+}
+
+.actions {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.stickyBar {
+  padding: 8px 0;
+  background: var(--color-bg);
+}
+
+@media (min-width: 1024px) {
+  .page {
+    min-height: 0;
+  }
+
+  .actions {
+    margin-top: 0;
+  }
+
+  .stickyBar {
+    background: transparent;
+  }
+}

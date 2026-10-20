@@ -1,0 +1,645 @@
+/*
+ * Báo cáo điểm của lớp (ScoreReportPage) và của một học viên
+ * (StudentScoreReportPage). Điểm hiển thị dấu chấm (7.2, 6.5 – 7.9) theo thiết
+ * kế; không có trung bình lớp. `.tabActions` được tab Điểm dùng chung.
+ */
+.page {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.subtitle {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Hàng nút đầu tab Điểm (dùng chung khung gridHead của bảng điểm) */
+.tabActions {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Bộ chọn lớp (desktop) */
+.picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.picker:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.pickerSelect {
+  min-width: 200px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  appearance: none;
+}
+.pickerSelect:focus {
+  outline: none;
+}
+.pickerChevron {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+/* Khối chung */
+.section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.sectionTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.sectionMeta {
+  flex: none;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.chevron {
+  flex: none;
+  color: var(--color-muted);
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* Phân bố trung bình theo dải */
+.bandList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.band {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.bandLabel {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.track {
+  display: block;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+}
+.fillLow {
+  background: var(--color-error);
+}
+.bandCount {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* Tiến độ nhập điểm từng bài */
+.progressList {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.progressItem {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.progressHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.progressName {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.progressCounts {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+.barPart {
+  height: 100%;
+  flex: none;
+}
+.barScored {
+  background: var(--color-success);
+}
+.barMissing {
+  background: var(--color-border);
+}
+
+/* Cần chú ý */
+.attentionCount {
+  flex: none;
+}
+/* Câu giải thích quy tắc "Cần chú ý" dưới tiêu đề (ảnh 22–25). */
+.attentionRule {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.attentionList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.attentionRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.attentionList li:first-child .attentionRow {
+  border-top: 0;
+  padding-top: 0;
+}
+.attentionMain {
+  display: grid;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+}
+.attentionName {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.attentionReason {
+  display: block;
+  color: var(--color-error);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.attentionRow:hover .attentionName {
+  text-decoration: underline;
+}
+.attentionRow:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Danh sách học sinh (mobile) */
+.studentSection {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.studentSectionTitle {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.studentList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.studentRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.studentRow:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.studentMain {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.studentName {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.studentMeta {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.studentAverage {
+  flex: none;
+  min-width: 26px;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* Chênh lệch điểm */
+.delta {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.deltaUp {
+  color: var(--color-success);
+}
+.deltaDown {
+  color: var(--color-error);
+}
+.deltaFlat {
+  color: var(--color-muted);
+}
+.deltaNone {
+  flex: none;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.trendIcon {
+  flex: none;
+}
+
+/* Bảng desktop */
+.desktopLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+.tableCard {
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  min-width: 0;
+}
+/* Cột bảng + ghi chú quy tắc "Cần chú ý" ngay dưới bảng (ảnh 25). */
+.tableColumn {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table th {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: start;
+}
+.table td {
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.tdName {
+  font-size: 15px;
+  font-weight: 600;
+}
+.rowLink {
+  color: inherit;
+  text-decoration: none;
+}
+.rowLink:hover {
+  text-decoration: underline;
+}
+.tdScore {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.table th:nth-child(2),
+.table td:nth-child(2),
+.table th:nth-child(3),
+.table td:nth-child(3),
+.table th:nth-child(4),
+.table td:nth-child(4) {
+  text-align: center;
+}
+.tdMuted {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Câu giải thích quy tắc "Cần chú ý" dưới bảng điểm web (ảnh 25). */
+.tableNote {
+  margin: 0;
+  padding: 0 4px;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.sidePanels {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Trạng thái chưa có điểm */
+.emptyCard {
+  display: grid;
+  min-height: 420px;
+  place-items: center;
+  padding: 24px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.emptyState {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px 20px;
+  text-align: center;
+}
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+.emptyTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.emptyText {
+  margin: 0;
+  max-width: 340px;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Một học viên */
+.navigator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.navButton {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.navButton:disabled {
+  color: var(--color-placeholder);
+  cursor: default;
+}
+.navButton:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.navigatorLabel {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.summaryCard {
+  display: grid;
+  gap: 10px;
+}
+.summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.summaryBox {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.summaryBoxEnd {
+  justify-items: end;
+  text-align: end;
+}
+.summaryLabel {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+.summaryValue {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.summaryUnit {
+  margin-left: 2px;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.summaryEmpty {
+  color: var(--color-muted);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+.summaryDelta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.summaryCaption {
+  max-width: 170px;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Biểu đồ xu hướng */
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.chartBase {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+.chartLine {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.chartDot {
+  fill: var(--color-primary);
+}
+.chartValue {
+  fill: var(--color-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+.chartGap {
+  fill: var(--color-muted);
+  font-size: 11px;
+}
+.chartDate {
+  fill: var(--color-muted);
+  font-size: 11px;
+}
+
+/* Điểm từng bài */
+.testList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.testRow {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.testRow:last-child {
+  border-bottom: 0;
+}
+.testRowDate {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.testRowName {
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.testScore {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.testScoreUnit {
+  margin-left: 1px;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    gap: 16px;
+  }
+}
+
+/* NIT: trạng thái rỗng giữa vùng trống còn lại ở mobile. */
+@media (max-width: 1023px) {
+  .page > .emptyState {
+    min-height: calc(100dvh - var(--tabbar-height) - 200px);
+    align-content: center;
+  }
+}

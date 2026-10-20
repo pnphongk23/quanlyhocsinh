@@ -1,0 +1,800 @@
+/* Dùng chung cho màn Học phí và Phiếu học phí (mobile 390px + desktop) */
+.page {
+  display: grid;
+  gap: 12px;
+  max-width: 960px;
+  min-width: 0;
+  margin: 0 auto;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  width: 100%;
+}
+.hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.noticeSuccess {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.noticeWarning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.bannerError {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: var(--radius-control);
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.bannerError > span {
+  flex: 1;
+  min-width: 160px;
+}
+.sectionTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Chọn tháng */
+.monthCard {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+}
+.monthHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.monthTitle {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+.navButton {
+  display: grid;
+  width: var(--tap);
+  height: var(--tap);
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.monthJump {
+  justify-self: center;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--color-primary-ink);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Chọn lớp */
+.classList {
+  display: grid;
+  gap: 4px;
+}
+.classLabel {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.classSelectWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.classSelect {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 44px 0 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  appearance: none;
+  cursor: pointer;
+}
+.classSelectWrap > svg {
+  position: absolute;
+  right: 14px;
+  color: var(--color-muted);
+  pointer-events: none;
+}
+.classSelect:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Thanh công cụ trên desktop: lớp + tháng + thao tác cùng một hàng */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.toolbarClass {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 220px;
+  flex: none;
+}
+.toolbarClass .classSelect {
+  min-height: 44px;
+  padding: 0 36px 0 12px;
+  font-size: 14px;
+}
+.toolbarClass > svg {
+  position: absolute;
+  right: 10px;
+  color: var(--color-muted);
+  pointer-events: none;
+}
+.toolbarNav {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.toolbarNav:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.toolbarMonth {
+  min-width: 128px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+.feePolicy {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Thẻ học phí của lớp */
+.feeCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+.feeMain {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.feeMain strong {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Tổng thu */
+.totals {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+}
+.totalsHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.totalTitle {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.totalGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.totalItem {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.totalItem + .totalItem {
+  padding-left: 8px;
+  border-left: 1px solid var(--color-divider);
+}
+.totalItem span {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.totalItem strong {
+  font-size: 15px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.totalDue {
+  color: var(--color-error);
+}
+.debtNote {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.debtNote strong {
+  color: var(--color-warning);
+  font-weight: 700;
+}
+
+/* Bốn thẻ số liệu trên desktop */
+.statRow {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.statCard {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 14px 16px;
+}
+.statLabel {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.statAmount {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.statDue {
+  color: var(--color-error);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+/* Lọc trạng thái */
+.filters {
+  display: grid;
+  min-width: 0;
+}
+.filters > div {
+  overflow-x: auto;
+}
+.filters button {
+  flex: 0 0 auto;
+  padding: 0 14px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Danh sách học sinh trên mobile */
+.list {
+  display: grid;
+  gap: 8px;
+}
+.rowLink {
+  display: block;
+  min-width: 0;
+  border-radius: var(--radius-card);
+  color: inherit;
+  text-decoration: none;
+}
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 64px;
+  padding: 12px;
+}
+.avatar {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.rowMain {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+.rowMain strong {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.rowMain span {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.rowMain .debt {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+.row > svg {
+  flex: none;
+  margin-top: 10px;
+  color: var(--color-muted);
+}
+.tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+/* Bảng trên web */
+.tableWrap {
+  padding: 6px 20px;
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  min-width: 880px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.table th {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+.table th:nth-child(1) {
+  width: 20%;
+}
+.table th:nth-child(2) {
+  width: 12%;
+}
+.table th:nth-child(3),
+.table th:nth-child(4),
+.table th:nth-child(5) {
+  width: 13%;
+}
+.table th:nth-child(6) {
+  width: 14%;
+}
+.table th:nth-child(7) {
+  width: 15%;
+}
+.table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--color-divider);
+  vertical-align: middle;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table td strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.tableLink {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.tableLink:hover,
+.tableLink:focus-visible {
+  color: var(--color-primary-ink);
+  text-decoration: underline;
+}
+.debtCell {
+  color: var(--color-warning);
+  font-weight: 700;
+}
+.debtNone {
+  color: var(--color-muted);
+}
+
+/* Phiếu học phí: khối tổng */
+.summary {
+  display: grid;
+  gap: 10px;
+}
+.summaryHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.summaryLabel {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.summaryAmount {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.summaryRows {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+.summaryRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.summaryRow dt {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.summaryRow dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+}
+.provisional {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.formula {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Khối giảm học phí */
+.discountCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.discountValue {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Các khối trong phiếu */
+.block {
+  display: grid;
+  gap: 10px;
+}
+.sessionList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sessionRow {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.sessionRow:last-child {
+  border-bottom: 0;
+}
+.sessionDate {
+  font-size: 14px;
+  font-weight: 600;
+}
+.sessionAmount {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sessionZero {
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sessionNote {
+  grid-column: 1 / -1;
+  padding-left: 56px;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Các lần thu */
+.payments {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.payment {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.payment:last-child {
+  border-bottom: 0;
+}
+.paymentMain {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.paymentTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.paymentTop strong {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.paymentAmount {
+  flex: none;
+  color: var(--color-success);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.paymentNote {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* Biểu mẫu trong Sheet/Modal */
+.form {
+  display: grid;
+  gap: 16px;
+}
+.field {
+  display: grid;
+  gap: 6px;
+}
+.label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.formActions {
+  display: grid;
+  gap: 8px;
+}
+.moneyField {
+  position: relative;
+}
+.moneyInput {
+  padding-right: 52px;
+}
+.suffix {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  color: var(--color-muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* Công tắc bật/tắt */
+.switchList {
+  display: grid;
+  gap: 0;
+}
+.switchRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+.switchRow:last-child {
+  border-bottom: 0;
+}
+.switchText {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  cursor: pointer;
+}
+.switchText strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  min-height: 28px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-input-border);
+  cursor: pointer;
+}
+.switchOn {
+  background: var(--color-primary);
+}
+.switchKnob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+.switchOn .switchKnob {
+  left: 23px;
+}
+
+/* Thanh thao tác dính đáy trên mobile */
+.stickyBar {
+  position: sticky;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  z-index: 5;
+  padding: 8px 0;
+  background: var(--color-bg);
+}
+.footerActions {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 8px;
+}
+
+/* Trạng thái focus */
+.rowLink:focus-visible,
+.navButton:focus-visible,
+.monthJump:focus-visible,
+.switch:focus-visible,
+.filters button:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    padding-bottom: 24px;
+  }
+  .stickyBar {
+    position: static;
+    padding: 0;
+    background: transparent;
+  }
+  .footerActions {
+    justify-content: end;
+    grid-template-columns: minmax(0, 220px) minmax(0, 200px);
+  }
+}
+
+@media (max-width: 560px) {
+  .totals {
+    padding: 12px;
+  }
+  .totalItem strong {
+    font-size: 14px;
+  }
+  .sessionNote {
+    padding-left: 0;
+  }
+  .payment {
+    flex-wrap: wrap;
+  }
+}
+
+/* Ghi chú tạm tính trên desktop */
+.provisionalLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* Phiếu đã thu đủ: chỉ còn một nút Gửi thông báo */
+.footerActionsSingle {
+  grid-template-columns: minmax(0, 1fr);
+}

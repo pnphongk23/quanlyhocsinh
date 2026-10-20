@@ -1,0 +1,317 @@
+/*
+ * Lịch dạy theo tuần: bộ chọn người (Admin), điều hướng tuần, dòng tóm tắt
+ * (mobile), ba thẻ tóm tắt + lưới 7 ngày (desktop), thẻ buổi dạy.
+ */
+.page {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
+.subtitle {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Bộ chọn người của Admin */
+.picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.picker:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.pickerIcon,
+.pickerChevron {
+  display: flex;
+  flex: none;
+  color: var(--color-muted);
+}
+.pickerHint {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.select {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  appearance: none;
+}
+.select:focus {
+  outline: none;
+}
+
+/* Điều hướng tuần */
+.weekBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.navButton {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.weekBarCenter {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  justify-items: center;
+  text-align: center;
+}
+.weekLabel {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.weekHint {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.weekJump {
+  min-height: 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-muted);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Tóm tắt tuần */
+.summaryLine {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.summaryLine strong {
+  font-weight: 700;
+}
+.summaryCards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.summaryCard {
+  display: grid;
+  gap: 4px;
+  padding: 14px 18px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.summaryCardLabel {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.summaryCardValue {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nhóm theo ngày (mobile) */
+.group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.groupLabel {
+  margin: 0;
+  padding: 0 4px;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.groupLabelToday {
+  color: var(--color-primary-ink);
+}
+.cards {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Lưới 7 ngày (desktop) */
+.weekGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.dayColumn {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+.dayLabel {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.dayEmpty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Thẻ buổi dạy */
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.cardLead {
+  flex: none;
+  width: 56px;
+  padding-top: 2px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.cardBody {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+.cardTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.cardNote {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.cardCancelled {
+  background: var(--color-bg);
+  opacity: 0.65;
+}
+.struck {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+/* Thẻ trong cột ngày: xếp dọc, nền xám trên thẻ trắng của lưới */
+.cardCompact {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+.cardCompact .cardLead {
+  width: auto;
+  padding-top: 0;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.cardCompact .cardTitle {
+  font-size: 14px;
+}
+
+/* Trạng thái trống (desktop) */
+.emptyCard {
+  display: grid;
+  min-height: 460px;
+  place-items: center;
+  padding: 24px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.navButton:focus-visible,
+.weekJump:focus-visible,
+.card:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    gap: 16px;
+    padding-bottom: 0;
+  }
+}
+
+/* NIT: trạng thái rỗng canh giữa vùng còn lại ở mobile, có biểu tượng lịch. */
+@media (max-width: 1023px) {
+  .page > :global([class*="empty"]) {
+    align-self: center;
+    width: 100%;
+    min-height: calc(100dvh - var(--tabbar-height) - 260px);
+    align-content: center;
+  }
+  .page > :global([class*="empty"])::before {
+    content: "";
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--color-primary-soft)
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e43b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2'/><path d='M16 2v4M8 2v4M3 10h18'/></svg>")
+      center / 28px 28px no-repeat;
+  }
+}

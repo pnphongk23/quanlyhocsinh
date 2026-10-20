@@ -1,0 +1,163 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>GV · Nhập điểm · bàn phím</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"><style>body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#E9ECF1}button,input{font-family:inherit}
+
+    .sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
+      border:1px solid color-mix(in srgb,currentColor 50%,transparent);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:color-mix(in srgb,currentColor 70%,transparent);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:color-mix(in srgb,currentColor 50%,transparent);
+      background:color-mix(in srgb,currentColor 10%,transparent);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts — keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      figure, table { break-inside: avoid; }
+      #dc-root, #dc-root > .sc-host { height: auto; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  
+x-dc{display:none!important}
+html,body{background:#f0eee6}#dc-root>.sc-host{position:relative}
+
+
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#E9ECF1}
+button,input{font-family:inherit}
+#w1 .app{display:flex;min-height:860px;background:#F6F7F9;color:#14181F}
+#w1 .side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+#w1 .nav{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+#w1 .nav.on{background:#E8EEFE;color:#1E43B8}
+#w1 .main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+#w1 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+#w1 .card{background:#fff;border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+#w1 .pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+#w1 .chip{background:#F6F7F9;border-radius:8px;padding:8px 10px;font-size:14px}
+#w2 .app{display:flex;min-height:860px;background:#F6F7F9;color:#14181F}
+#w2 .side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+#w2 .nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+#w2 .nav.on{background:#E8EEFE;color:#1E43B8}
+#w2 .main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+#w2 .card{background:#fff;border-radius:16px;padding:18px 20px}
+#w2 .row{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid #EEF0F3}
+#w2 .st{min-width:92px;height:44px;border-radius:12px;border:0;font-size:14px;font-weight:600}
+#w2 .ok{background:#E7F6EC;color:#14663F}
+#w2 .late{background:#FFF3D6;color:#8A5300}
+#w2 .ex{background:#E8EEFE;color:#1E43B8}
+#w2 .ab{background:#FDECEC;color:#B42318}
+#w3 .app{display:flex;min-height:860px;background:#F6F7F9;color:#14181F}
+#w3 .side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+#w3 .nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+#w3 .nav.on{background:#E8EEFE;color:#1E43B8}
+#w3 .main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+#w3 .card{background:#fff;border-radius:16px;padding:18px 20px}
+#w3 table{border-collapse:collapse;width:100%;min-width:640px}
+#w3 th{font-size:13px;font-weight:600;color:#4A5361;text-align:center;padding:8px 8px;border-bottom:1px solid #E6E9EE}
+#w3 th:first-child,#w3 td:first-child{text-align:left}
+#w3 td{padding:6px 8px;border-bottom:1px solid #EEF0F3;text-align:center;font-size:15px}
+#w3 .in{width:64px;height:44px;box-sizing:border-box;border:0;border-radius:8px;background:#F6F7F9;text-align:center;font-size:15px;font-weight:700}
+#w3 .na{font-size:13px;font-weight:600;color:#4A5361;background:#F0F2F5;padding:6px 10px;border-radius:999px}
+#w4 .app{display:flex;min-height:860px;background:#F6F7F9;color:#14181F}
+#w4 .side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+#w4 .nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+#w4 .nav.on{background:#E8EEFE;color:#1E43B8}
+#w4 .main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+#w4 .card{background:#fff;border-radius:16px;padding:18px 20px}
+#w4 table{border-collapse:collapse;width:100%;min-width:620px}
+#w4 th{font-size:13px;font-weight:600;color:#4A5361;text-align:left;padding:8px 8px;border-bottom:1px solid #E6E9EE}
+#w4 td{padding:8px 8px;border-bottom:1px solid #EEF0F3;font-size:15px}
+#w4 .pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+#w4 .stat{flex:1;min-width:140px;background:#fff;border-radius:12px;padding:12px 16px}
+#w5 .app{display:flex;min-height:860px;background:#F6F7F9;color:#14181F}
+#w5 .side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+#w5 .nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+#w5 .nav.on{background:#E8EEFE;color:#1E43B8}
+#w5 .main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+#w5 .card{background:#fff;border-radius:16px;padding:18px 20px}
+#w5 .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3;font-size:15px}
+#w5 .pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+#w3 .app{height:860px}
+#w3 .main{overflow:hidden}
+#w4 .app{height:860px}
+#w4 .main{overflow:hidden}
+#w5 .app{height:860px}
+#w5 .main{overflow:hidden}
+#w4b .app{display:flex;min-height:860px;background:#F6F7F9;color:#14181F}
+#w4b .side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+#w4b .nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+#w4b .nav.on{background:#E8EEFE;color:#1E43B8}
+#w4b .main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+#w4b .card{background:#fff;border-radius:16px;padding:18px 20px}
+#w4b table{border-collapse:collapse;width:100%;min-width:620px}
+#w4b th{font-size:13px;font-weight:600;color:#4A5361;text-align:left;padding:8px 8px;border-bottom:1px solid #E6E9EE}
+#w4b td{padding:8px 8px;border-bottom:1px solid #EEF0F3;font-size:15px}
+#w4b .pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+#w4b .stat{flex:1;min-width:140px;background:#fff;border-radius:12px;padding:12px 16px}
+#w4c .app{display:flex;min-height:860px;background:#F6F7F9;color:#14181F}
+#w4c .side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+#w4c .nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+#w4c .nav.on{background:#E8EEFE;color:#1E43B8}
+#w4c .main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+#w4c .card{background:#fff;border-radius:16px;padding:18px 20px}
+#w4c table{border-collapse:collapse;width:100%;min-width:620px}
+#w4c th{font-size:13px;font-weight:600;color:#4A5361;text-align:left;padding:8px 8px;border-bottom:1px solid #E6E9EE}
+#w4c td{padding:8px 8px;border-bottom:1px solid #EEF0F3;font-size:15px}
+#w4c .pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+#w4c .stat{flex:1;min-width:140px;background:#fff;border-radius:12px;padding:12px 16px}
+#w4d .app{display:flex;min-height:860px;background:#F6F7F9;color:#14181F}
+#w4d .side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+#w4d .nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+#w4d .nav.on{background:#E8EEFE;color:#1E43B8}
+#w4d .main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+#w4d .card{background:#fff;border-radius:16px;padding:18px 20px}
+#w4d table{border-collapse:collapse;width:100%;min-width:620px}
+#w4d th{font-size:13px;font-weight:600;color:#4A5361;text-align:left;padding:8px 8px;border-bottom:1px solid #E6E9EE}
+#w4d td{padding:8px 8px;border-bottom:1px solid #EEF0F3;font-size:15px}
+#w4d .pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+#w4d .stat{flex:1;min-width:140px;background:#fff;border-radius:12px;padding:12px 16px}
+#w5b .app{display:flex;min-height:860px;background:#F6F7F9;color:#14181F}
+#w5b .side{width:248px;flex:none;background:#fff;border-right:1px solid #E6E9EE;padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px}
+#w5b .nav{display:flex;align-items:center;height:44px;padding:0 12px;border-radius:12px;font-size:15px;font-weight:600;color:#4A5361}
+#w5b .nav.on{background:#E8EEFE;color:#1E43B8}
+#w5b .main{flex:1;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+#w5b .card{background:#fff;border-radius:16px;padding:18px 20px}
+#w5b .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #EEF0F3;font-size:15px}
+#w5b .pill{font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px}
+#w3 .app{height:860px}
+#w3 .main{overflow:hidden}
+#w4 .app{height:860px}
+#w4 .main{overflow:hidden}
+#w5b .app{height:860px}
+#w5b .main{overflow:hidden}
+#w4b .app,#w4c .app,#w4d .app,#w5b .app{height:860px}
+#w4b .main,#w4c .main,#w4d .main,#w5b .main{overflow:hidden}
+</style></head><body><div style="width: 390px; height: 844px; overflow: hidden; position: relative; border-radius: 24px; box-shadow: rgba(20, 24, 31, 0.08) 0px 2px 6px, rgba(20, 24, 31, 0.12) 0px 12px 40px; background: rgb(246, 247, 249);"><div style="width: 390px; height: 844px; box-sizing: border-box; background: rgb(246, 247, 249); color: rgb(20, 24, 31); display: flex; flex-direction: column; overflow: hidden; position: relative;">
+  <div style="padding: 48px 20px 4px; display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto;"><div style="display: flex; align-items: center; gap: 12px;"><h1 style="margin: 0px; font-size: 26px; font-weight: 700; letter-spacing: -0.01em;">Điểm số</h1></div><div style="font-size: 14px; color: rgb(74, 83, 97);">Unit 5 Test · Thang 10 điểm</div></div>
+  <div style="flex: 1 1 0%; min-height: 0px; overflow-y: auto; scrollbar-width: none; padding: 8px 20px; display: flex; flex-direction: column; gap: 8px; justify-content: flex-end;"><div style="display: flex; align-items: center; gap: 8px; background: rgb(255, 255, 255); border-radius: 12px; padding: 6px 4px 6px 12px; min-height: 56px; flex: 0 0 auto;"><div style="flex: 1 1 0%; font-size: 16px; font-weight: 500;">Nguyễn Minh Anh</div><div style="width: 64px; height: 44px; box-sizing: border-box; border-radius: 12px; background: rgb(246, 247, 249); font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center;">8.5</div><div style="width: 56px; display: flex; justify-content: center;"><span style="width: 48px; height: 28px; border-radius: 999px; background: rgb(210, 215, 223); position: relative; flex: 0 0 auto;"><span style="position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: rgb(255, 255, 255);"></span></span></div></div><div style="display: flex; align-items: center; gap: 8px; background: rgb(255, 255, 255); border-radius: 12px; padding: 6px 4px 6px 12px; min-height: 56px; flex: 0 0 auto;"><div style="flex: 1 1 0%; font-size: 16px; font-weight: 500;">Trần Gia Bảo</div><div style="width: 64px; height: 44px; box-sizing: border-box; border-radius: 12px; background: rgb(246, 247, 249); font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center;">7.0</div><div style="width: 56px; display: flex; justify-content: center;"><span style="width: 48px; height: 28px; border-radius: 999px; background: rgb(210, 215, 223); position: relative; flex: 0 0 auto;"><span style="position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: rgb(255, 255, 255);"></span></span></div></div><div style="display: flex; align-items: center; gap: 8px; background: rgb(255, 255, 255); border-radius: 12px; padding: 6px 4px 6px 12px; min-height: 56px; flex: 0 0 auto;"><div style="flex: 1 1 0%; font-size: 16px; font-weight: 500;">Lê Khánh Chi</div><div style="width: 64px; height: 44px; box-sizing: border-box; border-radius: 12px; background: rgb(246, 247, 249); font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center;">9.5</div><div style="width: 56px; display: flex; justify-content: center;"><span style="width: 48px; height: 28px; border-radius: 999px; background: rgb(210, 215, 223); position: relative; flex: 0 0 auto;"><span style="position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: rgb(255, 255, 255);"></span></span></div></div><div style="display: flex; align-items: center; gap: 8px; background: rgb(255, 255, 255); border-radius: 12px; padding: 6px 4px 6px 12px; min-height: 56px; flex: 0 0 auto;"><div style="flex: 1 1 0%; font-size: 16px; font-weight: 500;">Phạm Đức Dũng</div><div style="width: 64px; height: 44px; box-sizing: border-box; border-radius: 12px; background: rgb(246, 247, 249); font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center;">6.5</div><div style="width: 56px; display: flex; justify-content: center;"><span style="width: 48px; height: 28px; border-radius: 999px; background: rgb(210, 215, 223); position: relative; flex: 0 0 auto;"><span style="position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: rgb(255, 255, 255);"></span></span></div></div><div style="display: flex; align-items: center; gap: 8px; background: rgb(255, 255, 255); border-radius: 12px; padding: 6px 4px 6px 12px; min-height: 56px; flex: 0 0 auto;"><div style="flex: 1 1 0%; font-size: 16px; font-weight: 500;">Hoàng Thu Hà</div><div style="width: 64px; height: 44px; box-sizing: border-box; border-radius: 12px; background: rgb(246, 247, 249); font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center;">8.0</div><div style="width: 56px; display: flex; justify-content: center;"><span style="width: 48px; height: 28px; border-radius: 999px; background: rgb(210, 215, 223); position: relative; flex: 0 0 auto;"><span style="position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: rgb(255, 255, 255);"></span></span></div></div><div style="display: flex; flex-direction: column; background: rgb(255, 255, 255); border-radius: 12px; flex: 0 0 auto; outline: rgb(47, 91, 234) solid 2px; outline-offset: -2px;"><div style="display: flex; align-items: center; gap: 8px; padding: 6px 4px 6px 12px; min-height: 56px;"><div style="flex: 1 1 0%; font-size: 16px; font-weight: 500;">Vũ Quang Huy</div><div style="width: 64px; height: 44px; box-sizing: border-box; border-radius: 12px; background: rgb(255, 255, 255); border: 1.5px solid rgb(47, 91, 234); color: rgb(30, 67, 184); font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center;">7,5|</div><div style="width: 56px; display: flex; justify-content: center;"><span style="width: 48px; height: 28px; border-radius: 999px; background: rgb(210, 215, 223); position: relative; flex: 0 0 auto;"><span style="position: absolute; left: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: rgb(255, 255, 255);"></span></span></div></div></div></div><div style="background: rgb(240, 242, 245); border-top: 1px solid rgb(230, 233, 238); height: 52px; display: flex; align-items: center; gap: 8px; padding: 0px 8px; flex: 0 0 auto;"><button style="height: 44px; padding: 0px 12px; border: 0px; border-radius: 8px; background: rgb(255, 255, 255); color: rgb(20, 24, 31); font-size: 14px; font-weight: 600;">Vắng thi</button><span style="flex: 1 1 0%; text-align: center; font-size: 13px; color: rgb(74, 83, 97);">Vũ Quang Huy · 6/10</span><button style="height: 44px; padding: 0px 16px; border: 0px; border-radius: 8px; background: rgb(47, 91, 234); color: rgb(255, 255, 255); font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 4px;">Tiếp<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button></div><div style="background: rgb(230, 233, 238); padding: 8px 8px 34px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex: 0 0 auto;"><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">1</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">2</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">3</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">4</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">5</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">6</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">7</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">8</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">9</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">,</div><div style="height: 48px; border-radius: 8px; background: rgb(255, 255, 255); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;">0</div><div style="height: 48px; border-radius: 8px; background: transparent; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 500;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6"></path></svg></div></div></div></div></body></html>

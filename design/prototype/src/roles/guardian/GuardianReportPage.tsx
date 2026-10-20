@@ -1,0 +1,188 @@
+import { getChildMonthlyReport } from "../../data/repositories/guardian";
+import { Button, Card, PageHeader } from "../../shared/ui";
+import { useGuardianContext } from "./guardianContext";
+import {
+  defaultChildMonth,
+  publishedReportMonths,
+} from "./guardianRead";
+import { monthLabel, scoreText } from "./guardianFormat";
+import { ChildEmpty, StarRow } from "./guardianUi";
+import g from "./guardian.module.css";
+
+const REPUBLISH_NOTICE = "Điểm có cập nhật, cần phát hành lại";
+
+/**
+ * PH · Báo cáo tháng (ảnh 10): chuyên cần, điểm trung bình, nhận xét theo sao
+ * và bảng BTVN theo phần. Chỉ hiện khi giáo viên ĐÃ phát hành; phát hành lại
+ * khi điểm có cập nhật thì hiện cờ nhắc.
+ */
+export default function GuardianReportPage() {
+  const { child, error } = useGuardianContext();
+  if (error) {
+    return (
+      <p className={g.error} role="alert">
+        {error}
+      </p>
+    );
+  }
+  if (!child) {
+    return (
+      <ChildEmpty title="Chưa có con nào được liên kết">
+        <p>Liên hệ giáo viên nếu bạn cần xem dữ liệu của con.</p>
+      </ChildEmpty>
+    );
+  }
+  const studentId = child.student.id;
+  const published = publishedReportMonths(studentId);
+  const month = published[0] ?? defaultChildMonth(studentId);
+
+  let report: ReturnType<typeof getChildMonthlyReport> = null;
+  let loadError = "";
+  try {
+    report = getChildMonthlyReport(studentId, month);
+  } catch (cause) {
+    loadError =
+      cause instanceof Error ? cause.message : "Không đọc được báo cáo của con.";
+  }
+
+  if (loadError) {
+    return (
+      <main className={g.page}>
+        <PageHeader eyebrow={child.student.name} title="Báo cáo" />
+        <p className={g.error} role="alert">
+          {loadError}
+        </p>
+      </main>
+    );
+  }
+
+  if (!report) {
+    return (
+      <main className={g.page}>
+        <PageHeader
+          eyebrow={child.student.name}
+          title={`Báo cáo tháng ${Number(month.slice(5, 7))}`}
+        />
+        <ChildEmpty title="Cô chưa phát hành báo cáo tháng này">
+          <p>Báo cáo hiện ở đây sau khi cô phát hành cho phụ huynh.</p>
+        </ChildEmpty>
+      </main>
+    );
+  }
+
+  const body = report.body;
+  const starMax = Math.max(1, body.stars.byStars[3], body.stars.byStars[2], body.stars.byStars[1]);
+
+  return (
+    <main className={g.page}>
+      <PageHeader
+        eyebrow={child.student.name}
+        title={`Báo cáo tháng ${Number(month.slice(5, 7))}`}
+      />
+
+      <div className={g.segmented} role="group" aria-label="Kỳ báo cáo">
+        <button type="button" className={g.segment + " " + g.segmentOn} aria-pressed="true">
+          {monthLabel(month)}
+        </button>
+        {/* Báo cáo 3 tháng thuộc mục "Làm sau" của spec 8 nên chưa mở. */}
+        <button type="button" className={g.segment} disabled aria-pressed="false">
+          3 tháng gần nhất
+        </button>
+      </div>
+
+      {report.needsRepublish && (
+        <p className={g.warning} role="status">
+          {REPUBLISH_NOTICE}
+        </p>
+      )}
+
+      <div className={g.statRow}>
+        <Card className={g.statCard}>
+          <span className={g.statLabel}>Chuyên cần</span>
+          <strong className={g.statValue}>
+            {body.attendanceCount}/{body.sessions.length} buổi
+          </strong>
+          <span className={g.statSub}>{body.lateCount} muộn</span>
+        </Card>
+        <Card className={g.statCard}>
+          <span className={g.statLabel}>Điểm trung bình</span>
+          <strong className={g.statValue}>{scoreText(body.average)}/10</strong>
+          <span className={g.statSub}>{body.gradedTestCount} bài kiểm tra</span>
+        </Card>
+      </div>
+
+      <Card className={g.card}>
+        <div className={g.cardHead}>
+          <h2>Nhận xét theo sao</h2>
+          <span className={g.statSub}>{body.stars.ticketCount} buổi có phiếu</span>
+        </div>
+        <p className={g.reportNote}>Tính trên các phiếu đã gửi.</p>
+        <div className={g.starBars}>
+          {([3, 2, 1] as const).map((level) => {
+            const count = body.stars.byStars[level];
+            return (
+              <div key={level} className={g.barRow}>
+                <StarRow level={level} size={16} />
+                <span className={g.barTrack}>
+                  <span
+                    className={g.barFill}
+                    style={{ width: `${Math.round((count / starMax) * 100)}%` }}
+                  />
+                </span>
+                <span className={g.barCount}>{count} buổi</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className={g.card}>
+        <div className={g.cardHead}>
+          <h2>Bài tập về nhà</h2>
+        </div>
+        <p className={g.reportNote}>
+          Tốt = Hoàn thành tốt · Chưa = Chưa hoàn thành
+        </p>
+        {body.homework.length === 0 ? (
+          <p className={g.muted}>
+            Chưa có kết quả bài tập đã gửi trong tháng này.
+          </p>
+        ) : (
+          <table className={g.table}>
+            <thead>
+              <tr>
+                <th scope="col">Phần</th>
+                <th scope="col">Tốt</th>
+                <th scope="col">Hoàn thành</th>
+                <th scope="col">Chưa</th>
+              </tr>
+            </thead>
+            <tbody>
+              {body.homework.map((row) => (
+                <tr key={row.kind}>
+                  <th scope="row">{row.label}</th>
+                  <td className={g.numExcellent}>{row.excellent}</td>
+                  <td className={g.numDone}>{row.done}</td>
+                  <td className={g.numNotDone}>{row.not_done}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <p className={g.reportNote}>
+          Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.
+        </p>
+      </Card>
+
+      <Button
+        size="lg"
+        className={g.pdfButton}
+        onClick={() => {
+          if (typeof window !== "undefined") window.print();
+        }}
+      >
+        Tải PDF về máy
+      </Button>
+    </main>
+  );
+}

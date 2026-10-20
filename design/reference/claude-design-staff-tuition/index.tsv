@@ -1,0 +1,105 @@
+file	group	section	board
+A-001-GV_·_Phân_công_giảng_dạy.png	A · Phân công và dạy thay	Phân công giảng dạy	GV · Phân công giảng dạy
+A-002-GV_·_Phân_công_·_Sửa_phân_công.png	A · Phân công và dạy thay	Phân công giảng dạy	GV · Phân công · Sửa phân công
+A-003-GV_·_Phân_công_·_Lớp_chưa_có_GV_chính.png	A · Phân công và dạy thay	Phân công giảng dạy	GV · Phân công · Lớp chưa có GV chính
+A-004-GV_·_Phân_công_·_Lỗi_lưu.png	A · Phân công và dạy thay	Phân công giảng dạy	GV · Phân công · Lỗi lưu
+A-005-GV_·_Phân_công_·_Chưa_có_nhân_sự_hoạt_động.png	A · Phân công và dạy thay	Phân công giảng dạy	GV · Phân công · Chưa có nhân sự hoạt động
+A-006-GV_·_Phân_công_·_Đang_tải.png	A · Phân công và dạy thay	Phân công giảng dạy	GV · Phân công · Đang tải
+A-007-GV_·_Phân_công_·_Lỗi_tải.png	A · Phân công và dạy thay	Phân công giảng dạy	GV · Phân công · Lỗi tải
+A-008-GV_·_Phân_công_·_Chưa_có_lớp.png	A · Phân công và dạy thay	Phân công giảng dạy	GV · Phân công · Chưa có lớp
+A-009-GV_·_Buổi_·_Người_dạy.png	A · Phân công và dạy thay	Đổi người dạy buổi này	GV · Buổi · Người dạy
+A-010-GV_·_Buổi_·_Đã_dạy_thay.png	A · Phân công và dạy thay	Đổi người dạy buổi này	GV · Buổi · Đã dạy thay
+A-011-GV_·_Buổi_·_Đổi_người_dạy.png	A · Phân công và dạy thay	Đổi người dạy buổi này	GV · Buổi · Đổi người dạy
+A-012-GV_·_Buổi_·_Đổi_người_dạy_·_Lỗi_lưu.png	A · Phân công và dạy thay	Đổi người dạy buổi này	GV · Buổi · Đổi người dạy · Lỗi lưu
+A-013-GV_·_Buổi_·_Xác_nhận_huỷ_dạy_thay.png	A · Phân công và dạy thay	Đổi người dạy buổi này	GV · Buổi · Xác nhận huỷ dạy thay
+A-014-GV_·_Buổi_·_Đã_huỷ_·_Khoá_đổi_người_dạy.png	A · Phân công và dạy thay	Đổi người dạy buổi này	GV · Buổi · Đã huỷ · Khoá đổi người dạy
+A-015-GV_·_Buổi_·_Học_bù_·_Đổi_người_dạy.png	A · Phân công và dạy thay	Đổi người dạy buổi này	GV · Buổi · Học bù · Đổi người dạy
+A-016-GV_·_Buổi_·_Người_dạy_·_Chỉ_xem.png	A · Phân công và dạy thay	Đổi người dạy buổi này	GV · Buổi · Người dạy · Chỉ xem
+A-017-Web_·_Phân_công_giảng_dạy.png	A · Phân công và dạy thay	Web · Phân công giảng dạy	Web · Phân công giảng dạy
+A-018-Web_·_Phân_công_·_Sửa_phân_công.png	A · Phân công và dạy thay	Web · Phân công giảng dạy	Web · Phân công · Sửa phân công
+A-019-Web_·_Phân_công_·_Đang_tải.png	A · Phân công và dạy thay	Web · Phân công giảng dạy	Web · Phân công · Đang tải
+A-020-Web_·_Phân_công_·_Lỗi_tải.png	A · Phân công và dạy thay	Web · Phân công giảng dạy	Web · Phân công · Lỗi tải
+B-021-GV_·_Lịch_dạy_·_Theo_tuần_(Admin).png	B · Lịch dạy	Lịch dạy theo tuần	GV · Lịch dạy · Theo tuần (Admin)
+B-022-GV_·_Lịch_dạy_·_Tuần_có_dạy_thay.png	B · Lịch dạy	Lịch dạy theo tuần	GV · Lịch dạy · Tuần có dạy thay
+B-023-GV_·_Lịch_của_tôi.png	B · Lịch dạy	Lịch dạy theo tuần	GV · Lịch của tôi
+B-024-GV_·_Lịch_dạy_·_Chọn_người.png	B · Lịch dạy	Lịch dạy theo tuần	GV · Lịch dạy · Chọn người
+B-025-GV_·_Lịch_dạy_·_Tuần_không_có_buổi.png	B · Lịch dạy	Lịch dạy theo tuần	GV · Lịch dạy · Tuần không có buổi
+B-026-GV_·_Lịch_của_tôi_·_Chưa_được_phân_công.png	B · Lịch dạy	Lịch dạy theo tuần	GV · Lịch của tôi · Chưa được phân công
+B-027-GV_·_Lịch_dạy_·_Đang_tải.png	B · Lịch dạy	Lịch dạy theo tuần	GV · Lịch dạy · Đang tải
+B-028-GV_·_Lịch_dạy_·_Lỗi_tải.png	B · Lịch dạy	Lịch dạy theo tuần	GV · Lịch dạy · Lỗi tải
+B-029-Web_·_Lịch_dạy_·_Theo_tuần.png	B · Lịch dạy	Web · Lịch dạy theo tuần	Web · Lịch dạy · Theo tuần
+B-030-Web_·_Lịch_dạy_·_Buổi_bị_thay_và_huỷ.png	B · Lịch dạy	Web · Lịch dạy theo tuần	Web · Lịch dạy · Buổi bị thay và huỷ
+B-031-Web_·_Lịch_dạy_·_Tuần_không_có_buổi.png	B · Lịch dạy	Web · Lịch dạy theo tuần	Web · Lịch dạy · Tuần không có buổi
+B-032-Web_·_Lịch_dạy_·_Lỗi_tải.png	B · Lịch dạy	Web · Lịch dạy theo tuần	Web · Lịch dạy · Lỗi tải
+C-033-GV_·_Cài_đặt_·_Lối_vào_Admin_(mới).png	C · Lương	Lối vào từ Cài đặt	GV · Cài đặt · Lối vào Admin (mới)
+C-034-GV_·_Cài_đặt_·_Lối_vào_Giáo_viên_(mới).png	C · Lương	Lối vào từ Cài đặt	GV · Cài đặt · Lối vào Giáo viên (mới)
+C-035-GV_·_Bảng_lương_tháng.png	C · Lương	Bảng lương tháng (Admin)	GV · Bảng lương tháng
+C-036-GV_·_Bảng_lương_·_Xác_nhận_chốt.png	C · Lương	Bảng lương tháng (Admin)	GV · Bảng lương · Xác nhận chốt
+C-037-GV_·_Bảng_lương_·_Đã_chốt.png	C · Lương	Bảng lương tháng (Admin)	GV · Bảng lương · Đã chốt
+C-038-GV_·_Bảng_lương_·_Chưa_có_buổi.png	C · Lương	Bảng lương tháng (Admin)	GV · Bảng lương · Chưa có buổi
+C-039-GV_·_Bảng_lương_·_Đang_tải.png	C · Lương	Bảng lương tháng (Admin)	GV · Bảng lương · Đang tải
+C-040-GV_·_Bảng_lương_·_Lỗi_tải.png	C · Lương	Bảng lương tháng (Admin)	GV · Bảng lương · Lỗi tải
+C-041-GV_·_Bảng_lương_·_Lỗi_chốt.png	C · Lương	Bảng lương tháng (Admin)	GV · Bảng lương · Lỗi chốt
+C-042-GV_·_Lương_·_Chi_tiết_(Nháp).png	C · Lương	Chi tiết lương một người (Admin)	GV · Lương · Chi tiết (Nháp)
+C-043-GV_·_Lương_·_Chi_tiết_(Đã_chốt).png	C · Lương	Chi tiết lương một người (Admin)	GV · Lương · Chi tiết (Đã chốt)
+C-044-GV_·_Lương_·_Sửa_đơn_giá.png	C · Lương	Chi tiết lương một người (Admin)	GV · Lương · Sửa đơn giá
+C-045-GV_·_Lương_·_Sửa_đơn_giá_·_Lỗi_lưu.png	C · Lương	Chi tiết lương một người (Admin)	GV · Lương · Sửa đơn giá · Lỗi lưu
+C-046-GV_·_Lương_·_Thêm_điều_chỉnh.png	C · Lương	Chi tiết lương một người (Admin)	GV · Lương · Thêm điều chỉnh
+C-047-GV_·_Lương_·_Chưa_đặt_đơn_giá.png	C · Lương	Chi tiết lương một người (Admin)	GV · Lương · Chưa đặt đơn giá
+C-048-GV_·_Lương_·_Chi_tiết_·_Đang_tải.png	C · Lương	Chi tiết lương một người (Admin)	GV · Lương · Chi tiết · Đang tải
+C-049-GV_·_Lương_của_tôi_(Nháp).png	C · Lương	Lương của tôi (Giáo viên, Trợ giảng · chỉ đọc)	GV · Lương của tôi (Nháp)
+C-050-GV_·_Lương_của_tôi_(Đã_chốt).png	C · Lương	Lương của tôi (Giáo viên, Trợ giảng · chỉ đọc)	GV · Lương của tôi (Đã chốt)
+C-051-GV_·_Lương_của_tôi_·_Chưa_có_buổi.png	C · Lương	Lương của tôi (Giáo viên, Trợ giảng · chỉ đọc)	GV · Lương của tôi · Chưa có buổi
+C-052-GV_·_Lương_của_tôi_·_Chưa_đặt_đơn_giá.png	C · Lương	Lương của tôi (Giáo viên, Trợ giảng · chỉ đọc)	GV · Lương của tôi · Chưa đặt đơn giá
+C-053-GV_·_Lương_của_tôi_·_Đang_tải.png	C · Lương	Lương của tôi (Giáo viên, Trợ giảng · chỉ đọc)	GV · Lương của tôi · Đang tải
+C-054-GV_·_Lương_của_tôi_·_Lỗi_tải.png	C · Lương	Lương của tôi (Giáo viên, Trợ giảng · chỉ đọc)	GV · Lương của tôi · Lỗi tải
+C-055-Web_·_Bảng_lương_tháng.png	C · Lương	Web · Bảng lương tháng	Web · Bảng lương tháng
+C-056-Web_·_Bảng_lương_·_Xác_nhận_chốt.png	C · Lương	Web · Bảng lương tháng	Web · Bảng lương · Xác nhận chốt
+C-057-Web_·_Bảng_lương_·_Đã_chốt.png	C · Lương	Web · Bảng lương tháng	Web · Bảng lương · Đã chốt
+C-058-Web_·_Bảng_lương_·_Chưa_có_buổi.png	C · Lương	Web · Bảng lương tháng	Web · Bảng lương · Chưa có buổi
+C-059-Web_·_Bảng_lương_·_Đang_tải.png	C · Lương	Web · Bảng lương tháng	Web · Bảng lương · Đang tải
+C-060-Web_·_Bảng_lương_·_Lỗi_tải.png	C · Lương	Web · Bảng lương tháng	Web · Bảng lương · Lỗi tải
+D-061-GV_·_Học_phí_tháng.png	D · Học phí	Học phí tháng (Admin)	GV · Học phí tháng
+D-062-GV_·_Học_phí_tháng_·_Lọc_Chưa_thu.png	D · Học phí	Học phí tháng (Admin)	GV · Học phí tháng · Lọc Chưa thu
+D-063-GV_·_Học_phí_tháng_·_Sửa_học_phí_lớp.png	D · Học phí	Học phí tháng (Admin)	GV · Học phí tháng · Sửa học phí lớp
+D-064-GV_·_Học_phí_tháng_·_Xác_nhận_gửi_cả_lớp.png	D · Học phí	Học phí tháng (Admin)	GV · Học phí tháng · Xác nhận gửi cả lớp
+D-065-GV_·_Học_phí_tháng_·_Gửi_lỗi_mất_mạng.png	D · Học phí	Học phí tháng (Admin)	GV · Học phí tháng · Gửi lỗi mất mạng
+D-066-GV_·_Học_phí_tháng_·_Chưa_đặt_học_phí.png	D · Học phí	Học phí tháng (Admin)	GV · Học phí tháng · Chưa đặt học phí
+D-067-GV_·_Học_phí_tháng_·_Lớp_chưa_có_học_sinh.png	D · Học phí	Học phí tháng (Admin)	GV · Học phí tháng · Lớp chưa có học sinh
+D-068-GV_·_Học_phí_tháng_·_Đang_tải.png	D · Học phí	Học phí tháng (Admin)	GV · Học phí tháng · Đang tải
+D-069-GV_·_Học_phí_tháng_·_Lỗi_tải.png	D · Học phí	Học phí tháng (Admin)	GV · Học phí tháng · Lỗi tải
+D-070-GV_·_Phiếu_học_phí.png	D · Học phí	Phiếu học phí một học sinh (Admin)	GV · Phiếu học phí
+D-071-GV_·_Phiếu_học_phí_·_Các_lần_thu.png	D · Học phí	Phiếu học phí một học sinh (Admin)	GV · Phiếu học phí · Các lần thu
+D-072-GV_·_Phiếu_học_phí_·_Ghi_nhận_thu.png	D · Học phí	Phiếu học phí một học sinh (Admin)	GV · Phiếu học phí · Ghi nhận thu
+D-073-GV_·_Phiếu_học_phí_·_Cần_gửi_lại.png	D · Học phí	Phiếu học phí một học sinh (Admin)	GV · Phiếu học phí · Cần gửi lại
+D-074-GV_·_Phiếu_học_phí_·_Gửi_lỗi_mất_mạng.png	D · Học phí	Phiếu học phí một học sinh (Admin)	GV · Phiếu học phí · Gửi lỗi mất mạng
+D-075-GV_·_Phiếu_học_phí_·_Đã_thu_đủ.png	D · Học phí	Phiếu học phí một học sinh (Admin)	GV · Phiếu học phí · Đã thu đủ
+D-076-GV_·_Phiếu_học_phí_·_Đang_tải.png	D · Học phí	Phiếu học phí một học sinh (Admin)	GV · Phiếu học phí · Đang tải
+D-077-Web_·_Học_phí_tháng.png	D · Học phí	Web · Học phí tháng	Web · Học phí tháng
+D-078-Web_·_Học_phí_tháng_·_Sửa_học_phí_lớp.png	D · Học phí	Web · Học phí tháng	Web · Học phí tháng · Sửa học phí lớp
+D-079-Web_·_Học_phí_tháng_·_Gửi_lỗi_mất_mạng.png	D · Học phí	Web · Học phí tháng	Web · Học phí tháng · Gửi lỗi mất mạng
+D-080-Web_·_Học_phí_tháng_·_Chưa_đặt_học_phí.png	D · Học phí	Web · Học phí tháng	Web · Học phí tháng · Chưa đặt học phí
+D-081-Web_·_Học_phí_tháng_·_Đang_tải.png	D · Học phí	Web · Học phí tháng	Web · Học phí tháng · Đang tải
+D-082-Web_·_Học_phí_tháng_·_Lỗi_tải.png	D · Học phí	Web · Học phí tháng	Web · Học phí tháng · Lỗi tải
+D-083-PH_·_Học_phí_·_Đã_thu_đủ.png	D · Học phí	PH · Học phí	PH · Học phí · Đã thu đủ
+D-084-PH_·_Học_phí_·_Thu_một_phần.png	D · Học phí	PH · Học phí	PH · Học phí · Thu một phần
+D-085-PH_·_Học_phí_·_Chưa_có_lần_thu.png	D · Học phí	PH · Học phí	PH · Học phí · Chưa có lần thu
+D-086-PH_·_Học_phí_·_Chưa_có_phiếu.png	D · Học phí	PH · Học phí	PH · Học phí · Chưa có phiếu
+D-087-PH_·_Học_phí_·_Đang_tải.png	D · Học phí	PH · Học phí	PH · Học phí · Đang tải
+D-088-PH_·_Học_phí_·_Lỗi_tải.png	D · Học phí	PH · Học phí	PH · Học phí · Lỗi tải
+E-089-GV_·_Báo_cáo_điểm_lớp.png	E · Báo cáo điểm	Báo cáo điểm của lớp	GV · Báo cáo điểm lớp
+E-090-GV_·_Báo_cáo_điểm_lớp_·_Danh_sách_học_sinh.png	E · Báo cáo điểm	Báo cáo điểm của lớp	GV · Báo cáo điểm lớp · Danh sách học sinh
+E-091-GV_·_Báo_cáo_điểm_lớp_·_Không_ai_cần_chú_ý.png	E · Báo cáo điểm	Báo cáo điểm của lớp	GV · Báo cáo điểm lớp · Không ai cần chú ý
+E-092-GV_·_Báo_cáo_điểm_lớp_·_Chưa_có_điểm.png	E · Báo cáo điểm	Báo cáo điểm của lớp	GV · Báo cáo điểm lớp · Chưa có điểm
+E-093-GV_·_Báo_cáo_điểm_lớp_·_Đang_tải.png	E · Báo cáo điểm	Báo cáo điểm của lớp	GV · Báo cáo điểm lớp · Đang tải
+E-094-GV_·_Báo_cáo_điểm_lớp_·_Lỗi_tải.png	E · Báo cáo điểm	Báo cáo điểm của lớp	GV · Báo cáo điểm lớp · Lỗi tải
+E-095-GV_·_Báo_cáo_điểm_·_Học_sinh.png	E · Báo cáo điểm	Báo cáo điểm một học sinh	GV · Báo cáo điểm · Học sinh
+E-096-GV_·_Báo_cáo_điểm_·_Học_sinh_·_Vắng_thi_và_giảm_điểm.png	E · Báo cáo điểm	Báo cáo điểm một học sinh	GV · Báo cáo điểm · Học sinh · Vắng thi và giảm điểm
+E-097-GV_·_Báo_cáo_điểm_·_Học_sinh_·_Chưa_có_điểm.png	E · Báo cáo điểm	Báo cáo điểm một học sinh	GV · Báo cáo điểm · Học sinh · Chưa có điểm
+E-098-GV_·_Báo_cáo_điểm_·_Học_sinh_·_Chưa_có_điểm_nào.png	E · Báo cáo điểm	Báo cáo điểm một học sinh	GV · Báo cáo điểm · Học sinh · Chưa có điểm nào
+E-099-GV_·_Báo_cáo_điểm_·_Học_sinh_·_Đang_tải.png	E · Báo cáo điểm	Báo cáo điểm một học sinh	GV · Báo cáo điểm · Học sinh · Đang tải
+E-100-GV_·_Báo_cáo_điểm_·_Học_sinh_·_Lỗi_tải.png	E · Báo cáo điểm	Báo cáo điểm một học sinh	GV · Báo cáo điểm · Học sinh · Lỗi tải
+E-101-Web_·_Báo_cáo_điểm_lớp.png	E · Báo cáo điểm	Web · Báo cáo điểm lớp	Web · Báo cáo điểm lớp
+E-102-Web_·_Báo_cáo_điểm_lớp_·_Chưa_có_điểm.png	E · Báo cáo điểm	Web · Báo cáo điểm lớp	Web · Báo cáo điểm lớp · Chưa có điểm
+E-103-Web_·_Báo_cáo_điểm_lớp_·_Đang_tải.png	E · Báo cáo điểm	Web · Báo cáo điểm lớp	Web · Báo cáo điểm lớp · Đang tải
+E-104-Web_·_Báo_cáo_điểm_lớp_·_Lỗi_tải.png	E · Báo cáo điểm	Web · Báo cáo điểm lớp	Web · Báo cáo điểm lớp · Lỗi tải
