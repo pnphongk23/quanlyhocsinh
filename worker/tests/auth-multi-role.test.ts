@@ -157,4 +157,60 @@ describe('multi-role accounts (>= 2 memberships)', () => {
     expect((await call('/v1/auth/logout', { method: 'POST' }, token)).status).toBe(204);
     expect((await call('/v1/me', {}, token)).status).toBe(401);
   });
+
+  it('keeps account routes usable when the selected membership is disabled, and hides disabled roles from /me', async () => {
+    const setup = await multiRoleUser();
+    const signedIn = await login(setup.phone);
+    const token = signedIn.body.token as string;
+    const choseGuardian = await call(
+      '/v1/session/membership',
+      put({ membership_id: setup.guardianMembershipId }),
+      token,
+    );
+    expect(choseGuardian.status).toBe(200);
+
+    // MVP chưa có endpoint quản trị nên vô hiệu hoá membership bằng tay ở DB (authz-matrix 2.1).
+    await db
+      .prepare("UPDATE memberships SET status = 'disabled' WHERE id = ?")
+      .bind(setup.guardianMembershipId)
+      .run();
+
+    // Route miền: lỗi đúng spec (api-spec 1, membership bị vô hiệu ⇒ 403 account_disabled).
+    const blocked = await call('/v1/classes', {}, token);
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.error.code).toBe('account_disabled');
+
+    // Năm route tài khoản vẫn chạy để phiên không kẹt, và /me chỉ trả vai trò còn active.
+    const me = await call('/v1/me', {}, token);
+    expect(me.status).toBe(200);
+    expect(me.body.active_membership_id).toBeNull();
+    expect(me.body.memberships.map((row: { id: string }) => row.id)).toEqual([
+      setup.staffMembershipId,
+    ]);
+
+    // Chọn lại vai trò còn hoạt động ⇒ phiên tự khỏi.
+    const choseStaff = await call(
+      '/v1/session/membership',
+      put({ membership_id: setup.staffMembershipId }),
+      token,
+    );
+    expect(choseStaff.status).toBe(200);
+    expect(choseStaff.body.active_membership_id).toBe(setup.staffMembershipId);
+    expect((await call('/v1/classes', {}, token)).status).toBe(200);
+
+    // User bị vô hiệu thì route tài khoản cũng chặn: nhánh miễn trừ không nới cho user disabled.
+    await db
+      .prepare("UPDATE users SET status = 'disabled' WHERE id = ?")
+      .bind(setup.userId)
+      .run();
+    const disabledUser = await call('/v1/me', {}, token);
+    expect(disabledUser.status).toBe(403);
+    expect(disabledUser.body.error.code).toBe('account_disabled');
+    await db
+      .prepare("UPDATE users SET status = 'active' WHERE id = ?")
+      .bind(setup.userId)
+      .run();
+
+    expect((await call('/v1/auth/logout', { method: 'POST' }, token)).status).toBe(204);
+  });
 });

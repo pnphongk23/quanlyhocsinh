@@ -65,11 +65,13 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
     if (result.ok) {
       session = result.session;
       identity = result.identity;
-    } else if (
-      result.reason === 'membership_required' &&
-      ACCOUNT_SESSION_PATHS.has(normalizedPath(c.req.path))
-    ) {
-      // Chưa chọn vai trò: route tài khoản vẫn chạy để client hiện màn chọn vai trò.
+    } else if (result.reason === 'unauthorized') {
+      throw unauthorized();
+    } else if (ACCOUNT_SESSION_PATHS.has(normalizedPath(c.req.path))) {
+      // Route tài khoản chỉ cần phiên hợp lệ: chưa chọn vai trò, hoặc membership đang
+      // chọn vừa bị vô hiệu (N2) — client phải vào lại được màn chọn vai trò. Phiên của
+      // user bị vô hiệu vẫn bị `accountDisabled()` ở nhánh dưới vì `authenticateSession`
+      // kiểm `users.status` trước.
       const sessionResult = await authenticateSession(c.env.DB, tokenHash);
       if (!sessionResult.ok) {
         if (sessionResult.reason === 'unauthorized') throw unauthorized();
@@ -77,9 +79,9 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
       }
       session = sessionResult.session;
       identity = sessionIdentity(session);
+    } else if (result.reason === 'account_disabled') {
+      throw accountDisabled();
     } else {
-      if (result.reason === 'unauthorized') throw unauthorized();
-      if (result.reason === 'account_disabled') throw accountDisabled();
       throw forbidden({ reason: 'membership_required' });
     }
   }

@@ -230,7 +230,7 @@ export async function getMe(
            FROM memberships m
            JOIN workspaces w ON w.id = m.workspace_id
            JOIN roles r ON r.id = m.role_id
-          WHERE m.user_id = ?
+          WHERE m.user_id = ? AND m.status = 'active'
           ORDER BY m.created_at`,
       )
       .bind(userId),
@@ -554,6 +554,16 @@ export async function changePassword(
           WHERE user_id = ? AND id <> ? AND revoked_at IS NULL`,
       )
       .bind(input.now, input.userId, input.keepSessionId),
+    // api-spec 7: thu hồi phiên thì xoá token gắn với phiên đó, trong cùng batch.
+    db
+      .prepare(
+        `DELETE FROM device_tokens
+          WHERE auth_session_id IN (
+            SELECT id FROM auth_sessions
+             WHERE user_id = ? AND id <> ? AND revoked_at IS NOT NULL
+          )`,
+      )
+      .bind(input.userId, input.keepSessionId),
   ]);
 }
 

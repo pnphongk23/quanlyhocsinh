@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { call, db, fakePhone, insertClass, insertStudent, login, PASSWORD, post, registerWorkspace } from './helpers';
+import {
+  call,
+  db,
+  fakePhone,
+  insertClass,
+  insertDeviceToken,
+  insertStudent,
+  login,
+  PASSWORD,
+  post,
+  registerWorkspace,
+} from './helpers';
+import { sha256Hex } from '../src/lib/crypto';
 
 describe('auth flows', () => {
   it('registers the four default roles, exposes them in /me, then changes password and logs out', async () => {
@@ -27,6 +39,51 @@ describe('auth flows', () => {
     expect((await login(phone, 'another-Pass-456')).status).toBe(200);
     expect((await call('/v1/auth/logout', { method: 'POST' }, registered.body.token)).status).toBe(204);
     expect((await call('/v1/me', {}, registered.body.token)).status).toBe(401);
+  });
+
+  it('drops device tokens of the sessions it revokes when the password changes', async () => {
+    const phone = fakePhone();
+    const owner = await registerWorkspace(phone, 'Password rotation workspace');
+    const second = await login(phone);
+    expect(second.status).toBe(200);
+
+    const sessionIdFor = async (token: string): Promise<string> => {
+      const row = await db
+        .prepare('SELECT id FROM auth_sessions WHERE token_hash = ?')
+        .bind(await sha256Hex(token))
+        .first<{ id: string }>();
+      if (!row) throw new Error('session row missing');
+      return row.id;
+    };
+    const keptSessionId = await sessionIdFor(owner.token);
+    const revokedSessionId = await sessionIdFor(second.body.token as string);
+    const keptDeviceId = await insertDeviceToken(
+      owner.workspaceId, owner.userId, owner.membershipId, keptSessionId,
+    );
+    const revokedDeviceId = await insertDeviceToken(
+      owner.workspaceId, owner.userId, owner.membershipId, revokedSessionId,
+    );
+
+    const changed = await call(
+      '/v1/auth/change-password',
+      post({ current_password: PASSWORD, new_password: 'another-Pass-456' }),
+      owner.token,
+    );
+    expect(changed.status).toBe(200);
+
+    const revoked = await db
+      .prepare('SELECT revoked_at FROM auth_sessions WHERE id = ?')
+      .bind(revokedSessionId)
+      .first<{ revoked_at: string | null }>();
+    expect(revoked?.revoked_at).not.toBeNull();
+    expect((await call('/v1/me', {}, second.body.token)).status).toBe(401);
+
+    // api-spec 7: thu hồi phiên thì xoá token gắn với phiên đó, phiên hiện tại giữ nguyên.
+    const tokens = await db
+      .prepare('SELECT id FROM device_tokens WHERE id IN (?, ?)')
+      .bind(keptDeviceId, revokedDeviceId)
+      .all<{ id: string }>();
+    expect(tokens.results.map((row) => row.id)).toEqual([keptDeviceId]);
   });
 
   it('locks login after five wrong passwords', async () => {
