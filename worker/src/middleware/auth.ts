@@ -1,6 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import type { AppEnv, Identity } from '../types';
-import { authenticate, authenticateSession, touchSession } from '../db/identity';
+import { authenticate, authenticateSession, sessionIdentity, touchSession } from '../db/identity';
 import type { SessionRow } from '../db/identity';
 import { sha256Hex } from '../lib/crypto';
 import {
@@ -17,6 +17,16 @@ import {
 
 const PASSWORD_CHANGE_ALLOWED_PATHS = new Set([
   '/v1/me',
+  '/v1/auth/change-password',
+  '/v1/auth/logout',
+]);
+
+// Route tài khoản chỉ cần phiên hợp lệ: người dùng có từ hai vai trò trở lên phải gọi
+// được chúng trước khi chọn vai trò (api-spec 4). Mọi route miền khác vẫn 403.
+const ACCOUNT_SESSION_PATHS = new Set([
+  '/v1/me',
+  '/v1/session/membership',
+  '/v1/workspaces',
   '/v1/auth/change-password',
   '/v1/auth/logout',
 ]);
@@ -49,34 +59,29 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
     }
     session = result.session;
     // Sync resolves the requested queue membership itself in db/sync.ts.
-    identity = {
-      userId: session.user_id,
-      sessionId: session.session_id,
-      membershipId: '',
-      workspaceId: '',
-      workspaceName: '',
-      roleId: '',
-      roleName: '',
-      roleSystemKey: null,
-      scopeKind: 'assigned_classes',
-      scopeEpoch: 0,
-      permissions: {
-        classes: 'none', students: 'none', sessions_attendance: 'none',
-        scores: 'none', lectures: 'none', comments_reports: 'none',
-      },
-      classIds: [],
-      linkedStudentIds: [],
-      mustChangePassword: session.must_change_password === 1,
-    };
+    identity = sessionIdentity(session);
   } else {
     const result = await authenticate(c.env.DB, tokenHash);
-    if (!result.ok) {
+    if (result.ok) {
+      session = result.session;
+      identity = result.identity;
+    } else if (
+      result.reason === 'membership_required' &&
+      ACCOUNT_SESSION_PATHS.has(normalizedPath(c.req.path))
+    ) {
+      // Chưa chọn vai trò: route tài khoản vẫn chạy để client hiện màn chọn vai trò.
+      const sessionResult = await authenticateSession(c.env.DB, tokenHash);
+      if (!sessionResult.ok) {
+        if (sessionResult.reason === 'unauthorized') throw unauthorized();
+        throw accountDisabled();
+      }
+      session = sessionResult.session;
+      identity = sessionIdentity(session);
+    } else {
       if (result.reason === 'unauthorized') throw unauthorized();
       if (result.reason === 'account_disabled') throw accountDisabled();
       throw forbidden({ reason: 'membership_required' });
     }
-    session = result.session;
-    identity = result.identity;
   }
   c.set('identity', identity);
 

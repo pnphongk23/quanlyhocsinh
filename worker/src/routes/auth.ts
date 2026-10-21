@@ -341,7 +341,8 @@ authRoutes.post('/auth/change-password', requireAuth, async (c) => {
 
 authRoutes.get('/me', requireAuth, async (c) => {
   const identity = c.get('identity');
-  const me = await getMe(c.env.DB, identity.userId, identity.membershipId);
+  const activeMembershipId = identity.membershipId === '' ? null : identity.membershipId;
+  const me = await getMe(c.env.DB, identity.userId, activeMembershipId);
   return c.json(me);
 });
 

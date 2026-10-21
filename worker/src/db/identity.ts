@@ -63,6 +63,33 @@ export async function authenticateSession(
   return { ok: true, session };
 }
 
+/**
+ * Danh tính chỉ từ phiên, không có vai trò đang chọn: dùng cho `/sync/*` (tự chọn
+ * membership theo hàng đợi) và các route tài khoản cần chạy trước khi chọn vai trò
+ * (api-spec 4: từ hai vai trò trở lên `active_membership_id = null`).
+ */
+export function sessionIdentity(session: SessionRow): Identity {
+  return {
+    userId: session.user_id,
+    sessionId: session.session_id,
+    membershipId: '',
+    workspaceId: '',
+    workspaceName: '',
+    roleId: '',
+    roleName: '',
+    roleSystemKey: null,
+    scopeKind: 'assigned_classes',
+    scopeEpoch: 0,
+    permissions: {
+      classes: 'none', students: 'none', sessions_attendance: 'none',
+      scores: 'none', lectures: 'none', comments_reports: 'none',
+    },
+    classIds: [],
+    linkedStudentIds: [],
+    mustChangePassword: session.must_change_password === 1,
+  };
+}
+
 interface MembershipRow {
   id: string;
   workspace_id: string;

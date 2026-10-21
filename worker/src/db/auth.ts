@@ -213,7 +213,7 @@ export interface MeResponse {
 export async function getMe(
   db: D1Database,
   userId: string,
-  activeMembershipId: string,
+  activeMembershipId: string | null,
 ): Promise<MeResponse> {
   const [user, memberships] = await db.batch([
     db
