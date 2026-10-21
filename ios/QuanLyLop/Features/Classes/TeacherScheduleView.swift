@@ -65,8 +65,8 @@ struct TeacherScheduleView: View {
     var body: some View {
         TeacherScroll {
             VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-                Text("Lịch").appText(AppText.title).foregroundStyle(AppColors.text)
-                TeacherSegmented(options: [.init(id: "day", label: "Ngày"), .init(id: "month", label: "Tháng")],
+                Text(String(localized: "feature.classes.lich")).appText(AppText.title).foregroundStyle(AppColors.text)
+                TeacherSegmented(options: [.init(id: "day", label: String(localized: "feature.classes.ngay")), .init(id: "month", label: String(localized: "feature.classes.thang"))],
                                  value: view) { changeView($0) }
                 filterChips
                 if view == "day" { dayView } else { monthView }
@@ -93,7 +93,7 @@ struct TeacherScheduleView: View {
     private var filterChips: some View {
         TeacherHorizontalScroll {
             HStack(spacing: 8) {
-                filterChip(value: "all", label: "Tất cả lớp")
+                filterChip(value: "all", label: String(localized: "feature.classes.tat.ca.lop"))
                 ForEach(classes, id: \.id) { klass in
                     filterChip(value: klass.id, label: klass.name)
                 }
@@ -130,28 +130,28 @@ struct TeacherScheduleView: View {
             cardList(dateEntries) { entry in entry.session.startTime }
         }
         if !missedEntries.isEmpty {
-            TeacherGroupLabel(text: "Chưa điểm danh")
+            TeacherGroupLabel(text: String(localized: "feature.classes.chua.iem.danh"))
             cardList(missedEntries) { entry in TeacherFormat.dayMonth(entry.session.date) }
         }
         if !upcomingEntries.isEmpty {
-            TeacherGroupLabel(text: "Sắp tới")
+            TeacherGroupLabel(text: String(localized: "feature.classes.sap.toi"))
             cardList(upcomingEntries) { entry in TeacherFormat.weekdayName(entry.session.date) }
         }
     }
 
     private var dayBar: some View {
         HStack(spacing: 8) {
-            navButton("chevron.backward", label: "Hôm trước") { selectedDate = Self.addDays(selectedDate, -1) }
+            navButton("chevron.backward", label: String(localized: "feature.classes.hom.truoc")) { selectedDate = Self.addDays(selectedDate, -1) }
             VStack(spacing: 2) {
                 Text(TeacherFormat.weekdayDate(selectedDate))
                     .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
                     .foregroundStyle(AppColors.text)
                     .lineLimit(1)
                 if selectedDate == today {
-                    Text("Hôm nay").appText(AppText.muted).foregroundStyle(AppColors.muted)
+                    Text(String(localized: "feature.classes.hom.nay")).appText(AppText.muted).foregroundStyle(AppColors.muted)
                 } else {
                     Button { goToday() } label: {
-                        Text("Về hôm nay")
+                        Text(String(localized: "feature.classes.ve.hom.nay"))
                             .appText(AppText.muted)
                             .foregroundStyle(AppColors.muted)
                             .underline()
@@ -160,7 +160,7 @@ struct TeacherScheduleView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            navButton("chevron.right", label: "Hôm sau") { selectedDate = Self.addDays(selectedDate, 1) }
+            navButton("chevron.right", label: String(localized: "feature.classes.hom.sau")) { selectedDate = Self.addDays(selectedDate, 1) }
         }
         .padding(6)
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
@@ -180,8 +180,8 @@ struct TeacherScheduleView: View {
 
     private var dayEmpty: some View {
         TeacherEmptyState(systemImage: "calendar",
-                          title: "Không có buổi học",
-                          message: "Ngày \(TeacherFormat.dayMonth(selectedDate)) chưa có buổi học nào. Chọn ngày khác để xem lịch.")
+                          title: String(localized: "feature.classes.khong.co.buoi.hoc"),
+                          message: String.localizedStringWithFormat(String(localized: "feature.classes.ngay.chua.co.buoi.hoc.nao.chon.ngay.khac.e.xem.l"), String(describing: (TeacherFormat.dayMonth(selectedDate)))))
     }
 
     // MARK: Tháng
@@ -199,16 +199,16 @@ struct TeacherScheduleView: View {
     private var monthCard: some View {
         VStack(spacing: TeacherMetrics.contentGap) {
             HStack(spacing: 8) {
-                navButton("chevron.backward", label: "Tháng trước") { changeMonth(-1) }
+                navButton("chevron.backward", label: String(localized: "feature.classes.thang.truoc")) { changeMonth(-1) }
                 Text(TeacherFormat.monthTitle(year: visibleYear, month: visibleMonth))
                     .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 24))
                     .foregroundStyle(AppColors.text)
                     .frame(maxWidth: .infinity)
-                navButton("chevron.right", label: "Tháng sau") { changeMonth(1) }
+                navButton("chevron.right", label: String(localized: "feature.classes.thang.sau")) { changeMonth(1) }
             }
             if !isCurrentMonth {
                 Button { goToday() } label: {
-                    Text("Về tháng này")
+                    Text(String(localized: "feature.classes.ve.thang.nay"))
                         .appText(AppText.muted)
                         .foregroundStyle(AppColors.muted)
                         .underline()
@@ -334,7 +334,7 @@ struct TeacherScheduleView: View {
         var parts = [TeacherFeatureData.sessionPrefix(session)]
         if session.origin == .manual {
             let note = session.note?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            parts.append(note.isEmpty ? "Buổi lẻ" : note)
+            parts.append(note.isEmpty ? String(localized: "feature.classes.buoi.le") : note)
         }
         return parts.joined(separator: " · ")
     }
@@ -350,12 +350,12 @@ struct TeacherScheduleView: View {
     /// `scheduleState` of `scheduleModel.ts`.
     private static func state(of session: ClassSession, today: String) -> CardState {
         switch session.status {
-        case .cancelled: return CardState(label: "Đã huỷ", tone: .warning, action: "status")
-        case .held: return CardState(label: "Đã điểm danh", tone: .success, action: "status")
+        case .cancelled: return CardState(label: String(localized: "feature.classes.a.huy"), tone: .warning, action: "status")
+        case .held: return CardState(label: String(localized: "feature.classes.a.iem.danh"), tone: .success, action: "status")
         case .planned:
-            if session.date < today { return CardState(label: "Chưa điểm danh", tone: .warning, action: "status") }
-            if session.date == today { return CardState(label: "Điểm danh", tone: .primary, action: "checkin") }
-            return CardState(label: "Chưa tới", tone: .neutral, action: "status")
+            if session.date < today { return CardState(label: String(localized: "feature.classes.chua.iem.danh"), tone: .warning, action: "status") }
+            if session.date == today { return CardState(label: String(localized: "feature.classes.iem.danh"), tone: .primary, action: "checkin") }
+            return CardState(label: String(localized: "feature.classes.chua.toi"), tone: .neutral, action: "status")
         }
     }
 

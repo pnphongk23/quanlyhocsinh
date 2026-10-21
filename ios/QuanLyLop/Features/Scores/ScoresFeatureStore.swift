@@ -57,7 +57,7 @@ final class I4FeatureStore: ObservableObject {
             canWriteCommentsReports = allows(membership, group: "comments_reports", write: true)
         }
         do { try await SyncCoordinator(api: api, store: activeStore, deviceId: deviceID).synchronize() }
-        catch { errorMessage = "Không thể đồng bộ dữ liệu. Vui lòng thử lại." }
+        catch { errorMessage = String(localized: "feature.scores.khong.the.ong.bo.du.lieu.vui.long.thu.lai") }
         await refresh()
     }
 
@@ -76,7 +76,7 @@ final class I4FeatureStore: ObservableObject {
             reports = try await store.records(MonthlyReport.self, entity: "report")
             isReady = true
         } catch {
-            errorMessage = "Không tải được dữ liệu đã lưu."
+            errorMessage = String(localized: "feature.scores.khong.tai.uoc.du.lieu.a.luu")
         }
     }
 
@@ -98,7 +98,7 @@ final class I4FeatureStore: ObservableObject {
                 try await store.installSnapshot(rows, position: position)
             }
             await refresh()
-        } catch { errorMessage = "Không tải được dữ liệu mẫu." }
+        } catch { errorMessage = String(localized: "feature.scores.khong.tai.uoc.du.lieu.mau") }
     }
 
     // MARK: - Reads
@@ -180,10 +180,10 @@ final class I4FeatureStore: ObservableObject {
             guard let student = students.first(where: { $0.id == studentID }) else { continue }
             let parsed = Self.parseScore(raw)
             if raw.trimmingCharacters(in: .whitespaces).isEmpty == false, parsed == nil {
-                return "Điểm phải từ 0 đến \(test.maxScore)."
+                return String.localizedStringWithFormat(String(localized: "feature.scores.iem.phai.tu.0.en"), String(describing: (test.maxScore)))
             }
             if let parsed, parsed < 0 || parsed > Double(test.maxScore) {
-                return "Điểm phải từ 0 đến \(test.maxScore)."
+                return String.localizedStringWithFormat(String(localized: "feature.scores.iem.phai.tu.0.en"), String(describing: (test.maxScore)))
             }
             let old = score(testID: test.id, studentID: student.id)
             if old?.value == parsed { continue }
@@ -195,7 +195,7 @@ final class I4FeatureStore: ObservableObject {
                                          kind: "score.set",
                                          payload: scorePayload(test: test, student: student, value: parsed))
             do { try await store.write(row, forKey: command.recordKey, enqueueing: command) }
-            catch { return "Không lưu được điểm." }
+            catch { return String(localized: "feature.scores.khong.luu.uoc.iem") }
         }
         await syncIfNeeded()
         await refresh()
@@ -241,11 +241,11 @@ final class I4FeatureStore: ObservableObject {
             await refresh()
             return nil
         } catch ModelError.invalidMaxScore {
-            return "Điểm tối đa phải từ 1 đến 1000."
+            return String(localized: "feature.scores.iem.toi.a.phai.tu.1.en.1000")
         } catch ModelError.scoreOutsideRange {
-            return "Không hạ được điểm tối đa xuống dưới điểm cao nhất đã nhập."
+            return String(localized: "feature.scores.khong.ha.uoc.iem.toi.a.xuong.duoi.iem.cao.nhat.a")
         } catch {
-            return "Không lưu được bài kiểm tra."
+            return String(localized: "feature.scores.khong.luu.uoc.bai.kiem.tra")
         }
     }
 
@@ -281,8 +281,8 @@ final class I4FeatureStore: ObservableObject {
             try await store.write(row, forKey: command.recordKey, enqueueing: command)
             await syncIfNeeded()
             await refresh()
-            return hasScores ? "Bài kiểm tra đã được lưu trữ." : "Bài kiểm tra đã được xoá."
-        } catch { return "Không xoá được bài kiểm tra." }
+            return hasScores ? String(localized: "feature.scores.bai.kiem.tra.a.uoc.luu.tru") : String(localized: "feature.scores.bai.kiem.tra.a.uoc.xoa")
+        } catch { return String(localized: "feature.scores.khong.xoa.uoc.bai.kiem.tra") }
     }
 
     // MARK: - Session slips (comments)
@@ -305,7 +305,7 @@ final class I4FeatureStore: ObservableObject {
             await syncIfNeeded()
             await refresh()
             return nil
-        } catch { return "Không lưu được phiếu buổi học." }
+        } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
     }
 
     enum SendOutcome: Equatable {
@@ -319,7 +319,7 @@ final class I4FeatureStore: ObservableObject {
         let chosen = slips(sessionID: sessionID).filter {
             studentIDs.contains($0.studentId) && $0.stars != nil && $0.status != .sent
         }
-        guard let first = chosen.first else { return .failed("Chọn sao cho ít nhất một học sinh.") }
+        guard let first = chosen.first else { return .failed(String(localized: "feature.scores.chon.sao.cho.it.nhat.mot.hoc.sinh")) }
         var localRows: [SessionSlip] = []
         for slip in chosen {
             localRows.append(SessionSlip(sessionId: slip.sessionId, studentId: slip.studentId,
@@ -340,7 +340,7 @@ final class I4FeatureStore: ObservableObject {
             let synced = await syncIfNeeded()
             await refresh()
             return synced ? .sent(localRows.count) : .queued(localRows.count)
-        } catch { return .failed("Không xếp hàng được phiếu.") }
+        } catch { return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu")) }
     }
 
     // MARK: - Homework
@@ -361,7 +361,7 @@ final class I4FeatureStore: ObservableObject {
             await syncIfNeeded()
             await refresh()
             return nil
-        } catch { return "Không lưu được phần bài tập." }
+        } catch { return String(localized: "feature.scores.khong.luu.uoc.phan.bai.tap") }
     }
 
     private func sectionPayload(sessionID: String, id: String, kind: HomeworkKind, title: String,
@@ -386,7 +386,7 @@ final class I4FeatureStore: ObservableObject {
 
     func deleteSection(_ section: HomeworkSection) async -> String? {
         let graded = grades.contains { $0.sectionId == section.id && $0.level != nil }
-        guard !graded else { return "Đã chấm cho học sinh nên không xoá được." }
+        guard !graded else { return String(localized: "feature.scores.a.cham.cho.hoc.sinh.nen.khong.xoa.uoc") }
         let payload = object(["id": .string(section.id)])
         let command = PendingCommand(recordKey: key("homework_section", section.id),
                                      baseVersion: section.version,
@@ -397,7 +397,7 @@ final class I4FeatureStore: ObservableObject {
             await syncIfNeeded()
             await refresh()
             return nil
-        } catch { return "Không xoá được phần bài tập." }
+        } catch { return String(localized: "feature.scores.khong.xoa.uoc.phan.bai.tap") }
     }
 
     func grade(_ section: HomeworkSection, student: Student, level: HomeworkLevel?) async {
@@ -416,7 +416,7 @@ final class I4FeatureStore: ObservableObject {
             try await store.write(row, forKey: command.recordKey, enqueueing: command)
             await syncIfNeeded()
             await refresh()
-        } catch { errorMessage = "Không lưu được kết quả chấm." }
+        } catch { errorMessage = String(localized: "feature.scores.khong.luu.uoc.ket.qua.cham") }
     }
 
     /// Marks one level for every student of the session in a single list action.
@@ -443,7 +443,7 @@ final class I4FeatureStore: ObservableObject {
             try await store.write(row, forKey: key("report", row.id), enqueueing: nil)
             await refresh()
             return nil
-        } catch { return "Không thể lưu nhận xét chung." }
+        } catch { return String(localized: "feature.scores.khong.the.luu.nhan.xet.chung") }
     }
 
     enum PublishOutcome: Equatable {
@@ -466,7 +466,7 @@ final class I4FeatureStore: ObservableObject {
             } catch {
                 return .publishedWithoutPDF(publicationNo: response.publicationNo)
             }
-        } catch { return .failed("Không thể phát hành lúc này. Kiểm tra kết nối rồi thử lại.") }
+        } catch { return .failed(String(localized: "feature.scores.khong.the.phat.hanh.luc.nay.kiem.tra.ket.noi.roi")) }
     }
 
     // MARK: - Helpers
@@ -487,7 +487,7 @@ final class I4FeatureStore: ObservableObject {
             errorMessage = nil
             return true
         } catch {
-            errorMessage = "Đã lưu trên thiết bị; không thể đồng bộ lúc này."
+            errorMessage = String(localized: "feature.scores.a.luu.tren.thiet.bi.khong.the.ong.bo.luc.nay")
             return false
         }
     }
@@ -519,10 +519,10 @@ extension HomeworkKind {
 
     var label: String {
         switch self {
-        case .vocabulary: "Luyện từ vựng"
-        case .reading: "Luyện đọc"
-        case .speaking: "Luyện nói"
-        case .exercise: "Bài tập"
+        case .vocabulary: String(localized: "feature.scores.luyen.tu.vung")
+        case .reading: String(localized: "feature.scores.luyen.oc")
+        case .speaking: String(localized: "feature.scores.luyen.noi")
+        case .exercise: String(localized: "feature.scores.bai.tap")
         }
     }
 

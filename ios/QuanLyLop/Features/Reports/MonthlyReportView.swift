@@ -61,8 +61,8 @@ struct MonthlyReportView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if !data.canReadCommentsReports {
-                AppEmptyState(title: "Bạn không có quyền xem báo cáo") {
-                    Text("Liên hệ Admin nếu bạn cần quyền truy cập.").appText(AppText.body)
+                AppEmptyState(title: String(localized: "feature.reports.ban.khong.co.quyen.xem.bao.cao")) {
+                    Text(String(localized: "feature.reports.lien.he.admin.neu.ban.can.quyen.truy.cap")).appText(AppText.body)
                 }
             } else if previewOpen, let selected {
                 preview(selected)
@@ -71,15 +71,15 @@ struct MonthlyReportView: View {
                 summaryLine
                 notices
                 if rows.isEmpty {
-                    AppEmptyState(title: "Chưa có dữ liệu báo cáo") {
-                        Text("Chọn tháng có buổi học hoặc bài kiểm tra để xem báo cáo.")
+                    AppEmptyState(title: String(localized: "feature.reports.chua.co.du.lieu.bao.cao")) {
+                        Text(String(localized: "feature.reports.chon.thang.co.buoi.hoc.hoac.bai.kiem.tra.e.xem.b"))
                             .appText(AppText.body)
                     }
                 } else {
                     studentList
                     if data.canWriteCommentsReports {
                         publishAllButton
-                        Text("Phụ huynh chỉ thấy báo cáo sau khi bạn phát hành.")
+                        Text(String(localized: "feature.reports.phu.huynh.chi.thay.bao.cao.sau.khi.ban.phat.hanh"))
                             .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                             .foregroundStyle(AppColors.muted)
                     }
@@ -106,7 +106,7 @@ struct MonthlyReportView: View {
 
     private var monthBar: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Chọn tháng")
+            Text(String(localized: "feature.reports.chon.thang"))
                 .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                 .foregroundStyle(AppColors.muted)
             Menu {
@@ -130,7 +130,7 @@ struct MonthlyReportView: View {
                     RoundedRectangle(cornerRadius: AppRadius.control)
                         .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
             }
-            .accessibilityLabel("Chọn tháng báo cáo")
+            .accessibilityLabel(String(localized: "feature.reports.chon.thang.bao.cao"))
         }
     }
 
@@ -148,13 +148,13 @@ struct MonthlyReportView: View {
         HStack(spacing: 4) {
             Text("\(summary.ready)/\(summary.total)")
                 .foregroundStyle(AppColors.text)
-            Text("sẵn sàng ·")
+            Text(String(localized: "feature.reports.san.sang.4539f330"))
             Text("\(summary.missing)")
                 .foregroundStyle(AppColors.warning)
-            Text("thiếu dữ liệu ·")
+            Text(String(localized: "feature.reports.thieu.du.lieu.d64d166d"))
             Text("\(summary.published)")
                 .foregroundStyle(AppColors.text)
-            Text("đã phát hành")
+            Text(String(localized: "feature.reports.a.phat.hanh"))
         }
         .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
         .foregroundStyle(AppColors.muted)
@@ -212,7 +212,7 @@ struct MonthlyReportView: View {
                     .padding(.top, 8)
                 facts(report)
                 commentEditor(report)
-                AppButton(title: "Xem trước", variant: .secondary, size: .large) {
+                AppButton(title: String(localized: "feature.reports.xem.truoc"), variant: .secondary, size: .large) {
                     saveNow()
                     previewOpen = true
                 }
@@ -229,12 +229,12 @@ struct MonthlyReportView: View {
 
     private func facts(_ report: I4MonthlyReport) -> some View {
         HStack(spacing: 8) {
-            statCard(label: "Chuyên cần",
-                     value: "\(report.attendanceCount)/\(report.snapshot.attendance.heldSessions) buổi",
+            statCard(label: String(localized: "feature.reports.chuyen.can"),
+                     value: String.localizedStringWithFormat(String(localized: "feature.reports.buoi"), String(describing: (report.attendanceCount)), String(describing: (report.snapshot.attendance.heldSessions))),
                      detail: report.attendanceDetail)
-            statCard(label: "Bài kiểm tra",
-                     value: "\(report.gradedTestCount)/\(report.snapshot.tests.count) bài",
-                     detail: "đã có điểm")
+            statCard(label: String(localized: "feature.reports.bai.kiem.tra"),
+                     value: String.localizedStringWithFormat(String(localized: "feature.reports.bai"), String(describing: (report.gradedTestCount)), String(describing: (report.snapshot.tests.count))),
+                     detail: String(localized: "feature.reports.a.co.iem"))
         }
     }
 
@@ -260,7 +260,7 @@ struct MonthlyReportView: View {
 
     private func commentEditor(_ report: I4MonthlyReport) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Nhận xét chung của tháng")
+            Text(String(localized: "feature.reports.nhan.xet.chung.cua.thang"))
                 .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                 .foregroundStyle(AppColors.text)
             if data.canWriteCommentsReports {
@@ -273,7 +273,7 @@ struct MonthlyReportView: View {
                     .background(AppColors.background, in: RoundedRectangle(cornerRadius: 12))
                     .overlay(alignment: .topLeading) {
                         if commentValue(report).isEmpty {
-                            Text(report.suggestion ?? "Nhập nhận xét chung cho phụ huynh của em này.")
+                            Text(report.suggestion ?? String(localized: "feature.reports.nhap.nhan.xet.chung.cho.phu.huynh.cua.em.nay"))
                                 .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                                 .foregroundStyle(AppColors.muted)
                                 .padding(.horizontal, 15)
@@ -282,13 +282,13 @@ struct MonthlyReportView: View {
                         }
                     }
                 if let suggestion = report.suggestion {
-                    AppButton(title: "Dùng gợi ý làm bản nháp", variant: .secondary) {
+                    AppButton(title: String(localized: "feature.reports.dung.goi.y.lam.ban.nhap"), variant: .secondary) {
                         commentDraft = CommentDraft(key: draftKey(report), value: suggestion)
                         saveNow()
                     }
                 }
             } else {
-                Text(commentValue(report).isEmpty ? "Chưa có nhận xét chung." : commentValue(report))
+                Text(commentValue(report).isEmpty ? String(localized: "feature.reports.chua.co.nhan.xet.chung") : commentValue(report))
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                     .foregroundStyle(AppColors.text)
                     .padding(12)
@@ -342,7 +342,7 @@ struct MonthlyReportView: View {
                                                        comment: draft.value) {
             error = failure
         } else {
-            message = "Đã lưu nhận xét chung."
+            message = String(localized: "feature.reports.a.luu.nhan.xet.chung")
             error = nil
         }
     }
@@ -376,10 +376,10 @@ struct MonthlyReportView: View {
             }
             publishing = false
             if published > 0 {
-                message = "Đã phát hành \(published) báo cáo."
+                message = String.localizedStringWithFormat(String(localized: "feature.reports.a.phat.hanh.bao.cao.b1c96543"), String(describing: (published)))
                 error = nil
             } else {
-                error = "Không thể phát hành báo cáo. Kiểm tra kết nối rồi thử lại."
+                error = String(localized: "feature.reports.khong.the.phat.hanh.bao.cao.kiem.tra.ket.noi.roi")
             }
         }
     }
@@ -408,12 +408,12 @@ struct MonthlyReportView: View {
                     .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Quay lại danh sách báo cáo")
+            .accessibilityLabel(String(localized: "feature.reports.quay.lai.danh.sach.bao.cao"))
             VStack(alignment: .leading, spacing: 2) {
                 Text(I4Format.monthTitle(report.month))
                     .appText(AppTextStyle(size: 22, weight: .bold, lineHeight: 27.5, tracking: -0.22))
                     .foregroundStyle(AppColors.text)
-                Text("Xem trước · \(report.student.name) · \(klass?.name ?? "Lớp học")")
+                Text(String.localizedStringWithFormat(String(localized: "feature.reports.xem.truoc.d5092a86"), String(describing: (report.student.name)), String(describing: (klass?.name ?? String(localized: "feature.reports.class")))))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 19.6))
                     .foregroundStyle(AppColors.muted)
             }
@@ -435,19 +435,19 @@ struct MonthlyReportView: View {
         let maxCount = max(1, stars.three, stars.two, stars.one)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("Nhận xét theo sao")
+                Text(String(localized: "feature.reports.nhan.xet.theo.sao"))
                     .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 26))
                     .foregroundStyle(AppColors.text)
                 Spacer(minLength: 0)
-                Text("\(report.ticketCount) buổi có phiếu")
+                Text(String.localizedStringWithFormat(String(localized: "feature.reports.buoi.co.phieu"), String(describing: (report.ticketCount))))
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                     .foregroundStyle(AppColors.muted)
             }
-            Text("Tính trên các phiếu đã gửi.")
+            Text(String(localized: "feature.reports.tinh.tren.cac.phieu.a.gui"))
                 .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                 .foregroundStyle(AppColors.muted)
             if report.ticketCount == 0 {
-                Text("Chưa có phiếu nào được gửi trong tháng này.")
+                Text(String(localized: "feature.reports.chua.co.phieu.nao.uoc.gui.trong.thang.nay"))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                     .foregroundStyle(AppColors.muted)
             } else {
@@ -475,7 +475,7 @@ struct MonthlyReportView: View {
                 }
             }
             .frame(height: 10)
-            Text("\(count) buổi")
+            Text(String.localizedStringWithFormat(String(localized: "feature.reports.buoi.d5e8f7ce"), String(describing: (count))))
                 .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 24))
                 .foregroundStyle(AppColors.text)
                 .frame(minWidth: 60, alignment: .trailing)
@@ -486,14 +486,14 @@ struct MonthlyReportView: View {
     private func homeworkBlock(_ report: I4MonthlyReport) -> some View {
         let items = report.snapshot.homework
         return VStack(alignment: .leading, spacing: 8) {
-            Text("Bài tập về nhà")
+            Text(String(localized: "feature.reports.bai.tap.ve.nha"))
                 .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 26))
                 .foregroundStyle(AppColors.text)
-            Text("Tốt = Hoàn thành tốt · Chưa = Chưa hoàn thành")
+            Text(String(localized: "feature.reports.tot.hoan.thanh.tot.chua.chua.hoan.thanh"))
                 .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                 .foregroundStyle(AppColors.muted)
             if items.isEmpty {
-                Text("Chưa có kết quả bài tập nào được gửi trong tháng này.")
+                Text(String(localized: "feature.reports.chua.co.ket.qua.bai.tap.nao.uoc.gui.trong.thang"))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                     .foregroundStyle(AppColors.muted)
             } else {
@@ -502,7 +502,7 @@ struct MonthlyReportView: View {
                     homeworkRow(item)
                 }
             }
-            Text("Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.")
+            Text(String(localized: "feature.reports.chi.tinh.ket.qua.a.gui.khong.tinh.phan.chua.cham"))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                 .foregroundStyle(AppColors.muted)
         }
@@ -513,11 +513,11 @@ struct MonthlyReportView: View {
 
     private var homeworkHeader: some View {
         HStack(spacing: 8) {
-            Text("Phần")
+            Text(String(localized: "feature.reports.phan"))
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text("Tốt").frame(width: 46, alignment: .trailing)
-            Text("Hoàn thành").frame(width: 82, alignment: .trailing)
-            Text("Chưa").frame(width: 46, alignment: .trailing)
+            Text(String(localized: "feature.reports.tot")).frame(width: 46, alignment: .trailing)
+            Text(String(localized: "feature.reports.hoan.thanh")).frame(width: 82, alignment: .trailing)
+            Text(String(localized: "feature.reports.chua")).frame(width: 46, alignment: .trailing)
         }
         .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
         .foregroundStyle(AppColors.muted)
@@ -547,11 +547,11 @@ struct MonthlyReportView: View {
 
     private func testsBlock(_ report: I4MonthlyReport) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Điểm từng bài")
+            Text(String(localized: "feature.reports.iem.tung.bai"))
                 .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 26))
                 .foregroundStyle(AppColors.text)
             if report.snapshot.tests.isEmpty {
-                Text("Không có bài kiểm tra trong tháng này.")
+                Text(String(localized: "feature.reports.khong.co.bai.kiem.tra.trong.thang.nay"))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                     .foregroundStyle(AppColors.muted)
             } else {
@@ -566,7 +566,7 @@ struct MonthlyReportView: View {
                                 .foregroundStyle(AppColors.muted)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        Text(test.value.map { "\(I4Format.score($0))/\(test.max)" } ?? "Chưa có điểm")
+                    Text(test.value.map { "\(I4Format.score($0))/\(test.max)" } ?? String(localized: "feature.reports.noScore"))
                             .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                             .foregroundStyle(AppColors.text)
                     }
@@ -575,7 +575,7 @@ struct MonthlyReportView: View {
                     .overlay(alignment: .bottom) { AppColors.divider.frame(height: 1) }
                 }
             }
-            Text("Bài chưa có điểm cần chấm trước khi phát hành.")
+            Text(String(localized: "feature.reports.bai.chua.co.iem.can.cham.truoc.khi.phat.hanh"))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                 .foregroundStyle(AppColors.muted)
         }
@@ -586,11 +586,11 @@ struct MonthlyReportView: View {
 
     private func commentBlock(_ report: I4MonthlyReport) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Nhận xét chung")
+            Text(String(localized: "feature.reports.nhan.xet.chung"))
                 .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 26))
                 .foregroundStyle(AppColors.text)
             if commentValue(report).isEmpty {
-                Text("Chưa có nhận xét chung.")
+                Text(String(localized: "feature.reports.chua.co.nhan.xet.chung"))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                     .foregroundStyle(AppColors.muted)
             } else {
@@ -610,13 +610,13 @@ struct MonthlyReportView: View {
         let published = record?.status == .published
         return VStack(spacing: 8) {
             if data.canWriteCommentsReports {
-                AppButton(title: published ? "Phát hành lại" : "Phát hành", size: .large) {
+                AppButton(title: published ? String(localized: "feature.reports.phat.hanh.lai") : String(localized: "feature.reports.phat.hanh"), size: .large) {
                     publish(report)
                 }
                 .disabled(!report.ready || !slot.publishable || publishing)
             }
             Button { printReport(report) } label: {
-                Text("In báo cáo")
+                Text(String(localized: "feature.reports.in.bao.cao"))
                     .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
                     .foregroundStyle(AppColors.text)
                     .frame(maxWidth: .infinity, minHeight: AppMetrics.buttonHeightLarge)
@@ -633,10 +633,10 @@ struct MonthlyReportView: View {
             publishing = false
             switch outcome {
             case .published:
-                message = "Đã phát hành báo cáo."
+                message = String(localized: "feature.reports.a.phat.hanh.bao.cao")
                 error = nil
             case .publishedWithoutPDF:
-                message = "Đã phát hành báo cáo nhưng chưa tải được PDF lên máy chủ."
+                message = String(localized: "feature.reports.a.phat.hanh.bao.cao.nhung.chua.tai.uoc.pdf.len.m")
                 error = nil
             case .failed(let failure):
                 error = failure
@@ -683,41 +683,41 @@ enum I4PDFRenderer {
         return renderer.pdfData { context in
             context.beginPage()
             var cursor = PDFCursor(top: 48, context: context, page: page)
-            cursor.title("Báo cáo tháng \(Int(snapshot.month.dropFirst(5)) ?? 0)")
+            cursor.title(String.localizedStringWithFormat(String(localized: "feature.reports.bao.cao.thang"), String(describing: (Int(snapshot.month.dropFirst(5)) ?? 0))))
             cursor.text(className.isEmpty ? studentName : "\(studentName) · \(className)", size: 12, muted: true)
             cursor.gap(8)
 
             let attendance = snapshot.attendance
-            cursor.heading("Chuyên cần")
-            cursor.text("\(attendance.present + attendance.late)/\(attendance.heldSessions) buổi · \(attendance.late) muộn · \(attendance.excused) có phép · \(attendance.absent) vắng")
+            cursor.heading(String(localized: "feature.reports.chuyen.can"))
+            cursor.text(String.localizedStringWithFormat(String(localized: "feature.reports.buoi.muon.co.phep.vang"), String(describing: (attendance.present + attendance.late)), String(describing: (attendance.heldSessions)), String(describing: (attendance.late)), String(describing: (attendance.excused)), String(describing: (attendance.absent))))
 
             let stars = snapshot.stars
-            cursor.heading("Nhận xét theo sao")
-            cursor.text("★★★ \(stars.three) buổi · ★★ \(stars.two) buổi · ★ \(stars.one) buổi (tính trên phiếu đã gửi)")
+            cursor.heading(String(localized: "feature.reports.nhan.xet.theo.sao"))
+            cursor.text(String.localizedStringWithFormat(String(localized: "feature.reports.buoi.buoi.buoi.tinh.tren.phieu.a.gui"), String(describing: (stars.three)), String(describing: (stars.two)), String(describing: (stars.one))))
 
-            cursor.heading("Bài tập về nhà")
+            cursor.heading(String(localized: "feature.reports.bai.tap.ve.nha"))
             if snapshot.homework.isEmpty {
-                cursor.text("Chưa có kết quả bài tập nào được gửi trong tháng này.", muted: true)
+                cursor.text(String(localized: "feature.reports.chua.co.ket.qua.bai.tap.nao.uoc.gui.trong.thang"), muted: true)
             } else {
-                cursor.text("Phần · Tốt · Hoàn thành · Chưa", size: 11, muted: true)
+                cursor.text(String(localized: "feature.reports.phan.tot.hoan.thanh.chua"), size: 11, muted: true)
                 for item in snapshot.homework {
                     cursor.text("\(item.kind.label) · \(item.excellent) · \(item.done) · \(item.notDone)")
                 }
-                cursor.text("Chỉ tính kết quả đã gửi, không quy ra điểm.", size: 10, muted: true)
+                cursor.text(String(localized: "feature.reports.chi.tinh.ket.qua.a.gui.khong.quy.ra.iem"), size: 10, muted: true)
             }
 
-            cursor.heading("Điểm từng bài")
+            cursor.heading(String(localized: "feature.reports.iem.tung.bai"))
             if snapshot.tests.isEmpty {
-                cursor.text("Không có bài kiểm tra trong tháng này.", muted: true)
+                cursor.text(String(localized: "feature.reports.khong.co.bai.kiem.tra.trong.thang.nay"), muted: true)
             } else {
                 for test in snapshot.tests {
-                    let value = test.value.map { "\(I4Format.score($0))/\(test.max)" } ?? "Chưa có điểm"
+                      let value = test.value.map { "\(I4Format.score($0))/\(test.max)" } ?? String(localized: "feature.reports.noScore")
                     cursor.text("\(test.name) · \(I4Format.date(test.date)): \(value)")
                 }
             }
 
-            cursor.heading("Nhận xét chung")
-            cursor.text(snapshot.generalComment.isEmpty ? "Chưa có nhận xét chung." : snapshot.generalComment)
+            cursor.heading(String(localized: "feature.reports.nhan.xet.chung"))
+            cursor.text(snapshot.generalComment.isEmpty ? String(localized: "feature.reports.chua.co.nhan.xet.chung") : snapshot.generalComment)
         }
     }
 }

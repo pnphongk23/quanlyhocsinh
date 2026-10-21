@@ -17,9 +17,9 @@ struct I4MonthlyReport {
 
     var attendanceDetail: String {
         [
-            snapshot.attendance.late > 0 ? "\(snapshot.attendance.late) muộn" : "",
-            snapshot.attendance.excused > 0 ? "\(snapshot.attendance.excused) có phép" : "",
-            snapshot.attendance.absent > 0 ? "\(snapshot.attendance.absent) vắng" : ""
+            snapshot.attendance.late > 0 ? String.localizedStringWithFormat(String(localized: "feature.reports.muon"), String(describing: (snapshot.attendance.late))) : "",
+            snapshot.attendance.excused > 0 ? String.localizedStringWithFormat(String(localized: "feature.reports.co.phep"), String(describing: (snapshot.attendance.excused))) : "",
+            snapshot.attendance.absent > 0 ? String.localizedStringWithFormat(String(localized: "feature.reports.vang"), String(describing: (snapshot.attendance.absent))) : ""
         ].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 }
@@ -35,11 +35,11 @@ struct ReportSlot: Equatable {
     let detail: String
     let publishable: Bool
 
-    var publishLabel: String { status == .published || status == .republish ? "Phát hành lại" : "Phát hành" }
+    var publishLabel: String { status == .published || status == .republish ? String(localized: "feature.reports.phat.hanh.lai") : String(localized: "feature.reports.phat.hanh") }
 }
 
 enum ReportRules {
-    static let republishNote = "Điểm có cập nhật, cần phát hành lại"
+    static let republishNote = String(localized: "feature.reports.iem.co.cap.nhat.can.phat.hanh.lai")
 
     static func build(student: Student, month: String, sessions: [ClassSession], attendance: [Attendance],
                       tests: [TestDefinition], scores: [Score], slips: [SessionSlip],
@@ -118,13 +118,13 @@ enum ReportRules {
 
         var missing: [String] = []
         if !monthSessions.isEmpty && monthAttendance.count < monthSessions.count {
-            missing.append("Thiếu điểm danh")
+            missing.append(String(localized: "feature.reports.thieu.iem.danh"))
         }
         for test in monthTests where test.value == nil {
-            missing.append("Thiếu điểm \(test.name)")
+            missing.append(String.localizedStringWithFormat(String(localized: "feature.reports.thieu.iem"), String(describing: (test.name))))
         }
         let comment = generalComment.trimmingCharacters(in: .whitespacesAndNewlines)
-        if comment.isEmpty { missing.append("Thiếu nhận xét chung") }
+        if comment.isEmpty { missing.append(String(localized: "feature.reports.thieu.nhan.xet.chung")) }
 
         func count(_ status: AttendanceStatus) -> Int {
             monthAttendance.filter { $0.status == status }.count
@@ -149,30 +149,30 @@ enum ReportRules {
 
     static func suggestion(three: Int, two: Int, one: Int) -> String? {
         guard three + two + one > 0 else { return nil }
-        return "Gợi ý theo số buổi 3/2/1 sao của tháng: Tháng này con có \(three) buổi 3 sao, \(two) buổi 2 sao, \(one) buổi 1 sao."
+        return String.localizedStringWithFormat(String(localized: "feature.reports.goi.y.theo.so.buoi.3.2.1.sao.cua.thang.thang.nay"), String(describing: (three)), String(describing: (two)), String(describing: (one)))
     }
 
     /// Status pill of one student in the review list (`reportSlot`).
     static func slot(_ report: I4MonthlyReport, record: MonthlyReport?) -> ReportSlot {
         let published = record?.status == .published
         if !report.ready {
-            return ReportSlot(status: .missing, label: "Thiếu dữ liệu", tone: .warning,
+            return ReportSlot(status: .missing, label: String(localized: "feature.reports.thieu.du.lieu"), tone: .warning,
                               detail: report.missing.joined(separator: " · "), publishable: false)
         }
         if record?.needsRepublish == true {
-            return ReportSlot(status: .republish, label: "Cần phát hành lại", tone: .primary,
+            return ReportSlot(status: .republish, label: String(localized: "feature.reports.can.phat.hanh.lai"), tone: .primary,
                               detail: republishNote, publishable: true)
         }
         if published {
             let suffix = record.flatMap { I4Format.dayMonth(timestamp: $0.publishedAt) }.map { " · \($0)" } ?? ""
-            return ReportSlot(status: .published, label: "Đã phát hành\(suffix)", tone: .success,
+            return ReportSlot(status: .published, label: String.localizedStringWithFormat(String(localized: "feature.reports.a.phat.hanh.4e3f1cdf"), String(describing: (suffix))), tone: .success,
                               detail: "", publishable: false)
         }
         if record != nil {
-            return ReportSlot(status: .draft, label: "Nháp", tone: .neutral,
+            return ReportSlot(status: .draft, label: String(localized: "feature.reports.nhap"), tone: .neutral,
                               detail: "", publishable: true)
         }
-        return ReportSlot(status: .ready, label: "Sẵn sàng", tone: .success,
+        return ReportSlot(status: .ready, label: String(localized: "feature.reports.san.sang"), tone: .success,
                           detail: "", publishable: true)
     }
 
@@ -184,7 +184,7 @@ enum ReportRules {
     }
 
     static func publishAllLabel(_ count: Int) -> String {
-        count > 0 ? "Phát hành \(count) báo cáo" : "Phát hành báo cáo"
+        count > 0 ? String.localizedStringWithFormat(String(localized: "feature.reports.phat.hanh.bao.cao"), String(describing: (count))) : String(localized: "feature.reports.publishReports")
     }
 
     /// Month choices: sessions, tests, saved reports and the selected month, newest first.

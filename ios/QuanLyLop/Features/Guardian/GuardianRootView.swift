@@ -8,11 +8,11 @@ enum GuardianTab: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .overview: "Tổng quan"
-        case .attendance: "Điểm danh"
-        case .scores: "Điểm số"
-        case .comments: "Nhận xét"
-        case .reports: "Báo cáo"
+        case .overview: String(localized: "feature.guardian.tong.quan")
+        case .attendance: String(localized: "feature.guardian.iem.danh")
+        case .scores: String(localized: "feature.guardian.iem.so")
+        case .comments: String(localized: "feature.guardian.nhan.xet")
+        case .reports: String(localized: "feature.guardian.bao.cao")
         }
     }
 
@@ -87,7 +87,7 @@ struct GuardianRootView: View {
         // real demo class name (6A).
         if DemoFlag.screen == "settings" || DemoFlag.screen == "settings-blocked" {
             return dashboard.children
-                .map { "Bé \(AuthFormat.shortName($0.student.name)) (—)" }
+                .map { String.localizedStringWithFormat(String(localized: "feature.guardian.be.ea132ac1"), String(describing: (AuthFormat.shortName($0.student.name)))) }
                 .joined(separator: ", ")
         }
 #endif
@@ -109,8 +109,8 @@ struct GuardianRootView: View {
                     if let errorMessage {
                         GuardianErrorText(text: errorMessage)
                     } else {
-                        GuardianEmptyState(title: "Chưa có con nào được liên kết",
-                                           detail: "Liên hệ giáo viên nếu bạn cần xem dữ liệu của con.")
+                        GuardianEmptyState(title: String(localized: "feature.guardian.chua.co.con.nao.uoc.lien.ket"),
+                                           detail: String(localized: "feature.guardian.lien.he.giao.vien.neu.ban.can.xem.du.lieu.cua.co"))
                     }
                 }
                 .padding(.horizontal, 20)
@@ -135,10 +135,10 @@ struct GuardianRootView: View {
     private var missingTicket: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                GuardianPageHeader(eyebrow: child?.student.name, title: "Phiếu buổi học",
+                GuardianPageHeader(eyebrow: child?.student.name, title: String(localized: "feature.guardian.phieu.buoi.hoc"),
                                    backAction: { detail = nil })
-                GuardianEmptyState(title: "Không tìm thấy buổi học này",
-                                   detail: "Buổi học không thuộc lớp của con hoặc đã bị huỷ.")
+                GuardianEmptyState(title: String(localized: "feature.guardian.khong.tim.thay.buoi.hoc.nay"),
+                                   detail: String(localized: "feature.guardian.buoi.hoc.khong.thuoc.lop.cua.con.hoac.a.bi.huy"))
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
@@ -198,7 +198,7 @@ struct GuardianRootView: View {
             // `Báo cáo tháng 10` (ảnh 10 của P1), không phải nhãn tab "Báo cáo". Tháng lấy theo
             // báo cáo đã phát hành mới nhất, giống `publishedReportMonths()[0]` của prototype.
             GuardianPageHeader(eyebrow: child.student.name,
-                               title: "Báo cáo tháng \(GuardianFormat.monthNumber(child.latestReportMonth))")
+                               title: String.localizedStringWithFormat(String(localized: "feature.guardian.bao.cao.thang"), String(describing: (GuardianFormat.monthNumber(child.latestReportMonth)))))
         default:
             GuardianPageHeader(eyebrow: child.student.name, title: tab.label)
         }
@@ -281,7 +281,7 @@ struct GuardianRootView: View {
             selectFirstChild(next)
             errorMessage = nil
         } catch {
-            errorMessage = "Không tải được dữ liệu của con. Vui lòng thử lại."
+            errorMessage = String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai")
         }
     }
 

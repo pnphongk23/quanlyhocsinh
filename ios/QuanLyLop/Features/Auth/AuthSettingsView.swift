@@ -15,7 +15,7 @@ struct AuthSettingsView: View {
     var onClose: (() -> Void)? = nil
 
     var body: some View {
-        AuthPage(title: onClose == nil ? "Cài đặt" : nil,
+        AuthPage(title: onClose == nil ? String(localized: "feature.auth.cai.at") : nil,
                  horizontalPadding: AuthSettingsView.shellPadding,
                  topPadding: AuthSettingsView.shellTopPadding) {
             if let onClose { backRow(onClose) }
@@ -53,11 +53,11 @@ struct AuthSettingsView: View {
                         .frame(width: 48, height: 48)
                         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: 14))
                 }
-                .accessibilityLabel("Quay lại")
+                .accessibilityLabel(String(localized: "feature.auth.quay.lai"))
                 Spacer(minLength: 0)
             }
             .padding(.bottom, 8)
-            Text("Cài đặt").appText(AuthText.settingsTitle).foregroundStyle(AppColors.text)
+            Text(String(localized: "feature.auth.cai.at")).appText(AuthText.settingsTitle).foregroundStyle(AppColors.text)
         }
     }
 
@@ -81,12 +81,12 @@ struct AuthSettingsView: View {
                 Spacer(minLength: 0)
             }
             .padding(20)
-            profileRow("Tên hiển thị") {
+            profileRow(String(localized: "feature.auth.ten.hien.thi")) {
                 Text(displayName(user, membership))
                     .appText(AuthText.profileValue)
                     .foregroundStyle(AppColors.text)
             }
-            profileRow("Số điện thoại") {
+            profileRow(String(localized: "feature.auth.so.ien.thoai")) {
                 HStack(spacing: 6) {
                     Image(systemName: "lock")
                         .font(.system(size: 16, weight: .regular))
@@ -114,7 +114,7 @@ struct AuthSettingsView: View {
     private func menuCard(user: User, membership: Membership) -> some View {
         VStack(spacing: 0) {
             Button { model.show(.changePassword) } label: {
-                menuRow("Đổi mật khẩu") {
+                menuRow(String(localized: "feature.auth.oi.mat.khau")) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(AppColors.muted)
@@ -123,7 +123,7 @@ struct AuthSettingsView: View {
             .buttonStyle(.plain)
             if model.memberships.count > 1 {
                 Button { model.changeRoleFromSettings() } label: {
-                    menuRow("Đổi vai trò") {
+                    menuRow(String(localized: "feature.auth.oi.vai.tro")) {
                         HStack(spacing: 6) {
                             Text(AuthRoleBadge.label(membership.role))
                                 .appText(AuthText.menuValue)
@@ -150,13 +150,13 @@ struct AuthSettingsView: View {
         .frame(minHeight: 60)
         .contentShape(Rectangle())
         .overlay(alignment: .top) {
-            if title == "Đổi vai trò" { AppColors.divider.frame(height: 1) }
+            if title == String(localized: "feature.auth.oi.vai.tro") { AppColors.divider.frame(height: 1) }
         }
     }
 
     private var logoutButton: some View {
         Button { Task { await model.logout() } } label: {
-            Text("Đăng xuất")
+            Text(String(localized: "feature.auth.ang.xuat"))
                 .appText(AuthText.logout)
                 .foregroundStyle(AppColors.error)
                 .frame(maxWidth: .infinity)
@@ -217,12 +217,12 @@ private struct AuthLogoutBlockedSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 16) {
-                Text("Chưa thể đăng xuất")
+                Text(String(localized: "feature.auth.chua.the.ang.xuat"))
                     .appText(AppText.heading)
                     .foregroundStyle(AppColors.text)
                 Spacer(minLength: 0)
                 Button(action: close) {
-                    Text("Đóng")
+                    Text(String(localized: "feature.auth.ong"))
                         .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                         .foregroundStyle(AppColors.primaryInk)
                         .padding(.horizontal, 16)
@@ -239,8 +239,8 @@ private struct AuthLogoutBlockedSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             VStack(spacing: 10) {
-                SettingsDialogButton(title: "Đã hiểu", variant: .secondary, action: close)
-                SettingsDialogButton(title: "Thử đồng bộ lại", variant: .primary, action: retry)
+                SettingsDialogButton(title: String(localized: "feature.auth.a.hieu"), variant: .secondary, action: close)
+                SettingsDialogButton(title: String(localized: "feature.auth.thu.ong.bo.lai"), variant: .primary, action: retry)
             }
             .padding(.top, 18)
         }
@@ -301,24 +301,24 @@ struct AuthChangePasswordView: View {
                     .frame(width: 48, height: 48)
                     .background(AppColors.surface, in: RoundedRectangle(cornerRadius: 14))
             }
-            .accessibilityLabel("Quay lại")
+            .accessibilityLabel(String(localized: "feature.auth.quay.lai"))
             .padding(.bottom, 8)
-            Text("Đổi mật khẩu").appText(AuthText.settingsTitle).foregroundStyle(AppColors.text)
+            Text(String(localized: "feature.auth.oi.mat.khau")).appText(AuthText.settingsTitle).foregroundStyle(AppColors.text)
             VStack(spacing: 20) {
-                AuthPasswordField(label: "Mật khẩu hiện tại", value: $current,
+                AuthPasswordField(label: String(localized: "feature.auth.mat.khau.hien.tai"), value: $current,
                                   identifier: "change.current")
-                AuthPasswordField(label: "Mật khẩu mới", value: $newPassword,
+                AuthPasswordField(label: String(localized: "feature.auth.mat.khau.moi"), value: $newPassword,
                                   autoComplete: .newPassword,
                                   hasError: model.message != nil,
                                   errorText: model.message,
                                   identifier: "change.new",
                                   strengthPassword: newPassword)
-                AuthPasswordField(label: "Nhập lại mật khẩu mới", value: $confirmation,
+                AuthPasswordField(label: String(localized: "feature.auth.nhap.lai.mat.khau.moi"), value: $confirmation,
                                   autoComplete: .newPassword, hasError: mismatch,
                                   errorText: mismatch ? AuthCopy.passwordMismatch : nil,
                                   identifier: "change.confirm")
-                AuthCheckRow(ok: newPassword.count >= 8, text: "Tối thiểu 8 ký tự")
-                AuthSubmitButton(title: "Lưu mật khẩu mới", disabled: blocked) {
+                AuthCheckRow(ok: newPassword.count >= 8, text: String(localized: "feature.auth.toi.thieu.8.ky.tu"))
+                AuthSubmitButton(title: String(localized: "feature.auth.luu.mat.khau.moi"), disabled: blocked) {
                     Task {
                         await model.changePassword(current: current, newPassword: newPassword,
                                                    confirmation: confirmation)

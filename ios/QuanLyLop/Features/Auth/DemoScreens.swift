@@ -41,16 +41,16 @@ enum DemoScreens {
     static func membership(_ id: String, roleName: String, kind: ScopeKind,
                            systemKey: String? = nil) -> Membership {
         Membership(id: id,
-                   workspace: Workspace(id: "demo-workspace", name: "Lớp của cô Lan"),
+                   workspace: Workspace(id: "demo-workspace", name: String(localized: "feature.auth.lop.cua.co.lan")),
                    role: Role(id: "role-\(id)", name: roleName, systemKey: systemKey, scopeKind: kind),
                    status: "active", scopeEpoch: 1, permissions: nil)
     }
 
     @MainActor private static func build() -> AnyView? {
         guard let name = flag else { return nil }
-        let admin = membership("demo-admin", roleName: "Quản trị viên", kind: .workspace, systemKey: "admin")
-        let teacher = membership("demo-teacher", roleName: "Giáo viên", kind: .assignedClasses, systemKey: "teacher")
-        let guardian = membership("demo-guardian", roleName: "Phụ huynh", kind: .linkedStudents)
+        let admin = membership("demo-admin", roleName: String(localized: "feature.auth.quan.tri.vien"), kind: .workspace, systemKey: "admin")
+        let teacher = membership("demo-teacher", roleName: String(localized: "feature.auth.giao.vien"), kind: .assignedClasses, systemKey: "teacher")
+        let guardian = membership("demo-guardian", roleName: String(localized: "feature.auth.phu.huynh"), kind: .linkedStudents)
         let model = AuthModel(configuration: .fallback)
 
         switch name {
@@ -115,23 +115,23 @@ private struct DemoI4Screen: View {
     private var tabs: [TeacherTextTabs.Item] {
         if sessionFeature {
             return [
-                .init(id: "diem-danh", label: "Điểm danh"),
-                .init(id: "nhan-xet", label: "Nhận xét"),
-                .init(id: "btvn", label: "Bài tập về nhà"),
+                .init(id: "diem-danh", label: String(localized: "feature.auth.iem.danh")),
+                .init(id: "nhan-xet", label: String(localized: "feature.auth.nhan.xet")),
+                .init(id: "btvn", label: String(localized: "feature.auth.bai.tap.ve.nha")),
             ]
         }
         return [
-            .init(id: "buoi-hoc", label: "Buổi học"),
-            .init(id: "bai-kiem-tra", label: "Bài kiểm tra"),
-            .init(id: "diem", label: "Điểm"),
-            .init(id: "hoc-sinh", label: "Học sinh"),
-            .init(id: "bao-cao", label: "Báo cáo"),
+            .init(id: "buoi-hoc", label: String(localized: "feature.auth.buoi.hoc")),
+            .init(id: "bai-kiem-tra", label: String(localized: "feature.auth.bai.kiem.tra")),
+            .init(id: "diem", label: String(localized: "feature.auth.iem")),
+            .init(id: "hoc-sinh", label: String(localized: "feature.auth.hoc.sinh")),
+            .init(id: "bao-cao", label: String(localized: "feature.auth.bao.cao")),
         ]
     }
 
     init(kind: String) {
         self.kind = kind
-        let teacher = DemoScreens.membership("demo-teacher", roleName: "Giáo viên",
+        let teacher = DemoScreens.membership("demo-teacher", roleName: String(localized: "feature.auth.giao.vien"),
                                              kind: .assignedClasses, systemKey: "teacher")
         let model = AuthModel(configuration: .fallback)
         model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
@@ -153,7 +153,7 @@ private struct DemoI4Screen: View {
                                 if let test = data.tests(in: data.classID).first {
                                     TestScoresView(classID: data.classID, testID: test.id, data: data)
                                 } else {
-                                    AppEmptyState(title: "Chưa có bài kiểm tra")
+                                    AppEmptyState(title: String(localized: "feature.auth.chua.co.bai.kiem.tra"))
                                 }
                             case "homework":
                                 SessionHomeworkView(sessionID: data.defaultSession?.id ?? "fixture-session", data: data)
@@ -178,22 +178,22 @@ private struct DemoI4Screen: View {
     private var header: some View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
-                TeacherIconButton(systemImage: "chevron.backward", label: "Quay lại") {}
+                TeacherIconButton(systemImage: "chevron.backward", label: String(localized: "feature.auth.quay.lai")) {}
                 VStack(alignment: .leading, spacing: sessionFeature ? 0 : 0) {
                     if sessionFeature {
-                        Text("Tiếng Anh giao tiếp 6A")
+                        Text(String(localized: "feature.auth.tieng.anh.giao.tiep.6a"))
                             .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                             .foregroundStyle(AppColors.muted)
                             .lineLimit(1)
                     }
-                    Text(sessionFeature ? "Buổi 9 · 19/10" : "Tiếng Anh giao tiếp 6A")
+                    Text(sessionFeature ? String(localized: "feature.auth.buoi.9.19.10") : String(localized: "feature.auth.tieng.anh.giao.tiep.6a"))
                         .appText(sessionFeature ? AppTextStyle(size: 20, weight: .bold, lineHeight: 25)
                                                  : AppText.titleCompact)
                         .foregroundStyle(AppColors.text)
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                TeacherIconButton(systemImage: "ellipsis", label: "Tuỳ chọn lớp", tint: AppColors.muted) {}
+                TeacherIconButton(systemImage: "ellipsis", label: String(localized: "feature.auth.tuy.chon.lop"), tint: AppColors.muted) {}
             }
             .padding(.horizontal, 12)
             .padding(.top, 12)

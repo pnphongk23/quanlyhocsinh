@@ -64,14 +64,14 @@ struct SessionCommentsView: View {
     @ViewBuilder
     private var content: some View {
         if !data.canReadCommentsReports {
-            AppEmptyState(title: "Bạn không có quyền xem nhận xét") {
-                Text("Liên hệ Admin nếu bạn cần quyền truy cập.").appText(AppText.body)
+            AppEmptyState(title: String(localized: "feature.comments.ban.khong.co.quyen.xem.nhan.xet")) {
+                Text(String(localized: "feature.comments.lien.he.admin.neu.ban.can.quyen.truy.cap")).appText(AppText.body)
             }
         } else if let session {
             if session.status == .cancelled {
-                AppEmptyState(title: "Buổi học đã hủy nên không có phiếu buổi học")
+                AppEmptyState(title: String(localized: "feature.comments.buoi.hoc.a.huy.nen.khong.co.phieu.buoi.hoc"))
             } else if rows.isEmpty && leftStudents.isEmpty {
-                AppEmptyState(title: "Không có học sinh để nhận xét")
+                AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.e.nhan.xet"))
             } else {
                 if !leftStudents.isEmpty { infoBanner(session) }
                 filters
@@ -83,12 +83,12 @@ struct SessionCommentsView: View {
                 if data.canWriteCommentsReports { footer }
             }
         } else {
-            AppEmptyState(title: "Không tìm thấy buổi học để nhận xét")
+            AppEmptyState(title: String(localized: "feature.comments.khong.tim.thay.buoi.hoc.e.nhan.xet"))
         }
     }
 
     private func infoBanner(_ session: ClassSession) -> some View {
-        I4Banner(text: "Phiếu của buổi chỉ gồm em đang học vào ngày đó. Buổi \(session.sessionNumber ?? 0) có \(rows.count) em.")
+        I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.comments.phieu.cua.buoi.chi.gom.em.ang.hoc.vao.ngay.o.buo"), String(describing: (session.sessionNumber ?? 0)), String(describing: (rows.count))))
     }
 
     private var filters: some View {
@@ -114,7 +114,7 @@ struct SessionCommentsView: View {
     private var list: some View {
         VStack(spacing: 8) {
             if visibleRows.isEmpty {
-                AppEmptyState(title: "Không có học sinh trong mục này")
+                AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.trong.muc.nay"))
             }
             ForEach(visibleRows) { row in
                 ticketCard(row)
@@ -167,7 +167,7 @@ struct SessionCommentsView: View {
             }
             .frame(minHeight: 20)
         } else {
-            Text("Chưa chọn sao")
+            Text(String(localized: "feature.comments.chua.chon.sao"))
                 .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                 .foregroundStyle(AppColors.warning)
                 .frame(minHeight: 20)
@@ -184,17 +184,17 @@ struct SessionCommentsView: View {
                     .foregroundStyle(AppColors.text)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                AppPill(title: "Đã rời lớp · \(I4Format.dayMonth(student.leftAt ?? session?.date ?? ""))",
+                AppPill(title: String.localizedStringWithFormat(String(localized: "feature.comments.a.roi.lop"), String(describing: (I4Format.dayMonth(student.leftAt ?? session?.date ?? "")))),
                         tone: .neutral)
             }
-            Text("Không có phiếu từ buổi \(session?.sessionNumber ?? 0). Phiếu buổi \((session?.sessionNumber ?? 0) - 1) trở về trước vẫn giữ.")
+            Text(String.localizedStringWithFormat(String(localized: "feature.comments.khong.co.phieu.tu.buoi.phieu.buoi.tro.ve.truoc.v"), String(describing: (session?.sessionNumber ?? 0)), String(describing: ((session?.sessionNumber ?? 0) - 1))))
                 .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                 .foregroundStyle(AppColors.muted)
             if let oldSession {
                 Button {
                     target = TicketTarget(session: oldSession, student: student)
                 } label: {
-                    Text("Xem phiếu cũ của em")
+                    Text(String(localized: "feature.comments.xem.phieu.cu.cua.em"))
                         .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                         .foregroundStyle(AppColors.primaryInk)
                         .frame(minHeight: AppMetrics.tap)
@@ -217,7 +217,7 @@ struct SessionCommentsView: View {
             Button { showingSend = true } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "paperplane").font(.system(size: 16, weight: .regular))
-                    Text("Gửi phiếu cả lớp (\(sendableRows.count))")
+                    Text(String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))))
                         .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
                 }
                 .foregroundStyle(sendableRows.isEmpty ? AppColors.placeholder : AppColors.onPrimary)
@@ -234,23 +234,26 @@ struct SessionCommentsView: View {
     private var sendDialog: some View {
         let ungraded = CommentsRules.ungradedNotice(rows)
         let skipped = rows.filter { $0.stars == nil }
-        let previousLabel = rows.first?.previousSessionNumber.map { "buổi \($0)" } ?? "buổi trước"
-        return I4Dialog(title: "Gửi phiếu buổi \(session?.sessionNumber ?? 0)?", content: {
+        let previousLabel = rows.first?.previousSessionNumber.map { String.localizedStringWithFormat(String(localized: "feature.comments.buoi"), String(describing: ($0))) } ?? String(localized: "feature.comments.previousSession")
+        return I4Dialog(title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.buoi"), String(describing: (session?.sessionNumber ?? 0))), content: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
-                    statCard(value: "\(sendableRows.count)", label: "phiếu sẽ gửi",
+                    statCard(value: "\(sendableRows.count)", label: String(localized: "feature.comments.ticketsToSend"),
                              foreground: AppColors.primaryInk, background: AppColors.primarySoft)
-                    statCard(value: "\(skipped.count)", label: "em chưa chọn sao",
+                    statCard(value: "\(skipped.count)", label: String(localized: "feature.comments.studentsWithoutStars"),
                              foreground: AppColors.warning, background: AppColors.warningSoft)
                 }
                 if ungraded.parts > 0 {
-                    warningText("\(ungraded.students) em · \(ungraded.parts) phần BTVN \(previousLabel) còn “Chưa chấm”. Vẫn gửi được. Phụ huynh thấy “Chưa chấm” cho tới khi bạn chấm; chấm xong thì thấy ngay.")
+                    warningText(String.localizedStringWithFormat(String(localized: "feature.comments.em.phan.btvn.con.chua.cham.van.gui.uoc.phu.huynh"), String(describing: (ungraded.students)), String(describing: (ungraded.parts)), String(describing: (previousLabel))))
                 }
-                Text("Phụ huynh nhận **một thông báo** cho buổi này, gồm sao, câu mẫu, ghi chú\(ungraded.parts > 0 ? " và kết quả BTVN \(previousLabel)." : ".")")
+                  let homeworkSuffix = ungraded.parts > 0
+                      ? String.localizedStringWithFormat(String(localized: "feature.comments.homeworkResultSuffix"), previousLabel)
+                      : String(localized: "feature.comments.sentencePeriod")
+                  Text(String.localizedStringWithFormat(String(localized: "feature.comments.phu.huynh.nhan.mot.thong.bao.cho.buoi.nay.gom.sa"), homeworkSuffix))
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                     .foregroundStyle(AppColors.muted)
                 if !skipped.isEmpty {
-                    warningText("Chưa gửi được: \(skipped.map(\.student.name).joined(separator: ", ")). Chọn sao rồi gửi lại sau.")
+                    warningText(String.localizedStringWithFormat(String(localized: "feature.comments.chua.gui.uoc.chon.sao.roi.gui.lai.sau"), String(describing: (skipped.map(\.student.name).joined(separator: ", ")))))
                 }
                 if let sendError {
                     Text(sendError)
@@ -260,8 +263,8 @@ struct SessionCommentsView: View {
             }
         }, actions: {
             VStack(spacing: 8) {
-                AppButton(title: "Gửi \(sendableRows.count) phiếu", size: .large) { send() }
-                AppButton(title: "Quay lại", variant: .neutral, size: .large) { showingSend = false }
+                AppButton(title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu"), String(describing: (sendableRows.count))), size: .large) { send() }
+                AppButton(title: String(localized: "feature.comments.quay.lai"), variant: .neutral, size: .large) { showingSend = false }
             }
         }, dismiss: { showingSend = false })
     }
@@ -317,7 +320,7 @@ struct SessionCommentsView: View {
             case .queued:
                 showingSend = false
                 sendError = nil
-                toast = "Sẽ gửi khi có mạng"
+                toast = String(localized: "feature.comments.se.gui.khi.co.mang")
             case .failed(let message):
                 sendError = message
             }
@@ -395,8 +398,8 @@ struct I4TicketSheet: View {
     }
 
     private var badge: (label: String, tone: AppPill.Tone) {
-        if slip?.status == .sent { return ("Đã gửi", .success) }
-        return ("Chưa gửi", .neutral)
+        if slip?.status == .sent { return (String(localized: "feature.comments.a.gui"), .success) }
+        return (String(localized: "feature.comments.chua.gui"), .neutral)
     }
 
     var body: some View {
@@ -405,7 +408,7 @@ struct I4TicketSheet: View {
                 VStack(alignment: .leading, spacing: 14) {
                     header
                     if slip?.status == .sent {
-                        Text("Phụ huynh thấy thay đổi ngay")
+                        Text(String(localized: "feature.comments.phu.huynh.thay.thay.oi.ngay"))
                             .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                             .foregroundStyle(AppColors.success)
                             .frame(maxWidth: .infinity)
@@ -426,7 +429,7 @@ struct I4TicketSheet: View {
                 .padding(.bottom, 12)
             }
             if canWrite {
-                AppButton(title: "Lưu", size: .large) { save() }
+                AppButton(title: String(localized: "feature.comments.luu"), size: .large) { save() }
                     .disabled(saving)
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
@@ -453,7 +456,7 @@ struct I4TicketSheet: View {
                         .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 25))
                         .foregroundStyle(AppColors.text)
                         .lineLimit(1)
-                    Text("Nhận xét buổi \(session.sessionNumber ?? 0) · \(I4Format.dayMonth(session.date))")
+                    Text(String.localizedStringWithFormat(String(localized: "feature.comments.nhan.xet.buoi"), String(describing: (session.sessionNumber ?? 0)), String(describing: (I4Format.dayMonth(session.date)))))
                         .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                         .foregroundStyle(AppColors.muted)
                 }
@@ -465,13 +468,13 @@ struct I4TicketSheet: View {
 
     private var draftHint: some View {
         HStack(alignment: .center, spacing: 8) {
-            Text("Nháp, chưa lưu")
+            Text(String(localized: "feature.comments.nhap.chua.luu"))
                 .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                 .foregroundStyle(AppColors.warning)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(AppColors.warningSoft, in: Capsule())
-            Text("Sao và ghi chú được giữ khi bạn đóng sheet.")
+            Text(String(localized: "feature.comments.sao.va.ghi.chu.uoc.giu.khi.ban.ong.sheet"))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.2))
                 .foregroundStyle(AppColors.muted)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -502,13 +505,13 @@ struct I4TicketSheet: View {
 
     private var templateBox: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(stars?.template ?? "Chọn mức sao để xem câu mẫu gửi phụ huynh.")
+            Text(stars?.template ?? String(localized: "feature.comments.chon.muc.sao.e.xem.cau.mau.gui.phu.huynh"))
                 .appText(AppTextStyle(size: 16, weight: .regular, lineHeight: 24.8))
                 .foregroundStyle(AppColors.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 6) {
                 Image(systemName: "lock").font(.system(size: 12, weight: .regular))
-                Text("Câu mẫu cố định theo mức sao")
+                Text(String(localized: "feature.comments.cau.mau.co.inh.theo.muc.sao"))
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
             }
             .foregroundStyle(AppColors.muted)
@@ -522,14 +525,14 @@ struct I4TicketSheet: View {
     private var noteField: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 4) {
-                Text("Ghi chú")
+                Text(String(localized: "feature.comments.ghi.chu"))
                     .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                     .foregroundStyle(AppColors.text)
-                Text("· không bắt buộc")
+                Text(String(localized: "feature.comments.khong.bat.buoc"))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                     .foregroundStyle(AppColors.muted)
             }
-            TextField("Ghi chú thêm cho phụ huynh…", text: $note, axis: .vertical)
+            TextField(String(localized: "feature.comments.ghi.chu.them.cho.phu.huynh"), text: $note, axis: .vertical)
                 .lineLimit(2...5)
                 .font(.system(size: 15))
                 .foregroundStyle(AppColors.text)
@@ -543,17 +546,17 @@ struct I4TicketSheet: View {
     private var homeworkBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 0) {
-                Text(previousSessionNumber.map { "BTVN buổi \($0)" } ?? "BTVN buổi trước")
+                Text(previousSessionNumber.map { String.localizedStringWithFormat(String(localized: "feature.comments.btvn.buoi"), String(describing: ($0))) } ?? String(localized: "feature.comments.previousHomework"))
                     .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                     .foregroundStyle(AppColors.text)
-                Text(" · chỉ đọc")
+                Text(String(localized: "feature.comments.chi.oc"))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                     .foregroundStyle(AppColors.muted)
             }
             if sections.isEmpty {
                 Text(previousSessionNumber == nil
-                     ? "Buổi đầu · chưa có BTVN buổi trước"
-                     : "Buổi trước không giao BTVN")
+                     ? String(localized: "feature.comments.buoi.au.chua.co.btvn.buoi.truoc")
+                     : String(localized: "feature.comments.buoi.truoc.khong.giao.btvn"))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                     .foregroundStyle(AppColors.muted)
             } else {
@@ -564,7 +567,7 @@ struct I4TicketSheet: View {
             if canWrite {
                 Button { onGoHomework() } label: {
                     HStack(spacing: 4) {
-                        Text("Chấm ở tab Bài tập về nhà")
+                        Text(String(localized: "feature.comments.cham.o.tab.bai.tap.ve.nha"))
                             .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                         Image(systemName: "chevron.right").font(.system(size: 15, weight: .semibold))
                     }
@@ -585,7 +588,7 @@ struct I4TicketSheet: View {
                 .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                 .foregroundStyle(AppColors.text)
             Spacer(minLength: 0)
-            Text(level?.label ?? "Chưa chấm")
+            Text(level?.label ?? String(localized: "feature.comments.chua.cham"))
                 .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                 .foregroundStyle(level?.foreground ?? AppColors.warning)
         }

@@ -27,17 +27,17 @@ struct GuardianOverviewPage: View {
     private var attendanceCard: some View {
         let data = child.attendanceMonth(month)
         let attended = data.present + data.late
-        return GuardianStatCard(label: "Đi học",
+        return GuardianStatCard(label: String(localized: "feature.guardian.i.hoc"),
                                 value: "\(attended)/\(data.rows.count)",
-                                detail: "buổi · \(data.late) muộn, \(data.excused) có phép")
+                                detail: String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.muon.co.phep"), String(describing: (data.late)), String(describing: (data.excused))))
     }
 
     private func latestTicket(_ item: GuardianSentSlip) -> some View {
         Button { openTicket(item.session) } label: {
             GuardianTicketCard {
-                GuardianCardHead(title: "Nhận xét mới nhất",
+                GuardianCardHead(title: String(localized: "feature.guardian.nhan.xet.moi.nhat"),
                                  trailing: AnyView(
-                                    Text("Buổi \(item.session.sessionNumber ?? 0) ›")
+                                    Text(String.localizedStringWithFormat(String(localized: "feature.guardian.buoi"), String(describing: (item.session.sessionNumber ?? 0))))
                                         .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                                         .foregroundStyle(AppColors.muted)))
                 GuardianStars(level: item.slip.stars ?? .one)
@@ -46,24 +46,24 @@ struct GuardianOverviewPage: View {
                     .foregroundStyle(AppColors.text)
                     .multilineTextAlignment(.leading)
                 if !item.slip.note.isEmpty {
-                    GuardianNoteBlock(label: "Ghi chú", text: item.slip.note)
+                    GuardianNoteBlock(label: String(localized: "feature.guardian.ghi.chu"), text: item.slip.note)
                 }
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Mở phiếu buổi học buổi \(item.session.sessionNumber ?? 0)")
+        .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.guardian.mo.phieu.buoi.hoc.buoi"), String(describing: (item.session.sessionNumber ?? 0))))
     }
 
     private var recentScores: some View {
         let rows = Array(child.scoreRows(in: month).prefix(3))
         return VStack(alignment: .leading, spacing: 8) {
-            GuardianCardHead(title: "Điểm gần đây",
+            GuardianCardHead(title: String(localized: "feature.guardian.iem.gan.ay"),
                              trailing: AnyView(
-                                Button("Xem tất cả", action: openScores)
+                                Button(String(localized: "feature.guardian.xem.tat.ca"), action: openScores)
                                     .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                                     .foregroundStyle(AppColors.primaryInk)))
             if rows.isEmpty {
-                GuardianMutedText(text: "Chưa có điểm trong tháng này.")
+                GuardianMutedText(text: String(localized: "feature.guardian.chua.co.iem.trong.thang.nay"))
             } else {
                 GuardianScoreRows(rows: rows)
             }
@@ -92,7 +92,7 @@ struct GuardianAttendancePage: View {
                 GuardianStatCell(value: data.absent, name: AttendanceStatus.absent.guardianLabel)
             }
             if data.rows.isEmpty {
-                GuardianMutedText(text: "Chưa có buổi học nào trong tháng này.")
+                GuardianMutedText(text: String(localized: "feature.guardian.chua.co.buoi.hoc.nao.trong.thang.nay"))
             } else {
                 VStack(spacing: 8) {
                     ForEach(data.rows) { row in
@@ -110,12 +110,12 @@ struct GuardianAttendancePage: View {
                     .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                     .foregroundStyle(AppColors.text)
                 if row.status == .late, let time = row.lateAt, !time.isEmpty {
-                    Text("Đến muộn \(time)")
+                    Text(String.localizedStringWithFormat(String(localized: "feature.guardian.en.muon"), String(describing: (time))))
                         .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.2))
                         .foregroundStyle(AppColors.muted)
                 }
                 if !row.note.isEmpty {
-                    Text("Ghi chú: \(row.note)")
+                    Text(String.localizedStringWithFormat(String(localized: "feature.guardian.ghi.chu.2c1e0c8e"), String(describing: (row.note))))
                         .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.2))
                         .foregroundStyle(AppColors.muted)
                 }
@@ -125,7 +125,7 @@ struct GuardianAttendancePage: View {
                 AppPill(title: status.guardianPillLabel, tone: status.guardianTone)
                     .fixedSize()
             } else {
-                Text("Chưa điểm danh")
+                Text(String(localized: "feature.guardian.chua.iem.danh"))
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                     .foregroundStyle(AppColors.muted)
             }
@@ -148,12 +148,12 @@ struct GuardianScoresPage: View {
         VStack(alignment: .leading, spacing: 12) {
             GuardianMonthSwitch(month: month, months: child.months, select: selectMonth)
             if rows.isEmpty {
-                GuardianMutedText(text: "Chưa có bài kiểm tra nào trong tháng này.")
+                GuardianMutedText(text: String(localized: "feature.guardian.chua.co.bai.kiem.tra.nao.trong.thang.nay"))
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    GuardianCardHead(title: "Điểm từng bài",
+                    GuardianCardHead(title: String(localized: "feature.guardian.iem.tung.bai"),
                                      trailing: AnyView(
-                                        Text("\(rows.filter { $0.value != nil }.count) bài có điểm")
+                                        Text(String.localizedStringWithFormat(String(localized: "feature.guardian.bai.co.iem"), String(describing: (rows.filter { $0.value != nil }.count))))
                                             .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                                             .foregroundStyle(AppColors.muted)))
                     GuardianScoreRows(rows: rows)
@@ -175,13 +175,13 @@ struct GuardianCommentsPage: View {
     var body: some View {
         let tickets = child.sentSlips
         VStack(alignment: .leading, spacing: 12) {
-            Text("Phiếu buổi học theo từng buổi: sao, câu mẫu, ghi chú và kết quả BTVN.")
+            Text(String(localized: "feature.guardian.phieu.buoi.hoc.theo.tung.buoi.sao.cau.mau.ghi.ch"))
                 .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                 .foregroundStyle(AppColors.muted)
                 .padding(.top, -4)
             if tickets.isEmpty {
-                GuardianEmptyState(title: "Chưa có phiếu buổi học",
-                                   detail: "Cô gửi phiếu sau buổi học, phiếu hiện ở đây khi cô đã gửi.")
+                GuardianEmptyState(title: String(localized: "feature.guardian.chua.co.phieu.buoi.hoc"),
+                                   detail: String(localized: "feature.guardian.co.gui.phieu.sau.buoi.hoc.phieu.hien.o.ay.khi.co"))
             }
             ForEach(Array(tickets.enumerated()), id: \.element.id) { index, item in
                 ticket(item, isNew: index == 0)
@@ -192,10 +192,10 @@ struct GuardianCommentsPage: View {
     private func ticket(_ item: GuardianSentSlip, isNew: Bool) -> some View {
         Button { openTicket(item.session) } label: {
             GuardianTicketCard(isNew: isNew) {
-                GuardianCardHead(title: "Buổi \(item.session.sessionNumber ?? 0) · \(GuardianFormat.longDayMonth(item.session.date))",
+                GuardianCardHead(title: String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.c9f84c0e"), String(describing: (item.session.sessionNumber ?? 0)), String(describing: (GuardianFormat.longDayMonth(item.session.date)))),
                                  trailing: AnyView(
                                     HStack(spacing: 8) {
-                                        if isNew { AppPill(title: "Mới", tone: .primary) }
+                                        if isNew { AppPill(title: String(localized: "feature.guardian.moi"), tone: .primary) }
                                         GuardianStars(level: item.slip.stars ?? .one)
                                     }))
                 Text(item.slip.stars?.template ?? "")
@@ -203,11 +203,11 @@ struct GuardianCommentsPage: View {
                     .foregroundStyle(AppColors.text)
                     .multilineTextAlignment(.leading)
                 if !item.slip.note.isEmpty {
-                    GuardianNoteBlock(label: "Ghi chú", text: item.slip.note)
+                    GuardianNoteBlock(label: String(localized: "feature.guardian.ghi.chu"), text: item.slip.note)
                 }
                 if let homework = child.gradedHomework(for: item.session), !homework.parts.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Kết quả BTVN buổi \(homework.sessionNumber)")
+                        Text(String.localizedStringWithFormat(String(localized: "feature.guardian.ket.qua.btvn.buoi"), String(describing: (homework.sessionNumber))))
                             .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                             .foregroundStyle(AppColors.muted)
                         GuardianPillFlow(parts: homework.parts)
@@ -216,7 +216,7 @@ struct GuardianCommentsPage: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Mở phiếu buổi học buổi \(item.session.sessionNumber ?? 0)")
+        .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.guardian.mo.phieu.buoi.hoc.buoi"), String(describing: (item.session.sessionNumber ?? 0))))
     }
 }
 

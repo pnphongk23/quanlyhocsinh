@@ -170,7 +170,7 @@ struct GuardianChildData: Sendable, Identifiable {
     /// Dòng phụ trong hồ sơ: "Bé Gia Bảo (6A), Bé Bảo Ngọc (6A)".
     var childrenMeta: String {
         let short = AuthFormat.shortName(student.name)
-        return "Bé \(short) (\(AuthFormat.classShortLabel(className)))"
+        return String.localizedStringWithFormat(String(localized: "feature.guardian.be"), String(describing: (short)), String(describing: (AuthFormat.classShortLabel(className))))
     }
 }
 
@@ -252,7 +252,7 @@ struct GuardianTicketDetail: Identifiable, Sendable {
 enum GuardianFormat {
     static let currentMonth = String(ISO8601DateFormatter().string(from: .now).prefix(7))
 
-    private static let weekdays = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"]
+    private static let weekdays = [String(localized: "feature.guardian.chu.nhat"), String(localized: "feature.guardian.thu.hai"), String(localized: "feature.guardian.thu.ba"), String(localized: "feature.guardian.thu.tu"), String(localized: "feature.guardian.thu.nam"), String(localized: "feature.guardian.thu.sau"), String(localized: "feature.guardian.thu.bay")]
 
     private static func date(of iso: String) -> DateComponents? {
         let parts = iso.split(separator: "-").compactMap { Int($0) }
@@ -284,17 +284,17 @@ enum GuardianFormat {
     static func longDayMonth(_ iso: String) -> String {
         let parts = iso.split(separator: "-")
         guard parts.count == 3, let day = Int(parts[2]), let month = Int(parts[1]) else { return iso }
-        return "\(day) tháng \(month)"
+        return String.localizedStringWithFormat(String(localized: "feature.guardian.thang"), String(describing: (day)), String(describing: (month)))
     }
 
     /// "Tháng 10"
-    static func monthLabel(_ value: String) -> String { "Tháng \(monthNumber(value))" }
+    static func monthLabel(_ value: String) -> String { String.localizedStringWithFormat(String(localized: "feature.guardian.thang.6a38e3e2"), String(describing: (monthNumber(value)))) }
 
     static func monthNumber(_ value: String) -> Int { Int(value.dropFirst(5)) ?? 0 }
 
     /// Điểm theo dấu chấm như ảnh: "7.2"; nil = "Chưa có điểm".
     static func scoreText(_ value: Double?) -> String {
-        guard let value else { return "Chưa có điểm" }
+        guard let value else { return String(localized: "feature.guardian.chua.co.iem") }
         return String(format: "%.1f", value)
     }
 
@@ -310,8 +310,8 @@ enum GuardianFormat {
 
     /// "Buổi 18" hoặc "Buổi bù" khi máy chủ không trả số buổi.
     static func sessionPrefix(_ session: ClassSession) -> String {
-        if let number = session.sessionNumber { return "Buổi \(number)" }
-        return session.origin == .manual ? "Buổi bù" : "Buổi học"
+        if let number = session.sessionNumber { return String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.b945f512"), String(describing: (number))) }
+        return session.origin == .manual ? String(localized: "feature.guardian.buoi.bu") : String(localized: "feature.guardian.buoi.hoc")
     }
 }
 
@@ -319,20 +319,20 @@ extension AttendanceStatus {
     /// `.pill` chữ hoa đầu ("Có mặt"), khác nhãn thống kê chữ thường.
     var guardianPillLabel: String {
         switch self {
-        case .present: "Có mặt"
-        case .late: "Muộn"
-        case .excused: "Có phép"
-        case .absent: "Vắng"
+        case .present: String(localized: "feature.guardian.co.mat")
+        case .late: String(localized: "feature.guardian.muon")
+        case .excused: String(localized: "feature.guardian.co.phep")
+        case .absent: String(localized: "feature.guardian.vang")
         }
     }
 
     /// Tên trong ô thống kê: "có mặt", "muộn", "có phép", "vắng".
     var guardianLabel: String {
         switch self {
-        case .present: "có mặt"
-        case .late: "muộn"
-        case .excused: "có phép"
-        case .absent: "vắng"
+        case .present: String(localized: "feature.guardian.co.mat.e40cb3ed")
+        case .late: String(localized: "feature.guardian.muon.70dc7b1f")
+        case .excused: String(localized: "feature.guardian.co.phep.714fbab4")
+        case .absent: String(localized: "feature.guardian.vang.67bfe384")
         }
     }
 
@@ -350,10 +350,10 @@ extension HomeworkKind {
     /// `HOMEWORK_KIND_LABELS`: nhãn đầy đủ, màn phụ huynh viết hoa bằng `.textCase`.
     var guardianKindLabel: String {
         switch self {
-        case .vocabulary: "Luyện từ vựng"
-        case .reading: "Luyện đọc"
-        case .speaking: "Luyện nói"
-        case .exercise: "Bài tập"
+        case .vocabulary: String(localized: "feature.guardian.luyen.tu.vung")
+        case .reading: String(localized: "feature.guardian.luyen.oc")
+        case .speaking: String(localized: "feature.guardian.luyen.noi")
+        case .exercise: String(localized: "feature.guardian.bai.tap")
         }
     }
 
@@ -364,9 +364,9 @@ extension HomeworkKind {
 extension HomeworkLevel {
     var guardianLabel: String {
         switch self {
-        case .excellent: "Hoàn thành tốt"
-        case .done: "Hoàn thành"
-        case .notDone: "Chưa hoàn thành"
+        case .excellent: String(localized: "feature.guardian.hoan.thanh.tot")
+        case .done: String(localized: "feature.guardian.hoan.thanh")
+        case .notDone: String(localized: "feature.guardian.chua.hoan.thanh")
         }
     }
 

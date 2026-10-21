@@ -17,26 +17,26 @@ enum TeacherDemoData {
                                   previewStudents: students,
                                   previewSessions: sessions,
                                   previewAttendance: attendance(for: sessions),
-                                  displayName: "Cô Lan")
+                                  displayName: String(localized: "feature.classes.co.lan"))
     }
 
     static func emptyData() -> TeacherFeatureData {
         TeacherFeatureData(previewClasses: [], previewStudents: [], previewSessions: [])
     }
 
-    static let classroom = Classroom(id: classID, name: "Tiếng Anh giao tiếp 6A",
+    static let classroom = Classroom(id: classID, name: String(localized: "feature.classes.tieng.anh.giao.tiep.6a"),
                                      status: .active, weekdays: [1, 3], startTime: "18:00", version: 1)
 
     private static let roster: [(name: String, phone: String?)] = [
-        ("Nguyễn Minh Anh", "0900000002"),
-        ("Trần Gia Bảo", "0900000002"),
-        ("Lê Khánh Chi", "09xx xxx xxx"),
-        ("Phạm Đức Dũng", "09xx xxx xxx"),
-        ("Hoàng Thu Hà", nil),
-        ("Vũ Quang Huy", "09xx xxx xxx"),
-        ("Đặng Ngọc Lan", "09xx xxx xxx"),
-        ("Bùi Tuấn Kiệt", "09xx xxx xxx"),
-        ("Ngô Bảo Ngọc", "09xx xxx xxx"),
+        (String(localized: "feature.classes.nguyen.minh.anh"), "0900000002"),
+        (String(localized: "feature.classes.tran.gia.bao"), "0900000002"),
+        (String(localized: "feature.classes.le.khanh.chi"), "09xx xxx xxx"),
+        (String(localized: "feature.classes.pham.uc.dung"), "09xx xxx xxx"),
+        (String(localized: "feature.classes.hoang.thu.ha"), nil),
+        (String(localized: "feature.classes.vu.quang.huy"), "09xx xxx xxx"),
+        (String(localized: "feature.classes.ang.ngoc.lan"), "09xx xxx xxx"),
+        (String(localized: "feature.classes.bui.tuan.kiet"), "09xx xxx xxx"),
+        (String(localized: "feature.classes.ngo.bao.ngoc"), "09xx xxx xxx"),
     ]
 
     static var students: [Student] {
@@ -45,7 +45,7 @@ enum TeacherDemoData {
                     parentPhone: entry.phone, enrolledAt: addDays(-50), leftAt: nil,
                     status: .active, version: 1)
         }
-        items.append(Student(id: "demo-student-left", classId: classID, name: "Đỗ Hải Nam",
+        items.append(Student(id: "demo-student-left", classId: classID, name: String(localized: "feature.classes.o.hai.nam"),
                              parentPhone: "09xx xxx xxx", enrolledAt: addDays(-50),
                              leftAt: addDays(-12), status: .left, version: 2))
         return items
@@ -65,7 +65,7 @@ enum TeacherDemoData {
                                   version: 1, sessionNumber: 9))
         items.append(ClassSession(id: "demo-session-cancelled", classId: classID, date: addDays(-5),
                                   startTime: "18:00", origin: .manual, isMakeup: true,
-                                  status: .cancelled, note: "Buổi bù bị hủy", version: 1))
+                                  status: .cancelled, note: String(localized: "feature.classes.buoi.bu.bi.huy"), version: 1))
         items.append(ClassSession(id: "demo-session-extra", classId: classID, date: addDays(4),
                                   startTime: "17:00", origin: .manual, status: .planned,
                                   version: 1, sessionNumber: 10))

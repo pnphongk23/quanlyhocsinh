@@ -17,11 +17,11 @@ struct TeacherNewClassView: View {
         TeacherScroll {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                TeacherField(label: "Tên lớp", text: $name, placeholder: "Ví dụ: IELTS Foundation",
+                TeacherField(label: String(localized: "feature.classes.ten.lop"), text: $name, placeholder: String(localized: "feature.classes.vi.du.ielts.foundation"),
                              identifier: "class.name")
                 weekdayField
                 timeField
-                Text("Mỗi bài kiểm tra có thang điểm riêng, mặc định 15; sửa được khi tạo bài.")
+                Text(String(localized: "feature.classes.moi.bai.kiem.tra.co.thang.iem.rieng.mac.inh.15.s"))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
                 studentNote
@@ -41,8 +41,8 @@ struct TeacherNewClassView: View {
 
     private var header: some View {
         HStack(spacing: 4) {
-            TeacherIconButton(systemImage: "chevron.backward", label: "Quay lại") { dismiss() }
-            Text("Tạo lớp mới")
+            TeacherIconButton(systemImage: "chevron.backward", label: String(localized: "feature.classes.quay.lai")) { dismiss() }
+            Text(String(localized: "feature.classes.tao.lop.moi"))
                 .appText(AppText.titleCompact)
                 .foregroundStyle(AppColors.text)
             Spacer(minLength: 0)
@@ -52,7 +52,7 @@ struct TeacherNewClassView: View {
 
     private var weekdayField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Ngày học trong tuần").appText(AppText.label).foregroundStyle(AppColors.text)
+            Text(String(localized: "feature.classes.ngay.hoc.trong.tuan")).appText(AppText.label).foregroundStyle(AppColors.text)
             HStack(spacing: 8) {
                 ForEach(Self.weekdayLabels, id: \.value) { day in weekdayButton(day) }
             }
@@ -77,7 +77,7 @@ struct TeacherNewClassView: View {
 
     private var timeField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Giờ bắt đầu").appText(AppText.label).foregroundStyle(AppColors.text)
+            Text(String(localized: "feature.classes.gio.bat.au")).appText(AppText.label).foregroundStyle(AppColors.text)
             Button { showingTime.toggle() } label: {
                 HStack {
                     Text(time)
@@ -96,7 +96,7 @@ struct TeacherNewClassView: View {
                         .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Giờ bắt đầu")
+            .accessibilityLabel(String(localized: "feature.classes.gio.bat.au"))
             if showingTime {
                 DatePicker("", selection: $timeSelection, displayedComponents: .hourAndMinute)
                     .datePickerStyle(.wheel)
@@ -110,8 +110,8 @@ struct TeacherNewClassView: View {
 
     private var studentNote: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Thêm học sinh vào lớp").appText(AppText.label).foregroundStyle(AppColors.text)
-            Text("Sau khi tạo lớp, mở lớp rồi vào mục Học sinh để thêm từng em. Học sinh học nhiều lớp vẫn có điểm danh và điểm riêng cho từng lớp.")
+            Text(String(localized: "feature.classes.them.hoc.sinh.vao.lop")).appText(AppText.label).foregroundStyle(AppColors.text)
+            Text(String(localized: "feature.classes.sau.khi.tao.lop.mo.lop.roi.vao.muc.hoc.sinh.e.th"))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                 .foregroundStyle(AppColors.muted)
                 .padding(.horizontal, 14)
@@ -122,7 +122,7 @@ struct TeacherNewClassView: View {
     }
 
     private var stickyBar: some View {
-        AppButton(title: saving ? "Đang lưu…" : "Tạo lớp", size: .large) { Task { await save() } }
+        AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.tao.lop"), size: .large) { Task { await save() } }
             .disabled(saving)
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.vertical, 8)
@@ -140,7 +140,7 @@ struct TeacherNewClassView: View {
     private func save() async {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !weekdays.isEmpty else {
-            error = "Nhập tên lớp, chọn ít nhất một ngày và kiểm tra giờ học."
+            error = String(localized: "feature.classes.nhap.ten.lop.chon.it.nhat.mot.ngay.va.kiem.tra.g")
             return
         }
         saving = true
@@ -149,7 +149,7 @@ struct TeacherNewClassView: View {
             try await data.createClass(name: name, weekdays: weekdays.sorted(), time: time)
             dismiss()
         } catch {
-            self.error = "Không tạo được lớp. Vui lòng thử lại."
+            self.error = String(localized: "feature.classes.khong.tao.uoc.lop.vui.long.thu.lai")
         }
     }
 
@@ -182,26 +182,26 @@ struct TeacherClassDetailView: View {
 
     private var tabs: [TeacherTextTabs.Item] {
         var items: [TeacherTextTabs.Item] = []
-        if data.canReadAttendance { items.append(.init(id: "buoi-hoc", label: "Buổi học")) }
+        if data.canReadAttendance { items.append(.init(id: "buoi-hoc", label: String(localized: "feature.classes.buoi.hoc"))) }
         if data.canReadScores {
-            items.append(.init(id: "bai-kiem-tra", label: "Bài kiểm tra"))
-            items.append(.init(id: "diem", label: "Điểm"))
+            items.append(.init(id: "bai-kiem-tra", label: String(localized: "feature.classes.bai.kiem.tra")))
+            items.append(.init(id: "diem", label: String(localized: "feature.classes.iem")))
         }
-        if data.canReadStudents { items.append(.init(id: "hoc-sinh", label: "Học sinh")) }
-        if data.canReadReports { items.append(.init(id: "bao-cao", label: "Báo cáo")) }
+        if data.canReadStudents { items.append(.init(id: "hoc-sinh", label: String(localized: "feature.classes.hoc.sinh"))) }
+        if data.canReadReports { items.append(.init(id: "bao-cao", label: String(localized: "feature.classes.bao.cao"))) }
         return items
     }
 
     var body: some View {
         VStack(spacing: 0) {
             if !data.canReadClasses {
-                AppEmptyState(title: "Bạn không có quyền xem lớp này")
+                AppEmptyState(title: String(localized: "feature.classes.ban.khong.co.quyen.xem.lop.nay"))
                     .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             } else if let klass {
                 header(klass)
                 tabBody
             } else {
-                AppEmptyState(title: "Không tìm thấy lớp")
+                AppEmptyState(title: String(localized: "feature.classes.khong.tim.thay.lop"))
                     .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             }
         }
@@ -225,14 +225,14 @@ struct TeacherClassDetailView: View {
     private func header(_ klass: Classroom) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
-                TeacherIconButton(systemImage: "chevron.backward", label: "Quay lại") { dismiss() }
+                TeacherIconButton(systemImage: "chevron.backward", label: String(localized: "feature.classes.quay.lai")) { dismiss() }
                 Text(klass.name)
                     .appText(AppText.titleCompact)
                     .foregroundStyle(AppColors.text)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if data.canWriteClasses {
-                    TeacherIconButton(systemImage: "ellipsis", label: "Tuỳ chọn lớp",
+                    TeacherIconButton(systemImage: "ellipsis", label: String(localized: "feature.classes.tuy.chon.lop"),
                                       tint: AppColors.muted) { showingMenu = true }
                 }
             }
@@ -264,7 +264,7 @@ struct TeacherClassDetailView: View {
         ZStack(alignment: .topTrailing) {
             AppColors.scrim.ignoresSafeArea().onTapGesture { showingMenu = false }
             TeacherOptionsMenu(items: menuItems(klass),
-                               note: klass.status == .archived ? "Lớp này đã lưu trữ." : nil) {
+                               note: klass.status == .archived ? String(localized: "feature.classes.lop.nay.a.luu.tru") : nil) {
                 showingMenu = false
             }
             .padding(.top, 104)
@@ -274,15 +274,15 @@ struct TeacherClassDetailView: View {
 
     private func menuItems(_ klass: Classroom) -> [TeacherMenuItem] {
         [
-            TeacherMenuItem(label: "Sửa lớp", systemImage: "pencil") {
+            TeacherMenuItem(label: String(localized: "feature.classes.sua.lop"), systemImage: "pencil") {
                 showingMenu = false
                 showingEdit = true
             },
-            TeacherMenuItem(label: "Sửa lịch học", systemImage: "calendar") {
+            TeacherMenuItem(label: String(localized: "feature.classes.sua.lich.hoc"), systemImage: "calendar") {
                 showingMenu = false
                 showingSchedule = true
             },
-            TeacherMenuItem(label: "Lưu trữ lớp", systemImage: "archivebox", danger: true) {
+            TeacherMenuItem(label: String(localized: "feature.classes.luu.tru.lop"), systemImage: "archivebox", danger: true) {
                 showingMenu = false
                 Task { await archive(klass) }
             },
@@ -294,7 +294,7 @@ struct TeacherClassDetailView: View {
             try await data.archiveClass(klass)
             error = nil
         } catch {
-            self.error = "Không lưu trữ được lớp."
+            self.error = String(localized: "feature.classes.khong.luu.tru.uoc.lop")
         }
     }
 }
@@ -313,22 +313,22 @@ struct TeacherEditClassView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
-                TeacherField(label: "Tên lớp", text: $name, identifier: "class.edit.name")
-                AppButton(title: "Sửa lịch học", variant: .secondary, size: .large) {
+                TeacherField(label: String(localized: "feature.classes.ten.lop"), text: $name, identifier: "class.edit.name")
+                AppButton(title: String(localized: "feature.classes.sua.lich.hoc"), variant: .secondary, size: .large) {
                     dismiss()
                     editSchedule()
                 }
                 if let error { Text(error).appText(AppText.muted).foregroundStyle(AppColors.error) }
-                AppButton(title: saving ? "Đang lưu…" : "Lưu thay đổi", size: .large) { Task { await save() } }
+                AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.luu.thay.oi"), size: .large) { Task { await save() } }
                     .disabled(saving)
                 Spacer(minLength: 0)
             }
             .padding(24)
             .background(AppColors.background.ignoresSafeArea())
-            .navigationTitle("Sửa lớp")
+            .navigationTitle(String(localized: "feature.classes.sua.lop"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("Đóng") { dismiss() } }
+                ToolbarItem(placement: .topBarLeading) { Button(String(localized: "feature.classes.ong")) { dismiss() } }
             }
         }
         .onAppear { name = data.classroom(id: classID)?.name ?? "" }
@@ -344,7 +344,7 @@ struct TeacherEditClassView: View {
                                        time: klass.startTime ?? "18:00")
             dismiss()
         } catch {
-            self.error = "Không lưu được lớp."
+            self.error = String(localized: "feature.classes.khong.luu.uoc.lop")
         }
     }
 }
@@ -363,22 +363,22 @@ struct TeacherEditScheduleView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Ngày học trong tuần").appText(AppText.label).foregroundStyle(AppColors.text)
+                Text(String(localized: "feature.classes.ngay.hoc.trong.tuan")).appText(AppText.label).foregroundStyle(AppColors.text)
                 HStack(spacing: 8) {
                     ForEach(TeacherNewClassView.weekdayLabels, id: \.value) { day in dayButton(day) }
                 }
-                TeacherField(label: "Giờ bắt đầu", text: $time, placeholder: "18:00")
+                TeacherField(label: String(localized: "feature.classes.gio.bat.au"), text: $time, placeholder: "18:00")
                 if let error { Text(error).appText(AppText.muted).foregroundStyle(AppColors.error) }
-                AppButton(title: saving ? "Đang lưu…" : "Lưu lịch học", size: .large) { Task { await save() } }
+                AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.luu.lich.hoc"), size: .large) { Task { await save() } }
                     .disabled(saving)
                 Spacer(minLength: 0)
             }
             .padding(24)
             .background(AppColors.background.ignoresSafeArea())
-            .navigationTitle("Sửa lịch học")
+            .navigationTitle(String(localized: "feature.classes.sua.lich.hoc"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("Đóng") { dismiss() } }
+                ToolbarItem(placement: .topBarLeading) { Button(String(localized: "feature.classes.ong")) { dismiss() } }
             }
         }
         .onAppear {
@@ -404,7 +404,7 @@ struct TeacherEditScheduleView: View {
 
     private func save() async {
         guard !weekdays.isEmpty else {
-            error = "Chọn ít nhất một ngày học trong tuần."
+            error = String(localized: "feature.classes.chon.it.nhat.mot.ngay.hoc.trong.tuan")
             return
         }
         saving = true
@@ -413,7 +413,7 @@ struct TeacherEditScheduleView: View {
             try await data.updateClass(klass, name: klass.name, weekdays: weekdays.sorted(), time: time)
             dismiss()
         } catch {
-            self.error = "Không lưu được lịch học."
+            self.error = String(localized: "feature.classes.khong.luu.uoc.lich.hoc")
         }
     }
 }

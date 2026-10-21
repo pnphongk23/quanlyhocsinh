@@ -59,15 +59,15 @@ struct TeacherAttendanceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if !data.canReadAttendance {
-                AppEmptyState(title: "Bạn không có quyền xem điểm danh")
+                AppEmptyState(title: String(localized: "feature.attendance.ban.khong.co.quyen.xem.iem.danh"))
             } else if roster.isEmpty {
-                AppEmptyState(title: "Lớp chưa có học sinh")
+                AppEmptyState(title: String(localized: "feature.attendance.lop.chua.co.hoc.sinh"))
             } else {
                 if !viewOnly { summaryRow }
                 if readOnly { readOnlyNotice }
                 if !readOnly && !canEdit { permissionNotice }
                 if !viewOnly {
-                    Text("Vuốt phải: vắng · Vuốt trái: muộn")
+                    Text(String(localized: "feature.attendance.vuot.phai.vang.vuot.trai.muon"))
                         .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                         .foregroundStyle(AppColors.muted)
                 }
@@ -89,18 +89,18 @@ struct TeacherAttendanceView: View {
     /// grey fill come from `.stickyBar > button:disabled`.
     @ViewBuilder private var bottomButton: some View {
         if !viewOnly && !readOnly {
-            AppButton(title: saving ? "Đang lưu…" : "Lưu điểm danh", size: .large) { save() }
+            AppButton(title: saving ? String(localized: "feature.attendance.ang.luu") : String(localized: "feature.attendance.luu.iem.danh"), size: .large) { save() }
                 .disabled(saving)
                 .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
                 .padding(.top, 8)
         } else if readOnly {
-            Text("Điểm danh")
+            Text(String(localized: "feature.attendance.iem.danh"))
                 .appText(AppText.buttonLarge)
                 .foregroundStyle(AppColors.muted)
                 .frame(maxWidth: .infinity, minHeight: AppMetrics.buttonHeightLarge)
                 .background(AppColors.inputBorder, in: RoundedRectangle(cornerRadius: AppRadius.button))
                 .padding(.top, 8)
-                .accessibilityLabel("Điểm danh")
+                .accessibilityLabel(String(localized: "feature.attendance.iem.danh"))
         }
     }
 
@@ -110,10 +110,10 @@ struct TeacherAttendanceView: View {
                 Text("\(absentCount)")
                     .appText(AppTextStyle(size: 14, weight: .bold, lineHeight: 21))
                     .foregroundStyle(AppColors.error)
-                Text(" vắng mặt").appText(AppText.muted).foregroundStyle(AppColors.muted)
+                Text(String(localized: "feature.attendance.vang.mat")).appText(AppText.muted).foregroundStyle(AppColors.muted)
             }
             Spacer(minLength: 0)
-            AppButton(title: "Tất cả có mặt", variant: .secondary) {
+            AppButton(title: String(localized: "feature.attendance.tat.ca.co.mat"), variant: .secondary) {
                 for student in roster { update(student) { $0.status = .present } }
             }
         }
@@ -125,7 +125,7 @@ struct TeacherAttendanceView: View {
             Image(systemName: "lock")
                 .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(AppColors.primaryInk)
-            Text("Chỉ điểm danh được từ ngày học (\(TeacherFormat.dayMonth(session.date))) trở đi. Bây giờ bạn chỉ xem hoặc huỷ buổi.")
+            Text(String.localizedStringWithFormat(String(localized: "feature.attendance.chi.iem.danh.uoc.tu.ngay.hoc.tro.i.bay.gio.ban.c"), String(describing: (TeacherFormat.dayMonth(session.date)))))
                 .appText(AppText.muted)
                 .foregroundStyle(AppColors.primaryInk)
         }
@@ -136,7 +136,7 @@ struct TeacherAttendanceView: View {
     }
 
     private var permissionNotice: some View {
-        Text("Bạn chỉ có quyền xem điểm danh của buổi học này.")
+        Text(String(localized: "feature.attendance.ban.chi.co.quyen.xem.iem.danh.cua.buoi.hoc.nay"))
             .appText(AppText.muted)
             .foregroundStyle(AppColors.primaryInk)
             .padding(.horizontal, 16)
@@ -147,16 +147,16 @@ struct TeacherAttendanceView: View {
 
     private var attentionCard: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Cần chú ý")
+            Text(String(localized: "feature.attendance.can.chu.y"))
                 .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 24))
                 .foregroundStyle(AppColors.text)
             if warnings.isEmpty {
-                Text("Chưa có học sinh vắng 2 buổi liên tiếp.")
+                Text(String(localized: "feature.attendance.chua.co.hoc.sinh.vang.2.buoi.lien.tiep"))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
             } else {
                 ForEach(warnings) { student in
-                    Text("\(student.name) vắng ít nhất 2 buổi liên tiếp.")
+                    Text(String.localizedStringWithFormat(String(localized: "feature.attendance.vang.it.nhat.2.buoi.lien.tiep"), String(describing: (student.name))))
                         .appText(AppText.muted)
                         .foregroundStyle(AppColors.muted)
                 }
@@ -196,7 +196,7 @@ struct TeacherAttendanceView: View {
     private func lateFields(_ student: Student, _ value: TeacherAttendanceDraft) -> some View {
         HStack(spacing: 8) {
             HStack(spacing: 6) {
-                Text("Đến lúc")
+                Text(String(localized: "feature.attendance.en.luc"))
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                     .foregroundStyle(AppColors.muted)
                 TextField("", text: lateAtBinding(student, value),
@@ -210,10 +210,10 @@ struct TeacherAttendanceView: View {
                         RoundedRectangle(cornerRadius: AppRadius.button)
                             .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
                     .frame(maxWidth: 96)
-                    .accessibilityLabel("Giờ đến muộn của \(student.name)")
+                    .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.attendance.gio.en.muon.cua"), String(describing: (student.name))))
             }
             TextField("", text: noteBinding(student, value),
-                      prompt: Text("Ghi chú").foregroundStyle(AppColors.placeholder))
+                      prompt: Text(String(localized: "feature.attendance.ghi.chu")).foregroundStyle(AppColors.placeholder))
                 .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                 .padding(.horizontal, 10)
                 .frame(minHeight: AppMetrics.tap)
@@ -222,7 +222,7 @@ struct TeacherAttendanceView: View {
                     RoundedRectangle(cornerRadius: AppRadius.button)
                         .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
                 .frame(maxWidth: .infinity)
-                .accessibilityLabel("Ghi chú điểm danh của \(student.name)")
+                .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.attendance.ghi.chu.iem.danh.cua"), String(describing: (student.name))))
         }
     }
 
@@ -246,8 +246,8 @@ struct TeacherAttendanceView: View {
     }
 
     private func accessibilityLabel(_ student: Student, _ displayed: AttendanceStatus?) -> String {
-        let state = displayed?.label ?? "Chưa điểm danh"
-        return viewOnly ? "\(student.name): \(state)" : "\(student.name): \(state). Bấm để đổi"
+        let state = displayed?.label ?? String(localized: "feature.attendance.chua.iem.danh")
+        return viewOnly ? "\(student.name): \(state)" : String.localizedStringWithFormat(String(localized: "feature.attendance.bam.e.oi"), String(describing: (student.name)), String(describing: (state)))
     }
 
     private func pillTone(_ status: AttendanceStatus?) -> Color {
@@ -301,7 +301,7 @@ struct TeacherAttendanceView: View {
                 drafts.removeAll()
                 localError = nil
             } catch {
-                localError = "Không lưu được điểm danh."
+                localError = String(localized: "feature.attendance.khong.luu.uoc.iem.danh")
             }
         }
     }

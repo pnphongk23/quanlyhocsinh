@@ -44,7 +44,7 @@ final class TeacherFeatureData {
     private(set) var canWriteAttendance = false
     private(set) var canReadScores = false
     private(set) var canReadReports = false
-    private(set) var roleName = "Giáo viên"
+    private(set) var roleName = String(localized: "feature.classes.giao.vien")
     private(set) var displayName = ""
 
     private var store: SQLiteStore?
@@ -57,13 +57,13 @@ final class TeacherFeatureData {
     /// Screenshot/preview harness only: fills the observable with synthetic records so the
     /// teacher screens can be rendered without a session. No runtime path calls this.
     init(previewClasses: [Classroom], previewStudents: [Student], previewSessions: [ClassSession],
-         previewAttendance: [Attendance] = [], displayName: String = "Cô Lan") {
+         previewAttendance: [Attendance] = [], displayName: String = String(localized: "feature.classes.co.lan")) {
         classes = previewClasses
         students = previewStudents
         sessions = previewSessions.sorted { ($0.date, $0.startTime) < ($1.date, $1.startTime) }
         attendance = previewAttendance
         self.displayName = displayName
-        roleName = "Giáo viên"
+        roleName = String(localized: "feature.classes.giao.vien")
         canReadClasses = true
         canWriteClasses = true
         canReadStudents = true
@@ -109,7 +109,7 @@ final class TeacherFeatureData {
     func refresh() async {
         if let sync {
             do { try await sync.synchronize(); errorMessage = nil }
-            catch { errorMessage = "Không thể đồng bộ dữ liệu. Vui lòng thử lại." }
+            catch { errorMessage = String(localized: "feature.classes.khong.the.ong.bo.du.lieu.vui.long.thu.lai") }
         }
         await reload()
     }
@@ -125,7 +125,7 @@ final class TeacherFeatureData {
             scores = try await store.records(Score.self, entity: "score")
             isReady = true
         } catch {
-            errorMessage = "Không đọc được dữ liệu trên thiết bị."
+            errorMessage = String(localized: "feature.classes.khong.oc.uoc.du.lieu.tren.thiet.bi")
         }
     }
 
@@ -208,7 +208,7 @@ final class TeacherFeatureData {
         await reload()
         if let sync {
             do { try await sync.synchronize(); errorMessage = nil }
-            catch { errorMessage = "Không thể lưu hoặc đồng bộ điểm danh. Hãy thử lại." }
+            catch { errorMessage = String(localized: "feature.classes.khong.the.luu.hoac.ong.bo.iem.danh.hay.thu.lai") }
         }
     }
 
@@ -291,8 +291,8 @@ final class TeacherFeatureData {
     /// `sessionPrefix` of `data/repositories/sessions.ts`: numbering comes from the server
     /// only (Q16); a cancelled session has no number.
     static func sessionPrefix(_ session: ClassSession) -> String {
-        if let number = session.sessionNumber { return "Buổi \(number)" }
-        return session.isMakeup ? "Buổi bù" : "Buổi học"
+        if let number = session.sessionNumber { return String.localizedStringWithFormat(String(localized: "feature.classes.buoi"), String(describing: (number))) }
+        return session.isMakeup ? String(localized: "feature.classes.buoi.bu") : String(localized: "feature.classes.buoi.hoc")
     }
 
     static func sessionOrder(_ first: ClassSession, _ second: ClassSession) -> Bool {

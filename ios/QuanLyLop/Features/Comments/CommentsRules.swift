@@ -6,9 +6,9 @@ enum TicketFilter: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .all: "Tất cả"
-        case .none: "Chưa chọn sao"
-        case .unsent: "Chưa gửi"
+        case .all: String(localized: "feature.comments.tat.ca")
+        case .none: String(localized: "feature.comments.chua.chon.sao")
+        case .unsent: String(localized: "feature.comments.chua.gui")
         }
     }
 }
@@ -46,9 +46,9 @@ enum CommentsRules {
 
     static func filterLabel(_ filter: TicketFilter, _ counts: (all: Int, none: Int, unsent: Int)) -> String {
         switch filter {
-        case .all: "Tất cả (\(counts.all))"
-        case .none: "Chưa chọn sao (\(counts.none))"
-        case .unsent: "Chưa gửi (\(counts.unsent))"
+        case .all: String.localizedStringWithFormat(String(localized: "feature.comments.tat.ca.9c49d886"), String(describing: (counts.all)))
+        case .none: String.localizedStringWithFormat(String(localized: "feature.comments.chua.chon.sao.c7aef4ad"), String(describing: (counts.none)))
+        case .unsent: String.localizedStringWithFormat(String(localized: "feature.comments.chua.gui.52c3c8f7"), String(describing: (counts.unsent)))
         }
     }
 
@@ -60,30 +60,30 @@ enum CommentsRules {
     static func badge(_ row: I4TicketRow) -> (label: String, tone: AppPill.Tone) {
         if row.isSent {
             if let time = I4Format.time(row.slip?.sentAt) {
-                return ("Đã gửi · \(time)", .success)
+                return (String.localizedStringWithFormat(String(localized: "feature.comments.a.gui.4c29c834"), String(describing: (time))), .success)
             }
-            return ("Đã gửi", .success)
+            return (String(localized: "feature.comments.a.gui"), .success)
         }
-        return ("Chưa gửi", .neutral)
+        return (String(localized: "feature.comments.chua.gui"), .neutral)
     }
 
     static func homeworkLine(_ row: I4TicketRow) -> (text: String, warning: Bool) {
         let prefix: String
         if let number = row.previousSessionNumber {
-            prefix = "BTVN buổi \(number)"
+            prefix = String.localizedStringWithFormat(String(localized: "feature.comments.btvn.buoi"), String(describing: (number)))
         } else {
-            prefix = "BTVN buổi trước"
+            prefix = String(localized: "feature.comments.btvn.buoi.truoc")
         }
         if row.previousHomework.total == 0 {
             if row.previousSessionNumber == nil && !row.previousHadSections {
-                return ("Buổi đầu · chưa có BTVN buổi trước", false)
+                return (String(localized: "feature.comments.buoi.au.chua.co.btvn.buoi.truoc"), false)
             }
-            return ("Buổi trước không giao BTVN", false)
+            return (String(localized: "feature.comments.buoi.truoc.khong.giao.btvn"), false)
         }
         if row.previousHomework.ungraded > 0 {
-            return ("\(prefix): \(row.previousHomework.ungraded) phần Chưa chấm", true)
+            return (String.localizedStringWithFormat(String(localized: "feature.comments.phan.chua.cham"), String(describing: (prefix)), String(describing: (row.previousHomework.ungraded))), true)
         }
-        return ("\(prefix): \(row.previousHomework.graded)/\(row.previousHomework.total) phần đã chấm", false)
+        return (String.localizedStringWithFormat(String(localized: "feature.comments.phan.a.cham"), String(describing: (prefix)), String(describing: (row.previousHomework.graded)), String(describing: (row.previousHomework.total))), false)
     }
 
     /// Students (and parts) still "Chưa chấm" among the slips that will be sent.

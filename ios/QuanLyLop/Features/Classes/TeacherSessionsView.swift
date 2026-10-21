@@ -23,7 +23,7 @@ struct TeacherSessionsView: View {
             VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
                 if let error { TeacherErrorBanner(message: error) }
                 if !data.canReadAttendance {
-                    AppEmptyState(title: "Bạn không có quyền xem buổi học")
+                    AppEmptyState(title: String(localized: "feature.classes.ban.khong.co.quyen.xem.buoi.hoc"))
                 } else if data.sessions(in: classID).isEmpty {
                     emptyBlock
                 } else {
@@ -39,7 +39,7 @@ struct TeacherSessionsView: View {
             if data.canWriteAttendance {
                 Button { showingAdd = true } label: { TeacherFab() }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Thêm buổi")
+                    .accessibilityLabel(String(localized: "feature.classes.them.buoi"))
                     .padding(.trailing, 20)
                     .padding(.bottom, 16)
             }
@@ -52,11 +52,11 @@ struct TeacherSessionsView: View {
         }
         .teacherConfirmDialog(
             isPresented: Binding(get: { cancelling != nil }, set: { if !$0 { cancelling = nil } }),
-            title: "Huỷ buổi học \(cancelling.map { TeacherFormat.dayMonth($0.date) } ?? "")?",
-            message: "Buổi học sẽ được đánh dấu là đã huỷ. Bạn có thể khôi phục lại sau.",
+            title: String.localizedStringWithFormat(String(localized: "feature.classes.huy.buoi.hoc.a26a4ee4"), String(describing: (cancelling.map { TeacherFormat.dayMonth($0.date) } ?? ""))),
+            message: String(localized: "feature.classes.buoi.hoc.se.uoc.anh.dau.la.a.huy.ban.co.the.khoi"),
             actions: [
-                TeacherDialogAction(label: "Huỷ buổi học", variant: .danger) { cancel() },
-                TeacherDialogAction(label: "Giữ buổi học", variant: .neutral) { cancelling = nil },
+                TeacherDialogAction(label: String(localized: "feature.classes.huy.buoi.hoc"), variant: .danger) { cancel() },
+                TeacherDialogAction(label: String(localized: "feature.classes.giu.buoi.hoc"), variant: .neutral) { cancelling = nil },
             ],
             dismiss: { cancelling = nil })
     }
@@ -69,7 +69,7 @@ struct TeacherSessionsView: View {
 
     private func currentSection(_ session: ClassSession) -> some View {
         VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-            TeacherGroupLabel(text: "Buổi hiện tại")
+            TeacherGroupLabel(text: String(localized: "feature.classes.buoi.hien.tai"))
             currentCard(session)
         }
     }
@@ -89,16 +89,16 @@ struct TeacherSessionsView: View {
                 primaryActionLabel(for: session)
             }
             if session.date > today && session.status == .planned {
-                Text("Điểm danh mở vào ngày học.")
+                Text(String(localized: "feature.classes.iem.danh.mo.vao.ngay.hoc"))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
             }
             if session.status == .planned && data.canWriteAttendance {
                 HStack(spacing: 8) {
                     if session.origin == .manual {
-                        AppButton(title: "Sửa buổi lẻ", variant: .secondary) { editing = session }
+                        AppButton(title: String(localized: "feature.classes.sua.buoi.le"), variant: .secondary) { editing = session }
                     }
-                    AppButton(title: "Hủy buổi", variant: .danger) { cancelling = session }
+                    AppButton(title: String(localized: "feature.classes.huy.buoi.c50dd61d"), variant: .danger) { cancelling = session }
                 }
             }
         }
@@ -108,7 +108,7 @@ struct TeacherSessionsView: View {
     }
 
     private func primaryActionLabel(for session: ClassSession) -> some View {
-        let title = session.date == today && session.status == .planned ? "Điểm danh" : "Xem buổi"
+        let title = session.date == today && session.status == .planned ? String(localized: "feature.classes.iem.danh") : String(localized: "feature.classes.xem.buoi")
         return Text(title)
             .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
             .foregroundStyle(AppColors.onPrimary)
@@ -121,7 +121,7 @@ struct TeacherSessionsView: View {
         VStack(spacing: 0) {
             Button { upcomingOpen.toggle() } label: {
                 HStack(spacing: 12) {
-                    Text("Sắp tới (\(groups.upcoming.count) buổi)")
+                    Text(String.localizedStringWithFormat(String(localized: "feature.classes.sap.toi.buoi"), String(describing: (groups.upcoming.count))))
                         .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22))
                         .foregroundStyle(AppColors.text)
                     Spacer(minLength: 0)
@@ -150,9 +150,9 @@ struct TeacherSessionsView: View {
 
     private var pastSection: some View {
         VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-            TeacherGroupLabel(text: "Các buổi đã qua")
+            TeacherGroupLabel(text: String(localized: "feature.classes.cac.buoi.a.qua"))
             if groups.past.isEmpty {
-                Text("Chưa có buổi học nào đã qua.")
+                Text(String(localized: "feature.classes.chua.co.buoi.hoc.nao.a.qua"))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
             } else {
@@ -179,7 +179,7 @@ struct TeacherSessionsView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     if session.status == .cancelled {
-                        TeacherStatusPill(text: "Đã huỷ", tone: .warning)
+                        TeacherStatusPill(text: String(localized: "feature.classes.a.huy"), tone: .warning)
                     } else {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 16, weight: .semibold))
@@ -195,8 +195,8 @@ struct TeacherSessionsView: View {
             }
             if session.origin == .manual && session.status == .planned && data.canWriteAttendance {
                 HStack(spacing: 8) {
-                    AppButton(title: "Sửa buổi lẻ", variant: .secondary) { editing = session }
-                    AppButton(title: "Hủy buổi", variant: .danger) { cancelling = session }
+                    AppButton(title: String(localized: "feature.classes.sua.buoi.le"), variant: .secondary) { editing = session }
+                    AppButton(title: String(localized: "feature.classes.huy.buoi.c50dd61d"), variant: .danger) { cancelling = session }
                 }
                 .padding(.horizontal, 8)
                 .padding(.bottom, 8)
@@ -208,7 +208,7 @@ struct TeacherSessionsView: View {
 
     private func meta(_ session: ClassSession) -> String {
         var parts = [session.startTime]
-        if session.status == .planned && session.date <= today { parts.append("Chưa điểm danh") }
+        if session.status == .planned && session.date <= today { parts.append(String(localized: "feature.classes.chua.iem.danh")) }
         if session.origin == .manual, let note = session.note, !note.isEmpty { parts.append(note) }
         return parts.joined(separator: " · ")
     }
@@ -221,16 +221,16 @@ struct TeacherSessionsView: View {
                 .frame(width: 72, height: 72)
                 .background(AppColors.primarySoft, in: Circle())
             VStack(spacing: 8) {
-                Text("Lớp chưa có buổi học")
+                Text(String(localized: "feature.classes.lop.chua.co.buoi.hoc"))
                     .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 28))
                     .foregroundStyle(AppColors.text)
-                Text("Buổi học tự sinh theo lịch lặp của lớp. Bạn có thể thêm buổi lẻ ngoài lịch nếu cần.")
+                Text(String(localized: "feature.classes.buoi.hoc.tu.sinh.theo.lich.lap.cua.lop.ban.co.th"))
                     .appText(AppText.body)
                     .foregroundStyle(AppColors.muted)
                     .multilineTextAlignment(.center)
             }
             if data.canWriteAttendance {
-                AppButton(title: "Thêm buổi lẻ", size: .large) { showingAdd = true }
+                AppButton(title: String(localized: "feature.classes.them.buoi.le"), size: .large) { showingAdd = true }
             }
         }
         .frame(maxWidth: .infinity)
@@ -247,7 +247,7 @@ struct TeacherSessionsView: View {
                 try await data.cancel(session)
                 error = nil
             } catch {
-                self.error = "Không hủy được buổi học. Vui lòng thử lại."
+                self.error = String(localized: "feature.classes.khong.huy.uoc.buoi.hoc.vui.long.thu.lai")
             }
         }
     }
@@ -267,27 +267,27 @@ struct TeacherExtraSessionSheet: View {
     @State private var saving = false
 
     var body: some View {
-        TeacherSheet(title: session == nil ? "Thêm buổi lẻ" : "Sửa buổi lẻ") {
+        TeacherSheet(title: session == nil ? String(localized: "feature.classes.them.buoi.le") : String(localized: "feature.classes.sua.buoi.le")) {
             VStack(alignment: .leading, spacing: 16) {
                 Text(intro)
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
-                field("Ngày học") {
+                field(String(localized: "feature.classes.ngay.hoc")) {
                     DatePicker("", selection: $date, displayedComponents: .date)
                         .labelsHidden()
                         .datePickerStyle(.compact)
                 }
-                field("Giờ học") {
+                field(String(localized: "feature.classes.gio.hoc")) {
                     DatePicker("", selection: $time, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 4) {
-                        Text("Ghi chú").appText(AppText.label).foregroundStyle(AppColors.text)
-                        Text("(không bắt buộc)").appText(AppText.muted).foregroundStyle(AppColors.muted)
+                        Text(String(localized: "feature.classes.ghi.chu")).appText(AppText.label).foregroundStyle(AppColors.text)
+                        Text(String(localized: "feature.classes.khong.bat.buoc")).appText(AppText.muted).foregroundStyle(AppColors.muted)
                     }
-                    TextField("Ví dụ: Học bù buổi nghỉ", text: $note, axis: .vertical)
+                    TextField(String(localized: "feature.classes.vi.du.hoc.bu.buoi.nghi"), text: $note, axis: .vertical)
                         .appText(AppText.body)
                         .lineLimit(3...5)
                         .padding(.horizontal, 16)
@@ -302,10 +302,10 @@ struct TeacherExtraSessionSheet: View {
                 }
             }
         } footer: {
-            AppButton(title: saving ? "Đang lưu…" : session == nil ? "Lưu buổi học" : "Lưu thay đổi",
+            AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : session == nil ? String(localized: "feature.classes.luu.buoi.hoc") : String(localized: "feature.classes.luu.thay.oi"),
                       size: .large) { Task { await save() } }
                 .disabled(saving)
-            AppButton(title: "Đóng", variant: .secondary, size: .large) { dismiss() }
+            AppButton(title: String(localized: "feature.classes.ong"), variant: .secondary, size: .large) { dismiss() }
         } close: {
             dismiss()
         }
@@ -314,8 +314,8 @@ struct TeacherExtraSessionSheet: View {
 
     private var intro: String {
         session == nil
-            ? "Tạo một buổi học ngoài lịch lặp của lớp."
-            : "Cập nhật ngày, giờ hoặc ghi chú cho buổi đang chờ học."
+            ? String(localized: "feature.classes.tao.mot.buoi.hoc.ngoai.lich.lap.cua.lop")
+            : String(localized: "feature.classes.cap.nhat.ngay.gio.hoac.ghi.chu.cho.buoi.ang.cho")
     }
 
     private func field<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
@@ -369,7 +369,7 @@ struct TeacherExtraSessionSheet: View {
                                             makeup: false, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
             dismiss()
         } catch {
-            self.error = "Không lưu được buổi học. Hãy kiểm tra thông tin và thử lại."
+            self.error = String(localized: "feature.classes.khong.luu.uoc.buoi.hoc.hay.kiem.tra.thong.tin.va")
         }
     }
 }

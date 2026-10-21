@@ -20,10 +20,10 @@ enum GuardianDemo {
     private static func build() -> GuardianDashboard {
         let classA = "demo-class-6a"
         let classB = "demo-class-6a-b"
-        let bao = Student(id: "demo-student-bao", classId: classA, name: "Trần Gia Bảo",
+        let bao = Student(id: "demo-student-bao", classId: classA, name: String(localized: "feature.guardian.tran.gia.bao"),
                           parentPhone: nil, enrolledAt: "2026-09-01", leftAt: nil,
                           status: .active, version: 1)
-        let ngoc = Student(id: "demo-student-ngoc", classId: classB, name: "Trần Bảo Ngọc",
+        let ngoc = Student(id: "demo-student-ngoc", classId: classB, name: String(localized: "feature.guardian.tran.bao.ngoc"),
                            parentPhone: nil, enrolledAt: "2026-09-01", leftAt: nil,
                            status: .active, version: 1)
 
@@ -43,9 +43,9 @@ enum GuardianDemo {
             attendance("bao-7", .present), attendance("bao-8", .excused)
         ]
         let tests = [
-            try? TestDefinition(id: "test-speaking", classId: classA, name: "Nói", date: "2026-10-12", maxScore: 10),
+            try? TestDefinition(id: "test-speaking", classId: classA, name: String(localized: "feature.guardian.noi"), date: "2026-10-12", maxScore: 10),
             try? TestDefinition(id: "test-listening", classId: classA, name: "Nghe", date: "2026-10-07", maxScore: 10),
-            try? TestDefinition(id: "test-grammar", classId: classA, name: "Ngữ pháp", date: "2026-10-05", maxScore: 10)
+            try? TestDefinition(id: "test-grammar", classId: classA, name: String(localized: "feature.guardian.ngu.phap"), date: "2026-10-05", maxScore: 10)
         ].compactMap { $0 }
         let scores = [
             Score(testId: "test-speaking", studentId: bao.id, value: 10, version: 1, updatedAt: "2026-10-12T11:00:00.000Z"),
@@ -55,22 +55,22 @@ enum GuardianDemo {
         let slips = [
             slip("bao-5", .three, ""),
             slip("bao-6", .two, ""),
-            slip("bao-7", .one, "Con chưa tập trung ở phần luyện nói."),
-            slip("bao-8", .three, "Hôm nay con xung phong kể chuyện trước lớp rất tự tin.")
+            slip("bao-7", .one, String(localized: "feature.guardian.con.chua.tap.trung.o.phan.luyen.noi")),
+            slip("bao-8", .three, String(localized: "feature.guardian.hom.nay.con.xung.phong.ke.chuyen.truoc.lop.rat.t"))
         ]
         let sections = [
             HomeworkSection(id: "hw-7-vocab", classId: classA, sessionId: "bao-7", kind: .vocabulary,
-                            title: "Unit 5 · 12 từ chủ đề Food", description: "Học nghĩa và cách đọc, chép mỗi từ 2 lần vào vở.", version: 1),
+                            title: String(localized: "feature.guardian.unit.5.12.tu.chu.e.food"), description: String(localized: "feature.guardian.hoc.nghia.va.cach.oc.chep.moi.tu.2.lan.vao.vo"), version: 1),
             HomeworkSection(id: "hw-7-exercise", classId: classA, sessionId: "bao-7", kind: .exercise,
-                            title: "Workbook trang 38–39", description: "Làm bài 1 đến 4.", version: 1),
+                            title: "Workbook trang 38–39", description: String(localized: "feature.guardian.lam.bai.1.en.4"), version: 1),
             HomeworkSection(id: "hw-8-vocab", classId: classA, sessionId: "bao-8", kind: .vocabulary,
-                            title: "Unit 6 · 15 từ chủ đề Travel", description: "Học nghĩa và cách đọc, chép mỗi từ 2 lần vào vở.", version: 1),
+                            title: String(localized: "feature.guardian.unit.6.15.tu.chu.e.travel"), description: String(localized: "feature.guardian.hoc.nghia.va.cach.oc.chep.moi.tu.2.lan.vao.vo"), version: 1),
             HomeworkSection(id: "hw-8-speaking", classId: classA, sessionId: "bao-8", kind: .speaking,
-                            title: "Kể về chuyến đi gần nhất", description: "Nói khoảng 1 phút, nhờ bố mẹ nghe và góp ý.", version: 1),
+                            title: String(localized: "feature.guardian.ke.ve.chuyen.i.gan.nhat"), description: String(localized: "feature.guardian.noi.khoang.1.phut.nho.bo.me.nghe.va.gop.y"), version: 1),
             HomeworkSection(id: "hw-8-exercise", classId: classA, sessionId: "bao-8", kind: .exercise,
-                            title: "Workbook trang 40–41", description: "Làm bài 1 đến 5.", version: 1),
+                            title: "Workbook trang 40–41", description: String(localized: "feature.guardian.lam.bai.1.en.5"), version: 1),
             HomeworkSection(id: "hw-9-reading", classId: classA, sessionId: "bao-9", kind: .reading,
-                            title: "Unit 6 · Reading", description: "Đọc đoạn văn trang 42 hai lần.", version: 1)
+                            title: "Unit 6 · Reading", description: String(localized: "feature.guardian.oc.oan.van.trang.42.hai.lan"), version: 1)
         ]
         let grades = [
             HomeworkGrade(sectionId: "hw-7-vocab", studentId: bao.id, level: .excellent, version: 1, updatedAt: "2026-10-14T11:00:00.000Z"),
@@ -82,9 +82,9 @@ enum GuardianDemo {
             // Thứ tự bài kiểm tra trong báo cáo theo thứ tự giáo viên đã tạo (ảnh 10 của P1):
             // Ngữ pháp, Nghe, Nói — không sắp lại theo ngày như tab Điểm số.
             tests: [
-                ReportTest(testId: "test-grammar", name: "Ngữ pháp", date: "2026-10-05", max: 10, value: 8),
+                ReportTest(testId: "test-grammar", name: String(localized: "feature.guardian.ngu.phap"), date: "2026-10-05", max: 10, value: 8),
                 ReportTest(testId: "test-listening", name: "Nghe", date: "2026-10-07", max: 10, value: 9),
-                ReportTest(testId: "test-speaking", name: "Nói", date: "2026-10-12", max: 10, value: 10)
+                ReportTest(testId: "test-speaking", name: String(localized: "feature.guardian.noi"), date: "2026-10-12", max: 10, value: 10)
             ],
             stars: StarsSummary(three: 2, two: 1, one: 1),
             homework: [
@@ -92,7 +92,7 @@ enum GuardianDemo {
                 HomeworkSummary(kind: .exercise, excellent: 0, done: 1, notDone: 0)
             ],
             // Ảnh 15 của P1: "Điều cô muốn chia sẻ" lấy từ nhận xét chung của báo cáo đã phát hành.
-            generalComment: "Tháng này con tiến bộ rõ kỹ năng nghe và tự tin hơn khi nói trước lớp. Cần ôn từ vựng đều hơn ở nhà.",
+            generalComment: String(localized: "feature.guardian.thang.nay.con.tien.bo.ro.ky.nang.nghe.va.tu.tin"),
             ready: true)
         let publications = [
             ReportPublication(id: "publication-1", reportId: "demo-report-bao", classId: classA,
@@ -101,14 +101,14 @@ enum GuardianDemo {
         ]
 
         let baoData = GuardianChildData(
-            student: bao, className: "Tiếng Anh giao tiếp 6A", sessions: sessions,
+            student: bao, className: String(localized: "feature.guardian.tieng.anh.giao.tiep.6a"), sessions: sessions,
             attendances: attendances, tests: tests, scores: scores, slips: slips,
             homeworkSections: sections, homeworkGrades: grades, publications: publications)
 
         let ngocSessions = [session("ngoc-5", classB, "2026-10-05", 5, .held),
                             session("ngoc-6", classB, "2026-10-07", 6, .held)]
         let ngocData = GuardianChildData(
-            student: ngoc, className: "Tiếng Anh giao tiếp 6A",
+            student: ngoc, className: String(localized: "feature.guardian.tieng.anh.giao.tiep.6a"),
             sessions: ngocSessions,
             attendances: [attendance("ngoc-5", .present), attendance("ngoc-6", .present)],
             tests: [], scores: [], slips: [], homeworkSections: [], homeworkGrades: [],

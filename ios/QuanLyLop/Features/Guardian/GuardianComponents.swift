@@ -220,7 +220,7 @@ struct GuardianPageHeader: View {
                         .frame(width: 44, height: 44)
                         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
                 }
-                .accessibilityLabel("Quay lại")
+                .accessibilityLabel(String(localized: "feature.guardian.quay.lai"))
             }
             VStack(alignment: .leading, spacing: 2) {
                 if let eyebrow, !eyebrow.isEmpty {
@@ -299,7 +299,7 @@ struct GuardianMonthSwitch: View {
                     .foregroundStyle(index + 1 < sorted.count ? AppColors.primaryInk : AppColors.muted.opacity(0.4))
                     .frame(width: 40, height: 40)
             }
-            .accessibilityLabel("Xem tháng trước")
+            .accessibilityLabel(String(localized: "feature.guardian.xem.thang.truoc"))
             .disabled(index + 1 >= sorted.count)
             Text(GuardianFormat.monthLabel(month))
                 .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
@@ -310,7 +310,7 @@ struct GuardianMonthSwitch: View {
                     .foregroundStyle(index > 0 ? AppColors.primaryInk : AppColors.muted.opacity(0.4))
                     .frame(width: 40, height: 40)
             }
-            .accessibilityLabel("Xem tháng sau")
+            .accessibilityLabel(String(localized: "feature.guardian.xem.thang.sau"))
             .disabled(index == 0)
         }
         .padding(4)
@@ -353,7 +353,7 @@ struct GuardianNoteBox: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Điều cô muốn chia sẻ")
+            Text(String(localized: "feature.guardian.ieu.co.muon.chia.se"))
                 .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                 .foregroundStyle(AppColors.warning)
             Text(text)
@@ -432,7 +432,7 @@ struct GuardianScoreRows: View {
                             .foregroundStyle(AppColors.muted)
                     }
                     Spacer(minLength: 0)
-                    Text(row.value == nil ? "Chưa có điểm" : "\(GuardianFormat.scoreText(row.value))/\(row.test.maxScore)")
+                    Text(row.value == nil ? String(localized: "feature.guardian.noScore") : "\(GuardianFormat.scoreText(row.value))/\(row.test.maxScore)")
                         .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                         .foregroundStyle(AppColors.text)
                 }
@@ -512,14 +512,14 @@ struct GuardianHomeworkParts: View {
                                 .foregroundStyle(AppColors.muted)
                         }
                         if part.graded, part.level == nil {
-                            Text("Cô chấm xong là hiện ngay.")
+                            Text(String(localized: "feature.guardian.co.cham.xong.la.hien.ngay"))
                                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                                 .foregroundStyle(AppColors.muted)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     if part.graded {
-                        AppPill(title: part.level?.guardianLabel ?? "Chưa chấm",
+                        AppPill(title: part.level?.guardianLabel ?? String(localized: "feature.guardian.chua.cham"),
                                 tone: part.level?.guardianTone ?? .neutral)
                             .fixedSize()
                     }

@@ -19,9 +19,9 @@ struct TeacherSessionDetailView: View {
     private var cancelled: Bool { session?.status == .cancelled }
 
     private let tabs = [
-        TeacherTextTabs.Item(id: "diem-danh", label: "Điểm danh"),
-        TeacherTextTabs.Item(id: "nhan-xet", label: "Nhận xét"),
-        TeacherTextTabs.Item(id: "btvn", label: "Bài tập về nhà"),
+        TeacherTextTabs.Item(id: "diem-danh", label: String(localized: "feature.classes.iem.danh")),
+        TeacherTextTabs.Item(id: "nhan-xet", label: String(localized: "feature.classes.nhan.xet")),
+        TeacherTextTabs.Item(id: "btvn", label: String(localized: "feature.classes.bai.tap.ve.nha")),
     ]
 
     var body: some View {
@@ -30,15 +30,15 @@ struct TeacherSessionDetailView: View {
                 header(session)
                 body(session)
             } else {
-                AppEmptyState(title: "Không tìm thấy buổi học")
+                AppEmptyState(title: String(localized: "feature.classes.khong.tim.thay.buoi.hoc"))
                     .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             }
         }
         .background(AppColors.background.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showingMenu) {
-            TeacherSheet(title: "Tuỳ chọn buổi học") {
-                AppButton(title: "Huỷ buổi", variant: .danger, size: .medium) {
+            TeacherSheet(title: String(localized: "feature.classes.tuy.chon.buoi.hoc")) {
+                AppButton(title: String(localized: "feature.classes.huy.buoi"), variant: .danger, size: .medium) {
                     showingMenu = false
                     confirmingCancel = true
                 }
@@ -48,11 +48,11 @@ struct TeacherSessionDetailView: View {
         }
         .teacherConfirmDialog(
             isPresented: $confirmingCancel,
-            title: "Huỷ buổi học \(session.map { TeacherFormat.dayMonth($0.date) } ?? "")?",
-            message: "Buổi học sẽ được đánh dấu là đã huỷ. Bạn có thể khôi phục lại sau.",
+            title: String.localizedStringWithFormat(String(localized: "feature.classes.huy.buoi.hoc.a26a4ee4"), String(describing: (session.map { TeacherFormat.dayMonth($0.date) } ?? ""))),
+            message: String(localized: "feature.classes.buoi.hoc.se.uoc.anh.dau.la.a.huy.ban.co.the.khoi"),
             actions: [
-                TeacherDialogAction(label: "Huỷ buổi học", variant: .danger) { cancel() },
-                TeacherDialogAction(label: "Giữ buổi học", variant: .neutral) { confirmingCancel = false },
+                TeacherDialogAction(label: String(localized: "feature.classes.huy.buoi.hoc"), variant: .danger) { cancel() },
+                TeacherDialogAction(label: String(localized: "feature.classes.giu.buoi.hoc"), variant: .neutral) { confirmingCancel = false },
             ],
             dismiss: { confirmingCancel = false })
     }
@@ -60,9 +60,9 @@ struct TeacherSessionDetailView: View {
     private func header(_ session: ClassSession) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
-                TeacherIconButton(systemImage: "chevron.backward", label: "Quay lại") { dismiss() }
+                TeacherIconButton(systemImage: "chevron.backward", label: String(localized: "feature.classes.quay.lai")) { dismiss() }
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(klass?.name ?? "Lớp học")
+                    Text(klass?.name ?? String(localized: "feature.classes.lop.hoc"))
                         .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                         .foregroundStyle(AppColors.muted)
                         .lineLimit(1)
@@ -71,12 +71,12 @@ struct TeacherSessionDetailView: View {
                             .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 25))
                             .foregroundStyle(AppColors.text)
                             .lineLimit(1)
-                        if cancelled { TeacherStatusPill(text: "Đã huỷ", tone: .warning) }
+                        if cancelled { TeacherStatusPill(text: String(localized: "feature.classes.a.huy"), tone: .warning) }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if !cancelled && session.status == .planned && data.canWriteAttendance {
-                    TeacherIconButton(systemImage: "ellipsis", label: "Tuỳ chọn buổi học",
+                    TeacherIconButton(systemImage: "ellipsis", label: String(localized: "feature.classes.tuy.chon.buoi.hoc"),
                                       tint: AppColors.muted) { showingMenu = true }
                 }
             }
@@ -115,11 +115,11 @@ struct TeacherSessionDetailView: View {
 
     private var teacherCard: some View {
         VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-            Text("Người dạy")
+            Text(String(localized: "feature.classes.nguoi.day"))
                 .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                 .foregroundStyle(AppColors.text)
-            teacherRow(position: "Giáo viên chính", name: data.displayName)
-            teacherRow(position: "Trợ giảng", name: nil)
+            teacherRow(position: String(localized: "feature.classes.giao.vien.chinh"), name: data.displayName)
+            teacherRow(position: String(localized: "feature.classes.tro.giang"), name: nil)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
@@ -138,7 +138,7 @@ struct TeacherSessionDetailView: View {
                 Text(position)
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 17.6))
                     .foregroundStyle(AppColors.muted)
-                Text(name ?? "Không có")
+                Text(name ?? String(localized: "feature.classes.khong.co"))
                     .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 21))
                     .foregroundStyle(AppColors.text)
             }
@@ -152,7 +152,7 @@ struct TeacherSessionDetailView: View {
                 Text(TeacherFormat.weekdayDate(session.date))
                     .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
                     .foregroundStyle(AppColors.text)
-                Text("\(TeacherFeatureData.sessionPrefix(session)) · đã huỷ")
+                Text(String.localizedStringWithFormat(String(localized: "feature.classes.a.huy.6af7a5ff"), String(describing: (TeacherFeatureData.sessionPrefix(session)))))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
             }
@@ -168,15 +168,15 @@ struct TeacherSessionDetailView: View {
                     .frame(width: 72, height: 72)
                     .background(AppColors.primarySoft, in: Circle())
                 VStack(spacing: 8) {
-                    Text("Buổi này đã huỷ")
+                    Text(String(localized: "feature.classes.buoi.nay.a.huy"))
                         .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 28))
                         .foregroundStyle(AppColors.text)
-                    Text("Không cần điểm danh. Khôi phục nếu bạn huỷ nhầm.")
+                    Text(String(localized: "feature.classes.khong.can.iem.danh.khoi.phuc.neu.ban.huy.nham"))
                         .appText(AppText.body)
                         .foregroundStyle(AppColors.muted)
                         .multilineTextAlignment(.center)
                 }
-                AppButton(title: "Về danh sách buổi", variant: .secondary, size: .large) { dismiss() }
+                AppButton(title: String(localized: "feature.classes.ve.danh.sach.buoi"), variant: .secondary, size: .large) { dismiss() }
                     .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
             }
             .frame(maxWidth: .infinity)
@@ -194,7 +194,7 @@ struct TeacherSessionDetailView: View {
                 try await data.cancel(session)
                 error = nil
             } catch {
-                self.error = "Không hủy được buổi học."
+                self.error = String(localized: "feature.classes.khong.huy.uoc.buoi.hoc")
             }
         }
     }

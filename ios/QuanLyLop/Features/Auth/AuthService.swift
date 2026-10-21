@@ -115,7 +115,7 @@ final class AuthModel {
     /// auth payload, so the prototype's fallback "Phụ huynh" is used) and the workspace name
     /// for staff roles.
     func subtitle(for membership: Membership) -> String {
-        membership.role.scopeKind == .linkedStudents ? "Phụ huynh" : membership.workspace.name
+        membership.role.scopeKind == .linkedStudents ? String(localized: "feature.auth.phu.huynh") : membership.workspace.name
     }
 
     func login(phone: String, password: String) async {
@@ -260,7 +260,7 @@ final class AuthModel {
     /// without touching the keychain or the network.
     func applyDemo(memberships: [Membership], activeID: String, screen: Screen,
                    logoutBlock: LogoutBlock? = nil) {
-        let user = User(id: "demo-user", phone: "900000001", displayName: "Cô Lan",
+        let user = User(id: "demo-user", phone: "900000001", displayName: String(localized: "feature.auth.co.lan"),
                         mustChangePassword: false)
         session = AuthSession(token: "demo-token", expiresAt: "2099-01-01T00:00:00.000Z",
                               user: user, memberships: memberships, activeMembershipId: activeID)
@@ -325,12 +325,12 @@ final class AuthModel {
         }
         if let validation = error as? AuthValidationError {
             switch validation {
-            case .missingField: return "Vui lòng điền đầy đủ thông tin."
+            case .missingField: return String(localized: "feature.auth.vui.long.ien.ay.u.thong.tin")
             case .passwordLength: return AuthCopy.passwordTooShort
             case .passwordMismatch: return AuthCopy.passwordMismatch
             case .samePassword: return AuthCopy.sameAsCurrent
             }
         }
-        return "Không thể kết nối dịch vụ. Vui lòng thử lại."
+        return String(localized: "feature.auth.khong.the.ket.noi.dich.vu.vui.long.thu.lai")
     }
 }

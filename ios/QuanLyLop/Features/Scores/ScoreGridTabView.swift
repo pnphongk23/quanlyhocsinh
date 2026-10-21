@@ -46,7 +46,7 @@ struct ScoreGridTabView: View {
     private var newButton: some View {
         HStack {
             Spacer(minLength: 0)
-            AppButton(title: "+ Bài kiểm tra mới", variant: .secondary) { showingCreate = true }
+            AppButton(title: String(localized: "feature.scores.bai.kiem.tra.moi"), variant: .secondary) { showingCreate = true }
         }
     }
 
@@ -60,7 +60,7 @@ struct ScoreGridTabView: View {
                     }
                 }
             }
-            Text("Hiển thị \(activeCount) học sinh đang học và \(leftCount) học sinh đã nghỉ. Nhập 7,5 hoặc 7.5.")
+            Text(String.localizedStringWithFormat(String(localized: "feature.scores.hien.thi.hoc.sinh.ang.hoc.va.hoc.sinh.a.nghi.nha"), String(describing: (activeCount)), String(describing: (leftCount))))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                 .foregroundStyle(AppColors.muted)
                 .padding(.top, 12)
@@ -72,7 +72,7 @@ struct ScoreGridTabView: View {
 
     private var studentColumn: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Học sinh")
+            Text(String(localized: "feature.scores.hoc.sinh"))
                 .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                 .foregroundStyle(AppColors.muted)
                 .padding(8)
@@ -94,7 +94,7 @@ struct ScoreGridTabView: View {
                 .lineLimit(1)
                 .opacity(student.status == .active ? 1 : 0.62)
             if student.status != .active {
-                Text("Đã nghỉ")
+                Text(String(localized: "feature.scores.a.nghi"))
                     .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
                     .foregroundStyle(AppColors.muted)
                     .padding(.leading, 8)
@@ -155,7 +155,7 @@ struct ScoreGridTabView: View {
                             RoundedRectangle(cornerRadius: 8)
                                 .strokeBorder(AppColors.inputBorderStrong,
                                               style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
-                    Text("Chưa có điểm")
+                    Text(String(localized: "feature.scores.chua.co.iem"))
                         .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
                         .foregroundStyle(AppColors.warning)
                 }
@@ -169,7 +169,7 @@ struct ScoreGridTabView: View {
             .overlay(alignment: .bottom) { AppColors.divider.frame(height: 1) }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Nhập điểm \(test.name) cho \(student.name)")
+        .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.scores.nhap.iem.cho"), String(describing: (test.name)), String(describing: (student.name))))
     }
 
     private var emptyState: some View {
@@ -180,16 +180,16 @@ struct ScoreGridTabView: View {
                 .frame(width: 72, height: 72)
                 .background(AppColors.primarySoft, in: Circle())
             VStack(spacing: 8) {
-                Text("Chưa có bài kiểm tra")
+                Text(String(localized: "feature.scores.chua.co.bai.kiem.tra"))
                     .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 30))
                     .foregroundStyle(AppColors.text)
-                Text("Tạo bài kiểm tra đầu tiên, sau đó nhập điểm cho cả lớp.")
+                Text(String(localized: "feature.scores.tao.bai.kiem.tra.au.tien.sau.o.nhap.iem.cho.ca.l"))
                     .appText(AppText.body)
                     .foregroundStyle(AppColors.muted)
                     .multilineTextAlignment(.center)
             }
             if data.canWriteScores {
-                AppButton(title: "Tạo bài kiểm tra", size: .large) { showingCreate = true }
+                AppButton(title: String(localized: "feature.scores.tao.bai.kiem.tra"), size: .large) { showingCreate = true }
             }
         }
         .frame(maxWidth: .infinity)

@@ -14,13 +14,13 @@ enum GuardianPDFError: Error, Equatable {
     var message: String {
         switch self {
         case .missingToken, .unauthorized:
-            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+            String(localized: "feature.guardian.phien.ang.nhap.a.het.han.vui.long.ang.nhap.lai")
         case .offline:
-            "Không có kết nối mạng. Vui lòng thử lại."
+            String(localized: "feature.guardian.khong.co.ket.noi.mang.vui.long.thu.lai")
         case .notFound:
-            "Báo cáo chưa có tệp PDF. Vui lòng thử lại sau."
+            String(localized: "feature.guardian.bao.cao.chua.co.tep.pdf.vui.long.thu.lai.sau")
         case .notPDF, .server:
-            "Không tải được PDF. Vui lòng thử lại."
+            String(localized: "feature.guardian.khong.tai.uoc.pdf.vui.long.thu.lai")
         }
     }
 }
@@ -122,7 +122,7 @@ struct GuardianReportDownloadButton: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Button { Task { await download() } } label: {
-                Text("Tải PDF về máy")
+                Text(String(localized: "feature.guardian.tai.pdf.ve.may"))
                     .appText(AppText.buttonLarge)
                     .foregroundStyle(AppColors.onPrimary)
                     .frame(maxWidth: .infinity)
@@ -135,7 +135,7 @@ struct GuardianReportDownloadButton: View {
             if isDownloading {
                 HStack(spacing: 8) {
                     AppSpinner()
-                    Text("Đang tải PDF…")
+                    Text(String(localized: "feature.guardian.ang.tai.pdf"))
                         .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                         .foregroundStyle(AppColors.muted)
                 }

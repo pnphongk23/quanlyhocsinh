@@ -3,14 +3,14 @@ import SwiftUI
 /// Exact Vietnamese copy of the prototype account screens
 /// (`src/data/authAccounts.ts`, `src/features/settings/SettingsPage.tsx`).
 enum AuthCopy {
-    static let invalidCredentials = "Số điện thoại hoặc mật khẩu không đúng"
-    static let loginLocked = "Thử sai quá nhiều lần, thử lại sau 15 phút"
-    static let passwordTooShort = "Mật khẩu phải có ít nhất 8 ký tự."
-    static let passwordMismatch = "Mật khẩu nhập lại không khớp."
-    static let sameAsTemp = "Mật khẩu mới không được trùng mật khẩu tạm."
-    static let sameAsCurrent = "Mật khẩu mới phải khác mật khẩu hiện tại."
-    static let wrongCurrent = "Mật khẩu hiện tại không đúng."
-    static let logoutFailed = "Không thể đăng xuất."
+    static let invalidCredentials = String(localized: "feature.auth.so.ien.thoai.hoac.mat.khau.khong.ung")
+    static let loginLocked = String(localized: "feature.auth.thu.sai.qua.nhieu.lan.thu.lai.sau.15.phut")
+    static let passwordTooShort = String(localized: "feature.auth.mat.khau.phai.co.it.nhat.8.ky.tu")
+    static let passwordMismatch = String(localized: "feature.auth.mat.khau.nhap.lai.khong.khop")
+    static let sameAsTemp = String(localized: "feature.auth.mat.khau.moi.khong.uoc.trung.mat.khau.tam")
+    static let sameAsCurrent = String(localized: "feature.auth.mat.khau.moi.phai.khac.mat.khau.hien.tai")
+    static let wrongCurrent = String(localized: "feature.auth.mat.khau.hien.tai.khong.ung")
+    static let logoutFailed = String(localized: "feature.auth.khong.the.ang.xuat")
 }
 
 /// Why sign-out was refused: `pendingCommandCount()` was above zero
@@ -21,26 +21,26 @@ struct LogoutBlock: Equatable {
 
     /// Exact prototype text, one variant per connectivity state.
     var message: String {
-        let lead = "Còn \(pending) thay đổi chưa đồng bộ. "
+        let lead = String.localizedStringWithFormat(String(localized: "feature.auth.con.thay.oi.chua.ong.bo"), String(describing: (pending)))
         return lead + (online
-            ? "Hãy chờ đồng bộ xong rồi đăng xuất."
-            : "Máy đang ngoại tuyến, đăng xuất bây giờ sẽ làm mất dữ liệu. Hãy kết nối mạng để đồng bộ rồi thử lại.")
+            ? String(localized: "feature.auth.hay.cho.ong.bo.xong.roi.ang.xuat")
+            : String(localized: "feature.auth.may.ang.ngoai.tuyen.ang.xuat.bay.gio.se.lam.mat"))
     }
 }
 
 /// Role badge labels and initials from `src/features/auth/roleBadge.ts`.
 enum AuthRoleBadge {
     static func label(_ role: Role) -> String {
-        if role.scopeKind == .linkedStudents { return "Phụ huynh" }
-        if role.name == "Trợ giảng" { return "Trợ giảng" }
-        if role.name.localizedCaseInsensitiveContains("quản trị") { return "Quản trị viên" }
+        if role.scopeKind == .linkedStudents { return String(localized: "feature.auth.phu.huynh") }
+        if role.name == String(localized: "feature.auth.tro.giang") { return String(localized: "feature.auth.tro.giang") }
+        if role.name.localizedCaseInsensitiveContains(String(localized: "feature.auth.quan.tri")) { return String(localized: "feature.auth.quan.tri.vien") }
         return role.name
     }
 
     static func initials(_ role: Role) -> String {
         if role.scopeKind == .linkedStudents { return "PH" }
-        if role.name == "Trợ giảng" { return "TG" }
-        if role.name.localizedCaseInsensitiveContains("quản trị") { return "QT" }
+        if role.name == String(localized: "feature.auth.tro.giang") { return "TG" }
+        if role.name.localizedCaseInsensitiveContains(String(localized: "feature.auth.quan.tri")) { return "QT" }
         return "GV"
     }
 }

@@ -18,7 +18,7 @@ struct AuthFlowView: View {
     var body: some View {
         Group {
             if !configurationIsValid {
-                Text("Không thể đọc cấu hình ứng dụng.")
+                Text(String(localized: "feature.auth.khong.the.oc.cau.hinh.ung.dung"))
                     .appText(AppText.body)
                     .foregroundStyle(AppColors.error)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -51,7 +51,7 @@ struct AuthFlowView: View {
     private var loading: some View {
         VStack(spacing: 12) {
             AppSpinner()
-            Text("Đang tải tài khoản…").appText(AppText.muted)
+            Text(String(localized: "feature.auth.ang.tai.tai.khoan")).appText(AppText.muted)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppColors.background)
@@ -75,7 +75,7 @@ struct AuthFlowView: View {
                         Button { model.show(.settings) } label: {
                             Image(systemName: "person.crop.circle")
                         }
-                        .accessibilityLabel("Cài đặt tài khoản")
+                        .accessibilityLabel(String(localized: "feature.auth.cai.at.tai.khoan"))
                     }
                 }
         }

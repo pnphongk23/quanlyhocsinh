@@ -33,7 +33,7 @@ enum TeacherFormat {
     /// `formatWeekdayDate`: "Thứ Hai, 19 tháng 10" (`Intl` capitalises “Chủ Nhật”).
     static func weekdayDate(_ iso: String) -> String {
         guard let date = parser.date(from: iso) else { return iso }
-        return "\(capitalizedWeekdayName(iso)), \(calendar.component(.day, from: date)) tháng \(calendar.component(.month, from: date))"
+        return String.localizedStringWithFormat(String(localized: "feature.classes.thang.bfb6f23e"), String(describing: (capitalizedWeekdayName(iso))), String(describing: (calendar.component(.day, from: date))), String(describing: (calendar.component(.month, from: date))))
     }
 
     /// Same list as `Intl.DateTimeFormat(weekday: "long")`: “Chủ Nhật”.
@@ -43,14 +43,14 @@ enum TeacherFormat {
         return capitalizedWeekdayNames[index]
     }
 
-    static let capitalizedWeekdayNames = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"]
+    static let capitalizedWeekdayNames = [String(localized: "feature.classes.chu.nhat"), String(localized: "feature.classes.thu.hai"), String(localized: "feature.classes.thu.ba"), String(localized: "feature.classes.thu.tu"), String(localized: "feature.classes.thu.nam"), String(localized: "feature.classes.thu.sau"), String(localized: "feature.classes.thu.bay")]
     /// `fullDateLabel`: "Ngày 21 tháng 10 năm 2026".
     static func fullDate(_ iso: String) -> String {
         guard let date = parser.date(from: iso) else { return iso }
         let day = calendar.component(.day, from: date)
         let month = calendar.component(.month, from: date)
         let year = calendar.component(.year, from: date)
-        return "Ngày \(day) tháng \(month) năm \(year)"
+        return String.localizedStringWithFormat(String(localized: "feature.classes.ngay.thang.nam"), String(describing: (day)), String(describing: (month)), String(describing: (year)))
     }
     /// `weekdayNames` of `shared/format`.
     static func weekdayName(_ iso: String) -> String {
@@ -59,7 +59,7 @@ enum TeacherFormat {
         return weekdayNames[index]
     }
     /// `monthTitle` of the month view: "Tháng 10, 2026".
-    static func monthTitle(year: Int, month: Int) -> String { "Tháng \(month), \(year)" }
+    static func monthTitle(year: Int, month: Int) -> String { String.localizedStringWithFormat(String(localized: "feature.classes.thang.271d373b"), String(describing: (month)), String(describing: (year))) }
 
     static func todayISO() -> String {
         let now = Date.now
@@ -78,7 +78,7 @@ enum TeacherFormat {
                 calendar.component(.day, from: date))
     }
 
-    static let weekdayNames = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"]
+    static let weekdayNames = [String(localized: "feature.classes.chu.nhat.9d3bbd28"), String(localized: "feature.classes.thu.hai"), String(localized: "feature.classes.thu.ba"), String(localized: "feature.classes.thu.tu"), String(localized: "feature.classes.thu.nam"), String(localized: "feature.classes.thu.sau"), String(localized: "feature.classes.thu.bay")]
 
     private static let calendar = Calendar(identifier: .gregorian)
 
@@ -216,7 +216,7 @@ struct TeacherFab: View {
             .background(AppColors.primary, in: Circle())
             .shadow(color: Color(red: 35 / 255, green: 71 / 255, blue: 230 / 255, opacity: 0.35),
                     radius: 16, x: 0, y: 6)
-            .accessibilityLabel("Thêm")
+            .accessibilityLabel(String(localized: "feature.classes.them"))
     }
 }
 
@@ -570,7 +570,7 @@ struct TeacherSheet<Content: View, Footer: View>: View {
             HStack(spacing: 16) {
                 Text(title).appText(AppText.heading).foregroundStyle(AppColors.text)
                 Spacer(minLength: 0)
-                AppButton(title: "Đóng", variant: .secondary, action: close)
+                AppButton(title: String(localized: "feature.classes.ong"), variant: .secondary, action: close)
                     .accessibilityIdentifier("sheet.close")
             }
             .padding(.horizontal, 24)
@@ -611,7 +611,7 @@ struct TeacherErrorBanner: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             if let retry {
                 Button(action: retry) {
-                    Text("Thử lại")
+                    Text(String(localized: "feature.classes.thu.lai"))
                         .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                         .foregroundStyle(AppColors.onPrimary)
                         .padding(.horizontal, 16)

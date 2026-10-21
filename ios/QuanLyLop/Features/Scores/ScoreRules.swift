@@ -31,11 +31,11 @@ enum TestDeletion: Equatable {
     case delete
     case archive
 
-    var title: String { self == .archive ? "Lưu trữ bài kiểm tra?" : "Xoá bài kiểm tra?" }
+    var title: String { self == .archive ? String(localized: "feature.scores.luu.tru.bai.kiem.tra") : String(localized: "feature.scores.xoa.bai.kiem.tra") }
     var message: String {
         self == .archive
-            ? "Bài đã có điểm nên sẽ được lưu trữ; điểm đã nhập vẫn giữ, bài ẩn khỏi bảng điểm và báo cáo."
-            : "Bài chưa có điểm nào nên sẽ bị xoá hẳn."
+            ? String(localized: "feature.scores.bai.a.co.iem.nen.se.uoc.luu.tru.iem.a.nhap.van.g")
+            : String(localized: "feature.scores.bai.chua.co.iem.nao.nen.se.bi.xoa.han")
     }
-    var actionLabel: String { self == .archive ? "Lưu trữ bài" : "Xoá bài" }
+    var actionLabel: String { self == .archive ? String(localized: "feature.scores.luu.tru.bai") : String(localized: "feature.scores.xoa.bai") }
 }

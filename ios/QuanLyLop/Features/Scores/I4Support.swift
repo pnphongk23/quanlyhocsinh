@@ -23,7 +23,7 @@ enum I4Format {
     private static let dayMonthLongFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "vi_VN")
-        formatter.dateFormat = "d 'tháng' M"
+        formatter.dateFormat = String(localized: "feature.scores.d.thang.m")
         formatter.timeZone = TimeZone(identifier: "UTC")
         return formatter
     }()
@@ -91,15 +91,15 @@ enum I4Format {
     }
 
     static func monthOption(_ month: String) -> String {
-        "Tháng \(Int(month.dropFirst(5)) ?? 0), \(month.prefix(4))"
+        String.localizedStringWithFormat(String(localized: "feature.scores.thang"), String(describing: (Int(month.dropFirst(5)) ?? 0)), String(describing: (month.prefix(4))))
     }
 
     static func monthPeriod(_ month: String) -> String {
-        "Tháng \(Int(month.dropFirst(5)) ?? 0)"
+        String.localizedStringWithFormat(String(localized: "feature.scores.thang.6a38e3e2"), String(describing: (Int(month.dropFirst(5)) ?? 0)))
     }
 
     static func monthTitle(_ month: String) -> String {
-        "Báo cáo tháng \(Int(month.dropFirst(5)) ?? 0)"
+        String.localizedStringWithFormat(String(localized: "feature.scores.bao.cao.thang"), String(describing: (Int(month.dropFirst(5)) ?? 0)))
     }
 
     static func time(_ timestamp: String?) -> String? {

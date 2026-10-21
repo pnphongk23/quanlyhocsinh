@@ -35,7 +35,7 @@ struct TestsTabView: View {
     private var newButton: some View {
         HStack {
             Spacer(minLength: 0)
-            AppButton(title: "+ Bài mới", variant: .secondary) { showingCreate = true }
+            AppButton(title: String(localized: "feature.scores.bai.moi"), variant: .secondary) { showingCreate = true }
         }
     }
 
@@ -59,7 +59,7 @@ struct TestsTabView: View {
                     .appText(AppTextStyle(size: 18, weight: .bold, lineHeight: 27))
                     .foregroundStyle(AppColors.text)
                     .lineLimit(1)
-                Text("Ngày \(I4Format.dayMonthLong(test.date)) · Thang \(test.maxScore) điểm")
+                Text(String.localizedStringWithFormat(String(localized: "feature.scores.ngay.thang.iem"), String(describing: (I4Format.dayMonthLong(test.date))), String(describing: (test.maxScore))))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
             }
@@ -75,9 +75,9 @@ struct TestsTabView: View {
     private func pill(for test: TestDefinition) -> some View {
         let missing = ScoreRules.missingCount(testID: test.id, students: students, scores: data.scores)
         if missing > 0 {
-            AppPill(title: "Còn \(missing) em chưa có điểm", tone: .warning)
+            AppPill(title: String.localizedStringWithFormat(String(localized: "feature.scores.con.em.chua.co.iem"), String(describing: (missing))), tone: .warning)
         } else {
-            AppPill(title: "Đủ điểm", tone: .success)
+            AppPill(title: String(localized: "feature.scores.u.iem"), tone: .success)
         }
     }
 
@@ -89,16 +89,16 @@ struct TestsTabView: View {
                 .frame(width: 72, height: 72)
                 .background(AppColors.primarySoft, in: Circle())
             VStack(spacing: 8) {
-                Text("Chưa có bài kiểm tra")
+                Text(String(localized: "feature.scores.chua.co.bai.kiem.tra"))
                     .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 30))
                     .foregroundStyle(AppColors.text)
-                Text("Tạo bài kiểm tra đầu tiên, sau đó nhập điểm cho cả lớp.")
+                Text(String(localized: "feature.scores.tao.bai.kiem.tra.au.tien.sau.o.nhap.iem.cho.ca.l"))
                     .appText(AppText.body)
                     .foregroundStyle(AppColors.muted)
                     .multilineTextAlignment(.center)
             }
             if data.canWriteScores {
-                AppButton(title: "Tạo bài kiểm tra", size: .large) { showingCreate = true }
+                AppButton(title: String(localized: "feature.scores.tao.bai.kiem.tra"), size: .large) { showingCreate = true }
             }
         }
         .frame(maxWidth: .infinity)
@@ -166,8 +166,8 @@ struct TestScoresView: View {
             if let test {
                 page(test)
             } else {
-                AppEmptyState(title: "Không tìm thấy bài kiểm tra") {
-                    AppButton(title: "Về danh sách bài kiểm tra", variant: .secondary) { dismiss() }
+                AppEmptyState(title: String(localized: "feature.scores.khong.tim.thay.bai.kiem.tra")) {
+                    AppButton(title: String(localized: "feature.scores.ve.danh.sach.bai.kiem.tra"), variant: .secondary) { dismiss() }
                 }
                 .padding(.horizontal, 20)
             }
@@ -184,7 +184,7 @@ struct TestScoresView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     testCard(test)
                     if !data.canWriteScores {
-                        I4Banner(text: "Bạn chỉ có quyền xem điểm của lớp này.", horizontal: 12, vertical: 10)
+                        I4Banner(text: String(localized: "feature.scores.ban.chi.co.quyen.xem.iem.cua.lop.nay"), horizontal: 12, vertical: 10)
                     }
                     if let savedNotice {
                         I4Banner(text: savedNotice, horizontal: 12, vertical: 10)
@@ -219,13 +219,13 @@ struct TestScoresView: View {
                     .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Quay lại")
+            .accessibilityLabel(String(localized: "feature.scores.quay.lai"))
             VStack(alignment: .leading, spacing: 2) {
-                Text(klass?.name ?? "Lớp học")
+                Text(klass?.name ?? String(localized: "feature.scores.lop.hoc"))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
                     .lineLimit(1)
-                Text("Điểm số")
+                Text(String(localized: "feature.scores.iem.so"))
                     .appText(AppText.title)
                     .foregroundStyle(AppColors.text)
                     .lineLimit(1)
@@ -240,7 +240,7 @@ struct TestScoresView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Tuỳ chọn bài kiểm tra")
+                .accessibilityLabel(String(localized: "feature.scores.tuy.chon.bai.kiem.tra"))
             }
         }
         .padding(.horizontal, 20)
@@ -255,14 +255,14 @@ struct TestScoresView: View {
                 Text(test.name)
                     .appText(AppTextStyle(size: 18, weight: .bold, lineHeight: 27))
                     .foregroundStyle(AppColors.text)
-                Text("Ngày \(I4Format.dayMonthLong(test.date)) · Thang \(test.maxScore) điểm")
+                Text(String.localizedStringWithFormat(String(localized: "feature.scores.ngay.thang.iem"), String(describing: (I4Format.dayMonthLong(test.date))), String(describing: (test.maxScore))))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button { dismiss() } label: {
                 HStack(spacing: 4) {
-                    Text("Đổi bài").appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+                    Text(String(localized: "feature.scores.oi.bai")).appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                     Image(systemName: "chevron.down").font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundStyle(AppColors.primaryInk)
@@ -276,9 +276,9 @@ struct TestScoresView: View {
 
     private var columns: some View {
         HStack(spacing: 8) {
-            Text("Học sinh").appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+            Text(String(localized: "feature.scores.hoc.sinh")).appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text("Điểm").appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+            Text(String(localized: "feature.scores.iem")).appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                 .frame(width: 64, alignment: .center)
         }
         .foregroundStyle(AppColors.muted)
@@ -306,7 +306,7 @@ struct TestScoresView: View {
                         .appText(AppTextStyle(size: 16, weight: .medium, lineHeight: 24))
                         .foregroundStyle(AppColors.text)
                     if missing {
-                        Text("Chưa có điểm")
+                        Text(String(localized: "feature.scores.chua.co.iem"))
                             .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                             .foregroundStyle(AppColors.warning)
                     }
@@ -320,7 +320,7 @@ struct TestScoresView: View {
             if invalid {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle").font(.system(size: 13))
-                    Text("Điểm từ 0 đến \(test.maxScore)")
+                    Text(String.localizedStringWithFormat(String(localized: "feature.scores.iem.tu.0.en"), String(describing: (test.maxScore))))
                         .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                 }
                 .foregroundStyle(AppColors.error)
@@ -348,7 +348,7 @@ struct TestScoresView: View {
                     .strokeBorder(fieldBorder(invalid: invalid, missing: missing),
                                   style: StrokeStyle(lineWidth: 1.5, dash: missing ? [4, 3] : [])))
             .disabled(!data.canWriteScores)
-            .accessibilityLabel("Điểm \(student.name)")
+            .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.scores.iem.75e72810"), String(describing: (student.name))))
     }
 
     private func binding(_ student: Student) -> Binding<String> {
@@ -383,7 +383,7 @@ struct TestScoresView: View {
                     Text(error)
                         .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Button("Thử lại") { save(test) }
+                    Button(String(localized: "feature.scores.thu.lai")) { save(test) }
                         .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                         .foregroundStyle(AppColors.onPrimary)
                         .padding(.horizontal, 16)
@@ -397,16 +397,16 @@ struct TestScoresView: View {
                 .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: 12))
             }
             if invalidCount > 0 {
-                Text("Sửa 1 ô lỗi để lưu điểm")
+                Text(String(localized: "feature.scores.sua.1.o.loi.e.luu.iem"))
                     .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                     .foregroundStyle(AppColors.error)
             } else if !dirty {
-                Text("Chưa có thay đổi để lưu")
+                Text(String(localized: "feature.scores.chua.co.thay.oi.e.luu"))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                     .foregroundStyle(AppColors.muted)
             }
             Button { save(test) } label: {
-                Text("Lưu điểm")
+                Text(String(localized: "feature.scores.luu.iem"))
                     .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
                     .frame(maxWidth: .infinity, minHeight: 52)
                     .background(dirty && invalidCount == 0 ? AppColors.primary : AppColors.inputBorder,
@@ -428,19 +428,19 @@ struct TestScoresView: View {
             error = await data.saveScores(test: test, values: changed)
             if error == nil {
                 drafts.removeAll()
-                savedNotice = "Đã lưu điểm."
+                savedNotice = String(localized: "feature.scores.a.luu.iem")
             }
         }
     }
 
     private var optionsSheet: some View {
-        AppSheet(title: "Tuỳ chọn bài kiểm tra") {
+        AppSheet(title: String(localized: "feature.scores.tuy.chon.bai.kiem.tra")) {
             VStack(spacing: 10) {
-                AppButton(title: "Sửa bài", variant: .secondary, size: .medium) {
+                AppButton(title: String(localized: "feature.scores.sua.bai"), variant: .secondary, size: .medium) {
                     showingOptions = false
                     showingEdit = true
                 }
-                AppButton(title: "Xoá bài", variant: .danger, size: .medium) {
+                AppButton(title: String(localized: "feature.scores.xoa.bai"), variant: .danger, size: .medium) {
                     showingOptions = false
                     if let open = self.test {
                         deletion = ScoreRules.deletionMode(hasScores: hasScores(open))
@@ -474,7 +474,7 @@ struct TestScoresView: View {
                         if !data.tests(in: classID).contains(where: { $0.id == test.id }) { dismiss() }
                     }
                 }
-                AppButton(title: "Giữ bài", variant: .neutral, size: .large) { deletion = nil }
+                AppButton(title: String(localized: "feature.scores.giu.bai"), variant: .neutral, size: .large) { deletion = nil }
             }
         }, dismiss: { deletion = nil })
     }
@@ -504,10 +504,10 @@ struct TestEditorView: View {
             header
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    AppTextField(label: "Tên bài kiểm tra", text: $name, placeholder: "Ví dụ: Unit 6 Test")
+                    AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, placeholder: String(localized: "feature.scores.vi.du.unit.6.test"))
                     dateField
-                    AppTextField(label: "Điểm tối đa", text: $max, keyboard: .numberPad)
-                    Text("Mỗi bài có thang điểm riêng, mặc định 15. Sửa được lúc tạo bài hoặc khi sửa bài.")
+                    AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad)
+                    Text(String(localized: "feature.scores.moi.bai.co.thang.iem.rieng.mac.inh.15.sua.uoc.lu"))
                         .appText(AppText.muted)
                         .foregroundStyle(AppColors.muted)
                     if let error {
@@ -528,9 +528,9 @@ struct TestEditorView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 8) {
-                AppButton(title: "Tạo bài và nhập điểm", size: .large) { save() }
+                AppButton(title: String(localized: "feature.scores.tao.bai.va.nhap.iem"), size: .large) { save() }
                     .disabled(saving)
-                AppButton(title: "Huỷ", variant: .ghost, size: .medium) { dismiss() }
+                AppButton(title: String(localized: "feature.scores.huy"), variant: .ghost, size: .medium) { dismiss() }
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -551,8 +551,8 @@ struct TestEditorView: View {
                     .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Quay lại")
-            Text("Tạo bài kiểm tra")
+            .accessibilityLabel(String(localized: "feature.scores.quay.lai"))
+            Text(String(localized: "feature.scores.tao.bai.kiem.tra"))
                 .appText(AppText.title)
                 .foregroundStyle(AppColors.text)
             Spacer(minLength: 0)
@@ -564,7 +564,7 @@ struct TestEditorView: View {
 
     private var dateField: some View {
         VStack(alignment: .leading, spacing: AppMetrics.fieldGap) {
-            Text("Ngày kiểm tra").appText(AppText.label).foregroundStyle(AppColors.text)
+            Text(String(localized: "feature.scores.ngay.kiem.tra")).appText(AppText.label).foregroundStyle(AppColors.text)
             HStack {
                 DatePicker("", selection: dateBinding, displayedComponents: .date)
                     .labelsHidden()
@@ -593,11 +593,11 @@ struct TestEditorView: View {
     private func save() {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
-            error = "Nhập tên bài kiểm tra."
+            error = String(localized: "feature.scores.nhap.ten.bai.kiem.tra")
             return
         }
         guard let maximum = Int(max.trimmingCharacters(in: .whitespaces)) else {
-            error = "Điểm tối đa phải từ 1 đến 1000."
+            error = String(localized: "feature.scores.iem.toi.a.phai.tu.1.en.1000")
             return
         }
         saving = true
@@ -634,11 +634,11 @@ struct TestFormSheet: View {
     }
 
     var body: some View {
-        AppSheet(title: "Sửa bài kiểm tra") {
+        AppSheet(title: String(localized: "feature.scores.sua.bai.kiem.tra")) {
             VStack(spacing: 14) {
-                AppTextField(label: "Tên bài kiểm tra", text: $name)
-                AppTextField(label: "Ngày kiểm tra", text: $date, placeholder: "YYYY-MM-DD")
-                AppTextField(label: "Điểm tối đa", text: $max, keyboard: .numberPad)
+                AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name)
+                AppTextField(label: String(localized: "feature.scores.ngay.kiem.tra"), text: $date, placeholder: "YYYY-MM-DD")
+                AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad)
                 if let error {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle").font(.system(size: 16))
@@ -652,7 +652,7 @@ struct TestFormSheet: View {
                 }
             }
         } footer: {
-            AppButton(title: "Lưu thay đổi", size: .large) { save() }
+            AppButton(title: String(localized: "feature.scores.luu.thay.oi"), size: .large) { save() }
         } close: {
             dismiss()
         }
@@ -661,11 +661,11 @@ struct TestFormSheet: View {
     private func save() {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
-            error = "Nhập tên bài kiểm tra."
+            error = String(localized: "feature.scores.nhap.ten.bai.kiem.tra")
             return
         }
         guard let maximum = Int(max.trimmingCharacters(in: .whitespaces)) else {
-            error = "Điểm tối đa phải từ 1 đến 1000."
+            error = String(localized: "feature.scores.iem.toi.a.phai.tu.1.en.1000")
             return
         }
         Task {

@@ -29,22 +29,22 @@ struct GuardianTicketView: View {
     @ViewBuilder private var commentCard: some View {
         if let slip = ticket.slip {
             GuardianTicketCard {
-                GuardianCardHead(title: "Nhận xét của giáo viên",
+                GuardianCardHead(title: String(localized: "feature.guardian.nhan.xet.cua.giao.vien"),
                                  trailing: AnyView(GuardianStars(level: slip.stars ?? .one)))
                 Text(slip.stars?.template ?? "")
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                     .foregroundStyle(AppColors.text)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if !slip.note.isEmpty {
-                    GuardianNoteBlock(label: "Ghi chú", text: slip.note)
+                    GuardianNoteBlock(label: String(localized: "feature.guardian.ghi.chu"), text: slip.note)
                 }
             }
         } else {
             GuardianTicketCard {
-                Text("Cô chưa gửi phiếu buổi này")
+                Text(String(localized: "feature.guardian.co.chua.gui.phieu.buoi.nay"))
                     .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 24))
                     .foregroundStyle(AppColors.text)
-                GuardianMutedText(text: "Phiếu buổi học hiện ở đây sau khi cô gửi cho phụ huynh.")
+                GuardianMutedText(text: String(localized: "feature.guardian.phieu.buoi.hoc.hien.o.ay.sau.khi.co.gui.cho.phu"))
             }
         }
     }
@@ -52,7 +52,7 @@ struct GuardianTicketView: View {
     @ViewBuilder private var previousHomeworkCard: some View {
         if !ticket.previousParts.isEmpty, let previous = ticket.previousSession {
             GuardianTicketCard {
-                GuardianCardHead(title: "Kết quả BTVN buổi \(previous.sessionNumber ?? 0) · \(GuardianFormat.dayMonth(previous.date))")
+                GuardianCardHead(title: String.localizedStringWithFormat(String(localized: "feature.guardian.ket.qua.btvn.buoi.3b11636e"), String(describing: (previous.sessionNumber ?? 0)), String(describing: (GuardianFormat.dayMonth(previous.date)))))
                 GuardianHomeworkParts(parts: ticket.previousParts)
             }
         }
@@ -63,7 +63,7 @@ struct GuardianTicketView: View {
             GuardianCardHead(title: assignedTitle)
             if let homework = ticket.assigned {
                 ForEach(homework.grading.cancelled) { cancelled in
-                    Text("\(GuardianFormat.sessionPrefix(cancelled)) · \(GuardianFormat.dayMonth(cancelled.date)) · Đã huỷ")
+                    Text(String.localizedStringWithFormat(String(localized: "feature.guardian.a.huy"), String(describing: (GuardianFormat.sessionPrefix(cancelled))), String(describing: (GuardianFormat.dayMonth(cancelled.date)))))
                         .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
                         .foregroundStyle(AppColors.warning)
                         .padding(.horizontal, 8)
@@ -72,20 +72,20 @@ struct GuardianTicketView: View {
                 }
                 GuardianHomeworkParts(parts: homework.parts, showDescriptions: true)
             } else {
-                GuardianMutedText(text: "Buổi này không giao bài tập về nhà.")
+                GuardianMutedText(text: String(localized: "feature.guardian.buoi.nay.khong.giao.bai.tap.ve.nha"))
             }
         }
     }
 
     private var assignedTitle: String {
-        guard let homework = ticket.assigned else { return "BTVN mới" }
-        return "BTVN mới · \(gradingLine(homework))"
+        guard let homework = ticket.assigned else { return String(localized: "feature.guardian.btvn.moi") }
+        return String.localizedStringWithFormat(String(localized: "feature.guardian.btvn.moi.76c7ccf2"), String(describing: (gradingLine(homework))))
     }
 
     /// "Cô chấm ở buổi 19 · Thứ Tư 21/10" hoặc "Chưa có buổi chấm".
     private func gradingLine(_ homework: GuardianHomeworkSession) -> String {
-        guard let gradingSession = homework.grading.session else { return "Chưa có buổi chấm" }
-        return "Cô chấm ở buổi \(gradingSession.sessionNumber ?? 0) · \(GuardianFormat.weekdayDayMonth(gradingSession.date))"
+        guard let gradingSession = homework.grading.session else { return String(localized: "feature.guardian.chua.co.buoi.cham") }
+        return String.localizedStringWithFormat(String(localized: "feature.guardian.co.cham.o.buoi"), String(describing: (gradingSession.sessionNumber ?? 0)), String(describing: (GuardianFormat.weekdayDayMonth(gradingSession.date))))
     }
 }
 
@@ -101,8 +101,8 @@ struct GuardianReportView: View {
         if let publication {
             reportBody(publication)
         } else {
-            GuardianEmptyState(title: "Cô chưa phát hành báo cáo tháng này",
-                               detail: "Báo cáo hiện ở đây sau khi cô phát hành cho phụ huynh.")
+            GuardianEmptyState(title: String(localized: "feature.guardian.co.chua.phat.hanh.bao.cao.thang.nay"),
+                               detail: String(localized: "feature.guardian.bao.cao.hien.o.ay.sau.khi.co.phat.hanh.cho.phu.h"))
         }
     }
 
@@ -126,7 +126,7 @@ struct GuardianReportView: View {
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .background(AppColors.surface, in: RoundedRectangle(cornerRadius: 10))
             // Báo cáo 3 tháng thuộc mục "Làm sau" của spec 8 nên chưa mở.
-            Text("3 tháng gần nhất")
+            Text(String(localized: "feature.guardian.3.thang.gan.nhat"))
                 .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                 .foregroundStyle(AppColors.muted)
                 .frame(maxWidth: .infinity, minHeight: 44)
@@ -139,12 +139,12 @@ struct GuardianReportView: View {
         let attended = report.attendance.present + report.attendance.late
         let scored = report.tests.filter { $0.value != nil }.count
         return HStack(spacing: 8) {
-            GuardianStatCard(label: "Chuyên cần",
-                             value: "\(attended)/\(report.attendance.heldSessions) buổi",
-                             detail: "\(report.attendance.late) muộn")
-            GuardianStatCard(label: "Bài kiểm tra",
-                             value: "\(scored)/\(report.tests.count) bài",
-                             detail: "đã có điểm")
+            GuardianStatCard(label: String(localized: "feature.guardian.chuyen.can"),
+                             value: String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.d4197bc8"), String(describing: (attended)), String(describing: (report.attendance.heldSessions))),
+                             detail: String.localizedStringWithFormat(String(localized: "feature.guardian.muon.69aa257b"), String(describing: (report.attendance.late))))
+            GuardianStatCard(label: String(localized: "feature.guardian.bai.kiem.tra"),
+                             value: String.localizedStringWithFormat(String(localized: "feature.guardian.bai"), String(describing: (scored)), String(describing: (report.tests.count))),
+                             detail: String(localized: "feature.guardian.a.co.iem"))
         }
     }
 
@@ -152,12 +152,12 @@ struct GuardianReportView: View {
         let maximum = max(1, report.stars.three, report.stars.two, report.stars.one)
         let total = report.stars.three + report.stars.two + report.stars.one
         return VStack(alignment: .leading, spacing: 8) {
-            GuardianCardHead(title: "Nhận xét theo sao",
+            GuardianCardHead(title: String(localized: "feature.guardian.nhan.xet.theo.sao"),
                              trailing: AnyView(
-                                Text("\(total) buổi có phiếu")
+                                Text(String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.co.phieu"), String(describing: (total))))
                                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                                     .foregroundStyle(AppColors.muted)))
-            Text("Tính trên các phiếu đã gửi.")
+            Text(String(localized: "feature.guardian.tinh.tren.cac.phieu.a.gui"))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                 .foregroundStyle(AppColors.muted)
             VStack(spacing: 8) {
@@ -186,7 +186,7 @@ struct GuardianReportView: View {
                     }
             }
             .frame(height: 12)
-            Text("\(count) buổi")
+            Text(String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.d5e8f7ce"), String(describing: (count))))
                 .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                 .foregroundStyle(AppColors.text)
                 .frame(width: 52, alignment: .trailing)
@@ -196,16 +196,16 @@ struct GuardianReportView: View {
 
     private func homeworkCard(_ report: ReportSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            GuardianCardHead(title: "Bài tập về nhà")
-            Text("Tốt = Hoàn thành tốt · Chưa = Chưa hoàn thành")
+            GuardianCardHead(title: String(localized: "feature.guardian.bai.tap.ve.nha"))
+            Text(String(localized: "feature.guardian.tot.hoan.thanh.tot.chua.chua.hoan.thanh"))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                 .foregroundStyle(AppColors.muted)
             if report.homework.isEmpty {
-                GuardianMutedText(text: "Chưa có kết quả bài tập đã gửi trong tháng này.")
+                GuardianMutedText(text: String(localized: "feature.guardian.chua.co.ket.qua.bai.tap.a.gui.trong.thang.nay"))
             } else {
                 homeworkTable(report.homework)
             }
-            Text("Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.")
+            Text(String(localized: "feature.guardian.chi.tinh.ket.qua.a.gui.khong.tinh.phan.chua.cham"))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                 .foregroundStyle(AppColors.muted)
         }
@@ -218,10 +218,10 @@ struct GuardianReportView: View {
     private func homeworkTable(_ rows: [HomeworkSummary]) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
-                Text("Phần").frame(maxWidth: .infinity, alignment: .leading)
-                Text("Tốt").frame(width: 56, alignment: .trailing)
-                Text("Hoàn thành").frame(width: 104, alignment: .trailing)
-                Text("Chưa").frame(width: 44, alignment: .trailing)
+                Text(String(localized: "feature.guardian.phan")).frame(maxWidth: .infinity, alignment: .leading)
+                Text(String(localized: "feature.guardian.tot")).frame(width: 56, alignment: .trailing)
+                Text(String(localized: "feature.guardian.hoan.thanh")).frame(width: 104, alignment: .trailing)
+                Text(String(localized: "feature.guardian.chua")).frame(width: 44, alignment: .trailing)
             }
             .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
             .foregroundStyle(AppColors.muted)
@@ -253,9 +253,9 @@ struct GuardianReportView: View {
 
     private func testsCard(_ report: ReportSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            GuardianCardHead(title: "Điểm từng bài")
+            GuardianCardHead(title: String(localized: "feature.guardian.iem.tung.bai"))
             if report.tests.isEmpty {
-                GuardianMutedText(text: "Không có bài kiểm tra trong tháng này.")
+                GuardianMutedText(text: String(localized: "feature.guardian.khong.co.bai.kiem.tra.trong.thang.nay"))
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(report.tests.enumerated()), id: \.element.testId) { index, row in
@@ -269,7 +269,7 @@ struct GuardianReportView: View {
                                     .foregroundStyle(AppColors.muted)
                             }
                             Spacer(minLength: 0)
-                            Text(row.value.map { String(format: "%.1f", $0) + "/\(row.max)" } ?? "Chưa có điểm")
+                            Text(row.value.map { String(format: "%.1f", $0) + "/\(row.max)" } ?? String(localized: "feature.guardian.noScore"))
                                 .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                                 .foregroundStyle(AppColors.text)
                         }

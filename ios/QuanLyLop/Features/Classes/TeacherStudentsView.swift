@@ -30,8 +30,8 @@ struct TeacherStudentsView: View {
                     .foregroundStyle(AppColors.muted)
                 if let error { TeacherErrorBanner(message: error) }
                 if students.isEmpty {
-                    AppEmptyState(title: "Chưa có học sinh") {
-                        Text("Thêm học sinh để bắt đầu quản lý lớp.")
+                    AppEmptyState(title: String(localized: "feature.classes.chua.co.hoc.sinh")) {
+                        Text(String(localized: "feature.classes.them.hoc.sinh.e.bat.au.quan.ly.lop"))
                             .appText(AppText.body)
                             .foregroundStyle(AppColors.muted)
                     }
@@ -50,7 +50,7 @@ struct TeacherStudentsView: View {
             if data.canWriteStudents {
                 Button { showingAdd = true } label: { TeacherFab() }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Thêm học sinh")
+                    .accessibilityLabel(String(localized: "feature.classes.them.hoc.sinh"))
                     .padding(.trailing, 20)
                     .padding(.bottom, 16)
             }
@@ -65,7 +65,7 @@ struct TeacherStudentsView: View {
     private var statsLine: String {
         let left = students.count - activeCount
         let warnings = data.absenceWarningCount(in: classID)
-        return "\(activeCount) đang học · \(left) đã nghỉ (giữ lịch sử) · \(warnings) vắng 2 buổi liền"
+        return String.localizedStringWithFormat(String(localized: "feature.classes.ang.hoc.a.nghi.giu.lich.su.vang.2.buoi.lien"), String(describing: (activeCount)), String(describing: (left)), String(describing: (warnings)))
     }
 
     private func card(_ student: Student) -> some View {
@@ -83,9 +83,9 @@ struct TeacherStudentsView: View {
                     .foregroundStyle(AppColors.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            if student.status == .left { TeacherStatusPill(text: "Đã nghỉ", tone: .neutral) }
+            if student.status == .left { TeacherStatusPill(text: String(localized: "feature.classes.a.nghi"), tone: .neutral) }
             if data.canWriteStudents {
-                TeacherIconButton(systemImage: "ellipsis", label: "Tuỳ chọn \(student.name)",
+                TeacherIconButton(systemImage: "ellipsis", label: String.localizedStringWithFormat(String(localized: "feature.classes.tuy.chon"), String(describing: (student.name))),
                                   tint: AppColors.muted) { selectedStudent = student }
             }
         }
@@ -97,14 +97,14 @@ struct TeacherStudentsView: View {
 
     private func parentLine(_ student: Student) -> String {
         guard let phone = student.parentPhone, !phone.isEmpty else {
-            return "Chưa có số điện thoại phụ huynh"
+            return String(localized: "feature.classes.chua.co.so.ien.thoai.phu.huynh")
         }
-        return "Phụ huynh · \(phone)"
+        return String.localizedStringWithFormat(String(localized: "feature.classes.phu.huynh"), String(describing: (phone)))
     }
 
     private func enrollmentLine(_ student: Student) -> String {
-        var line = "Vào lớp \(TeacherFormat.date(student.enrolledAt))"
-        if let leftAt = student.leftAt { line += " · Rời lớp \(TeacherFormat.date(leftAt))" }
+        var line = String.localizedStringWithFormat(String(localized: "feature.classes.vao.lop"), String(describing: (TeacherFormat.date(student.enrolledAt))))
+        if let leftAt = student.leftAt { line += String.localizedStringWithFormat(String(localized: "feature.classes.roi.lop"), String(describing: (TeacherFormat.date(leftAt)))) }
         return line
     }
 
@@ -138,32 +138,32 @@ struct TeacherStudentsView: View {
     }
 
     private func leaveSheet(_ student: Student) -> some View {
-        TeacherSheet(title: "Đánh dấu học sinh đã nghỉ?") {
-            Text("Ngày nghỉ là hôm nay. Điểm và điểm danh cũ vẫn được giữ trong lịch sử lớp.")
+        TeacherSheet(title: String(localized: "feature.classes.anh.dau.hoc.sinh.a.nghi")) {
+            Text(String(localized: "feature.classes.ngay.nghi.la.hom.nay.iem.va.iem.danh.cu.van.uoc"))
                 .appText(AppText.muted)
                 .foregroundStyle(AppColors.muted)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } footer: {
-            AppButton(title: "Xác nhận nghỉ học", variant: .danger, size: .large) { markLeft(student) }
+            AppButton(title: String(localized: "feature.classes.xac.nhan.nghi.hoc"), variant: .danger, size: .large) { markLeft(student) }
         } close: {
             leaving = nil
         }
     }
 
     private func passwordSheet(_ password: String) -> some View {
-        TeacherSheet(title: "Mật khẩu tạm") {
+        TeacherSheet(title: String(localized: "feature.classes.mat.khau.tam")) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(password)
                     .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 28))
                     .foregroundStyle(AppColors.text)
                     .textSelection(.enabled)
-                Text("Hãy gửi mật khẩu cho phụ huynh. Mật khẩu này chỉ hiển thị một lần.")
+                Text(String(localized: "feature.classes.hay.gui.mat.khau.cho.phu.huynh.mat.khau.nay.chi"))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } footer: {
-            AppButton(title: "Đã hiểu", size: .large) { revealedPassword = nil }
+            AppButton(title: String(localized: "feature.classes.a.hieu"), size: .large) { revealedPassword = nil }
         } close: {
             revealedPassword = nil
         }
@@ -176,7 +176,7 @@ struct TeacherStudentsView: View {
                 try await data.markLeft(student)
                 error = nil
             } catch {
-                self.error = "Không thể cập nhật trạng thái học sinh."
+                self.error = String(localized: "feature.classes.khong.the.cap.nhat.trang.thai.hoc.sinh")
             }
         }
     }
@@ -186,7 +186,7 @@ struct TeacherStudentsView: View {
             let password = try await data.issueGuardianPassword(for: student)
             revealedPassword = PasswordReveal(value: password)
         } catch {
-            self.error = "Không cấp được mật khẩu. SĐT này không tự đặt lại được hoặc phụ huynh chưa có SĐT."
+            self.error = String(localized: "feature.classes.khong.cap.uoc.mat.khau.s.t.nay.khong.tu.at.lai.u")
         }
     }
 }
@@ -201,12 +201,12 @@ struct TeacherAddStudentSheet: View {
     @State private var saving = false
 
     var body: some View {
-        TeacherSheet(title: "Thêm học sinh") {
+        TeacherSheet(title: String(localized: "feature.classes.them.hoc.sinh")) {
             VStack(alignment: .leading, spacing: 14) {
-                TeacherField(label: "Họ và tên học sinh", text: $name, identifier: "student.name")
-                TeacherField(label: "Số điện thoại phụ huynh (tuỳ chọn)", text: $phone,
+                TeacherField(label: String(localized: "feature.classes.ho.va.ten.hoc.sinh"), text: $name, identifier: "student.name")
+                TeacherField(label: String(localized: "feature.classes.so.ien.thoai.phu.huynh.tuy.chon"), text: $phone,
                              keyboard: .phonePad, identifier: "student.phone")
-                Text("Chỉ lưu số điện thoại trong hồ sơ. Chưa gửi lời mời hoặc tin nhắn.")
+                Text(String(localized: "feature.classes.chi.luu.so.ien.thoai.trong.ho.so.chua.gui.loi.mo"))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
                 if let error {
@@ -214,7 +214,7 @@ struct TeacherAddStudentSheet: View {
                 }
             }
         } footer: {
-            AppButton(title: saving ? "Đang lưu…" : "Lưu học sinh", size: .large) { Task { await save() } }
+            AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.luu.hoc.sinh"), size: .large) { Task { await save() } }
                 .disabled(saving)
         } close: {
             dismiss()
@@ -224,7 +224,7 @@ struct TeacherAddStudentSheet: View {
     private func save() async {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            error = "Nhập họ và tên học sinh."
+            error = String(localized: "feature.classes.nhap.ho.va.ten.hoc.sinh")
             return
         }
         saving = true
@@ -233,7 +233,7 @@ struct TeacherAddStudentSheet: View {
             try await data.addStudent(to: classID, name: trimmed, parentPhone: phone)
             dismiss()
         } catch {
-            self.error = "Không thể lưu học sinh. Vui lòng thử lại."
+            self.error = String(localized: "feature.classes.khong.the.luu.hoc.sinh.vui.long.thu.lai")
         }
     }
 }
@@ -255,16 +255,16 @@ struct TeacherParentPhoneSheet: View {
     }
 
     var body: some View {
-        TeacherSheet(title: "Sửa số điện thoại phụ huynh") {
+        TeacherSheet(title: String(localized: "feature.classes.sua.so.ien.thoai.phu.huynh")) {
             VStack(alignment: .leading, spacing: 14) {
-                TeacherField(label: "Số điện thoại phụ huynh", text: $phone, keyboard: .phonePad,
+                TeacherField(label: String(localized: "feature.classes.so.ien.thoai.phu.huynh"), text: $phone, keyboard: .phonePad,
                              identifier: "student.parentPhone")
                 if let error {
                     Text(error).appText(AppText.muted).foregroundStyle(AppColors.error)
                 }
             }
         } footer: {
-            AppButton(title: saving ? "Đang lưu…" : "Lưu số điện thoại", size: .large) { Task { await save() } }
+            AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.luu.so.ien.thoai"), size: .large) { Task { await save() } }
                 .disabled(saving)
         } close: {
             dismiss()
@@ -278,7 +278,7 @@ struct TeacherParentPhoneSheet: View {
             try await data.updateStudent(student, parentPhone: phone)
             dismiss()
         } catch {
-            let message = "Không cập nhật được số điện thoại."
+            let message = String(localized: "feature.classes.khong.cap.nhat.uoc.so.ien.thoai")
             self.error = message
             onError(message)
         }
@@ -301,14 +301,14 @@ struct TeacherStudentOptionsSheet: View {
     var close: () -> Void
 
     var body: some View {
-        TeacherSheet(title: "Tuỳ chọn học sinh") {
+        TeacherSheet(title: String(localized: "feature.classes.tuy.chon.hoc.sinh")) {
             VStack(spacing: 10) {
                 if student.status == .active {
-                    AppButton(title: "Sửa số điện thoại", variant: .secondary, size: .large, action: editPhone)
-                    AppButton(title: "Cấp mật khẩu", variant: .secondary, size: .large, action: issuePassword)
-                    AppButton(title: "Đánh dấu nghỉ", variant: .danger, size: .large, action: markLeft)
+                    AppButton(title: String(localized: "feature.classes.sua.so.ien.thoai"), variant: .secondary, size: .large, action: editPhone)
+                    AppButton(title: String(localized: "feature.classes.cap.mat.khau"), variant: .secondary, size: .large, action: issuePassword)
+                    AppButton(title: String(localized: "feature.classes.anh.dau.nghi"), variant: .danger, size: .large, action: markLeft)
                 } else {
-                    Text("Học sinh đã nghỉ. Điểm và điểm danh cũ vẫn được giữ trong lịch sử lớp.")
+                    Text(String(localized: "feature.classes.hoc.sinh.a.nghi.iem.va.iem.danh.cu.van.uoc.giu.t"))
                         .appText(AppText.muted)
                         .foregroundStyle(AppColors.muted)
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -98,7 +98,7 @@ struct AuthBrand: View {
                 .foregroundStyle(AppColors.onPrimary)
                 .frame(width: 56, height: 56)
                 .background(AppColors.primary, in: RoundedRectangle(cornerRadius: 16))
-            Text("Quản lý lớp tiếng Anh")
+            Text(String(localized: "feature.auth.quan.ly.lop.tieng.anh"))
                 .appText(AuthText.noteStrong)
                 .foregroundStyle(AppColors.text)
         }
@@ -182,7 +182,7 @@ struct AuthSubmitButton: View {
 
 /// `.backButton` (48 × 48 surface card) with `.backRow` margin below.
 struct AuthBackButton: View {
-    var label = "Quay lại đăng nhập"
+    var label = String(localized: "feature.auth.quay.lai.ang.nhap")
     let action: () -> Void
 
     var body: some View {
@@ -268,7 +268,7 @@ struct AuthPasswordStrength: View {
         return min(value, 4)
     }
 
-    private var label: String { ["", "Yếu", "Trung bình", "Khá", "Mạnh"][score] }
+    private var label: String { ["", String(localized: "feature.auth.yeu"), String(localized: "feature.auth.trung.binh"), String(localized: "feature.auth.kha"), String(localized: "feature.auth.manh")][score] }
 
     var body: some View {
         if !password.isEmpty {
@@ -286,7 +286,7 @@ struct AuthPasswordStrength: View {
                     .frame(minWidth: 52, alignment: .trailing)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Độ mạnh mật khẩu: \(label)")
+            .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.auth.o.manh.mat.khau"), String(describing: (label))))
         }
     }
 }
@@ -365,7 +365,7 @@ struct AuthPhoneField: View {
                 if readOnly {
                     HStack(spacing: 4) {
                         Image(systemName: "lock").font(.system(size: 15, weight: .regular))
-                        Text("Chỉ đọc").appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+                        Text(String(localized: "feature.auth.chi.oc")).appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                     }
                     .foregroundStyle(AppColors.muted)
                     .padding(.trailing, 14)
@@ -453,7 +453,7 @@ struct AuthPasswordField: View {
                         .background(Color.clear, in: RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.trailing, 4)
-                .accessibilityLabel(shown ? "Ẩn mật khẩu" : "Hiện mật khẩu")
+                .accessibilityLabel(shown ? String(localized: "feature.auth.an.mat.khau") : String(localized: "feature.auth.hien.mat.khau"))
             }
             .frame(minHeight: 56)
             .background(disabled ? AppColors.neutralSoft : AppColors.surface,

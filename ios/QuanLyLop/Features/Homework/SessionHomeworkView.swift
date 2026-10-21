@@ -71,12 +71,12 @@ struct SessionHomeworkView: View {
     @ViewBuilder
     private var content: some View {
         if !data.canReadCommentsReports {
-            AppEmptyState(title: "Bạn không có quyền xem bài tập về nhà") {
-                Text("Liên hệ Admin nếu bạn cần quyền truy cập.").appText(AppText.body)
+            AppEmptyState(title: String(localized: "feature.homework.ban.khong.co.quyen.xem.bai.tap.ve.nha")) {
+                Text(String(localized: "feature.homework.lien.he.admin.neu.ban.can.quyen.truy.cap")).appText(AppText.body)
             }
         } else if let session {
             if session.status == .cancelled {
-                noticeCard(title: "Buổi học đã hủy nên không giao hoặc chấm bài tập.")
+                noticeCard(title: String(localized: "feature.homework.buoi.hoc.a.huy.nen.khong.giao.hoac.cham.bai.tap"))
             } else {
                 segmented
                 if let error {
@@ -84,13 +84,13 @@ struct SessionHomeworkView: View {
                              horizontal: 14, vertical: 10)
                 }
                 if !data.canWriteCommentsReports {
-                    I4Banner(text: "Bạn chỉ có quyền xem bài tập về nhà của buổi này.",
+                    I4Banner(text: String(localized: "feature.homework.ban.chi.co.quyen.xem.bai.tap.ve.nha.cua.buoi.nay"),
                              horizontal: 12, vertical: 10)
                 }
                 if view == .previous { previousBody } else { todayBody(session) }
             }
         } else {
-            AppEmptyState(title: "Không tìm thấy buổi học")
+            AppEmptyState(title: String(localized: "feature.homework.khong.tim.thay.buoi.hoc"))
         }
     }
 
@@ -124,7 +124,7 @@ struct SessionHomeworkView: View {
             let copy = HomeworkRules.previousEmptyCopy(first: previousSession == nil)
             noticeCard(title: copy.title, body: copy.body)
             if data.canWriteCommentsReports {
-                AppButton(title: "Giao BTVN ở Bài tập hôm nay", variant: .secondary, size: .medium) {
+                AppButton(title: String(localized: "feature.homework.giao.btvn.o.bai.tap.hom.nay"), variant: .secondary, size: .medium) {
                     view = .today
                 }
             }
@@ -143,7 +143,7 @@ struct SessionHomeworkView: View {
                 Text("BTVN \(giving?.sessionNumber.map { "buổi \($0)" } ?? "buổi trước") · \(I4Format.dayMonth(giving?.date ?? session.date))")
                     .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 21.6))
                     .foregroundStyle(AppColors.text)
-                Text("Chấm hôm nay ở buổi \(session.sessionNumber ?? 0). Kết quả gửi kèm phiếu.")
+                Text(String.localizedStringWithFormat(String(localized: "feature.homework.cham.hom.nay.o.buoi.ket.qua.gui.kem.phieu"), String(describing: (session.sessionNumber ?? 0))))
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                     .foregroundStyle(AppColors.muted)
             }
@@ -160,15 +160,15 @@ struct SessionHomeworkView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .overlay(alignment: .top) { AppColors.divider.frame(height: 1) }
             HStack {
-                Text("\(progress.summary.graded)/\(progress.summary.total) em đã chấm")
+                Text(String.localizedStringWithFormat(String(localized: "feature.homework.em.a.cham"), String(describing: (progress.summary.graded)), String(describing: (progress.summary.total))))
                     .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                     .foregroundStyle(AppColors.text)
                 Spacer(minLength: 0)
-                Text("\(progress.summary.ungraded) còn Chưa chấm")
+                Text(String.localizedStringWithFormat(String(localized: "feature.homework.con.chua.cham"), String(describing: (progress.summary.ungraded))))
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                     .foregroundStyle(AppColors.muted)
             }
-            softButton("Đánh dấu cả lớp: Hoàn thành") {
+            softButton(String(localized: "feature.homework.anh.dau.ca.lop.hoan.thanh")) {
                 let section = progress.section
                 let roster = students
                 Task {
@@ -221,7 +221,7 @@ struct SessionHomeworkView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(spacing: 4) {
                     if absent {
-                        Text("Vắng buổi giao bài")
+                        Text(String(localized: "feature.homework.vang.buoi.giao.bai"))
                             .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
                             .foregroundStyle(AppColors.warning)
                             .padding(.horizontal, 10)
@@ -229,7 +229,7 @@ struct SessionHomeworkView: View {
                             .background(AppColors.warningSoft, in: Capsule())
                     }
                     if level == nil {
-                        Text("Chưa chấm")
+                        Text(String(localized: "feature.homework.chua.cham"))
                             .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                             .foregroundStyle(AppColors.muted)
                             .padding(.horizontal, 12)
@@ -258,16 +258,16 @@ struct SessionHomeworkView: View {
             gradingBanner(session)
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("BTVN giao hôm nay")
+                    Text(String(localized: "feature.homework.btvn.giao.hom.nay"))
                         .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 21.6))
                         .foregroundStyle(AppColors.text)
                     todayMeta(session)
                 }
                 if !todaySections.isEmpty {
-                    AppPill(title: "Đã lưu · phụ huynh đã thấy", tone: .success)
+                    AppPill(title: String(localized: "feature.homework.a.luu.phu.huynh.a.thay"), tone: .success)
                 }
                 if todaySections.isEmpty {
-                    Text("Chưa giao phần bài tập nào.")
+                    Text(String(localized: "feature.homework.chua.giao.phan.bai.tap.nao"))
                         .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                         .foregroundStyle(AppColors.muted)
                 } else {
@@ -282,7 +282,7 @@ struct SessionHomeworkView: View {
                         if let kind = missingKinds.first { editor = .add(kind) }
                     } label: {
                         HStack(spacing: 6) {
-                            Text("+ Thêm phần")
+                            Text(String(localized: "feature.homework.them.phan"))
                                 .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                             Text("· \(hint)")
                                 .appText(AppTextStyle(size: 14, weight: .medium, lineHeight: 21))
@@ -303,13 +303,14 @@ struct SessionHomeworkView: View {
 
     private func todayMeta(_ session: ClassSession) -> some View {
         HStack(spacing: 0) {
-            Text("Một lần cho cả lớp · \(HomeworkRules.partsCountLabel(todaySections.count)) · ")
+            Text(String.localizedStringWithFormat(String(localized: "feature.homework.mot.lan.cho.ca.lop"), String(describing: (HomeworkRules.partsCountLabel(todaySections.count)))))
                 .foregroundStyle(AppColors.muted)
             if let grading = gradingPlan.session {
-                Text("chấm ở \(grading.sessionNumber.map { "buổi \($0)" } ?? "buổi sau")")
+                let gradingLabel = grading.sessionNumber.map { String.localizedStringWithFormat(String(localized: "feature.homework.sessionNumber"), String(describing: ($0))) } ?? String(localized: "feature.homework.nextSession")
+                Text(String.localizedStringWithFormat(String(localized: "feature.homework.cham.o"), gradingLabel))
                     .foregroundStyle(AppColors.muted)
             } else {
-                Text("Chưa có buổi chấm")
+                Text(String(localized: "feature.homework.chua.co.buoi.cham"))
                     .foregroundStyle(AppColors.warning)
             }
         }
@@ -321,10 +322,11 @@ struct SessionHomeworkView: View {
     private func gradingBanner(_ session: ClassSession) -> some View {
         let plan = gradingPlan
         if !plan.cancelled.isEmpty, let grading = plan.session {
-            I4Banner(text: "\(plan.cancelled.map { "Buổi \(I4Format.dayMonth($0.date))" }.joined(separator: ", ")) đã bị hủy. BTVN buổi \(session.sessionNumber ?? 0) chấm ở buổi \(grading.sessionNumber ?? 0) · \(I4Format.weekdayDayMonth(grading.date)). Phụ huynh thấy thay đổi này.",
+            let cancelledSessions = plan.cancelled.map { String.localizedStringWithFormat(String(localized: "feature.homework.cancelledSession"), I4Format.dayMonth($0.date)) }.joined(separator: ", ")
+            I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.homework.a.bi.huy.btvn.buoi.cham.o.buoi.phu.huynh.thay.th"), cancelledSessions, String(describing: (session.sessionNumber ?? 0)), String(describing: (grading.sessionNumber ?? 0)), String(describing: (I4Format.weekdayDayMonth(grading.date)))),
                      tone: .warning, horizontal: 14)
         } else if plan.session == nil {
-            I4Banner(text: "Lịch lớp không còn buổi nào sau buổi \(session.sessionNumber ?? 0). Phụ huynh thấy “Chưa có buổi chấm” cho tới khi bạn thêm buổi vào lịch.",
+            I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.homework.lich.lop.khong.con.buoi.nao.sau.buoi.phu.huynh.t"), String(describing: (session.sessionNumber ?? 0))),
                      tone: .warning, horizontal: 14)
         }
     }
@@ -359,7 +361,7 @@ struct SessionHomeworkView: View {
                         .background(AppColors.neutralSoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Sửa phần \(section.kind.label)")
+                .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.homework.sua.phan"), String(describing: (section.kind.label))))
             }
         }
         .padding(.vertical, 8)
@@ -407,7 +409,7 @@ struct SessionHomeworkView: View {
 
 enum HomeworkTab: String, CaseIterable {
     case previous, today
-    var label: String { self == .previous ? "Bài tập buổi trước" : "Bài tập hôm nay" }
+    var label: String { self == .previous ? String(localized: "feature.homework.bai.tap.buoi.truoc") : String(localized: "feature.homework.bai.tap.hom.nay") }
 }
 
 enum HomeworkEditor: Identifiable {
@@ -500,10 +502,10 @@ struct HomeworkSectionEditor: View {
                     if let section = editingSection {
                         deleteRow(section)
                         savedHint
-                        AppButton(title: "Lưu", size: .large) { save() }
+                        AppButton(title: String(localized: "feature.homework.luu"), size: .large) { save() }
                     } else {
                         footHint
-                        AppButton(title: "Lưu phần", size: .large) { save() }
+                        AppButton(title: String(localized: "feature.homework.luu.phan"), size: .large) { save() }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -515,10 +517,10 @@ struct HomeworkSectionEditor: View {
 
     private var addHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Thêm phần BTVN")
+            Text(String(localized: "feature.homework.them.phan.btvn"))
                 .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 30))
                 .foregroundStyle(AppColors.text)
-            Text("Loại")
+            Text(String(localized: "feature.homework.loai"))
                 .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                 .foregroundStyle(AppColors.text)
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
@@ -527,7 +529,7 @@ struct HomeworkSectionEditor: View {
                     kindOption(option)
                 }
             }
-            Text("Mỗi loại chỉ có một phần trong một buổi.")
+            Text(String(localized: "feature.homework.moi.loai.chi.co.mot.phan.trong.mot.buoi"))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                 .foregroundStyle(AppColors.muted)
         }
@@ -543,7 +545,7 @@ struct HomeworkSectionEditor: View {
                     .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 18))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if taken {
-                    Text("Đã có").appText(AppTextStyle(size: 12, weight: .medium, lineHeight: 18))
+                    Text(String(localized: "feature.homework.a.co")).appText(AppTextStyle(size: 12, weight: .medium, lineHeight: 18))
                 }
             }
             .foregroundStyle(taken ? AppColors.placeholder : (chosen ? AppColors.primaryInk : AppColors.text))
@@ -567,7 +569,7 @@ struct HomeworkSectionEditor: View {
                 .foregroundStyle(AppColors.primaryInk)
                 .frame(width: 36, height: 36)
                 .background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: 10))
-            Text("Sửa phần · \(editingSection?.kind.label ?? "Bài tập")")
+            Text(String.localizedStringWithFormat(String(localized: "feature.homework.sua.phan.e042540b"), String(describing: (editingSection?.kind.label ?? String(localized: "feature.homework.exercise")))))
                 .appText(AppTextStyle(size: 18, weight: .bold, lineHeight: 23.4))
                 .foregroundStyle(AppColors.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -578,7 +580,7 @@ struct HomeworkSectionEditor: View {
 
     private var titleField: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Tiêu đề")
+            Text(String(localized: "feature.homework.tieu.e"))
                 .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                 .foregroundStyle(AppColors.text)
             TextField("", text: $title)
@@ -593,10 +595,10 @@ struct HomeworkSectionEditor: View {
     private var descriptionField: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
-                Text("Mô tả")
+                Text(String(localized: "feature.homework.mo.ta"))
                     .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                     .foregroundStyle(AppColors.text)
-                Text("· không bắt buộc")
+                Text(String(localized: "feature.homework.khong.bat.buoc"))
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                     .foregroundStyle(AppColors.muted)
             }
@@ -613,7 +615,7 @@ struct HomeworkSectionEditor: View {
     private var footHint: some View {
         HStack(spacing: 6) {
             Image(systemName: "info.circle").font(.system(size: 14))
-            Text("Phụ huynh thấy ngay khi lưu. Không đính kèm tệp.")
+            Text(String(localized: "feature.homework.phu.huynh.thay.ngay.khi.luu.khong.inh.kem.tep"))
                 .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
         }
         .foregroundStyle(AppColors.muted)
@@ -622,7 +624,7 @@ struct HomeworkSectionEditor: View {
     private var savedHint: some View {
         HStack(spacing: 6) {
             Image(systemName: "checkmark").font(.system(size: 13, weight: .semibold))
-            Text("Phụ huynh thấy ngay khi lưu")
+            Text(String(localized: "feature.homework.phu.huynh.thay.ngay.khi.luu"))
                 .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
         }
         .foregroundStyle(AppColors.success)
@@ -633,16 +635,16 @@ struct HomeworkSectionEditor: View {
         Group {
             if confirmingDelete {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Xoá phần “\(section.title)”?")
+                    Text(String.localizedStringWithFormat(String(localized: "feature.homework.xoa.phan.e8531efc"), String(describing: (section.title))))
                         .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                         .foregroundStyle(AppColors.error)
-                    Text("Phụ huynh sẽ không thấy phần này nữa. Không thể hoàn tác.")
+                    Text(String(localized: "feature.homework.phu.huynh.se.khong.thay.phan.nay.nua.khong.the.h"))
                         .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                         .foregroundStyle(AppColors.muted)
                     HStack(spacing: 8) {
                         Spacer(minLength: 0)
-                        AppButton(title: "Huỷ", variant: .secondary, size: .medium) { confirmingDelete = false }
-                        AppButton(title: "Xoá phần", variant: .danger, size: .medium) { remove(section) }
+                        AppButton(title: String(localized: "feature.homework.huy"), variant: .secondary, size: .medium) { confirmingDelete = false }
+                        AppButton(title: String(localized: "feature.homework.xoa.phan"), variant: .danger, size: .medium) { remove(section) }
                     }
                 }
                 .padding(12)
@@ -652,7 +654,7 @@ struct HomeworkSectionEditor: View {
                     Button { if deletable { confirmingDelete = true } } label: {
                         HStack(spacing: 6) {
                             Image(systemName: deletable ? "trash" : "lock").font(.system(size: 14))
-                            Text("Xoá phần").appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                            Text(String(localized: "feature.homework.xoa.phan")).appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                         }
                         .foregroundStyle(deletable ? AppColors.error : AppColors.placeholder)
                         .padding(.horizontal, 16)
@@ -675,7 +677,7 @@ struct HomeworkSectionEditor: View {
     private func save() {
         guard let kind = editingSection?.kind ?? kind else { return }
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            error = "Nhập tiêu đề phần bài tập."
+            error = String(localized: "feature.homework.nhap.tieu.e.phan.bai.tap")
             return
         }
         let draftTitle = title

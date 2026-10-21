@@ -69,26 +69,26 @@ enum HomeworkRules {
     static func canDelete(gradeCount: Int) -> Bool { gradeCount == 0 }
 
     static func deleteBlockedMessage(gradeCount: Int) -> String {
-        "Đã chấm cho \(gradeCount) em nên không xoá được. Vẫn sửa được tiêu đề và mô tả."
+        String.localizedStringWithFormat(String(localized: "feature.homework.a.cham.cho.em.nen.khong.xoa.uoc.van.sua.uoc.tieu"), String(describing: (gradeCount)))
     }
 
-    static let deleteAllowedMessage = "Chưa chấm cho em nào nên xoá được."
+    static let deleteAllowedMessage = String(localized: "feature.homework.chua.cham.cho.em.nao.nen.xoa.uoc")
 
     static func addPartLabel(missing: [HomeworkKind]) -> String? {
-        missing.isEmpty ? nil : "còn \(missing.count) loại"
+        missing.isEmpty ? nil : String.localizedStringWithFormat(String(localized: "feature.homework.con.loai"), String(describing: (missing.count)))
     }
 
-    static func partsCountLabel(_ count: Int) -> String { "\(count)/4 phần" }
+    static func partsCountLabel(_ count: Int) -> String { String.localizedStringWithFormat(String(localized: "feature.homework.4.phan"), String(describing: (count))) }
 
     static func gradePillLabel(gradeCount: Int, total: Int) -> String {
-        gradeCount > 0 ? "Đã chấm \(gradeCount)/\(total)" : "Chưa chấm"
+        gradeCount > 0 ? String.localizedStringWithFormat(String(localized: "feature.homework.a.cham"), String(describing: (gradeCount)), String(describing: (total))) : String(localized: "feature.homework.ungraded")
     }
 
     static func previousEmptyCopy(first: Bool) -> (title: String, body: String) {
         first
-            ? ("Buổi đầu, chưa có BTVN buổi trước",
-               "Lớp chưa giao bài nào nên chưa có gì để chấm.")
-            : ("Buổi trước không giao BTVN",
-               "Không có phần nào để chấm ở buổi này. Phiếu vẫn gửi bình thường.")
+            ? (String(localized: "feature.homework.buoi.au.chua.co.btvn.buoi.truoc"),
+               String(localized: "feature.homework.lop.chua.giao.bai.nao.nen.chua.co.gi.e.cham"))
+            : (String(localized: "feature.homework.buoi.truoc.khong.giao.btvn"),
+               String(localized: "feature.homework.khong.co.phan.nao.e.cham.o.buoi.nay.phieu.van.gu"))
     }
 }

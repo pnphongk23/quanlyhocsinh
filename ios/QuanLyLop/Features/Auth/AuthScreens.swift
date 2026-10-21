@@ -10,32 +10,32 @@ struct AuthLoginView: View {
     var body: some View {
         AuthPage {
             AuthBrand()
-            AuthTitle(text: "Đăng nhập")
-            AuthDescription(text: "Dành cho giáo viên và phụ huynh.")
+            AuthTitle(text: String(localized: "feature.auth.ang.nhap"))
+            AuthDescription(text: String(localized: "feature.auth.danh.cho.giao.vien.va.phu.huynh"))
             if model.isLocked {
                 AuthBanner(text: AuthCopy.loginLocked, tone: .warning)
             } else if let message = model.message {
                 AuthBanner(text: message, tone: .error)
             }
             VStack(spacing: 20) {
-                AuthPhoneField(label: "Số điện thoại", digits: $phone,
+                AuthPhoneField(label: String(localized: "feature.auth.so.ien.thoai"), digits: $phone,
                                disabled: model.isLocked,
                                hasError: model.message != nil && !model.isLocked,
                                identifier: "login.phone")
-                AuthPasswordField(label: "Mật khẩu", value: $password,
+                AuthPasswordField(label: String(localized: "feature.auth.mat.khau"), value: $password,
                                   hasError: model.message != nil && !model.isLocked,
                                   disabled: model.isLocked,
                                   identifier: "login.password")
                 HStack {
                     Spacer(minLength: 0)
-                    Button("Quên mật khẩu?") {
+                    Button(String(localized: "feature.auth.quen.mat.khau")) {
                         model.showForgotPassword(phone: phone,
                                                  isTeacher: model.activeMembership?.role.scopeKind == .workspace)
                     }
                     .appText(AuthText.link)
                     .foregroundStyle(AppColors.primary)
                 }
-                AuthSubmitButton(title: "Đăng nhập", disabled: model.isLocked) {
+                AuthSubmitButton(title: String(localized: "feature.auth.ang.nhap"), disabled: model.isLocked) {
                     Task { await model.login(phone: phone, password: password) }
                 }
             }
@@ -43,14 +43,14 @@ struct AuthLoginView: View {
 
             VStack(spacing: 16) {
                 Button { model.show(.register) } label: {
-                    (Text("Chưa có không gian làm việc? ").foregroundStyle(AppColors.muted)
-                     + Text("Đăng ký cho giáo viên").foregroundStyle(AppColors.primary))
+                    (Text(String(localized: "feature.auth.chua.co.khong.gian.lam.viec")).foregroundStyle(AppColors.muted)
+                     + Text(String(localized: "feature.auth.ang.ky.cho.giao.vien")).foregroundStyle(AppColors.primary))
                         .appText(AuthText.note)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .multilineTextAlignment(.center)
                 }
                 .buttonStyle(.plain)
-                AuthHintCard(lead: "Phụ huynh: ", text: "dùng số điện thoại đã đăng ký với giáo viên và mật khẩu giáo viên cấp.")
+                AuthHintCard(lead: String(localized: "feature.auth.phu.huynh.c87f8d0d"), text: String(localized: "feature.auth.dung.so.ien.thoai.a.ang.ky.voi.giao.vien.va.mat"))
             }
             .padding(.top, 32)
             Spacer(minLength: 0)
@@ -73,26 +73,26 @@ struct AuthRegisterView: View {
     var body: some View {
         AuthPage {
             AuthBackButton { model.show(.login) }
-            AuthTitle(text: "Tạo không gian làm việc")
+            AuthTitle(text: String(localized: "feature.auth.tao.khong.gian.lam.viec"))
             if let message = model.message { AuthBanner(text: message, tone: .error) }
             VStack(spacing: 20) {
-                AuthTextField(label: "Tên hiển thị", text: $name, placeholder: "Cô Lan",
+                AuthTextField(label: String(localized: "feature.auth.ten.hien.thi"), text: $name, placeholder: String(localized: "feature.auth.co.lan"),
                               identifier: "register.name")
-                AuthTextField(label: "Tên không gian làm việc", text: $workspace,
-                              placeholder: "Lớp của cô Lan", identifier: "register.workspace")
-                AuthPhoneField(label: "Số điện thoại", digits: $phone, identifier: "register.phone")
-                AuthPasswordField(label: "Mật khẩu", value: $password, autoComplete: .newPassword,
+                AuthTextField(label: String(localized: "feature.auth.ten.khong.gian.lam.viec"), text: $workspace,
+                              placeholder: String(localized: "feature.auth.lop.cua.co.lan"), identifier: "register.workspace")
+                AuthPhoneField(label: String(localized: "feature.auth.so.ien.thoai"), digits: $phone, identifier: "register.phone")
+                AuthPasswordField(label: String(localized: "feature.auth.mat.khau"), value: $password, autoComplete: .newPassword,
                                   identifier: "register.password",
                                   strengthPassword: password)
-                AuthCheckRow(ok: password.count >= 8, text: "Tối thiểu 8 ký tự")
-                AuthPasswordField(label: "Nhập lại mật khẩu", value: $confirmation,
+                AuthCheckRow(ok: password.count >= 8, text: String(localized: "feature.auth.toi.thieu.8.ky.tu"))
+                AuthPasswordField(label: String(localized: "feature.auth.nhap.lai.mat.khau"), value: $confirmation,
                                   autoComplete: .newPassword, hasError: mismatch,
                                   errorText: mismatch ? AuthCopy.passwordMismatch : nil,
                                   identifier: "register.confirm")
-                Text("Người tạo là quản trị viên đầu tiên của không gian làm việc.")
+                Text(String(localized: "feature.auth.nguoi.tao.la.quan.tri.vien.au.tien.cua.khong.gia"))
                     .appText(AuthText.note)
                     .foregroundStyle(AppColors.muted)
-                AuthSubmitButton(title: "Tạo không gian làm việc") {
+                AuthSubmitButton(title: String(localized: "feature.auth.tao.khong.gian.lam.viec")) {
                     Task {
                         await model.register(name: name, workspace: workspace, phone: phone,
                                              password: password, confirmation: confirmation)
@@ -122,29 +122,29 @@ struct AuthForcedPasswordView: View {
 
     var body: some View {
         AuthPage {
-            AuthTitle(text: "Đổi mật khẩu")
-            AuthDescription(text: "Bạn đang dùng mật khẩu tạm do giáo viên cấp. Hãy đặt mật khẩu mới để tiếp tục.")
+            AuthTitle(text: String(localized: "feature.auth.oi.mat.khau"))
+            AuthDescription(text: String(localized: "feature.auth.ban.ang.dung.mat.khau.tam.do.giao.vien.cap.hay.a"))
             VStack(spacing: 20) {
-                AuthPasswordField(label: "Mật khẩu hiện tại (mật khẩu tạm)", value: $current,
+                AuthPasswordField(label: String(localized: "feature.auth.mat.khau.hien.tai.mat.khau.tam"), value: $current,
                                   identifier: "forced.current")
-                AuthPasswordField(label: "Mật khẩu mới", value: $newPassword,
+                AuthPasswordField(label: String(localized: "feature.auth.mat.khau.moi"), value: $newPassword,
                                   autoComplete: .newPassword,
                                   hasError: tooShort || duplicateTemp,
                                   errorText: duplicateTemp ? AuthCopy.sameAsTemp : nil,
                                   identifier: "forced.new",
                                   strengthPassword: newPassword)
-                AuthPasswordField(label: "Nhập lại mật khẩu mới", value: $confirmation,
+                AuthPasswordField(label: String(localized: "feature.auth.nhap.lai.mat.khau.moi"), value: $confirmation,
                                   autoComplete: .newPassword, hasError: mismatch,
                                   errorText: mismatch ? AuthCopy.passwordMismatch : nil,
                                   identifier: "forced.confirm")
                 VStack(spacing: 10) {
-                    AuthCheckRow(ok: newPassword.count >= 8, text: "Tối thiểu 8 ký tự")
-                    AuthCheckRow(ok: !newPassword.isEmpty && !duplicateTemp, text: "Khác mật khẩu tạm")
+                    AuthCheckRow(ok: newPassword.count >= 8, text: String(localized: "feature.auth.toi.thieu.8.ky.tu"))
+                    AuthCheckRow(ok: !newPassword.isEmpty && !duplicateTemp, text: String(localized: "feature.auth.khac.mat.khau.tam"))
                 }
                 if let message = model.message, !duplicateTemp {
                     Text(message).appText(AuthText.fieldError).foregroundStyle(AppColors.error)
                 }
-                AuthSubmitButton(title: "Đổi mật khẩu và tiếp tục", disabled: blocked) {
+                AuthSubmitButton(title: String(localized: "feature.auth.oi.mat.khau.va.tiep.tuc"), disabled: blocked) {
                     Task {
                         await model.changePassword(current: current, newPassword: newPassword,
                                                    confirmation: confirmation)
@@ -167,23 +167,23 @@ struct AuthForgotPasswordView: View {
     var body: some View {
         AuthPage {
             AuthBackButton { model.show(.login) }
-            AuthTitle(text: "Quên mật khẩu?")
+            AuthTitle(text: String(localized: "feature.auth.quen.mat.khau"))
             AuthDescription(text: isTeacher
-                            ? "Giáo viên chưa tự đặt lại mật khẩu được."
-                            : "Nhờ giáo viên cấp lại mật khẩu cho số điện thoại của bạn.")
-            AuthPhoneField(label: "Số điện thoại của bạn", digits: $phone, readOnly: true,
+                            ? String(localized: "feature.auth.giao.vien.chua.tu.at.lai.mat.khau.uoc")
+                            : String(localized: "feature.auth.nho.giao.vien.cap.lai.mat.khau.cho.so.ien.thoai"))
+            AuthPhoneField(label: String(localized: "feature.auth.so.ien.thoai.cua.ban"), digits: $phone, readOnly: true,
                            identifier: "forgot.phone")
                 .padding(.top, 22)
 
             if isTeacher {
-                AuthBanner(text: "Liên hệ quản trị viên không gian làm việc", tone: .warning)
-                AuthNote(text: "Hiện chưa có tự phục hồi mật khẩu cho giáo viên. Quản trị viên sẽ cấp mật khẩu mới cho bạn.")
+                AuthBanner(text: String(localized: "feature.auth.lien.he.quan.tri.vien.khong.gian.lam.viec"), tone: .warning)
+                AuthNote(text: String(localized: "feature.auth.hien.chua.co.tu.phuc.hoi.mat.khau.cho.giao.vien"))
             } else {
                 steps
             }
-            AuthNote(text: "Không có mã nào được gửi đến điện thoại của bạn.")
+            AuthNote(text: String(localized: "feature.auth.khong.co.ma.nao.uoc.gui.en.ien.thoai.cua.ban"))
             Spacer(minLength: 0)
-            AuthSubmitButton(title: "Quay lại đăng nhập") { model.show(.login) }
+            AuthSubmitButton(title: String(localized: "feature.auth.quay.lai.ang.nhap")) { model.show(.login) }
                 .padding(.top, 24)
         }
         .onAppear { phone = model.recoveryPhone }
@@ -191,9 +191,9 @@ struct AuthForgotPasswordView: View {
 
     private var steps: some View {
         VStack(spacing: 18) {
-            step(1, "Báo số điện thoại này cho giáo viên của con.")
-            step(2, "Giáo viên bấm “Cấp lại mật khẩu” ở hồ sơ học sinh.")
-            step(3, "Đăng nhập bằng mật khẩu tạm rồi đổi mật khẩu mới.")
+            step(1, String(localized: "feature.auth.bao.so.ien.thoai.nay.cho.giao.vien.cua.con"))
+            step(2, String(localized: "feature.auth.giao.vien.bam.cap.lai.mat.khau.o.ho.so.hoc.sinh"))
+            step(3, String(localized: "feature.auth.ang.nhap.bang.mat.khau.tam.roi.oi.mat.khau.moi"))
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -223,12 +223,12 @@ struct AuthRolePickerView: View {
 
     var body: some View {
         AuthPage {
-            AuthTitle(text: "Chọn vai trò")
+            AuthTitle(text: String(localized: "feature.auth.chon.vai.tro"))
             if let user = model.currentUser {
-                AuthDescription(text: "Số \(AuthFormat.phone(user.phone)) có hơn một vai trò. Chọn một để vào.")
+                AuthDescription(text: String.localizedStringWithFormat(String(localized: "feature.auth.so.co.hon.mot.vai.tro.chon.mot.e.vao"), String(describing: (AuthFormat.phone(user.phone)))))
             }
             if model.memberships.isEmpty {
-                AuthNote(text: "Tài khoản của bạn chưa có vai trò nào đang hoạt động trong không gian làm việc này.")
+                AuthNote(text: String(localized: "feature.auth.tai.khoan.cua.ban.chua.co.vai.tro.nao.ang.hoat.o"))
             }
             VStack(spacing: 14) {
                 ForEach(model.memberships, id: \.id) { membership in
@@ -238,7 +238,7 @@ struct AuthRolePickerView: View {
             .padding(.top, 26)
             if let message = model.message { AuthBanner(text: message, tone: .error) }
             // `.pickerFooter` chỉ cách danh sách 28 pt, không bị đẩy xuống đáy màn.
-            Text("Bạn đổi được vai trò bất cứ lúc nào trong Cài đặt.")
+            Text(String(localized: "feature.auth.ban.oi.uoc.vai.tro.bat.cu.luc.nao.trong.cai.at"))
                 .appText(AuthText.note)
                 .foregroundStyle(AppColors.muted)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -280,7 +280,7 @@ struct AuthRolePickerView: View {
 #if DEBUG
         if DemoFlag.screen == "role-picker",
            membership.role.scopeKind == .linkedStudents {
-            return "Bé Gia Bảo"
+            return String(localized: "feature.auth.be.gia.bao")
         }
 #endif
         return model.subtitle(for: membership)

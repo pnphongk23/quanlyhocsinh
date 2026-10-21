@@ -88,9 +88,9 @@ struct TeacherTabBar: View {
     }
 
     private let items = [
-        Item(tab: .classes, label: "Lớp", systemImage: "book"),
-        Item(tab: .calendar, label: "Lịch", systemImage: "calendar"),
-        Item(tab: .settings, label: "Cài đặt", systemImage: "slider.horizontal.3"),
+        Item(tab: .classes, label: String(localized: "feature.classes.lop"), systemImage: "book"),
+        Item(tab: .calendar, label: String(localized: "feature.classes.lich"), systemImage: "calendar"),
+        Item(tab: .settings, label: String(localized: "feature.classes.cai.at"), systemImage: "slider.horizontal.3"),
     ]
 
     var body: some View {
@@ -142,7 +142,7 @@ struct TeacherClassListView: View {
                 header
                 if let error = data.errorMessage { TeacherErrorBanner(message: error) { Task { await data.refresh() } } }
                 if !data.canReadClasses {
-                    AppEmptyState(title: "Bạn không có quyền xem lớp học")
+                    AppEmptyState(title: String(localized: "feature.classes.ban.khong.co.quyen.xem.lop.hoc"))
                 } else if !data.isReady {
                     loadingState
                 } else if classes.isEmpty {
@@ -162,7 +162,7 @@ struct TeacherClassListView: View {
         .overlay(alignment: .bottomTrailing) {
             if data.canWriteClasses {
                 TeacherLink(route: .newClass) { TeacherFab() }
-                    .accessibilityLabel("Tạo lớp mới")
+                    .accessibilityLabel(String(localized: "feature.classes.tao.lop.moi"))
                 .padding(.trailing, 20)
                 .padding(.bottom, 16)
             }
@@ -174,10 +174,10 @@ struct TeacherClassListView: View {
     private var header: some View {
         HStack(alignment: .bottom, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Xin chào, \(data.displayName)")
+                Text(String.localizedStringWithFormat(String(localized: "feature.classes.xin.chao"), String(describing: (data.displayName))))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
-                Text("Lớp của tôi")
+                Text(String(localized: "feature.classes.lop.cua.toi"))
                     .appText(AppText.title)
                     .foregroundStyle(AppColors.text)
             }
@@ -186,7 +186,7 @@ struct TeacherClassListView: View {
                 TeacherAvatar(initials: settingsInitials, size: AppMetrics.tap)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Cài đặt")
+            .accessibilityLabel(String(localized: "feature.classes.cai.at"))
         }
     }
 
@@ -199,17 +199,17 @@ struct TeacherClassListView: View {
     private var loadingState: some View {
         HStack(spacing: 12) {
             AppSpinner()
-            Text("Đang tải lớp học").appText(AppText.body).foregroundStyle(AppColors.muted)
+            Text(String(localized: "feature.classes.ang.tai.lop.hoc")).appText(AppText.body).foregroundStyle(AppColors.muted)
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.vertical, 24)
     }
 
     private var emptyState: some View {
-        AppEmptyState(title: "Chưa có lớp học") {
+        AppEmptyState(title: String(localized: "feature.classes.chua.co.lop.hoc")) {
             if data.canWriteClasses {
                 TeacherLink(route: .newClass) {
-                    Text("Tạo lớp đầu tiên")
+                    Text(String(localized: "feature.classes.tao.lop.au.tien"))
                         .appText(AppText.buttonSmall)
                         .foregroundStyle(AppColors.onPrimary)
                         .padding(.horizontal, 16)
@@ -223,7 +223,7 @@ struct TeacherClassListView: View {
     private func todayCard(session: ClassSession, classroom: Classroom) -> some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Hôm nay · \(classroom.startTime ?? session.startTime)")
+                Text(String.localizedStringWithFormat(String(localized: "feature.classes.hom.nay.7aac3196"), String(describing: (classroom.startTime ?? session.startTime))))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.onPrimary)
                 Text("\(classroom.name) · \(TeacherFeatureData.sessionPrefix(session))")
@@ -232,7 +232,7 @@ struct TeacherClassListView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             TeacherLink(route: .session(classID: classroom.id, sessionID: session.id)) {
-                Text("Điểm danh")
+                Text(String(localized: "feature.classes.iem.danh"))
                     .appText(AppText.buttonSmall)
                     .foregroundStyle(AppColors.primaryInk)
                     .padding(.horizontal, 16)
@@ -253,8 +253,8 @@ struct TeacherClassListView: View {
                     .foregroundStyle(AppColors.text)
                     .lineLimit(1)
                 HStack(spacing: 8) {
-                    TeacherCountChip(count: "\(data.activeStudents(in: klass.id).count)", after: " học sinh")
-                    TeacherCountChip(before: "Chuyên cần ", count: attendanceText(klass))
+                    TeacherCountChip(count: "\(data.activeStudents(in: klass.id).count)", after: String(localized: "feature.classes.students.suffix"))
+                    TeacherCountChip(before: String(localized: "feature.classes.chuyen.can"), count: attendanceText(klass))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -278,19 +278,19 @@ struct TeacherSettingsView: View {
     var body: some View {
         TeacherScroll {
             VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-                Text("Cài đặt").appText(AppText.title).foregroundStyle(AppColors.text)
+                Text(String(localized: "feature.classes.cai.at")).appText(AppText.title).foregroundStyle(AppColors.text)
                 AppCard {
                     HStack {
-                        Text("Vai trò").appText(AppText.label)
+                        Text(String(localized: "feature.classes.vai.tro")).appText(AppText.label)
                         Spacer()
                         Text(data.roleName).appText(AppText.muted).foregroundStyle(AppColors.muted)
                     }
                 }
                 AppCard {
                     HStack {
-                        Text("Ngôn ngữ").appText(AppText.label)
+                        Text(String(localized: "feature.classes.ngon.ngu")).appText(AppText.label)
                         Spacer()
-                        Text("Tiếng Việt").appText(AppText.muted).foregroundStyle(AppColors.muted)
+                        Text(String(localized: "feature.classes.tieng.viet")).appText(AppText.muted).foregroundStyle(AppColors.muted)
                     }
                 }
             }
