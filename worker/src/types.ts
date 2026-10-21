@@ -33,7 +33,7 @@ export interface Identity {
 
 export interface Env {
   DB: D1Database;
-  REPORT_PDFS: R2Bucket;
+  REPORT_PDFS?: R2Bucket;
   ENVIRONMENT?: string;
   /** Số vòng PBKDF2, mặc định 100000 (api-spec Q8). Test dùng số nhỏ. */
   PBKDF2_ITERATIONS?: string;

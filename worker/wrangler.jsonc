@@ -18,12 +18,6 @@
       "migrations_dir": "migrations"
     }
   ],
-  "r2_buckets": [
-    {
-      "binding": "REPORT_PDFS",
-      "bucket_name": "replace-at-deploy"
-    }
-  ],
   "env": {
     "staging": {
       "name": "qlh-staging-api",
@@ -39,12 +33,12 @@
           "migrations_dir": "migrations"
         }
       ],
-      "r2_buckets": [
-        {
-          "binding": "REPORT_PDFS",
-          "bucket_name": "qlh-staging-reports"
-        }
-      ]
+      // R2 is not enabled for this account yet. To enable report PDFs:
+      // 1. Create the qlh-staging-reports bucket in Cloudflare.
+      // 2. Uncomment this binding, then deploy the staging environment.
+      // "r2_buckets": [
+      //   { "binding": "REPORT_PDFS", "bucket_name": "qlh-staging-reports" }
+      // ]
     }
   }
 }

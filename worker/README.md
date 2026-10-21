@@ -11,3 +11,7 @@ npm run dev
 ```
 
 Run `npm run typecheck`, `npm test`, and `npm run bundle:size` before committing changes. Copy `.dev.vars.example` to `.dev.vars` only when local overrides are needed; keep secrets out of source control.
+
+## Enable report PDF storage
+
+R2 is optional and disabled in the deploy config until the account has access. Create the `qlh-staging-reports` bucket in Cloudflare, uncomment the `REPORT_PDFS` block under `env.staging` in `wrangler.jsonc`, then deploy staging. Vitest keeps a local R2 bucket configured for tests.
