@@ -69,12 +69,19 @@ ios/
   Scripts/make-icon.py   sinh AppIcon 1024×1024 + Assets.xcassets
   docs/                  storage-proposal.md, ảnh chụp màn khởi động, báo cáo
   QuanLyLop/
-    App/                 QuanLyLopApp.swift (@main), ContentView (màn khởi động)
+    App/                 QuanLyLopApp.swift (@main), ContentView (màn khởi động + harness design system)
     Core/Config/         AppConfiguration: đọc API_BASE_URL, môi trường từ Info.plist
-    Core/Networking/     APIClient protocol + StubAPIClient (chờ API spec)
-    Core/Storage/        LocalStore protocol, PendingCommand (chưa cài đặt)
+    Core/DesignSystem/   token prototype (màu/chữ/bán kính), nút, ô nhập, chip, pill, thẻ, sheet, trạng thái
+    Core/Models/         mô hình Codable theo api-spec/data-model, JSONValue + WireJSON
+    Core/Networking/     APIClient (URLSession) + StubAPIClient + Fixtures/CoreFixtures.json
+    Core/Security/       TokenStore (Keychain/in-memory) + SessionController (đăng xuất, đổi vai trò)
+    Core/Storage/        LocalStore + SQLiteStore: bản ghi, hàng đợi lệnh idempotent, cursor
+    Core/Sync/           SyncCoordinator: push/pull/snapshot theo api-spec mục 6
+    Core/Push/           PushRegistrar + NoOpPushRegistrar (chưa Firebase)
     Features/            Auth, Classes, Attendance, Scores, Homework, Comments, Reports, Guardian (trống)
-    Resources/           Info.plist, Assets.xcassets, Localizable.xcstrings, InfoPlist.xcstrings
+    Resources/           Info.plist, QuanLyLop.entitlements, Assets.xcassets, Localizable.xcstrings, InfoPlist.xcstrings
+  QuanLyLopTests/        test Core, đồng bộ, mạng, design system (XCTest)
+  docs/                  core-api.md, report-i1.md, storage-proposal.md, screens/ (ảnh đối chiếu prototype)
 ```
 
 Localization: `developmentRegion` là `vi`; mọi chuỗi trong app đi qua `Localizable.xcstrings`,
@@ -86,8 +93,33 @@ tên app đi qua `InfoPlist.xcstrings`. Chưa có ngôn ngữ thứ hai.
 `AccentColor`, `LaunchBackground`. Màu chính dùng `#2F5BEA` — rgb(47, 91, 234) — theo prototype
 (`design/prototype/src/shared/styles/tokens.css`, `--color-primary`).
 
+## Kiểm thử
+
+```sh
+cd ios
+xcodegen generate
+xcodebuild -scheme QuanLyLop -configuration Staging \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -derivedDataPath /tmp/qlh-dd-i1 CODE_SIGNING_ALLOWED=NO build test
+```
+
+Lệnh này chạy cả build và test. Test keychain cần app **có ký** (entitlement `keychain-access-groups`);
+với `CODE_SIGNING_ALLOWED=NO` nó tự `XCTSkip`, muốn chạy đủ thì bỏ cờ đó:
+
+```sh
+xcodebuild -scheme QuanLyLop -configuration Staging \
+  -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -derivedDataPath /tmp/qlh-dd-i1b test -only-testing:QuanLyLopTests/NetworkingTests
+```
+
+Xem thư viện thành phần (design system) ngay trên simulator:
+
+```sh
+SIMCTL_CHILD_QLH_DESIGN_GALLERY=1 xcrun simctl launch booted vn.quanlylop.app   # =sheet để mở sheet mẫu
+```
+
 ## Chưa có (đúng phạm vi bản nền)
 
-- API thật, đăng nhập, mọi màn nghiệp vụ.
-- Lưu cục bộ và hàng đợi đồng bộ: mới có đề xuất `ios/docs/storage-proposal.md`.
-- Test tự động, CI, chứng chỉ ký, cấu hình push.
+- API thật, đăng nhập, mọi màn nghiệp vụ (I-2..I-5).
+- Push FCM: mới có `PushRegistrar` no-op.
+- CI, chứng chỉ ký, cấu hình Team.
