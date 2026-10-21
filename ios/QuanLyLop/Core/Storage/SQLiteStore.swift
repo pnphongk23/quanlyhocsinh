@@ -106,7 +106,10 @@ actor SQLiteStore: LocalStore {
     }
     func read<Value: Decodable & Sendable>(_ type: Value.Type, forKey key: String) throws -> Value? {
         guard let text = try db.execute("SELECT json FROM records WHERE scope=? AND key=?", [scope.storageKey, key]).first?["json"] else { return nil }
-        let overlay = try db.execute("SELECT local_json FROM commands WHERE scope=? AND record_key=? ORDER BY created_at DESC,seq DESC LIMIT 1", [scope.storageKey, key]).first?["local_json"]
+        // Only an edit that is still on its way to the server may hide the cached row. A `rejected`
+        // command is not a value the teacher has (`api-spec.md` mục 6: it was never applied), so the
+        // cell falls back to whatever `pull` left in the cache instead of showing a second value.
+        let overlay = try db.execute("SELECT local_json FROM commands WHERE scope=? AND record_key=? AND state IN ('pending','sending') ORDER BY created_at DESC,seq DESC LIMIT 1", [scope.storageKey, key]).first?["local_json"]
         return try decode(type, overlay ?? text)
     }
     func records<Value: Decodable & Sendable>(_ type: Value.Type, entity: String) throws -> [Value] {
@@ -144,6 +147,11 @@ actor SQLiteStore: LocalStore {
                 }
                 try db.execute("INSERT INTO commands(scope,id,record_key,kind,json,local_json,created_at) VALUES(?,?,?,?,?,?,?)",
                     [scope.storageKey,replacement.id.uuidString,key,replacement.kind,try encode(replacement),json,String(replacement.createdAt.timeIntervalSince1970)])
+                // A fresh edit of the same cell supersedes its rejected command: the teacher has changed
+                // the value, so keeping the old error up would leave a permanent save-error pill (spec 5.3
+                // asks for an error only while it is true, and the outbox would block logout forever).
+                try db.execute("DELETE FROM commands WHERE scope=? AND record_key=? AND kind=? AND state='rejected'",
+                               [scope.storageKey,key,command.kind])
             }
         }
     }
@@ -209,7 +217,15 @@ actor SQLiteStore: LocalStore {
     }
     private func reject(_ result: CommandResult) throws {
         let error = result.error ?? APIError(code: "rejected", message: nil, details: nil, requestId: nil)
+        // Read the cell before the state change so its optimistic placeholder can be dropped.
+        let key = try db.execute("SELECT record_key FROM commands WHERE scope=? AND id=?", [scope.storageKey,result.id.uuidString]).first?["record_key"]
         try db.execute("UPDATE commands SET state='rejected',error=? WHERE scope=? AND id=? AND state='sending'", [try encode(error),scope.storageKey,result.id.uuidString])
+        // `version = -1` is the local placeholder written with the command. The server never accepted
+        // this edit, so the cell goes back to the last pulled value (or to empty) while the command
+        // stays queued as the error label's source.
+        if let key {
+            try db.execute("DELETE FROM records WHERE scope=? AND key=? AND version=-1", [scope.storageKey,key])
+        }
     }
     func retry(_ ids: [UUID], now: Date, minimumDelay: TimeInterval = 0) throws {
         try transaction {
