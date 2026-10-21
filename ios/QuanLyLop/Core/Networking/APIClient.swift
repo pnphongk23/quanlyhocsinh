@@ -36,19 +36,21 @@ struct APIError: Codable, Sendable, Equatable {
     let requestId: String?
     var localizedMessage: String {
         switch code {
-        case "unauthorized": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
-        case "invalid_credentials": "Số điện thoại hoặc mật khẩu không đúng."
-        case "password_change_required": "Vui lòng đổi mật khẩu trước khi tiếp tục."
-        case "account_disabled": "Tài khoản hoặc vai trò đã bị vô hiệu hóa."
-        case "forbidden": "Bạn không có quyền thực hiện thao tác này."
-        case "not_found": "Không tìm thấy dữ liệu hoặc bạn không còn quyền truy cập."
-        case "account_not_resettable": "Không thể cấp lại mật khẩu cho tài khoản này."
-        case "version_conflict", "conflict": "Dữ liệu đã thay đổi. Vui lòng kiểm tra lại."
-        case "resync_required", "snapshot_required": "Cần tải lại dữ liệu."
-        case "validation_error", "bad_request": "Dữ liệu chưa hợp lệ. Vui lòng kiểm tra lại."
-        case "payload_too_large": "Dữ liệu gửi lên quá lớn."
-        case "rate_limited": "Bạn thao tác quá nhanh. Vui lòng thử lại sau."
-        default: "Không thể kết nối dịch vụ. Vui lòng thử lại."
+        case "unauthorized": String(localized: "core.apiError.unauthorized")
+        case "invalid_credentials": String(localized: "core.apiError.invalidCredentials")
+        case "password_change_required": String(localized: "core.apiError.passwordChangeRequired")
+        case "account_disabled": String(localized: "core.apiError.accountDisabled")
+        case "forbidden": String(localized: "core.apiError.forbidden")
+        case "not_found": String(localized: "core.apiError.notFound")
+        case "account_not_resettable": String(localized: "core.apiError.accountNotResettable")
+        case "version_conflict", "conflict": String(localized: "core.apiError.conflict")
+        case "resync_required", "snapshot_required": String(localized: "core.apiError.resyncRequired")
+        case "validation_error", "bad_request": String(localized: "core.apiError.validationError")
+        // Kept when the server rejects a queued command without an error code of its own.
+        case "rejected": String(localized: "core.apiError.rejected")
+        case "payload_too_large": String(localized: "core.apiError.payloadTooLarge")
+        case "rate_limited": String(localized: "core.apiError.rateLimited")
+        default: String(localized: "core.apiError.unknown")
         }
     }
 }

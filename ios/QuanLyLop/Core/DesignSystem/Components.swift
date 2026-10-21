@@ -240,10 +240,10 @@ extension AttendanceStatus {
     /// Labels from `AttendancePanel.tsx`, colours from `.present/.late/.excused/.absent`.
     var label: String {
         switch self {
-        case .present: "Có mặt"
-        case .late: "Muộn"
-        case .excused: "Có phép"
-        case .absent: "Vắng"
+        case .present: String(localized: "design.attendance.present")
+        case .late: String(localized: "design.attendance.late")
+        case .excused: String(localized: "design.attendance.excused")
+        case .absent: String(localized: "design.attendance.absent")
         }
     }
     var pillTone: AppPill.Tone {
@@ -261,9 +261,9 @@ extension HomeworkLevel {
     /// `HOMEWORK_LEVEL_LABELS` in `data/homework.ts`; colours from `.level_*`.
     var label: String {
         switch self {
-        case .excellent: "Hoàn thành tốt"
-        case .done: "Hoàn thành"
-        case .notDone: "Chưa hoàn thành"
+        case .excellent: String(localized: "design.homework.excellent")
+        case .done: String(localized: "design.homework.done")
+        case .notDone: String(localized: "design.homework.notDone")
         }
     }
     var foreground: Color {
@@ -295,7 +295,7 @@ struct AppHomeworkPill: View {
     let level: HomeworkLevel?
 
     var body: some View {
-        if let level { level.pill } else { AppPill(title: "Chưa chấm", tone: .warning) }
+        if let level { level.pill } else { AppPill(title: String(localized: "design.homework.ungraded"), tone: .warning) }
     }
 }
 
@@ -380,7 +380,7 @@ struct AppSheet<Content: View, Footer: View>: View {
             HStack(spacing: 16) {
                 Text(title).appText(AppText.heading).foregroundStyle(AppColors.text)
                 Spacer(minLength: 0)
-                AppButton(title: "Đóng", variant: .secondary, action: close)
+                AppButton(title: String(localized: "design.action.close"), variant: .secondary, action: close)
                     .accessibilityIdentifier("sheet.close")
             }
             .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 16)
@@ -402,7 +402,7 @@ struct AppSheet<Content: View, Footer: View>: View {
 // MARK: - Empty / error / loading (`.empty`, `.emptyTitle`, `.spinner`)
 
 struct AppEmptyState<Extra: View>: View {
-    var title: String = "Chưa có dữ liệu"
+    var title: String = String(localized: "design.empty.title")
     @ViewBuilder var detail: Extra
 
     var body: some View {
@@ -418,20 +418,20 @@ struct AppEmptyState<Extra: View>: View {
 }
 
 extension AppEmptyState where Extra == EmptyView {
-    init(title: String = "Chưa có dữ liệu") { self.init(title: title) { EmptyView() } }
+    init(title: String = String(localized: "design.empty.title")) { self.init(title: title) { EmptyView() } }
 }
 
 /// The prototype has no dedicated error component; this keeps the empty-state shell so an
 /// error never looks like a different surface, and adds the retry action.
 struct AppErrorState: View {
-    var message = "Không thể tải dữ liệu. Vui lòng thử lại."
+    var message = String(localized: "design.error.message")
     let retry: () -> Void
 
     var body: some View {
-        AppEmptyState(title: "Đã xảy ra lỗi") {
+        AppEmptyState(title: String(localized: "design.error.title")) {
             VStack(spacing: 12) {
                 Text(message).appText(AppText.muted).foregroundStyle(AppColors.muted)
-                AppButton(title: "Thử lại", action: retry)
+                AppButton(title: String(localized: "design.action.retry"), action: retry)
             }
         }
     }
@@ -450,6 +450,6 @@ struct AppSpinner: View {
             .rotationEffect(.degrees(spinning ? 360 : 0))
             .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: spinning)
             .onAppear { spinning = true }
-            .accessibilityLabel("Đang tải")
+            .accessibilityLabel(Text("design.loading"))
     }
 }

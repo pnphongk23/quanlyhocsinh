@@ -18,9 +18,9 @@ enum Stars: Int, Codable, Sendable, CaseIterable {
     case one = 1, two, three
     var template: String {
         switch self {
-        case .three: "Con hoàn thành 3 sao 🌟🌟🌟. Tập trung, tích cực học tập. Ghi bài đầy đủ, hiểu bài!"
-        case .two: "Con hoàn thành 2 sao 🌟🌟. Ghi bài đầy đủ, tham gia hoạt động học tập. Còn mất trật tự."
-        case .one: "Con chỉ đạt 1 sao 🌟. Chưa tập trung, nói chuyện làm việc riêng. Đã ghi chép bài đầy đủ."
+        case .three: String(localized: "core.stars.three")
+        case .two: String(localized: "core.stars.two")
+        case .one: String(localized: "core.stars.one")
         }
     }
 }
@@ -269,15 +269,3 @@ struct CurrentIdentity: Codable, Sendable, Equatable {
     let memberships: [Membership]
 }
 
-struct SyncConflict: Codable, Sendable, Equatable {
-    let id: String
-    let entity: String
-    let k1: String
-    let k2: String
-    let serverValue: JSONValue
-    let serverVersion: Int
-    let clientValue: JSONValue
-    let createdAt: String
-    let resolvedAt: String?
-    let version: Int
-}

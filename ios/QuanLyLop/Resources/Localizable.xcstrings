@@ -1,54 +1,438 @@
 {
-  "sourceLanguage" : "vi",
-  "strings" : {
-    "app.name" : {
-      "comment" : "Tên app hiển thị trong app. Tên tạm, đổi cùng lúc với CFBundleDisplayName.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quản lý lớp"
+  "sourceLanguage": "vi",
+  "strings": {
+    "app.name": {
+      "comment": "Tên app hiển thị trong app. Tên tạm, đổi cùng lúc với CFBundleDisplayName.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quản lý lớp"
           }
         }
       }
     },
-    "launch.configError" : {
-      "comment" : "Hiện khi không đọc được AppEnvironment/APIBaseURL trong Info.plist.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không đọc được cấu hình môi trường. Kiểm tra Config/*.xcconfig rồi build lại."
+    "core.apiError.accountDisabled": {
+      "comment": "Tài khoản/membership bị vô hiệu.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tài khoản hoặc vai trò đã bị vô hiệu hóa."
           }
         }
       }
     },
-    "launch.environment" : {
-      "comment" : "Nhãn cạnh tên môi trường Staging/Production.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Môi trường"
+    "core.apiError.accountNotResettable": {
+      "comment": "409 account_not_resettable.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể cấp lại mật khẩu cho tài khoản này."
           }
         }
       }
     },
-    "launch.tagline" : {
-      "comment" : "Dòng phụ dưới tên app ở màn khởi động.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nền ứng dụng đang được chuẩn bị"
+    "core.apiError.conflict": {
+      "comment": "409 conflict/version_conflict từ API trực tuyến (ví dụ PATCH lớp); không phải xung đột ô đồng bộ.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dữ liệu đã thay đổi ở nơi khác. Vui lòng mở lại màn hình."
+          }
+        }
+      }
+    },
+    "core.apiError.forbidden": {
+      "comment": "403 thiếu quyền.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bạn không có quyền thực hiện thao tác này."
+          }
+        }
+      }
+    },
+    "core.apiError.invalidCredentials": {
+      "comment": "Sai SĐT/mật khẩu.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Số điện thoại hoặc mật khẩu không đúng."
+          }
+        }
+      }
+    },
+    "core.apiError.notFound": {
+      "comment": "404, gồm membership đã bị gỡ.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không tìm thấy dữ liệu hoặc bạn không còn quyền truy cập."
+          }
+        }
+      }
+    },
+    "core.apiError.passwordChangeRequired": {
+      "comment": "403 bắt buộc đổi mật khẩu.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vui lòng đổi mật khẩu trước khi tiếp tục."
+          }
+        }
+      }
+    },
+    "core.apiError.payloadTooLarge": {
+      "comment": "413 payload quá lớn.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dữ liệu gửi lên quá lớn."
+          }
+        }
+      }
+    },
+    "core.apiError.rateLimited": {
+      "comment": "429 quá nhiều lần gọi.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bạn thao tác quá nhanh. Vui lòng thử lại sau."
+          }
+        }
+      }
+    },
+    "core.apiError.rejected": {
+      "comment": "Lệnh bị từ chối khi đồng bộ nhưng response thiếu mã lỗi; giữ lệnh, hiện lỗi cho người dùng.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không lưu được thay đổi này. Vui lòng kiểm tra lại."
+          }
+        }
+      }
+    },
+    "core.apiError.resyncRequired": {
+      "comment": "409 resync_required/snapshot_required.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cần tải lại dữ liệu."
+          }
+        }
+      }
+    },
+    "core.apiError.unauthorized": {
+      "comment": "401: phiên hết hạn hoặc đã thu hồi.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          }
+        }
+      }
+    },
+    "core.apiError.unknown": {
+      "comment": "Lỗi khác chưa có thông điệp riêng.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể kết nối dịch vụ. Vui lòng thử lại."
+          }
+        }
+      }
+    },
+    "core.apiError.validationError": {
+      "comment": "422/400 dữ liệu sai.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dữ liệu chưa hợp lệ. Vui lòng kiểm tra lại."
+          }
+        }
+      }
+    },
+    "core.stars.one": {
+      "comment": "Mẫu nhận xét 1 sao chèn sẵn vào ô nhận xét.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con chỉ đạt 1 sao 🌟. Chưa tập trung, nói chuyện làm việc riêng. Đã ghi chép bài đầy đủ."
+          }
+        }
+      }
+    },
+    "core.stars.three": {
+      "comment": "Mẫu nhận xét 3 sao chèn sẵn vào ô nhận xét.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con hoàn thành 3 sao 🌟🌟🌟. Tập trung, tích cực học tập. Ghi bài đầy đủ, hiểu bài!"
+          }
+        }
+      }
+    },
+    "core.stars.two": {
+      "comment": "Mẫu nhận xét 2 sao chèn sẵn vào ô nhận xét.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con hoàn thành 2 sao 🌟🌟. Ghi bài đầy đủ, tham gia hoạt động học tập. Còn mất trật tự."
+          }
+        }
+      }
+    },
+    "design.action.close": {
+      "comment": "Nút đóng của sheet (.dialogHeader).",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đóng"
+          }
+        }
+      }
+    },
+    "design.action.retry": {
+      "comment": "Nút thử lại trong khung lỗi.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thử lại"
+          }
+        }
+      }
+    },
+    "design.attendance.absent": {
+      "comment": "Điểm danh: vắng không phép (.absent).",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vắng"
+          }
+        }
+      }
+    },
+    "design.attendance.excused": {
+      "comment": "Điểm danh: vắng có phép (.excused).",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Có phép"
+          }
+        }
+      }
+    },
+    "design.attendance.late": {
+      "comment": "Điểm danh: đi muộn (.late).",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muộn"
+          }
+        }
+      }
+    },
+    "design.attendance.present": {
+      "comment": "Điểm danh: có mặt (.present).",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Có mặt"
+          }
+        }
+      }
+    },
+    "design.empty.title": {
+      "comment": "Tiêu đề mặc định của trạng thái rỗng (.empty).",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có dữ liệu"
+          }
+        }
+      }
+    },
+    "design.error.message": {
+      "comment": "Câu lỗi mặc định của khung lỗi dùng chung.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể tải dữ liệu. Vui lòng thử lại."
+          }
+        }
+      }
+    },
+    "design.error.title": {
+      "comment": "Tiêu đề khung lỗi dùng chung trong design system.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã xảy ra lỗi"
+          }
+        }
+      }
+    },
+    "design.homework.done": {
+      "comment": "Mức BTVN: hoàn thành.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoàn thành"
+          }
+        }
+      }
+    },
+    "design.homework.excellent": {
+      "comment": "Mức BTVN: hoàn thành tốt (.level_*).",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoàn thành tốt"
+          }
+        }
+      }
+    },
+    "design.homework.notDone": {
+      "comment": "Mức BTVN: chưa hoàn thành.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa hoàn thành"
+          }
+        }
+      }
+    },
+    "design.homework.ungraded": {
+      "comment": "Pill khi giáo viên chưa chấm bài tập về nhà.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa chấm"
+          }
+        }
+      }
+    },
+    "design.loading": {
+      "comment": "Nhãn đọc màn hình của vòng quay tải (design system, .spinner).",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang tải"
+          }
+        }
+      }
+    },
+    "launch.configError": {
+      "comment": "Hiện khi không đọc được AppEnvironment/APIBaseURL trong Info.plist.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không đọc được cấu hình môi trường. Kiểm tra Config/*.xcconfig rồi build lại."
+          }
+        }
+      }
+    },
+    "launch.environment": {
+      "comment": "Nhãn cạnh tên môi trường Staging/Production.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Môi trường"
+          }
+        }
+      }
+    },
+    "launch.tagline": {
+      "comment": "Dòng phụ dưới tên app ở màn khởi động.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nền ứng dụng đang được chuẩn bị"
+          }
+        }
+      }
+    },
+    "status.save.error": {
+      "comment": "Dấu hiệu duy nhất của offline/sync (prototype src/shared/SaveStatus): chỉ hiện khi đồng bộ lỗi hoặc lệnh bị từ chối. Không có trạng thái xung đột (thay đổi tới máy chủ sau cùng thắng).",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lỗi lưu — vui lòng thử lại"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }
