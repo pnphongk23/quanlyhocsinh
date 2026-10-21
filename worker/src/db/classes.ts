@@ -38,6 +38,8 @@ function validateName(value: unknown): string {
   return value.trim();
 }
 
+/** Chèn buổi lặp cho các ngày khớp `bits`, bỏ qua ngày đã có buổi của lớp (kể cả buổi lẻ/đã hủy)
+ *  để một lần đổi lịch không bao giờ tạo hai buổi cùng lớp trong cùng một ngày. */
 function insertSessions(db: D1Database, workspaceId: string, classId: string, bits: number,
   startTime: string, from: string, until: string, now: string) {
   const statements: D1PreparedStatement[] = [];
@@ -45,12 +47,16 @@ function insertSessions(db: D1Database, workspaceId: string, classId: string, bi
   const last = new Date(`${until}T00:00:00.000Z`);
   for (; cursor <= last; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
     if ((bits & (1 << weekdayBit(cursor))) === 0) continue;
+    const date = dayString(cursor);
     statements.push(db.prepare(
       `INSERT OR IGNORE INTO class_sessions
        (id, workspace_id, class_id, date, start_time, origin, is_makeup, status, note,
         cancelled_at, cancelled_by, created_at, updated_at, updated_by, version)
-       VALUES (?, ?, ?, ?, ?, 'recurring', 0, 'planned', '', NULL, NULL, ?, ?, ?, 1)`,
-    ).bind(crypto.randomUUID(), workspaceId, classId, dayString(cursor), startTime, now, now, null));
+       SELECT ?, ?, ?, ?, ?, 'recurring', 0, 'planned', '', NULL, NULL, ?, ?, ?, 1
+       WHERE NOT EXISTS (SELECT 1 FROM class_sessions existing
+         WHERE existing.workspace_id = ? AND existing.class_id = ? AND existing.date = ?)`,
+    ).bind(crypto.randomUUID(), workspaceId, classId, date, startTime, now, now, null,
+      workspaceId, classId, date));
   }
   return statements;
 }
@@ -134,13 +140,17 @@ export async function updateClass(db: D1Database, identity: Identity, classId: s
   const until = dayString(new Date(new Date(`${today}T00:00:00Z`).getTime() + 56 * 86400000));
   const statements: D1PreparedStatement[] = [];
   if (changedSchedule) {
+    // Buổi hôm nay cũng thuộc lịch cũ nếu nó còn `planned` và chưa có dữ liệu: xoá/đổi như buổi
+    // tương lai để buổi mới của lịch mới thay chỗ, tránh hai buổi cùng lớp trong cùng một ngày.
+    // Buổi đã có dữ liệu (điểm danh/phiếu/BTVN), đã hủy, đã diễn ra hoặc buổi lẻ được giữ nguyên;
+    // `insertSessions` bỏ qua ngày đã có buổi nên ngày giữ lại chỉ có đúng buổi cũ.
     statements.push(db.prepare(`UPDATE class_sessions SET origin = 'manual', updated_at = ?, updated_by = ?, version = version + 1
-      WHERE workspace_id = ? AND class_id = ? AND date > ? AND status = 'planned' AND origin = 'recurring'
+      WHERE workspace_id = ? AND class_id = ? AND date >= ? AND status = 'planned' AND origin = 'recurring'
       AND (EXISTS (SELECT 1 FROM attendance a WHERE a.session_id = class_sessions.id)
         OR EXISTS (SELECT 1 FROM session_comments sc WHERE sc.session_id = class_sessions.id)
         OR EXISTS (SELECT 1 FROM homework_sections hs WHERE hs.session_id = class_sessions.id))`)
       .bind(now, identity.userId, identity.workspaceId, classId, today));
-    statements.push(db.prepare(`DELETE FROM class_sessions WHERE workspace_id = ? AND class_id = ? AND date > ?
+    statements.push(db.prepare(`DELETE FROM class_sessions WHERE workspace_id = ? AND class_id = ? AND date >= ?
       AND status = 'planned' AND origin = 'recurring'
       AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.session_id = class_sessions.id)
       AND NOT EXISTS (SELECT 1 FROM session_comments sc WHERE sc.session_id = class_sessions.id)

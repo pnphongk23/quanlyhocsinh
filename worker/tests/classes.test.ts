@@ -1,6 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { call, db, insertClass, insertMembership, insertUser, post, registerWorkspace, clubToken, insertStudent, insertGuardianMembership, PASSWORD, type RegisteredWorkspace } from './helpers';
 
+function vnToday(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+}
+function addDays(value: string, count: number): string {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + count);
+  return date.toISOString().slice(0, 10);
+}
+/** 1 = Thứ hai … 7 = Chủ nhật, cùng quy ước với `weekdays` của API. */
+function weekdayOf(value: string): number {
+  return ((new Date(`${value}T00:00:00.000Z`).getUTCDay() + 6) % 7) + 1;
+}
+function sessionDates(rows: any[]): string[] {
+  return rows.map((row) => row.date as string);
+}
+
 async function registerWorkspaceAtIp(phone: string, name: string, ip: string): Promise<RegisteredWorkspace> {
   const result = await call('/v1/auth/register', {
     ...post({ phone, password: PASSWORD, display_name: 'Teacher Sample', workspace_name: name }),
@@ -55,6 +71,93 @@ describe('classes API', () => {
     expect(updated.status).toBe(200);
     expect(updated.body).toMatchObject({ name: 'Lớp A+', version: 2 });
     expect((await call(`/v1/classes/${classId}`, { method: 'PATCH', body: JSON.stringify({ name: 'stale', base_version: 1 }) }, owner.token)).status).toBe(409);
+  });
+
+  it('replaces today\'s recurring session when start_time changes (one session per day, numbered)', async () => {
+    const owner = await registerWorkspaceAtIp('+84900000131', 'Class start time change', '198.51.100.41');
+    const today = vnToday();
+    const created = await call('/v1/classes', post({ name: 'Lịch giờ', weekdays: [weekdayOf(today)], start_time: '18:00' }), owner.token);
+    const classId = created.body.id as string;
+    const before = await call(`/v1/classes/${classId}/sessions?from=${today}&to=${addDays(today, 7)}`, {}, owner.token);
+    const oldToday = before.body.items.find((row: any) => row.date === today);
+    expect(oldToday).toMatchObject({ start_time: '18:00', status: 'planned', session_number: 1 });
+
+    const patched = await call(`/v1/classes/${classId}`, { method: 'PATCH', body: JSON.stringify({ start_time: '17:30', base_version: 1 }) }, owner.token);
+    expect(patched.status).toBe(200);
+    expect(patched.body).toMatchObject({ start_time: '17:30', weekdays: [weekdayOf(today)], version: 2 });
+
+    const sessions = await call(`/v1/classes/${classId}/sessions?from=${today}&to=${addDays(today, 56)}`, {}, owner.token);
+    const items = sessions.body.items as any[];
+    expect(items.filter((row) => row.date === today)).toEqual([
+      expect.objectContaining({ start_time: '17:30', status: 'planned', session_number: 1 }),
+    ]);
+    expect(items.some((row) => row.id === oldToday.id)).toBe(false);
+    const dates = sessionDates(items);
+    expect(new Set(dates).size, 'at most one session per day after a schedule change').toBe(dates.length);
+    expect(items.map((row) => row.session_number)).toEqual(items.map((_, index) => index + 1));
+  });
+
+  it('keeps sessions that already have data and applies the new schedule around them', async () => {
+    const owner = await registerWorkspaceAtIp('+84900000132', 'Class schedule with data', '198.51.100.42');
+    const today = vnToday();
+    const todayDay = weekdayOf(today);
+    const otherDay = todayDay === 7 ? 1 : todayDay + 1;
+    const created = await call('/v1/classes', post({ name: 'Lịch có dữ liệu', weekdays: [todayDay, otherDay], start_time: '18:00' }), owner.token);
+    const classId = created.body.id as string;
+    const before = await call(`/v1/classes/${classId}/sessions?from=${today}&to=${addDays(today, 56)}`, {}, owner.token);
+    const todaySession = before.body.items.find((row: any) => row.date === today);
+    const laterSession = before.body.items.find((row: any) => row.date > today && weekdayOf(row.date) === otherDay);
+    expect(todaySession.start_time).toBe('18:00');
+    expect(laterSession.start_time).toBe('18:00');
+    const studentId = await insertStudent(owner.workspaceId, classId, 'Có điểm danh', null, owner.userId);
+    const now = new Date().toISOString();
+    for (const sessionId of [todaySession.id, laterSession.id]) {
+      await db.prepare(`INSERT INTO attendance (workspace_id, class_id, session_id, student_id, status, note, late_at, version, created_at, updated_at, updated_by)
+        VALUES (?, ?, ?, ?, 'present', '', NULL, 1, ?, ?, ?)`)
+        .bind(owner.workspaceId, classId, sessionId, studentId, now, now, owner.userId).run();
+    }
+
+    const patched = await call(`/v1/classes/${classId}`, { method: 'PATCH', body: JSON.stringify({ start_time: '17:30', base_version: 1 }) }, owner.token);
+    expect(patched.status).toBe(200);
+
+    const sessions = await call(`/v1/classes/${classId}/sessions?from=${today}&to=${addDays(today, 56)}`, {}, owner.token);
+    const items = sessions.body.items as any[];
+    expect(items.filter((row) => row.date === today)).toEqual([
+      expect.objectContaining({ id: todaySession.id, start_time: '18:00', session_number: 1 }),
+    ]);
+    expect(items.filter((row) => row.date === laterSession.date)).toEqual([
+      expect.objectContaining({ id: laterSession.id, start_time: '18:00' }),
+    ]);
+    const rebuilt = items.filter((row) => row.id !== todaySession.id && row.id !== laterSession.id);
+    expect(rebuilt.length).toBeGreaterThan(0);
+    expect(rebuilt.every((row) => row.start_time === '17:30')).toBe(true);
+    const dates = sessionDates(items);
+    expect(new Set(dates).size, 'at most one session per day after a schedule change').toBe(dates.length);
+    expect(items.map((row) => row.session_number)).toEqual(items.map((_, index) => index + 1));
+  });
+
+  it('rebuilds the series from today when weekdays change', async () => {
+    const owner = await registerWorkspaceAtIp('+84900000133', 'Class weekday change', '198.51.100.43');
+    const today = vnToday();
+    const todayDay = weekdayOf(today);
+    const otherDay = todayDay === 7 ? 1 : todayDay + 1;
+    const created = await call('/v1/classes', post({ name: 'Đổi thứ', weekdays: [todayDay, otherDay], start_time: '18:00' }), owner.token);
+    const classId = created.body.id as string;
+    const before = await call(`/v1/classes/${classId}/sessions?from=${today}&to=${addDays(today, 7)}`, {}, owner.token);
+    expect(before.body.items.some((row: any) => row.date === today)).toBe(true);
+
+    const patched = await call(`/v1/classes/${classId}`, { method: 'PATCH', body: JSON.stringify({ weekdays: [otherDay], base_version: 1 }) }, owner.token);
+    expect(patched.status).toBe(200);
+    expect(patched.body).toMatchObject({ weekdays: [otherDay], version: 2 });
+
+    const sessions = await call(`/v1/classes/${classId}/sessions?from=${today}&to=${addDays(today, 56)}`, {}, owner.token);
+    const items = sessions.body.items as any[];
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((row) => weekdayOf(row.date) === otherDay)).toBe(true);
+    expect(items.some((row) => row.date === today)).toBe(false);
+    const dates = sessionDates(items);
+    expect(new Set(dates).size).toBe(dates.length);
+    expect(items.map((row) => row.session_number)).toEqual(items.map((_, index) => index + 1));
   });
 
   it('checks the role matrix for every class endpoint', async () => {

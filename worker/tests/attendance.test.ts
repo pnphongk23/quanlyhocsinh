@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { call, clubToken, db, insertClass, insertGuardianMembership, insertMembership, insertSession, insertStudent, insertUser, PASSWORD, post, type RegisteredWorkspace } from './helpers';
-import { setAttendance } from '../src/db/attendance';
-import type { Identity } from '../src/types';
+
+const syncCommand = (type: string, payload: unknown, baseVersion = 0) => ({
+  id: crypto.randomUUID(), type, payload, base_version: baseVersion, created_at: new Date().toISOString(),
+});
+function pushCommands(token: string, membershipId: string, commands: unknown[]) {
+  return call('/v1/sync/push', post({ membership_id: membershipId, device_id: crypto.randomUUID(), commands }), token);
+}
 
 async function registerWorkspaceAtIp(phone: string, name: string, ip: string): Promise<RegisteredWorkspace> {
   const result = await call('/v1/auth/register', {
@@ -72,23 +77,38 @@ describe('attendance read API', () => {
     expect((await call(`/v1/sessions/${firstSession}/attendance`, {}, other.token)).status).toBe(404);
     expect((await call(`/v1/sessions/${firstSession}/attendance`)).status).toBe(401);
 
-      const adminIdentity: Identity = {
-        userId: owner.userId, sessionId: 'test-session', membershipId: owner.membershipId,
-        workspaceId: owner.workspaceId, workspaceName: 'Attendance API', roleId: owner.roles.admin!,
-        roleName: 'Admin', roleSystemKey: 'admin', scopeKind: 'workspace', scopeEpoch: 1,
-        permissions: { classes: 'write', students: 'write', sessions_attendance: 'write', scores: 'write', lectures: 'write', comments_reports: 'write' },
-        classIds: [], linkedStudentIds: [], mustChangePassword: false,
-      };
-      await setAttendance(db, adminIdentity, { session_id: firstSession, student_id: firstStudent,
-        status: 'excused', note: 'Changed', base_version: 1 });
+      const pushed = await pushCommands(owner.token, owner.membershipId, [syncCommand('attendance.set',
+        { session_id: firstSession, student_id: firstStudent, status: 'excused', note: 'Changed' }, 1)]);
+      expect(pushed.status).toBe(200);
+      expect(pushed.body.results).toEqual([expect.objectContaining({ status: 'applied', version: 2 })]);
     const history = await db.prepare('SELECT old_status, new_status, changed_by FROM attendance_history WHERE session_id = ? AND student_id = ?')
       .bind(firstSession, firstStudent).first<{ old_status: string; new_status: string; changed_by: string }>();
       expect(history).toMatchObject({ old_status: 'late', new_status: 'excused', changed_by: owner.userId });
-      await expect(setAttendance(db, adminIdentity, { session_id: firstSession, student_id: firstStudent,
-        status: 'absent', base_version: 1 })).rejects.toThrow();
+      const stale = await pushCommands(owner.token, owner.membershipId, [syncCommand('attendance.set',
+        { session_id: firstSession, student_id: firstStudent, status: 'absent' }, 1)]);
+      expect(stale.body.results).toEqual([expect.objectContaining({
+        status: 'conflict', server: expect.objectContaining({ status: 'excused', version: 2 }),
+      })]);
       const statuses = await db.prepare('SELECT DISTINCT status FROM attendance WHERE workspace_id = ?')
         .bind(owner.workspaceId).all<{ status: string }>();
       expect(statuses.results.map((row) => row.status).sort()).toEqual(['absent', 'excused', 'late', 'present']);
+    });
+
+    it('rejects attendance writes for a cancelled session through sync push', async () => {
+      const owner = await registerWorkspaceAtIp('+84900000411', 'Attendance cancelled session', '198.51.100.35');
+      const classId = await insertClass(owner.workspaceId, 'Cancelled', owner.userId);
+      const studentId = await insertStudent(owner.workspaceId, classId, 'Student C', null, owner.userId);
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+      const cancelledSession = await insertSession(owner.workspaceId, classId, today, owner.userId, 'cancelled');
+      const pushed = await pushCommands(owner.token, owner.membershipId, [syncCommand('attendance.set',
+        { session_id: cancelledSession, student_id: studentId, status: 'present' })]);
+      expect(pushed.status).toBe(200);
+      expect(pushed.body.results).toEqual([expect.objectContaining({
+        status: 'rejected', error: expect.objectContaining({ details: expect.objectContaining({ reason: 'session_cancelled' }) }),
+      })]);
+      const cells = await db.prepare('SELECT COUNT(*) AS count FROM attendance WHERE session_id = ?')
+        .bind(cancelledSession).first<{ count: number }>();
+      expect(cells?.count).toBe(0);
     });
 
     it('rejects cross-class and cross-workspace attendance cells at the D1 boundary', async () => {
