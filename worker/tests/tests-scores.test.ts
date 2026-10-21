@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   call,
   clubToken,
+  db,
   fakePhone,
   insertClass,
   insertGuardianMembership,
@@ -26,6 +27,16 @@ describe("tests and score routes", () => {
       ws.userId,
     );
     const test = await insertTest(ws.workspaceId, c1, ws.userId);
+    const now = '2026-10-21T11:15:00.000Z';
+    await db
+      .prepare(
+        `INSERT INTO scores
+          (workspace_id, class_id, test_id, student_id, value, version,
+           created_at, updated_at, updated_by)
+         VALUES (?, ?, ?, ?, 12.5, 1, ?, ?, ?)`,
+      )
+      .bind(ws.workspaceId, c1, test, student, now, now, ws.userId)
+      .run();
     async function staff(role: string, classes: string[]) {
       const u = await insertUser(fakePhone());
       const m = await insertMembership(
@@ -102,5 +113,42 @@ describe("tests and score routes", () => {
     expect((await call(scoresPath, {}, f.teacherOther)).status).toBe(404);
     expect((await call(scoresPath, {}, f.wrongGuardian)).status).toBe(404);
     expect((await call(scoresPath, {}, f.otherWorkspace)).status).toBe(404);
+  });
+
+  it('returns lists as { items: [...] }, not raw D1 results', async () => {
+    const tests = await call(`/v1/classes/${f.c1}/tests`, {}, f.admin);
+    expect(tests.status).toBe(200);
+    expect(Object.keys(tests.body)).toEqual(['items']);
+    expect(Array.isArray(tests.body.items)).toBe(true);
+    expect(tests.body.items).toHaveLength(1);
+    expect(tests.body.items[0]).toEqual({
+      id: f.test,
+      class_id: f.c1,
+      name: 'Unit test',
+      date: '2026-10-14',
+      max: 15,
+      archived: 0,
+      version: 1,
+    });
+
+    const scores = await call(`/v1/tests/${f.test}/scores`, {}, f.admin);
+    expect(scores.status).toBe(200);
+    expect(Object.keys(scores.body)).toEqual(['items']);
+    expect(Array.isArray(scores.body.items)).toBe(true);
+    expect(scores.body.items).toHaveLength(1);
+    expect(scores.body.items[0]).toEqual({
+      test_id: f.test,
+      student_id: f.student,
+      value: 12.5,
+      version: 1,
+      updated_at: '2026-10-21T11:15:00.000Z',
+    });
+
+    const guardianTests = await call(`/v1/classes/${f.c1}/tests`, {}, f.guardian);
+    expect(Array.isArray(guardianTests.body.items)).toBe(true);
+    const guardianScores = await call(`/v1/tests/${f.test}/scores`, {}, f.guardian);
+    expect(Array.isArray(guardianScores.body.items)).toBe(true);
+    expect(guardianScores.body.items).toHaveLength(1);
+    expect(guardianScores.body.items[0].student_id).toBe(f.student);
   });
 });

@@ -20,5 +20,5 @@ testsScoresRoutes.get("/tests/:id/scores", async (c) => {
     c.req.param("id"),
   );
   if (result === null) throw notFound();
-  return c.json({ items: result.results });
+  return c.json({ items: result });
 });
