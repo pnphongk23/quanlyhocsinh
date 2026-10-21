@@ -33,6 +33,10 @@ extension AppConfiguration {
         static let buildNumber = "CFBundleVersion"
     }
 
+    /// Keychain service holding the session token. One per environment, so Staging and Production
+    /// sessions never mix; shared by the auth flow and the app frame's push registration.
+    var tokenStoreService: String { "vn.quanlylop.\(environment.rawValue)" }
+
     static func load(bundle: Bundle = .main) -> Result<AppConfiguration, AppConfigurationError> {
         do {
             return .success(try make(bundle: bundle))
