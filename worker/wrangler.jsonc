@@ -29,10 +29,11 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "PBKDF2_ITERATIONS": "100000",
-        // Điền origin Cloudflare Pages của staging (và localhost) trước khi dùng web,
-        // ví dụ "https://qlh-staging.pages.dev,http://localhost:5173". Rỗng = chặn mọi
-        // origin khác miền (iOS không bị ảnh hưởng).
-        "ALLOWED_ORIGINS": ""
+        // Origin được phép gọi /v1/* (phân tách dấu phẩy, khớp chính xác). Hiện chưa có
+        // project Pages riêng cho mảng Web nên dùng origin của Pages prototype
+        // (quanlyhocsinh-proto) cộng các cổng dev/Preview của máy cục bộ.
+        // Rỗng = chặn mọi origin khác miền (iOS không bị ảnh hưởng).
+        "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,http://localhost:3000,https://quanlyhocsinh-proto.pages.dev"
       },
       "d1_databases": [
         {
