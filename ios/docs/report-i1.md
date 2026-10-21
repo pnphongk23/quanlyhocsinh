@@ -148,6 +148,14 @@ Không có màn nghiệp vụ nào ở gói I-1 (I-2..I-5 mới dựng màn), n�
 | Thiếu thành phần | không có segmented, list row, spinner | có | |
 | Dark mode | màu thích ứng hệ thống | bỏ thích ứng: giữ đúng màu prototype ở mọi chế độ | xem Câu hỏi 2 |
 
+## Bổ sung I-1c (yêu cầu I-4)
+
+`APIClient` thêm body nhị phân: `APIEndpoint.binary(method:path:query:body:contentType:requiresAuthentication:)`
++ thuộc tính `contentType` (mặc định `nil` = `application/json` khi có body, không gửi `Content-Type` khi
+không có body). Không đổi chữ ký cũ (`init`, `.json`). Dùng cho `PUT /reports/{id}/publications/{no}/pdf`
+(`application/pdf`, ≤ 5 MB, `api-spec.md` mục 8). Test: `testBinaryUploadSendsRawBodyAndContentType`,
+`testBinaryEndpointContentTypeDefaultsAndStubMatching`; chi tiết trong `docs/core-api.md` mục 1.
+
 ## Câu hỏi
 
 1. **Q16 (đã có quyết định của lead, ghi lại)**: client không tự tính số buổi; `sessionNumber` chỉ lấy từ

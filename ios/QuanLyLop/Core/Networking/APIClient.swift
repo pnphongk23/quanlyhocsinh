@@ -6,16 +6,26 @@ struct APIEndpoint: Sendable, Hashable {
     let path: String
     let query: [String: String]
     let body: Data?
+    /// Overrides the `Content-Type` header. `nil` means `application/json` when a body is present.
+    let contentType: String?
     let requiresAuthentication: Bool
     init(method: Method, path: String, query: [String: String] = [:], body: Data? = nil,
-         requiresAuthentication: Bool = true) {
+         contentType: String? = nil, requiresAuthentication: Bool = true) {
         self.method = method; self.path = path; self.query = query; self.body = body
-        self.requiresAuthentication = requiresAuthentication
+        self.contentType = contentType; self.requiresAuthentication = requiresAuthentication
     }
     static func json<T: Encodable>(method: Method, path: String, body: T,
                                     requiresAuthentication: Bool = true) throws -> Self {
         .init(method: method, path: path, body: try WireJSON.encoder().encode(body),
               requiresAuthentication: requiresAuthentication)
+    }
+    /// Raw (non-JSON) body, e.g. a generated report PDF sent as `application/pdf`
+    /// (`PUT /reports/{id}/publications/{no}/pdf`, api-spec mục 8).
+    static func binary(method: Method, path: String, query: [String: String] = [:], body: Data,
+                       contentType: String = "application/octet-stream",
+                       requiresAuthentication: Bool = true) -> Self {
+        .init(method: method, path: path, query: query, body: body,
+              contentType: contentType, requiresAuthentication: requiresAuthentication)
     }
 }
 
@@ -99,7 +109,11 @@ struct URLSessionAPIClient: APIClient {
         request.httpBody = endpoint.body
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        if endpoint.body != nil { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
+        if let contentType = endpoint.contentType {
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        } else if endpoint.body != nil {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
         request.setValue("ios/1.0.0", forHTTPHeaderField: "X-Client")
         request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Request-Id")
         if endpoint.requiresAuthentication {
