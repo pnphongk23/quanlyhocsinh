@@ -11,7 +11,7 @@ struct ContentView: View {
         if ProcessInfo.processInfo.environment["QLH_DESIGN_GALLERY"] != nil {
             DesignSystemGallery()
         } else {
-            launchScreen
+            AuthFlowView(configuration: configuration)
         }
     }
 
