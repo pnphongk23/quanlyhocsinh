@@ -40,6 +40,10 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>PlusJakartaSans.ttf</string>
+	</array>
 	<key>AppEnvironment</key>
 	<string>$(APP_ENVIRONMENT)</string>
 	<key>APIBaseURL</key>

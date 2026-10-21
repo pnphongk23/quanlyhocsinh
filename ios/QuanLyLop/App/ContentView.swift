@@ -6,6 +6,16 @@ struct ContentView: View {
     let configuration: Result<AppConfiguration, AppConfigurationError>
 
     var body: some View {
+        // Design-system gallery for comparison screenshots. Off unless launched with
+        // `SIMCTL_CHILD_QLH_DESIGN_GALLERY=1|sheet`; never reachable from normal app use.
+        if ProcessInfo.processInfo.environment["QLH_DESIGN_GALLERY"] != nil {
+            DesignSystemGallery()
+        } else {
+            launchScreen
+        }
+    }
+
+    private var launchScreen: some View {
         VStack(spacing: 0) {
             Spacer()
             badge
