@@ -1,3 +1,5 @@
+import { insertSessions } from './classes';
+
 function dateInVietnam(now: Date): string {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh',
     year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
@@ -9,11 +11,8 @@ function plusDays(value: string, count: number): string {
   date.setUTCDate(date.getUTCDate() + count);
   return date.toISOString().slice(0, 10);
 }
-function bitForDate(value: string): number {
-  return (new Date(`${value}T00:00:00.000Z`).getUTCDay() + 6) % 7;
-}
 
-/** Sinh tối đa 20 lớp mỗi lượt, idempotent nhờ UNIQUE(class_id,date,start_time). */
+/** Sinh tối đa 20 lớp mỗi lượt; dùng chung `insertSessions` (một buổi/lớp/ngày, idempotent). */
 export async function generateUpcomingSessions(db: D1Database, now = new Date()) {
   const today = dateInVietnam(now);
   const until = plusDays(today, 56);
@@ -27,15 +26,8 @@ export async function generateUpcomingSessions(db: D1Database, now = new Date())
   for (const cls of classes) {
     const from = cls.generated_until && cls.generated_until >= today
       ? plusDays(cls.generated_until, 1) : today;
-    const statements: D1PreparedStatement[] = [];
-    for (let day = from; day <= until; day = plusDays(day, 1)) {
-      if ((cls.weekdays & (1 << bitForDate(day))) === 0) continue;
-      statements.push(db.prepare(`INSERT OR IGNORE INTO class_sessions
-        (id, workspace_id, class_id, date, start_time, origin, is_makeup, status, note,
-         cancelled_at, cancelled_by, created_at, updated_at, updated_by, version)
-        VALUES (?, ?, ?, ?, ?, 'recurring', 0, 'planned', '', NULL, NULL, ?, ?, NULL, 1)`)
-        .bind(crypto.randomUUID(), cls.workspace_id, cls.id, day, cls.start_time, nowIsoValue, nowIsoValue));
-    }
+    const statements = insertSessions(db, cls.workspace_id, cls.id, cls.weekdays, cls.start_time,
+      from, until, nowIsoValue);
     statements.push(db.prepare(`UPDATE classes SET generated_until = ?
       WHERE workspace_id = ? AND id = ? AND status = 'active' AND (generated_until IS NULL OR generated_until < ?)`)
       .bind(until, cls.workspace_id, cls.id, until));

@@ -39,8 +39,8 @@ function validateName(value: unknown): string {
 }
 
 /** Chèn buổi lặp cho các ngày khớp `bits`, bỏ qua ngày đã có buổi của lớp (kể cả buổi lẻ/đã hủy)
- *  để một lần đổi lịch không bao giờ tạo hai buổi cùng lớp trong cùng một ngày. */
-function insertSessions(db: D1Database, workspaceId: string, classId: string, bits: number,
+ *  để một lần đổi lịch hoặc một lượt cron không bao giờ tạo hai buổi cùng lớp trong cùng một ngày. */
+export function insertSessions(db: D1Database, workspaceId: string, classId: string, bits: number,
   startTime: string, from: string, until: string, now: string) {
   const statements: D1PreparedStatement[] = [];
   const cursor = new Date(`${from}T00:00:00.000Z`);
