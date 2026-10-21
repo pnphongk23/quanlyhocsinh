@@ -89,7 +89,7 @@ final class CoreTests: XCTestCase {
         let retried = try await store.claimBatch(now: now.addingTimeInterval(31))
         XCTAssertEqual(retried.map(\.id), [first.id, second.id])
         try await store.acknowledge([CommandResult(id: first.id, status: .duplicate, originalStatus: .applied),
-                                     CommandResult(id: second.id, status: .conflict, conflictId: "fixture-conflict")])
+                                     CommandResult(id: second.id, status: .applied, version: 1)])
         let count = try await store.pendingCommandCount()
         XCTAssertEqual(count, 0)
     }
@@ -171,21 +171,22 @@ final class CoreTests: XCTestCase {
         let grades = try await store.records(HomeworkGrade.self, entity: "homework_grade")
         let reports = try await store.records(MonthlyReport.self, entity: "report")
         let publications = try await store.records(ReportPublication.self, entity: "report_publication")
-        let conflicts = try await store.records(SyncConflict.self, entity: "conflict")
         XCTAssertEqual([classes.count,students.count,sessions.count,attendance.count,tests.count,scores.count,
-                        slips.count,sections.count,grades.count,reports.count,publications.count,conflicts.count], Array(repeating: 1, count: 12))
+                        slips.count,sections.count,grades.count,reports.count,publications.count], Array(repeating: 1, count: 11))
         XCTAssertEqual(sessions.first?.sessionNumber, 8)
         XCTAssertEqual(tests.first?.maxScore, 15)
         XCTAssertEqual(publications.first?.snapshot.homework.first?.excellent, 4)
     }
-    func testConflictPullReplacesOptimisticSameVersion() async throws {
+    /// Pull value wins over an optimistic local cell, even at the same `version` (`-1` placeholder):
+    /// after acknowledgement this device's edit is gone and the server row is what the teacher sees.
+    func testPullValueReplacesOptimisticSameVersionCell() async throws {
         let store = try store(), key = cell()
         let original = Score(testId: "test", studentId: "student", value: 14, version: 3, updatedAt: "fixture")
         try await store.write(original, forKey: key, enqueueing: nil)
         let edit = command(key, version: 2)
         try await store.write(Score(testId: "test", studentId: "student", value: 12.5, version: 3, updatedAt: "fixture"), forKey: key, enqueueing: edit)
         _ = try await store.claimBatch(now: .now)
-        try await store.acknowledge([CommandResult(id: edit.id, status: .conflict)])
+        try await store.acknowledge([CommandResult(id: edit.id, status: .applied, version: 4)])
         let canonical = try await store.read(Score.self, forKey: key)
         XCTAssertEqual(canonical, original)
     }

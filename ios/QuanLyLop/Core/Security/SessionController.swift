@@ -11,9 +11,11 @@ actor SessionController {
     private let tokenStore: any TokenStore
     private let store: any LocalStore
     private let push: any PushRegistrar
+    private let status: SyncStatusCenter
     init(api: any APIClient, tokenStore: any TokenStore, store: any LocalStore,
-         push: any PushRegistrar = NoOpPushRegistrar()) {
+         push: any PushRegistrar = NoOpPushRegistrar(), status: SyncStatusCenter = .shared) {
         self.api = api; self.tokenStore = tokenStore; self.store = store; self.push = push
+        self.status = status
     }
     func logout() async throws {
         let count = try await store.pendingCommandCount()
@@ -21,13 +23,16 @@ actor SessionController {
         _ = try await api.send(.init(method: .post, path: "auth/logout"), as: EmptyResponse.self)
         try await tokenStore.clear()
         await push.clearDeliveredNotifications()
+        // The previous account's save failures must not leak into the next identity.
+        status.reset()
     }
     func selectMembership(_ id: String) async throws -> MembershipSelection {
         struct Selection: Encodable { let membershipId: String }
         let result = try await api.send(try .json(method: .put, path: "session/membership", body: Selection(membershipId: id)), as: MembershipSelection.self)
         await push.clearDeliveredNotifications()
+        status.reset()
         // Registration failure only loses push, not the acknowledged identity change.
-        try? await push.register(membershipId: result.activeMembershipId)
+        _ = try? await push.register(membershipId: result.activeMembershipId)
         return result
     }
 }

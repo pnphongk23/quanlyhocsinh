@@ -48,6 +48,9 @@ protocol LocalStore: Sendable {
     func write<Value: Encodable & Sendable>(_ value: Value, forKey key: String, enqueueing command: PendingCommand?) async throws
     func pendingCommands() async throws -> [PendingCommand]
     func pendingCommandCount() async throws -> Int
+    /// Commands the server rejected and the client keeps (offline-plan: `rejected` giữ lại).
+    /// The app frame reads it to decide whether to show the save error.
+    func rejectedCommandCount() async throws -> Int
     func position() async throws -> SyncPosition?
     func claimBatch(now: Date) async throws -> [PendingCommand]
     func acknowledge(_ results: [CommandResult]) async throws

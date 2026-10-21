@@ -114,24 +114,6 @@
       "version": 1
     }
   ],
-  "conflict": [
-    {
-      "id": "fixture-conflict",
-      "entity": "score",
-      "k1": "fixture-test",
-      "k2": "fixture-student",
-      "server_value": {
-        "value": 14
-      },
-      "server_version": 2,
-      "client_value": {
-        "value": 12.5
-      },
-      "created_at": "2026-10-21T11:15:00.000Z",
-      "resolved_at": null,
-      "version": 1
-    }
-  ],
   "report_publication": [
     {
       "id": "fixture-publication",

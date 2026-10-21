@@ -1,13 +1,16 @@
 import Foundation
 
+/// Final statuses of a pushed command (`api-spec.md` mục 6.1).
+///
+/// `conflict` is a legacy status: the current rule is last-write-wins (the change that reaches the
+/// server last wins; no two values, no teacher choice), so it is acknowledged exactly like
+/// `applied`. The case stays so an old server or a stale response still decodes; it is never shown.
 enum CommandStatus: String, Codable, Sendable { case applied, duplicate, conflict, rejected }
 struct CommandResult: Codable, Sendable, Equatable {
     let id: UUID
     let status: CommandStatus
     var version: Int? = nil
     var originalStatus: CommandStatus? = nil
-    var conflictId: String? = nil
-    var server: JSONValue? = nil
     var error: APIError? = nil
     var noop: Bool? = nil
     var outcome: String? = nil
@@ -51,14 +54,32 @@ actor SyncCoordinator {
     private let api: any APIClient
     private let store: any LocalStore
     private let deviceId: String
+    private let status: SyncStatusCenter
     private var running = false
-    init(api: any APIClient, store: any LocalStore, deviceId: String) {
-        self.api = api; self.store = store; self.deviceId = deviceId
+    init(api: any APIClient, store: any LocalStore, deviceId: String,
+         status: SyncStatusCenter = .shared) {
+        self.api = api; self.store = store; self.deviceId = deviceId; self.status = status
     }
     func synchronize(now: Date = .now) async throws {
         guard !running else { return }
         running = true
         defer { running = false }
+        do {
+            try await run(now: now)
+            await report(syncFailed: false)
+        } catch {
+            await report(syncFailed: true)
+            throw error
+        }
+    }
+    /// One failed sync or one rejected command is enough for the app frame to show the save-error
+    /// pill; a successful sync clears it unless rejected commands remain queued. A legacy `conflict`
+    /// is not an error: the server keeps the value that arrived last and `pull` brings it back.
+    private func report(syncFailed: Bool) async {
+        let rejected = (try? await store.rejectedCommandCount()) ?? 0
+        status.record(syncFailed: syncFailed, rejectedCommands: rejected)
+    }
+    private func run(now: Date) async throws {
         do {
             if try await store.position() == nil { try await snapshot() }
             while true {
@@ -109,6 +130,8 @@ actor SyncCoordinator {
         let manifest = try await api.send(.init(method: .get, path: "sync/snapshot", query: ["membership_id": membership]), as: SnapshotManifest.self)
         var records: [String: [JSONValue]] = [:]
         for entity in manifest.entities {
+            // `conflict` stays decodable only so a server that still lists the legacy entity does not
+            // fail the whole snapshot; the app has no conflict surface any more (last write wins).
             guard ["class", "student", "class_session", "test", "attendance", "score", "slip", "homework_section", "homework_grade", "report", "report_publication", "conflict"].contains(entity) else { throw SyncFailure.invalidResponse }
             var after: String?
             repeat {

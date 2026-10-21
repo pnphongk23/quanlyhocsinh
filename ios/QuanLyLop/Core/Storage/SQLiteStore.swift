@@ -155,6 +155,11 @@ actor SQLiteStore: LocalStore {
     }
     func pendingCommands() throws -> [PendingCommand] { try queuedCommands().map(\.command) }
     func pendingCommandCount() throws -> Int { try pendingCommandCountForUser() }
+    func rejectedCommandCount() throws -> Int {
+        let count = try db.execute("SELECT COUNT(*) AS count FROM commands WHERE scope=? AND state='rejected'", [scope.storageKey])
+            .first?["count"]
+        return count.flatMap { Int($0) } ?? 0
+    }
     /// Counts every membership of this user, so role switching cannot bypass the logout guard.
     func pendingCommandCountForUser() throws -> Int {
         try db.execute("SELECT DISTINCT scope FROM commands").reduce(0) { total, row in
@@ -183,6 +188,9 @@ actor SQLiteStore: LocalStore {
         try transaction {
             for result in results {
                 switch result.status {
+                // `conflict` is the legacy name of "the other device's value is what the server keeps";
+                // it confirms this command the same way `applied` does, and `pull` then brings the
+                // server value back into the cache (last write wins). Nothing is shown to the teacher.
                 case .applied, .conflict:
                     try db.execute("DELETE FROM commands WHERE scope=? AND id=? AND state='sending'", [scope.storageKey,result.id.uuidString])
                 case .duplicate:
@@ -200,7 +208,7 @@ actor SQLiteStore: LocalStore {
         }
     }
     private func reject(_ result: CommandResult) throws {
-        let error = result.error ?? APIError(code: "conflict", message: nil, details: nil, requestId: nil)
+        let error = result.error ?? APIError(code: "rejected", message: nil, details: nil, requestId: nil)
         try db.execute("UPDATE commands SET state='rejected',error=? WHERE scope=? AND id=? AND state='sending'", [try encode(error),scope.storageKey,result.id.uuidString])
     }
     func retry(_ ids: [UUID], now: Date, minimumDelay: TimeInterval = 0) throws {

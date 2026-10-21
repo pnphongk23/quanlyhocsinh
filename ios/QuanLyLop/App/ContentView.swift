@@ -1,17 +1,38 @@
 import SwiftUI
 
-/// Màn khởi động của bản nền: tên app, môi trường đang build (Staging/Production)
-/// và URL API đọc từ Info.plist. Chưa có màn nghiệp vụ nào.
+/// Khung app: màn đăng nhập/luồng tài khoản, dấu hiệu lỗi lưu ở cạnh trên và đăng ký push.
 struct ContentView: View {
     let configuration: Result<AppConfiguration, AppConfigurationError>
+
+    @Environment(\.scenePhase) private var scenePhase
+    /// Shared with every `SyncCoordinator`: only the error state is shown, never a sync chip.
+    private let syncStatus = SyncStatusCenter.shared
+    @State private var push: AppPush?
+
+    init(configuration: Result<AppConfiguration, AppConfigurationError>) {
+        self.configuration = configuration
+        if case .success(let value) = configuration {
+            _push = State(initialValue: AppPush(configuration: value))
+        }
+    }
 
     var body: some View {
         // Design-system gallery for comparison screenshots. Off unless launched with
         // `SIMCTL_CHILD_QLH_DESIGN_GALLERY=1|sheet`; never reachable from normal app use.
-        if ProcessInfo.processInfo.environment["QLH_DESIGN_GALLERY"] != nil {
-            DesignSystemGallery()
-        } else {
-            AuthFlowView(configuration: configuration)
+        Group {
+            if ProcessInfo.processInfo.environment["QLH_DESIGN_GALLERY"] != nil {
+                DesignSystemGallery()
+            } else {
+                AuthFlowView(configuration: configuration)
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            SaveStatusBanner(state: syncStatus.state)
+        }
+        .task { await push?.registerIfSignedIn() }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await push?.registerIfSignedIn() }
         }
     }
 
