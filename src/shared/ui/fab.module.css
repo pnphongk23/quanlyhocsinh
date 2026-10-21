@@ -1,0 +1,31 @@
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(var(--tabbar-height, 64px) + env(safe-area-inset-bottom) + 16px);
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 6px 16px rgb(35 71 230 / 0.35);
+  cursor: pointer;
+}
+.fab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (min-width: 900px) {
+  .fab {
+    bottom: 24px;
+    right: 24px;
+  }
+}
+.plus {
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 400;
+}

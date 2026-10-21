@@ -1,0 +1,323 @@
+/* Nút */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.md {
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: var(--radius-control);
+  font-size: 15px;
+}
+.lg {
+  min-height: 52px;
+  width: 100%;
+  border-radius: var(--radius-control);
+  font-size: 16px;
+}
+.secondary {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+.surface {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.neutral {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.danger {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+.ghost {
+  background: transparent;
+  color: var(--color-muted);
+}
+
+/* Card */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+}
+.cardSelected {
+  outline: 2px solid var(--color-primary);
+}
+@media (min-width: 1024px) {
+  .card {
+    padding: 18px 20px;
+  }
+}
+
+/* Hàng danh sách */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-row);
+}
+
+/* Chip thống kê */
+.chip {
+  display: inline-block;
+  padding: 8px 10px;
+  border-radius: var(--radius-chip);
+  background: var(--color-bg);
+  font-size: 14px;
+}
+
+/* Pill trạng thái */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pillNeutral {
+  background: var(--color-neutral-soft);
+  color: var(--color-muted);
+}
+.pillSuccess {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.pillWarning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.pillError {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+.pillPrimary {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+
+/* Ô nhập */
+.input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 16px;
+}
+.input::placeholder {
+  color: var(--color-placeholder);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.field {
+  display: grid;
+  gap: 6px;
+}
+.field > label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.fieldError {
+  color: var(--color-error);
+  font-size: 14px;
+}
+
+/* Segmented */
+.segmented {
+  display: flex;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--color-border);
+}
+.segment {
+  flex: 1;
+  min-height: var(--tap);
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+.segmentOn {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Đầu trang */
+.pageHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.pageHeaderMain {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+.pageTitle {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.pageTitle:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+.compactTitle h1 {
+  font-size: 22px;
+}
+.eyebrow {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.backButton {
+  width: var(--tap);
+  height: var(--tap);
+  min-height: var(--tap);
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.pageActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Trạng thái rỗng */
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  text-align: center;
+}
+.emptyTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Biểu tượng */
+.icon {
+  flex: none;
+}
+
+/* Hộp thoại */
+.dialog {
+  border: 0;
+  border-radius: var(--radius-card);
+  padding: 24px;
+  width: min(520px, calc(100% - 32px));
+  max-height: 85dvh;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.dialog[open] {
+  display: flex;
+}
+.dialog:not([open]) {
+  display: none;
+}
+.dialog::backdrop {
+  background: var(--color-scrim);
+}
+.dialogBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.dialogFooter {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.sheet {
+  margin-bottom: 0;
+  border-radius: 20px 20px 0 0;
+}
+/* Bottom sheet mobile: tràn hết chiều ngang, footer chừa safe-area. */
+@media (max-width: 1023px) {
+  .sheet {
+    width: 100%;
+    max-width: 100%;
+    padding-bottom: 0;
+    border-radius: 20px 20px 0 0;
+  }
+  .sheet .dialogFooter {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+}
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* Đang tải */
+.spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

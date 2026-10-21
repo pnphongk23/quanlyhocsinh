@@ -1,0 +1,10 @@
+ .shell { min-height: 100dvh; max-width: 1280px; margin-inline: auto; background: var(--color-bg); }
+.header { display: flex; justify-content: space-between; gap: 16px; padding: max(20px, env(safe-area-inset-top)) 24px 20px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.header span { color: var(--color-muted); }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 24px; background: var(--color-surface); }
+.nav a { display: inline-flex; align-items: center; min-height: var(--tap); padding: 8px 12px; border-radius: var(--radius-button); color: var(--color-primary); text-decoration: none; }
+.nav a[aria-current="page"] { background: var(--color-primary-soft); font-weight: 700; }
+.nav a:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.content { max-width: 1120px; padding: 24px max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)); margin-inline: auto; }
+.content h1 { font-size: 24px; margin-bottom: 20px; }
+@media (min-width: 900px) { .content { padding: 32px; } }
