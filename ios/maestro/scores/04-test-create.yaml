@@ -1,0 +1,8 @@
+# demo: scores
+appId: vn.quanlylop.app
+name: scores-test-create
+---
+- tapOn: "+ Bài mới"
+- assertVisible: "Tạo bài kiểm tra"
+- assertVisible: "Điểm tối đa"
+- takeScreenshot: docs/screens/scores/test-new

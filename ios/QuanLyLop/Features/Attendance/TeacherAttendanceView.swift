@@ -82,6 +82,7 @@ struct TeacherAttendanceView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 48)
     }
 
     /// Image 17 keeps a disabled “Điểm danh” button in the same sticky spot; the label and

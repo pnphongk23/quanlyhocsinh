@@ -259,7 +259,7 @@ struct AuthRolePickerView: View {
                     Text(AuthRoleBadge.label(membership.role))
                         .appText(AuthText.roleName)
                         .foregroundStyle(AppColors.text)
-                    Text(model.subtitle(for: membership))
+                    Text(roleSubtitle(for: membership))
                         .appText(AuthText.roleMeta)
                         .foregroundStyle(AppColors.muted)
                 }
@@ -274,5 +274,15 @@ struct AuthRolePickerView: View {
             .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.row))
         }
         .buttonStyle(.plain)
+    }
+
+    private func roleSubtitle(for membership: Membership) -> String {
+#if DEBUG
+        if DemoFlag.screen == "role-picker",
+           membership.role.scopeKind == .linkedStudents {
+            return "Bé Gia Bảo"
+        }
+#endif
+        return model.subtitle(for: membership)
     }
 }

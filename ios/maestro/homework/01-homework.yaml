@@ -1,0 +1,6 @@
+# demo: homework
+appId: vn.quanlylop.app
+name: session-homework
+---
+- assertVisible: "Bài tập buổi trước"
+- takeScreenshot: docs/screens/homework/previous-ios

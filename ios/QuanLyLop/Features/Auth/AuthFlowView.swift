@@ -85,7 +85,9 @@ struct AuthFlowView: View {
         if isGuardian {
             GuardianRootView(model: model)
         } else {
-            AuthSettingsView(model: model, onClose: { model.show(.main) })
+            TeacherRootView(initialTab: .settings) {
+                AnyView(AuthSettingsView(model: model, onClose: { model.show(.main) }))
+            }
         }
     }
 

@@ -1,0 +1,6 @@
+# demo: reports
+appId: vn.quanlylop.app
+name: monthly-reports
+---
+- assertVisible: "Báo cáo"
+- takeScreenshot: docs/screens/reports/list-ios

@@ -1,0 +1,6 @@
+# demo: comments
+appId: vn.quanlylop.app
+name: session-comments
+---
+- assertVisible: "Nhận xét"
+- takeScreenshot: docs/screens/comments/list-ios

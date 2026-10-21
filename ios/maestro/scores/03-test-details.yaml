@@ -1,0 +1,7 @@
+# demo: scores
+appId: vn.quanlylop.app
+name: scores-test-details
+---
+- tapOn: "Bài mẫu"
+- assertVisible: "Điểm số"
+- takeScreenshot: docs/screens/scores/test-scores-detail

@@ -62,8 +62,8 @@ final class ReportPDFUploadTests: XCTestCase {
         let student = Student(id: "student-1", classId: "class-1", name: "Học sinh", parentPhone: nil,
                               enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
 
-        await data.publish(student: student, month: "2026-10", comment: "Nhận xét chung",
-                           snapshot: snapshot(studentID: student.id))
+        let outcome = await data.publish(student: student, month: "2026-10")
+        XCTAssertEqual(outcome, .published(publicationNo: 4))
 
         let requests = await api.recordedRequests()
         let upload = requests.first { $0.contentType == "application/pdf" }
@@ -72,17 +72,6 @@ final class ReportPDFUploadTests: XCTestCase {
         XCTAssertEqual(upload?.path, "reports/report-9/publications/4/pdf")
         XCTAssertTrue(upload?.body?.starts(with: Data("%PDF".utf8)) ?? false)
         XCTAssertNotNil(requests.first { $0.method == .post })
-    }
-
-    private func snapshot(studentID: String) -> ReportSnapshot {
-        ReportSnapshot(
-            studentId: studentID, month: "2026-10",
-            attendance: AttendanceSummary(present: 5, late: 1, excused: 0, absent: 0, heldSessions: 6),
-            tests: [ReportTest(testId: "test-1", name: "Bài kiểm tra", date: "2026-10-15", max: 15, value: 12)],
-            stars: StarsSummary(three: 3, two: 2, one: 1),
-            homework: [HomeworkSummary(kind: .vocabulary, excellent: 2, done: 1, notDone: 0)],
-            generalComment: "Nhận xét chung", ready: true
-        )
     }
 }
 

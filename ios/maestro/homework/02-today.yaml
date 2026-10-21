@@ -1,0 +1,7 @@
+# demo: homework
+appId: vn.quanlylop.app
+name: session-homework-today
+---
+- tapOn: "Bài tập hôm nay"
+- assertVisible: "Bài tập hôm nay"
+- takeScreenshot: docs/screens/homework/today

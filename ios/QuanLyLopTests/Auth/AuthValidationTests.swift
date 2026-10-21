@@ -1,6 +1,7 @@
 import XCTest
 @testable import QuanLyLop
 
+@MainActor
 final class AuthValidationTests: XCTestCase {
     func testRegistrationRequiresAllFields() {
         XCTAssertThrowsError(try AuthValidation.validateRegistration(

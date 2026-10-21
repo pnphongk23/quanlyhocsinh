@@ -4,9 +4,15 @@ struct TeacherRootView: View {
     @Environment(AuthModel.self) private var auth
     @State private var data = TeacherFeatureData()
     @State private var i4Data = I4FeatureStore()
-    @State private var tab = TeacherTab.classes
+    @State private var tab: TeacherTab
     @State private var classesPath = NavigationPath()
     @State private var calendarPath = NavigationPath()
+    private let accountSettings: (() -> AnyView)?
+
+    init(initialTab: TeacherTab = .classes, accountSettings: (() -> AnyView)? = nil) {
+        _tab = State(initialValue: initialTab)
+        self.accountSettings = accountSettings
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,7 +40,11 @@ struct TeacherRootView: View {
             }
         case .settings:
             NavigationStack {
-                TeacherSettingsView(data: data)
+                if let accountSettings {
+                    accountSettings()
+                } else {
+                    TeacherSettingsView(data: data)
+                }
             }
         }
     }

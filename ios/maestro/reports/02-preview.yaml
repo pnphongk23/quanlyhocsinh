@@ -1,0 +1,7 @@
+# demo: reports
+appId: vn.quanlylop.app
+name: monthly-report-preview
+---
+- tapOn: "Xem trước"
+- assertVisible: "Báo cáo tháng 10"
+- takeScreenshot: docs/screens/reports/preview

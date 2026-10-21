@@ -1,0 +1,6 @@
+# demo: score-grid
+appId: vn.quanlylop.app
+name: scores-grid
+---
+- assertVisible: "Điểm số"
+- takeScreenshot: docs/screens/scores/grid-ios

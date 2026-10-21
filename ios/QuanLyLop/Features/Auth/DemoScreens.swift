@@ -76,17 +76,133 @@ enum DemoScreens {
         case "settings-teacher":
             model.applyDemo(memberships: [teacher, guardian], activeID: teacher.id, screen: .settings)
             return AnyView(DemoAuthFlow(model: model).environment(model))
-        case "settings", "settings-blocked", "change-password":
-            let screen: AuthModel.Screen = name == "change-password" ? .changePassword : .settings
-            model.applyDemo(memberships: [teacher, guardian], activeID: guardian.id, screen: screen)
-            if name == "settings-blocked" { model.demoPendingCommands = 1 }
-            return AnyView(GuardianRootView(model: model).environment(model))
-        case "guardian", "guardian-empty":
+          case "settings", "settings-blocked", "change-password":
+              let screen: AuthModel.Screen = name == "change-password" ? .changePassword : .settings
+              model.applyDemo(memberships: [teacher, guardian], activeID: guardian.id, screen: screen)
+              if name == "settings-blocked" { model.demoPendingCommands = 1 }
+              return AnyView(GuardianRootView(model: model).environment(model))
+          case "scores", "score-grid", "homework", "comments", "reports":
+              return AnyView(DemoI4Screen(kind: name))
+          case "guardian", "guardian-empty":
             model.applyDemo(memberships: [guardian], activeID: guardian.id, screen: .main)
             return AnyView(GuardianRootView(model: model).environment(model))
         default:
             return nil
         }
+    }
+}
+
+/// Read-only debug harness for I-8C feature comparisons. The feature store reads the bundled
+/// synthetic CoreFixtures snapshot; it never uses a real account or writes production data.
+@MainActor
+private struct DemoI4Screen: View {
+    let kind: String
+    @State private var model: AuthModel
+    @StateObject private var data: I4FeatureStore
+    @State private var rootTab = TeacherTab.classes
+
+    private var sessionFeature: Bool { kind == "homework" || kind == "comments" }
+    private var selectedTab: String {
+        switch kind {
+        case "score-grid": "diem"
+        case "reports": "bao-cao"
+        case "homework": "btvn"
+        case "comments": "nhan-xet"
+        default: "bai-kiem-tra"
+        }
+    }
+
+    private var tabs: [TeacherTextTabs.Item] {
+        if sessionFeature {
+            return [
+                .init(id: "diem-danh", label: "Điểm danh"),
+                .init(id: "nhan-xet", label: "Nhận xét"),
+                .init(id: "btvn", label: "Bài tập về nhà"),
+            ]
+        }
+        return [
+            .init(id: "buoi-hoc", label: "Buổi học"),
+            .init(id: "bai-kiem-tra", label: "Bài kiểm tra"),
+            .init(id: "diem", label: "Điểm"),
+            .init(id: "hoc-sinh", label: "Học sinh"),
+            .init(id: "bao-cao", label: "Báo cáo"),
+        ]
+    }
+
+    init(kind: String) {
+        self.kind = kind
+        let teacher = DemoScreens.membership("demo-teacher", roleName: "Giáo viên",
+                                             kind: .assignedClasses, systemKey: "teacher")
+        let model = AuthModel(configuration: .fallback)
+        model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
+        _model = State(initialValue: model)
+        _data = StateObject(wrappedValue: I4FeatureStore())
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            NavigationStack {
+                VStack(spacing: 0) {
+                    header
+                    TeacherScroll {
+                        VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
+                            switch kind {
+                            case "scores":
+                                TestsTabView(classID: data.classID, data: data)
+                            case "score-grid":
+                                if let test = data.tests(in: data.classID).first {
+                                    TestScoresView(classID: data.classID, testID: test.id, data: data)
+                                } else {
+                                    AppEmptyState(title: "Chưa có bài kiểm tra")
+                                }
+                            case "homework":
+                                SessionHomeworkView(sessionID: data.defaultSession?.id ?? "fixture-session", data: data)
+                            case "comments":
+                                SessionCommentsView(sessionID: data.defaultSession?.id ?? "fixture-session", data: data)
+                            default:
+                                MonthlyReportView(classID: data.classID, data: data)
+                            }
+                        }
+                        .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+                        .padding(.top, 8)
+                        .padding(.bottom, TeacherMetrics.tabBarHeight)
+                    }
+                }
+            }
+            TeacherTabBar(selection: $rootTab)
+        }
+        .background(AppColors.background.ignoresSafeArea())
+        .environment(model)
+    }
+
+    private var header: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 4) {
+                TeacherIconButton(systemImage: "chevron.backward", label: "Quay lại") {}
+                VStack(alignment: .leading, spacing: sessionFeature ? 0 : 0) {
+                    if sessionFeature {
+                        Text("Tiếng Anh giao tiếp 6A")
+                            .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                            .foregroundStyle(AppColors.muted)
+                            .lineLimit(1)
+                    }
+                    Text(sessionFeature ? "Buổi 9 · 19/10" : "Tiếng Anh giao tiếp 6A")
+                        .appText(sessionFeature ? AppTextStyle(size: 20, weight: .bold, lineHeight: 25)
+                                                 : AppText.titleCompact)
+                        .foregroundStyle(AppColors.text)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                TeacherIconButton(systemImage: "ellipsis", label: "Tuỳ chọn lớp", tint: AppColors.muted) {}
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 12)
+            .padding(.bottom, sessionFeature ? 0 : 4)
+            TeacherTextTabs(items: tabs, selection: selectedTab,
+                            fontSize: sessionFeature ? 14 : 13,
+                            fillsWidth: sessionFeature) { _ in }
+        }
+        .background(AppColors.surface)
     }
 }
 
@@ -104,9 +220,17 @@ private struct DemoAuthFlow: View {
         case .forgot: AuthForgotPasswordView(model: model)
         case .forcedPassword: AuthForcedPasswordView(model: model)
         case .chooseRole: AuthRolePickerView(model: model)
-        case .settings: AuthSettingsView(model: model)
+        case .settings:
+            if model.activeMembership?.role.scopeKind == .linkedStudents {
+                AuthSettingsView(model: model)
+            } else {
+                TeacherRootView(initialTab: .settings) {
+                    AnyView(AuthSettingsView(model: model, onClose: { model.show(.main) }))
+                }
+            }
         case .changePassword: AuthChangePasswordView(model: model) { model.show(.settings) }
-        case .login, .main, .loading: AuthLoginView(model: model)
+        case .main: TeacherRootView()
+        case .login, .loading: AuthLoginView(model: model)
         }
     }
 }
