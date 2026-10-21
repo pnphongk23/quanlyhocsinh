@@ -50,6 +50,15 @@ enum AuthValidation {
     }
 }
 
+extension AppConfiguration {
+    /// Placeholder configuration for screens that never touch the network
+    /// (invalid configuration screen and the debug screenshot harness).
+    static let fallback = AppConfiguration(environment: .staging,
+                                          apiBaseURL: URL(string: "https://staging.invalid")!,
+                                          bundleIdentifier: "vn.quanlylop.app",
+                                          appVersion: "0", buildNumber: "0")
+}
+
 @MainActor
 @Observable
 final class AuthModel {
@@ -59,9 +68,10 @@ final class AuthModel {
     private(set) var session: AuthSession?
     private(set) var identity: CurrentIdentity?
     private(set) var isLocked = false
-    private(set) var pendingLogoutCount: Int?
+    private(set) var logoutBlock: LogoutBlock?
     private(set) var message: String?
     private(set) var recoveryPhone = ""
+    private(set) var recoveryIsTeacher = false
 
     private let tokenStore: any TokenStore
     private let api: any APIClient
@@ -89,12 +99,20 @@ final class AuthModel {
     }
 
     func show(_ screen: Screen) { message = nil; self.screen = screen }
-    func showForgotPassword(phone: String) {
-        recoveryPhone = phone.filter(\.isNumber)
+    func showForgotPassword(phone: String, isTeacher: Bool) {
+        recoveryPhone = AuthFormat.phoneInput(phone)
+        recoveryIsTeacher = isTeacher
         message = nil
         screen = .forgot
     }
-    func dismissLogoutBlock() { pendingLogoutCount = nil }
+    func dismissLogoutBlock() { logoutBlock = nil }
+
+    /// Label under a role card: "Bé Gia Bảo" for guardians (children are not part of the
+    /// auth payload, so the prototype's fallback "Phụ huynh" is used) and the workspace name
+    /// for staff roles.
+    func subtitle(for membership: Membership) -> String {
+        membership.role.scopeKind == .linkedStudents ? "Phụ huynh" : membership.workspace.name
+    }
 
     func login(phone: String, password: String) async {
         message = nil; isLocked = false
@@ -159,9 +177,9 @@ final class AuthModel {
         } catch {
             if let failure = error as? APIFailure, case .server(_, let detail, _) = failure,
                detail.code == "invalid_credentials" {
-                message = "Mật khẩu hiện tại không đúng."
+                message = AuthCopy.wrongCurrent
             } else if let validation = error as? AuthValidationError, validation == .samePassword {
-                message = forcedChange ? "Mật khẩu mới không được trùng mật khẩu tạm." : "Mật khẩu mới phải khác mật khẩu hiện tại."
+                message = forcedChange ? AuthCopy.sameAsTemp : AuthCopy.sameAsCurrent
             } else { message = Self.userMessage(error) }
         }
     }
@@ -199,11 +217,15 @@ final class AuthModel {
             let scopeStore = try makeStore(user: user, membershipId: "")
             let controller = SessionController(api: api, tokenStore: tokenStore, store: scopeStore)
             try await controller.logout()
-            session = nil; identity = nil; activeStore = nil; pendingLogoutCount = nil
+            session = nil; identity = nil; activeStore = nil; logoutBlock = nil
             screen = .login
         } catch SessionFailure.pendingCommands(let count) {
-            pendingLogoutCount = count
-        } catch { message = Self.userMessage(error) }
+            // Sign-out stays blocked while commands are pending (spec mục 5.3).
+            logoutBlock = LogoutBlock(pending: count, online: ConnectivityMonitor.shared.isOnline)
+        } catch {
+            guard let count = await pendingCommandCount() else { message = AuthCopy.logoutFailed; return }
+            logoutBlock = LogoutBlock(pending: count, online: ConnectivityMonitor.shared.isOnline)
+        }
     }
 
     func retrySync() async {
@@ -221,6 +243,21 @@ final class AuthModel {
         } catch { message = Self.userMessage(error) }
     }
 
+#if DEBUG
+    /// Screenshot harness only (never reachable in a normal launch): seeds an account
+    /// without touching the keychain or the network.
+    func applyDemo(memberships: [Membership], activeID: String, screen: Screen,
+                   logoutBlock: LogoutBlock? = nil) {
+        let user = User(id: "demo-user", phone: "900000001", displayName: "Cô Lan",
+                        mustChangePassword: false)
+        session = AuthSession(token: "demo-token", expiresAt: "2099-01-01T00:00:00.000Z",
+                              user: user, memberships: memberships, activeMembershipId: activeID)
+        self.screen = screen
+        self.logoutBlock = logoutBlock
+        message = nil
+    }
+#endif
+
     var currentUser: User? { session?.user ?? identity?.user }
     var memberships: [Membership] { session?.memberships ?? identity?.memberships ?? [] }
     var activeMembership: Membership? {
@@ -231,6 +268,11 @@ final class AuthModel {
         (session?.activeMembershipId ?? identity?.activeMembershipId) == nil ? .chooseRole : .main
     }
     var activeStoreForLogout: (any LocalStore)? { activeStore }
+
+    private func pendingCommandCount() async -> Int? {
+        guard let activeStore else { return nil }
+        return try? await activeStore.pendingCommandCount()
+    }
 
     private func prepareStore(for user: User, membershipId: String) async throws {
         let membership = memberships.first { $0.id == membershipId }
@@ -252,15 +294,15 @@ final class AuthModel {
     private static func userMessage(_ error: Error) -> String {
         if let apiError = error as? APIFailure,
            case .server(_, let detail, _) = apiError {
-              if detail.code == "invalid_credentials" { return "Số điện thoại hoặc mật khẩu không đúng" }
+              if detail.code == "invalid_credentials" { return AuthCopy.invalidCredentials }
             return detail.localizedMessage
         }
         if let validation = error as? AuthValidationError {
             switch validation {
             case .missingField: return "Vui lòng điền đầy đủ thông tin."
-            case .passwordLength: return "Mật khẩu phải có từ 8 đến 128 ký tự."
-              case .passwordMismatch: return "Mật khẩu nhập lại không khớp."
-            case .samePassword: return "Mật khẩu mới phải khác mật khẩu hiện tại."
+            case .passwordLength: return AuthCopy.passwordTooShort
+            case .passwordMismatch: return AuthCopy.passwordMismatch
+            case .samePassword: return AuthCopy.sameAsCurrent
             }
         }
         return "Không thể kết nối dịch vụ. Vui lòng thử lại."
