@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv } from './types';
+import type { Env } from './types';
 import { apiRoutes } from './routes';
 import { ApiError, errorBody, payloadTooLarge } from './lib/errors';
 import { MAX_BODY_BYTES } from './lib/http';
+import { generateUpcomingSessions } from './db/session-generation';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/;
 
@@ -14,6 +16,27 @@ function resolveRequestId(request: Request): string {
 }
 
 const app = new Hono<AppEnv>();
+
+type ScheduledJob = (
+  controller: ScheduledController,
+  env: Env,
+  context: ExecutionContext,
+) => Promise<void>;
+
+// Keep cron jobs in one dispatcher so additional scheduled work can be added here.
+const scheduledJobs: ScheduledJob[] = [
+  async (_controller, env) => {
+    await generateUpcomingSessions(env.DB);
+  },
+];
+
+export async function scheduled(
+  controller: ScheduledController,
+  env: Env,
+  context: ExecutionContext,
+): Promise<void> {
+  for (const job of scheduledJobs) await job(controller, env, context);
+}
 
 app.use('*', async (c, next) => {
   const requestId = resolveRequestId(c.req.raw);
@@ -88,4 +111,5 @@ app.onError((error, c) => {
   );
 });
 
-export default app;
+// Preserve Hono's .request() test helper while exposing Worker cron events.
+export default Object.assign(app, { scheduled });
