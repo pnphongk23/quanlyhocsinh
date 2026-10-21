@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "qlh-staging-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-21",
+  "observability": {
+    "enabled": false
+  },
+  "vars": {
+    "ENVIRONMENT": "local",
+    "PBKDF2_ITERATIONS": "100000"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "qlh-staging-db",
+      "database_id": "REPLACE_AT_DEPLOY",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "env": {
+    "staging": {
+      "name": "qlh-staging-api",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "PBKDF2_ITERATIONS": "100000"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "qlh-staging-db",
+          "database_id": "REPLACE_AT_DEPLOY",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
+}
