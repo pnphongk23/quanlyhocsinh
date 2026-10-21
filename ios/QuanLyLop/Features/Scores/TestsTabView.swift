@@ -8,7 +8,7 @@ struct TestsTabView: View {
     @Environment(AuthModel.self) private var auth
     @State private var showingCreate = false
 
-    init(classID: String, data: I4FeatureStore = .demo) {
+    init(classID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.classID = classID
         self.data = data
     }
@@ -124,7 +124,7 @@ struct TestScoresView: View {
     @State private var focusStudentID: String?
     @State private var savedNotice: String?
 
-    init(classID: String, testID: String, data: I4FeatureStore = .demo, focusStudentID: String? = nil) {
+    init(classID: String, testID: String, data: I4FeatureStore = I4FeatureStore(), focusStudentID: String? = nil) {
         self.classID = classID
         self.testID = testID
         self.data = data

@@ -3,6 +3,16 @@ import XCTest
 
 @MainActor
 final class I4FeatureTests: XCTestCase {
+    func testTeacherStoreAndRootConstructWithoutProductionFixtures() {
+        let store = I4FeatureStore()
+        let root = TeacherRootView()
+
+        XCTAssertFalse(store.isReady)
+        XCTAssertNil(store.store)
+        XCTAssertNil(store.api)
+        _ = root
+    }
+
     func testTestMaximumAndScoreBoundaries() throws {
         let test = try TestDefinition(id: "test", classId: "class", name: "Unit 6", date: "2026-10-21")
         XCTAssertEqual(test.maxScore, 15)

@@ -3,13 +3,14 @@ import SwiftUI
 struct TeacherRootView: View {
     @Environment(AuthModel.self) private var auth
     @State private var data = TeacherFeatureData()
-    @State private var i4Data = I4FeatureStore()
+    @State private var i4Data: I4FeatureStore
     @State private var tab: TeacherTab
     @State private var classesPath = NavigationPath()
     @State private var calendarPath = NavigationPath()
     private let accountSettings: (() -> AnyView)?
 
-    init(initialTab: TeacherTab = .classes, accountSettings: (() -> AnyView)? = nil) {
+    init(auth: AuthModel? = nil, initialTab: TeacherTab = .classes, accountSettings: (() -> AnyView)? = nil) {
+        _i4Data = State(initialValue: auth.map(I4FeatureStore.init(auth:)) ?? I4FeatureStore())
         _tab = State(initialValue: initialTab)
         self.accountSettings = accountSettings
     }

@@ -10,7 +10,13 @@ struct RecordKey: Codable, Sendable, Hashable {
     let entity: String
     let k1: String
     var k2: String = ""
-    var storageKey: String { String(decoding: try! JSONEncoder().encode([entity, k1, k2]), as: UTF8.self) }
+    var storageKey: String {
+        if let data = try? JSONEncoder().encode([entity, k1, k2]),
+           let key = String(data: data, encoding: .utf8) {
+            return key
+        }
+        return [entity, k1, k2].map { "\($0.utf8.count):\($0)" }.joined()
+    }
 }
 struct PendingCommand: Codable, Sendable, Equatable, Identifiable {
     let id: UUID

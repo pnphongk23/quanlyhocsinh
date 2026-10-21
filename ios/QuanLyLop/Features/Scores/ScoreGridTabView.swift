@@ -8,7 +8,7 @@ struct ScoreGridTabView: View {
     @Environment(AuthModel.self) private var auth
     @State private var showingCreate = false
 
-    init(classID: String, data: I4FeatureStore = .demo) {
+    init(classID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.classID = classID
         self.data = data
     }

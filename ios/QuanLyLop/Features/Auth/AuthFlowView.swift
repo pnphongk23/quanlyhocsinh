@@ -77,7 +77,7 @@ struct AuthFlowView: View {
 
     private var teacherShell: some View {
         NavigationStack {
-            TeacherRootView()
+            TeacherRootView(auth: model)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { model.show(.settings) } label: {
@@ -93,7 +93,7 @@ struct AuthFlowView: View {
         if isGuardian {
             GuardianRootView(model: model)
         } else {
-            TeacherRootView(initialTab: .settings) {
+            TeacherRootView(auth: model, initialTab: .settings) {
                 AnyView(AuthSettingsView(model: model, onClose: { model.show(.main) }))
             }
         }

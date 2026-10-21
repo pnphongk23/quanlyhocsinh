@@ -16,7 +16,7 @@ struct MonthlyReportView: View {
     @State private var publishing = false
     @State private var saveTask: Task<Void, Never>?
 
-    init(classID: String, data: I4FeatureStore = .demo) {
+    init(classID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.classID = classID
         self.data = data
         _month = State(initialValue: I4Format.currentMonth())

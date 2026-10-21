@@ -5,8 +5,6 @@ import SwiftUI
 /// Reads what Teacher A already caches in `SQLiteStore` and keeps every write in the outbox.
 @MainActor
 final class I4FeatureStore: ObservableObject {
-    static let demo = I4FeatureStore()
-
     @Published private(set) var classes: [Classroom] = []
     @Published private(set) var students: [Student] = []
     @Published private(set) var sessions: [ClassSession] = []
@@ -19,49 +17,53 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var publications: [ReportPublication] = []
     @Published private(set) var reports: [MonthlyReport] = []
     @Published private(set) var hiddenSectionIDs: Set<String> = []
-    @Published private(set) var canReadScores = true
-    @Published private(set) var canWriteScores = true
-    @Published private(set) var canReadCommentsReports = true
-    @Published private(set) var canWriteCommentsReports = true
+    @Published private(set) var canReadScores = false
+    @Published private(set) var canWriteScores = false
+    @Published private(set) var canReadCommentsReports = false
+    @Published private(set) var canWriteCommentsReports = false
     @Published private(set) var isReady = false
     @Published var errorMessage: String?
 
-    private(set) var store: SQLiteStore
-    private(set) var api: any APIClient
-    private(set) var isDemo: Bool
-    private let membershipID = "fixture-member"
+    private(set) var store: SQLiteStore?
+    private(set) var api: (any APIClient)?
     private let deviceID = "fixture-device"
 
-    init(store: SQLiteStore? = nil, api: (any APIClient)? = nil, isDemo: Bool = true) {
-        let scope = CacheScope(userId: "fixture-user", workspaceId: "fixture-workspace", membershipId: "fixture-member")
-        self.store = store ?? (try! SQLiteStore.open(scope: scope))
-        self.api = api ?? (try! StubAPIClient.demo(baseURL: URL(string: "https://staging.invalid/v1")!, membershipId: "fixture-member"))
-        self.isDemo = isDemo
-        Task { await bootstrap() }
+    init(store: SQLiteStore? = nil, api: (any APIClient)? = nil) {
+        self.store = store
+        self.api = api
+    }
+
+    init(auth: AuthModel) {
+        _ = bind(auth: auth)
     }
 
     var classID: String { classes.first?.id ?? "fixture-class" }
     var defaultSession: ClassSession? { sessions.first(where: { $0.status != .cancelled }) }
 
     func configure(auth: AuthModel) async {
-        guard let activeStore = auth.activeStoreForLogout as? SQLiteStore,
-              case .success(let configuration) = AppConfiguration.load() else { return }
-        store = activeStore
-        api = URLSessionAPIClient(configuration: configuration,
-                                  tokenStore: KeychainTokenStore(service: "vn.quanlylop.\(configuration.environment.rawValue)"))
-        isDemo = false
-        if let membership = auth.activeMembership {
-            canReadScores = allows(membership, group: "scores", write: false)
-            canWriteScores = allows(membership, group: "scores", write: true)
-            canReadCommentsReports = allows(membership, group: "comments_reports", write: false)
-            canWriteCommentsReports = allows(membership, group: "comments_reports", write: true)
-        }
-        do { try await SyncCoordinator(api: api, store: activeStore, deviceId: deviceID).synchronize() }
+        guard let (activeStore, activeAPI) = bind(auth: auth) else { return }
+        do { try await SyncCoordinator(api: activeAPI, store: activeStore, deviceId: deviceID).synchronize() }
         catch { errorMessage = String(localized: "feature.scores.khong.the.ong.bo.du.lieu.vui.long.thu.lai") }
         await refresh()
     }
 
+    private func bind(auth: AuthModel) -> (SQLiteStore, URLSessionAPIClient)? {
+        guard let activeStore = auth.activeStoreForLogout as? SQLiteStore,
+              let membership = auth.activeMembership,
+              case .success(let configuration) = AppConfiguration.load() else { return nil }
+        let activeAPI = URLSessionAPIClient(configuration: configuration,
+                                             tokenStore: KeychainTokenStore(service: configuration.tokenStoreService))
+        store = activeStore
+        api = activeAPI
+        canReadScores = allows(membership, group: "scores", write: false)
+        canWriteScores = allows(membership, group: "scores", write: true)
+        canReadCommentsReports = allows(membership, group: "comments_reports", write: false)
+        canWriteCommentsReports = allows(membership, group: "comments_reports", write: true)
+        return (activeStore, activeAPI)
+    }
+
     func refresh() async {
+        guard let store else { return }
         do {
             classes = try await store.records(Classroom.self, entity: "class")
             students = try await store.records(Student.self, entity: "student")
@@ -78,27 +80,6 @@ final class I4FeatureStore: ObservableObject {
         } catch {
             errorMessage = String(localized: "feature.scores.khong.tai.uoc.du.lieu.a.luu")
         }
-    }
-
-    private func bootstrap() async {
-        do {
-            if try await store.position() == nil {
-                let manifest = try await api.send(.init(method: .get, path: "sync/snapshot",
-                                                        query: ["membership_id": membershipID]),
-                                                  as: SnapshotManifest.self)
-                var rows: [String: [JSONValue]] = [:]
-                for entity in manifest.entities {
-                    let path = "sync/snapshot/" + entity
-                    let query = ["membership_id": membershipID, "limit": "300"]
-                    let page = try await api.send(.init(method: .get, path: path, query: query),
-                                                  as: SnapshotPage.self)
-                    rows[entity] = page.items
-                }
-                let position = SyncPosition(cursor: manifest.cursor, epoch: manifest.epoch)
-                try await store.installSnapshot(rows, position: position)
-            }
-            await refresh()
-        } catch { errorMessage = String(localized: "feature.scores.khong.tai.uoc.du.lieu.mau") }
     }
 
     // MARK: - Reads
@@ -176,6 +157,7 @@ final class I4FeatureStore: ObservableObject {
 
     /// Saves every changed score of one test. Returns the first validation error, if any.
     func saveScores(test: TestDefinition, values: [String: String]) async -> String? {
+        guard let store else { return String(localized: "feature.scores.khong.luu.uoc.iem") }
         for (studentID, raw) in values {
             guard let student = students.first(where: { $0.id == studentID }) else { continue }
             let parsed = Self.parseScore(raw)
@@ -218,6 +200,7 @@ final class I4FeatureStore: ObservableObject {
     }
 
     func saveTest(name: String, date: String, max: Int, existing: TestDefinition? = nil) async -> String? {
+        guard let store else { return String(localized: "feature.scores.khong.luu.uoc.bai.kiem.tra") }
         do {
             if let existing {
                 let highest = scores.filter { $0.testId == existing.id }.compactMap(\.value).max()
@@ -271,6 +254,7 @@ final class I4FeatureStore: ObservableObject {
     /// The server decides physical deletion versus archiving; hide the row either way.
     /// Returns the confirmation copy so the dialog can say which outcome applies.
     func deleteTest(_ test: TestDefinition) async -> String? {
+        guard let store else { return String(localized: "feature.scores.khong.xoa.uoc.bai.kiem.tra") }
         let hasScores = scores.contains { $0.testId == test.id && $0.value != nil }
         do {
             let row = try TestDefinition(id: test.id, classId: test.classId, name: test.name, date: test.date,
@@ -288,6 +272,7 @@ final class I4FeatureStore: ObservableObject {
     // MARK: - Session slips (comments)
 
     func saveSlip(sessionID: String, student: Student, stars: Stars?, note: String) async -> String? {
+        guard let store else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
         let old = slip(sessionID: sessionID, studentID: student.id)
         let row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: stars, note: note,
                               status: old?.status ?? .draft, sentAt: old?.sentAt,
@@ -316,6 +301,7 @@ final class I4FeatureStore: ObservableObject {
 
     /// Sends every starred, not-yet-sent slip of the session in one command.
     func sendSlips(sessionID: String, studentIDs: [String]) async -> SendOutcome {
+        guard let store else { return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu")) }
         let chosen = slips(sessionID: sessionID).filter {
             studentIDs.contains($0.studentId) && $0.stars != nil && $0.status != .sent
         }
@@ -347,6 +333,7 @@ final class I4FeatureStore: ObservableObject {
 
     func saveSection(sessionID: String, kind: HomeworkKind, title: String, description: String,
                      section: HomeworkSection? = nil) async -> String? {
+        guard let store else { return String(localized: "feature.scores.khong.luu.uoc.phan.bai.tap") }
         let id = section?.id ?? UUID().uuidString.lowercased()
         let row = HomeworkSection(id: id, classId: classID, sessionId: sessionID, kind: kind, title: title,
                                   description: description, version: section?.version ?? 0)
@@ -385,6 +372,7 @@ final class I4FeatureStore: ObservableObject {
     }
 
     func deleteSection(_ section: HomeworkSection) async -> String? {
+        guard let store else { return String(localized: "feature.scores.khong.xoa.uoc.phan.bai.tap") }
         let graded = grades.contains { $0.sectionId == section.id && $0.level != nil }
         guard !graded else { return String(localized: "feature.scores.a.cham.cho.hoc.sinh.nen.khong.xoa.uoc") }
         let payload = object(["id": .string(section.id)])
@@ -401,6 +389,7 @@ final class I4FeatureStore: ObservableObject {
     }
 
     func grade(_ section: HomeworkSection, student: Student, level: HomeworkLevel?) async {
+        guard let store else { return }
         let old = grade(sectionID: section.id, studentID: student.id)
         let row = HomeworkGrade(sectionId: section.id, studentId: student.id, level: level,
                                 version: old?.version ?? 0, updatedAt: Self.now)
@@ -429,6 +418,7 @@ final class I4FeatureStore: ObservableObject {
     // MARK: - Monthly reports
 
     func saveReportComment(studentID: String, month: String, comment: String) async -> String? {
+        guard let api, let store else { return String(localized: "feature.scores.khong.the.luu.nhan.xet.chung") }
         let existing = report(studentID: studentID, month: month)
         do {
             let path = "students/\(studentID)/reports/\(month)"
@@ -454,6 +444,7 @@ final class I4FeatureStore: ObservableObject {
 
     /// Publishes the month through `POST …/publish` and uploads the locally rendered PDF.
     func publish(student: Student, month: String) async -> PublishOutcome {
+        guard let api else { return .failed(String(localized: "feature.scores.khong.the.phat.hanh.luc.nay.kiem.tra.ket.noi.roi")) }
         let path = "students/\(student.id)/reports/\(month)/publish"
         do {
             let response = try await api.send(.init(method: .post, path: path), as: ReportPublishResponse.self)
@@ -461,7 +452,7 @@ final class I4FeatureStore: ObservableObject {
             let pdf = I4PDFRenderer.render(snapshot: response.snapshot, studentName: student.name)
             do {
                 try await ReportPDFUpload.upload(pdf: pdf, reportId: response.reportId,
-                                                 publicationNo: response.publicationNo, api: api)
+                                                   publicationNo: response.publicationNo, api: api)
                 return .published(publicationNo: response.publicationNo)
             } catch {
                 return .publishedWithoutPDF(publicationNo: response.publicationNo)
@@ -481,7 +472,7 @@ final class I4FeatureStore: ObservableObject {
 
     @discardableResult
     private func syncIfNeeded() async -> Bool {
-        guard !isDemo else { return false }
+        guard let api, let store else { return false }
         do {
             try await SyncCoordinator(api: api, store: store, deviceId: deviceID).synchronize()
             errorMessage = nil

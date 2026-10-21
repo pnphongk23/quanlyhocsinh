@@ -11,7 +11,7 @@ struct SessionHomeworkView: View {
     @State private var editor: HomeworkEditor?
     @State private var error: String?
 
-    init(sessionID: String, data: I4FeatureStore = .demo) {
+    init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.sessionID = sessionID
         self.data = data
     }

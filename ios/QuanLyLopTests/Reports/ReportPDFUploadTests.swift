@@ -58,7 +58,7 @@ final class ReportPDFUploadTests: XCTestCase {
         let scope = CacheScope(userId: "user", workspaceId: "workspace", membershipId: "member")
         let store = try SQLiteStore(path: ":memory:", scope: scope)
         let api = RecordingAPIClient()
-        let data = I4FeatureStore(store: store, api: api, isDemo: false)
+        let data = I4FeatureStore(store: store, api: api)
         let student = Student(id: "student-1", classId: "class-1", name: "Học sinh", parentPhone: nil,
                               enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
 

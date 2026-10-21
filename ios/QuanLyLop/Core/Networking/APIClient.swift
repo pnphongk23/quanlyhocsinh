@@ -157,6 +157,7 @@ struct StubAPIClient: APIClient {
     }
 }
 
+#if DEBUG
 extension StubAPIClient {
     /// Read-only demo data, synthetic IDs/names and empty notes; no credentials.
     static func demo(baseURL: URL, membershipId: String = "fixture-member", bundle: Bundle = .main) throws -> StubAPIClient {
@@ -175,3 +176,4 @@ extension StubAPIClient {
         return StubAPIClient(baseURL: baseURL, fixtures: fixtures)
     }
 }
+#endif

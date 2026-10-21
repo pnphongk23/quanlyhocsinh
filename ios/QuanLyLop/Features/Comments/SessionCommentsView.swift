@@ -11,7 +11,7 @@ struct SessionCommentsView: View {
     @State private var sendError: String?
     @State private var toast: String?
 
-    init(sessionID: String, data: I4FeatureStore = .demo) {
+    init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.sessionID = sessionID
         self.data = data
     }
