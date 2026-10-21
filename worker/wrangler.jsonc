@@ -8,7 +8,9 @@
   },
   "vars": {
     "ENVIRONMENT": "local",
-    "PBKDF2_ITERATIONS": "100000"
+    "PBKDF2_ITERATIONS": "100000",
+    // CORS cho /v1/*: danh sách origin (phân tách dấu phẩy), rỗng = không cho origin nào.
+    "ALLOWED_ORIGINS": ""
   },
   "triggers": {
     "crons": ["* * * * *"]
@@ -26,7 +28,11 @@
       "name": "qlh-staging-api",
       "vars": {
         "ENVIRONMENT": "staging",
-        "PBKDF2_ITERATIONS": "100000"
+        "PBKDF2_ITERATIONS": "100000",
+        // Điền origin Cloudflare Pages của staging (và localhost) trước khi dùng web,
+        // ví dụ "https://qlh-staging.pages.dev,http://localhost:5173". Rỗng = chặn mọi
+        // origin khác miền (iOS không bị ảnh hưởng).
+        "ALLOWED_ORIGINS": ""
       },
       "d1_databases": [
         {

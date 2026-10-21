@@ -9,6 +9,24 @@ import { runScheduledPush } from './db/notification-dispatch';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/;
 
+// Web chạy ở Cloudflare Pages (miền khác), nên `/v1/*` phải trả header CORS. Danh sách
+// origin do `ALLOWED_ORIGINS` chốt (phân tách dấu phẩy); rỗng = không cho origin nào.
+// Không bao giờ dùng `*`: phản chiếu đúng origin đã cấu hình.
+const CORS_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+const CORS_HEADERS = 'Authorization, Content-Type, X-Request-Id, X-Client';
+const CORS_EXPOSE_HEADERS = 'X-Request-Id, Retry-After';
+const CORS_MAX_AGE_SECONDS = '600';
+
+function allowedOrigins(raw: string | undefined): Set<string> {
+  const origins = new Set<string>();
+  for (const entry of (raw ?? '').split(',')) {
+    // Chấp nhận khoảng trắng và dấu `/` cuối (origin không có dấu `/`).
+    const origin = entry.trim().replace(/\/$/, '');
+    if (origin !== '' && origin !== '*') origins.add(origin);
+  }
+  return origins;
+}
+
 function resolveRequestId(request: Request): string {
   const incoming = request.headers.get('x-request-id');
   if (incoming !== null && REQUEST_ID_PATTERN.test(incoming)) return incoming;
@@ -48,6 +66,26 @@ export async function scheduled(
     }
   }
 }
+
+app.use('/v1/*', async (c, next) => {
+  const origin = c.req.header('origin');
+  c.header('Vary', 'Origin');
+  const reflected = origin !== undefined && allowedOrigins(c.env.ALLOWED_ORIGINS).has(origin);
+  if (reflected) {
+    c.header('Access-Control-Allow-Origin', origin);
+    c.header('Access-Control-Expose-Headers', CORS_EXPOSE_HEADERS);
+  }
+  if (c.req.method === 'OPTIONS') {
+    // Preflight: không xác thực, luôn 204; origin lạ không được phản chiếu nên trình duyệt chặn.
+    if (reflected) {
+      c.header('Access-Control-Allow-Methods', CORS_METHODS);
+      c.header('Access-Control-Allow-Headers', CORS_HEADERS);
+      c.header('Access-Control-Max-Age', CORS_MAX_AGE_SECONDS);
+    }
+    return c.body(null, 204);
+  }
+  await next();
+});
 
 app.use('*', async (c, next) => {
   const requestId = resolveRequestId(c.req.raw);

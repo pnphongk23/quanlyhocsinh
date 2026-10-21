@@ -12,6 +12,10 @@ npm run dev
 
 Run `npm run typecheck`, `npm test`, and `npm run bundle:size` before committing changes. Copy `.dev.vars.example` to `.dev.vars` only when local overrides are needed; keep secrets out of source control.
 
+## CORS for the web client
+
+The web app runs on Cloudflare Pages, a different origin from the Worker, so `/v1/*` answers CORS. `ALLOWED_ORIGINS` is a comma-separated allow list of exact origins (`https://qlh-staging.pages.dev,http://localhost:5173`); an empty or unset value allows no cross-origin caller. The Worker never answers with `*` and reflects only an origin from that list, adds `Vary: Origin`, allows `Authorization, Content-Type, X-Request-Id, X-Client` (plus `GET, POST, PUT, PATCH, DELETE`), and answers `OPTIONS` preflight with `204` and `Access-Control-Max-Age: 600`. CORS headers are also set on error responses so the browser can read the error code. iOS does not use CORS. Set the staging value in the `env.staging` vars block of `wrangler.jsonc` and redeploy.
+
 ## Staging deployment
 
 Resources (prefix `qlh-staging-` only; there is no production yet): Worker `qlh-staging-api`, D1 `qlh-staging-db` (region APAC). The D1 `database_id` is committed in `wrangler.jsonc` under `env.staging`; the top-level config stays on `REPLACE_AT_DEPLOY` because it is only used for local runs and tests.
