@@ -1,0 +1,29 @@
+# Staging thật (I-6): đăng nhập bằng tài khoản demo rồi xem danh sách lớp do máy chủ trả về.
+# Thông tin đăng nhập KHÔNG nằm trong repo: truyền qua `-e` từ `/tmp/qlh-staging-demo.txt`, ví dụ
+#   maestro --device <udid> test -e STAGING_PHONE=... -e STAGING_PASSWORD=... ios/maestro/staging/01-login.yaml
+# `STAGING_PHONE` là 9 số nội địa (app đã có tiền tố +84 và tự chuẩn hoá trước khi gửi).
+# Ảnh chụp không chứa mật khẩu (ô mật khẩu đã bị xoá khi sang màn kế tiếp).
+appId: vn.quanlylop.app
+name: staging-login
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Đăng nhập"
+    timeout: 30000
+- tapOn:
+    id: login.phone
+- inputText: ${STAGING_PHONE}
+- tapOn:
+    id: login.password
+- inputText: ${STAGING_PASSWORD}
+# Bàn phím số không có nút ẩn chuẩn: chạm vào mô tả tĩnh để đóng, rồi mới bấm nút đăng nhập.
+- tapOn: "Dành cho giáo viên và phụ huynh."
+- tapOn:
+    text: "Đăng nhập"
+    index: 1
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 30000
+- assertNotVisible:
+    id: saveStatus.error
+- takeScreenshot: staging-classes
