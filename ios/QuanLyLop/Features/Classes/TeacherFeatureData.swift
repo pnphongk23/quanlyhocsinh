@@ -52,6 +52,29 @@ final class TeacherFeatureData {
     private var sync: SyncCoordinator?
     private var observer: Task<Void, Never>?
 
+    init() {}
+
+    /// Screenshot/preview harness only: fills the observable with synthetic records so the
+    /// teacher screens can be rendered without a session. No runtime path calls this.
+    init(previewClasses: [Classroom], previewStudents: [Student], previewSessions: [ClassSession],
+         previewAttendance: [Attendance] = [], displayName: String = "Cô Lan") {
+        classes = previewClasses
+        students = previewStudents
+        sessions = previewSessions.sorted { ($0.date, $0.startTime) < ($1.date, $1.startTime) }
+        attendance = previewAttendance
+        self.displayName = displayName
+        roleName = "Giáo viên"
+        canReadClasses = true
+        canWriteClasses = true
+        canReadStudents = true
+        canWriteStudents = true
+        canReadAttendance = true
+        canWriteAttendance = true
+        canReadScores = true
+        canReadReports = true
+        isReady = true
+    }
+
     func configure(auth: AuthModel) async {
         guard let membership = auth.activeMembership,
               let store = auth.activeStoreForLogout as? SQLiteStore,
@@ -157,8 +180,8 @@ final class TeacherFeatureData {
         return value.temporaryPassword
     }
 
-    func addOneOffSession(classID: String, date: String, time: String, makeup: Bool) async throws {
-        let value = try await send(.post, path: "classes/\(classID)/sessions", body: TeacherSessionRequest(date: date, startTime: time, isMakeup: makeup, note: ""), as: ClassSession.self)
+    func addOneOffSession(classID: String, date: String, time: String, makeup: Bool, note: String = "") async throws {
+        let value = try await send(.post, path: "classes/\(classID)/sessions", body: TeacherSessionRequest(date: date, startTime: time, isMakeup: makeup, note: note), as: ClassSession.self)
         try await cache(value, entity: "class_session")
         await refresh()
     }
@@ -207,15 +230,73 @@ final class TeacherFeatureData {
     func students(in classID: String) -> [Student] {
         students.filter { $0.classId == classID }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
+    func activeStudents(in classID: String) -> [Student] {
+        students(in: classID).filter { $0.status == .active }
+    }
     func sessions(in classID: String) -> [ClassSession] { sessions.filter { $0.classId == classID } }
     func session(id: String) -> ClassSession? { sessions.first { $0.id == id } }
     func classroom(id: String) -> Classroom? { classes.first { $0.id == id } }
     func attendanceCount(in classID: String) -> Int { attendance.filter { record in sessions.contains(where: { $0.classId == classID && $0.id == record.sessionId }) }.count }
+    /// `attendanceRate` of `data/logic.ts`: “Có phép” is excluded from the denominator
+    /// (điểm danh footnote: “Có phép không bị trừ chuyên cần”).
     func attendanceRate(in classID: String) -> Int? {
         let classSessionIDs = Set(sessions.filter { $0.classId == classID && $0.status == .held }.map(\.id))
-        let rows = attendance.filter { classSessionIDs.contains($0.sessionId) }
+        let rows = attendance.filter { classSessionIDs.contains($0.sessionId) && $0.status != .excused }
         guard !rows.isEmpty else { return nil }
-        return Int((Double(rows.filter { $0.status == .present || $0.status == .late }.count) / Double(rows.count) * 100).rounded())
+        let attending = rows.filter { $0.status == .present || $0.status == .late }.count
+        return Int((Double(attending) / Double(rows.count) * 100).rounded())
+    }
+
+    /// `splitSessions` of `data/sessionGroups.ts`: one spotlight session (today, or the next
+    /// planned one), the sessions after it, and everything before today.
+    func splitSessions(in classID: String, today: String) -> (current: [ClassSession], upcoming: [ClassSession], past: [ClassSession]) {
+        let all = sessions(in: classID)
+        var current = all.filter { $0.date == today }
+        if current.isEmpty,
+           let next = all.filter({ $0.status == .planned && $0.date > today })
+                .sorted(by: Self.sessionOrder).first {
+            current.append(next)
+        }
+        let currentIDs = Set(current.map(\.id))
+        let upcoming = all.filter { $0.status == .planned && $0.date > today && !currentIDs.contains($0.id) }
+            .sorted(by: Self.sessionOrder)
+        let past = all.filter { $0.date < today }.sorted(by: Self.sessionOrder).reversed()
+        return (current.sorted(by: Self.sessionOrder), upcoming, Array(past))
+    }
+
+    /// `consecutiveAbsences` of `data/logic.ts`: trailing “Vắng” rows of held sessions.
+    func consecutiveAbsences(of student: Student) -> Int {
+        let held = sessions.filter {
+            $0.classId == student.classId && $0.status == .held && $0.date >= student.enrolledAt
+                && (student.leftAt == nil || $0.date <= student.leftAt!)
+        }
+        .sorted { $0.date > $1.date }
+        var count = 0
+        for session in held {
+            guard attendanceFor(sessionID: session.id, studentID: student.id)?.status == .absent else { break }
+            count += 1
+        }
+        return count
+    }
+
+    /// `hasAbsenceWarning` of `data/logic.ts`.
+    func hasAbsenceWarning(_ student: Student) -> Bool {
+        student.status == .active && consecutiveAbsences(of: student) >= 2
+    }
+
+    func absenceWarningCount(in classID: String) -> Int {
+        activeStudents(in: classID).filter(hasAbsenceWarning).count
+    }
+
+    /// `sessionPrefix` of `data/repositories/sessions.ts`: numbering comes from the server
+    /// only (Q16); a cancelled session has no number.
+    static func sessionPrefix(_ session: ClassSession) -> String {
+        if let number = session.sessionNumber { return "Buổi \(number)" }
+        return session.isMakeup ? "Buổi bù" : "Buổi học"
+    }
+
+    static func sessionOrder(_ first: ClassSession, _ second: ClassSession) -> Bool {
+        (first.date, first.startTime) < (second.date, second.startTime)
     }
     func tests(in classID: String) -> [TestDefinition] { tests.filter { $0.classId == classID } }
     private func send<Response: Decodable & Sendable, Body: Encodable>(_ method: APIEndpoint.Method, path: String, body: Body, as type: Response.Type) async throws -> Response {

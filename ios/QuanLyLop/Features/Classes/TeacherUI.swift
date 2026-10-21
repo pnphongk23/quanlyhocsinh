@@ -1,0 +1,630 @@
+import SwiftUI
+
+/// Measurements copied from the prototype mobile screens (390×844) of the teacher
+/// package: `shell.module.css` (content padding 12/20, tabbar 64), `classes.module.css`,
+/// `classSpace.module.css`, `sessions.module.css`, `AttendancePanel.module.css`,
+/// `students.module.css` and `schedule.module.css`.
+enum TeacherMetrics {
+    /// `.content { padding: 12px 20px 16px }`
+    static let screenPaddingHorizontal: CGFloat = 20
+    static let screenPaddingTop: CGFloat = 12
+    /// `.mobile { padding-bottom: calc(tabbar + safe-area + 16px) }`
+    static let tabBarHeight: CGFloat = 64
+    static let contentGap: CGFloat = 12
+    static let fabSize: CGFloat = 56
+    static let cardPadding: CGFloat = 16
+    static let rowMinHeight: CGFloat = 56
+    static let listGap: CGFloat = 8
+}
+
+/// Prototype date labels (`src/shared/format/index.ts`) in the same `vi-VN` shapes.
+enum TeacherFormat {
+    private static let parser: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    /// `formatDate`: 01/09/2026.
+    static func date(_ iso: String) -> String { format(iso, "dd/MM/yyyy") }
+    /// `formatDayMonth`: 19/10.
+    static func dayMonth(_ iso: String) -> String { format(iso, "d/M") }
+    /// `formatWeekdayDate`: "Thứ Hai, 19 tháng 10" (`Intl` capitalises “Chủ Nhật”).
+    static func weekdayDate(_ iso: String) -> String {
+        guard let date = parser.date(from: iso) else { return iso }
+        return "\(capitalizedWeekdayName(iso)), \(calendar.component(.day, from: date)) tháng \(calendar.component(.month, from: date))"
+    }
+
+    /// Same list as `Intl.DateTimeFormat(weekday: "long")`: “Chủ Nhật”.
+    static func capitalizedWeekdayName(_ iso: String) -> String {
+        guard let date = parser.date(from: iso) else { return iso }
+        let index = calendar.component(.weekday, from: date) - 1
+        return capitalizedWeekdayNames[index]
+    }
+
+    static let capitalizedWeekdayNames = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"]
+    /// `fullDateLabel`: "Ngày 21 tháng 10 năm 2026".
+    static func fullDate(_ iso: String) -> String {
+        guard let date = parser.date(from: iso) else { return iso }
+        let day = calendar.component(.day, from: date)
+        let month = calendar.component(.month, from: date)
+        let year = calendar.component(.year, from: date)
+        return "Ngày \(day) tháng \(month) năm \(year)"
+    }
+    /// `weekdayNames` of `shared/format`.
+    static func weekdayName(_ iso: String) -> String {
+        guard let date = parser.date(from: iso) else { return iso }
+        let index = calendar.component(.weekday, from: date) - 1
+        return weekdayNames[index]
+    }
+    /// `monthTitle` of the month view: "Tháng 10, 2026".
+    static func monthTitle(year: Int, month: Int) -> String { "Tháng \(month), \(year)" }
+
+    static func todayISO() -> String {
+        let now = Date.now
+        let parts = calendar.dateComponents([.year, .month, .day], from: now)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 2000, parts.month ?? 1, parts.day ?? 1)
+    }
+
+    static func iso(year: Int, month: Int, day: Int) -> String {
+        String(format: "%04d-%02d-%02d", year, month, day)
+    }
+
+    static func components(_ iso: String) -> (year: Int, month: Int, day: Int) {
+        guard let date = parser.date(from: iso) else { return (2000, 1, 1) }
+        return (calendar.component(.year, from: date),
+                calendar.component(.month, from: date),
+                calendar.component(.day, from: date))
+    }
+
+    static let weekdayNames = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"]
+
+    private static let calendar = Calendar(identifier: .gregorian)
+
+    private static func format(_ iso: String, _ pattern: String) -> String {
+        guard let date = parser.date(from: iso) else { return iso }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "vi_VN")
+        formatter.dateFormat = pattern
+        return formatter.string(from: date)
+    }
+}
+
+/// `ScrollView` of the screens below. `ImageRenderer` in the screenshot harness cannot lay
+/// out a scroll view, so the harness sets `teacherStaticLayout` and the content is stacked
+/// directly instead. Never set outside the comparison screenshots.
+struct TeacherScroll<Content: View>: View {
+    @Environment(\.teacherStaticLayout) private var isStatic
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        if isStatic {
+            VStack(spacing: 0) {
+                content
+                Spacer(minLength: 0)
+            }
+        } else {
+            ScrollView { content }
+        }
+    }
+}
+
+private struct TeacherStaticLayoutKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var teacherStaticLayout: Bool {
+        get { self[TeacherStaticLayoutKey.self] }
+        set { self[TeacherStaticLayoutKey.self] = newValue }
+    }
+}
+
+// MARK: - Avatar (`.avatar` 40/44/36 circles of the prototype)
+
+struct TeacherAvatar: View {
+    let initials: String
+    var size: CGFloat = 40
+    /// `.avatarEmpty`: neutral background with a dash instead of the initials.
+    var isEmpty = false
+
+    private static let textStyle = AppTextStyle(size: 14, weight: .bold, lineHeight: 21)
+
+    var body: some View {
+        Text(isEmpty ? "–" : initials)
+            .appText(Self.textStyle)
+            .foregroundStyle(isEmpty ? AppColors.muted : AppColors.primaryInk)
+            .frame(width: size, height: size)
+            .background(isEmpty ? AppColors.background : AppColors.primarySoft, in: Circle())
+    }
+}
+
+extension TeacherAvatar {
+    /// `initialsOf`: first letters of the last two words, upper-cased.
+    init(name: String, size: CGFloat = 40) {
+        let words = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ")
+            .suffix(2)
+        self.init(initials: words.compactMap(\.first).map(String.init).joined().uppercased(),
+                  size: size)
+    }
+}
+
+/// `NavigationLink(value:)` with the prototype's plain style. When the screenshot harness
+/// renders without a navigation stack the label is drawn as-is, so it keeps its colours
+/// (a bare `NavigationLink` outside a stack renders disabled).
+struct TeacherLink<Label: View>: View {
+    @Environment(\.teacherStaticLayout) private var isStatic
+    let route: TeacherRoute
+    @ViewBuilder let label: Label
+
+    var body: some View {
+        if isStatic {
+            label
+        } else {
+            NavigationLink(value: route) { label }
+                .buttonStyle(.plain)
+        }
+    }
+}
+
+/// Horizontal scroller for the schedule filter chips. Same `teacherStaticLayout` escape as
+/// `TeacherScroll`, because `ImageRenderer` cannot lay out a scroll view.
+struct TeacherHorizontalScroll<Content: View>: View {
+    @Environment(\.teacherStaticLayout) private var isStatic
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        if isStatic {
+            content
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) { content }
+        }
+    }
+}
+
+// MARK: - Icon button (`.iconButton` / `.moreButton` 44×44)
+
+struct TeacherIconButton: View {
+    let systemImage: String
+    let label: String
+    var tint: Color = AppColors.text
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 20, weight: .regular))
+                .foregroundStyle(tint)
+                .frame(width: AppMetrics.tap, height: AppMetrics.tap)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+// MARK: - Floating action button (`fab.module.css`)
+
+struct TeacherFab: View {
+    var body: some View {
+        Image(systemName: "plus")
+            .font(.system(size: 26, weight: .regular))
+            .foregroundStyle(AppColors.onPrimary)
+            .frame(width: TeacherMetrics.fabSize, height: TeacherMetrics.fabSize)
+            .background(AppColors.primary, in: Circle())
+            .shadow(color: Color(red: 35 / 255, green: 71 / 255, blue: 230 / 255, opacity: 0.35),
+                    radius: 16, x: 0, y: 6)
+            .accessibilityLabel("Thêm")
+    }
+}
+
+// MARK: - Group label (`.groupLabel`: 14/600 muted, padding 0 4)
+
+struct TeacherGroupLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .appText(AppText.label)
+            .foregroundStyle(AppColors.muted)
+            .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Count chip (`.chips .chip` with a bold number)
+
+struct TeacherCountChip: View {
+    var before = ""
+    let count: String
+    var after = ""
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if !before.isEmpty {
+                Text(before).appText(AppText.chip).foregroundStyle(AppColors.text)
+            }
+            Text(count)
+                .appText(AppTextStyle(size: 14, weight: .bold, lineHeight: 21))
+                .foregroundStyle(AppColors.text)
+            if !after.isEmpty {
+                Text(after).appText(AppText.chip).foregroundStyle(AppColors.text)
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .padding(.horizontal, AppMetrics.chipPaddingHorizontal)
+        .padding(.vertical, AppMetrics.chipPaddingVertical)
+        .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.chip))
+    }
+}
+
+// MARK: - Status pill (`.cardStatus` / `.statusPill`: 13/600, padding 4 12)
+
+struct TeacherStatusPill: View {
+    enum Tone: Sendable { case neutral, success, warning, error, primary }
+
+    let text: String
+    var tone: Tone = .neutral
+
+    var body: some View {
+        Text(text)
+            .appText(AppText.pill)
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(background, in: Capsule())
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var foreground: Color {
+        switch tone {
+        case .neutral: AppColors.muted
+        case .success: AppColors.success
+        case .warning: AppColors.warning
+        case .error: AppColors.error
+        case .primary: AppColors.primaryInk
+        }
+    }
+
+    private var background: Color {
+        switch tone {
+        case .neutral: AppColors.neutralSoft
+        case .success: AppColors.successSoft
+        case .warning: AppColors.warningSoft
+        case .error: AppColors.errorSoft
+        case .primary: AppColors.primarySoft
+        }
+    }
+}
+
+// MARK: - Text tabs (`.subTabs` 13/600 · `.tabs` 14/600, 48 high, 3px underline)
+
+struct TeacherTextTabs: View {
+    struct Item: Identifiable, Sendable {
+        let id: String
+        let label: String
+    }
+
+    let items: [Item]
+    let selection: String
+    var fontSize: CGFloat = 13
+    var fillsWidth = false
+    let select: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: fillsWidth ? 0 : 4) {
+            ForEach(items) { item in tabButton(item) }
+        }
+        .padding(.horizontal, fillsWidth ? 20 : 12)
+        .overlay(alignment: .bottom) { AppColors.border.frame(height: 1) }
+    }
+
+    private func tabButton(_ item: Item) -> some View {
+        let active = item.id == selection
+        return Button { select(item.id) } label: {
+            Text(item.label)
+                .appText(AppTextStyle(size: fontSize, weight: .semiBold, lineHeight: fontSize * 1.5))
+                .foregroundStyle(active ? AppColors.primary : AppColors.muted)
+                .lineLimit(1)
+                .frame(maxWidth: fillsWidth ? .infinity : nil)
+                .padding(.horizontal, fillsWidth ? 4 : 8)
+                .frame(height: 48)
+                .contentShape(Rectangle())
+                .overlay(alignment: .bottom) {
+                    (active ? AppColors.primary : .clear).frame(height: 3)
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? [.isSelected] : [])
+    }
+}
+
+// MARK: - Segmented (`.viewSwitch` of the schedule screen: 14/600, radius 8)
+
+struct TeacherSegmented: View {
+    let options: [TeacherTextTabs.Item]
+    let value: String
+    let select: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(options) { option in segment(option) }
+        }
+        .padding(3)
+        .background(AppColors.border, in: RoundedRectangle(cornerRadius: AppRadius.segmentTrack))
+    }
+
+    private func segment(_ option: TeacherTextTabs.Item) -> some View {
+        let active = option.id == value
+        return Button { select(option.id) } label: {
+            Text(option.label)
+                .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                .foregroundStyle(active ? AppColors.text : AppColors.muted)
+                .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
+                .background(active ? AppColors.surface : .clear,
+                            in: RoundedRectangle(cornerRadius: 8))
+                .shadow(color: active ? Color(.sRGB, red: 20 / 255, green: 24 / 255, blue: 31 / 255, opacity: 0.12) : .clear,
+                        radius: 1, x: 0, y: 1)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? [.isSelected] : [])
+    }
+}
+
+// MARK: - Empty state (`schedule.module.css .empty`: 72px icon, 20/700 title)
+
+struct TeacherEmptyState: View {
+    let systemImage: String
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: systemImage)
+                .font(.system(size: 28, weight: .regular))
+                .foregroundStyle(AppColors.primaryInk)
+                .frame(width: 72, height: 72)
+                .background(AppColors.primarySoft, in: Circle())
+            VStack(spacing: 8) {
+                Text(title)
+                    .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 28))
+                    .foregroundStyle(AppColors.text)
+                Text(message)
+                    .appText(AppText.body)
+                    .foregroundStyle(AppColors.muted)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 28)
+        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+}
+
+// MARK: - Form controls (`.input` 52 high, radius 14, `.field` label 14/600)
+
+struct TeacherField: View {
+    @Environment(\.teacherStaticLayout) private var isStatic
+    let label: String
+    @Binding var text: String
+    var placeholder = ""
+    var keyboard: UIKeyboardType = .default
+    var identifier: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label).appText(AppText.label).foregroundStyle(AppColors.text)
+            input
+                .padding(.horizontal, 16)
+                .frame(minHeight: AppMetrics.inputHeight)
+                .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.control))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppRadius.control)
+                        .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
+                .accessibilityIdentifier(identifier ?? label)
+        }
+    }
+
+    /// `ImageRenderer` cannot rasterise a UIKit text field, so the screenshot harness draws the
+    /// text inside the same box. The layout and the real control are unchanged.
+    @ViewBuilder private var input: some View {
+        if isStatic {
+            Text(text.isEmpty ? placeholder : text)
+                .appText(AppText.body)
+                .foregroundStyle(text.isEmpty ? AppColors.placeholder : AppColors.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(AppColors.placeholder))
+                .appText(AppText.body)
+                .foregroundStyle(AppColors.text)
+                .keyboardType(keyboard)
+        }
+    }
+}
+
+// MARK: - Confirm dialog (`dialogs.module.css .dialog`: 342 max width, padding 24)
+
+struct TeacherDialogAction: Identifiable {
+    let id = UUID()
+    let label: String
+    var variant: AppButtonStyle.Variant = .primary
+    let action: () -> Void
+}
+
+private struct TeacherDialogCard: View {
+    let title: String
+    let message: String?
+    let actions: [TeacherDialogAction]
+    let dismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(title)
+                .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 25, tracking: -0.2))
+                .foregroundStyle(AppColors.text)
+            if let message {
+                Text(message).appText(AppText.body).foregroundStyle(AppColors.muted)
+            }
+            VStack(spacing: 8) {
+                ForEach(actions) { action in
+                    AppButton(title: action.label, variant: action.variant, size: .large,
+                              action: action.action)
+                        .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
+                }
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: 342)
+        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+}
+
+extension View {
+    /// Prototype "danger dialog" / "unsaved changes" (`82`, `80`).
+    func teacherConfirmDialog(isPresented: Binding<Bool>, title: String, message: String?,
+                              actions: [TeacherDialogAction], dismiss: @escaping () -> Void) -> some View {
+        overlay {
+            if isPresented.wrappedValue {
+                ZStack {
+                    AppColors.scrim.ignoresSafeArea().onTapGesture(perform: dismiss)
+                    TeacherDialogCard(title: title, message: message, actions: actions, dismiss: dismiss)
+                        .padding(24)
+                }
+                .transition(.opacity)
+            }
+        }
+    }
+}
+
+// MARK: - Options menu (`dialogs.module.css .menu`: 220 wide, rows 48 high, 15/600)
+
+struct TeacherMenuItem: Identifiable {
+    let id = UUID()
+    let label: String
+    let systemImage: String
+    var danger = false
+    let action: () -> Void
+}
+
+struct TeacherOptionsMenu: View {
+    let items: [TeacherMenuItem]
+    var note: String?
+    let dismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let note {
+                Text(note)
+                    .appText(AppText.muted)
+                    .foregroundStyle(AppColors.muted)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                ForEach(items) { item in row(item) }
+            }
+        }
+        .padding(4)
+        .frame(width: 220, alignment: .leading)
+        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.button)
+                .strokeBorder(AppColors.border, lineWidth: 1))
+        .shadow(color: Color(.sRGB, red: 20 / 255, green: 24 / 255, blue: 31 / 255, opacity: 0.16),
+                radius: 16, x: 0, y: 12)
+    }
+
+    private func row(_ item: TeacherMenuItem) -> some View {
+        Button(action: item.action) {
+            HStack(spacing: 12) {
+                Image(systemName: item.systemImage)
+                    .font(.system(size: 16, weight: .regular))
+                    .frame(width: 18)
+                    .foregroundStyle(item.danger ? AppColors.error : AppColors.muted)
+                Text(item.label)
+                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22))
+                    .foregroundStyle(item.danger ? AppColors.error : AppColors.text)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Bottom sheet (`ui.module.css .dialog` + `.sheet`)
+
+struct TeacherSheet<Content: View, Footer: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+    @ViewBuilder let footer: Footer
+    let close: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 16) {
+                Text(title).appText(AppText.heading).foregroundStyle(AppColors.text)
+                Spacer(minLength: 0)
+                AppButton(title: "Đóng", variant: .secondary, action: close)
+                    .accessibilityIdentifier("sheet.close")
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
+            .padding(.bottom, 16)
+
+            TeacherScroll { content.padding(.horizontal, 24) }
+                .frame(maxHeight: .infinity, alignment: .top)
+
+            VStack(spacing: 8) { footer }
+                .padding(.horizontal, 24)
+                .padding(.top, 12)
+                .padding(.bottom, 16)
+        }
+        .background(AppColors.surface)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+extension TeacherSheet where Footer == EmptyView {
+    init(title: String, @ViewBuilder content: () -> Content, close: @escaping () -> Void) {
+        self.init(title: title, content: content, footer: { EmptyView() }, close: close)
+    }
+}
+
+// MARK: - Error banner (`.error` of the feature modules)
+
+struct TeacherErrorBanner: View {
+    let message: String
+    var retry: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(message)
+                .appText(AppText.muted)
+                .foregroundStyle(AppColors.error)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if let retry {
+                Button(action: retry) {
+                    Text("Thử lại")
+                        .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                        .foregroundStyle(AppColors.onPrimary)
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: AppMetrics.tap)
+                        .background(AppColors.error, in: RoundedRectangle(cornerRadius: AppRadius.button))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, retry == nil ? 16 : 8)
+        .padding(.vertical, retry == nil ? 12 : 0)
+        .frame(minHeight: retry == nil ? nil : 52)
+        .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
+    }
+}
