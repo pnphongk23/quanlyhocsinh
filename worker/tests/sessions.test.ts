@@ -197,4 +197,55 @@ describe('sessions API', () => {
       section_id: sectionId, student_id: studentId, level: 'done',
     }));
   });
+
+  it('replays homework grades when canceling a session closes the grading gate', async () => {
+    const owner = await registerWorkspaceAtIp('+84900000343', 'Homework grade gate close', '198.51.100.30');
+    const classId = await insertClass(owner.workspaceId, 'C1', owner.userId);
+    const studentId = await insertStudent(owner.workspaceId, classId, 'Child A', null, owner.userId);
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+    const relativeDate = (offset: number) => {
+      const date = new Date(`${today}T00:00:00.000Z`);
+      date.setUTCDate(date.getUTCDate() + offset);
+      return date.toISOString().slice(0, 10);
+    };
+    const assignmentSession = await insertSession(owner.workspaceId, classId, relativeDate(-3), owner.userId);
+    const gradingSession = await insertSession(owner.workspaceId, classId, relativeDate(-2), owner.userId);
+    const nextSession = await insertSession(owner.workspaceId, classId, relativeDate(-1), owner.userId);
+    const parentUser = await insertUser('+84900000344');
+    const parentMembership = await insertGuardianMembership(owner.workspaceId, parentUser, owner.roles.guardian!, [studentId]);
+    const parentToken = await clubToken(owner.workspaceId, parentUser, parentMembership);
+    const sectionId = crypto.randomUUID();
+    const command = (type: string, payload: Record<string, unknown>) => ({
+      id: crypto.randomUUID(), type, payload, base_version: 0, created_at: new Date().toISOString(),
+    });
+    const push = (commands: ReturnType<typeof command>[]) => call('/v1/sync/push', post({
+      membership_id: owner.membershipId, device_id: crypto.randomUUID(), commands,
+    }), owner.token);
+    const setup = await push([
+      command('homework.section.upsert', { id: sectionId, session_id: assignmentSession, kind: 'reading' }),
+      command('homework.grade.set', { section_id: sectionId, student_id: studentId, level: 'done' }),
+      command('slip.set', { session_id: gradingSession, student_id: studentId, stars: 3, note: '' }),
+    ]);
+    expect(setup.body.results.map((result: any) => result.status)).toEqual(['applied', 'applied', 'applied']);
+    const sent = await push([command('slip.send', { session_id: gradingSession, student_ids: [studentId] })]);
+    expect(sent.body.results[0].status).toBe('applied');
+
+    const before = await call(`/v1/sync/snapshot?membership_id=${parentMembership}`, {}, parentToken);
+    expect(before.status).toBe(200);
+    const visible = await call(`/v1/sync/snapshot/homework_grade?membership_id=${parentMembership}`, {}, parentToken);
+    expect(visible.body.items).toContainEqual(expect.objectContaining({ section_id: sectionId, student_id: studentId, level: 'done' }));
+
+    // Cancelling the grading session moves the gate to the next session, whose slip is not sent yet.
+    const cancelled = await call(`/v1/sessions/${gradingSession}/cancel`, { method: 'POST' }, owner.token);
+    expect(cancelled.status).toBe(200);
+    const replay = await call(`/v1/sync/pull?membership_id=${parentMembership}&cursor=${before.body.cursor}&epoch=${before.body.epoch}`, {}, parentToken);
+    expect(replay.status).toBe(200);
+    expect(replay.body.upserts.homework_grade ?? []).toEqual([]);
+    expect(replay.body.deleted).toContainEqual({ entity: 'homework_grade', k1: sectionId, k2: studentId });
+    const after = await call(`/v1/sync/snapshot/homework_grade?membership_id=${parentMembership}`, {}, parentToken);
+    expect(after.body.items).toEqual([]);
+    const nextSlip = await db.prepare("SELECT COUNT(*) AS n FROM session_comments WHERE session_id = ? AND status = 'sent'")
+      .bind(nextSession).first<{ n: number }>();
+    expect(nextSlip?.n, 'the gate moved to the next session and is still closed').toBe(0);
+  });
 });

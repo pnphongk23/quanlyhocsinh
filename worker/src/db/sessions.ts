@@ -113,6 +113,8 @@ export async function cancelSession(db: D1Database, identity: Identity, sessionI
         updated_at = ?, updated_by = ?, version = version + 1
         WHERE workspace_id = ? AND id = ? AND status = 'planned' AND version = ?`)
         .bind(now, identity.userId, now, identity.userId, identity.workspaceId, sessionId, row.version),
+      // Phát lại mọi ô chấm BTVN vừa đổi buổi chấm, không lọc trạng thái phiếu: `pull` tự sinh
+      // `upsert` khi cổng mở (phiếu buổi chấm mới đã gửi) hoặc `deleted` khi cổng đóng lại.
       db.prepare(`INSERT INTO change_log (workspace_id, entity, k1, k2, op, class_id, student_id, created_at)
         SELECT g.workspace_id, 'homework_grade', g.section_id, g.student_id, 'upsert', g.class_id, g.student_id, unixepoch()
         FROM homework_grades g
@@ -125,8 +127,6 @@ export async function cancelSession(db: D1Database, identity: Identity, sessionI
             AND (next.date > assigned.date OR (next.date = assigned.date AND next.start_time > assigned.start_time))
           ORDER BY next.date, next.start_time LIMIT 1
         )
-        JOIN session_comments slip ON slip.workspace_id = g.workspace_id
-          AND slip.session_id = grading.id AND slip.student_id = g.student_id AND slip.status = 'sent'
         WHERE g.workspace_id = ? AND assigned.class_id = ? AND assigned.status <> 'cancelled'
           AND (assigned.date < ? OR (assigned.date = ? AND assigned.start_time < ?))
           AND NOT EXISTS (
