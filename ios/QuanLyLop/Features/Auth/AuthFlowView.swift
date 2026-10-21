@@ -75,22 +75,46 @@ private struct LoginView: View {
             AuthBrand()
             Text("Đăng nhập").appText(AuthText.title).padding(.top, 28)
             Text("Dành cho giáo viên và phụ huynh.").appText(AuthText.body).foregroundStyle(AppColors.muted)
-            if model.isLocked { NoticeBox(text: "Thử sai quá nhiều lần, thử lại sau 15 phút", tone: .warning) }
-            else if let message = model.message { NoticeBox(text: message, tone: .error) }
+            loginNotice
             PhoneField(value: $phone)
             SecureEntry(label: "Mật khẩu", value: $password, shown: $showPassword)
-            HStack { Spacer(); Button("Quên mật khẩu?") { model.showForgotPassword(phone: phone) }.foregroundStyle(AppColors.primaryInk) }
-            AuthActionButton(title: "Đăng nhập", disabled: phone.isEmpty || password.isEmpty || model.isLocked) {
+            forgotRow
+            AuthActionButton(title: "Đăng nhập", disabled: loginDisabled) {
                 Task { await model.login(phone: phone, password: password) }
             }
             Spacer(minLength: 40)
             Text("Chưa có không gian làm việc?").appText(AuthText.body).foregroundStyle(AppColors.muted)
             Button("Đăng ký cho giáo viên") { model.show(.register) }.foregroundStyle(AppColors.primaryInk)
-            Text("Phụ huynh: dùng số điện thoại đã đăng ký với giáo viên và mật khẩu giáo viên cấp.")
-                .appText(AuthText.body).foregroundStyle(AppColors.muted).padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+            parentNote
         }
+    }
+
+    private var loginDisabled: Bool {
+        phone.isEmpty || password.isEmpty || model.isLocked
+    }
+
+    @ViewBuilder
+    private var loginNotice: some View {
+        if model.isLocked {
+            NoticeBox(text: "Thử sai quá nhiều lần, thử lại sau 15 phút", tone: .warning)
+        } else if let message = model.message {
+            NoticeBox(text: message, tone: .error)
+        }
+    }
+
+    private var forgotRow: some View {
+        HStack {
+            Spacer()
+            Button("Quên mật khẩu?") { model.showForgotPassword(phone: phone) }
+                .foregroundStyle(AppColors.primaryInk)
+        }
+    }
+
+    private var parentNote: some View {
+        Text("Phụ huynh: dùng số điện thoại đã đăng ký với giáo viên và mật khẩu giáo viên cấp.")
+            .appText(AuthText.body).foregroundStyle(AppColors.muted).padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 }
 
@@ -120,11 +144,17 @@ private struct RegisterView: View {
                         error: confirmation.isEmpty || confirmation == password ? nil : "Mật khẩu nhập lại chưa khớp.")
             Text("Người tạo là quản trị viên đầu tiên của không gian làm việc.")
                 .appText(AppText.muted).foregroundStyle(AppColors.muted)
-            AuthActionButton(title: "Tạo không gian làm việc", disabled: name.isEmpty || workspace.isEmpty || phone.isEmpty || password.isEmpty || confirmation.isEmpty) {
-                Task { await model.register(name: name, workspace: workspace, phone: phone,
-                                            password: password, confirmation: confirmation) }
+            AuthActionButton(title: "Tạo không gian làm việc", disabled: registerDisabled) {
+                Task {
+                    await model.register(name: name, workspace: workspace, phone: phone,
+                                        password: password, confirmation: confirmation)
+                }
             }
         }
+    }
+
+    private var registerDisabled: Bool {
+        name.isEmpty || workspace.isEmpty || phone.isEmpty || password.isEmpty || confirmation.isEmpty
     }
 }
 
@@ -152,19 +182,34 @@ private struct PasswordFormView: View {
                         value: $current, shown: $showCurrent)
             SecureEntry(label: "Mật khẩu mới", value: $newPassword, shown: $showNew,
                         contentType: .newPassword,
-                        error: forced && !newPassword.isEmpty && newPassword == current
-                            ? "Mật khẩu mới không được trùng mật khẩu tạm." : nil)
+                        error: newMismatchError)
             PasswordStrength(password: newPassword)
             SecureEntry(label: "Nhập lại mật khẩu mới", value: $confirmation, shown: $showConfirm,
                         contentType: .newPassword,
-                        error: confirmation.isEmpty || confirmation == newPassword ? nil : "Mật khẩu nhập lại chưa khớp.")
+                        error: confirmationMismatchError)
             CheckRow(ok: newPassword.count >= 8) { Text("Tối thiểu 8 ký tự") }
             if forced { CheckRow(ok: !newPassword.isEmpty && newPassword != current) { Text("Khác mật khẩu tạm") } }
             AuthActionButton(title: forced ? "Đổi mật khẩu và tiếp tục" : "Lưu mật khẩu mới",
-                             disabled: current.isEmpty || newPassword.count < 8 || confirmation.isEmpty || newPassword != confirmation || (forced && current == newPassword)) {
+                             disabled: changeDisabled) {
                 Task { await model.changePassword(current: current, newPassword: newPassword, confirmation: confirmation) }
             }
         }
+    }
+
+    private var newMismatchError: String? {
+        guard forced, !newPassword.isEmpty, newPassword == current else { return nil }
+        return "Mật khẩu mới không được trùng mật khẩu tạm."
+    }
+
+    private var confirmationMismatchError: String? {
+        guard !confirmation.isEmpty, confirmation != newPassword else { return nil }
+        return "Mật khẩu nhập lại chưa khớp."
+    }
+
+    private var changeDisabled: Bool {
+        if current.isEmpty || newPassword.count < 8 || confirmation.isEmpty { return true }
+        if newPassword != confirmation { return true }
+        return forced && current == newPassword
     }
 }
 
@@ -206,24 +251,37 @@ private struct RolePickerView: View {
             }
             if let message = model.message { NoticeBox(text: message, tone: .error) }
             ForEach(model.memberships, id: \.id) { membership in
-                Button { Task { await model.selectMembership(membership) } } label: {
-                    HStack(spacing: 14) {
-                        Text(membership.role.scopeKind == .linkedStudents ? "PH" : "GV")
-                            .font(.system(size: 16, weight: .bold)).foregroundStyle(AppColors.primaryInk)
-                            .frame(width: 44, height: 44).background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: 12))
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(membership.role.name).appText(AppText.heading).foregroundStyle(AppColors.text)
-                            Text(membership.workspace.name).appText(AppText.body).foregroundStyle(AppColors.muted)
-                        }
-                        Spacer(); Image(systemName: "chevron.right").foregroundStyle(AppColors.muted)
-                    }
-                    .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-                }.buttonStyle(.plain)
+                roleRow(membership)
             }
             Spacer(minLength: 80)
             Text("Bạn đổi được vai trò bất cứ lúc nào trong Cài đặt.")
                   .appText(AuthText.body).foregroundStyle(AppColors.muted)
+        }
+    }
+
+    private func roleRow(_ membership: Membership) -> some View {
+        Button { Task { await model.selectMembership(membership) } } label: {
+            HStack(spacing: 14) {
+                roleBadge(membership)
+                roleTitle(membership)
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(AppColors.muted)
+            }
+            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        }.buttonStyle(.plain)
+    }
+
+    private func roleBadge(_ membership: Membership) -> some View {
+        Text(membership.role.scopeKind == .linkedStudents ? "PH" : "GV")
+            .font(.system(size: 16, weight: .bold)).foregroundStyle(AppColors.primaryInk)
+            .frame(width: 44, height: 44).background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func roleTitle(_ membership: Membership) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(membership.role.name).appText(AppText.heading).foregroundStyle(AppColors.text)
+            Text(membership.workspace.name).appText(AppText.body).foregroundStyle(AppColors.muted)
         }
     }
 }
@@ -232,49 +290,77 @@ private struct SettingsView: View {
     let model: AuthModel
     var body: some View {
         AuthPage {
-            HStack {
-                Button { model.show(.main) } label: { Image(systemName: "chevron.left") }
-                    .accessibilityLabel("Quay lại")
-                  Text("Cài đặt").appText(AuthText.settingsTitle)
-            }
+            backHeader
             if let message = model.message { NoticeBox(text: message, tone: .error) }
             if let user = model.currentUser, let membership = model.activeMembership {
-                VStack(spacing: 0) {
-                    HStack(spacing: 16) {
-                        Text(initials(user.displayName ?? membership.role.name))
-                            .font(.system(size: 20, weight: .bold)).foregroundStyle(AppColors.primaryInk)
-                            .frame(width: 64, height: 64).background(AppColors.primarySoft, in: Circle())
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(user.displayName ?? membership.role.name).appText(AppText.heading)
-                            Text("\(membership.role.name) · \(membership.workspace.name)").appText(AppText.body).foregroundStyle(AppColors.muted)
-                        }
-                        Spacer(minLength: 0)
-                    }.padding(20)
-                    settingsRow("Tên hiển thị", value: user.displayName ?? "—")
-                    settingsRow("Số điện thoại", value: formattedPhone(user.phone), locked: true)
-                }.background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-                VStack(spacing: 0) {
-                    Button { model.show(.changePassword) } label: { menuRow("Đổi mật khẩu", value: nil) }
-                    if model.memberships.count > 1 {
-                        Button { model.changeRoleFromSettings() } label: { menuRow("Đổi vai trò", value: membership.role.name) }
-                    }
-                }.background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-                  AuthActionButton(title: "Đăng xuất", disabled: false, danger: true) { Task { await model.logout() } }
+                profileCard(user: user, membership: membership)
+                menuCard(membership: membership)
+                AuthActionButton(title: "Đăng xuất", disabled: false, danger: true) { Task { await model.logout() } }
             }
             Spacer(minLength: 0)
         }
-        .sheet(isPresented: Binding(
-            get: { model.pendingLogoutCount != nil }, set: { if !$0 { model.dismissLogoutBlock() } }
-        )) {
-            AppSheet(title: "Chưa thể đăng xuất", content: {
-                Text("Còn \(model.pendingLogoutCount ?? 0) thay đổi chưa đồng bộ. Hãy kết nối mạng để đồng bộ rồi thử lại.")
-                    .appText(AppText.body).foregroundStyle(AppColors.text)
-            }, footer: {
-                AppButton(title: "Thử đồng bộ lại", size: .medium) {
-                    Task { await model.retrySync(); model.dismissLogoutBlock() }
-                }
-                AppButton(title: "Đã hiểu", variant: .secondary, size: .medium) { model.dismissLogoutBlock() }
-            }, close: { model.dismissLogoutBlock() })
+        .sheet(isPresented: logoutSheetBinding) { logoutSheet }
+    }
+
+    private var backHeader: some View {
+        HStack {
+            Button { model.show(.main) } label: { Image(systemName: "chevron.left") }
+                .accessibilityLabel("Quay lại")
+            Text("Cài đặt").appText(AuthText.settingsTitle)
+        }
+    }
+
+    private func profileCard(user: User, membership: Membership) -> some View {
+        VStack(spacing: 0) {
+            profileRow(user: user, membership: membership)
+            settingsRow("Tên hiển thị", value: user.displayName ?? "—")
+            settingsRow("Số điện thoại", value: formattedPhone(user.phone), locked: true)
+        }
+        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+
+    private func profileRow(user: User, membership: Membership) -> some View {
+        HStack(spacing: 16) {
+            Text(initials(user.displayName ?? membership.role.name))
+                .font(.system(size: 20, weight: .bold)).foregroundStyle(AppColors.primaryInk)
+                .frame(width: 64, height: 64).background(AppColors.primarySoft, in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(user.displayName ?? membership.role.name).appText(AppText.heading)
+                Text("\(membership.role.name) · \(membership.workspace.name)")
+                    .appText(AppText.body).foregroundStyle(AppColors.muted)
+            }
+            Spacer(minLength: 0)
+        }.padding(20)
+    }
+
+    private func menuCard(membership: Membership) -> some View {
+        VStack(spacing: 0) {
+            Button { model.show(.changePassword) } label: { menuRow("Đổi mật khẩu", value: nil) }
+            if model.memberships.count > 1 {
+                Button { model.changeRoleFromSettings() } label: { menuRow("Đổi vai trò", value: membership.role.name) }
+            }
+        }
+        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+
+    private var logoutSheetBinding: Binding<Bool> {
+        Binding(
+            get: { model.pendingLogoutCount != nil },
+            set: { if !$0 { model.dismissLogoutBlock() } }
+        )
+    }
+
+    private var logoutSheet: some View {
+        AppSheet(title: "Chưa thể đăng xuất") {
+            Text("Còn \(model.pendingLogoutCount ?? 0) thay đổi chưa đồng bộ. Hãy kết nối mạng để đồng bộ rồi thử lại.")
+                .appText(AppText.body).foregroundStyle(AppColors.text)
+        } footer: {
+            AppButton(title: "Thử đồng bộ lại", size: .medium) {
+                Task { await model.retrySync(); model.dismissLogoutBlock() }
+            }
+            AppButton(title: "Đã hiểu", variant: .secondary, size: .medium) { model.dismissLogoutBlock() }
+        } close: {
+            model.dismissLogoutBlock()
         }
     }
 

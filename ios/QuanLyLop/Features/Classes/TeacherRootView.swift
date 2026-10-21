@@ -50,17 +50,7 @@ private struct TeacherClassListView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .bottom) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Xin chào, \(data.displayName)").appText(AppText.muted).foregroundStyle(AppColors.muted)
-                        Text("Lớp của tôi").appText(AppText.title).foregroundStyle(AppColors.text)
-                    }
-                    Spacer()
-                    Text(data.displayName.split(separator: " ").suffix(2).compactMap(\.first).map(String.init).joined().uppercased())
-                        .appText(AppText.label).foregroundStyle(AppColors.primaryInk)
-                        .frame(width: AppMetrics.tap, height: AppMetrics.tap)
-                        .background(AppColors.primarySoft, in: Circle())
-                }
+                header
                 if let error = data.errorMessage { TeacherInlineError(message: error) }
                 if !data.canReadClasses {
                     AppEmptyState(title: "Bạn không có quyền xem lớp")
@@ -71,47 +61,14 @@ private struct TeacherClassListView: View {
                         if data.canWriteClasses { AppButton(title: "Tạo lớp đầu tiên", size: .medium) { showingCreate = true } }
                     }
                 } else {
-                    if let today = data.sessions.first(where: { $0.date == TeacherFeatureData.todayString && $0.status == .planned }),
-                       let todayClass = data.classroom(id: today.classId) {
-                        NavigationLink(value: ClassRoute(id: todayClass.id)) {
-                            HStack(spacing: 12) {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text("Hôm nay · \(todayClass.startTime ?? today.startTime)").appText(AppText.muted)
-                                    Text("\(todayClass.name) · \(TeacherDateFormat.display(today.date))").appText(AppText.subheading)
-                                }
-                                Spacer()
-                                Text("Điểm danh").appText(AppText.buttonSmall)
-                                    .foregroundStyle(AppColors.primaryInk)
-                                    .padding(.horizontal, 12).padding(.vertical, 10)
-                                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
-                            }
-                            .foregroundStyle(AppColors.onPrimary)
-                            .padding(16)
-                            .background(AppColors.primary, in: RoundedRectangle(cornerRadius: AppRadius.card))
-                        }
-                        .buttonStyle(.plain)
+                    if let today = todaySession, let todayClass = data.classroom(id: today.classId) {
+                        todayCard(session: today, classroom: todayClass)
                     }
-                    TextField("Tìm lớp", text: $query)
-                        .appText(AppText.body)
-                        .padding(.horizontal, 14).frame(height: 48)
-                        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.control))
+                    searchField
                     if classes.isEmpty {
                         AppEmptyState(title: "Không tìm thấy lớp")
                     }
-                    ForEach(classes, id: \.id) { klass in
-                        NavigationLink(value: ClassRoute(id: klass.id)) {
-                            AppCard {
-                                VStack(alignment: .leading, spacing: 12) {
-                                        Text(klass.name).appText(AppText.heading).foregroundStyle(AppColors.text)
-                                        HStack(spacing: 8) {
-                                            AppChip(title: "\(data.students(in: klass.id).filter { $0.status == .active }.count) học sinh")
-                                            AppChip(title: "Chuyên cần \(data.attendanceRate(in: klass.id).map { "\($0)%" } ?? "—")")
-                                    }
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    ForEach(classes, id: \.id) { klass in classRow(klass) }
                 }
             }
             .padding(16)
@@ -130,6 +87,92 @@ private struct TeacherClassListView: View {
         }
         .sheet(isPresented: $showingCreate) { TeacherClassFormView(data: data) }
         .refreshable { await data.refresh() }
+    }
+
+    private var todaySession: ClassSession? {
+        data.sessions.first { $0.date == TeacherFeatureData.todayString && $0.status == .planned }
+    }
+
+    private var header: some View {
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Xin chào, \(data.displayName)").appText(AppText.muted).foregroundStyle(AppColors.muted)
+                Text("Lớp của tôi").appText(AppText.title).foregroundStyle(AppColors.text)
+            }
+            Spacer()
+            avatar
+        }
+    }
+
+    private var avatar: some View {
+        Text(initials)
+            .appText(AppText.label).foregroundStyle(AppColors.primaryInk)
+            .frame(width: AppMetrics.tap, height: AppMetrics.tap)
+            .background(AppColors.primarySoft, in: Circle())
+    }
+
+    private var initials: String {
+        let words = data.displayName.split(separator: " ").suffix(2)
+        let letters = words.compactMap(\.first).map(String.init)
+        return letters.joined().uppercased()
+    }
+
+    private var searchField: some View {
+        TextField("Tìm lớp", text: $query)
+            .appText(AppText.body)
+            .padding(.horizontal, 14).frame(height: 48)
+            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.control))
+    }
+
+    private func todayCard(session: ClassSession, classroom: Classroom) -> some View {
+        NavigationLink(value: ClassRoute(id: classroom.id)) {
+            HStack(spacing: 12) {
+                todayCardTitle(session: session, classroom: classroom)
+                Spacer()
+                Text("Điểm danh").appText(AppText.buttonSmall)
+                    .foregroundStyle(AppColors.primaryInk)
+                    .padding(.horizontal, 12).padding(.vertical, 10)
+                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
+            }
+            .foregroundStyle(AppColors.onPrimary)
+            .padding(16)
+            .background(AppColors.primary, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func todayCardTitle(session: ClassSession, classroom: Classroom) -> some View {
+        let startTime = classroom.startTime ?? session.startTime
+        let date = TeacherDateFormat.display(session.date)
+        return VStack(alignment: .leading, spacing: 3) {
+            Text("Hôm nay · \(startTime)").appText(AppText.muted)
+            Text("\(classroom.name) · \(date)").appText(AppText.subheading)
+        }
+    }
+
+    private func classRow(_ klass: Classroom) -> some View {
+        NavigationLink(value: ClassRoute(id: klass.id)) {
+            AppCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(klass.name).appText(AppText.heading).foregroundStyle(AppColors.text)
+                    HStack(spacing: 8) {
+                        AppChip(title: studentCountTitle(klass))
+                        AppChip(title: attendanceTitle(klass))
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func studentCountTitle(_ klass: Classroom) -> String {
+        let active = data.students(in: klass.id).filter { $0.status == .active }.count
+        return "\(active) học sinh"
+    }
+
+    private func attendanceTitle(_ klass: Classroom) -> String {
+        let rate = data.attendanceRate(in: klass.id).map { "\($0)%" } ?? "—"
+        return "Chuyên cần \(rate)"
     }
 }
 
@@ -225,32 +268,8 @@ private struct TeacherClassDetailView: View {
             if !data.canReadClasses {
                 AppEmptyState(title: "Bạn không có quyền xem lớp")
             } else if let klass {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(klass.name).appText(AppText.titleCompact).foregroundStyle(AppColors.text)
-                        Text("\(data.students(in: classID).filter { $0.status == .active }.count) học sinh")
-                            .appText(AppText.muted).foregroundStyle(AppColors.muted)
-                    }
-                    Spacer()
-                    Menu {
-                        if data.canWriteClasses {
-                            Button("Sửa lớp", systemImage: "pencil") { showingEdit = true }
-                            Button("Lưu trữ lớp", systemImage: "archivebox", role: .destructive) { confirmingArchive = true }
-                        }
-                        if data.canWriteStudents { Button("Thêm học sinh", systemImage: "person.badge.plus") { showingStudents = true } }
-                    } label: { Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(AppColors.primary) }
-                }
-                .padding(.horizontal, 16).padding(.vertical, 12)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 20) {
-                        ForEach(tabs, id: \.0) { tab in
-                            Button(tab.1) { selected = tab.0 }
-                                .appText(AppText.label)
-                                .foregroundStyle(selected == tab.0 ? AppColors.primary : AppColors.muted)
-                                .overlay(alignment: .bottom) { if selected == tab.0 { AppColors.primary.frame(height: 2).offset(y: 10) } }
-                        }
-                    }.padding(.horizontal, 16).padding(.vertical, 10)
-                }
+                detailHeader(klass)
+                tabStrip
                 AppColors.border.frame(height: 1)
                 tabContent
             } else {
@@ -267,6 +286,53 @@ private struct TeacherClassDetailView: View {
             Button("Lưu trữ lớp", role: .destructive) { Task { if let klass { try? await data.archiveClass(klass) } } }
             Button("Huỷ", role: .cancel) {}
         } message: { Text("Lớp sẽ được chuyển khỏi danh sách lớp đang mở.") }
+    }
+
+    private func detailHeader(_ klass: Classroom) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(klass.name).appText(AppText.titleCompact).foregroundStyle(AppColors.text)
+                Text("\(activeStudentCount) học sinh")
+                    .appText(AppText.muted).foregroundStyle(AppColors.muted)
+            }
+            Spacer()
+            headerMenu
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12)
+    }
+
+    private var activeStudentCount: Int {
+        data.students(in: classID).filter { $0.status == .active }.count
+    }
+
+    private var headerMenu: some View {
+        Menu {
+            if data.canWriteClasses {
+                Button("Sửa lớp", systemImage: "pencil") { showingEdit = true }
+                Button("Lưu trữ lớp", systemImage: "archivebox", role: .destructive) { confirmingArchive = true }
+            }
+            if data.canWriteStudents { Button("Thêm học sinh", systemImage: "person.badge.plus") { showingStudents = true } }
+        } label: {
+            Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(AppColors.primary)
+        }
+    }
+
+    private var tabStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 20) {
+                ForEach(tabs, id: \.0) { tab in tabButton(tab) }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+        }
+    }
+
+    private func tabButton(_ tab: (String, String)) -> some View {
+        Button(tab.1) { selected = tab.0 }
+            .appText(AppText.label)
+            .foregroundStyle(selected == tab.0 ? AppColors.primary : AppColors.muted)
+            .overlay(alignment: .bottom) {
+                if selected == tab.0 { AppColors.primary.frame(height: 2).offset(y: 10) }
+            }
     }
 
     @ViewBuilder private var tabContent: some View {
@@ -318,22 +384,8 @@ private struct TeacherSessionCard: View {
     var body: some View {
         AppCard {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(sessionPrefix) · \(TeacherDateFormat.display(session.date))").appText(AppText.subheading)
-                        Text("\(session.startTime) · \(session.origin == .manual ? "Buổi lẻ" : "Lịch lặp")").appText(AppText.muted).foregroundStyle(AppColors.muted)
-                    }
-                    Spacer()
-                    if session.status == .cancelled { AppPill(title: "Đã huỷ", tone: .warning) }
-                }
-                HStack(spacing: 8) {
-                    AppButton(title: session.status == .cancelled ? "Xem buổi" : session.date <= TeacherFeatureData.todayString ? "Điểm danh" : "Xem buổi", variant: .secondary) { showingDetail = true }
-                        .disabled(session.status == .cancelled || session.date > TeacherFeatureData.todayString)
-                    if data.canWriteAttendance && session.status == .planned {
-                        AppButton(title: "Huỷ buổi", variant: .danger) { confirmCancel = true }
-                            .disabled(session.date < TeacherFeatureData.todayString)
-                    }
-                }
+                cardHeader
+                cardActions
             }
         }
         .sheet(isPresented: $showingDetail) { TeacherSessionDetailView(session: session, data: data, i4Data: i4Data) }
@@ -341,6 +393,39 @@ private struct TeacherSessionCard: View {
             Button("Huỷ buổi học", role: .destructive) { Task { try? await data.cancel(session) } }
             Button("Giữ buổi học", role: .cancel) {}
         }
+    }
+
+    private var cardHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(sessionPrefix) · \(TeacherDateFormat.display(session.date))")
+                    .appText(AppText.subheading)
+                Text("\(session.startTime) · \(originLabel)")
+                    .appText(AppText.muted).foregroundStyle(AppColors.muted)
+            }
+            Spacer()
+            if session.status == .cancelled { AppPill(title: "Đã huỷ", tone: .warning) }
+        }
+    }
+
+    private var originLabel: String {
+        session.origin == .manual ? "Buổi lẻ" : "Lịch lặp"
+    }
+
+    private var cardActions: some View {
+        HStack(spacing: 8) {
+            AppButton(title: openSessionTitle, variant: .secondary) { showingDetail = true }
+                .disabled(session.status == .cancelled || session.date > TeacherFeatureData.todayString)
+            if data.canWriteAttendance && session.status == .planned {
+                AppButton(title: "Huỷ buổi", variant: .danger) { confirmCancel = true }
+                    .disabled(session.date < TeacherFeatureData.todayString)
+            }
+        }
+    }
+
+    private var openSessionTitle: String {
+        if session.status == .cancelled { return "Xem buổi" }
+        return session.date <= TeacherFeatureData.todayString ? "Điểm danh" : "Xem buổi"
     }
     private var sessionPrefix: String {
         if session.origin == .manual { return "Buổi lẻ" }
@@ -372,14 +457,7 @@ private struct TeacherSessionDetailView: View {
     private let tabs = ["Điểm danh", "Nhận xét", "Bài tập về nhà"]
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(session.origin == .manual ? "Buổi lẻ" : session.sessionNumber.map { "Buổi \($0)" } ?? "Buổi học").appText(AppText.heading)
-                    Text("\(TeacherDateFormat.display(session.date)) · \(session.startTime)").appText(AppText.muted).foregroundStyle(AppColors.muted)
-                }
-                Spacer()
-                AppPill(title: session.status == .cancelled ? "Đã huỷ" : session.status == .held ? "Đã học" : "Sắp tới", tone: session.status == .cancelled ? .warning : .neutral)
-            }.padding(16)
+            detailHeader
             AppSegmented(options: tabs.map { .init(value: $0, label: $0) }, value: tab) { tab = $0 }
                 .padding(.horizontal, 16).padding(.bottom, 10)
             AppColors.border.frame(height: 1)
@@ -393,6 +471,35 @@ private struct TeacherSessionDetailView: View {
         }
         .background(AppColors.background.ignoresSafeArea())
         .presentationDetents([.large])
+    }
+
+    private var detailHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(sessionHeading).appText(AppText.heading)
+                Text("\(TeacherDateFormat.display(session.date)) · \(session.startTime)")
+                    .appText(AppText.muted).foregroundStyle(AppColors.muted)
+            }
+            Spacer()
+            AppPill(title: statusTitle, tone: statusTone)
+        }.padding(16)
+    }
+
+    private var sessionHeading: String {
+        if session.origin == .manual { return "Buổi lẻ" }
+        return session.sessionNumber.map { "Buổi \($0)" } ?? "Buổi học"
+    }
+
+    private var statusTitle: String {
+        switch session.status {
+        case .cancelled: "Đã huỷ"
+        case .held: "Đã học"
+        case .planned: "Sắp tới"
+        }
+    }
+
+    private var statusTone: AppPill.Tone {
+        session.status == .cancelled ? .warning : .neutral
     }
 }
 
@@ -434,6 +541,57 @@ private struct TeacherAttendanceView: View {
         }
     }
 
+    private func attendanceCard(index: Int, student: Student) -> some View {
+        let existing = data.attendanceFor(sessionID: session.id, studentID: student.id)
+        let row = draft(for: student)
+        let displayed = data.canWriteAttendance ? row.status : existing?.status
+        return AppCard {
+            VStack(alignment: .leading, spacing: 10) {
+                attendanceCardHeader(index: index, student: student, displayed: displayed)
+                if data.canWriteAttendance {
+                    attendanceControls(student: student, row: row)
+                }
+            }
+        }
+    }
+
+    private func attendanceCardHeader(index: Int, student: Student, displayed: AttendanceStatus?) -> some View {
+        HStack {
+            Text("\(index + 1). \(student.name)").appText(AppText.subheading)
+            Spacer()
+            if let displayed { displayed.pill }
+        }
+    }
+
+    @ViewBuilder
+    private func attendanceControls(student: Student, row: TeacherAttendanceDraft) -> some View {
+        Button(action: { cycle(student) }) {
+            HStack {
+                Text(row.status.label)
+                Spacer()
+                Image(systemName: "arrow.triangle.2.circlepath")
+            }
+            .appText(AppText.label).foregroundStyle(AppColors.primaryInk)
+            .padding(12).background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: AppRadius.control))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(student.name): \(row.status.label). Bấm để đổi")
+        if row.status == .late {
+            TextField("Đến lúc", text: lateAtBinding(student: student, row: row))
+                .keyboardType(.numbersAndPunctuation)
+                .accessibilityLabel("Giờ đến muộn của \(student.name)")
+            TextField("Ghi chú", text: noteBinding(student: student, row: row))
+        }
+    }
+
+    private func lateAtBinding(student: Student, row: TeacherAttendanceDraft) -> Binding<String> {
+        Binding(get: { row.lateAt ?? "" }, set: { newValue in update(student) { $0.lateAt = newValue } })
+    }
+
+    private func noteBinding(student: Student, row: TeacherAttendanceDraft) -> Binding<String> {
+        Binding(get: { row.note }, set: { newValue in update(student) { $0.note = newValue } })
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
@@ -457,33 +615,7 @@ private struct TeacherAttendanceView: View {
                         }
                     }
                     ForEach(Array(roster.enumerated()), id: \.element.id) { index, student in
-                        let existing = data.attendanceFor(sessionID: session.id, studentID: student.id)
-                        let row = draft(for: student)
-                        let displayed = data.canWriteAttendance ? row.status : existing?.status
-                        AppCard {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Text("\(index + 1). \(student.name)").appText(AppText.subheading)
-                                    Spacer()
-                                    if let displayed { displayed.pill }
-                                }
-                                if data.canWriteAttendance {
-                                    Button(action: { cycle(student) }) {
-                                        HStack { Text(row.status.label); Spacer(); Image(systemName: "arrow.triangle.2.circlepath") }
-                                            .appText(AppText.label).foregroundStyle(AppColors.primaryInk)
-                                            .padding(12).background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: AppRadius.control))
-                                    }
-                                    .buttonStyle(.plain)
-                                    .accessibilityLabel("\(student.name): \(row.status.label). Bấm để đổi")
-                                    if row.status == .late {
-                                        TextField("Đến lúc", text: Binding(get: { row.lateAt ?? "" }, set: { newValue in update(student) { $0.lateAt = newValue } }))
-                                            .keyboardType(.numbersAndPunctuation)
-                                            .accessibilityLabel("Giờ đến muộn của \(student.name)")
-                                        TextField("Ghi chú", text: Binding(get: { row.note }, set: { newValue in update(student) { $0.note = newValue } }))
-                                    }
-                                }
-                            }
-                        }
+                        attendanceCard(index: index, student: student)
                     }
                 }
             }.padding(16)
@@ -507,29 +639,51 @@ private struct TeacherStudentsView: View {
         ScrollView {
             VStack(spacing: 12) {
                 ForEach(data.students(in: classID)) { student in
-                    AppCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack { Text(student.name).appText(AppText.subheading); Spacer(); if student.status == .left { AppPill(title: "Đã nghỉ", tone: .neutral) } }
-                            Text(student.status == .left ? "Đã nghỉ học" : "Phụ huynh · \(student.parentPhone ?? "Chưa có SĐT")")
-                                .appText(AppText.muted).foregroundStyle(AppColors.muted)
-                            if data.canWriteStudents {
-                                Menu("Thao tác") {
-                                    Button("Sửa SĐT phụ huynh") { selectedStudent = student }
-                                    if student.parentPhone != nil { Button("Cấp mật khẩu") { Task { await issuePassword(student) } } }
-                                    if student.status == .active { Button("Đánh dấu nghỉ", role: .destructive) { Task { try? await data.markLeft(student) } } }
-                                }
-                            }
-                        }
-                    }
+                    studentCard(student)
                 }
                 if data.students(in: classID).isEmpty { AppEmptyState(title: "Chưa có học sinh") }
             }.padding(16)
         }
         .safeAreaInset(edge: .bottom) {
-            if data.canWriteStudents { AppButton(title: "Thêm học sinh", systemImage: "plus", size: .large) { showingAdd = true }.padding(16).background(AppColors.background) }
+            if data.canWriteStudents {
+                AppButton(title: "Thêm học sinh", systemImage: "plus", size: .large) { showingAdd = true }
+                    .padding(16).background(AppColors.background)
+            }
         }
         .sheet(isPresented: $showingAdd) { TeacherAddStudentForm(classID: classID, data: data) }
         .sheet(item: $selectedStudent) { student in TeacherParentPhoneForm(student: student, data: data) }
+    }
+
+    private func studentCard(_ student: Student) -> some View {
+        AppCard {
+            VStack(alignment: .leading, spacing: 8) {
+                studentCardHeader(student)
+                Text(studentSubtitle(student))
+                    .appText(AppText.muted).foregroundStyle(AppColors.muted)
+                if data.canWriteStudents { studentMenu(student) }
+            }
+        }
+    }
+
+    private func studentCardHeader(_ student: Student) -> some View {
+        HStack {
+            Text(student.name).appText(AppText.subheading)
+            Spacer()
+            if student.status == .left { AppPill(title: "Đã nghỉ", tone: .neutral) }
+        }
+    }
+
+    private func studentSubtitle(_ student: Student) -> String {
+        if student.status == .left { return "Đã nghỉ học" }
+        return "Phụ huynh · \(student.parentPhone ?? "Chưa có SĐT")"
+    }
+
+    private func studentMenu(_ student: Student) -> some View {
+        Menu("Thao tác") {
+            Button("Sửa SĐT phụ huynh") { selectedStudent = student }
+            if student.parentPhone != nil { Button("Cấp mật khẩu") { Task { await issuePassword(student) } } }
+            if student.status == .active { Button("Đánh dấu nghỉ", role: .destructive) { Task { try? await data.markLeft(student) } } }
+        }
     }
     private func issuePassword(_ student: Student) async {
         do { let temporaryPassword = try await data.issueGuardianPassword(for: student); await MainActor.run { selectedStudent = nil; PasswordReveal.showOnce(temporaryPassword) } }
@@ -550,11 +704,20 @@ private struct TeacherAddStudentForm: View {
                 TextField("Tên học sinh", text: $name).textContentType(.name)
                 TextField("SĐT phụ huynh", text: $phone).keyboardType(.phonePad)
                 if let error { Text(error).foregroundStyle(AppColors.error) }
-                Button("Thêm học sinh") { Task { do { try await data.addStudent(to: classID, name: name, parentPhone: phone); dismiss() } catch { self.error = "Không thêm được học sinh." } } }
+                Button("Thêm học sinh") { submit() }
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .navigationTitle("Thêm học sinh")
             .toolbar { ToolbarItem(placement: .topBarLeading) { Button("Đóng") { dismiss() } } }
+        }
+    }
+
+    private func submit() {
+        Task {
+            do {
+                try await data.addStudent(to: classID, name: name, parentPhone: phone)
+                dismiss()
+            } catch { self.error = "Không thêm được học sinh." }
         }
     }
 }
@@ -571,10 +734,19 @@ private struct TeacherParentPhoneForm: View {
             Form {
                 TextField("SĐT phụ huynh", text: $phone).keyboardType(.phonePad)
                 if let error { Text(error).foregroundStyle(AppColors.error) }
-                Button("Lưu SĐT") { Task { do { try await data.updateStudent(student, parentPhone: phone); dismiss() } catch { self.error = "Không cập nhật được SĐT." } } }
+                Button("Lưu SĐT") { submit() }
             }
             .navigationTitle("Sửa SĐT phụ huynh")
             .toolbar { ToolbarItem(placement: .topBarLeading) { Button("Đóng") { dismiss() } } }
+        }
+    }
+
+    private func submit() {
+        Task {
+            do {
+                try await data.updateStudent(student, parentPhone: phone)
+                dismiss()
+            } catch { self.error = "Không cập nhật được SĐT." }
         }
     }
 }
@@ -607,8 +779,19 @@ private struct TeacherOneOffSessionForm: View {
                 DatePicker("Giờ bắt đầu", selection: $time, displayedComponents: .hourAndMinute)
                 Toggle("Buổi học bù", isOn: $makeup)
                 if let error { Text(error).foregroundStyle(AppColors.error) }
-                Button("Thêm buổi lẻ") { Task { do { try await data.addOneOffSession(classID: classID, date: date.formatted(.iso8601.year().month().day().dateSeparator(.dash)), time: time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)), makeup: makeup); dismiss() } catch { self.error = "Không thêm được buổi học." } } }
+                Button("Thêm buổi lẻ") { submit() }
             }.navigationTitle("Thêm buổi lẻ").toolbar { ToolbarItem(placement: .topBarLeading) { Button("Đóng") { dismiss() } } }
+        }
+    }
+
+    private func submit() {
+        let day = date.formatted(.iso8601.year().month().day().dateSeparator(.dash))
+        let timeText = time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
+        Task {
+            do {
+                try await data.addOneOffSession(classID: classID, date: day, time: timeText, makeup: makeup)
+                dismiss()
+            } catch { self.error = "Không thêm được buổi học." }
         }
     }
 }
@@ -622,18 +805,47 @@ private struct TeacherCalendarView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Lịch").appText(AppText.title).foregroundStyle(AppColors.text)
-                AppSegmented(options: [.init(value: "Tháng", label: "Tháng"), .init(value: "Ngày", label: "Ngày")], value: mode) { mode = $0 }
-                if mode == "Ngày" { DatePicker("Ngày", selection: $date, displayedComponents: .date).datePickerStyle(.compact) }
-                else { DatePicker("Tháng", selection: $date, displayedComponents: .date).datePickerStyle(.graphical) }
-                let selectedDay = date.formatted(.iso8601.year().month().day().dateSeparator(.dash))
-                let selectedMonth = String(selectedDay.prefix(7))
-                let matching = data.sessions.filter { mode == "Ngày" ? $0.date == selectedDay : $0.date.hasPrefix(selectedMonth) }
-                ForEach(matching) { session in TeacherSessionCard(session: session, data: data, i4Data: i4Data) }
-                if matching.isEmpty { AppEmptyState(title: mode == "Ngày" ? "Không có buổi học" : "Tháng này chưa có buổi học") }
+                calendarModePicker
+                datePicker
+                ForEach(matchingSessions) { session in
+                    TeacherSessionCard(session: session, data: data, i4Data: i4Data)
+                }
+                if matchingSessions.isEmpty { emptyCalendarState }
             }.padding(16)
         }
         .background(AppColors.background.ignoresSafeArea())
         .navigationBarHidden(true)
+    }
+
+    private var calendarModePicker: some View {
+        AppSegmented(options: [.init(value: "Tháng", label: "Tháng"),
+                               .init(value: "Ngày", label: "Ngày")], value: mode) { mode = $0 }
+    }
+
+    private var datePicker: some View {
+        Group {
+            if mode == "Ngày" {
+                DatePicker("Ngày", selection: $date, displayedComponents: .date).datePickerStyle(.compact)
+            } else {
+                DatePicker("Tháng", selection: $date, displayedComponents: .date).datePickerStyle(.graphical)
+            }
+        }
+    }
+
+    private var selectedDay: String {
+        date.formatted(.iso8601.year().month().day().dateSeparator(.dash))
+    }
+
+    private var selectedMonth: String {
+        String(selectedDay.prefix(7))
+    }
+
+    private var matchingSessions: [ClassSession] {
+        data.sessions.filter { mode == "Ngày" ? $0.date == selectedDay : $0.date.hasPrefix(selectedMonth) }
+    }
+
+    private var emptyCalendarState: some View {
+        AppEmptyState(title: mode == "Ngày" ? "Không có buổi học" : "Tháng này chưa có buổi học")
     }
 }
 
@@ -652,7 +864,12 @@ private struct TeacherSettingsView: View {
 
 private struct TeacherInlineError: View {
     let message: String
-    var body: some View { Text(message).appText(AppText.muted).foregroundStyle(AppColors.error).padding(12).frame(maxWidth: .infinity, alignment: .leading).background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.row)) }
+    var body: some View {
+        Text(message)
+            .appText(AppText.muted).foregroundStyle(AppColors.error)
+            .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.row))
+    }
 }
 
 private enum TeacherDateFormat {
