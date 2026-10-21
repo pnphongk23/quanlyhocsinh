@@ -1,6 +1,18 @@
 import { badRequest, payloadTooLarge, validationError } from './errors';
 
 export const MAX_BODY_BYTES = 256 * 1024;
+export const MAX_PDF_BYTES = 5 * 1024 * 1024;
+
+export function isPdfUploadRequest(request: Request): boolean {
+  const path = new URL(request.url).pathname;
+  return request.method === 'PUT'
+    && /^\/v1\/reports\/[^/]+\/publications\/[^/]+\/pdf$/.test(path)
+    && (request.headers.get('content-type')?.split(';')[0] ?? '').trim().toLowerCase() === 'application/pdf';
+}
+
+export function maxBodyBytes(request: Request): number {
+  return isPdfUploadRequest(request) ? MAX_PDF_BYTES : MAX_BODY_BYTES;
+}
 
 /** Đọc body JSON, chặn > 256 KB (413) và JSON hỏng (400). */
 export async function readJsonObject(request: Request): Promise<Record<string, unknown>> {
@@ -8,7 +20,7 @@ export async function readJsonObject(request: Request): Promise<Record<string, u
   if (declared !== null && Number(declared) > MAX_BODY_BYTES) throw payloadTooLarge();
 
   const text = await request.text();
-  if (text.length > MAX_BODY_BYTES) throw payloadTooLarge();
+  if (new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) throw payloadTooLarge();
   if (text.trim() === '') return {};
 
   let parsed: unknown;

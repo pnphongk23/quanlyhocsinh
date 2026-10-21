@@ -1,6 +1,7 @@
 import { createMiddleware } from 'hono/factory';
-import type { AppEnv } from '../types';
-import { authenticate, touchSession } from '../db/identity';
+import type { AppEnv, Identity } from '../types';
+import { authenticate, authenticateSession, touchSession } from '../db/identity';
+import type { SessionRow } from '../db/identity';
 import { sha256Hex } from '../lib/crypto';
 import {
   accountDisabled,
@@ -37,15 +38,46 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   if (token === null || token.length < 16 || token.length > 512) throw unauthorized();
 
   const tokenHash = await sha256Hex(token);
-  const result = await authenticate(c.env.DB, tokenHash);
-
-  if (!result.ok) {
-    if (result.reason === 'unauthorized') throw unauthorized();
-    if (result.reason === 'account_disabled') throw accountDisabled();
-    throw forbidden({ reason: 'membership_required' });
+  const syncRequest = c.req.path === '/v1/sync' || c.req.path.startsWith('/v1/sync/');
+  let identity: Identity;
+  let session: SessionRow;
+  if (syncRequest) {
+    const result = await authenticateSession(c.env.DB, tokenHash);
+    if (!result.ok) {
+      if (result.reason === 'unauthorized') throw unauthorized();
+      throw accountDisabled();
+    }
+    session = result.session;
+    // Sync resolves the requested queue membership itself in db/sync.ts.
+    identity = {
+      userId: session.user_id,
+      sessionId: session.session_id,
+      membershipId: '',
+      workspaceId: '',
+      workspaceName: '',
+      roleId: '',
+      roleName: '',
+      roleSystemKey: null,
+      scopeKind: 'assigned_classes',
+      scopeEpoch: 0,
+      permissions: {
+        classes: 'none', students: 'none', sessions_attendance: 'none',
+        scores: 'none', lectures: 'none', comments_reports: 'none',
+      },
+      classIds: [],
+      linkedStudentIds: [],
+      mustChangePassword: session.must_change_password === 1,
+    };
+  } else {
+    const result = await authenticate(c.env.DB, tokenHash);
+    if (!result.ok) {
+      if (result.reason === 'unauthorized') throw unauthorized();
+      if (result.reason === 'account_disabled') throw accountDisabled();
+      throw forbidden({ reason: 'membership_required' });
+    }
+    session = result.session;
+    identity = result.identity;
   }
-
-  const identity = result.identity;
   c.set('identity', identity);
 
   if (
@@ -57,8 +89,8 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
 
   // Gia hạn trượt khi còn dưới 150 ngày; cập nhật last_seen tối đa mỗi giờ.
   const nowMs = Date.now();
-  const expiresMs = Date.parse(result.session.expires_at);
-  const lastSeenMs = Date.parse(result.session.last_seen_at);
+  const expiresMs = Date.parse(session.expires_at);
+  const lastSeenMs = Date.parse(session.last_seen_at);
   let newExpiresAt: string | null = null;
   let shouldTouch = false;
   if (Number.isFinite(expiresMs) && expiresMs - nowMs < SESSION_RENEW_BELOW_MS) {
@@ -68,7 +100,7 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
     shouldTouch = true;
   }
   if (shouldTouch) {
-    const touch = touchSession(c.env.DB, result.session, newExpiresAt);
+    const touch = touchSession(c.env.DB, session, newExpiresAt);
     try {
       c.executionCtx.waitUntil(touch);
     } catch {

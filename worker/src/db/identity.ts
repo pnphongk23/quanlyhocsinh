@@ -19,6 +19,10 @@ export type AuthResult =
   | { ok: true; identity: Identity; session: SessionRow }
   | { ok: false; reason: AuthFailure };
 
+export type SessionAuthResult =
+  | { ok: true; session: SessionRow }
+  | { ok: false; reason: 'unauthorized' | 'account_disabled' };
+
 const PERM_GROUPS: PermGroup[] = [
   'classes',
   'students',
@@ -44,6 +48,19 @@ export async function findSessionByTokenHash(
     .bind(tokenHash)
     .first<SessionRow>();
   return row ?? undefined;
+}
+
+/** Validate the bearer session and its user without resolving the selected membership. */
+export async function authenticateSession(
+  db: D1Database,
+  tokenHash: string,
+): Promise<SessionAuthResult> {
+  const session = await findSessionByTokenHash(db, tokenHash);
+  if (!session) return { ok: false, reason: 'unauthorized' };
+  if (session.revoked_at !== null) return { ok: false, reason: 'unauthorized' };
+  if (Date.parse(session.expires_at) <= Date.now()) return { ok: false, reason: 'unauthorized' };
+  if (session.user_status !== 'active') return { ok: false, reason: 'account_disabled' };
+  return { ok: true, session };
 }
 
 interface MembershipRow {
@@ -97,11 +114,9 @@ export async function authenticate(
   db: D1Database,
   tokenHash: string,
 ): Promise<AuthResult> {
-  const session = await findSessionByTokenHash(db, tokenHash);
-  if (!session) return { ok: false, reason: 'unauthorized' };
-  if (session.revoked_at !== null) return { ok: false, reason: 'unauthorized' };
-  if (Date.parse(session.expires_at) <= Date.now()) return { ok: false, reason: 'unauthorized' };
-  if (session.user_status !== 'active') return { ok: false, reason: 'account_disabled' };
+  const authenticated = await authenticateSession(db, tokenHash);
+  if (!authenticated.ok) return authenticated;
+  const { session } = authenticated;
 
   if (session.membership_id === null) return { ok: false, reason: 'membership_required' };
   const membership = await loadMembership(db, session.user_id, session.membership_id);

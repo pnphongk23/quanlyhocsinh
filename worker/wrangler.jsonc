@@ -11,7 +11,7 @@
     "PBKDF2_ITERATIONS": "100000"
   },
   "triggers": {
-    "crons": ["0 17 * * *"]
+    "crons": ["* * * * *"]
   },
   "d1_databases": [
     {

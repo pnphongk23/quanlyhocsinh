@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import type { AppEnv } from './types';
-import type { Env } from './types';
+import type { AppEnv, Env } from './types';
 import { apiRoutes } from './routes';
 import { ApiError, errorBody, payloadTooLarge } from './lib/errors';
-import { MAX_BODY_BYTES } from './lib/http';
+import { isPdfUploadRequest, maxBodyBytes } from './lib/http';
 import { generateUpcomingSessions } from './db/session-generation';
+import { runScheduledPush } from './db/notification-dispatch';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/;
 
@@ -17,16 +17,20 @@ function resolveRequestId(request: Request): string {
 
 const app = new Hono<AppEnv>();
 
-type ScheduledJob = (
-  controller: ScheduledController,
-  env: Env,
-  context: ExecutionContext,
-) => Promise<void>;
+interface ScheduledJob {
+  name: string;
+  run: (controller: ScheduledController, env: Env, context: ExecutionContext) => Promise<void>;
+}
 
 // Keep cron jobs in one dispatcher so additional scheduled work can be added here.
 const scheduledJobs: ScheduledJob[] = [
-  async (_controller, env) => {
-    await generateUpcomingSessions(env.DB);
+  {
+    name: 'session_generation',
+    run: async (_controller, env) => { await generateUpcomingSessions(env.DB); },
+  },
+  {
+    name: 'notification_dispatch',
+    run: async (_controller, env) => { await runScheduledPush(env); },
   },
 ];
 
@@ -35,7 +39,14 @@ export async function scheduled(
   env: Env,
   context: ExecutionContext,
 ): Promise<void> {
-  for (const job of scheduledJobs) await job(controller, env, context);
+  for (const job of scheduledJobs) {
+    try {
+      await job.run(controller, env, context);
+    } catch {
+      // A failed cron task must not prevent the other task from running.
+      console.error(JSON.stringify({ level: 'error', code: 'scheduled_job_failed', job: job.name }));
+    }
+  }
 }
 
 app.use('*', async (c, next) => {
@@ -51,8 +62,13 @@ app.use('*', async (c, next) => {
   }
 
   const declared = c.req.header('content-length');
-  if (declared !== undefined && Number(declared) > MAX_BODY_BYTES) {
+  const limit = maxBodyBytes(c.req.raw);
+  if (declared !== undefined && Number(declared) > limit) {
     throw payloadTooLarge();
+  }
+  if (isPdfUploadRequest(c.req.raw)
+    && (await c.req.raw.clone().arrayBuffer()).byteLength > limit) {
+      throw payloadTooLarge();
   }
 
   await next();
