@@ -154,9 +154,7 @@ actor SQLiteStore: LocalStore {
         }
     }
     func pendingCommands() throws -> [PendingCommand] { try queuedCommands().map(\.command) }
-    func pendingCommandCount() throws -> Int {
-        Int(try db.execute("SELECT COUNT(*) AS count FROM commands WHERE scope=?", [scope.storageKey]).first?["count"] ?? "0") ?? 0
-    }
+    func pendingCommandCount() throws -> Int { try pendingCommandCountForUser() }
     /// Counts every membership of this user, so role switching cannot bypass the logout guard.
     func pendingCommandCountForUser() throws -> Int {
         try db.execute("SELECT DISTINCT scope FROM commands").reduce(0) { total, row in
@@ -192,6 +190,9 @@ actor SQLiteStore: LocalStore {
                         try reject(result)
                     } else if result.originalStatus == .applied || result.originalStatus == .conflict {
                         try db.execute("DELETE FROM commands WHERE scope=? AND id=? AND state='sending'", [scope.storageKey,result.id.uuidString])
+                    } else {
+                        // A duplicate without original_status acknowledges nothing; replay the same UUID.
+                        try db.execute("UPDATE commands SET state='pending',next_attempt=0 WHERE scope=? AND id=? AND state='sending'", [scope.storageKey,result.id.uuidString])
                     }
                 case .rejected: try reject(result)
                 }

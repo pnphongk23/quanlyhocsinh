@@ -88,7 +88,11 @@ struct URLSessionAPIClient: APIClient {
         parts.path = parts.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         parts.path = "/" + ([parts.path, endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))]
             .filter { !$0.isEmpty }.joined(separator: "/"))
-        parts.queryItems = endpoint.query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+        // An empty array still appends a bare "?" to the URL, so leave the query untouched when there is none.
+        if !endpoint.query.isEmpty {
+            parts.queryItems = endpoint.query.sorted { $0.key < $1.key }
+                .map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
         guard let url = parts.url, url.scheme == "https" else { throw APIFailure.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = endpoint.method.rawValue
@@ -134,5 +138,24 @@ struct StubAPIClient: APIClient {
         if data.isEmpty, let empty = EmptyResponse() as? Response { return empty }
         do { return try WireJSON.decoder().decode(type, from: data) }
         catch { throw APIFailure.decoding }
+    }
+}
+
+extension StubAPIClient {
+    /// Read-only demo data, synthetic IDs/names and empty notes; no credentials.
+    static func demo(baseURL: URL, membershipId: String = "fixture-member", bundle: Bundle = .main) throws -> StubAPIClient {
+        guard let url = bundle.url(forResource: "CoreFixtures", withExtension: "json") else { throw APIFailure.decoding }
+        let rows = try JSONDecoder().decode([String: [JSONValue]].self, from: Data(contentsOf: url))
+        let manifest = SnapshotManifest(cursor: 0, epoch: 1, window: .init(from: "2026-07-23", to: "2026-12-16"), entities: rows.keys.sorted())
+        var fixtures: [APIEndpoint: Data] = [
+            .init(method: .get, path: "sync/snapshot", query: ["membership_id": membershipId]): try WireJSON.encoder().encode(manifest)
+        ]
+        for (entity, items) in rows {
+            fixtures[.init(method: .get, path: "sync/snapshot/" + entity, query: ["membership_id": membershipId, "limit": "300"])] =
+                try WireJSON.encoder().encode(SnapshotPage(items: items, nextAfter: nil))
+        }
+        fixtures[.init(method: .get, path: "sync/pull", query: ["membership_id": membershipId, "cursor": "0", "epoch": "1", "limit": "200"])] =
+            try WireJSON.encoder().encode(PullPage(cursor: 0, epoch: 1, hasMore: false, serverTime: "2026-10-21T11:20:00.000Z", upserts: [:], deleted: []))
+        return StubAPIClient(baseURL: baseURL, fixtures: fixtures)
     }
 }
