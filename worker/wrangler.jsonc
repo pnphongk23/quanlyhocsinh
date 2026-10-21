@@ -18,6 +18,12 @@
       "migrations_dir": "migrations"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "REPORT_PDFS",
+      "bucket_name": "replace-at-deploy"
+    }
+  ],
   "env": {
     "staging": {
       "name": "qlh-staging-api",
@@ -31,6 +37,12 @@
           "database_name": "qlh-staging-db",
           "database_id": "REPLACE_AT_DEPLOY",
           "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "REPORT_PDFS",
+          "bucket_name": "qlh-staging-reports"
         }
       ]
     }

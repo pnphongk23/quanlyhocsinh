@@ -8,6 +8,7 @@ export default defineConfig({
     cloudflareTest({
       wrangler: { configPath: './wrangler.jsonc' },
       miniflare: {
+        r2Buckets: { REPORT_PDFS: 'test-report-pdfs' },
         bindings: {
           TEST_MIGRATIONS: migrations,
           PBKDF2_ITERATIONS: '1000',
