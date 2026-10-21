@@ -269,6 +269,16 @@ actor SQLiteStore: LocalStore {
             try db.execute("DELETE FROM meta WHERE scope=?", [scope.storageKey])
         }
     }
+    func resetCacheForUser() throws {
+        try transaction {
+            let rows = try db.execute("SELECT scope FROM records UNION SELECT scope FROM meta")
+            let userPrefix = "\(scope.userId.utf8.count):\(scope.userId)"
+            for scopeKey in rows.compactMap({ $0["scope"] }).filter({ $0.hasPrefix(userPrefix) }) {
+                try db.execute("DELETE FROM records WHERE scope=?", [scopeKey])
+                try db.execute("DELETE FROM meta WHERE scope=?", [scopeKey])
+            }
+        }
+    }
     func installSnapshot(_ records: [String: [JSONValue]], position: SyncPosition) throws {
         try transaction {
             try db.execute("DELETE FROM records WHERE scope=?", [scope.storageKey])

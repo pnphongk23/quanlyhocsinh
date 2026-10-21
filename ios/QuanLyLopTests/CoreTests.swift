@@ -206,6 +206,32 @@ final class CoreTests: XCTestCase {
         } catch {}
         let preserved = await token.token(); XCTAssertEqual(preserved, "FIXTURE")
     }
+    func testLogoutClearsEveryScopeForThatUserAndKeepsOtherUsersCache() async throws {
+        let path = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString + ".sqlite").path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let active = try SQLiteStore(path: path, scope: CacheScope(userId: "fixture-user", workspaceId: "one", membershipId: "teacher"))
+        let secondScope = try SQLiteStore(path: path, scope: CacheScope(userId: "fixture-user", workspaceId: "two", membershipId: "guardian"))
+        let otherUser = try SQLiteStore(path: path, scope: CacheScope(userId: "another-user", workspaceId: "one", membershipId: "teacher"))
+        try await active.write(1, forKey: "cached", enqueueing: nil)
+        try await secondScope.write(2, forKey: "cached", enqueueing: nil)
+        try await otherUser.write(3, forKey: "cached", enqueueing: nil)
+        try await secondScope.apply(PullPage(cursor: 8, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [:], deleted: []))
+        let token = InMemoryTokenStore(token: "FIXTURE")
+        let api = StubAPIClient(baseURL: URL(string: "https://fixture.invalid/v1")!, fixtures: [
+            APIEndpoint(method: .post, path: "auth/logout"): Data()
+        ])
+
+        try await SessionController(api: api, tokenStore: token, store: active).logout()
+
+        let firstValue = try await active.read(Int.self, forKey: "cached")
+        let secondValue = try await secondScope.read(Int.self, forKey: "cached")
+        let otherValue = try await otherUser.read(Int.self, forKey: "cached")
+        let secondPosition = try await secondScope.position()
+        XCTAssertNil(firstValue)
+        XCTAssertNil(secondValue)
+        XCTAssertNil(secondPosition)
+        XCTAssertEqual(otherValue, 3)
+    }
     func testTokenStoreReplacementAndClear() async throws {
         let token = InMemoryTokenStore()
         await token.setToken("FIXTURE_NOT_A_TOKEN")

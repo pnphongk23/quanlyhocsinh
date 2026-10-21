@@ -21,6 +21,7 @@ actor SessionController {
         let count = try await store.pendingCommandCount()
         guard count == 0 else { throw SessionFailure.pendingCommands(count) }
         _ = try await api.send(.init(method: .post, path: "auth/logout"), as: EmptyResponse.self)
+        try await store.resetCacheForUser()
         try await tokenStore.clear()
         await push.clearDeliveredNotifications()
         // The previous account's save failures must not leak into the next identity.

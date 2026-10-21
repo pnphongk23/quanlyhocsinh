@@ -57,5 +57,6 @@ protocol LocalStore: Sendable {
     func retry(_ ids: [UUID], now: Date, minimumDelay: TimeInterval) async throws
     func apply(_ page: PullPage) async throws
     func resetCache() async throws
+    func resetCacheForUser() async throws
     func installSnapshot(_ records: [String: [JSONValue]], position: SyncPosition) async throws
 }

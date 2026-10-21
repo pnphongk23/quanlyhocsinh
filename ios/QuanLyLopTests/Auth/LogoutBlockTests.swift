@@ -35,13 +35,19 @@ final class LogoutBlockTests: XCTestCase {
         } catch SessionFailure.pendingCommands(let count) {
             XCTAssertEqual(count, 2)
             XCTAssertTrue(LogoutBlock(pending: count, online: true).message.hasPrefix("Còn 2 thay đổi chưa đồng bộ."))
+            let cached = try await store.read(Score.self, forKey: key)
+            XCTAssertEqual(cached?.value, 12.5)
         }
         let preserved = await token.token()
         XCTAssertEqual(preserved, "FIXTURE_NOT_A_REAL_TOKEN")
     }
 
-    func testSignOutIsNotBlockedWhenNothingIsPending() async throws {
+    func testSignOutClearsThePreviousUsersCacheAfterServerAcknowledgement() async throws {
         let store = try store(scope: CacheScope(userId: "user", workspaceId: "ws", membershipId: "member"))
+        let key = RecordKey(entity: "score", k1: "test", k2: "student").storageKey
+        try await store.write(Score(testId: "test", studentId: "student", value: 12.5, version: 3, updatedAt: "fixture"),
+                              forKey: key, enqueueing: nil)
+        try await store.apply(PullPage(cursor: 7, epoch: 2, hasMore: false, serverTime: "fixture", upserts: [:], deleted: []))
         let token = InMemoryTokenStore(token: "FIXTURE_NOT_A_REAL_TOKEN")
         let api = StubAPIClient(baseURL: URL(string: "https://fixture.invalid/v1")!, fixtures: [
             APIEndpoint(method: .post, path: "auth/logout"): Data()
@@ -50,6 +56,10 @@ final class LogoutBlockTests: XCTestCase {
         try await SessionController(api: api, tokenStore: token, store: store).logout()
         let cleared = await token.token()
         XCTAssertNil(cleared)
+        let cached = try await store.read(Score.self, forKey: key)
+        let position = try await store.position()
+        XCTAssertNil(cached)
+        XCTAssertNil(position)
     }
 
     private func store(scope: CacheScope) throws -> SQLiteStore {

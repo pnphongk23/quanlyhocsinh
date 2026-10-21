@@ -23,7 +23,7 @@ struct AuthFlowView: View {
                     .foregroundStyle(AppColors.error)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(AppColors.background)
-            } else if let demo = DemoScreens.requested {
+            } else if let demo = requestedDemo {
                 demo
             } else {
                 screens
@@ -32,6 +32,14 @@ struct AuthFlowView: View {
         .task { if model.screen == .loading { await model.restoreSession() } }
         .preferredColorScheme(.light)
         .environment(model)
+    }
+
+    private var requestedDemo: AnyView? {
+#if DEBUG
+        DemoScreens.requested
+#else
+        nil
+#endif
     }
 
     @ViewBuilder private var screens: some View {
