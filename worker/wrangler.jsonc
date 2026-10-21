@@ -32,7 +32,7 @@
         {
           "binding": "DB",
           "database_name": "qlh-staging-db",
-          "database_id": "REPLACE_AT_DEPLOY",
+          "database_id": "ab89f59d-5f7e-4db2-aff0-cbb2932d0a6d",
           "migrations_dir": "migrations"
         }
       ],
