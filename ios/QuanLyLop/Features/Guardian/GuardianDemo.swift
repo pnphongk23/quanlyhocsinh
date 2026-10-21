@@ -2,13 +2,14 @@ import Foundation
 
 /// Synthetic guardian data for comparison screenshots only.
 ///
-/// Enabled by `SIMCTL_CHILD_QLH_DEMO_SCREEN=settings|settings-blocked|change-password`
+/// Enabled by `SIMCTL_CHILD_QLH_DEMO_SCREEN=guardian|guardian-empty|settings|settings-blocked|change-password`
 /// (see `DemoScreens`), which is how `simctl launch` reaches the guardian shell without
 /// a live account. Debug builds only; Production is a release build and never sees data.
 enum GuardianDemo {
     static var dashboard: GuardianDashboard? {
         #if DEBUG
-        guard ProcessInfo.processInfo.environment["QLH_DEMO_SCREEN"] != nil else { return nil }
+        guard let name = DemoFlag.screen else { return nil }
+        if name == "guardian-empty" { return GuardianDashboard(children: []) }
         return build()
         #else
         return nil
@@ -43,13 +44,13 @@ enum GuardianDemo {
         ]
         let tests = [
             try? TestDefinition(id: "test-speaking", classId: classA, name: "Nói", date: "2026-10-12", maxScore: 10),
-            try? TestDefinition(id: "test-listening", classId: classA, name: "Nghe", date: "2026-10-14", maxScore: 10),
-            try? TestDefinition(id: "test-grammar", classId: classA, name: "Ngữ pháp", date: "2026-10-16", maxScore: 10)
+            try? TestDefinition(id: "test-listening", classId: classA, name: "Nghe", date: "2026-10-07", maxScore: 10),
+            try? TestDefinition(id: "test-grammar", classId: classA, name: "Ngữ pháp", date: "2026-10-05", maxScore: 10)
         ].compactMap { $0 }
         let scores = [
             Score(testId: "test-speaking", studentId: bao.id, value: 10, version: 1, updatedAt: "2026-10-12T11:00:00.000Z"),
-            Score(testId: "test-listening", studentId: bao.id, value: 9, version: 1, updatedAt: "2026-10-14T11:00:00.000Z"),
-            Score(testId: "test-grammar", studentId: bao.id, value: 8, version: 1, updatedAt: "2026-10-16T11:00:00.000Z")
+            Score(testId: "test-listening", studentId: bao.id, value: 9, version: 1, updatedAt: "2026-10-07T11:00:00.000Z"),
+            Score(testId: "test-grammar", studentId: bao.id, value: 8, version: 1, updatedAt: "2026-10-05T11:00:00.000Z")
         ]
         let slips = [
             slip("bao-5", .three, ""),
@@ -78,17 +79,21 @@ enum GuardianDemo {
         let snapshot = ReportSnapshot(
             studentId: bao.id, month: "2026-10",
             attendance: AttendanceSummary(present: 3, late: 0, excused: 1, absent: 0, heldSessions: 4),
+            // Thứ tự bài kiểm tra trong báo cáo theo thứ tự giáo viên đã tạo (ảnh 10 của P1):
+            // Ngữ pháp, Nghe, Nói — không sắp lại theo ngày như tab Điểm số.
             tests: [
-                ReportTest(testId: "test-speaking", name: "Nói", date: "2026-10-12", max: 10, value: 10),
-                ReportTest(testId: "test-listening", name: "Nghe", date: "2026-10-14", max: 10, value: 9),
-                ReportTest(testId: "test-grammar", name: "Ngữ pháp", date: "2026-10-16", max: 10, value: 8)
+                ReportTest(testId: "test-grammar", name: "Ngữ pháp", date: "2026-10-05", max: 10, value: 8),
+                ReportTest(testId: "test-listening", name: "Nghe", date: "2026-10-07", max: 10, value: 9),
+                ReportTest(testId: "test-speaking", name: "Nói", date: "2026-10-12", max: 10, value: 10)
             ],
             stars: StarsSummary(three: 2, two: 1, one: 1),
             homework: [
                 HomeworkSummary(kind: .vocabulary, excellent: 1, done: 0, notDone: 0),
                 HomeworkSummary(kind: .exercise, excellent: 0, done: 1, notDone: 0)
             ],
-            generalComment: "", ready: true)
+            // Ảnh 15 của P1: "Điều cô muốn chia sẻ" lấy từ nhận xét chung của báo cáo đã phát hành.
+            generalComment: "Tháng này con tiến bộ rõ kỹ năng nghe và tự tin hơn khi nói trước lớp. Cần ôn từ vựng đều hơn ở nhà.",
+            ready: true)
         let publications = [
             ReportPublication(id: "publication-1", reportId: "demo-report-bao", classId: classA,
                               studentId: bao.id, month: "2026-10", publicationNo: 2,
@@ -109,7 +114,8 @@ enum GuardianDemo {
             tests: [], scores: [], slips: [], homeworkSections: [], homeworkGrades: [],
             publications: [])
 
-        return GuardianDashboard(children: [ngocData, baoData])
+        // Prototype default: the first linked child (ảnh 15 selects “Gia Bảo” first).
+        return GuardianDashboard(children: [baoData, ngocData])
     }
 
     private static func session(_ id: String, _ classID: String, _ date: String,

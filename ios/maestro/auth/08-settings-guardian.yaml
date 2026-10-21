@@ -1,0 +1,25 @@
+# demo: settings
+# Tài khoản · Cài đặt của phụ huynh (ảnh 11 của P2) và Đổi mật khẩu trong Cài đặt (ảnh 12).
+# Phụ huynh vào Cài đặt bằng cùng khung 5 tab của prototype (`SettingsShell`), nên màn này
+# chỉ mở được bằng cờ debug — prototype không có lối vào trên thanh tab.
+# Chạy: ios/maestro/run.sh ios/maestro/auth/08-settings-guardian.yaml
+appId: vn.quanlylop.app
+name: auth-settings-guardian
+---
+- extendedWaitUntil:
+    visible: "Cài đặt"
+    timeout: 20000
+- assertVisible: "Tên hiển thị"
+- assertVisible: "Số điện thoại"
+- assertVisible: "Đổi mật khẩu"
+- assertVisible: "Đăng xuất"
+- takeScreenshot: docs/screens/auth/cai-dat-phu-huynh-ios
+- tapOn: "Đổi mật khẩu"
+- extendedWaitUntil:
+    visible: "Mật khẩu hiện tại"
+    timeout: 10000
+- takeScreenshot: docs/screens/auth/cai-dat-doi-mat-khau-ios
+- tapOn: "Quay lại"
+- extendedWaitUntil:
+    visible: "Đăng xuất"
+    timeout: 10000

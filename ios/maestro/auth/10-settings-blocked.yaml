@@ -1,0 +1,26 @@
+# demo: settings-blocked
+# Tài khoản · Đăng xuất bị chặn khi còn lệnh chờ (ảnh 13 của P2). Chữ trong hộp thoại lấy
+# đúng câu của prototype `SettingsPage.tsx` (`LogoutBlocked`): tiêu đề "Chưa thể đăng xuất".
+# Hộp thoại phải giữ màn Cài đặt phía sau — không đăng xuất được.
+# Chạy: ios/maestro/run.sh ios/maestro/auth/10-settings-blocked.yaml
+appId: vn.quanlylop.app
+name: auth-settings-logout-blocked
+---
+- extendedWaitUntil:
+    visible: "Đăng xuất"
+    timeout: 20000
+- tapOn: "Đăng xuất"
+- extendedWaitUntil:
+    visible: "Chưa thể đăng xuất"
+    timeout: 10000
+- assertVisible: "Còn 1 thay đổi chưa đồng bộ. Hãy chờ đồng bộ xong rồi đăng xuất."
+- assertVisible: "Đã hiểu"
+- assertVisible: "Thử đồng bộ lại"
+- takeScreenshot: docs/screens/auth/dang-xuat-bi-chan-ios
+- tapOn: "Đã hiểu"
+- extendedWaitUntil:
+    notVisible: "Chưa thể đăng xuất"
+    timeout: 10000
+# Vẫn ở màn Cài đặt: đăng xuất đã bị chặn, không quay về Đăng nhập.
+- assertVisible: "Cài đặt"
+- assertVisible: "Đăng xuất"

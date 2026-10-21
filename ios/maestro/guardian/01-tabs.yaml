@@ -1,0 +1,46 @@
+# demo: guardian
+# Phụ huynh · thanh 5 tab của prototype (ảnh 15) và từng màn: Tổng quan, Điểm danh,
+# Điểm số, Nhận xét, Báo cáo. Không có tab Cài đặt — đúng prototype.
+# Chạy: ios/maestro/run.sh ios/maestro/guardian/01-tabs.yaml
+appId: vn.quanlylop.app
+name: guardian-tabs
+---
+- extendedWaitUntil:
+    visible: "Tổng quan"
+    timeout: 20000
+- assertVisible:
+    id: guardian.tab.overview
+- assertVisible:
+    id: guardian.tab.attendance
+- assertVisible:
+    id: guardian.tab.scores
+- assertVisible:
+    id: guardian.tab.comments
+- assertVisible:
+    id: guardian.tab.reports
+- assertVisible: "Nhận xét mới nhất"
+- takeScreenshot: docs/screens/guardian/tong-quan-ios
+- tapOn:
+    id: guardian.tab.attendance
+- extendedWaitUntil:
+    visible: "có phép"
+    timeout: 10000
+- takeScreenshot: docs/screens/guardian/diem-danh-ios
+- tapOn:
+    id: guardian.tab.scores
+- extendedWaitUntil:
+    visible: "Điểm từng bài"
+    timeout: 10000
+- takeScreenshot: docs/screens/guardian/diem-so-ios
+- tapOn:
+    id: guardian.tab.comments
+- extendedWaitUntil:
+    visible: "Phiếu buổi học theo từng buổi: sao, câu mẫu, ghi chú và kết quả BTVN."
+    timeout: 10000
+- takeScreenshot: docs/screens/guardian/nhan-xet-ios
+- tapOn:
+    id: guardian.tab.reports
+- extendedWaitUntil:
+    visible: "Chuyên cần"
+    timeout: 10000
+- takeScreenshot: docs/screens/guardian/bao-cao-ios

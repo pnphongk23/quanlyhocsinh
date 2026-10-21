@@ -1,0 +1,25 @@
+# demo: guardian
+# Phụ huynh · mở phiếu buổi học mới nhất từ tab Nhận xét rồi quay lại (ảnh 08 của P1).
+# Chạy: ios/maestro/run.sh ios/maestro/guardian/02-ticket.yaml
+appId: vn.quanlylop.app
+name: guardian-ticket
+---
+- extendedWaitUntil:
+    visible: "Tổng quan"
+    timeout: 20000
+- tapOn:
+    id: guardian.tab.comments
+- extendedWaitUntil:
+    visible: "Phiếu buổi học theo từng buổi: sao, câu mẫu, ghi chú và kết quả BTVN."
+    timeout: 10000
+- tapOn: "Mở phiếu buổi học buổi 8"
+- extendedWaitUntil:
+    visible: "Nhận xét của giáo viên"
+    timeout: 10000
+- takeScreenshot: docs/screens/guardian/phieu-buoi-hoc-ios
+- tapOn: "Quay lại"
+- extendedWaitUntil:
+    visible: "Phiếu buổi học theo từng buổi: sao, câu mẫu, ghi chú và kết quả BTVN."
+    timeout: 10000
+- assertVisible:
+    id: guardian.tab.comments

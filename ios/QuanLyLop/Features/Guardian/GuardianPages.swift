@@ -14,6 +14,9 @@ struct GuardianOverviewPage: View {
                 attendanceCard
                 Color.clear.frame(maxWidth: .infinity)
             }
+            if let note = child.teacherNote {
+                GuardianNoteBox(text: note)
+            }
             if let latest = child.sentSlips.first {
                 latestTicket(latest)
             }

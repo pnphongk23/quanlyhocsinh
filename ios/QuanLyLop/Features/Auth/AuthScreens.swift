@@ -237,7 +237,7 @@ struct AuthRolePickerView: View {
             }
             .padding(.top, 26)
             if let message = model.message { AuthBanner(text: message, tone: .error) }
-            Spacer(minLength: 0)
+            // `.pickerFooter` chỉ cách danh sách 28 pt, không bị đẩy xuống đáy màn.
             Text("Bạn đổi được vai trò bất cứ lúc nào trong Cài đặt.")
                 .appText(AuthText.note)
                 .foregroundStyle(AppColors.muted)

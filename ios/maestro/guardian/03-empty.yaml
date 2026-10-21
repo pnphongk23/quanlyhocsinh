@@ -1,0 +1,11 @@
+# demo: guardian-empty
+# Phụ huynh · chưa có con nào được liên kết (trạng thái rỗng của `GuardianOverviewPage`).
+# Chạy: ios/maestro/run.sh ios/maestro/guardian/03-empty.yaml
+appId: vn.quanlylop.app
+name: guardian-empty
+---
+- extendedWaitUntil:
+    visible: "Chưa có con nào được liên kết"
+    timeout: 20000
+- assertVisible: "Liên hệ giáo viên nếu bạn cần xem dữ liệu của con."
+- takeScreenshot: docs/screens/guardian/chua-lien-ket-ios

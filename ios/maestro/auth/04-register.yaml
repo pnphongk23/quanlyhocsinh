@@ -1,0 +1,22 @@
+# demo: register
+# Tài khoản · Đăng ký giáo viên (ảnh 04 của P2).
+# Chạy: ios/maestro/run.sh ios/maestro/auth/04-register.yaml
+appId: vn.quanlylop.app
+name: auth-register
+---
+- extendedWaitUntil:
+    visible: "Tạo không gian làm việc"
+    timeout: 20000
+- assertVisible: "Tên hiển thị"
+- assertVisible: "Tên không gian làm việc"
+- assertVisible: "Số điện thoại"
+- assertVisible: "Nhập lại mật khẩu"
+- assertVisible: "Tối thiểu 8 ký tự"
+# Ảnh so sánh chụp ở đầu trang như ảnh 04 của P2`.
+- takeScreenshot: docs/screens/auth/dang-ky-ios
+# Thanh trạng thái lấy 59 pt của khung 844 nên dòng ghi chú cuối nằm dưới màn: cuộn tới để
+# kiểm tra nội dung vẫn có (không chụp ở trạng thái đã cuộn).
+- scrollUntilVisible:
+    element: "Người tạo là quản trị viên đầu tiên của không gian làm việc."
+    direction: DOWN
+- assertVisible: "Người tạo là quản trị viên đầu tiên của không gian làm việc."

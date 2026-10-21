@@ -341,6 +341,33 @@ struct GuardianNoteBlock: View {
     }
 }
 
+// MARK: - Khối "Điều cô muốn chia sẻ" (`.noteBox`)
+
+/// `GuardianOverviewPage` ảnh 15: hộp nền `--color-warning-soft`, tiêu đề 15/600
+/// `--color-warning`, nội dung 15/1.55 màu nâu đậm, giữ nguyên xuống dòng (`white-space: pre-line`).
+struct GuardianNoteBox: View {
+    let text: String
+
+    private static let bodyInk = Color(.sRGB, red: 0x3B / 255, green: 0x2A / 255,
+                                       blue: 0x00 / 255, opacity: 1)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Điều cô muốn chia sẻ")
+                .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+                .foregroundStyle(AppColors.warning)
+            Text(text)
+                .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
+                .foregroundStyle(Self.bodyInk)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.warningSoft, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+}
+
 // MARK: - Thẻ số liệu (`.statCard`, `.stats4`)
 
 struct GuardianStatCard: View {

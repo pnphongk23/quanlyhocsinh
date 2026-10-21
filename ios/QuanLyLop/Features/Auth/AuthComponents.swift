@@ -61,6 +61,10 @@ enum AuthText {
 /// The card is a plain column; on mobile there is no white panel (only ≥1024 has one).
 struct AuthPage<Content: View>: View {
     var title: String? = nil
+    /// `.page` của auth là 32 24 24; trang Cài đặt nằm trong khung app (`SettingsShell`)
+    /// nên đệm theo khung: 16 20 (guardianShell.module.css `.content`).
+    var horizontalPadding: CGFloat = 24
+    var topPadding: CGFloat = 32
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -75,8 +79,8 @@ struct AuthPage<Content: View>: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(minHeight: proxy.size.height - 56, alignment: .top)
-                .padding(.horizontal, 24)
-                .padding(.top, 32)
+                .padding(.horizontal, horizontalPadding)
+                .padding(.top, topPadding)
                 .padding(.bottom, 24)
             }
             .scrollDismissesKeyboard(.interactively)
@@ -368,7 +372,10 @@ struct AuthPhoneField: View {
                     .fixedSize()
                 }
             }
-            .frame(minHeight: 56)
+            // `.phoneBox` is 56 px tall (min-height with a fixed single-line input). The height is
+            // pinned rather than a minimum: the "+84" column below fills the row, and a minimum
+            // lets it swallow the free space the surrounding column distributes, doubling the box.
+            .frame(height: 56)
             .background(readOnly || disabled ? AppColors.neutralSoft : AppColors.surface,
                         in: RoundedRectangle(cornerRadius: AppRadius.control))
             .overlay(boxBorder(focused: focused, readOnly: readOnly || disabled, hasError: hasError))

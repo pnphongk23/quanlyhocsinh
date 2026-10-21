@@ -1,0 +1,24 @@
+appId: vn.quanlylop.app
+---
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: settings-blocked
+- assertVisible: "Cài đặt"
+- assertVisible: "Phụ huynh · Bé Gia Bảo (—), Bé Bảo Ngọc (—)"
+- assertVisible: "Tên hiển thị"
+- assertVisible: "Đổi mật khẩu"
+- assertVisible: "Đổi vai trò"
+- assertVisible: "Tổng quan"
+- assertVisible: "Điểm danh"
+- assertVisible: "Điểm số"
+- assertVisible: "Nhận xét"
+- assertVisible: "Báo cáo"
+- assertNotVisible:
+    id: guardian.tab.settings
+- takeScreenshot: auth-guardian-settings
+- tapOn: "Đăng xuất"
+- assertVisible: "Chưa thể đăng xuất"
+- assertNotVisible: "Đang đồng bộ"
+- takeScreenshot: auth-logout-blocked
+- tapOn: "Đã hiểu"
+- assertNotVisible: "Chưa thể đăng xuất"

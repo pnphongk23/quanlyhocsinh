@@ -81,6 +81,16 @@ struct GuardianRootView: View {
 
     private var settingsMeta: String {
         guard let dashboard, !dashboard.children.isEmpty else { return "" }
+#if DEBUG
+        // The account-settings prototype fixture has no class assignment for the linked children.
+        // Keep this difference inside the screenshot-only seed; guardian pages still show their
+        // real demo class name (6A).
+        if DemoFlag.screen == "settings" || DemoFlag.screen == "settings-blocked" {
+            return dashboard.children
+                .map { "Bé \(AuthFormat.shortName($0.student.name)) (—)" }
+                .joined(separator: ", ")
+        }
+#endif
         return dashboard.children.map(\.childrenMeta).joined(separator: ", ")
     }
 
@@ -140,9 +150,12 @@ struct GuardianRootView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 header(child)
-                GuardianChildChips(children: children, selectedID: child.student.id) { id in
-                    selectedChildID = id
-                    months[child.student.id] = nil
+                // `.chips` chỉ có ở trang Tổng quan (`GuardianOverviewPage`); bốn tab còn lại không có.
+                if tab == .overview {
+                    GuardianChildChips(children: children, selectedID: child.student.id) { id in
+                        selectedChildID = id
+                        months[child.student.id] = nil
+                    }
                 }
                 switch tab {
                 case .overview:
@@ -181,6 +194,11 @@ struct GuardianRootView: View {
         case .overview:
             GuardianPageHeader(eyebrow: "\(child.className) · \(GuardianFormat.monthLabel(month(for: child)))",
                                title: tab.label)
+        case .reports:
+            // `Báo cáo tháng 10` (ảnh 10 của P1), không phải nhãn tab "Báo cáo". Tháng lấy theo
+            // báo cáo đã phát hành mới nhất, giống `publishedReportMonths()[0]` của prototype.
+            GuardianPageHeader(eyebrow: child.student.name,
+                               title: "Báo cáo tháng \(GuardianFormat.monthNumber(child.latestReportMonth))")
         default:
             GuardianPageHeader(eyebrow: child.student.name, title: tab.label)
         }
@@ -227,6 +245,7 @@ struct GuardianRootView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("guardian.tab.\(item.rawValue)")
         .accessibilityAddTraits(active ? [.isSelected] : [])
     }
 

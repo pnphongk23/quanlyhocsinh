@@ -83,9 +83,23 @@ struct GuardianChildData: Sendable, Identifiable {
         orderedSessions.last { GuardianFormat.isBefore($0, session) && $0.status != .cancelled }
     }
 
+    /// `getChildOverview.teacherNote`: nhận xét chung của báo cáo ĐÃ PHÁT HÀNH mới nhất
+    /// (tháng mới nhất, rồi `publishedAt` mới nhất). Báo cáo mới nhất để trống nhận xét thì
+    /// ẩn khối, không lấy báo cáo cũ hơn — đúng `latestPublishedComment` của prototype.
+    var teacherNote: String? {
+        let latest = publications.max { lhs, rhs in
+            lhs.month == rhs.month
+                ? lhs.publishedAt < rhs.publishedAt
+                : lhs.month < rhs.month
+        }
+        let note = latest?.snapshot.generalComment
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return note.isEmpty ? nil : note
+    }
+
     private func parts(of session: ClassSession, graded: Bool) -> [GuardianHomeworkPart] {
+        // `.hwList` giữ nguyên thứ tự phần BTVN giáo viên đã lưu; prototype không sắp lại.
         homeworkSections.filter { $0.sessionId == session.id }
-            .sorted { $0.kind.rawValue < $1.kind.rawValue }
             .map { section in
                 let level = homeworkGrades.first {
                     $0.studentId == student.id && $0.sectionId == section.id
@@ -250,11 +264,11 @@ enum GuardianFormat {
         (lhs.date, lhs.startTime) < (rhs.date, rhs.startTime)
     }
 
-    /// "16/10"
+    /// "16/10" — `dayMonth` của prototype không đệm số 0 ("7/10", không phải "07/10").
     static func dayMonth(_ iso: String) -> String {
         let parts = iso.split(separator: "-")
-        guard parts.count == 3 else { return iso }
-        return "\(parts[2])/\(parts[1])"
+        guard parts.count == 3, let day = Int(parts[2]), let month = Int(parts[1]) else { return iso }
+        return "\(day)/\(month)"
     }
 
     /// "Thứ Sáu 16/10"

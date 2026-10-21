@@ -72,6 +72,10 @@ final class AuthModel {
     private(set) var message: String?
     private(set) var recoveryPhone = ""
     private(set) var recoveryIsTeacher = false
+#if DEBUG
+    /// Screenshot harness only: makes `logout()` report pending commands.
+    var demoPendingCommands: Int?
+#endif
 
     private let tokenStore: any TokenStore
     private let api: any APIClient
@@ -213,6 +217,14 @@ final class AuthModel {
     func logout() async {
         guard let user = session?.user ?? identity?.user else { return }
         message = nil
+        #if DEBUG
+        // Screenshot harness (`QLH_DEMO_SCREEN=settings-blocked`) only: stand in for a store
+        // that still holds pending commands so the dialog can be driven without an account.
+        if let demo = demoPendingCommands {
+            logoutBlock = LogoutBlock(pending: demo, online: ConnectivityMonitor.shared.isOnline)
+            return
+        }
+        #endif
         do {
             let scopeStore = try makeStore(user: user, membershipId: "")
             let controller = SessionController(api: api, tokenStore: tokenStore, store: scopeStore)
@@ -255,6 +267,20 @@ final class AuthModel {
         self.screen = screen
         self.logoutBlock = logoutBlock
         message = nil
+    }
+
+    /// Screenshot harness only: the login screen with its two prototype failure states.
+    func applyDemoLogin(message: String?, locked: Bool) {
+        session = nil; identity = nil; activeStore = nil
+        self.screen = .login
+        self.message = message
+        self.isLocked = locked
+    }
+
+    /// Screenshot harness only: read-only phone and role variant of the forgot-password screen.
+    func applyDemoRecovery(phone: String, isTeacher: Bool) {
+        recoveryPhone = AuthFormat.phoneInput(phone)
+        recoveryIsTeacher = isTeacher
     }
 #endif
 

@@ -3,6 +3,11 @@ import SwiftUI
 // MARK: - Cài đặt tài khoản (`src/features/settings/SettingsPage.tsx`, mobile)
 
 struct AuthSettingsView: View {
+    /// Trang Cài đặt nằm trong khung app, không phải trang auth: khung phụ huynh đệm 16 20
+    /// (`guardianShell.module.css` `.content`), nên tiêu đề và thẻ canh theo đệm đó.
+    static let shellPadding: CGFloat = 20
+    static let shellTopPadding: CGFloat = 16
+
     let model: AuthModel
     /// Guardian meta from the live dashboard: "Phụ huynh · Bé Gia Bảo (6A), Bé Bảo Ngọc (6A)".
     var guardianMeta: String? = nil
@@ -10,7 +15,9 @@ struct AuthSettingsView: View {
     var onClose: (() -> Void)? = nil
 
     var body: some View {
-        AuthPage(title: onClose == nil ? "Cài đặt" : nil) {
+        AuthPage(title: onClose == nil ? "Cài đặt" : nil,
+                 horizontalPadding: AuthSettingsView.shellPadding,
+                 topPadding: AuthSettingsView.shellTopPadding) {
             if let onClose { backRow(onClose) }
             if let user = model.currentUser, let membership = model.activeMembership {
                 profileCard(user: user, membership: membership)
@@ -167,21 +174,13 @@ struct AuthSettingsView: View {
     }
 
     private func logoutSheet(_ block: LogoutBlock) -> some View {
-        AppSheet(title: "Chưa thể đăng xuất") {
-            Text(block.message)
-                .appText(AuthText.confirm)
-                .foregroundStyle(AppColors.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } footer: {
-            SettingsDialogButton(title: "Đã hiểu", variant: .secondary) { model.dismissLogoutBlock() }
-            SettingsDialogButton(title: "Thử đồng bộ lại", variant: .primary) {
-                Task {
-                    await model.retrySync()
-                    model.dismissLogoutBlock()
-                }
-            }
-        } close: {
+        AuthLogoutBlockedSheet(message: block.message) {
             model.dismissLogoutBlock()
+        } retry: {
+            Task {
+                await model.retrySync()
+                model.dismissLogoutBlock()
+            }
         }
     }
 
@@ -201,6 +200,63 @@ struct AuthSettingsView: View {
 
 extension LogoutBlock: Identifiable {
     var id: String { "\(pending)-\(online)" }
+}
+
+/// `LogoutBlocked` mở dạng `sheet` trong `SettingsPage.tsx` (`.dialog .sheet`): rộng hết màn,
+/// bo trên 20, đệm 24, đầu mục 18/700 kèm nút "Đóng", thân 16/1.5, hai nút 48 xếp dọc cách 10.
+///
+/// Không dùng `AppSheet` của lõi: nó mở detent `.medium`/`.large` (cao gần nửa màn) và có
+/// thanh kéo, trong khi prototype cao theo nội dung và không có thanh kéo.
+private struct AuthLogoutBlockedSheet: View {
+    let message: String
+    let close: () -> Void
+    let retry: () -> Void
+
+    @State private var height: CGFloat = 300
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 16) {
+                Text("Chưa thể đăng xuất")
+                    .appText(AppText.heading)
+                    .foregroundStyle(AppColors.text)
+                Spacer(minLength: 0)
+                Button(action: close) {
+                    Text("Đóng")
+                        .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                        .foregroundStyle(AppColors.primaryInk)
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: AppMetrics.tap)
+                        .background(AppColors.primarySoft,
+                                    in: RoundedRectangle(cornerRadius: AppRadius.button))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, 16)
+            Text(message)
+                .appText(AppTextStyle(size: 16, weight: .regular, lineHeight: 24))
+                .foregroundStyle(AppColors.text)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: 10) {
+                SettingsDialogButton(title: "Đã hiểu", variant: .secondary, action: close)
+                SettingsDialogButton(title: "Thử đồng bộ lại", variant: .primary, action: retry)
+            }
+            .padding(.top, 18)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            GeometryReader { proxy in
+                AppColors.surface
+                    .onAppear { height = proxy.size.height }
+                    .onChange(of: proxy.size.height) { _, value in height = value }
+            }
+        }
+        .presentationDetents([.height(height)])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(20)
+    }
 }
 
 /// `.confirmPrimary` / `.confirmSecondary`: 48 high, radius `--radius-button`, 16 / 700.
@@ -236,7 +292,8 @@ struct AuthChangePasswordView: View {
     private var mismatch: Bool { !confirmation.isEmpty && confirmation != newPassword }
 
     var body: some View {
-        AuthPage {
+        AuthPage(horizontalPadding: AuthSettingsView.shellPadding,
+                 topPadding: AuthSettingsView.shellTopPadding) {
             Button(action: onBack) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .semibold))

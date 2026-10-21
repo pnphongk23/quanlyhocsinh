@@ -1,0 +1,27 @@
+# demo: login
+# Tài khoản · Đăng nhập (ảnh 01 của P2) và Quên mật khẩu của phụ huynh (ảnh 07).
+# Chạy: ios/maestro/run.sh ios/maestro/auth/01-login.yaml
+appId: vn.quanlylop.app
+name: auth-login
+---
+- extendedWaitUntil:
+    visible: "Đăng nhập"
+    timeout: 20000
+- assertVisible:
+    id: login.phone
+- assertVisible:
+    id: login.password
+- assertVisible: "Quên mật khẩu?"
+- assertVisible: "Dành cho giáo viên và phụ huynh."
+- assertVisible:
+    text: "Phụ huynh: dùng số điện thoại đã đăng ký với giáo viên và mật khẩu giáo viên cấp."
+- takeScreenshot: docs/screens/auth/dang-nhap-ios
+- tapOn: "Quên mật khẩu?"
+- extendedWaitUntil:
+    visible: "Nhờ giáo viên cấp lại mật khẩu cho số điện thoại của bạn."
+    timeout: 10000
+- takeScreenshot: docs/screens/auth/quen-mat-khau-phu-huynh-ios
+- tapOn: "Quay lại đăng nhập"
+- extendedWaitUntil:
+    visible: "Dành cho giáo viên và phụ huynh."
+    timeout: 10000

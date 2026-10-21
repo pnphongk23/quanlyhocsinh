@@ -84,7 +84,9 @@ final class GuardianAccessTests: XCTestCase {
 
     func testGuardianDateFormattingMatchesPrototype() {
         XCTAssertEqual(GuardianFormat.dayMonth("2026-10-16"), "16/10")
-        XCTAssertEqual(GuardianFormat.weekdayDayMonth("2026-10-14"), "Thứ Tư 14/10")
+        // `dayMonth` của prototype không đệm số 0: "7/10" như ảnh Điểm danh.
+        XCTAssertEqual(GuardianFormat.dayMonth("2026-10-07"), "7/10")
+        XCTAssertEqual(GuardianFormat.weekdayDayMonth("2026-10-07"), "Thứ Tư 7/10")
         XCTAssertEqual(GuardianFormat.weekdayDayMonth("2026-10-16"), "Thứ Sáu 16/10")
         XCTAssertEqual(GuardianFormat.weekdayDayMonth("2026-10-18"), "Chủ nhật 18/10")
         XCTAssertEqual(GuardianFormat.longDayMonth("2026-10-14"), "14 tháng 10")
@@ -102,6 +104,56 @@ final class GuardianAccessTests: XCTestCase {
         XCTAssertEqual(HomeworkKind.vocabulary.guardianKindLabel, "Luyện từ vựng")
         XCTAssertEqual(HomeworkLevel.excellent.guardianLabel, "Hoàn thành tốt")
         XCTAssertEqual(HomeworkLevel.notDone.guardianTone, .error)
+    }
+
+    func testTeacherNoteUsesLatestPublishedReportComment() throws {
+        let child = try fixture(sent: true)
+        let older = publication(id: "older", month: "2026-09", at: "2026-09-30T00:00:00.000Z",
+                                comment: "Nhận xét tháng 9")
+        let newer = publication(id: "newer", month: "2026-10", at: "2026-10-21T00:00:00.000Z",
+                                comment: "  Tháng này con tiến bộ rõ kỹ năng nghe.  ")
+
+        XCTAssertEqual(published(child, [older, newer]).teacherNote,
+                       "Tháng này con tiến bộ rõ kỹ năng nghe.")
+        // Báo cáo mới nhất để trống nhận xét thì ẩn khối, không lấy báo cáo cũ hơn.
+        let blank = publication(id: "blank", month: "2026-10", at: "2026-10-22T00:00:00.000Z", comment: "   ")
+        XCTAssertNil(published(child, [older, newer, blank]).teacherNote)
+        XCTAssertNil(published(child, []).teacherNote)
+    }
+
+    func testHomeworkPartsKeepTheTeacherOrderNotTheKindOrder() throws {
+        let child = try fixture(sent: true)
+        let extra = [
+            HomeworkSection(id: "vocab", classId: "class", sessionId: "assignment-session",
+                            kind: .vocabulary, title: "Từ vựng", description: "", version: 1),
+            HomeworkSection(id: "speaking", classId: "class", sessionId: "assignment-session",
+                            kind: .speaking, title: "Nói", description: "", version: 1),
+            HomeworkSection(id: "exercise", classId: "class", sessionId: "assignment-session",
+                            kind: .exercise, title: "Bài tập", description: "", version: 1)
+        ]
+        let ordered = GuardianChildData(student: child.student, className: child.className,
+            sessions: child.sessions, attendances: child.attendances, tests: child.tests,
+            scores: child.scores, slips: child.slips, homeworkSections: extra,
+            homeworkGrades: child.homeworkGrades, publications: child.publications)
+
+        let assigned = try XCTUnwrap(ordered.homeworkSession(id: "assignment-session"))
+        XCTAssertEqual(assigned.parts.map(\.section.id), ["vocab", "speaking", "exercise"])
+    }
+
+    private func publication(id: String, month: String, at: String, comment: String) -> ReportPublication {
+        let snapshot = ReportSnapshot(studentId: childID, month: month,
+            attendance: AttendanceSummary(present: 0, late: 0, excused: 0, absent: 0, heldSessions: 0),
+            tests: [], stars: StarsSummary(three: 0, two: 0, one: 0), homework: [],
+            generalComment: comment, ready: true)
+        return ReportPublication(id: id, reportId: "report", classId: "class", studentId: childID,
+            month: month, publicationNo: 1, publishedAt: at, hasPdf: false, snapshot: snapshot)
+    }
+
+    private func published(_ child: GuardianChildData, _ publications: [ReportPublication]) -> GuardianChildData {
+        GuardianChildData(student: child.student, className: child.className, sessions: child.sessions,
+            attendances: child.attendances, tests: child.tests, scores: child.scores, slips: child.slips,
+            homeworkSections: child.homeworkSections, homeworkGrades: child.homeworkGrades,
+            publications: publications)
     }
 
     private func fixture(sent: Bool, gradingNumber: Int = 2) throws -> GuardianChildData {
