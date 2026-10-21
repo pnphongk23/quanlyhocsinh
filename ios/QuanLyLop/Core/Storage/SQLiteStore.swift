@@ -1,0 +1,254 @@
+import Foundation
+import SQLite3
+
+struct StoreFailure: Error, Sendable { let code: Int32 }
+private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
+/// Owned exclusively by SQLiteStore; @unchecked covers pointer cleanup in deinit only.
+private final class SQLiteConnection: @unchecked Sendable {
+    let handle: OpaquePointer
+    init(path: String) throws {
+        var db: OpaquePointer?
+        let status = sqlite3_open_v2(path, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, nil)
+        guard status == SQLITE_OK, let db else {
+            if let db { sqlite3_close(db) }
+            throw StoreFailure(code: status)
+        }
+        handle = db
+        sqlite3_busy_timeout(db, 3000)
+    }
+    deinit { sqlite3_close(handle) }
+    @discardableResult
+    func execute(_ sql: String, _ values: [String?] = []) throws -> [[String: String]] {
+        var statement: OpaquePointer?
+        let status = sqlite3_prepare_v2(handle, sql, -1, &statement, nil)
+        guard status == SQLITE_OK, let statement else { throw StoreFailure(code: status) }
+        defer { sqlite3_finalize(statement) }
+        for (offset, value) in values.enumerated() {
+            let status: Int32
+            if let value { status = sqlite3_bind_text(statement, Int32(offset + 1), value, -1, sqliteTransient) }
+            else { status = sqlite3_bind_null(statement, Int32(offset + 1)) }
+            guard status == SQLITE_OK else { throw StoreFailure(code: status) }
+        }
+        var rows: [[String: String]] = []
+        while true {
+            let status = sqlite3_step(statement)
+            if status == SQLITE_DONE { return rows }
+            guard status == SQLITE_ROW else { throw StoreFailure(code: status) }
+            var row: [String: String] = [:]
+            for column in 0..<sqlite3_column_count(statement) {
+                if let text = sqlite3_column_text(statement, column) {
+                    row[String(cString: sqlite3_column_name(statement, column))] = String(cString: text)
+                }
+            }
+            rows.append(row)
+        }
+    }
+}
+
+actor SQLiteStore: LocalStore {
+    nonisolated let scope: CacheScope
+    private let db: SQLiteConnection
+    private var observers: [UUID: AsyncStream<Void>.Continuation] = [:]
+
+    init(path: String, scope: CacheScope) throws {
+        self.scope = scope
+        let db = try SQLiteConnection(path: path)
+        self.db = db
+        try db.execute("PRAGMA journal_mode=WAL")
+        try db.execute("PRAGMA synchronous=FULL")
+        let version = try db.execute("PRAGMA user_version").first?["user_version"] ?? "0"
+        guard version == "0" || version == "1" else { throw StoreFailure(code: SQLITE_SCHEMA) }
+        try db.execute("BEGIN IMMEDIATE")
+        do {
+            try db.execute("CREATE TABLE IF NOT EXISTS records(scope TEXT NOT NULL, key TEXT NOT NULL, entity TEXT NOT NULL, version INTEGER NOT NULL, json TEXT NOT NULL, PRIMARY KEY(scope,key))")
+            try db.execute("CREATE TABLE IF NOT EXISTS commands(seq INTEGER PRIMARY KEY AUTOINCREMENT, scope TEXT NOT NULL, id TEXT NOT NULL, record_key TEXT NOT NULL, kind TEXT NOT NULL, json TEXT NOT NULL, local_json TEXT NOT NULL, created_at REAL NOT NULL, state TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, next_attempt REAL NOT NULL DEFAULT 0, error TEXT, UNIQUE(scope,id))")
+            try db.execute("CREATE INDEX IF NOT EXISTS commands_scope_order ON commands(scope,created_at,seq)")
+            try db.execute("CREATE TABLE IF NOT EXISTS meta(scope TEXT PRIMARY KEY, cursor INTEGER NOT NULL, epoch INTEGER NOT NULL)")
+            try db.execute("PRAGMA user_version=1")
+            // An interrupted request is replayed with the same UUID, never coalesced.
+            try db.execute("UPDATE commands SET state='pending' WHERE scope=? AND state='sending'", [scope.storageKey])
+            try db.execute("COMMIT")
+        } catch { _ = try? db.execute("ROLLBACK"); throw error }
+    }
+
+    static func open(scope: CacheScope, directory: URL = .applicationSupportDirectory) throws -> SQLiteStore {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: directory.path)
+        var url = directory.appending(path: "core.sqlite")
+        var resource = URLResourceValues(); resource.isExcludedFromBackup = true
+        let store = try SQLiteStore(path: url.path, scope: scope)
+        try url.setResourceValues(resource)
+        return store
+    }
+    func changes() -> AsyncStream<Void> {
+        let id = UUID()
+        let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        observers[id] = continuation
+        continuation.onTermination = { [weak self] _ in Task { await self?.removeObserver(id) } }
+        return stream
+    }
+    private func removeObserver(_ id: UUID) { observers.removeValue(forKey: id) }
+    private func transaction<T>(_ body: () throws -> T) throws -> T {
+        try db.execute("BEGIN IMMEDIATE")
+        do {
+            let result = try body()
+            try db.execute("COMMIT")
+            for observer in observers.values { observer.yield(()) }
+            return result
+        } catch { _ = try? db.execute("ROLLBACK"); throw error }
+    }
+    private func encode<T: Encodable>(_ value: T) throws -> String {
+        String(decoding: try WireJSON.encoder().encode(value), as: UTF8.self)
+    }
+    private func decode<T: Decodable>(_ type: T.Type, _ text: String) throws -> T {
+        try WireJSON.decoder().decode(type, from: Data(text.utf8))
+    }
+    func read<Value: Decodable & Sendable>(_ type: Value.Type, forKey key: String) throws -> Value? {
+        guard let text = try db.execute("SELECT json FROM records WHERE scope=? AND key=?", [scope.storageKey, key]).first?["json"] else { return nil }
+        let overlay = try db.execute("SELECT local_json FROM commands WHERE scope=? AND record_key=? ORDER BY created_at DESC,seq DESC LIMIT 1", [scope.storageKey, key]).first?["local_json"]
+        return try decode(type, overlay ?? text)
+    }
+    func records<Value: Decodable & Sendable>(_ type: Value.Type, entity: String) throws -> [Value] {
+        try db.execute("SELECT key FROM records WHERE scope=? AND entity=? ORDER BY key", [scope.storageKey, entity])
+            .compactMap { try read(type, forKey: $0["key"]!) }
+    }
+    func write<Value: Encodable & Sendable>(_ value: Value, forKey key: String, enqueueing command: PendingCommand? = nil) throws {
+        let json = try encode(value)
+        let tree = try JSONDecoder().decode(JSONValue.self, from: Data(json.utf8))
+        try transaction {
+            if let command {
+                guard command.recordKey == key, command.baseVersion >= 0 else { throw StoreFailure(code: SQLITE_MISMATCH) }
+                if try !db.execute("SELECT id FROM commands WHERE scope=? AND id=?", [scope.storageKey, command.id.uuidString]).isEmpty { return }
+            }
+            let entity = (try? JSONDecoder().decode([String].self, from: Data(key.utf8)))?.first ?? "local"
+            if command == nil {
+                try db.execute("INSERT INTO records(scope,key,entity,version,json) VALUES(?,?,?,?,?) ON CONFLICT(scope,key) DO UPDATE SET json=excluded.json,version=excluded.version,entity=excluded.entity",
+                    [scope.storageKey, key, entity, String(tree["version"]?.int ?? 0), json])
+            } else {
+                // Keep the authoritative row separate from optimistic outbox overlays.
+                // -1 is a local placeholder, so even a same-version/noop pull wins after acknowledgement.
+                try db.execute("INSERT OR IGNORE INTO records(scope,key,entity,version,json) VALUES(?,?,?,?,?)",
+                    [scope.storageKey, key, entity, "-1", json])
+            }
+            if let command {
+                // Coalesce only a never-sent pending cell; UUIDs that reached transport are immutable.
+                let cells = ["attendance.set", "score.set", "slip.set", "homework.grade.set"]
+                var replacement = command
+                if cells.contains(command.kind), let row = try db.execute("SELECT json FROM commands WHERE scope=? AND record_key=? AND kind=? AND state='pending' AND attempts=0 ORDER BY created_at DESC,seq DESC LIMIT 1", [scope.storageKey,key,command.kind]).first,
+                   let old = row["json"] {
+                    let previous = try decode(PendingCommand.self, old)
+                    replacement = PendingCommand(id: command.id, recordKey: key, baseVersion: previous.baseVersion,
+                                                 kind: command.kind, payload: command.payload, createdAt: previous.createdAt)
+                    try db.execute("DELETE FROM commands WHERE scope=? AND id=?", [scope.storageKey,previous.id.uuidString])
+                }
+                try db.execute("INSERT INTO commands(scope,id,record_key,kind,json,local_json,created_at) VALUES(?,?,?,?,?,?,?)",
+                    [scope.storageKey,replacement.id.uuidString,key,replacement.kind,try encode(replacement),json,String(replacement.createdAt.timeIntervalSince1970)])
+            }
+        }
+    }
+    func queuedCommands() throws -> [QueuedCommand] {
+        try db.execute("SELECT * FROM commands WHERE scope=? ORDER BY created_at,seq", [scope.storageKey]).map {
+            QueuedCommand(command: try decode(PendingCommand.self, $0["json"]!), state: $0["state"]!,
+                          attempts: Int($0["attempts"]!)!, error: try $0["error"].map { try decode(APIError.self, $0) })
+        }
+    }
+    func pendingCommands() throws -> [PendingCommand] { try queuedCommands().map(\.command) }
+    func pendingCommandCount() throws -> Int {
+        Int(try db.execute("SELECT COUNT(*) AS count FROM commands WHERE scope=?", [scope.storageKey]).first?["count"] ?? "0") ?? 0
+    }
+    /// Counts every membership of this user, so role switching cannot bypass the logout guard.
+    func pendingCommandCountForUser() throws -> Int {
+        try db.execute("SELECT DISTINCT scope FROM commands").reduce(0) { total, row in
+            guard let scopeKey = row["scope"], scopeKey.hasPrefix("\(scope.userId.utf8.count):\(scope.userId)") else { return total }
+            return total + (Int(try db.execute("SELECT COUNT(*) AS count FROM commands WHERE scope=?", [scopeKey]).first?["count"] ?? "0") ?? 0)
+        }
+    }
+    func position() throws -> SyncPosition? {
+        guard let row = try db.execute("SELECT cursor,epoch FROM meta WHERE scope=?", [scope.storageKey]).first else { return nil }
+        return SyncPosition(cursor: Int(row["cursor"]!)!, epoch: Int(row["epoch"]!)!)
+    }
+    func claimBatch(now: Date) throws -> [PendingCommand] {
+        try transaction {
+            let rows = try db.execute("SELECT * FROM commands WHERE scope=? AND state<>'rejected' ORDER BY created_at,seq LIMIT 50", [scope.storageKey])
+            var result: [PendingCommand] = []
+            for row in rows {
+                guard row["state"] == "pending", (Double(row["next_attempt"]!) ?? 0) <= now.timeIntervalSince1970 else { break }
+                let command = try decode(PendingCommand.self, row["json"]!)
+                try db.execute("UPDATE commands SET state='sending',attempts=attempts+1 WHERE scope=? AND id=?", [scope.storageKey,command.id.uuidString])
+                result.append(command)
+            }
+            return result
+        }
+    }
+    func acknowledge(_ results: [CommandResult]) throws {
+        try transaction {
+            for result in results {
+                switch result.status {
+                case .applied, .conflict:
+                    try db.execute("DELETE FROM commands WHERE scope=? AND id=? AND state='sending'", [scope.storageKey,result.id.uuidString])
+                case .duplicate:
+                    if result.originalStatus == .rejected {
+                        try reject(result)
+                    } else if result.originalStatus == .applied || result.originalStatus == .conflict {
+                        try db.execute("DELETE FROM commands WHERE scope=? AND id=? AND state='sending'", [scope.storageKey,result.id.uuidString])
+                    }
+                case .rejected: try reject(result)
+                }
+            }
+        }
+    }
+    private func reject(_ result: CommandResult) throws {
+        let error = result.error ?? APIError(code: "conflict", message: nil, details: nil, requestId: nil)
+        try db.execute("UPDATE commands SET state='rejected',error=? WHERE scope=? AND id=? AND state='sending'", [try encode(error),scope.storageKey,result.id.uuidString])
+    }
+    func retry(_ ids: [UUID], now: Date, minimumDelay: TimeInterval = 0) throws {
+        try transaction {
+            for id in ids {
+                let row = try db.execute("SELECT attempts FROM commands WHERE scope=? AND id=? AND state='sending'", [scope.storageKey,id.uuidString]).first
+                guard let row else { continue }
+                let delay = max(minimumDelay, min(300, pow(2, Double(min(Int(row["attempts"]!) ?? 1, 9)))))
+                try db.execute("UPDATE commands SET state='pending',next_attempt=? WHERE scope=? AND id=?", [String(now.timeIntervalSince1970 + delay),scope.storageKey,id.uuidString])
+            }
+        }
+    }
+    private func upsert(entity: String, value: JSONValue) throws {
+        let key = try Self.recordKey(entity: entity, value: value).storageKey
+        let version = value["version"]?.int ?? value["publication_no"]?.int ?? 1
+        let json = String(decoding: try JSONEncoder().encode(value), as: UTF8.self)
+        try db.execute("INSERT INTO records(scope,key,entity,version,json) VALUES(?,?,?,?,?) ON CONFLICT(scope,key) DO UPDATE SET json=excluded.json,version=excluded.version WHERE excluded.version>records.version",
+                       [scope.storageKey,key,entity,String(version),json])
+    }
+    static func recordKey(entity: String, value: JSONValue) throws -> RecordKey {
+        let pairs = ["attendance": "session_id", "score": "test_id", "slip": "session_id", "homework_grade": "section_id"]
+        let k1 = value[pairs[entity] ?? "id"]?.string
+        let k2 = pairs[entity] == nil ? "" : value["student_id"]?.string
+        guard let k1, let k2 else { throw StoreFailure(code: SQLITE_MISMATCH) }
+        return RecordKey(entity: entity,k1: k1,k2: k2)
+    }
+    func apply(_ page: PullPage) throws {
+        try transaction {
+            for (entity, values) in page.upserts { for value in values { try upsert(entity: entity, value: value) } }
+            for key in page.deleted {
+                try db.execute("DELETE FROM records WHERE scope=? AND key=?", [scope.storageKey,key.storageKey])
+            }
+            try setPosition(SyncPosition(cursor: page.cursor, epoch: page.epoch))
+        }
+    }
+    private func setPosition(_ position: SyncPosition) throws {
+        try db.execute("INSERT INTO meta(scope,cursor,epoch) VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET cursor=excluded.cursor,epoch=excluded.epoch", [scope.storageKey,String(position.cursor),String(position.epoch)])
+    }
+    func resetCache() throws {
+        try transaction {
+            try db.execute("DELETE FROM records WHERE scope=?", [scope.storageKey])
+            try db.execute("DELETE FROM meta WHERE scope=?", [scope.storageKey])
+        }
+    }
+    func installSnapshot(_ records: [String: [JSONValue]], position: SyncPosition) throws {
+        try transaction {
+            try db.execute("DELETE FROM records WHERE scope=?", [scope.storageKey])
+            for (entity, values) in records { for value in values { try upsert(entity: entity, value: value) } }
+            try setPosition(position)
+        }
+    }
+}
