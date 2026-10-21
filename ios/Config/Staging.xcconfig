@@ -1,7 +1,9 @@
-// Môi trường staging (mặc định khi build/run).
-// Chưa có backend: dùng tên miền giả `.invalid` (RFC 2606) để không gọi nhầm.
-// Trong xcconfig, `//` mở đầu chú thích, nên viết URL bằng `https:/$()/...`.
 #include "Base.xcconfig"
 
+// Môi trường staging (mặc định khi build/run). API staging thật đã chạy:
+// https://qlh-staging-api.tolaphamnhuphong.workers.dev, mọi endpoint nằm dưới `/v1`
+// (api-spec mục 0: base URL = `https://<worker-host>/v1`), nên `/` và `/health` trả 404.
+// Trong xcconfig, `//` mở đầu chú thích, nên viết URL bằng `https:/$()/...`.
+// Không đặt secret ở đây: chỉ URL công khai.
 APP_ENVIRONMENT = Staging
-API_BASE_URL = https:/$()/staging.invalid
+API_BASE_URL = https:/$()/qlh-staging-api.tolaphamnhuphong.workers.dev/v1
