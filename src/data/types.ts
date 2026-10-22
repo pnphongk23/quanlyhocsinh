@@ -28,6 +28,7 @@ export interface Session {
   /** Buổi học bù (buổi lẻ đánh dấu "Học bù"). */
   makeup?: boolean;
   status: "held" | "cancelled" | "planned";
+  version?: number;
 }
 
 export interface Attendance {
@@ -184,6 +185,7 @@ export interface StoreState {
   homeworkSections: HomeworkSection[];
   homeworkGrades: HomeworkGrade[];
   reports: Report[];
+  reportPublications: Array<{ id: string; report_id: string; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; snapshot: unknown }>;
   changeLogs: ChangeLog[];
   pending: PendingChange[];
   auth: AuthSession | null;

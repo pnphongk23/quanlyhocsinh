@@ -12,6 +12,7 @@ import type {
   Test,
 } from "../types";
 import { getStore } from "../store";
+import { getSession } from "../auth/session";
 import {
   can,
   canAccessStudent,
@@ -31,6 +32,7 @@ import {
 import { starTemplate } from "../logic";
 import {
   buildMonthlyStudentReport,
+  buildStarSuggestion,
   type MonthlyStudentReport,
   type MonthlyStudentReportData,
 } from "../reportModel";
@@ -60,14 +62,29 @@ function requireGuardian(group?: PermissionGroup): void {
 
 /** Con được liên kết; em khác (hoặc em không tồn tại) bị từ chối. */
 function requireChild(studentId: string): Student {
-  const student = getStore().students.find((item) => item.id === studentId);
+  const student = childRecord(studentId);
   if (!student || !canAccessStudent(studentId))
     throw new Error(STUDENT_ACCESS_ERROR);
   return student;
 }
 
+function childRecord(studentId: string): Student | undefined {
+  const state = getStore();
+  const cached = state.students.find((item) => item.id === studentId);
+  if (cached) return cached;
+  const session = getSession();
+  const membership = session?.me.memberships.find((item) => item.id === session.activeMembershipId && item.status === "active");
+  const child = membership?.students?.find((item) => item.id === studentId);
+  if (!child) return undefined;
+  return { id: child.id, name: child.name, classId: child.class_id, parentPhone: "", enrolledAt: "0000-01-01", leftAt: null, status: "active" };
+}
+
 function classNameOf(state: StoreState, student: Student): string {
-  return state.classes.find((item) => item.id === student.classId)?.name ?? "";
+  const cached = state.classes.find((item) => item.id === student.classId)?.name;
+  if (cached) return cached;
+  const session = getSession();
+  const membership = session?.me.memberships.find((item) => item.id === session.activeMembershipId && item.status === "active");
+  return membership?.students?.find((item) => item.id === student.id)?.class_name ?? "";
 }
 
 /** Một con trong danh sách chuyển giữa các con (ảnh 15). */
@@ -82,7 +99,11 @@ export function listMyChildren(): GuardianChild[] {
   requireGuardian();
   const state = getStore();
   const linked = linkedStudentIds();
-  return state.students
+  const membership = getSession()?.me.memberships.find((item) => item.id === getSession()?.activeMembershipId && item.status === "active");
+  const students = membership?.students !== undefined
+    ? membership.students.map((summary) => childRecord(summary.id)).filter((student): student is Student => Boolean(student))
+    : state.students.filter((student) => linked.has(student.id));
+  return students
     .filter((student) => linked.has(student.id))
     .map((student) => ({ student, className: classNameOf(state, student) }))
     .sort((a, b) => a.student.name.localeCompare(b.student.name, "vi"));
@@ -431,6 +452,46 @@ export interface ChildMonthlyReport {
   needsRepublish: boolean;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function decodeReportSnapshot(value: unknown, student: Student, month: string): MonthlyStudentReport | null {
+  if (!isRecord(value) || !isRecord(value.attendance) || !isRecord(value.stars) || !Array.isArray(value.tests) || !Array.isArray(value.homework)) return null;
+  const count = (object: Record<string, unknown>, key: string) => typeof object[key] === "number" && Number.isInteger(object[key]) && (object[key] as number) >= 0;
+  if (!["present", "late", "excused", "absent", "held_sessions"].every((key) => count(value.attendance as Record<string, unknown>, key))) return null;
+  if (!["three", "two", "one"].every((key) => count(value.stars as Record<string, unknown>, key))) return null;
+  if (typeof value.general_comment !== "string" || typeof value.ready !== "boolean") return null;
+  const tests = value.tests.map((item) => isRecord(item) && typeof item.test_id === "string" && typeof item.name === "string" && typeof item.date === "string" && typeof item.max === "number" && Number.isFinite(item.max) && (item.value === null || (typeof item.value === "number" && Number.isFinite(item.value))));
+  if (tests.some((valid) => !valid)) return null;
+  const validKinds = new Set<HomeworkKind>(["vocabulary", "reading", "speaking", "exercise"]);
+  const homework = value.homework.map((item) => isRecord(item) && validKinds.has(item.kind as HomeworkKind) && ["excellent", "done", "not_done"].every((key) => count(item, key)));
+  if (homework.some((valid) => !valid)) return null;
+
+  const attendance = value.attendance as Record<string, number>;
+  const stars = value.stars as Record<string, number>;
+  const sessions: Session[] = Array.from({ length: attendance.held_sessions }, (_, index) => ({ id: `published:${student.id}:${month}:${index}`, classId: student.classId, date: `${month}-01`, origin: "recurring", status: "held" }));
+  const attendanceRows: StoreState["attendance"] = [];
+  for (const [status, amount] of [["present", attendance.present], ["late", attendance.late], ["excused", attendance.excused], ["absent", attendance.absent]] as const) {
+    for (let index = 0; index < amount; index++) attendanceRows.push({ id: `published:${student.id}:${month}:${status}:${index}`, sessionId: sessions[index % Math.max(1, sessions.length)]?.id ?? "", studentId: student.id, status, note: "", lateAt: null });
+  }
+  const testsWithScores = value.tests.map((item) => {
+    const test = item as { test_id: string; name: string; date: string; max: number; value: number | null };
+    const model: Test = { id: test.test_id, classId: student.classId, name: test.name, date: test.date, max: test.max, archived: false };
+    return { test: model, score: test.value === null ? undefined : { id: `${test.test_id}:${student.id}`, testId: test.test_id, studentId: student.id, value: test.value } };
+  });
+  const homeworkRows = (value.homework as Array<{ kind: HomeworkKind; excellent: number; done: number; not_done: number }>).map((item) => ({ ...item, label: HOMEWORK_KIND_LABELS[item.kind], total: item.excellent + item.done + item.not_done }));
+  const byStars = { 1: stars.one, 2: stars.two, 3: stars.three } as Record<StarLevel, number>;
+  const ready = value.ready;
+  return {
+    student, month, sessions, attendance: attendanceRows, tests: testsWithScores,
+    gradedTestCount: testsWithScores.filter(({ score }) => score?.value != null).length,
+    attendanceCount: attendance.present + attendance.late, lateCount: attendance.late, excusedCount: attendance.excused, absentCount: attendance.absent,
+    stars: { ticketCount: stars.one + stars.two + stars.three, byStars }, homework: homeworkRows,
+    generalComment: value.general_comment, suggestion: buildStarSuggestion(byStars), ready, missing: ready ? [] : ["Báo cáo chưa đủ dữ liệu"],
+  };
+}
+
 /**
  * Báo cáo tháng mà phụ huynh xem được: CHỈ khi giáo viên đã phát hành.
  * Chưa phát hành (hoặc không có báo cáo) → null. Nội dung dựng bằng
@@ -443,12 +504,20 @@ export function getChildMonthlyReport(
   requireGuardian("comments_reports");
   const student = requireChild(studentId);
   const state = getStore();
-  const report = state.reports.find(
-    (item) =>
-      item.studentId === student.id &&
-      item.month === month &&
-      item.status === "published",
-  );
+  const publications = state.reportPublications
+    .filter((item) => item.student_id === student.id && item.month === month)
+    .sort((a, b) => b.publication_no - a.publication_no);
+  if (publications.length) {
+    const publication = publications[0];
+    let body: MonthlyStudentReport | null;
+    try { body = decodeReportSnapshot(publication.snapshot, student, month); }
+    catch { body = null; }
+    if (!body) { console.warn("Unable to decode a published guardian report snapshot."); return null; }
+    const report: Report = { id: publication.report_id, classId: publication.class_id, studentId: publication.student_id, month: publication.month, status: "published", generalComment: body.generalComment, needsRepublish: false, publishedAt: publication.published_at };
+    return { report, body, needsRepublish: false };
+  }
+  // Compatibility for old local caches created before report_publication was cached.
+  const report = state.reports.find((item) => item.studentId === student.id && item.month === month && item.status === "published");
   if (!report) return null;
   const body = buildMonthlyStudentReport(
     student,

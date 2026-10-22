@@ -6,7 +6,7 @@ import { setSaveStatus } from "./saveStatus";
 import { scheduleSync } from "./sync";
 
 export function commitState<T>(entity: string, key: string, change: (draft: StoreState) => T): T {
-  const draft: StoreState = { ...getStore(), classes: [...getStore().classes], students: [...getStore().students], sessions: [...getStore().sessions], attendance: [...getStore().attendance], tests: [...getStore().tests], scores: [...getStore().scores], comments: [...getStore().comments], homeworkSections: [...getStore().homeworkSections], homeworkGrades: [...getStore().homeworkGrades], reports: [...getStore().reports], changeLogs: [...getStore().changeLogs], pending: [...getStore().pending] };
+    const draft: StoreState = { ...getStore(), classes: [...getStore().classes], students: [...getStore().students], sessions: [...getStore().sessions], attendance: [...getStore().attendance], tests: [...getStore().tests], scores: [...getStore().scores], comments: [...getStore().comments], homeworkSections: [...getStore().homeworkSections], homeworkGrades: [...getStore().homeworkGrades], reports: [...getStore().reports], reportPublications: [...getStore().reportPublications], changeLogs: [...getStore().changeLogs], pending: [...getStore().pending] };
   const result = change(draft); replaceStore(draft); return result;
 }
 function keyForCommand(command: SyncCommand): string | undefined {

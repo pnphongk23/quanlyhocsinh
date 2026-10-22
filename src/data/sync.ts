@@ -21,7 +21,7 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
   switch (entity) {
     case "class": return { id: item.id, name: item.name, status: item.status, weekdays: item.weekdays, time: item.start_time };
     case "student": return { id: item.id, classId: item.class_id, name: item.name, parentPhone: item.parent_phone ?? "", enrolledAt: item.enrolled_at, leftAt: item.left_at, status: item.status };
-    case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status, note: item.note };
+      case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status, note: item.note, version: item.version };
     case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };
     case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, max: item.max, archived: item.archived, version: item.version };
     case "score": return { id: `${item.test_id}:${item.student_id}`, testId: item.test_id, studentId: item.student_id, value: item.value, version: item.version };
@@ -35,7 +35,16 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
 function updateStoreView(entity: EntityName, item: Record<string, any>): void {
   const view = toView(entity, item); const state = window.__QLH_STATE__;
   if (!state) return;
-  const target = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "comments", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report: "reports", report_publication: "reports" } as const)[entity];
+    if (entity === "report_publication") {
+      const publications = state.reportPublications;
+      const existing = publications.findIndex((entry) => entry.id === item.id);
+      if (existing >= 0) publications[existing] = item as typeof publications[number]; else publications.push(item as typeof publications[number]);
+      const report = { id: item.report_id, classId: item.class_id, studentId: item.student_id, month: item.month, status: "published", generalComment: "", needsRepublish: false, publishedAt: item.published_at };
+      const reportIndex = state.reports.findIndex((entry) => entry.id === report.id && entry.studentId === report.studentId && entry.month === report.month);
+      if (reportIndex >= 0) state.reports[reportIndex] = report as typeof state.reports[number]; else state.reports.push(report as typeof state.reports[number]);
+      return;
+    }
+    const target = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "comments", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report: "reports" } as const)[entity];
   const list = state[target] as Array<Record<string, any>>; const k = entity === "attendance" ? `${item.session_id}:${item.student_id}` : entity === "score" ? `${item.test_id}:${item.student_id}` : entity === "slip" ? `${item.session_id}:${item.student_id}` : entity === "homework_grade" ? `${item.section_id}:${item.student_id}` : item.id;
   const index = list.findIndex((entry) => entry.id === k || entry.id === item.id || (entry.sectionId === item.section_id && entry.studentId === item.student_id));
   if (index >= 0) list[index] = view; else list.push(view);
@@ -134,7 +143,10 @@ export async function syncNow(): Promise<void> {
 }
 async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {
   const row = await db.outbox.get(result.id); if (!row) return;
-  if (result.status === "rejected") { await db.outbox.put({ ...row, status: "rejected", error: result.error.code }); return; }
+    if (result.status === "rejected") { await db.outbox.put({ ...row, status: "rejected", error: result.error.code }); return; }
+    if (result.status === "duplicate" && (result as { original_status?: string }).original_status === "rejected") {
+      await db.outbox.put({ ...row, status: "rejected", error: (result as { error?: { code?: string } }).error?.code ?? row.error ?? "rejected" }); return;
+    }
   await db.outbox.delete(result.id);
 }
 function getDeviceId(): string {

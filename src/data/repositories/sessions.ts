@@ -3,10 +3,13 @@ import type { Class, Session } from "../types";
 import { getStore } from "../store";
 import { commitState } from "../outbox";
 import { requirePermission, requireClassAccess } from "./access";
+import { ApiError } from "../api/client";
 import { api } from "../sync";
 import { setSaveStatus } from "../saveStatus";
 
 export function localToday(): string { return todayISO(); }
+let extraSessionUpdateError: string | null = null;
+export function getExtraSessionUpdateError(): string | null { return extraSessionUpdateError; }
 
 export const listSessions: (classId: string) => Session[] = (classId) => getStore().sessions.filter(s=>s.classId===classId).sort((a,b)=>`${a.date} ${a.time??"00:00"}`.localeCompare(`${b.date} ${b.time??"00:00"}`));
 
@@ -25,7 +28,7 @@ export function createExtraSession(input: {
     note?: string;
 }, today = localToday()): Session { requirePermission("sessions_attendance","write");requireClassAccess(input.classId);const klass=getStore().classes.find(c=>c.id===input.classId);if(!klass||klass.status!=="active")throw new Error("Không thể thêm buổi cho lớp đã lưu trữ.");if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||input.date<today)throw new Error("Không thể thêm buổi trong quá khứ.");if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.time))throw new Error("Giờ học không hợp lệ.");if(getStore().sessions.some(s=>s.classId===input.classId&&s.date===input.date&&s.time===input.time))throw new Error("Đã có buổi học vào thời gian này.");const item:Session={...input,id:crypto.randomUUID(),origin:"manual",status:"planned",makeup:true};commitState("session",item.id,d=>{d.sessions.push(item);});void api.request(`POST /classes/${input.classId}/sessions` as any,{body:{date:item.date,start_time:item.time,is_makeup:true,note:item.note??""}} as any).catch(()=>setSaveStatus("error"));return item; }
 
-/** Kept in sync with the prototype signature; edit is local pending API support. */
+/** Kept synchronous for the prototype call sites; server confirmation precedes cache mutation. */
 export function updateExtraSession(id: string, patch: { date?: string; time?: string; note?: string }, today = localToday()): void {
   requirePermission("sessions_attendance", "write");
   const current = getStore().sessions.find((session) => session.id === id);
@@ -36,7 +39,26 @@ export function updateExtraSession(id: string, patch: { date?: string; time?: st
   if (!/^\d{4}-\d{2}-\d{2}$/.test(next.date) || next.date < today) throw new Error("Không thể chuyển buổi về ngày trong quá khứ.");
   if (!next.time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(next.time)) throw new Error("Giờ học không hợp lệ.");
   if (getStore().sessions.some((session) => session.id !== id && session.classId === current.classId && session.date === next.date && session.time === next.time)) throw new Error("Đã có buổi học vào thời gian này.");
-  commitState("session", id, (draft) => { draft.sessions = draft.sessions.map((session) => session.id === id ? next : session); });
+  if (typeof navigator !== "undefined" && !navigator.onLine) throw new Error("Sửa buổi học cần kết nối mạng.");
+  extraSessionUpdateError = null;
+  const body = {
+    ...(patch.date === undefined ? {} : { date: patch.date }),
+    ...(patch.time === undefined ? {} : { start_time: patch.time }),
+    ...(patch.note === undefined ? {} : { note: patch.note }),
+    ...(current.version === undefined ? {} : { base_version: current.version }),
+  };
+  void api.request(`PATCH /sessions/${id}` as any, { body } as any).then((saved: any) => {
+    const confirmed: Session = { ...current, date: saved.date, time: saved.start_time, note: saved.note, version: saved.version };
+    commitState("session", id, (draft) => { draft.sessions = draft.sessions.map((session) => session.id === id ? confirmed : session); });
+    setSaveStatus("synced");
+  }).catch((cause: unknown) => {
+    setSaveStatus("error");
+    extraSessionUpdateError = cause instanceof ApiError
+      ? cause.error.message
+      : cause instanceof TypeError || (cause instanceof DOMException && ["AbortError", "TimeoutError"].includes(cause.name))
+        ? "Sửa buổi học cần kết nối mạng."
+        : cause instanceof Error ? cause.message : "Không thể sửa buổi học.";
+  });
 }
 
 type Schedule = {

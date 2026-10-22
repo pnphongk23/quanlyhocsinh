@@ -10,6 +10,8 @@ export interface ApiMembership {
   id: string;
   workspace: { id: string; name: string };
   role: { id: string; name: string; system_key: string | null; scope_kind: ScopeKind };
+  /** Guardian-only scope supplied by login/register-guardian/GET /me. */
+  students?: Array<{ id: string; name: string; class_id: string; class_name: string }>;
 }
 export interface MeResponse {
   user: ApiUser; active_membership_id: string | null;
@@ -36,7 +38,7 @@ export interface ReportPreview {
   general_comment: string; ready: boolean;
 }
 export interface ApiReport extends Versioned { id: string; class_id: string; student_id: string; month: string; status: "draft" | "published"; general_comment: string; needs_republish: boolean; publication_count: number; published_at: string | null }
-export interface ApiPublication { id: string; report_id: string; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; snapshot: ReportPreview }
+export interface ApiPublication { id: string; report_id: string; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; snapshot: unknown }
 export interface ApiConflict extends Versioned { id: string; entity: "attendance" | "score" | "slip" | "homework_grade"; k1: string; k2: string; server_value: Record<string, unknown>; server_version: number; client_value: Record<string, unknown>; created_at: string; resolved_at: string | null }
 export interface EntityMap {
   class: ApiClass; student: ApiStudent; class_session: ApiSession; attendance: ApiAttendance; test: ApiTest; score: ApiScore; slip: ApiSlip; homework_section: ApiHomeworkSection; homework_grade: ApiHomeworkGrade; report: ApiReport; report_publication: ApiPublication; conflict: ApiConflict;
@@ -62,7 +64,7 @@ export type SyncCommand = { [K in keyof CommandPayloads]: {
 type Applied = { id: string; status: "applied"; version?: number; noop?: boolean; outcome?: "deleted" | "archived"; sent?: string[]; skipped?: { student_id: string; reason: string }[] };
 type ConflictResult = { id: string; status: "conflict"; conflict_id: string; server: Record<string, unknown> };
 type Rejected = { id: string; status: "rejected"; error: ApiErrorBody["error"] };
-export type CommandResult = Applied | ConflictResult | Rejected | { id: string; status: "duplicate"; original_status: "applied" | "conflict" | "rejected"; version?: number; conflict_id?: string; server?: Record<string, unknown>; error?: ApiErrorBody["error"] };
+export type CommandResult = Applied | ConflictResult | Rejected | { id: string; status: "duplicate"; original_status: "applied" | "conflict"; version?: number; conflict_id?: string; server?: Record<string, unknown> };
 export interface PushRequest { membership_id: string; device_id: string; commands: SyncCommand[] }
 export interface PushResponse { epoch: number; cursor: number; results: CommandResult[] }
 export interface PullResponse { cursor: number; epoch: number; has_more: boolean; server_time: string; upserts: { [K in keyof EntityMap]?: EntityMap[K][] }; deleted: { entity: keyof EntityMap; k1: string; k2: string }[] }

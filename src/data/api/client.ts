@@ -15,8 +15,9 @@ export type ApiEndpoints = {
   "POST /sync/push": Endpoint<PushResponse, PushRequest>;
   "GET /sync/pull": Endpoint<PullResponse>;
   "GET /sync/snapshot": Endpoint<SnapshotResponse>;
-  "GET /calendar": Endpoint<{ items: ApiSession[] }>;
-  } & { [P in `PATCH /classes/${string}`]: Endpoint<ApiClass, { name?: string; weekdays?: number[]; start_time?: string; status?: "archived" }> }
+    "GET /calendar": Endpoint<{ items: ApiSession[] }>;
+    } & { [P in `PATCH /sessions/${string}`]: Endpoint<ApiSession, { date?: string; start_time?: string; note?: string; base_version?: number }> }
+      & { [P in `PATCH /classes/${string}`]: Endpoint<ApiClass, { name?: string; weekdays?: number[]; start_time?: string; status?: "archived" }> }
     & { [P in `GET /sync/snapshot/${string}`]: Endpoint<{ items: unknown[]; next_after: string | null }> }
     & { [P in `POST /classes/${string}/students`]: Endpoint<ApiStudent, { name: string; parent_phone?: string; enrolled_at: string }> }
     & { [P in `PATCH /students/${string}`]: Endpoint<ApiStudent, { name?: string; parent_phone?: string; status?: "left"; left_at?: string }> }

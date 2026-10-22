@@ -7,7 +7,7 @@ export function createSeed(): StoreState {
     classes: [
       { id:"6a", name:"Tiếng Anh giao tiếp 6A", weekdays:[1,3], time:"18:00", status:"active" },
       { id:"ielts", name:"IELTS 7.0", weekdays:[2,4], time:"19:30", status:"active" },
-    ], students: [], sessions: [], attendance: [], tests: [], scores: [], comments: [], homeworkSections: [], homeworkGrades: [], reports: [], changeLogs: [], pending: [],
+      ], students: [], sessions: [], attendance: [], tests: [], scores: [], comments: [], homeworkSections: [], homeworkGrades: [], reports: [], reportPublications: [], changeLogs: [], pending: [],
     auth: { phone:"fixture-user", memberIds:[MEMBER_IDS.lanAdmin, MEMBER_IDS.lanTeacher] }, currentClassId:"6a", roles:defaultRoles(), members:[], activeMemberId:MEMBER_IDS.lanAdmin,
   };
   const names=["Nguyễn Minh Anh","Trần Gia Bảo","Lê Khánh Chi","Phạm Đức Dũng","Hoàng Thu Hà","Vũ Quang Huy","Đặng Ngọc Lan","Bùi Tuấn Kiệt","Ngô Bảo Ngọc","Đỗ Hải Nam"];
@@ -26,8 +26,10 @@ export function createSeed(): StoreState {
   }
   const admin:Member={id:MEMBER_IDS.lanAdmin,name:"Admin Fixture",phone:"fixture-user",roleId:ROLE_IDS.admin,classIds:[],status:"active"};
     const teacher:Member={id:MEMBER_IDS.lanTeacher,name:"Teacher Fixture",phone:"fixture-user",roleId:ROLE_IDS.teacher,classIds:["6a"],status:"active"};
-    const assistant:Member={id:MEMBER_IDS.trang,name:"Assistant Fixture",phone:"fixture-assistant",roleId:ROLE_IDS.assistant,classIds:["6a"],status:"active"};
-    state.members=[admin,teacher,assistant];
+      const assistant:Member={id:MEMBER_IDS.trang,name:"Assistant Fixture",phone:"fixture-assistant",roleId:ROLE_IDS.assistant,classIds:["6a"],status:"active"};
+      const guardian:Member={id:MEMBER_IDS.lanGuardian,name:"Guardian Fixture",phone:"900000001",roleId:ROLE_IDS.guardian,classIds:[],studentIds:["6a-student-1","6a-student-8"],status:"active"};
+      const secondGuardian:Member={id:MEMBER_IDS.minhAnhGuardian,name:"Second Guardian Fixture",phone:"fixture-parent-2",roleId:ROLE_IDS.guardian,classIds:[],studentIds:["ielts-student-3"],status:"active"};
+      state.members=[admin,teacher,assistant,guardian,secondGuardian];
     for (const [index, stars] of [3,2,1,3].entries()) {
       const sessionIndex = index + 4;
       const sentAt = `${dates[sessionIndex]}T13:14:00.000Z`;
