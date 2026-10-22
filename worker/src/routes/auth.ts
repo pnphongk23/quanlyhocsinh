@@ -9,6 +9,7 @@ import {
   changePassword,
   checkThrottle,
   clearThrottle,
+  consumeThrottle,
   createSession,
   findActiveMembership,
   findUserByPhone,
@@ -72,8 +73,8 @@ function roleView(systemKey: 'admin' | 'teacher' | 'assistant' | 'guardian') {
 authRoutes.post('/auth/register', async (c) => {
   const db = c.env.DB;
   const ip = getClientIp(c.req.raw);
-  const registerCheck = await checkThrottle(db, registerIpKey(ip), REGISTER_IP_POLICY);
-  if (!registerCheck.allowed) throw rateLimited(registerCheck.retryAfterSeconds);
+  const registerThrottle = await consumeThrottle(db, registerIpKey(ip), REGISTER_IP_POLICY);
+  if (!registerThrottle.allowed) throw rateLimited(registerThrottle.retryAfterSeconds);
 
   const body = await readJsonObject(c.req.raw);
   const phone = normalizePhone(body.phone);
@@ -86,8 +87,6 @@ authRoutes.post('/auth/register', async (c) => {
     max: 100,
   }) as string;
   const displayName = optionalDisplayName(body);
-
-  await recordThrottleFailure(db, registerIpKey(ip), REGISTER_IP_POLICY);
 
   const existing = await findUserByPhone(db, phone);
   if (existing) throw conflict('phone_registered');
@@ -156,7 +155,7 @@ authRoutes.post('/auth/register-guardian', async (c) => {
   const db = c.env.DB;
   const ip = getClientIp(c.req.raw);
   const throttleKey = registerIpKey(ip);
-  const throttle = await checkThrottle(db, throttleKey, REGISTER_IP_POLICY);
+  const throttle = await consumeThrottle(db, throttleKey, REGISTER_IP_POLICY);
   if (!throttle.allowed) throw rateLimited(throttle.retryAfterSeconds);
 
   const body = await readJsonObject(c.req.raw);
@@ -166,7 +165,6 @@ authRoutes.post('/auth/register-guardian', async (c) => {
   assertPassword(password, phone);
   const displayName = optionalDisplayName(body);
 
-  await recordThrottleFailure(db, throttleKey, REGISTER_IP_POLICY);
   if (await findUserByPhone(db, phone)) throw conflict('phone_registered');
 
   const iterations = resolveIterations(c.env.PBKDF2_ITERATIONS);
@@ -208,7 +206,7 @@ authRoutes.post('/auth/register-guardian', async (c) => {
 authRoutes.post('/workspaces', requireAuth, async (c) => {
   const identity = c.get('identity');
   const throttleKey = workspaceCreateKey(identity.userId);
-  const throttle = await checkThrottle(c.env.DB, throttleKey, WORKSPACE_CREATE_POLICY);
+  const throttle = await consumeThrottle(c.env.DB, throttleKey, WORKSPACE_CREATE_POLICY);
   if (!throttle.allowed) throw rateLimited(throttle.retryAfterSeconds);
   const body = await readJsonObject(c.req.raw);
   const workspaceName = stringField(body, 'workspace_name', {
@@ -216,8 +214,6 @@ authRoutes.post('/workspaces', requireAuth, async (c) => {
     min: 1,
     max: 100,
   }) as string;
-
-  await recordThrottleFailure(c.env.DB, throttleKey, WORKSPACE_CREATE_POLICY);
 
   const workspaceId = crypto.randomUUID();
   const membershipId = crypto.randomUUID();

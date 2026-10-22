@@ -811,6 +811,38 @@ export async function recordThrottleFailure(
     .run();
 }
 
+/** Atomically consumes one request from a fixed throttle window. */
+export async function consumeThrottle(
+  db: D1Database,
+  key: string,
+  policy: ThrottlePolicy,
+  nowMs: number = Date.now(),
+): Promise<ThrottleCheck> {
+  const now = isoAt(nowMs);
+  const windowCutoff = isoAt(nowMs - policy.windowMs);
+  const row = await db
+    .prepare(
+      `INSERT INTO auth_throttle (key, fails, window_start, locked_until)
+       VALUES (?, 1, ?, NULL)
+       ON CONFLICT(key) DO UPDATE SET
+         fails = CASE WHEN auth_throttle.window_start <= ? THEN 1 ELSE auth_throttle.fails + 1 END,
+         window_start = CASE WHEN auth_throttle.window_start <= ? THEN excluded.window_start ELSE auth_throttle.window_start END,
+         locked_until = NULL
+       RETURNING fails, window_start`,
+    )
+    .bind(key, now, windowCutoff, windowCutoff)
+    .first<{ fails: number; window_start: string }>();
+
+  if (!row) throw new Error('Throttle update did not return a row.');
+  if (row.fails <= policy.limit) return { allowed: true };
+
+  const retryAt = Date.parse(row.window_start) + policy.windowMs;
+  return {
+    allowed: false,
+    retryAfterSeconds: Math.max(1, Math.ceil((retryAt - nowMs) / 1000)),
+  };
+}
+
 export async function clearThrottle(db: D1Database, key: string): Promise<void> {
   await db.prepare('DELETE FROM auth_throttle WHERE key = ?').bind(key).run();
 }

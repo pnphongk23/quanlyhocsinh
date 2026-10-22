@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { consumeThrottle } from '../src/db/auth';
 import {
   call,
   db,
@@ -158,5 +159,40 @@ describe('guardian self registration', () => {
     const throttledWorkspace = await call('/v1/workspaces', post({ workspace_name: 'Over limit' }), owner.token);
     expect(throttledWorkspace.status).toBe(429);
     expect(Number(throttledWorkspace.headers.get('retry-after'))).toBeGreaterThan(0);
+  });
+
+  it('atomically limits concurrent guardian registrations and workspace creation', async () => {
+    const guardianIp = '198.51.100.54';
+    const guardianResults = await Promise.all(
+      Array.from({ length: 8 }, () => registerGuardian(fakePhone(), guardianIp)),
+    );
+    expect(guardianResults.filter((result) => result.status === 201)).toHaveLength(5);
+    expect(guardianResults.filter((result) => result.status === 429)).toHaveLength(3);
+
+    const owner = await registerWorkspaceAtIp(fakePhone(), 'Concurrent workspace owner', '198.51.100.55');
+    const workspaceResults = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        call('/v1/workspaces', post({ workspace_name: `Concurrent ${index}` }), owner.token),
+      ),
+    );
+    expect(workspaceResults.filter((result) => result.status === 201)).toHaveLength(5);
+    expect(workspaceResults.filter((result) => result.status === 429)).toHaveLength(3);
+  });
+
+  it('limits concurrent throttle consumes and resets an expired window', async () => {
+    const key = `test:atomic-throttle:${crypto.randomUUID()}`;
+    const policy = { limit: 5, windowMs: 60 * 60 * 1000 };
+    const now = Date.parse('2026-10-22T12:00:00.000Z');
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () => consumeThrottle(db, key, policy, now)),
+    );
+    expect(results.filter((result) => result.allowed)).toHaveLength(5);
+    expect(results.filter((result) => !result.allowed)).toHaveLength(3);
+    expect(results.find((result) => !result.allowed)).toMatchObject({
+      allowed: false,
+      retryAfterSeconds: 3600,
+    });
+
+    expect(await consumeThrottle(db, key, policy, now + policy.windowMs)).toEqual({ allowed: true });
   });
 });
