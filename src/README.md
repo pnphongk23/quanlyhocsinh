@@ -7,10 +7,10 @@ Node 22.19+; dependency cùng major với prototype, lockfile độc lập ở g
 - `roles/staff/routes.ts`: điểm ghép riêng của W-2; `StaffShell.tsx` tải lười.
 - `roles/guardian/routes.ts`: điểm ghép riêng của W-3; `GuardianShell.tsx` tải lười.
 - `roles/account/routes.ts`: điểm ghép riêng của W-4 cho auth/settings.
-- `features/`: worker tính năng tạo thư mục tại đây; Đợt A chưa có màn nghiệp vụ.
+- `features/`: giao diện theo từng luồng MVP, đọc/ghi qua repositories.
 - `shared/`: token, CSS Modules, UI, format, hooks, SaveStatus và mascot dùng chung sao chép từ prototype.
 - `data/types.ts`: view model camelCase tương thích prototype, thứ trong tuần JS 0..6.
-- `data/api/`: kiểu wire snake_case theo api-spec, thứ trong tuần ISO 1..7; adapter ở Đợt B phải đổi rõ 0 ↔ 7.
+- `data/api/`: kiểu wire snake_case theo api-spec, thứ trong tuần ISO 1..7; adapter đổi giữa ISO 1..7 và view model JS 0..6.
 - `data/repositories/`: tên/hàm và kiểu tham số, kết quả MVP giữ theo prototype.
 - `data/store.ts`: facade `getStore/useStore` đọc trạng thái đang hoạt động, hydrate từ Dexie theo danh tính hiện hành và phát thay đổi cho subscriber.
 - `data/homework.ts`, `reportModel.ts`: helper tính BTVN và báo cáo thuần, không phụ thuộc API.
