@@ -1,5 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { createExtraSession, updateExtraSession } from "../../data/repositories/sessions";
+import {
+  createExtraSession,
+  getExtraSessionUpdateError,
+  updateExtraSession,
+} from "../../data/repositories/sessions";
 import { useAccess } from "../../data/repositories/access";
 import type { Session } from "../../data/types";
 import { todayISO } from "../../shared/format";
@@ -30,13 +34,27 @@ export default function AddSessionModal({
 
   if (!access.can("sessions_attendance", "write")) return null;
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function close() {
+    if (!saving) onClose();
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     setError("");
     setSaving(true);
     try {
-      if (session) updateExtraSession(session.id, { date, time, note: note.trim() });
-      else createExtraSession({ classId, date, time, note: note.trim() || undefined });
+      if (session) {
+        await updateExtraSession(session.id, { date, time, note: note.trim() });
+        const serverError = getExtraSessionUpdateError();
+        if (serverError) {
+          setError(serverError);
+          setSaving(false);
+          return;
+        }
+      } else {
+        createExtraSession({ classId, date, time, note: note.trim() || undefined });
+      }
       onClose();
     } catch (cause) {
       setError(
@@ -51,7 +69,7 @@ export default function AddSessionModal({
   return (
     <Sheet
       open
-      onClose={onClose}
+      onClose={close}
       title={session ? "Sửa buổi lẻ" : "Thêm buổi lẻ"}
     >
       <form className={s.form} onSubmit={submit}>
@@ -107,7 +125,7 @@ export default function AddSessionModal({
           <Button type="submit" disabled={saving}>
             {saving ? "Đang lưu…" : session ? "Lưu thay đổi" : "Lưu buổi học"}
           </Button>
-          <Button variant="secondary" type="button" onClick={onClose}>
+          <Button variant="secondary" type="button" onClick={close} disabled={saving}>
             Đóng
           </Button>
         </div>

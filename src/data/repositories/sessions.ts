@@ -28,8 +28,8 @@ export function createExtraSession(input: {
     note?: string;
 }, today = localToday()): Session { requirePermission("sessions_attendance","write");requireClassAccess(input.classId);const klass=getStore().classes.find(c=>c.id===input.classId);if(!klass||klass.status!=="active")throw new Error("Không thể thêm buổi cho lớp đã lưu trữ.");if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||input.date<today)throw new Error("Không thể thêm buổi trong quá khứ.");if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.time))throw new Error("Giờ học không hợp lệ.");if(getStore().sessions.some(s=>s.classId===input.classId&&s.date===input.date&&s.time===input.time))throw new Error("Đã có buổi học vào thời gian này.");const item:Session={...input,id:crypto.randomUUID(),origin:"manual",status:"planned",makeup:true};commitState("session",item.id,d=>{d.sessions.push(item);});void api.request(`POST /classes/${input.classId}/sessions` as any,{body:{date:item.date,start_time:item.time,is_makeup:true,note:item.note??""}} as any).catch(()=>setSaveStatus("error"));return item; }
 
-/** Kept synchronous for the prototype call sites; server confirmation precedes cache mutation. */
-export function updateExtraSession(id: string, patch: { date?: string; time?: string; note?: string }, today = localToday()): void {
+export async function updateExtraSession(id: string, patch: { date?: string; time?: string; note?: string }, today = localToday()): Promise<void> {
+  extraSessionUpdateError = null;
   requirePermission("sessions_attendance", "write");
   const current = getStore().sessions.find((session) => session.id === id);
   if (!current) throw new Error("Không tìm thấy buổi học.");
@@ -40,14 +40,13 @@ export function updateExtraSession(id: string, patch: { date?: string; time?: st
   if (!next.time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(next.time)) throw new Error("Giờ học không hợp lệ.");
   if (getStore().sessions.some((session) => session.id !== id && session.classId === current.classId && session.date === next.date && session.time === next.time)) throw new Error("Đã có buổi học vào thời gian này.");
   if (typeof navigator !== "undefined" && !navigator.onLine) throw new Error("Sửa buổi học cần kết nối mạng.");
-  extraSessionUpdateError = null;
   const body = {
     ...(patch.date === undefined ? {} : { date: patch.date }),
     ...(patch.time === undefined ? {} : { start_time: patch.time }),
     ...(patch.note === undefined ? {} : { note: patch.note }),
     ...(current.version === undefined ? {} : { base_version: current.version }),
   };
-  void api.request(`PATCH /sessions/${id}` as any, { body } as any).then((saved: any) => {
+  return api.request(`PATCH /sessions/${id}` as any, { body } as any).then((saved: any) => {
     const confirmed: Session = { ...current, date: saved.date, time: saved.start_time, note: saved.note, version: saved.version };
     commitState("session", id, (draft) => { draft.sessions = draft.sessions.map((session) => session.id === id ? confirmed : session); });
     setSaveStatus("synced");
