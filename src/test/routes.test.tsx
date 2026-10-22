@@ -132,8 +132,12 @@ describe("foundation route integration", () => {
     router.dispose();
   });
 
-  it.each(["/dang-nhap", "/dang-ky", "/quen-mat-khau", "/doi-mat-khau-bat-buoc", "/chon-vai-tro", "/cai-dat", "/cai-dat/doi-mat-khau"])("reserves account route %s", (path) => {
+  it.each(["/dang-nhap", "/dang-ky", "/quen-mat-khau", "/chon-vai-tro", "/cai-dat", "/cai-dat/doi-mat-khau"])("reserves account route %s", (path) => {
     expect(matchRoutes(routes, path)?.at(-1)?.route.path).toBe(path);
+  });
+
+  it("has no forced password change route", () => {
+    expect(matchRoutes(routes, "/doi-mat-khau-bat-buoc")?.at(-1)?.route.path).not.toBe("/doi-mat-khau-bat-buoc");
   });
 
   it("opens staff and guardian shells from the foundation landing", async () => {
