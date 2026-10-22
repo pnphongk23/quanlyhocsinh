@@ -147,3 +147,60 @@ export async function cancelSession(db: D1Database, identity: Identity, sessionI
     if (!results[0]?.meta.changes) throw conflict('session_not_planned');
   return { id: sessionId, status: 'cancelled', version: row.version + 1 };
 }
+
+export async function updateManualSession(db: D1Database, identity: Identity, sessionId: string,
+  input: Record<string, unknown>) {
+  const row = await db.prepare(`SELECT cs.id, cs.class_id, cs.date, cs.start_time, cs.origin, cs.status,
+      cs.note, cs.version, w.timezone
+    FROM class_sessions cs JOIN workspaces w ON w.id = cs.workspace_id
+    WHERE cs.workspace_id = ? AND cs.id = ?`)
+    .bind(identity.workspaceId, sessionId)
+    .first<SessionRow & { timezone: string }>();
+  if (!row) throw notFound();
+  requireAccess(identity, 'sessions_attendance', 'write', { classId: row.class_id });
+  if (row.origin !== 'manual' || row.status !== 'planned') throw conflict('session_not_editable');
+
+  const fields = ['date', 'start_time', 'note'] as const;
+  if (!fields.some((field) => Object.prototype.hasOwnProperty.call(input, field))) {
+    throw validationError(undefined, 'at_least_one_field_required');
+  }
+  if (input.base_version !== undefined && !Number.isInteger(input.base_version)) {
+    throw validationError({ base_version: 'must_be_integer' });
+  }
+  if (input.base_version !== undefined && input.base_version !== row.version) throw conflict('version_conflict');
+
+  const date = input.date === undefined ? row.date : input.date;
+  if (input.date !== undefined && !isDate(input.date)) throw validationError({ date: 'must_be_date' });
+  if (typeof date !== 'string') throw validationError({ date: 'must_be_date' });
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: row.timezone }).format(new Date());
+  if (date < today) throw validationError({ date: 'date_in_past' }, 'date_in_past');
+
+  const startTime = input.start_time === undefined ? row.start_time : input.start_time;
+  if (input.start_time !== undefined && !validateTime(input.start_time)) {
+    throw validationError({ start_time: 'must_be_hh_mm' });
+  }
+  if (typeof startTime !== 'string') throw validationError({ start_time: 'must_be_hh_mm' });
+  const note = input.note === undefined ? row.note : input.note;
+  if (input.note !== undefined && (typeof input.note !== 'string' || input.note.length > 500)) {
+    throw validationError({ note: 'must_be_at_most_500' });
+  }
+  if (typeof note !== 'string') throw validationError({ note: 'must_be_at_most_500' });
+
+  const now = nowIso();
+  let result: D1Result;
+  try {
+    result = await db.prepare(`UPDATE class_sessions
+      SET date = ?, start_time = ?, note = ?, updated_at = ?, updated_by = ?, version = version + 1
+      WHERE workspace_id = ? AND id = ? AND version = ? AND origin = 'manual' AND status = 'planned'`)
+      .bind(date, startTime, note, now, identity.userId, identity.workspaceId, sessionId, row.version).run();
+  } catch (error) {
+    if (String(error).includes('UNIQUE')) throw conflict('session_exists');
+    throw error;
+  }
+  if (result.meta.changes === 0) throw conflict('version_conflict');
+
+  const updated = await db.prepare(`${SESSION_SELECT}
+    WHERE cs.workspace_id = ? AND cs.id = ?`).bind(identity.workspaceId, sessionId).first<SessionRow>();
+  if (!updated) throw notFound();
+  return { ...mapSession(updated), note: updated.note };
+}

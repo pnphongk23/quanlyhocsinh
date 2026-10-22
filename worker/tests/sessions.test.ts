@@ -54,6 +54,70 @@ describe('sessions API', () => {
     expect((await call('/v1/calendar?from=2026-10-01&to=2026-11-30')).status).toBe(401);
   });
 
+  it('edits only future manual planned sessions with permission, versions, uniqueness and change-log visibility', async () => {
+    const owner = await registerWorkspaceAtIp('+84900000351', 'Edit session rules', '198.51.100.35');
+    const classId = await insertClass(owner.workspaceId, 'Editable class', owner.userId);
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+    const relativeDate = (offset: number) => {
+      const date = new Date(`${today}T00:00:00.000Z`);
+      date.setUTCDate(date.getUTCDate() + offset);
+      return date.toISOString().slice(0, 10);
+    };
+    const targetDate = relativeDate(3);
+    const targetId = await insertSession(owner.workspaceId, classId, targetDate, owner.userId);
+    const duplicateId = await insertSession(owner.workspaceId, classId, relativeDate(5), owner.userId);
+    const recurringId = await insertSession(owner.workspaceId, classId, relativeDate(6), owner.userId);
+    const heldId = await insertSession(owner.workspaceId, classId, relativeDate(7), owner.userId);
+    await db.prepare("UPDATE class_sessions SET origin = 'recurring' WHERE id = ?").bind(recurringId).run();
+    await db.prepare("UPDATE class_sessions SET status = 'held' WHERE id = ?").bind(heldId).run();
+    const parentUser = await insertUser('+84900000352');
+    const studentId = await insertStudent(owner.workspaceId, classId, 'Child', null, owner.userId);
+    const parentMembership = await insertGuardianMembership(owner.workspaceId, parentUser, owner.roles.guardian!, [studentId]);
+    const parentToken = await clubToken(owner.workspaceId, parentUser, parentMembership);
+    const assistantUser = await insertUser('+84900000353');
+    const assistantMembership = await insertMembership(owner.workspaceId, assistantUser, owner.roles.assistant!, [classId]);
+    const assistantToken = await clubToken(owner.workspaceId, assistantUser, assistantMembership);
+    const otherClass = await insertClass(owner.workspaceId, 'Other class', owner.userId);
+    const otherTeacher = await insertUser('+84900000354');
+    const otherTeacherMembership = await insertMembership(owner.workspaceId, otherTeacher, owner.roles.teacher!, [otherClass]);
+    const otherTeacherToken = await clubToken(owner.workspaceId, otherTeacher, otherTeacherMembership);
+
+    const before = await call(`/v1/sync/snapshot?membership_id=${owner.membershipId}`, {}, owner.token);
+    expect(before.status).toBe(200);
+    const changed = await call(`/v1/sessions/${targetId}`, {
+      method: 'PATCH', body: JSON.stringify({ date: relativeDate(4), start_time: '19:15', note: 'Updated note', base_version: 1 }),
+    }, owner.token);
+    expect(changed.status).toBe(200);
+    expect(changed.body).toMatchObject({ id: targetId, class_id: classId, date: relativeDate(4), start_time: '19:15',
+      origin: 'manual', status: 'planned', note: 'Updated note', session_number: 1, version: 2 });
+    const pull = await call(`/v1/sync/pull?membership_id=${owner.membershipId}&cursor=${before.body.cursor}&epoch=${before.body.epoch}`, {}, owner.token);
+    expect(pull.status).toBe(200);
+    expect(pull.body.upserts.class_session).toContainEqual(expect.objectContaining({ id: targetId, date: relativeDate(4), version: 2 }));
+
+    const conflictReason = async (id: string, body: Record<string, unknown>, token = owner.token) => {
+      const result = await call(`/v1/sessions/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token);
+      return { status: result.status, reason: result.body.error?.details?.reason };
+    };
+    expect(await conflictReason(targetId, { note: 'stale', base_version: 1 })).toEqual({ status: 409, reason: 'version_conflict' });
+    expect(await conflictReason(recurringId, { note: 'no' })).toEqual({ status: 409, reason: 'session_not_editable' });
+    expect(await conflictReason(heldId, { note: 'no' })).toEqual({ status: 409, reason: 'session_not_editable' });
+    expect(await conflictReason(targetId, { note: 'no' }, parentToken)).toEqual({ status: 403, reason: undefined });
+    expect(await conflictReason(targetId, { note: 'no' }, otherTeacherToken)).toEqual({ status: 404, reason: undefined });
+    expect(await conflictReason(targetId, { date: relativeDate(-1) })).toEqual({ status: 422, reason: 'date_in_past' });
+    expect(await conflictReason(targetId, { start_time: '9:00' })).toEqual({ status: 422, reason: undefined });
+    expect(await conflictReason(targetId, {})).toEqual({ status: 422, reason: 'at_least_one_field_required' });
+    expect(await conflictReason(targetId, { note: 'x'.repeat(501) })).toEqual({ status: 422, reason: undefined });
+
+    await call(`/v1/sessions/${duplicateId}/cancel`, { method: 'POST' }, owner.token);
+    expect(await conflictReason(targetId, { date: relativeDate(5), start_time: '18:00' }))
+      .toEqual({ status: 409, reason: 'session_exists' });
+    expect((await call(`/v1/sessions/${duplicateId}`, { method: 'PATCH', body: JSON.stringify({ note: 'cancelled' }) }, owner.token))
+      .body.error.details.reason).toBe('session_not_editable');
+
+    const newManual = await call(`/v1/classes/${classId}/sessions`, post({ date: relativeDate(8), start_time: '18:00' }), owner.token);
+    expect((await call(`/v1/sessions/${newManual.body.id}`, { method: 'PATCH', body: JSON.stringify({ start_time: '18:30' }) }, assistantToken)).status).toBe(200);
+  });
+
   it('cron fills the next 56 days in bounded, repeatable class batches', async () => {
     const owner = await registerWorkspaceAtIp('+84900000311', 'Cron API', '198.51.100.15');
     const classId = await insertClass(owner.workspaceId, 'Recurring', owner.userId);

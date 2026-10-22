@@ -98,6 +98,14 @@ export interface MembershipSummary {
     system_key: string | null;
     scope_kind: ScopeKind;
   };
+  students?: GuardianStudentSummary[];
+}
+
+export interface GuardianStudentSummary {
+  id: string;
+  name: string;
+  class_id: string;
+  class_name: string;
 }
 
 export interface UserView {
@@ -181,12 +189,39 @@ function toMembershipSummary(row: MembershipJoinRow): MembershipSummary {
   };
 }
 
+interface GuardianStudentRow extends GuardianStudentSummary {
+  workspace_id: string;
+}
+
+function addGuardianStudents(memberships: MembershipSummary[], rows: GuardianStudentRow[]) {
+  const studentsByWorkspace = new Map<string, GuardianStudentSummary[]>();
+  for (const row of rows) {
+    const students = studentsByWorkspace.get(row.workspace_id) ?? [];
+    students.push({ id: row.id, name: row.name, class_id: row.class_id, class_name: row.class_name });
+    studentsByWorkspace.set(row.workspace_id, students);
+  }
+  return memberships.map((membership) => membership.role.scope_kind === 'linked_students'
+    ? { ...membership, students: studentsByWorkspace.get(membership.workspace.id) ?? [] }
+    : membership);
+}
+
+function linkedStudentsStatement(db: D1Database, userId: string) {
+  return db.prepare(`SELECT m.workspace_id, s.id, s.name, s.class_id, c.name AS class_name
+      FROM memberships m
+      JOIN roles r ON r.id = m.role_id AND r.scope_kind = 'linked_students'
+      JOIN guardian_student gs ON gs.user_id = m.user_id AND gs.workspace_id = m.workspace_id
+      JOIN students s ON s.id = gs.student_id AND s.workspace_id = gs.workspace_id
+      JOIN classes c ON c.id = s.class_id AND c.workspace_id = s.workspace_id
+      WHERE m.user_id = ? AND m.status = 'active'
+      ORDER BY m.workspace_id, c.name, s.name, s.id`).bind(userId);
+}
+
 export async function listActiveMemberships(
   db: D1Database,
   userId: string,
 ): Promise<MembershipSummary[]> {
-  const { results } = await db
-    .prepare(
+  const [membershipResult, studentResult] = await db.batch([
+    db.prepare(
       `SELECT m.id, m.status, m.scope_epoch, m.workspace_id, w.name AS workspace_name,
               r.id AS role_id, r.name AS role_name, r.system_key, r.scope_kind
          FROM memberships m
@@ -194,10 +229,11 @@ export async function listActiveMemberships(
          JOIN roles r ON r.id = m.role_id
         WHERE m.user_id = ? AND m.status = 'active'
         ORDER BY m.created_at`,
-    )
-    .bind(userId)
-    .all<MembershipJoinRow>();
-  return results.map(toMembershipSummary);
+    ).bind(userId),
+    linkedStudentsStatement(db, userId),
+  ]);
+  const memberships = (membershipResult?.results ?? []).map((row) => toMembershipSummary(row as MembershipJoinRow));
+  return addGuardianStudents(memberships, (studentResult?.results ?? []) as GuardianStudentRow[]);
 }
 
 export interface MeMembership extends MembershipSummary {
@@ -215,7 +251,7 @@ export async function getMe(
   userId: string,
   activeMembershipId: string | null,
 ): Promise<MeResponse> {
-  const [user, memberships] = await db.batch([
+  const [user, memberships, linkedStudents] = await db.batch([
     db
       .prepare(
         `SELECT id, phone, display_name, password_hash, must_change_password,
@@ -234,12 +270,15 @@ export async function getMe(
           ORDER BY m.created_at`,
       )
       .bind(userId),
+    linkedStudentsStatement(db, userId),
   ]);
 
   const userRow = (user?.results?.[0] as UserRow | undefined) ?? null;
   if (!userRow) throw notFound();
 
   const membershipRows = (memberships?.results ?? []) as MembershipJoinRow[];
+  const membershipSummaries = addGuardianStudents(membershipRows.map(toMembershipSummary),
+    (linkedStudents?.results ?? []) as GuardianStudentRow[]);
   const roleIds = [...new Set(membershipRows.map((row) => row.role_id))];
 
   const permissionsByRole = new Map<string, Permissions>();
@@ -266,10 +305,10 @@ export async function getMe(
   return {
     user: toUserView(userRow),
     active_membership_id: activeMembershipId,
-    memberships: membershipRows.map((row) => ({
-      ...toMembershipSummary(row),
+    memberships: membershipSummaries.map((membership, index) => ({
+      ...membership,
       permissions:
-        permissionsByRole.get(row.role_id) ??
+        permissionsByRole.get(membershipRows[index]!.role_id) ??
         (Object.fromEntries(PERM_GROUPS.map((group) => [group, 'none'])) as Permissions),
     })),
   };

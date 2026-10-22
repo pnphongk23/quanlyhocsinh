@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../types';
-import { cancelSession, createManualSession, listCalendar, listClassSessions } from '../db/sessions';
+import { cancelSession, createManualSession, listCalendar, listClassSessions, updateManualSession } from '../db/sessions';
 import { encodeCursor, parseSessionCursor } from '../db/attendance';
 import { isDate } from '../db/classes';
 import { validationError } from '../lib/errors';
@@ -39,3 +39,8 @@ sessionsRoutes.post('/classes/:id/sessions', async (c) => {
 });
 sessionsRoutes.post('/sessions/:id/cancel', async (c) =>
   c.json(await cancelSession(c.env.DB, c.get('identity'), c.req.param('id'))));
+
+sessionsRoutes.patch('/sessions/:id', async (c) => {
+  const body = await readJsonObject(c.req.raw);
+  return c.json(await updateManualSession(c.env.DB, c.get('identity'), c.req.param('id'), body));
+});
