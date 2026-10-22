@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import {
@@ -24,6 +24,7 @@ import {
 import { EditClassModal } from "../classes/EditClassModal";
 import { EditClassSchedule } from "../classes/EditClassSchedule";
 import { sessionPrefix } from "../../data/repositories/sessions";
+import { useSlideIndicator } from "../../shared/motion";
 import s from "./desktop.module.css";
 
 /** Năm tab của lớp, đúng thứ tự ảnh 01…15. */
@@ -97,6 +98,8 @@ export default function ClassDesktopHeader({
   const visibleTabs = TABS.filter((tab) => access.can(tab.group, "read"));
   const studentCount = listStudents(classId).length;
   const activeLabel = visibleTabs.find((tab) => tab.to === active)?.label;
+  const tabsRef = useRef<HTMLElement>(null);
+  const indicatorReady = useSlideIndicator(tabsRef, active);
 
   useEffect(() => {
     if (getCurrentClassId() !== classId) setCurrentClass(classId);
@@ -214,7 +217,7 @@ export default function ClassDesktopHeader({
             {actions}
           </div>
         </div>
-        <nav className={s.tabs} aria-label="Mục của lớp">
+          <nav ref={tabsRef} className={s.tabs} aria-label="Mục của lớp">
           {visibleTabs.map((tab) => (
             <Link
               key={tab.to}
@@ -224,8 +227,9 @@ export default function ClassDesktopHeader({
             >
               {tab.label}
             </Link>
-          ))}
-        </nav>
+            ))}
+            <span className={s.slideBar + (indicatorReady ? ` ${s.slideBarReady}` : "")} aria-hidden="true" />
+          </nav>
       </header>
       {error && (
         <p role="alert" className={s.error}>

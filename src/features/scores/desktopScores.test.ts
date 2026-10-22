@@ -77,7 +77,10 @@ describe("Bảng điểm nhập trực tiếp trên web (ảnh 13)", () => {
     const empty = scores.filter((score) => score.value === null);
     expect(empty.length).toBeGreaterThan(0);
     expect(formatScore(0)).toBe("0");
-    expect(formatScore(7.5)).toBe("7,5");
+      expect(formatScore(7.5)).toBe("7,5");
+      expect(formatScore(0.5)).toBe("0,5");
+      expect(formatScore(14.5)).toBe("14,5");
+      expect(formatScore(null)).toBe("Chưa có điểm");
     expect(formatScore(8)).toBe("8");
     expect(students.length).toBe(10);
   });

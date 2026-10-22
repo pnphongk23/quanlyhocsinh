@@ -4,6 +4,9 @@
   border-collapse: collapse;
 }
 
+.table th:first-child, .table td:first-child { width: auto; }
+.table th:not(:first-child), .table td:not(:first-child) { width: 1%; white-space: nowrap; }
+
 .table th {
   padding: 0 0 8px;
   color: var(--color-muted);
@@ -25,8 +28,8 @@
 
 .statusGroup {
   display: flex;
-  gap: 2px;
-  padding: 3px;
+  gap: 4px;
+  padding: 4px;
   border-radius: 10px;
   background: var(--color-neutral-soft);
 }

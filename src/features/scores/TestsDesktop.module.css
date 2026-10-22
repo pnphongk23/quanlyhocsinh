@@ -6,8 +6,10 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
+
+.table th:not(:first-child), .table td:not(:first-child) { width: 1%; white-space: nowrap; }
 
 .table th {
   padding: 0 4px 8px 12px;

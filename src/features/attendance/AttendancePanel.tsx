@@ -257,7 +257,7 @@ export default function AttendancePanel({
           web 89: nút nằm cùng hàng với tiêu đề, tóm tắt 4 trạng thái trong thẻ */}
       {!viewOnly && (
       <div className={s.summaryRow}>
-        {!desktop && (
+        {!desktop && !readOnly && (
           <p className={s.summary}>
             <b>{counts[3]}</b> vắng mặt
           </p>

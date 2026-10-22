@@ -1,11 +1,11 @@
-import { formatDate } from "../../shared/format";
+import { formatDate, formatScore } from "../../shared/format";
 import { Button, Icon } from "../../shared/ui";
 import type { MonthlyStudentReport } from "../../data/reportModel";
 import { reportMonthTitle } from "./reviewStatus";
 import styles from "./ReportsPage.module.css";
 
 const starOrder = [3, 2, 1] as const;
-const formatScoreDot = (value: number) => value.toFixed(1);
+  const formatScoreDot = (value: number) => formatScore(value);
 
 export interface ReportPreviewProps {
   report: MonthlyStudentReport;

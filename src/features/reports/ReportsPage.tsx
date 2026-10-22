@@ -19,6 +19,7 @@ import { listTests } from "../../data/repositories/tests";
 import { useStore } from "../../data/store";
 import type { Report, Student } from "../../data/types";
 import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
+import { Collapse } from "../../shared/motion";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import {
   Button,
@@ -548,10 +549,9 @@ export default function ReportsPage() {
                           {row.slot.label}
                         </Pill>
                       </button>
-                      {active && (
-                        <div className={styles.studentExpanded}>
-                          <ReportFacts report={row.report} />
-                          {commentEditor}
+                        <Collapse open={active} className={styles.studentExpanded}>
+                            <ReportFacts report={row.report} />
+                            {commentEditor}
                           <Button
                             variant="secondary"
                             size="lg"
@@ -559,8 +559,7 @@ export default function ReportsPage() {
                           >
                             Xem trước
                           </Button>
-                        </div>
-                      )}
+                        </Collapse>
                     </div>
                   );
                 })}

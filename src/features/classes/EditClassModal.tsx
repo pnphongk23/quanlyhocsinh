@@ -67,7 +67,10 @@ export function EditClassModal({
           </p>
         )}
         <SaveStatus status={save.status} />
-        <Button type="submit" disabled={saving}>Lưu thay đổi</Button>
+          <div className={s.modalActions}>
+            <Button type="button" variant="secondary" disabled={saving} onClick={onClose}>Huỷ</Button>
+            <Button type="submit" disabled={saving}>Lưu thay đổi</Button>
+          </div>
       </form>
     </Modal>
   );

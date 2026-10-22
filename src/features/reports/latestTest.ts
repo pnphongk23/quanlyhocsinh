@@ -1,4 +1,5 @@
 import type { Score, Test } from "../../data/types";
+import { formatScore } from "../../shared/format";
 
 export interface LatestTestScore {
   name: string;
@@ -50,5 +51,5 @@ export function latestTestLabel(latest: LatestTestScore | null): string {
 
 /** Số gọn cho điểm: 14 → "14", 7.5 → "7,5". */
 export function trimNumber(value: number): string {
-  return String(Number(value.toFixed(2))).replace(".", ",");
+    return formatScore(value);
 }

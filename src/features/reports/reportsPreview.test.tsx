@@ -99,8 +99,9 @@ describe("bản xem trước báo cáo tháng (ảnh 07)", () => {
     );
     // Điểm từng bài dạng value/max + nhận xét chung.
     expect(html).toContain("Điểm từng bài");
-    expect(html).toContain("8.0/10");
-    expect(html).toContain("10.0/10");
+    expect(html).toContain("8/10");
+    expect(html).toContain("10/10");
+    expect(html).not.toContain("10.0");
     expect(html).toContain("Bài chưa có điểm cần chấm trước khi phát hành.");
     expect(html).toContain("Nhận xét chung");
       expect(html).toContain("Nhận xét kiểm thử tổng hợp.");

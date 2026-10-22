@@ -1,0 +1,8 @@
+.card { display:grid; gap:10px; padding:16px; border-radius:var(--radius-card); background:var(--color-primary); color:var(--color-on-primary); }
+.heading { margin:0; font-size:16px; font-weight:700; }
+.subheading { margin:4px 0 0; font-size:14px; font-weight:700; }
+.session { display:grid; justify-items:start; gap:3px; width:100%; color:var(--color-primary-ink); text-align:left; }
+.session span { font-size:13px; font-weight:400; }
+.tasks { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.tasks a { color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.remaining,.empty { margin:0; font-size:14px; }

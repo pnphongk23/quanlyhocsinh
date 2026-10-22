@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { getClass } from "../../data/repositories/classes";
 import {
   createStudent,
+  classAttendanceRate,
   listStudents,
   markStudentLeft,
   updateStudentPhone,
@@ -154,8 +155,11 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
 
         <div className={s.stats}>
           <div className={d.statCard}>
-            <div className={d.statValue}>{active.length}</div>
-            <div className={d.statLabel}>đang học</div>
+            <div><div className={d.statValue}>{active.length}</div><div className={d.statLabel}>đang học</div></div>
+            <span className={s.statDivider} />
+            <div><div className={d.statValue}>{students.length - active.length}</div><div className={d.statLabel}>đã nghỉ</div></div>
+            <span className={s.statDivider} />
+            <div><div className={d.statValue}>{classAttendanceRate(classId) === null ? "—" : `${Math.round(classAttendanceRate(classId)!)}%`}</div><div className={d.statLabel}>chuyên cần lớp</div></div>
           </div>
         </div>
 
@@ -163,15 +167,13 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
         <table className={s.table}>
           <colgroup>
             <col />
-              <col style={{ width: 190 }} />
               <col style={{ width: 84 }} />
               <col style={{ width: 48 }} />
           </colgroup>
           <thead>
             <tr>
               <th>Học sinh</th>
-              <th>Lớp đang học</th>
-              <th>Chuyên cần</th>
+                <th>Chuyên cần</th>
                 <th aria-label="Thao tác" />
             </tr>
           </thead>
@@ -187,8 +189,7 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
                       {student.parentPhone || "Chưa có SĐT"}
                     </span>
                   </td>
-                  <td className={s.classCell}>{klass.name}</td>
-                  <td className={s.rateCell}>
+                    <td className={s.rateCell}>
                     {rate ? `${rate.attended}/${rate.total}` : "Chưa có"}
                   </td>
                   <td>

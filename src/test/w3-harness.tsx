@@ -15,6 +15,11 @@ import ScoreGridTab from "../features/class-space/ScoreGridTab";
 import NewTestPage from "../features/scores/NewTestPage";
 import TestScoresPage from "../features/scores/TestScoresPage";
 import ReportsPage from "../features/reports/ReportsPage";
+import ClassListPage from "../features/classes/ClassListPage";
+import NewClassPage from "../features/classes/NewClassPage";
+import StudentsPage from "../features/students/StudentsPage";
+import SettingsPage from "../features/settings/SettingsPage";
+import { EditClassModal } from "../features/classes/EditClassModal";
 import { Component as StaffShell } from "../roles/staff/StaffShell";
 import { createSeed } from "./fixtures/seed";
 import { replaceStore } from "../data/store";
@@ -31,8 +36,12 @@ const router = createMemoryRouter(
   [
     {
       element: <StaffShell />,
-      children: [
-        {
+        children: [
+          { path: "/lop", element: <ClassListPage /> },
+          { path: "/lop/moi", element: <NewClassPage /> },
+          { path: "/cai-dat", element: <SettingsPage /> },
+          { path: "/__edit-class", element: <EditClassModal classId="6a" onClose={() => {}} onEditSchedule={() => {}} /> },
+          {
           path: "/lop/:classId",
           element: <ClassSpaceLayout />,
           children: [
@@ -42,7 +51,8 @@ const router = createMemoryRouter(
             { path: "bai-kiem-tra", element: <TestsTab /> },
             { path: "bai-kiem-tra/moi", element: <NewTestPage />, handle: { detail: true } },
             { path: "bai-kiem-tra/:testId", element: <TestScoresPage />, handle: { detail: true } },
-            { path: "diem", element: <ScoreGridTab /> },
+              { path: "diem", element: <ScoreGridTab /> },
+              { path: "hoc-sinh", element: <StudentsPage /> },
             { path: "bao-cao", element: <ReportsPage /> },
           ],
         },

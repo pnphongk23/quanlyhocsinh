@@ -4,6 +4,9 @@
   gap: 12px;
 }
 
+.stats > :first-child { display:flex; align-items:center; gap:16px; width:max-content; }
+.statDivider { align-self:stretch; width:1px; background:var(--color-divider); }
+
 .table {
   width: 100%;
   border-collapse: collapse;

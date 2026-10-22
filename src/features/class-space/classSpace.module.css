@@ -55,6 +55,7 @@
 }
 
 .subTabs {
+  position: relative;
   display: flex;
   gap: 4px;
   justify-content: space-between;
@@ -63,6 +64,18 @@
   scrollbar-width: none;
   border-bottom: 1px solid var(--color-border);
 }
+
+.slideBar {
+  position: absolute;
+  left: 0;
+  top: calc(var(--ind-top, 0px) + var(--ind-h, 0px) - 3px);
+  width: var(--ind-w, 0px);
+  height: 3px;
+  background: var(--color-primary);
+  transform: translateX(var(--ind-x, 0px));
+  pointer-events: none;
+}
+.slideBarReady { transition: transform 200ms var(--ease-standard), width 200ms var(--ease-standard); }
 
 .subTabs::-webkit-scrollbar {
   display: none;
@@ -85,7 +98,7 @@
 
 .subTabActive {
   color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  border-bottom-color: transparent;
 }
 
 .body {

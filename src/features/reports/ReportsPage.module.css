@@ -170,9 +170,11 @@
   display: grid;
   gap: 12px;
   min-width: 0;
+  width: 100%;
   padding-top: 8px;
   border-top: 1px solid var(--color-divider);
 }
+.studentExpanded > :global(div) { min-width: 0; width: 100%; }
 .studentName {
   display: grid;
   flex: 1;
@@ -249,7 +251,7 @@
 }
 .statGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   min-width: 0;
 }
@@ -583,13 +585,19 @@
   .page {
     gap: 18px;
   }
-  .desktopLayout {
+    .desktopLayout {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.9fr);
+      grid-template-columns: minmax(0, 1fr) 380px;
     align-items: start;
-    gap: 18px;
+      gap: 16px;
     min-width: 0;
   }
+
+  .desktopLayout > :last-child { position: sticky; top: 24px; }
+  .suggestionButton { width: auto; justify-self: end; min-width: 96px; }
+  .actions { justify-content: flex-end; }
+  .actions > button { flex: none; min-width: 96px; }
+  .studentRow { padding: 12px; }
   .listCard {
     padding: 16px 20px;
   }

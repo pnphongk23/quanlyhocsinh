@@ -20,6 +20,7 @@ import { useStore } from "../../data/store";
 import type { PermissionGroup } from "../../data/types";
 import { EmptyState, Icon, LinkButton, NoAccess } from "../../shared/ui";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
+import { useSlideIndicator } from "../../shared/motion";
 import { ClassOptionsMenu, type ClassOption } from "../classes/ClassOptionsMenu";
 import { EditClassModal } from "../classes/EditClassModal";
 import { EditClassSchedule } from "../classes/EditClassSchedule";
@@ -63,6 +64,8 @@ export default function ClassSpaceLayout() {
       : undefined;
   const canWriteClasses = access.can("classes", "write");
   const visibleTabs = tabs.filter((tab) => access.can(tab.group, "read"));
+  const activeTab = tabs.find((tab) => pathname.includes(`/${tab.to}`))?.to ?? tabs[0].to;
+  const indicatorReady = useSlideIndicator(subTabsRef, activeTab);
   const detail = matches.some(
     (match) => (match.handle as { detail?: boolean } | undefined)?.detail,
   );
@@ -167,7 +170,7 @@ export default function ClassSpaceLayout() {
             </div>
           )}
         </div>
-        <nav ref={subTabsRef} className={s.subTabs} aria-label="Mục của lớp">
+          <nav ref={subTabsRef} className={s.subTabs} aria-label="Mục của lớp">
           {visibleTabs.map((tab) => (
             <NavLink
               key={tab.to}
@@ -179,7 +182,8 @@ export default function ClassSpaceLayout() {
             >
               {tab.label}
             </NavLink>
-          ))}
+            ))}
+            <span className={s.slideBar + (indicatorReady ? ` ${s.slideBarReady}` : "")} aria-hidden="true" />
         </nav>
       </header>
       <div className={s.body}>
