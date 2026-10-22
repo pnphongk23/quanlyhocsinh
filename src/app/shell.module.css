@@ -8,3 +8,29 @@
 .content { max-width: 1120px; padding: 24px max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)); margin-inline: auto; }
 .content h1 { font-size: 24px; margin-bottom: 20px; }
 @media (min-width: 900px) { .content { padding: 32px; } }
+
+/* Staff shell follows the desktop sidebar and mobile tab bar in the prototype. */
+.staffDesktop { min-height: 100dvh; padding-bottom: calc(64px + env(safe-area-inset-bottom)); background: var(--color-bg); }
+.staffSkip { position: fixed; top: -100px; left: 8px; z-index: 20; padding: 12px; border-radius: var(--radius-button); background: var(--color-surface); color: var(--color-text); }
+.staffSkip:focus { top: 8px; }
+.staffContent { display: flex; min-width: 0; flex-direction: column; gap: 12px; padding: 12px 20px 16px; }
+.staffMobileSaveStatus { display: flex; width: fit-content; margin: calc(8px + env(safe-area-inset-top)) 20px 0; }
+.staffSidebar { display: none; }
+.staffTabbar { position: fixed; z-index: 10; right: 0; bottom: 0; left: 0; display: flex; padding: 0 4px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: var(--color-surface); }
+.staffTabbar a { display: flex; min-height: 56px; flex: 1; flex-direction: column; align-items: center; justify-content: center; padding-top: 8px; border-top: 3px solid transparent; color: var(--color-muted); text-decoration: none; font-size: 12px; font-weight: 600; }
+.staffTabbar a[aria-current="page"] { border-top-color: var(--color-primary); color: var(--color-primary); }
+@media (min-width: 1024px) {
+  .staffDesktop { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); height: calc(100dvh - 32px); min-height: 0; margin: 16px; padding: 0; overflow: hidden; border-radius: var(--radius-card); background: var(--color-bg); box-shadow: 0 2px 10px rgb(20 24 31 / 0.06); }
+  .staffSidebar { display: flex; min-height: 0; flex-direction: column; gap: 6px; padding: 20px 14px; overflow-y: auto; border-right: 1px solid var(--color-border); background: var(--color-surface); }
+  .staffBrand { padding: 4px 12px 14px; color: var(--color-primary); font-size: 18px; font-weight: 700; text-decoration: none; }
+  .staffClassScope { display: grid; gap: 6px; margin: 0 4px 8px; padding: 12px; border: 1px solid var(--color-border); border-radius: 12px; color: var(--color-muted); font-size: 12px; }
+  .staffClassScope strong { color: var(--color-text); font-size: 14px; }
+  .staffSideNav { display: grid; gap: 6px; }
+  .staffNavItem { display: flex; min-height: var(--tap); align-items: center; padding: 0 12px; border-radius: 12px; color: var(--color-muted); text-decoration: none; font-size: 15px; font-weight: 600; }
+  .staffNavActive { background: var(--color-primary-soft); color: var(--color-primary-ink); }
+  .staffRole { display: grid; gap: 8px; margin-top: auto; padding: 24px 12px 0; color: var(--color-muted); font-size: 13px; }
+  .staffDesktopSaveStatus { display: flex; width: fit-content; }
+  .staffContent { gap: 20px; padding: 28px 32px; overflow-y: auto; }
+  .staffTabbar { display: none; }
+  .staffMobileSaveStatus { display: none; }
+}
