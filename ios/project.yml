@@ -49,6 +49,9 @@ targets:
         # Chỉ iPhone: app ưu tiên iPhone; bản web desktop làm sau (docs/spec.md mục 8).
         TARGETED_DEVICE_FAMILY: "1"
       configs:
+        Staging:
+          # Simulator ad-hoc signing has no provisioning AppIdentifierPrefix.
+          CODE_SIGN_ENTITLEMENTS: QuanLyLop/Resources/QuanLyLop-Staging.entitlements
         Production:
           EXCLUDED_SOURCE_FILE_NAMES: "CoreFixtures.json"
 
