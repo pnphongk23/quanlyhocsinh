@@ -15,6 +15,8 @@ struct MonthlyReportView: View {
     @State private var error: String?
     @State private var publishing = false
     @State private var saveTask: Task<Void, Never>?
+    @State private var shareItem: I4ReportPDFShareItem?
+    @State private var temporaryPDFURL: URL?
 
     init(classID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.classID = classID
@@ -96,6 +98,12 @@ struct MonthlyReportView: View {
             message = nil
             error = nil
             commentDraft = nil
+        }
+        .sheet(item: $shareItem, onDismiss: {
+            I4ReportPDFFile.remove(temporaryPDFURL)
+            temporaryPDFURL = nil
+        }) { item in
+            I4ReportPDFShareSheet(url: item.url)
         }
     }
 
@@ -370,7 +378,7 @@ struct MonthlyReportView: View {
             var published = 0
             for report in waiting {
                 switch await data.publish(student: report.student, month: month) {
-                case .published, .publishedWithoutPDF: published += 1
+                  case .published: published += 1
                 case .failed: break
                 }
             }
@@ -635,11 +643,8 @@ struct MonthlyReportView: View {
             case .published:
                 message = String(localized: "feature.reports.a.phat.hanh.bao.cao")
                 error = nil
-            case .publishedWithoutPDF:
-                message = String(localized: "feature.reports.a.phat.hanh.bao.cao.nhung.chua.tai.uoc.pdf.len.m")
-                error = nil
-            case .failed(let failure):
-                error = failure
+              case .failed(let failure):
+                  error = failure
             }
         }
     }
@@ -647,32 +652,21 @@ struct MonthlyReportView: View {
     private func printReport(_ report: I4MonthlyReport) {
         let pdf = I4PDFRenderer.render(snapshot: report.snapshot, studentName: report.student.name,
                                        className: klass?.name ?? "")
-        I4PrintPresenter.shared.present(pdf: pdf)
+        do {
+            let publicationNo = data.report(studentID: report.student.id, month: month)?.publicationCount ?? 0
+            let url = try I4ReportPDFFile.write(pdf, month: month, publicationNo: publicationNo)
+            temporaryPDFURL = url
+            shareItem = I4ReportPDFShareItem(url: url)
+            error = nil
+        } catch _ {
+            error = String(localized: "feature.reports.khong.the.tao.pdf")
+        }
     }
 }
 
 struct CommentDraft {
     let key: String
     let value: String
-}
-
-/// Presents the system print dialog with the locally rendered report PDF.
-@MainActor
-final class I4PrintPresenter {
-    static let shared = I4PrintPresenter()
-    private var controller: UIPrintInteractionController?
-
-    func present(pdf: Data) {
-        guard UIPrintInteractionController.isPrintingAvailable else { return }
-        let controller = UIPrintInteractionController.shared
-        let info = UIPrintInfo(dictionary: nil)
-        info.jobName = "Bao cao thang"
-        info.outputType = .general
-        controller.printInfo = info
-        controller.printingItem = pdf
-        self.controller = controller
-        controller.present(animated: true, completionHandler: nil)
-    }
 }
 
 /// The monthly report PDF: the same content as the preview, rendered on device with UIKit.

@@ -118,6 +118,13 @@ Xem thư viện thành phần (design system) ngay trên simulator:
 SIMCTL_CHILD_QLH_DESIGN_GALLERY=1 xcrun simctl launch booted vn.quanlylop.app   # =sheet để mở sheet mẫu
 ```
 
+## PDF báo cáo (iOS-19)
+
+Phát hành chỉ gửi yêu cầu `POST …/publish` và lưu bản chụp báo cáo. Khi người dùng chọn “In báo cáo”
+(giáo viên) hoặc “Tải PDF về máy” (phụ huynh), app tạo PDF từ dữ liệu trên máy, mở bảng chia sẻ iOS để
+in, lưu vào Tệp hoặc gửi qua ứng dụng khác, rồi xoá file tạm khi bảng đóng. App không tải PDF lên hoặc
+tải PDF từ máy chủ.
+
 ## Chưa có (đúng phạm vi bản nền)
 
 - API thật, đăng nhập, mọi màn nghiệp vụ (I-2..I-5).

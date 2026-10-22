@@ -114,7 +114,8 @@ struct GuardianReportView: View {
             starsCard(report)
             homeworkCard(report)
             testsCard(report)
-            GuardianReportDownloadButton(publication: publication, month: month)
+            GuardianReportDownloadButton(publication: publication, month: month,
+                                         studentName: child.student.name, className: child.className)
         }
     }
 

@@ -435,25 +435,17 @@ final class I4FeatureStore: ObservableObject {
 
     enum PublishOutcome: Equatable {
         case published(publicationNo: Int)
-        case publishedWithoutPDF(publicationNo: Int)
         case failed(String)
     }
 
-    /// Publishes the month through `POST …/publish` and uploads the locally rendered PDF.
+    /// Publishes the month through `POST …/publish`.
     func publish(student: Student, month: String) async -> PublishOutcome {
         guard let api else { return .failed(String(localized: "feature.scores.khong.the.phat.hanh.luc.nay.kiem.tra.ket.noi.roi")) }
         let path = "students/\(student.id)/reports/\(month)/publish"
         do {
             let response = try await api.send(.init(method: .post, path: path), as: ReportPublishResponse.self)
             await refresh()
-            let pdf = I4PDFRenderer.render(snapshot: response.snapshot, studentName: student.name)
-            do {
-                try await ReportPDFUpload.upload(pdf: pdf, reportId: response.reportId,
-                                                   publicationNo: response.publicationNo, api: api)
-                return .published(publicationNo: response.publicationNo)
-            } catch {
-                return .publishedWithoutPDF(publicationNo: response.publicationNo)
-            }
+            return .published(publicationNo: response.publicationNo)
         } catch { return .failed(String(localized: "feature.scores.khong.the.phat.hanh.luc.nay.kiem.tra.ket.noi.roi")) }
     }
 

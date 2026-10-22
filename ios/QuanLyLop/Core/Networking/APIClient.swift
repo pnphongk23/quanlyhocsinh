@@ -19,14 +19,6 @@ struct APIEndpoint: Sendable, Hashable {
         .init(method: method, path: path, body: try WireJSON.encoder().encode(body),
               requiresAuthentication: requiresAuthentication)
     }
-    /// Raw (non-JSON) body, e.g. a generated report PDF sent as `application/pdf`
-    /// (`PUT /reports/{id}/publications/{no}/pdf`, api-spec mục 8).
-    static func binary(method: Method, path: String, query: [String: String] = [:], body: Data,
-                       contentType: String = "application/octet-stream",
-                       requiresAuthentication: Bool = true) -> Self {
-        .init(method: method, path: path, query: query, body: body,
-              contentType: contentType, requiresAuthentication: requiresAuthentication)
-    }
 }
 
 struct APIError: Codable, Sendable, Equatable {

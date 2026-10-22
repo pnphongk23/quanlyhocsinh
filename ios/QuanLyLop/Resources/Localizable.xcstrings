@@ -4249,18 +4249,6 @@
         }
       }
     },
-    "feature.guardian.ang.tai.pdf": {
-      "comment": "Chuỗi hiển thị trong Features/Guardian.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đang tải PDF…"
-          }
-        }
-      }
-    },
     "feature.guardian.bai": {
       "comment": "Chuỗi hiển thị có giá trị động trong Features/Guardian.",
       "extractionState": "manual",
@@ -4329,18 +4317,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Báo cáo"
-          }
-        }
-      }
-    },
-    "feature.guardian.bao.cao.chua.co.tep.pdf.vui.long.thu.lai.sau": {
-      "comment": "Chuỗi hiển thị trong Features/Guardian.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Báo cáo chưa có tệp PDF. Vui lòng thử lại sau."
           }
         }
       }
@@ -5053,18 +5029,6 @@
         }
       }
     },
-    "feature.guardian.khong.co.ket.noi.mang.vui.long.thu.lai": {
-      "comment": "Chuỗi hiển thị trong Features/Guardian.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Không có kết nối mạng. Vui lòng thử lại."
-          }
-        }
-      }
-    },
     "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai": {
       "comment": "Chuỗi hiển thị trong Features/Guardian.",
       "extractionState": "manual",
@@ -5073,18 +5037,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Không tải được dữ liệu của con. Vui lòng thử lại."
-          }
-        }
-      }
-    },
-    "feature.guardian.khong.tai.uoc.pdf.vui.long.thu.lai": {
-      "comment": "Chuỗi hiển thị trong Features/Guardian.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Không tải được PDF. Vui lòng thử lại."
           }
         }
       }
@@ -5349,18 +5301,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Phần"
-          }
-        }
-      }
-    },
-    "feature.guardian.phien.ang.nhap.a.het.han.vui.long.ang.nhap.lai": {
-      "comment": "Chuỗi hiển thị trong Features/Guardian.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
           }
         }
       }
@@ -6421,7 +6361,7 @@
         }
       }
     },
-    "feature.reports.a.phat.hanh.bao.cao.b1c96543": {
+      "feature.reports.a.phat.hanh.bao.cao.b1c96543": {
       "comment": "Chuỗi hiển thị có giá trị động trong Features/Reports.",
       "extractionState": "manual",
       "localizations": {
@@ -6432,19 +6372,31 @@
           }
         }
       }
-    },
-    "feature.reports.a.phat.hanh.bao.cao.nhung.chua.tai.uoc.pdf.len.m": {
-      "comment": "Chuỗi hiển thị trong Features/Reports.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đã phát hành báo cáo nhưng chưa tải được PDF lên máy chủ."
+      },
+      "feature.reports.dang.chuan.bi.pdf": {
+        "comment": "Chuỗi trạng thái khi chuẩn bị PDF báo cáo trên thiết bị.",
+        "extractionState": "manual",
+        "localizations": {
+          "vi": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Đang chuẩn bị PDF…"
+            }
           }
         }
-      }
-    },
+      },
+      "feature.reports.khong.the.tao.pdf": {
+        "comment": "Chuỗi lỗi khi không thể tạo hoặc lưu PDF báo cáo trên thiết bị.",
+        "extractionState": "manual",
+        "localizations": {
+          "vi": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Không thể tạo PDF. Vui lòng thử lại."
+            }
+          }
+        }
+      },
     "feature.reports.bai": {
       "comment": "Chuỗi hiển thị có giá trị động trong Features/Reports.",
       "extractionState": "manual",

@@ -23,10 +23,6 @@ struct APIEndpoint: Sendable, Hashable {              // Hashable vì StubAPICli
          contentType: String? = nil, requiresAuthentication: Bool = true)
     static func json<T: Encodable>(method: Method, path: String, body: T,
                                    requiresAuthentication: Bool = true) throws -> Self
-    // Body nhị phân (PDF, ảnh…) với Content-Type riêng; mặc định application/octet-stream.
-    static func binary(method: Method, path: String, query: [String: String] = [:], body: Data,
-                       contentType: String = "application/octet-stream",
-                       requiresAuthentication: Bool = true) -> Self
 }
 protocol APIClient: Sendable {
     var baseURL: URL { get }
@@ -43,24 +39,13 @@ extension StubAPIClient { static func demo(baseURL:membershipId:bundle:) throws 
 query được sắp theo khoá. **Query rỗng không tạo `?`** (đã sửa ở I-1b).
 
 `Content-Type` tự đặt: `endpoint.contentType` nếu có, ngược lại `application/json` khi có body, và
-không gửi header này khi không có body (GET/DELETE). `Accept` luôn `application/json`. Body nhị phân
-đi nguyên byte, không encode lại.
+không gửi header này khi không có body (GET/DELETE). `Accept` luôn `application/json`.
 
-**Tải PDF báo cáo tháng (I-4)** — `PUT /reports/{id}/publications/{no}/pdf`, `application/pdf`, ≤ 5 MB,
-"đúng một lần" theo `api-spec.md` mục 8. Client tự sinh PDF từ `snapshot` rồi:
-
-```swift
-let pdf = try makePDF(publication.snapshot)                 // thư viện tải lười, không thêm dependency vào Core
-guard pdf.count <= 5 * 1024 * 1024 else { throw ReportExportError.pdfTooLarge }
-let endpoint = APIEndpoint.binary(method: .put,
-    path: "reports/\(publication.reportId)/publications/\(publication.publicationNo)/pdf",
-    body: pdf, contentType: "application/pdf")
-_ = try await api.send(endpoint, as: EmptyResponse.self)     // server hiện trả 204; nếu backend đổi sang JSON thì decode kiểu tương ứng
-```
-
-Kiểm dung lượng ở tầng feature trước khi gọi; `APIEndpoint` không cắt bớt body. Lệnh này **không** đi qua
-hàng đợi đồng bộ (endpoint không nằm trong danh mục lệnh mục 6.2): I-4 cần mạng và xử lý lỗi tại chỗ,
-phát hành lại thì gửi lại cùng `publication_no`.
+**PDF báo cáo tháng (iOS-19)** — phát hành gọi `POST /students/{studentId}/reports/{month}/publish` để
+lưu bản chụp và nhận `ReportPublishResponse`. Không tải PDF lên hoặc xuống máy chủ. Giáo viên và phụ huynh
+tạo PDF cục bộ từ dữ liệu báo cáo (phụ huynh dùng `ReportPublication.snapshot`) khi chạm nút xuất, ghi file
+vào thư mục tạm, rồi mở `UIActivityViewController` để in, lưu vào Tệp hoặc chia sẻ. File tạm bị xoá khi
+bảng chia sẻ đóng.
 
 Lỗi:
 

@@ -77,39 +77,6 @@ final class NetworkingTests: XCTestCase {
         let body = try JSONDecoder().decode(JSONValue.self, from: XCTUnwrap(request.httpBody))
         XCTAssertEqual(body["base_version"], .number(3))
     }
-    func testBinaryUploadSendsRawBodyAndContentType() async throws {
-        let url = "https://fixture.invalid/v1/reports/fixture/publications/1/pdf"
-        FixtureURLProtocol.transport.add(url, status: 204)
-        // Minimal but real PDF header so the assertion reads unambiguously as binary.
-        let pdf = Data("%PDF-1.7\n%fixture\n".utf8)
-        let endpoint = APIEndpoint.binary(method: .put, path: "reports/fixture/publications/1/pdf",
-            body: pdf, contentType: "application/pdf")
-        _ = try await api().send(endpoint, as: EmptyResponse.self)
-        let request = try XCTUnwrap(FixtureURLProtocol.transport.request(url))
-        XCTAssertEqual(request.httpMethod, "PUT")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/pdf")
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer FIXTURE_NOT_A_REAL_TOKEN")
-        XCTAssertEqual(request.httpBody, pdf, "the PDF bytes must reach the wire unchanged")
-    }
-    func testBinaryEndpointContentTypeDefaultsAndStubMatching() async throws {
-        let pdf = Data("%PDF-1.7\n".utf8)
-        let endpoint = APIEndpoint.binary(method: .put, path: "reports/other/publications/2/pdf", body: pdf)
-        XCTAssertEqual(endpoint.contentType, "application/octet-stream")
-        XCTAssertEqual(endpoint.body, pdf)
-        XCTAssertTrue(endpoint.requiresAuthentication)
-        let json = try APIEndpoint.json(method: .put, path: "reports/other", body: ["month": "2026-10"])
-        XCTAssertNil(json.contentType, "JSON endpoints keep the implicit application/json header")
-        struct Stored: Decodable, Sendable, Equatable { let stored: Bool }
-        let stub = StubAPIClient(baseURL: URL(string: "https://fixture.invalid/v1")!,
-            fixtures: [endpoint: Data(#"{"stored":true}"#.utf8)])
-        let reply = try await stub.send(endpoint, as: Stored.self)
-        XCTAssertEqual(reply, Stored(stored: true))
-        let otherPDF = Data("%PDF-1.7\n%other\n".utf8)
-        do {
-            _ = try await stub.send(APIEndpoint.binary(method: .put, path: "reports/other/publications/2/pdf", body: otherPDF), as: Stored.self)
-            XCTFail("a fixture must not answer a different body")
-        } catch { XCTAssertEqual(error as? APIFailure, .badStatus(code: 404)) }
-    }
     func testErrorMappingRetryAfterAndSafeUserMessage() async throws {
         FixtureURLProtocol.transport.add("https://fixture.invalid/v1/limited", status: 429,
             json: #"{"error":{"code":"rate_limited","message":"Developer detail","request_id":"fixture-request"}}"#,
