@@ -165,8 +165,7 @@ async function verifyReopen(browser, spec) {
   const page = await createPage(browser, spec);
   await openDialog(page, spec.kind);
   await waitForEntry(page, spec.kind);
-  await startClock(page, spec.kind);
-  await triggerClose(page, spec.kind, "close");
+  await page.evaluate((kind) => window[`__probeClose${kind}`](), spec.kind);
   await page.waitForSelector(`dialog[aria-label="Probe ${spec.kind}"][data-closing]`);
   await page.evaluate((kind) => window[`__probeReopen${kind}`](), spec.kind);
   await page.waitForFunction((kind) => {

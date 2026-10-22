@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 
 function prefersReducedMotion(): boolean {
   return (
@@ -25,6 +25,51 @@ function exitAnimationNames(dialog: HTMLDialogElement): string[] {
   });
 }
 
+function animateClose(dialog: HTMLDialogElement, onFinish: () => void): () => void {
+  if (!dialog.open) {
+    onFinish();
+    return () => {};
+  }
+  if (prefersReducedMotion()) {
+    onFinish();
+    return () => {};
+  }
+
+  let done = false;
+  let timer = 0;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    window.clearTimeout(timer);
+    dialog.removeEventListener("animationend", onEnd);
+    dialog.removeAttribute("data-closing");
+    onFinish();
+  };
+  const onEnd = (event: AnimationEvent) => {
+    if (
+      event.target === dialog &&
+      !event.pseudoElement &&
+      exitNames.includes(event.animationName)
+    ) {
+      finish();
+    }
+  };
+
+  dialog.setAttribute("data-closing", "");
+  const exitNames = exitAnimationNames(dialog);
+  if (exitNames.length === 0) {
+    finish();
+    return () => {};
+  }
+  dialog.addEventListener("animationend", onEnd);
+  timer = window.setTimeout(finish, 400);
+  return () => {
+    done = true;
+    window.clearTimeout(timer);
+    dialog.removeEventListener("animationend", onEnd);
+  };
+}
+
 /**
  * Mở bằng `showModal()`; đóng thì đặt `data-closing` để chạy animation ra,
  * xong mới `close()`. Mở lại giữa chừng huỷ lần đóng đang chờ.
@@ -32,50 +77,49 @@ function exitAnimationNames(dialog: HTMLDialogElement): string[] {
 export function useAnimatedDialog(
   ref: RefObject<HTMLDialogElement | null>,
   open: boolean,
-) {
+): (onClose: () => void) => void {
+  const pendingClose = useRef<(() => void) | null>(null);
+  const finishedClose = useRef<HTMLDialogElement | null>(null);
+  const requestClose = useCallback(
+    (onClose: () => void) => {
+      const dialog = ref.current;
+      if (!dialog || !dialog.open) {
+        onClose();
+        return;
+      }
+      if (pendingClose.current) return;
+      let finished = false;
+      const cancel = animateClose(dialog, () => {
+        finished = true;
+        pendingClose.current = null;
+        finishedClose.current = dialog;
+        onClose();
+      });
+      if (!finished) pendingClose.current = cancel;
+    },
+    [ref],
+  );
+
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     if (open) {
+      pendingClose.current?.();
+      pendingClose.current = null;
+      finishedClose.current = null;
       dialog.removeAttribute("data-closing");
       if (!dialog.open) dialog.showModal();
       return;
     }
     if (!dialog.open) return;
-    if (prefersReducedMotion()) {
+    if (finishedClose.current === dialog) {
+      finishedClose.current = null;
       dialog.close();
       return;
     }
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      dialog.removeAttribute("data-closing");
-      if (dialog.open) dialog.close();
-    };
-    dialog.setAttribute("data-closing", "");
-    // Read after data-closing so only the exit animation (dialogOut/sheetOut)
-    // can finish the dialog. The backdrop animation also targets the dialog.
-    const exitNames = exitAnimationNames(dialog);
-    if (exitNames.length === 0) {
-      finish();
-      return;
-    }
-    const onEnd = (event: AnimationEvent) => {
-      if (
-        event.target === dialog &&
-        !event.pseudoElement &&
-        exitNames.includes(event.animationName)
-      ) {
-        finish();
-      }
-    };
-    dialog.addEventListener("animationend", onEnd);
-    const timer = window.setTimeout(finish, 400);
-    return () => {
-      done = true;
-      window.clearTimeout(timer);
-      dialog.removeEventListener("animationend", onEnd);
-    };
+    const cancel = animateClose(dialog, () => dialog.close());
+    return cancel;
   }, [ref, open]);
+
+  return requestClose;
 }

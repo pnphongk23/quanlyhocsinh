@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from "react";
 import { Button } from "./Button";
+import { deferDialogClose } from "./deferDialogClose";
 import { useAnimatedDialog } from "./useAnimatedDialog";
 import s from "./ui.module.css";
 
@@ -30,7 +31,8 @@ export function Sheet({
   header,
 }: SheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
-  useAnimatedDialog(ref, open);
+  const requestClose = useAnimatedDialog(ref, open);
+  const close = () => requestClose(onClose);
   return (
     <dialog
       ref={ref}
@@ -38,27 +40,32 @@ export function Sheet({
       className={s.dialog + " " + s.sheet}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        close();
       }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-      onClose={() => {
-        if (open) onClose();
+        if (event.target === event.currentTarget) close();
       }}
     >
       {header ? (
-        <div className={s.dialogHeader}>{header}</div>
+        <div className={s.dialogHeader}>
+          {deferDialogClose(header, onClose, requestClose)}
+        </div>
       ) : (
         <div className={s.dialogHeader}>
           <h2>{title}</h2>
-          <Button variant="secondary" onClick={onClose} aria-label="Đóng">
+          <Button variant="secondary" onClick={close} aria-label="Đóng">
             Đóng
           </Button>
         </div>
       )}
-      <div className={s.dialogBody}>{children}</div>
-      {footer ? <div className={s.dialogFooter}>{footer}</div> : null}
+      <div className={s.dialogBody}>
+        {deferDialogClose(children, onClose, requestClose)}
+      </div>
+      {footer ? (
+        <div className={s.dialogFooter}>
+          {deferDialogClose(footer, onClose, requestClose)}
+        </div>
+      ) : null}
     </dialog>
   );
 }

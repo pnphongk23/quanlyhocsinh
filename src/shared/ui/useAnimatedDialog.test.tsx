@@ -1,6 +1,7 @@
-import { act, render } from "@testing-library/react";
-import { useRef } from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Modal } from "./Modal";
 import { useAnimatedDialog } from "./useAnimatedDialog";
 
 function Harness({ open }: { open: boolean }) {
@@ -20,6 +21,20 @@ function animationEnd(name: string, pseudoElement = ""): Event {
     pseudoElement: { value: pseudoElement },
   });
   return event;
+}
+
+function ConditionallyMountedModal() {
+  const [open, setOpen] = useState(true);
+  const close = () => setOpen(false);
+  return open ? (
+    <Modal open onClose={close} title="Conditional modal">
+      <form>
+        <button type="button" onClick={close}>
+          Huỷ
+        </button>
+      </form>
+    </Modal>
+  ) : null;
 }
 
 describe("useAnimatedDialog", () => {
@@ -83,6 +98,34 @@ describe("useAnimatedDialog", () => {
 
     act(() => dialog.dispatchEvent(animationEnd(exitName)));
     expect(dialog.open).toBe(false);
+  });
+
+  it("defers a nested cancel action before a conditional Modal unmount", () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      () => ({ matches: false }) as MediaQueryList,
+    );
+    const getStyle = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element, pseudo) =>
+      element instanceof HTMLDialogElement
+        ? ({
+            animationName: "dialogOut",
+            animationDuration: "200ms",
+            animationDelay: "0s",
+          }) as CSSStyleDeclaration
+        : getStyle(element, pseudo),
+    );
+    const view = render(<ConditionallyMountedModal />);
+    const dialog = view.container.querySelector("dialog")!;
+
+    fireEvent.click(screen.getByRole("button", { name: "Huỷ" }));
+
+    expect(dialog.open).toBe(true);
+    expect(dialog).toHaveAttribute("data-closing");
+    expect(view.container.querySelector("dialog")).toBe(dialog);
+
+    act(() => dialog.dispatchEvent(animationEnd("dialogOut")));
+
+    expect(view.container.querySelector("dialog")).toBeNull();
   });
 
   it("cancels the pending close when reopened", () => {

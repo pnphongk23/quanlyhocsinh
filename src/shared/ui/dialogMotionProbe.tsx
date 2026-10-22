@@ -15,6 +15,8 @@ declare global {
   interface Window {
     __probeReopenModal?: () => void;
     __probeReopenSheet?: () => void;
+    __probeCloseModal?: () => void;
+    __probeCloseSheet?: () => void;
   }
 }
 
@@ -24,6 +26,8 @@ function DialogMotionProbe() {
   const [segment, setSegment] = useState("one");
   window.__probeReopenModal = () => setModalOpen(true);
   window.__probeReopenSheet = () => setSheetOpen(true);
+  window.__probeCloseModal = () => setModalOpen(false);
+  window.__probeCloseSheet = () => setSheetOpen(false);
 
   return (
     <main data-shared-ui-probe style={{ padding: 24 }}>
