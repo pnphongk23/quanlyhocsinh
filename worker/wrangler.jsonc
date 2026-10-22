@@ -33,7 +33,7 @@
         // project Pages riêng cho mảng Web nên dùng origin của Pages prototype
         // (quanlyhocsinh-proto) cộng các cổng dev/Preview của máy cục bộ.
         // Rỗng = chặn mọi origin khác miền (iOS không bị ảnh hưởng).
-        "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,http://localhost:3000,https://quanlyhocsinh-proto.pages.dev"
+        "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,http://localhost:3000,https://quanlyhocsinh-proto.pages.dev,https://qlh-staging-web.pages.dev"
       },
       "d1_databases": [
         {
