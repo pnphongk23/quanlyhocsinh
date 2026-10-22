@@ -21,10 +21,6 @@ struct TeacherSessionRequest: Encodable {
     let note: String
 }
 
-struct GuardianCredentialResponse: Decodable {
-    let temporaryPassword: String
-}
-
 @MainActor
 @Observable
 final class TeacherFeatureData {
@@ -172,12 +168,6 @@ final class TeacherFeatureData {
         let value = try await send(.patch, path: "students/\(student.id)", body: Request(status: "left", leftAt: Self.todayString, baseVersion: student.version), as: Student.self)
         try await cache(value, entity: "student")
         await refresh()
-    }
-
-    func issueGuardianPassword(for student: Student) async throws -> String {
-        struct Request: Encodable { let displayName: String }
-        let value = try await send(.post, path: "students/\(student.id)/guardian-credentials", body: Request(displayName: student.name), as: GuardianCredentialResponse.self)
-        return value.temporaryPassword
     }
 
     func addOneOffSession(classID: String, date: String, time: String, makeup: Bool, note: String = "") async throws {

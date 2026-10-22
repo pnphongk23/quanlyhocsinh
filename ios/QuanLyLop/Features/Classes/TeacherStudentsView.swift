@@ -9,7 +9,6 @@ struct TeacherStudentsView: View {
     @State private var selectedStudent: Student?
     @State private var leaving: Student?
     @State private var editingPhone: Student?
-    @State private var revealedPassword: PasswordReveal?
     @State private var error: String?
 
     init(classID: String, data: TeacherFeatureData, showsAdd: Bool = false, optionStudent: Student? = nil) {
@@ -59,7 +58,6 @@ struct TeacherStudentsView: View {
         .sheet(item: $selectedStudent) { student in optionsSheet(student) }
         .sheet(item: $editingPhone) { student in phoneSheet(student) }
         .sheet(item: $leaving) { student in leaveSheet(student) }
-        .sheet(item: $revealedPassword) { reveal in passwordSheet(reveal.value) }
     }
 
     private var statsLine: String {
@@ -119,10 +117,6 @@ struct TeacherStudentsView: View {
                 selectedStudent = nil
                 editingPhone = student
             },
-            issuePassword: {
-                selectedStudent = nil
-                Task { await issuePassword(student) }
-            },
             markLeft: {
                 selectedStudent = nil
                 leaving = student
@@ -150,25 +144,6 @@ struct TeacherStudentsView: View {
         }
     }
 
-    private func passwordSheet(_ password: String) -> some View {
-        TeacherSheet(title: String(localized: "feature.classes.mat.khau.tam")) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(password)
-                    .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 28))
-                    .foregroundStyle(AppColors.text)
-                    .textSelection(.enabled)
-                Text(String(localized: "feature.classes.hay.gui.mat.khau.cho.phu.huynh.mat.khau.nay.chi"))
-                    .appText(AppText.muted)
-                    .foregroundStyle(AppColors.muted)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } footer: {
-            AppButton(title: String(localized: "feature.classes.a.hieu"), size: .large) { revealedPassword = nil }
-        } close: {
-            revealedPassword = nil
-        }
-    }
-
     private func markLeft(_ student: Student) {
         leaving = nil
         Task {
@@ -181,14 +156,6 @@ struct TeacherStudentsView: View {
         }
     }
 
-    private func issuePassword(_ student: Student) async {
-        do {
-            let password = try await data.issueGuardianPassword(for: student)
-            revealedPassword = PasswordReveal(value: password)
-        } catch {
-            self.error = String(localized: "feature.classes.khong.cap.uoc.mat.khau.s.t.nay.khong.tu.at.lai.u")
-        }
-    }
 }
 
 struct TeacherAddStudentSheet: View {
@@ -285,18 +252,10 @@ struct TeacherParentPhoneSheet: View {
     }
 }
 
-/// One-time guardian password shown in a sheet exactly once (spec mục 4).
-struct PasswordReveal: Identifiable {
-    let id = UUID()
-    let value: String
-}
-
-/// “Tuỳ chọn học sinh” sheet. The mobile prototype only lists “Đánh dấu nghỉ”; the two
-/// account actions come from brief I-8B (sửa SĐT, cấp mật khẩu) and keep the same rows.
+/// “Tuỳ chọn học sinh” sheet; phone editing and marking a student as left stay available.
 struct TeacherStudentOptionsSheet: View {
     let student: Student
     var editPhone: () -> Void
-    var issuePassword: () -> Void
     var markLeft: () -> Void
     var close: () -> Void
 
@@ -305,7 +264,6 @@ struct TeacherStudentOptionsSheet: View {
             VStack(spacing: 10) {
                 if student.status == .active {
                     AppButton(title: String(localized: "feature.classes.sua.so.ien.thoai"), variant: .secondary, size: .large, action: editPhone)
-                    AppButton(title: String(localized: "feature.classes.cap.mat.khau"), variant: .secondary, size: .large, action: issuePassword)
                     AppButton(title: String(localized: "feature.classes.anh.dau.nghi"), variant: .danger, size: .large, action: markLeft)
                 } else {
                     Text(String(localized: "feature.classes.hoc.sinh.a.nghi.iem.va.iem.danh.cu.van.uoc.giu.t"))

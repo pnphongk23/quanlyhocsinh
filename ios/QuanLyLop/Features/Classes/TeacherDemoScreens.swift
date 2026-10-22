@@ -155,7 +155,7 @@ enum TeacherDemoScreen: String, CaseIterable {
             TeacherAddStudentSheet(classID: TeacherDemoData.classID, data: data)
         case .studentsOptions:
             TeacherStudentOptionsSheet(student: data.students(in: TeacherDemoData.classID)[0],
-                                       editPhone: {}, issuePassword: {}, markLeft: {}, close: {})
+                                       editPhone: {}, markLeft: {}, close: {})
         case .studentsEmpty:
             TeacherStudentsView(classID: "empty-class", data: TeacherDemoData.emptyData())
         case .scheduleDay:

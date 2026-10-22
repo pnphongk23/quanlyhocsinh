@@ -2065,18 +2065,6 @@
         }
       }
     },
-    "feature.classes.cap.mat.khau": {
-      "comment": "Chuỗi hiển thị trong Features/Classes.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cấp mật khẩu"
-          }
-        }
-      }
-    },
     "feature.classes.cap.nhat.ngay.gio.hoac.ghi.chu.cho.buoi.ang.cho": {
       "comment": "Chuỗi hiển thị trong Features/Classes.",
       "extractionState": "manual",
@@ -2305,18 +2293,6 @@
         }
       }
     },
-    "feature.classes.hay.gui.mat.khau.cho.phu.huynh.mat.khau.nay.chi": {
-      "comment": "Chuỗi hiển thị trong Features/Classes.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hãy gửi mật khẩu cho phụ huynh. Mật khẩu này chỉ hiển thị một lần."
-          }
-        }
-      }
-    },
     "feature.classes.ho.va.ten.hoc.sinh": {
       "comment": "Chuỗi hiển thị trong Features/Classes.",
       "extractionState": "manual",
@@ -2529,18 +2505,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Không cập nhật được số điện thoại."
-          }
-        }
-      }
-    },
-    "feature.classes.khong.cap.uoc.mat.khau.s.t.nay.khong.tu.at.lai.u": {
-      "comment": "Chuỗi hiển thị trong Features/Classes.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Không cấp được mật khẩu. SĐT này không tự đặt lại được hoặc phụ huynh chưa có SĐT."
           }
         }
       }
@@ -2889,18 +2853,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lưu trữ lớp"
-          }
-        }
-      }
-    },
-    "feature.classes.mat.khau.tam": {
-      "comment": "Chuỗi hiển thị trong Features/Classes.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mật khẩu tạm"
           }
         }
       }
