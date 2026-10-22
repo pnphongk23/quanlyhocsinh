@@ -239,7 +239,17 @@
 }
 
 .strongName {
+  position: relative;
   font-weight: 700;
+}
+.strongName::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 36px);
+  height: 36px;
+  transform: translate(-50%, -50%);
 }
 
 .smallMeta {
@@ -270,6 +280,7 @@
 }
 
 .rowButton {
+  position: relative;
   display: grid;
   place-items: center;
   width: 44px;
@@ -280,6 +291,15 @@
   background: transparent;
   color: var(--color-muted);
   cursor: pointer;
+}
+.rowButton::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 36px;
+  transform: translateX(-50%);
 }
 .rowButton:hover,
 .rowButton:focus-visible {

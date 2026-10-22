@@ -148,6 +148,7 @@
   outline-offset: -2px;
 }
 .studentButton {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -161,6 +162,15 @@
   font: inherit;
   text-align: start;
   cursor: pointer;
+}
+.studentButton::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 44px;
+  transform: translateY(-50%);
 }
 .studentButton:focus-visible {
   outline: 3px solid var(--color-primary);
