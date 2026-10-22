@@ -52,3 +52,7 @@ Lần đầu Maestro dừng ở lỗi kết nối driver `127.0.0.1:7001`. Chạ
 
 Status: BLOCKED
 API login và các khoá JSON đã được xác minh đúng; app unsigned vẫn ở form do bước lưu token Keychain, phù hợp với OSStatus `-34018` đã ghi ở report-i6 và entitlement vắng trong bundle hiện tại. Theo chỉ đạo lead, không build bản ký hoặc lưu token ngoài Keychain nên không thể tiếp tục B.2–B.5; Part A và flow đăng nhập được commit riêng.
+
+## Cập nhật từ iOS-18
+
+Đã thử build Staging ad-hoc với entitlement riêng và chạy lại flow đăng nhập trên simulator iPhone 16 sạch. Maestro login vẫn không đạt; theo brief đã dừng, không gửi lệnh attendance và không thử đăng nhập lại. Chưa xác minh được nguyên nhân hoặc GET điểm danh độc lập; trạng thái staging vẫn `BLOCKED` (xem `report-i18.md`).
