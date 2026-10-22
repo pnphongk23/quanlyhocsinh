@@ -5,6 +5,7 @@ type Endpoint<Response, Body = never> = { response: Response; body: Body };
 export type ApiEndpoints = {
   "POST /auth/login": Endpoint<LoginResponse, { phone: string; password: string; device_label?: string }>;
   "POST /auth/register": Endpoint<LoginResponse, { phone: string; password: string; display_name: string; workspace_name: string }>;
+  "POST /auth/register-guardian": Endpoint<LoginResponse, { phone: string; password: string; display_name: string }>;
   "POST /auth/logout": Endpoint<void>;
   "POST /auth/change-password": Endpoint<{ must_change_password: false }, { current_password: string; new_password: string }>;
   "GET /me": Endpoint<MeResponse>;
@@ -39,15 +40,16 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   return { request: async (endpoint, request = {}) => {
     const [method, path] = endpoint.split(" ");
       const base = options.baseUrl.endsWith("/") ? options.baseUrl : `${options.baseUrl}/`;
-      const url = new URL(path.startsWith("/") ? path.slice(1) : path, /^[a-z][a-z\d+.-]*:/i.test(base) ? base : "http://localhost/");
-      if (!/^[a-z][a-z\d+.-]*:/i.test(base)) url.pathname = `${new URL(base, "http://localhost/").pathname.replace(/\/$/, "")}/${url.pathname.replace(/^\//, "")}`;
+      const absoluteBase = /^[a-z][a-z\d+.-]*:/i.test(base);
+      const url = new URL(path.startsWith("/") ? path.slice(1) : path, absoluteBase ? base : "http://localhost/");
+      if (!absoluteBase) url.pathname = `${new URL(base, "http://localhost/").pathname.replace(/\/$/, "")}/${url.pathname.replace(/^\//, "")}`;
     for (const [key, value] of Object.entries(request.query ?? {})) if (value !== undefined) url.searchParams.set(key, String(value));
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(new DOMException("Request timed out", "TimeoutError")), 15_000);
     const signal = request.signal ? AbortSignal.any([request.signal, controller.signal]) : controller.signal;
     const token = options.getToken();
     try {
-      const response = await fetcher(url, {
+        const response = await fetcher(absoluteBase ? url : `${url.pathname}${url.search}`, {
         method, signal, headers: {
           Accept: "application/json", ...(request.body === undefined ? {} : { "Content-Type": "application/json" }),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -14,9 +14,10 @@ export async function registerTeacher(phone: string, password: string, displayNa
   const result = await api.request("POST /auth/register", { body: { phone, password, display_name: displayName, workspace_name: workspaceName } });
   const me = await api.request("GET /me"); await activateSession(result.token, result.user, me, result.active_membership_id);
 }
-/** The MVP API contract has no parent-only registration endpoint; see web/w1-report.md. */
-export async function registerParent(_phone: string, _password: string): Promise<never> {
-  throw new Error("Câu hỏi: API đăng ký phụ huynh chưa được định nghĩa; cần endpoint tạo tài khoản và liên kết học sinh theo số điện thoại.");
+export async function registerParent(phone: string, password: string, displayName: string): Promise<void> {
+  const result = await api.request("POST /auth/register-guardian", { body: { phone, password, display_name: displayName } });
+  const me = await api.request("GET /me");
+  await activateSession(result.token, result.user, me, result.active_membership_id);
 }
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   await api.request("POST /auth/change-password", { body: { current_password: currentPassword, new_password: newPassword } });
