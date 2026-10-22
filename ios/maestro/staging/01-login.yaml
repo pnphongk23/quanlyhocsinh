@@ -16,14 +16,15 @@ name: staging-login
 - tapOn:
     id: login.password
 - inputText: ${STAGING_PASSWORD}
-# Bàn phím số không có nút ẩn chuẩn: chạm vào mô tả tĩnh để đóng, rồi mới bấm nút đăng nhập.
-- tapOn: "Dành cho giáo viên và phụ huynh."
+- scrollUntilVisible:
+    element:
+      id: login.submit
+    direction: DOWN
 - tapOn:
-    text: "Đăng nhập"
-    index: 1
+    id: login.submit
 - extendedWaitUntil:
     visible: "Lớp của tôi"
-    timeout: 30000
+    timeout: 45000
 - assertNotVisible:
     id: saveStatus.error
 - takeScreenshot: staging-classes

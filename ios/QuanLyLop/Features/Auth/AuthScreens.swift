@@ -38,6 +38,7 @@ struct AuthLoginView: View {
                 AuthSubmitButton(title: String(localized: "feature.auth.ang.nhap"), disabled: model.isLocked) {
                     Task { await model.login(phone: phone, password: password) }
                 }
+                .accessibilityIdentifier("login.submit")
             }
             .padding(.top, 24)
 
