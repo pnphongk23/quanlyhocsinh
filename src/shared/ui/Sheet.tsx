@@ -40,6 +40,9 @@ export function Sheet({
         event.preventDefault();
         onClose();
       }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
       onClose={() => {
         if (open) onClose();
       }}

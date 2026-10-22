@@ -1,10 +1,28 @@
 import { useEffect, type RefObject } from "react";
 
-/** Đóng ngay khi không có animation để chờ (reduced-motion, jsdom). */
-function canAnimate(dialog: HTMLDialogElement): boolean {
-  if (typeof dialog.getAnimations !== "function") return false;
-  if (typeof window.matchMedia !== "function") return true;
-  return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+function timeInMilliseconds(value: string): number {
+  const number = Number.parseFloat(value);
+  if (!Number.isFinite(number)) return 0;
+  return value.trim().endsWith("ms") ? number : number * 1000;
+}
+
+function exitAnimationNames(dialog: HTMLDialogElement): string[] {
+  const style = window.getComputedStyle(dialog);
+  const names = style.animationName.split(",").map((name) => name.trim());
+  const durations = style.animationDuration.split(",").map(timeInMilliseconds);
+  const delays = style.animationDelay.split(",").map(timeInMilliseconds);
+  return names.filter((name, index) => {
+    const duration = durations[index % durations.length] ?? 0;
+    const delay = delays[index % delays.length] ?? 0;
+    return name !== "none" && duration + delay > 0;
+  });
 }
 
 /**
@@ -24,7 +42,7 @@ export function useAnimatedDialog(
       return;
     }
     if (!dialog.open) return;
-    if (!canAnimate(dialog)) {
+    if (prefersReducedMotion()) {
       dialog.close();
       return;
     }
@@ -36,8 +54,21 @@ export function useAnimatedDialog(
       if (dialog.open) dialog.close();
     };
     dialog.setAttribute("data-closing", "");
+    // Read after data-closing so only the exit animation (dialogOut/sheetOut)
+    // can finish the dialog. The backdrop animation also targets the dialog.
+    const exitNames = exitAnimationNames(dialog);
+    if (exitNames.length === 0) {
+      finish();
+      return;
+    }
     const onEnd = (event: AnimationEvent) => {
-      if (event.target === dialog) finish();
+      if (
+        event.target === dialog &&
+        !event.pseudoElement &&
+        exitNames.includes(event.animationName)
+      ) {
+        finish();
+      }
     };
     dialog.addEventListener("animationend", onEnd);
     const timer = window.setTimeout(finish, 400);
