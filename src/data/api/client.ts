@@ -1,4 +1,4 @@
-import type { ApiErrorBody, ApiClass, ApiStudent, ApiSession, LoginResponse, MeResponse, Page, PushRequest, PushResponse, PullResponse, SnapshotResponse, ReportPreview } from "./types";
+import type { ApiErrorBody, ApiClass, ApiStudent, ApiSession, ApiReport, LoginResponse, MeResponse, Page, PushRequest, PushResponse, PullResponse, SnapshotResponse, ReportPreview } from "./types";
 export interface ApiClientOptions { baseUrl: string; getToken: () => string | null; fetch?: typeof fetch }
 export interface RequestOptions<Body> { body?: Body; query?: Record<string, string | number | undefined>; signal?: AbortSignal; requestId?: string }
 type Endpoint<Response, Body = never> = { response: Response; body: Body };
@@ -17,9 +17,14 @@ export type ApiEndpoints = {
   "GET /calendar": Endpoint<{ items: ApiSession[] }>;
   } & { [P in `PATCH /classes/${string}`]: Endpoint<ApiClass, { name?: string; weekdays?: number[]; start_time?: string; status?: "archived" }> }
     & { [P in `GET /sync/snapshot/${string}`]: Endpoint<{ items: unknown[]; next_after: string | null }> }
+    & { [P in `POST /classes/${string}/students`]: Endpoint<ApiStudent, { name: string; parent_phone?: string; enrolled_at: string }> }
+    & { [P in `PATCH /students/${string}`]: Endpoint<ApiStudent, { name?: string; parent_phone?: string; status?: "left"; left_at?: string }> }
+    & { [P in `GET /classes/${string}/reports`]: Endpoint<{items: ApiReport[]}> }
+    & { [P in `PUT /students/${string}/reports/${string}`]: Endpoint<ApiReport, {general_comment:string}> }
+    & { [P in `POST /students/${string}/reports/${string}/publish`]: Endpoint<{publication:unknown}> }
     & { [P in `GET /classes/${string}/students`]: Endpoint<{ items: ApiStudent[] }> }
   & { [P in `GET /classes/${string}/sessions`]: Endpoint<Page<ApiSession>> }
-  & { [P in `GET /students/${string}/report-preview`]: Endpoint<ReportPreview> };
+    & { [P in `GET /students/${string}/report-preview`]: Endpoint<ReportPreview> };
 export interface ApiClient {
   request<K extends keyof ApiEndpoints>(endpoint: K, options?: RequestOptions<ApiEndpoints[K]["body"]>): Promise<ApiEndpoints[K]["response"]>;
 }
@@ -33,7 +38,9 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   const fetcher = options.fetch ?? fetch;
   return { request: async (endpoint, request = {}) => {
     const [method, path] = endpoint.split(" ");
-    const url = new URL(path.startsWith("/") ? path.slice(1) : path, options.baseUrl.endsWith("/") ? options.baseUrl : `${options.baseUrl}/`);
+      const base = options.baseUrl.endsWith("/") ? options.baseUrl : `${options.baseUrl}/`;
+      const url = new URL(path.startsWith("/") ? path.slice(1) : path, /^[a-z][a-z\d+.-]*:/i.test(base) ? base : "http://localhost/");
+      if (!/^[a-z][a-z\d+.-]*:/i.test(base)) url.pathname = `${new URL(base, "http://localhost/").pathname.replace(/\/$/, "")}/${url.pathname.replace(/^\//, "")}`;
     for (const [key, value] of Object.entries(request.query ?? {})) if (value !== undefined) url.searchParams.set(key, String(value));
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(new DOMException("Request timed out", "TimeoutError")), 15_000);

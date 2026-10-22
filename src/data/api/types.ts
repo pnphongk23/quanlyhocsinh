@@ -36,7 +36,7 @@ export interface ReportPreview {
   general_comment: string; ready: boolean;
 }
 export interface ApiReport extends Versioned { id: string; class_id: string; student_id: string; month: string; status: "draft" | "published"; general_comment: string; needs_republish: boolean; publication_count: number; published_at: string | null }
-export interface ApiPublication { id: string; report_id: string; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; has_pdf: boolean; snapshot: ReportPreview }
+export interface ApiPublication { id: string; report_id: string; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; snapshot: ReportPreview }
 export interface ApiConflict extends Versioned { id: string; entity: "attendance" | "score" | "slip" | "homework_grade"; k1: string; k2: string; server_value: Record<string, unknown>; server_version: number; client_value: Record<string, unknown>; created_at: string; resolved_at: string | null }
 export interface EntityMap {
   class: ApiClass; student: ApiStudent; class_session: ApiSession; attendance: ApiAttendance; test: ApiTest; score: ApiScore; slip: ApiSlip; homework_section: ApiHomeworkSection; homework_grade: ApiHomeworkGrade; report: ApiReport; report_publication: ApiPublication; conflict: ApiConflict;

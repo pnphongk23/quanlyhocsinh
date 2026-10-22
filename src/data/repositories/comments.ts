@@ -1,33 +1,18 @@
-/** Phase A contract; persistence and sync are implemented in Phase B. */
-import { foundationUnavailable } from "../foundation";
 import type { Comment, StarLevel } from "../types";
-
-import { type UngradedHomeworkNotice } from "../homework";
-
-export const listComments: (classId: string) => Comment[] = () => [];
-
-export function listSessionComments(sessionId: string): Comment[] { return []; }
-
-export function getSessionComment(sessionId: string, studentId: string): Comment | null { return null; }
-
-export function saveSessionComment(input: {
-    sessionId: string;
-    studentId: string;
-    stars: StarLevel | null;
-    note?: string;
-}): Comment { return foundationUnavailable(); }
-
-export interface SendTicketsResult {
-    /** studentId đã gửi (hoặc đã xếp hàng chờ mạng). */
-    sent: string[];
-    /** studentId bị bỏ qua vì chưa chọn sao. */
-    skipped: string[];
-    /** true khi mất mạng: phiếu sẽ gửi khi có mạng. */
-    queued: boolean;
-    /** Phần BTVN buổi trước còn "Chưa chấm" của các em sẽ gửi. */
-    ungraded: UngradedHomeworkNotice;
-}
-
-export function sendSessionTickets(sessionId: string, studentIds?: string[]): SendTicketsResult { return foundationUnavailable(); }
-
-export function flushQueuedTickets(): number { return foundationUnavailable(); }
+import { getStore } from "../store";
+import { commitState, persistCommand } from "../outbox";
+import { type UngradedHomeworkNotice, previousHomeworkSession, ungradedHomeworkNotice } from "../homework";
+import { requirePermission, requireSessionAccess } from "./access";
+import type { SyncCommand } from "../api/types";
+import { scheduleSync } from "../sync";
+import { db, getCacheIdentity, identityKey, stored } from "../db";
+const key=(sessionId:string,studentId:string)=>`${sessionId}:${studentId}`;
+export const listComments=(classId:string):Comment[]=>getStore().comments.filter(c=>c.classId===classId);
+export function listSessionComments(sessionId:string):Comment[]{return getStore().comments.filter(c=>c.sessionId===sessionId);}
+export function getSessionComment(sessionId:string,studentId:string):Comment|null{return getStore().comments.find(c=>c.sessionId===sessionId&&c.studentId===studentId)??null;}
+export function saveSessionComment(input:{sessionId:string;studentId:string;stars:StarLevel|null;note?:string}):Comment {requirePermission("comments_reports","write");const session=requireSessionAccess(input.sessionId);const student=getStore().students.find(s=>s.id===input.studentId);if(!student||student.classId!==session.classId||student.enrolledAt>session.date||(student.leftAt&&student.leftAt<session.date))throw new Error("Học sinh không thuộc buổi học này.");const old=getSessionComment(input.sessionId,input.studentId);const now=new Date().toISOString();const item:Comment={id:key(input.sessionId,input.studentId),classId:session.classId,sessionId:input.sessionId,studentId:input.studentId,stars:input.stars,note:input.note??"",status:old?.status??"draft",sendQueued:old?.sendQueued??false,sentAt:old?.sentAt??null,updatedAt:now,createdAt:old?.createdAt??now};commitState("comment",item.id,d=>{d.comments=d.comments.filter(c=>c.id!==item.id).concat(item);});const cmd={id:crypto.randomUUID(),type:"slip.set",payload:{session_id:item.sessionId,student_id:item.studentId,stars:item.stars,note:item.note},base_version:(old as any)?.version??0,created_at:now} as SyncCommand;void persistCommand("slip",[item.sessionId,item.studentId],{session_id:item.sessionId,student_id:item.studentId,stars:item.stars,note:item.note,status:item.status,sent_at:item.sentAt,version:(old as any)?.version??0,updated_at:now},cmd).catch(()=>{});return item;}
+export interface SendTicketsResult { sent:string[];skipped:string[];queued:boolean;ungraded:UngradedHomeworkNotice; }
+export function sendSessionTickets(sessionId:string,studentIds?:string[]):SendTicketsResult {requirePermission("comments_reports","write");const session=requireSessionAccess(sessionId);if(session.date>new Date().toISOString().slice(0,10))throw new Error("Chỉ gửi phiếu từ ngày học.");const requested=studentIds??getStore().students.filter(s=>s.classId===session.classId&&s.status==="active").map(s=>s.id);const sent:string[]=[],skipped:string[]=[];for(const studentId of requested){const comment=getSessionComment(sessionId,studentId);if(!comment||comment.stars===null){skipped.push(studentId);continue;}if(comment.status==="sent"){skipped.push(studentId);continue;}sent.push(studentId);commitState("comment-send",comment.id,d=>{d.comments=d.comments.map(c=>c.id===comment.id?{...c,sendQueued:true,updatedAt:new Date().toISOString()}:c);});}
+  if(sent.length){const membership=getCacheIdentity();const identity=identityKey();if(!membership)throw new Error("Đăng nhập để gửi phiếu.");const cmd={id:crypto.randomUUID(),type:"slip.send",payload:{session_id:sessionId,student_ids:sent},created_at:new Date().toISOString()} as SyncCommand;const row:any={id:cmd.id,identity,type:cmd.type,payload:cmd.payload,base_version:0,membership_id:membership.membershipId,created_at:cmd.created_at,status:"pending"};void db.transaction("rw",[db.slips,db.outbox],async()=>{for(const studentId of sent){const comment=getSessionComment(sessionId,studentId)!;const wire={session_id:sessionId,student_id:studentId,stars:comment.stars,note:comment.note,status:comment.status,sent_at:comment.sentAt,version:(comment as any).version??0,updated_at:comment.updatedAt};await db.slips.put(stored("slip",`${identity}|slip|${sessionId}|${studentId}`,wire) as any);}await db.outbox.put(row);}).then(()=>scheduleSync()).catch(()=>{});}
+  const giving=previousHomeworkSession(getStore().sessions,sessionId);return{sent,skipped,queued:sent.length>0&&(typeof navigator==="undefined"||!navigator.onLine),ungraded:giving?ungradedHomeworkNotice(getStore(),giving.id,sent):{students:[],ungradedParts:0}};}
+export function flushQueuedTickets():number {const count=getStore().comments.filter(c=>c.sendQueued).length;scheduleSync(0);return count;}

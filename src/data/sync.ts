@@ -100,15 +100,28 @@ export async function syncNow(): Promise<void> {
   const identity = identityKey();
   running = (async () => {
     try {
-      const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status !== "rejected").sortBy("created_at");
-      for (let i = 0; i < rows.length; i += 50) {
-        const batch = rows.slice(i, i + 50);
+        while (true) {
+          const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").sortBy("created_at");
+          if (!rows.length) break;
+          const batch = [] as typeof rows;
+          for (const row of rows) {
+            if (batch.length >= 50) break;
+            if (row.depends_on) {
+              const dependency = await db.outbox.get(row.depends_on);
+              if (dependency && dependency.status !== "rejected") continue;
+            }
+            batch.push(row);
+          }
+          if (!batch.length) break;
         const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({ id, type, payload, base_version, created_at })) as SyncCommand[];
         await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "sending" as const })));
         let response;
         try { response = await api.request("POST /sync/push", { body: { membership_id: cache.membershipId, device_id: getDeviceId(), commands } }); }
         catch (e) { await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "pending" as const }))); throw e; }
-        for (const result of response.results) await applyCommandResult(result, identity);
+          const returned = new Set<string>();
+          for (const result of response.results) { returned.add(result.id); await applyCommandResult(result, identity); }
+          for (const row of batch) if (!returned.has(row.id)) await db.outbox.update(row.id, { status: "pending" });
+          if (batch.some((row) => !returned.has(row.id))) break;
       }
       await pull(identity, cache.membershipId); await hydrateStore();
       const remaining = await db.outbox.where("identity").equals(identity).toArray();

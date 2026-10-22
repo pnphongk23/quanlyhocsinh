@@ -1,6 +1,5 @@
 import type { MeResponse } from "../api/types";
 import { hydrateStore, setCacheIdentity } from "../store";
-import { syncNow } from "../sync";
 const KEY = "qlh.session.v1";
 export interface WebSession { token: string; user: MeResponse["user"]; me: MeResponse; activeMembershipId: string | null; }
 let session: WebSession | null = read();
@@ -21,7 +20,9 @@ export async function activateMembershipCache(membershipId: string | null): Prom
   const membership = session?.me.memberships.find((m) => m.id === membershipId && m.status === "active");
   if (!session || !membership) { setCacheIdentity(null); await hydrateStore(); return; }
   setCacheIdentity({ userId: session.user.id, workspaceId: membership.workspace.id, membershipId: membership.id });
-  await hydrateStore(); void syncNow();
+  await hydrateStore(); void import("../sync").then(({ syncNow }) => syncNow());
 }
 export async function clearSession(): Promise<void> { session = null; persist(); setCacheIdentity(null); await hydrateStore(); }
 export function setActiveMembershipId(membershipId: string): void { if (!session) return; session = { ...session, activeMembershipId: membershipId, me: { ...session.me, active_membership_id: membershipId } }; persist(); }
+let initialized = false;
+export async function initializeSession(): Promise<void> { if (initialized) return; initialized = true; await activateMembershipCache(session?.activeMembershipId ?? null); }

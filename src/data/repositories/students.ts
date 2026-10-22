@@ -1,23 +1,21 @@
-/** Phase A contract; persistence and sync are implemented in Phase B. */
-import { foundationUnavailable } from "../foundation";
 import type { Student } from "../types";
-
-export const listStudents: (classId: string, includeLeft?: boolean) => Student[] = () => [];
-
-export const getStudent: (id: string) => Student | undefined = () => undefined;
-
-export function listStudentsForSession(sessionId: string, includeLeft?: boolean): Student[] { return []; }
-
-export function createStudent(input: Omit<Student, "id" | "status" | "leftAt">): Student { return foundationUnavailable(); }
-
-export function updateStudent(id: string, patch: Partial<Pick<Student, "name">>): void { return foundationUnavailable(); }
-
-export function updateStudentPhone(id: string, parentPhone: string): void { return foundationUnavailable(); }
-
-export function markStudentLeft(id: string, leftAt: string): void { return foundationUnavailable(); }
-
-export const studentAttendanceRate: (id: string) => number | null = () => null;
-
-export const classAttendanceRate: (classId: string) => number | null = () => null;
-
-export const studentAbsenceWarning: (id: string) => boolean = () => false;
+import { getStore } from "../store";
+import { commitState } from "../outbox";
+import { requirePermission, requireClassAccess, canAccessClass, canAccessSession } from "./access";
+import { api } from "../sync";
+import { db, identityKey, stored } from "../db";
+import { setSaveStatus } from "../saveStatus";
+const asView=(item:any):Student=>({id:item.id,classId:item.class_id,name:item.name,parentPhone:item.parent_phone??"",enrolledAt:item.enrolled_at,leftAt:item.left_at??null,status:item.status});
+function persistStudent(item:any):void { const identity=identityKey();void db.students.put(stored("student",`${identity}|student|${item.id}`,item) as any).catch(()=>setSaveStatus("error")); }
+export const listStudents=(classId:string,includeLeft=true):Student[]=>canAccessClass(classId)?getStore().students.filter(s=>s.classId===classId&&(includeLeft||s.status==="active")):[];
+export const getStudent=(id:string):Student|undefined=>getStore().students.find(s=>s.id===id);
+export function listStudentsForSession(sessionId:string,includeLeft=true):Student[]{if(!canAccessSession(sessionId))return[];const session=getStore().sessions.find(s=>s.id===sessionId);return session?listStudents(session.classId,includeLeft):[];}
+export function createStudent(input:Omit<Student,"id"|"status"|"leftAt">):Student { requirePermission("students","write");requireClassAccess(input.classId);if(!input.name.trim())throw new Error("Nhập tên học sinh.");if(typeof navigator!=="undefined"&&!navigator.onLine)throw new Error("Thêm học sinh cần kết nối mạng.");const item:Student={...input,id:crypto.randomUUID(),status:"active",leftAt:null};commitState("students",item.id,d=>{d.students.push(item);});void api.request(`POST /classes/${input.classId}/students` as any,{body:{name:item.name,parent_phone:item.parentPhone||undefined,enrolled_at:item.enrolledAt}} as any).then((remote:any)=>{persistStudent(remote);commitState("student-id",item.id,d=>{d.students=d.students.map(s=>s.id===item.id?asView(remote):s);});}).catch(()=>setSaveStatus("error"));return item;}
+function patchStudent(id:string,patch:Partial<Pick<Student,"name"|"parentPhone"|"status"|"leftAt">>):void {const current=getStudent(id);if(!current)throw new Error("Không tìm thấy học sinh.");requirePermission("students","write");requireClassAccess(current.classId);const next={...current,...patch};commitState("student",id,d=>{d.students=d.students.map(s=>s.id===id?next:s);});const body={...(patch.name?{name:patch.name}:{}),...(patch.parentPhone!==undefined?{parent_phone:patch.parentPhone}:{}),...(patch.status?{status:"left" as const,left_at:patch.leftAt}:{} )};void api.request(`PATCH /students/${id}` as any,{body} as any).then((remote:any)=>{persistStudent(remote);}).catch(()=>setSaveStatus("error"));}
+export function updateStudent(id:string,patch:Partial<Pick<Student,"name">>):void {if(patch.name!==undefined&&!patch.name.trim())throw new Error("Nhập tên học sinh.");patchStudent(id,patch);}
+export function updateStudentPhone(id:string,parentPhone:string):void {const phone=parentPhone.trim();if(phone&&!/^[0-9+().\s-]{6,20}$/.test(phone))throw new Error("Số điện thoại không hợp lệ.");patchStudent(id,{parentPhone:phone});}
+export function markStudentLeft(id:string,leftAt:string):void {const student=getStudent(id);if(!student)throw new Error("Không tìm thấy học sinh.");if(leftAt<student.enrolledAt)throw new Error("Ngày nghỉ phải sau ngày vào lớp.");patchStudent(id,{status:"left",leftAt});}
+function rate(rows:Array<{status:string}>):number|null {if(!rows.length)return null;return Math.round(rows.filter(r=>r.status==="present"||r.status==="late").length/rows.length*100);}
+export const studentAttendanceRate=(id:string):number|null=>{const student=getStudent(id);if(!student||!canAccessClass(student.classId))return null;const held=new Set(getStore().sessions.filter(s=>s.classId===student.classId&&s.status==="held").map(s=>s.id));return rate(getStore().attendance.filter(a=>a.studentId===id&&held.has(a.sessionId)));};
+export const classAttendanceRate=(classId:string):number|null=>{if(!canAccessClass(classId))return null;const held=new Set(getStore().sessions.filter(s=>s.classId===classId&&s.status==="held").map(s=>s.id));return rate(getStore().attendance.filter(a=>held.has(a.sessionId)));};
+export function studentAbsenceWarning(id:string):boolean {const student=getStudent(id);if(!student)return false;const sessions=getStore().sessions.filter(s=>s.classId===student.classId&&s.status==="held").sort((a,b)=>b.date.localeCompare(a.date)).slice(0,2);if(sessions.length<2)return false;const statuses=sessions.map(s=>getStore().attendance.find(a=>a.sessionId===s.id&&a.studentId===id)?.status);return statuses.every(status=>status==="absent");}

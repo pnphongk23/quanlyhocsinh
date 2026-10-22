@@ -1,21 +1,11 @@
-/** Phase A contract; persistence and sync are implemented in Phase B. */
-import { foundationUnavailable } from "../foundation";
 import type { HomeworkGrade, HomeworkKind, HomeworkLevel, HomeworkSection } from "../types";
-
-export function listHomeworkSections(sessionId: string): HomeworkSection[] { return []; }
-
-export function listHomeworkGrades(sectionId: string): HomeworkGrade[] { return []; }
-
-export function saveHomeworkSection(input: {
-    id?: string;
-    sessionId: string;
-    kind: HomeworkKind;
-    title: string;
-    description?: string;
-}): HomeworkSection { return foundationUnavailable(); }
-
-export function deleteHomeworkSection(id: string): void { return foundationUnavailable(); }
-
-export function setHomeworkGrade(sectionId: string, studentId: string, level: HomeworkLevel | null): HomeworkGrade | null { return foundationUnavailable(); }
-
-export function setHomeworkGradeForAll(sectionId: string, level: HomeworkLevel): number { return foundationUnavailable(); }
+import { getStore } from "../store";
+import { commitState, persistCommand } from "../outbox";
+import { requirePermission, requireSessionAccess } from "./access";
+import type { SyncCommand } from "../api/types";
+export function listHomeworkSections(sessionId:string):HomeworkSection[]{return getStore().homeworkSections.filter(x=>x.sessionId===sessionId);}
+export function listHomeworkGrades(sectionId:string):HomeworkGrade[]{return getStore().homeworkGrades.filter(x=>x.sectionId===sectionId);}
+export function saveHomeworkSection(input:{id?:string;sessionId:string;kind:HomeworkKind;title:string;description?:string}):HomeworkSection {requirePermission("comments_reports","write");const session=requireSessionAccess(input.sessionId);if(session.status==="cancelled")throw new Error("Buổi đã huỷ, không thể giao bài.");const existing=input.id?getStore().homeworkSections.find(x=>x.id===input.id):undefined;if(!existing&&getStore().homeworkSections.some(x=>x.sessionId===input.sessionId&&x.kind===input.kind))throw new Error("Mỗi buổi chỉ có một phần cho từng loại bài tập.");const item:HomeworkSection={id:existing?.id??crypto.randomUUID(),sessionId:input.sessionId,kind:input.kind,title:input.title.trim(),description:input.description?.trim()??""};commitState("homework-section",item.id,d=>{d.homeworkSections=d.homeworkSections.filter(x=>x.id!==item.id).concat(item);});const command={id:crypto.randomUUID(),type:"homework.section.upsert",payload:{id:item.id,session_id:item.sessionId,kind:item.kind,title:item.title,description:item.description},base_version:(existing as any)?.version??0,created_at:new Date().toISOString()} as SyncCommand;void persistCommand("homework_section",[item.id],{id:item.id,class_id:session.classId,session_id:item.sessionId,kind:item.kind,title:item.title,description:item.description,version:(existing as any)?.version??0},command).catch(()=>{});return item;}
+export function deleteHomeworkSection(id:string):void {requirePermission("comments_reports","write");const item=getStore().homeworkSections.find(x=>x.id===id);if(!item)throw new Error("Không tìm thấy phần bài tập.");requireSessionAccess(item.sessionId);if(getStore().homeworkGrades.some(g=>g.sectionId===id&&g.level!==null))throw new Error("Không thể xoá phần đã có kết quả chấm.");commitState("homework-delete",id,d=>{d.homeworkSections=d.homeworkSections.filter(x=>x.id!==id);d.homeworkGrades=d.homeworkGrades.filter(x=>x.sectionId!==id);});const command={id:crypto.randomUUID(),type:"homework.section.delete",payload:{id},base_version:(item as any).version??1,created_at:new Date().toISOString()} as SyncCommand;void persistCommand("homework_section",[id],null,command).catch(()=>{});}
+export function setHomeworkGrade(sectionId:string,studentId:string,level:HomeworkLevel|null):HomeworkGrade|null {requirePermission("comments_reports","write");const section=getStore().homeworkSections.find(x=>x.id===sectionId);const student=getStore().students.find(x=>x.id===studentId);if(!section||!student)throw new Error("Không tìm thấy bài tập hoặc học sinh.");const session=requireSessionAccess(section.sessionId);if(student.classId!==session.classId||student.enrolledAt>session.date||(student.leftAt&&student.leftAt<session.date))throw new Error("Học sinh không thuộc lớp ở ngày giao bài.");const old=getStore().homeworkGrades.find(x=>x.sectionId===sectionId&&x.studentId===studentId);const item:HomeworkGrade={sectionId,studentId,level:level as HomeworkLevel};commitState("homework-grade",`${sectionId}:${studentId}`,d=>{d.homeworkGrades=d.homeworkGrades.filter(x=>!(x.sectionId===sectionId&&x.studentId===studentId));if(level!==null)d.homeworkGrades.push(item);});const command={id:crypto.randomUUID(),type:"homework.grade.set",payload:{section_id:sectionId,student_id:studentId,level},base_version:(old as any)?.version??0,created_at:new Date().toISOString()} as SyncCommand;void persistCommand("homework_grade",[sectionId,studentId],level===null?null:{section_id:sectionId,student_id:studentId,level,version:(old as any)?.version??0,updated_at:new Date().toISOString()},command).catch(()=>{});return level===null?null:item;}
+export function setHomeworkGradeForAll(sectionId:string,level:HomeworkLevel):number {const section=getStore().homeworkSections.find(x=>x.id===sectionId);if(!section)throw new Error("Không tìm thấy phần bài tập.");const session=requireSessionAccess(section.sessionId);const students=getStore().students.filter(s=>s.classId===session.classId&&s.enrolledAt<=session.date&&(!s.leftAt||s.leftAt>=session.date));students.forEach(s=>setHomeworkGrade(sectionId,s.id,level));return students.length;}

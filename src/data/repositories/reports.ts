@@ -1,11 +1,10 @@
-/** Phase A contract; persistence and sync are implemented in Phase B. */
-import { foundationUnavailable } from "../foundation";
 import type { Report } from "../types";
-
-export const listReports: (classId: string) => Report[] = () => [];
-
-export function saveReport(input: Pick<Report, "classId" | "studentId" | "month">): Report { return foundationUnavailable(); }
-
-export function publishReport(id: string): void { return foundationUnavailable(); }
-
-export function saveReportComment(id: string, generalComment: string): Report { return foundationUnavailable(); }
+import { getStore } from "../store";
+import { commitState } from "../outbox";
+import { requirePermission, requireClassAccess } from "./access";
+import { api } from "../sync";
+import { setSaveStatus } from "../saveStatus";
+export const listReports=(classId:string):Report[]=>getStore().reports.filter(r=>r.classId===classId);
+export function saveReport(input:Pick<Report,"classId"|"studentId"|"month">):Report {requirePermission("comments_reports","write");requireClassAccess(input.classId);if(!getStore().students.some(s=>s.id===input.studentId&&s.classId===input.classId)||!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(input.month))throw new Error("Kiểm tra lớp và tháng báo cáo.");const old=getStore().reports.find(r=>r.studentId===input.studentId&&r.month===input.month);if(old)return old;const item:Report={...input,id:crypto.randomUUID(),status:"draft",needsRepublish:false,generalComment:"",publishedAt:null};commitState("report",item.id,d=>{d.reports.push(item);});return item;}
+export function publishReport(id:string):void {requirePermission("comments_reports","write");const current=getStore().reports.find(r=>r.id===id);if(!current)throw new Error("Không tìm thấy báo cáo.");requireClassAccess(current.classId);if(typeof navigator!=="undefined"&&!navigator.onLine)throw new Error("Phát hành báo cáo cần kết nối mạng.");void api.request(`POST /students/${current.studentId}/reports/${current.month}/publish` as any).then((result:any)=>{commitState("report-publish",id,d=>{d.reports=d.reports.map(r=>r.id===id?{...r,id:result.report_id??r.id,status:"published",needsRepublish:false,publishedAt:result.published_at??new Date().toISOString()}:r);});}).catch(()=>setSaveStatus("error"));}
+export function saveReportComment(id:string,generalComment:string):Report {requirePermission("comments_reports","write");const current=getStore().reports.find(r=>r.id===id);if(!current)throw new Error("Không tìm thấy báo cáo.");requireClassAccess(current.classId);const value=generalComment.trim();const next={...current,generalComment:value};commitState("report-comment",id,d=>{d.reports=d.reports.map(r=>r.id===id?next:r);});void api.request(`PUT /students/${current.studentId}/reports/${current.month}` as any,{body:{general_comment:value}} as any).catch(()=>setSaveStatus("error"));return next;}

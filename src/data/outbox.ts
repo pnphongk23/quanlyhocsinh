@@ -23,17 +23,22 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
   const identity = identityKey(); const cache = getCacheIdentity(); if (!cache) throw new Error("Đăng nhập để lưu thay đổi.");
   const key = rowKey(entity, parts), cellKey = keyForCommand(command);
   const recordTable = tableFor(entity);
-  const matching = cellKey ? await db.outbox.where("identity").equals(identity).and((row) => row.cell_key === cellKey && row.status === "pending").first() : undefined;
-  const row: OutboxRow = { id: crypto.randomUUID(), identity, type: command.type, payload: command.payload, base_version: matching?.base_version ?? ("base_version" in command && command.base_version !== undefined ? command.base_version : 0), membership_id: cache.membershipId, created_at: command.created_at, status: "pending", cell_key: cellKey };
-  const finalRow = matching ? { ...row, base_version: matching.base_version } : row;
+  const row: OutboxRow = { id: crypto.randomUUID(), identity, type: command.type, payload: command.payload, base_version: ("base_version" in command && command.base_version !== undefined ? command.base_version : 0), membership_id: cache.membershipId, created_at: command.created_at, status: "pending", cell_key: cellKey };
   try {
     await db.transaction("rw", [recordTable, db.outbox], async () => {
       if (wireRecord) await recordTable.put(stored(entity, key, wireRecord) as any); else await recordTable.delete(key);
-      if (matching) await db.outbox.delete(matching.id);
-      await db.outbox.put(finalRow);
+        const matching = cellKey ? await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "pending").first() : undefined;
+        const finalRow = matching ? { ...row, base_version: matching.base_version } : row;
+        if (matching) await db.outbox.delete(matching.id);
+        await db.outbox.put(finalRow);
+        if (command.type === "score.set") {
+          const testId = (command.payload as { test_id: string }).test_id;
+          const create = await db.outbox.where("identity").equals(identity).and((candidate) => candidate.type === "test.create" && (candidate.payload as { id: string }).id === testId && candidate.status === "pending").first();
+          if (create) await db.outbox.update(finalRow.id, { depends_on: create.id });
+        }
     });
     setSaveStatus("local");
-    commitState("pending", row.id, (draft) => { draft.pending = [...draft.pending.filter((item) => item.id !== row.id), { id: row.id, entity: command.type, recordId: key, createdAt: row.created_at }]; });
+      commitState("pending", row.id, (draft) => { draft.pending = [...draft.pending.filter((item) => item.entity !== command.type || item.recordId !== key), { id: row.id, entity: command.type, recordId: key, createdAt: row.created_at }]; });
     scheduleSync();
   } catch {
     setSaveStatus("error"); throw new Error("Không lưu được vào bộ nhớ trên thiết bị.");

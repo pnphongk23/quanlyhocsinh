@@ -29,8 +29,6 @@ export async function switchMembership(membershipId: string): Promise<void> {
   const current = getSession(); if (!current) throw new Error("Bạn cần đăng nhập.");
   const membership = current.me.memberships.find((entry) => entry.id === membershipId && entry.status === "active");
   if (!membership) throw new Error("Không tìm thấy vai trò đang hoạt động.");
-  const pending = await import("../outbox").then(({ pendingCommandCount }) => pendingCommandCount());
-  if (pending) throw new Error("Đồng bộ các thay đổi đang chờ trước khi đổi vai trò.");
   const response = await api.request("PUT /session/membership", { body: { membership_id: membershipId } });
   if (response.active_membership_id !== membershipId) throw new Error("Máy chủ chưa xác nhận việc đổi vai trò.");
   setActiveMembershipId(membershipId); await activateMembershipCache(membershipId);

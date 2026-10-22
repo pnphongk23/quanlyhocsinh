@@ -19,16 +19,23 @@ export function createSeed(): StoreState {
       const studentId=`${classId}-student-${i}`; const left=i===9&&classId==="6a";
       state.students.push({id:studentId,classId,name,parentPhone:"",enrolledAt:"2026-09-01",leftAt:left?"2026-10-09":null,status:left?"left":"active"});
       classDates.slice(0,8).forEach((date,j)=>{ if(left&&date>"2026-10-09")return; const status=i===0&&j>=6?"absent":i===1&&j===7?"excused":i===2&&j===7?"late":"present"; state.attendance.push({id:`${classId}-attendance-${i}-${j}`,sessionId:`${classId}-session-${j}`,studentId,status,note:"",lateAt:status==="late"?"18:10":null}); });
-      for(let j=0;j<4;j++) state.scores.push({id:`${classId}-score-${i}-${j}`,testId:`${classId}-test-${j}`,studentId,value:i===3&&j===3?null:6+((i+j)%5)});
+        for(let j=0;j<4;j++) state.scores.push({id:`${classId}-score-${i}-${j}`,testId:`${classId}-test-${j}`,studentId,value:i===3&&j===3?null:classId==="6a"&&i===1&&j===2?10:classId==="6a"&&i===1&&j===3?9:6+((i+j)%5)});
       state.reports.push({id:`${studentId}-report`,classId,studentId,month:"2026-10",status:i<2?"published":"draft",needsRepublish:false,generalComment:i===1&&classId==="6a"?"Nhận xét kiểm thử tổng hợp.":"",publishedAt:i<2?"2026-10-12T09:00:00.000Z":null});
     });
     for(let j=0;j<4;j++) state.tests.push({id:`${classId}-test-${j}`,classId,name:["Từ vựng","Ngữ pháp","Nghe","Nói"][j],date:classDates[j+3],max:10,archived:false});
   }
   const admin:Member={id:MEMBER_IDS.lanAdmin,name:"Admin Fixture",phone:"fixture-user",roleId:ROLE_IDS.admin,classIds:[],status:"active"};
-  const teacher:Member={id:MEMBER_IDS.lanTeacher,name:"Teacher Fixture",phone:"fixture-user",roleId:ROLE_IDS.teacher,classIds:["6a"],status:"active"};
-  state.members=[admin,teacher];
-  state.comments.push({id:"fixture-comment-sent",classId:"6a",studentId:"6a-student-1",sessionId:"6a-session-7",stars:3,note:"Ghi chú kiểm thử.",status:"sent",sendQueued:false,sentAt:"2026-10-14T13:14:00.000Z",updatedAt:"2026-10-14T13:14:00.000Z",createdAt:"2026-10-14T13:14:00.000Z"});
-  state.homeworkSections.push({id:"fixture-hw-vocab",sessionId:"6a-session-6",kind:"vocabulary",title:"Từ vựng kiểm thử",description:""},{id:"fixture-hw-exercise",sessionId:"6a-session-6",kind:"exercise",title:"Bài tập kiểm thử",description:""});
+    const teacher:Member={id:MEMBER_IDS.lanTeacher,name:"Teacher Fixture",phone:"fixture-user",roleId:ROLE_IDS.teacher,classIds:["6a"],status:"active"};
+    const assistant:Member={id:MEMBER_IDS.trang,name:"Assistant Fixture",phone:"fixture-assistant",roleId:ROLE_IDS.assistant,classIds:["6a"],status:"active"};
+    state.members=[admin,teacher,assistant];
+    for (const [index, stars] of [3,2,1,3].entries()) {
+      const sessionIndex = index + 4;
+      const sentAt = `${dates[sessionIndex]}T13:14:00.000Z`;
+      state.comments.push({id:`fixture-comment-${index}`,classId:"6a",studentId:"6a-student-1",sessionId:`6a-session-${sessionIndex}`,stars:stars as 1|2|3,note:"Ghi chú kiểm thử.",status:"sent",sendQueued:false,sentAt,updatedAt:sentAt,createdAt:sentAt});
+    }
+    state.comments.push({id:"fixture-comment-class-2",classId:"6a",studentId:"6a-student-2",sessionId:"6a-session-7",stars:2,note:"Phiếu kiểm thử.",status:"sent",sendQueued:false,sentAt:"2026-10-14T13:14:00.000Z",updatedAt:"2026-10-14T13:14:00.000Z",createdAt:"2026-10-14T13:14:00.000Z"});
+    state.homeworkSections.push({id:"fixture-hw-vocab",sessionId:"6a-session-6",kind:"vocabulary",title:"Từ vựng kiểm thử",description:""},{id:"fixture-hw-exercise",sessionId:"6a-session-6",kind:"exercise",title:"Bài tập kiểm thử",description:""});
+    state.homeworkSections.push({id:"fixture-hw-next-vocab",sessionId:"6a-session-7",kind:"vocabulary",title:"Từ vựng buổi 7",description:""},{id:"fixture-hw-next-exercise",sessionId:"6a-session-7",kind:"exercise",title:"Bài tập buổi 7",description:""});
   const grade=(sectionId:string, studentIds:string[],level:HomeworkGrade["level"])=>studentIds.forEach(studentId=>state.homeworkGrades.push({sectionId,studentId,level}));
   grade("fixture-hw-vocab",["6a-student-1","6a-student-2","6a-student-3"],"done");
   grade("fixture-hw-exercise",["6a-student-1","6a-student-2"],"excellent");

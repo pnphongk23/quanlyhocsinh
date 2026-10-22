@@ -1,5 +1,7 @@
-import { Link, Outlet, useRouteError } from "react-router-dom";
+import { Link, Outlet, redirect, useRouteError } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
+import { authRedirect } from "../data/auth";
+import { initializeSession } from "../data/auth/session";
 import { staffRoutes } from "../roles/staff/routes";
 import { guardianRoutes } from "../roles/guardian/routes";
 import { accountRoutes } from "../roles/account/routes";
@@ -15,7 +17,19 @@ export const routes: RouteObject[] = [{
   element: <Outlet />, errorElement: <RouteError />,
   children: [
     { path: "/", element: <FoundationHome /> },
-    ...staffRoutes, ...guardianRoutes, ...accountRoutes,
+      ...guardRoutes(staffRoutes, "staff"), ...guardRoutes(guardianRoutes, "guardian"), ...accountRoutes,
     { path: "*", element: <main className={styles.content}><h1>Không tìm thấy màn hình</h1><Link to="/">Về trang đầu</Link></main> },
   ],
 }];
+
+function guardRoutes(routes: RouteObject[], role: "staff" | "guardian"): RouteObject[] {
+  return routes.map((route) => ({ ...route, loader: async ({ request }) => {
+    await initializeSession();
+    const target = authRedirect(role);
+    if (target) {
+      const url = new URL(request.url);
+      throw redirect(`${target}?next=${encodeURIComponent(url.pathname + url.search)}`);
+    }
+    return undefined;
+  } }));
+}
