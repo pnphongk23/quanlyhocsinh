@@ -7,7 +7,6 @@ import {
   REGISTER_IP_POLICY,
   addWorkspace,
   changePassword,
-  checkThrottle,
   clearThrottle,
   consumeThrottle,
   createSession,
@@ -21,7 +20,7 @@ import {
   loginPhoneKey,
   logoutSession,
   newRoleIdMap,
-  recordThrottleFailure,
+  refundThrottle,
   rehashPassword,
   registerIpKey,
   registerGuardian,
@@ -270,12 +269,19 @@ authRoutes.post('/auth/login', async (c) => {
   const phoneKey = loginPhoneKey(phone ?? 'invalid');
   const ipKey = loginIpKey(ip);
 
-  for (const [key, policy] of [
-    [phoneKey, LOGIN_PHONE_POLICY] as const,
-    [ipKey, LOGIN_IP_POLICY] as const,
-  ]) {
-    const check = await checkThrottle(db, key, policy);
-    if (!check.allowed) throw rateLimited(check.retryAfterSeconds);
+  // Reserve IP first, then phone; refund IP if the phone reservation is denied.
+  const ipReservation = await consumeThrottle(db, ipKey, LOGIN_IP_POLICY, Date.now(), LOGIN_IP_POLICY.lockMs);
+  if (!ipReservation.allowed) throw rateLimited(ipReservation.retryAfterSeconds);
+  const phoneReservation = await consumeThrottle(
+    db,
+    phoneKey,
+    LOGIN_PHONE_POLICY,
+    Date.now(),
+    LOGIN_PHONE_POLICY.lockMs,
+  );
+  if (!phoneReservation.allowed) {
+    await refundThrottle(db, ipKey);
+    throw rateLimited(phoneReservation.retryAfterSeconds);
   }
 
   const iterations = resolveIterations(c.env.PBKDF2_ITERATIONS);
@@ -295,15 +301,11 @@ authRoutes.post('/auth/login', async (c) => {
   }
 
   if (!passwordOk || !user) {
-    await recordThrottleFailure(db, phoneKey, LOGIN_PHONE_POLICY);
-    await recordThrottleFailure(db, ipKey, LOGIN_IP_POLICY);
-    // Lần sai thứ 5 khoá SĐT 15 phút: trả 429 ngay từ lần chạm ngưỡng.
-    const locked = await checkThrottle(db, phoneKey, LOGIN_PHONE_POLICY);
-    if (!locked.allowed) throw rateLimited(locked.retryAfterSeconds);
     throw invalidCredentials();
   }
 
   await clearThrottle(db, phoneKey);
+  await refundThrottle(db, ipKey);
 
   if (user.status !== 'active') throw accountDisabled();
 
@@ -356,9 +358,18 @@ authRoutes.post('/auth/change-password', requireAuth, async (c) => {
   const user = await getUserById(db, identity.userId);
   if (!user) throw unauthorized();
 
+  const throttleKey = loginPhoneKey(user.phone);
+  const reservation = await consumeThrottle(
+    db,
+    throttleKey,
+    LOGIN_PHONE_POLICY,
+    Date.now(),
+    LOGIN_PHONE_POLICY.lockMs,
+  );
+  if (!reservation.allowed) throw rateLimited(reservation.retryAfterSeconds);
+
   const verified = await verifyPassword(user.password_hash, currentPassword);
   if (!verified.ok) {
-    await recordThrottleFailure(db, loginPhoneKey(user.phone), LOGIN_PHONE_POLICY);
     throw invalidCredentials();
   }
 
@@ -372,7 +383,7 @@ authRoutes.post('/auth/change-password', requireAuth, async (c) => {
     now: nowIso(),
     keepSessionId: identity.sessionId,
   });
-  await clearThrottle(db, loginPhoneKey(user.phone));
+  await clearThrottle(db, throttleKey);
 
   return c.json({ must_change_password: false });
 });

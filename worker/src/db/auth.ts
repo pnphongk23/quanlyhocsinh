@@ -817,23 +817,48 @@ export async function consumeThrottle(
   key: string,
   policy: ThrottlePolicy,
   nowMs: number = Date.now(),
+  lockMs?: number,
 ): Promise<ThrottleCheck> {
   const now = isoAt(nowMs);
   const windowCutoff = isoAt(nowMs - policy.windowMs);
+  const lockedUntil = lockMs === undefined ? null : isoAfterMs(lockMs, nowMs);
   const row = await db
     .prepare(
       `INSERT INTO auth_throttle (key, fails, window_start, locked_until)
-       VALUES (?, 1, ?, NULL)
+       VALUES (?, 1, ?, CASE WHEN ? = 1 THEN ? ELSE NULL END)
        ON CONFLICT(key) DO UPDATE SET
-         fails = CASE WHEN auth_throttle.window_start <= ? THEN 1 ELSE auth_throttle.fails + 1 END,
-         window_start = CASE WHEN auth_throttle.window_start <= ? THEN excluded.window_start ELSE auth_throttle.window_start END,
-         locked_until = NULL
-       RETURNING fails, window_start`,
+         fails = CASE
+           WHEN auth_throttle.locked_until > ? THEN auth_throttle.fails
+           WHEN auth_throttle.window_start <= ? THEN 1
+           ELSE auth_throttle.fails + 1
+         END,
+         window_start = CASE
+           WHEN auth_throttle.locked_until > ? THEN auth_throttle.window_start
+           WHEN auth_throttle.window_start <= ? THEN excluded.window_start
+           ELSE auth_throttle.window_start
+         END,
+         locked_until = CASE
+           WHEN auth_throttle.locked_until > ? THEN auth_throttle.locked_until
+           WHEN auth_throttle.window_start <= ? AND ? IS NOT NULL AND ? >= ? THEN ?
+           WHEN auth_throttle.window_start > ? AND auth_throttle.fails + 1 >= ? AND ? IS NOT NULL THEN ?
+           ELSE NULL
+         END
+       RETURNING fails, window_start, locked_until`,
     )
-    .bind(key, now, windowCutoff, windowCutoff)
-    .first<{ fails: number; window_start: string }>();
+    .bind(
+      key, now, policy.limit, lockedUntil,
+      now, windowCutoff, now, windowCutoff, now, windowCutoff, lockMs ?? null,
+      1, policy.limit, lockedUntil, windowCutoff, policy.limit, lockMs ?? null, lockedUntil,
+    )
+    .first<{ fails: number; window_start: string; locked_until: string | null }>();
 
   if (!row) throw new Error('Throttle update did not return a row.');
+  if (row.locked_until !== null) {
+    const until = Date.parse(row.locked_until);
+    if (until > nowMs || row.fails >= policy.limit) {
+      return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((until - nowMs) / 1000)) };
+    }
+  }
   if (row.fails <= policy.limit) return { allowed: true };
 
   const retryAt = Date.parse(row.window_start) + policy.windowMs;
@@ -841,6 +866,17 @@ export async function consumeThrottle(
     allowed: false,
     retryAfterSeconds: Math.max(1, Math.ceil((retryAt - nowMs) / 1000)),
   };
+}
+
+/** Atomically returns a reserved attempt, used when a paired throttle key rejects it. */
+export async function refundThrottle(
+  db: D1Database,
+  key: string,
+): Promise<void> {
+  await db
+    .prepare('UPDATE auth_throttle SET fails = MAX(fails - 1, 0) WHERE key = ?')
+    .bind(key)
+    .run();
 }
 
 export async function clearThrottle(db: D1Database, key: string): Promise<void> {
