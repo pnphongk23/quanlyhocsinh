@@ -17,19 +17,24 @@
 .staffMobileSaveStatus { display: flex; width: fit-content; margin: calc(8px + env(safe-area-inset-top)) 20px 0; }
 .staffSidebar { display: none; }
 .staffTabbar { position: fixed; z-index: 10; right: 0; bottom: 0; left: 0; display: flex; padding: 0 4px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: var(--color-surface); }
-.staffTabbar a { display: flex; min-height: 56px; flex: 1; flex-direction: column; align-items: center; justify-content: center; padding-top: 8px; border-top: 3px solid transparent; color: var(--color-muted); text-decoration: none; font-size: 12px; font-weight: 600; }
+.staffTabbar a { display: flex; min-height: 56px; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding-top: 8px; margin-top: -1px; border-top: 3px solid transparent; color: var(--color-muted); text-decoration: none; font-size: 12px; font-weight: 600; }
 .staffTabbar a[aria-current="page"] { border-top-color: var(--color-primary); color: var(--color-primary); }
 @media (min-width: 1024px) {
   .staffDesktop { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); height: calc(100dvh - 32px); min-height: 0; margin: 16px; padding: 0; overflow: hidden; border-radius: var(--radius-card); background: var(--color-bg); box-shadow: 0 2px 10px rgb(20 24 31 / 0.06); }
   .staffSidebar { display: flex; min-height: 0; flex-direction: column; gap: 6px; padding: 20px 14px; overflow-y: auto; border-right: 1px solid var(--color-border); background: var(--color-surface); }
-  .staffBrand { padding: 4px 12px 14px; color: var(--color-primary); font-size: 18px; font-weight: 700; text-decoration: none; }
-  .staffClassScope { display: grid; gap: 6px; margin: 0 4px 8px; padding: 12px; border: 1px solid var(--color-border); border-radius: 12px; color: var(--color-muted); font-size: 12px; }
-  .staffClassScope strong { color: var(--color-text); font-size: 14px; }
+  .staffBrand { min-width: 0; padding: 4px 12px 14px; overflow: hidden; color: var(--color-primary); font-size: 17px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+  .staffClassPicker { position: relative; margin: 0 4px 8px; }
+  .staffClassScope { display: grid; width: 100%; gap: 1px; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--color-bg); color: var(--color-muted); text-align: left; font: inherit; font-size: 12px; cursor: pointer; }
+  .staffClassScope strong { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; color: var(--color-text); font-size: 14px; }
+  .staffClassScope strong > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .staffClassChevron { flex: none; font-size: 16px; line-height: 1; }
+  .staffClassMenu { position: absolute; z-index: 12; top: calc(100% + 4px); right: 0; left: 0; display: grid; gap: 2px; padding: 4px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); box-shadow: 0 8px 24px rgb(20 24 31 / 0.14); }
+  .staffClassMenu button { min-height: var(--tap); padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--color-text); text-align: left; font: inherit; cursor: pointer; }
+  .staffClassMenu button[aria-selected="true"], .staffClassMenu button:hover { background: var(--color-primary-soft); color: var(--color-primary-ink); }
   .staffSideNav { display: grid; gap: 6px; }
   .staffNavItem { display: flex; min-height: var(--tap); align-items: center; padding: 0 12px; border-radius: 12px; color: var(--color-muted); text-decoration: none; font-size: 15px; font-weight: 600; }
   .staffNavActive { background: var(--color-primary-soft); color: var(--color-primary-ink); }
-  .staffRole { display: grid; gap: 8px; margin-top: auto; padding: 24px 12px 0; color: var(--color-muted); font-size: 13px; }
-  .staffDesktopSaveStatus { display: flex; width: fit-content; }
+  .staffDesktopSaveStatus { display: flex; width: fit-content; align-self: flex-start; margin-top: auto; padding-top: 24px; }
   .staffContent { gap: 20px; padding: 28px 32px; overflow-y: auto; }
   .staffTabbar { display: none; }
   .staffMobileSaveStatus { display: none; }

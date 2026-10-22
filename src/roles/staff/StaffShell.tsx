@@ -1,12 +1,14 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getSession } from "../../data/auth/session";
-import { useStore } from "../../data/store";
+import { getStore, replaceStore, useStore } from "../../data/store";
 import SaveStatus from "../../shared/SaveStatus";
+import { Icon } from "../../shared/ui";
 import styles from "../../app/shell.module.css";
 
 const desktopItems = [
   ["/lop", "Lớp"],
-  ["class-buoi-hoc", "Điểm danh"],
+  ["class-diem-danh", "Điểm danh"],
   ["class-diem", "Điểm số"],
   ["class-hoc-sinh", "Học sinh"],
   ["class-bao-cao", "Báo cáo"],
@@ -20,22 +22,22 @@ function classPath(classId: string | undefined, section: string): string {
 export function Component() {
   const store = useStore();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const [classMenuOpen, setClassMenuOpen] = useState(false);
   const session = getSession();
   const membership = session?.me.memberships.find(
     (item) => item.id === session.activeMembershipId && item.status === "active",
   );
-  const activeClass = store.classes.find((item) => item.id === store.currentClassId);
-  const activeMember = store.members.find((member) => member.id === store.activeMemberId);
-  const userName =
-    session?.user.display_name ??
-    activeMember?.name ?? "";
+  const activeClass = store.classes.find(
+    (item) => item.id === store.currentClassId,
+  );
+  const activeMember = store.members.find(
+    (member) => member.id === store.activeMemberId,
+  );
+  const userName = session?.user.display_name ?? activeMember?.name ?? "";
   const workspaceLabel = userName
     ? `Lớp của ${userName}`
     : membership?.workspace.name ?? "Lớp học";
-  const roleName =
-    membership?.role.name ??
-    store.roles.find((role) => role.id === activeMember?.roleId)?.name ??
-    "Nhân sự";
   const links = desktopItems.map(([to, label]) => {
     const href = to.startsWith("class-")
       ? classPath(activeClass?.id, to.slice("class-".length))
@@ -53,38 +55,82 @@ export function Component() {
         <NavLink to="/lop" className={styles.staffBrand}>
           {workspaceLabel}
         </NavLink>
-        <div className={styles.staffClassScope}>
-          <span>Đang xem lớp</span>
-          <strong>{activeClass?.name ?? "Chưa chọn lớp"}</strong>
-        </div>
-        <nav className={styles.staffSideNav} aria-label="Điều hướng nhân sự">
-          {links.map(({ href, label }) => (
-            <NavLink
-              key={label}
-              to={href}
-              end={href === "/lop"}
-              className={({ isActive }) => {
-                const scoreReport =
-                  label === "Điểm số" && pathname.includes("/bao-cao-diem");
-                return `${styles.staffNavItem}${isActive || scoreReport ? ` ${styles.staffNavActive}` : ""}`;
-              }}
+        <div className={styles.staffClassPicker}>
+          <button
+            type="button"
+            className={styles.staffClassScope}
+            aria-expanded={classMenuOpen}
+            aria-haspopup="listbox"
+            onClick={() => setClassMenuOpen((open) => !open)}
+          >
+            <span>Đang xem lớp</span>
+            <strong>
+              <span>{activeClass?.name ?? "Chưa chọn lớp"}</span>
+              <span aria-hidden="true" className={styles.staffClassChevron}>
+                ⌄
+              </span>
+            </strong>
+          </button>
+          {classMenuOpen && (
+            <div
+              className={styles.staffClassMenu}
+              role="listbox"
+              aria-label="Chọn lớp"
             >
-              {label}
-            </NavLink>
+              {store.classes.map((klass) => (
+                <button
+                  type="button"
+                  key={klass.id}
+                  role="option"
+                  aria-selected={klass.id === activeClass?.id}
+                  onClick={() => {
+                    replaceStore({ ...getStore(), currentClassId: klass.id });
+                    setClassMenuOpen(false);
+                    if (pathname.startsWith("/lop/"))
+                      navigate(`/lop/${klass.id}`);
+                  }}
+                >
+                  {klass.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+          <nav className={styles.staffSideNav} aria-label="Điều hướng nhân sự">
+            {links.map(({ href, label }) => (
+              <NavLink
+                key={label}
+                to={href}
+                end
+                className={({ isActive }) => {
+                  const scoreReport =
+                    label === "Điểm số" && pathname.includes("/bao-cao-diem");
+                  const selected = isActive || scoreReport;
+                  return `${styles.staffNavItem}${selected ? ` ${styles.staffNavActive}` : ""}`;
+                }}
+              >
+                {label}
+              </NavLink>
           ))}
         </nav>
-        <div className={styles.staffRole}>
-          <SaveStatus className={styles.staffDesktopSaveStatus} />
-          <span>{roleName}</span>
-        </div>
+        <SaveStatus className={styles.staffDesktopSaveStatus} />
       </aside>
       <main id="staff-content" className={styles.staffContent}>
         <Outlet />
       </main>
       <nav className={styles.staffTabbar} aria-label="Điều hướng chính">
-        <NavLink to="/lop" end>Lớp</NavLink>
-        <NavLink to="/lich">Lịch</NavLink>
-        <NavLink to="/cai-dat">Cài đặt</NavLink>
+        <NavLink to="/lop">
+          <Icon name="classes" />
+          Lớp
+        </NavLink>
+        <NavLink to="/lich">
+          <Icon name="calendar" />
+          Lịch
+        </NavLink>
+        <NavLink to="/cai-dat">
+          <Icon name="settings" />
+          Cài đặt
+        </NavLink>
       </nav>
     </div>
   );
