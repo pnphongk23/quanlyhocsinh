@@ -220,6 +220,8 @@ describe('sync scope and read protocol',()=>{
         expect((await f.page('class_session',actor)).body.items[0]).not.toHaveProperty('note');
         expect(snap.body.entities).not.toContain('report');expect(snap.body.entities).not.toContain('conflict');
         expect(pulled.body.upserts.score).toHaveLength(1);
+        expect(pulled.body.upserts.class[0]).toMatchObject({weekdays:expect.any(Array),start_time:expect.any(String)});
+        expect(pulled.body.upserts.class[0]).not.toHaveProperty('workspace_id');
       }
       }
     });
@@ -231,7 +233,7 @@ describe('sync scope and read protocol',()=>{
       expect(classPage.body.items).toEqual([
         expect.objectContaining({id:f.cls,name:'C1',teacher_name:'Cô Lan'}),
       ]);
-      expect(Object.keys(classPage.body.items[0]).sort()).toEqual(['id','name','status','teacher_name','version']);
+      expect(Object.keys(classPage.body.items[0]).sort()).toEqual(['id','name','start_time','status','teacher_name','version','weekdays']);
       expect(JSON.stringify(classPage.body.items)).not.toMatch(/phone|user_id|membership_id|teacher_id/i);
 
       await db.prepare("UPDATE users SET display_name='Cô Mai' WHERE id=?").bind(f.teacherUser).run();
