@@ -45,7 +45,7 @@
 .filterChip {
   flex: none;
   max-width: min(220px, 62vw);
-  min-height: 36px;
+  min-height: var(--tap);
   overflow: hidden;
   padding: 8px 12px;
   border: 1px solid transparent;
