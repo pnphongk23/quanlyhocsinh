@@ -1,16 +1,19 @@
 import type { RouteObject } from "react-router-dom";
-import { placeholderRoute } from "../../app/placeholderRoute";
-/** W-3 owns guardian features. No staff component imports in this module. */
-export const guardianRoutes: RouteObject[] = [{
-  path: "/ph", lazy: () => import("./GuardianShell"),
-  children: [
-    { index: true, lazy: placeholderRoute("Tổng quan") },
-    { path: "diem-danh", lazy: placeholderRoute("Điểm danh") },
-    { path: "diem-so", lazy: placeholderRoute("Điểm số") },
-    { path: "nhan-xet", lazy: placeholderRoute("Nhận xét") },
-    { path: "nhan-xet/:sessionId", lazy: placeholderRoute("Phiếu buổi học"), handle: { detail: true } },
-    { path: "btvn", lazy: placeholderRoute("Bài tập về nhà") },
-    { path: "btvn/:sessionId", lazy: placeholderRoute("Bài tập về nhà"), handle: { detail: true } },
-    { path: "bao-cao", lazy: placeholderRoute("Báo cáo tháng") },
-  ],
-}];
+
+/** Màn phụ huynh được tải lười, tách khỏi chunk nhân sự. */
+export const guardianRoutes: RouteObject[] = [
+  {
+    path: "/ph",
+    lazy: () => import("./GuardianShell"),
+    children: [
+      { index: true, lazy: async () => ({ Component: (await import("./GuardianOverviewPage")).default }) },
+      { path: "diem-danh", lazy: async () => ({ Component: (await import("./GuardianAttendancePage")).default }) },
+      { path: "diem-so", lazy: async () => ({ Component: (await import("./GuardianScoresPage")).default }) },
+      { path: "nhan-xet", lazy: async () => ({ Component: (await import("./GuardianCommentsPage")).default }) },
+      { path: "nhan-xet/:sessionId", lazy: async () => ({ Component: (await import("./GuardianTicketPage")).default }), handle: { detail: true } },
+      { path: "btvn", lazy: async () => ({ Component: (await import("./GuardianHomeworkPage")).default }) },
+      { path: "btvn/:sessionId", lazy: async () => ({ Component: (await import("./GuardianHomeworkPage")).default }), handle: { detail: true } },
+      { path: "bao-cao", lazy: async () => ({ Component: (await import("./GuardianReportPage")).default }) },
+    ],
+  },
+];

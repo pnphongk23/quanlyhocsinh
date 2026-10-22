@@ -34,8 +34,7 @@ export default function RolePickerPage() {
 
   function subtitle(membership: (typeof memberships)[number]): string {
     if (membership.role.scope_kind !== "linked_students") return membership.workspace.name;
-    const phone = normalizePhone(sessionPhone);
-    const first = state.students.find((student) => normalizePhone(student.parentPhone) === phone);
+    const first = membership.students?.[0];
     return first ? `Bé ${shortName(first.name)}` : "Phụ huynh";
   }
 

@@ -7,6 +7,7 @@ import {
   changePassword,
 } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
+import { listMyChildren } from "../../data/repositories/guardian";
 import { getStore, useStore } from "../../data/store";
 import { pendingCommandCount } from "../../data/outbox";
 import { scheduleSync } from "../../data/sync";
@@ -73,21 +74,17 @@ function useSettingsData() {
   /**
    * Dòng phụ dưới tên: "Giáo viên · Lớp của cô Lan", "Phụ huynh · Minh Anh
    * (6A), Gia Bảo (7B)" hoặc "Phụ huynh · Chưa liên kết con" (spec mục 4).
-   * Con đọc theo hồ sơ học sinh trong kho dữ liệu vì gói thành viên chưa trả
-   * danh sách con; xem mục "Cần W-1" trong báo cáo W-4b.
+   * Con đọc từ `students` của membership phụ huynh qua repository được phân
+   * quyền; danh sách này phản ánh các hồ sơ hiện đang liên kết với tài khoản.
    */
   function subtitleFor(membership: (typeof memberships)[number]): string {
     if (membership.role.scope_kind !== "linked_students") {
       return membership.workspace.name;
     }
-    const digits = normalizePhone(phone);
-    const children = state.students
-      .filter((student) => normalizePhone(student.parentPhone) === digits)
-      .map((student) => {
-        const klass = state.classes.find((item) => item.id === student.classId);
-        const shortName = student.name.trim().split(/\s+/).slice(-2).join(" ");
-        return `${shortName} (${klass ? classShortLabel(klass.name) : "—"})`;
-      });
+    const children = listMyChildren().map(({ student, className }) => {
+      const shortName = student.name.trim().split(/\s+/).slice(-2).join(" ");
+      return `${shortName} (${className ? classShortLabel(className) : "—"})`;
+    });
     return children.length ? children.join(", ") : "Chưa liên kết con";
   }
 

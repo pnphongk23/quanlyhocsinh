@@ -30,6 +30,7 @@ const memberships: MeResponse["memberships"] = [
 ];
 const user = { id: "user-1", phone: "+84900000001", display_name: "Cô Lan", must_change_password: false };
 let activeMembershipId: string | null = memberships[0].id;
+let registeredTeacher = false;
 const me = (): MeResponse => ({ user, active_membership_id: activeMembershipId, memberships });
 const loginResponse = () => ({ token: "test-token", expires_at: "2099-01-01T00:00:00Z", user, memberships, active_membership_id: activeMembershipId });
 function Harness({ initial = "/dang-nhap" }: { initial?: string }) {
@@ -41,10 +42,21 @@ function Harness({ initial = "/dang-nhap" }: { initial?: string }) {
 }
 
 beforeEach(async () => {
-  await clearSession(); activeMembershipId = memberships[0].id; request.mockReset(); assertCanLogout.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
+  await clearSession(); activeMembershipId = memberships[0].id; registeredTeacher = false; request.mockReset(); assertCanLogout.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
   request.mockImplementation(async (endpoint: string, options?: { body?: { membership_id: string } }) => {
-    if (endpoint === "POST /auth/login" || endpoint === "POST /auth/register") return loginResponse();
-    if (endpoint === "GET /me") return me();
+    if (endpoint === "POST /auth/login") return loginResponse();
+    if (endpoint === "POST /auth/register") {
+      activeMembershipId = memberships[0].id;
+      registeredTeacher = true;
+      return { ...loginResponse(), memberships: [memberships[0]], active_membership_id: activeMembershipId };
+    }
+    if (endpoint === "GET /me") {
+      if (registeredTeacher) {
+        registeredTeacher = false;
+        return { user, active_membership_id: memberships[0].id, memberships: [memberships[0]] };
+      }
+      return me();
+    }
     if (endpoint === "PUT /session/membership") { activeMembershipId = options?.body?.membership_id ?? activeMembershipId; return { active_membership_id: activeMembershipId, device_registration_cleared: true }; }
     if (endpoint === "POST /auth/change-password") return { must_change_password: false };
     if (endpoint === "POST /auth/logout") return undefined;

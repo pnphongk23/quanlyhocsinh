@@ -1,0 +1,83 @@
+/* Khung màn phụ huynh: cột giữa hẹp, tối đa 480px như khung 390px của ảnh. */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  background: var(--color-bg);
+}
+.skip {
+  position: fixed;
+  top: -100px;
+  left: 8px;
+  z-index: 20;
+  padding: 12px;
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.skip:focus {
+  top: 8px;
+}
+.content {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px 20px calc(16px + env(safe-area-inset-top));
+  min-width: 0;
+}
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  z-index: 10;
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+  transform: translateX(-50%);
+  padding: 0 4px calc(8px + env(safe-area-inset-bottom));
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 56px;
+  padding-top: 8px;
+  margin-top: -1px;
+  border-top: 3px solid transparent;
+  color: var(--color-muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+.tabActive {
+  color: var(--color-primary);
+  border-top-color: var(--color-primary);
+}
+
+@media print {
+  .app {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+  .skip,
+  .tabbar {
+    display: none !important;
+  }
+  .content {
+    display: block;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+}

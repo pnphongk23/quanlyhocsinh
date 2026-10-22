@@ -35,8 +35,6 @@ export default function LoginPage() {
       <div className={s.forgotRow}><Link to={`/quen-mat-khau${phone ? `?sdt=+84${phone.replace(/\D/g, "")}` : ""}`} className={s.forgotLink}>Quên mật khẩu?</Link></div>
       <button type="submit" className={s.submit} disabled={loading}>{loading ? "Đang đăng nhập…" : "Đăng nhập"}</button>
     </form>
-    <div className={s.footerBlock}><p className={s.registerRow}>Chưa có không gian làm việc? <Link to="/dang-ky" className={s.registerLink}>Đăng ký cho giáo viên</Link></p>
-      <p className={s.hintCard}><strong>Phụ huynh:</strong> dùng số điện thoại đã khai trong hồ sơ học sinh và mật khẩu tài khoản.</p>
-    </div>
+      <div className={s.footerBlock}><p className={s.registerRow}>Chưa có tài khoản? · <Link to="/dang-ky" className={s.registerLink}>Tạo tài khoản</Link></p></div>
   </div></main>;
 }
