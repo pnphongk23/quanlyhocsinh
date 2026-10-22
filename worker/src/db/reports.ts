@@ -94,6 +94,25 @@ export async function previewReport(
     )
     .bind(i.workspaceId, student.class_id, month)
     .first<{ n: number }>();
+  const homeworkByKind = new Map<
+    string,
+    { kind: string; excellent: number; done: number; not_done: number }
+  >();
+  for (const row of homework.results) {
+    const summary = homeworkByKind.get(row.kind) ?? {
+      kind: row.kind,
+      excellent: 0,
+      done: 0,
+      not_done: 0,
+    };
+    if (row.level === "excellent" || row.level === "done" || row.level === "not_done") {
+      summary[row.level] = row.count;
+    }
+    homeworkByKind.set(row.kind, summary);
+  }
+  const homeworkSummary = [...homeworkByKind.values()].sort((a, b) =>
+    a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0,
+  );
   return {
     student_id: studentId,
     month,
@@ -110,7 +129,7 @@ export async function previewReport(
       two: starCounts.two ?? 0,
       one: starCounts.one ?? 0,
     },
-    homework: homework.results,
+    homework: homeworkSummary,
     general_comment: report?.general_comment ?? "",
     ready: true,
   };

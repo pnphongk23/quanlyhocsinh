@@ -8,6 +8,7 @@ import {
   insertClass,
   insertGuardianMembership,
   insertMembership,
+  insertSession,
   insertStudent,
   insertUser,
   post,
@@ -20,6 +21,9 @@ describe("reports routes and optional PDF storage", () => {
   let f: {
     classId: string;
     studentId: string;
+    workspaceId: string;
+    userId: string;
+    membershipId: string;
     token: string;
     reportId: string;
     teacher: string;
@@ -112,6 +116,9 @@ describe("reports routes and optional PDF storage", () => {
     f = {
       classId,
       studentId,
+      workspaceId: ws.workspaceId,
+      userId: ws.userId,
+      membershipId: ws.membershipId,
       token: ws.token,
       reportId: published.body.report_id,
       teacher: await clubToken(ws.workspaceId, teacherUser, teacherMembership),
@@ -410,6 +417,97 @@ describe("reports routes and optional PDF storage", () => {
       noR2,
     );
     expect(snapshot.status).toBe(200);
+  });
+  it("returns homework counts grouped by kind in previews and publication snapshots", async () => {
+    const grades = [
+      "excellent",
+      "excellent",
+      "excellent",
+      "excellent",
+      "done",
+      "done",
+      "done",
+      "not_done",
+      "done",
+    ];
+    const commands = [] as {
+      id: string;
+      type: string;
+      payload: Record<string, unknown>;
+      base_version: number;
+      created_at: string;
+    }[];
+    const command = (type: string, payload: Record<string, unknown>) => ({
+      id: crypto.randomUUID(),
+      type,
+      payload,
+      base_version: 0,
+      created_at: new Date().toISOString(),
+    });
+    for (const [index, level] of grades.entries()) {
+      const sessionId = await insertSession(
+        f.workspaceId,
+        f.classId,
+        `2026-10-${String(index + 1).padStart(2, "0")}`,
+        f.userId,
+        "held",
+      );
+      const sectionId = crypto.randomUUID();
+      const kind = index === grades.length - 1 ? "reading" : "vocabulary";
+      commands.push(
+        command("homework.section.upsert", {
+          id: sectionId,
+          session_id: sessionId,
+          kind,
+        }),
+        command("homework.grade.set", {
+          section_id: sectionId,
+          student_id: f.studentId,
+          level,
+        }),
+      );
+    }
+    const pushed = await call(
+      "/v1/sync/push",
+      post({
+        membership_id: f.membershipId,
+        device_id: crypto.randomUUID(),
+        commands,
+      }),
+      f.token,
+    );
+    expect(pushed.status).toBe(200);
+    expect(
+      pushed.body.results.every((result: any) => result.status === "applied"),
+    ).toBe(true);
+
+    const expectedHomework = [
+      { kind: "reading", excellent: 0, done: 1, not_done: 0 },
+      { kind: "vocabulary", excellent: 4, done: 3, not_done: 1 },
+    ];
+    const preview = await call(
+      `/v1/students/${f.studentId}/report-preview?month=2026-10`,
+      {},
+      f.token,
+    );
+    expect(preview.body.homework).toEqual(expectedHomework);
+    for (const item of preview.body.homework) {
+      expect(Object.keys(item).sort()).toEqual(
+        ["done", "excellent", "kind", "not_done"].sort(),
+      );
+    }
+
+    const published = await call(
+      `/v1/students/${f.studentId}/reports/2026-10/publish`,
+      post({}),
+      f.token,
+    );
+    expect(published.body.snapshot.homework).toEqual(expectedHomework);
+    for (const item of published.body.snapshot.homework) {
+      expect(Object.keys(item).sort()).toEqual(
+        ["done", "excellent", "kind", "not_done"].sort(),
+      );
+    }
   });
   it("uploads and streams PDF with REPORT_PDFS, returns 503 when the optional binding is absent", async () => {
     const path = `/v1/reports/${f.reportId}/publications/1/pdf`,
