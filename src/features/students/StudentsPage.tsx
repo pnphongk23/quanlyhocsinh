@@ -127,7 +127,7 @@ export default function StudentsPage() {
         <form className={s.form} onSubmit={addStudent}>
           <Input label="Họ và tên học sinh" name="name" autoComplete="name" onChange={save.markUnsaved} required />
           <Input label="Số điện thoại phụ huynh (tuỳ chọn)" name="phone" type="tel" inputMode="tel" autoComplete="tel" onChange={save.markUnsaved} />
-          <p className={s.note}>Chỉ lưu số điện thoại trong hồ sơ. Chưa gửi lời mời hoặc tin nhắn.</p>
+          <p className={s.note}>Phụ huynh dùng số này để đăng ký và đăng nhập.</p>
           {error && <p role="alert" className={s.error}>{error}</p>}
           <SaveStatus status={save.status} />
           <Button size="lg" type="submit">Lưu học sinh</Button>

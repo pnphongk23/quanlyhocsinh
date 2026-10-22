@@ -12,7 +12,7 @@ export function EmptyState({
 }) {
   return (
     <div className={s.empty}>
-      {mascot && <Mascot pose={mascot} size={80} />}
+        {mascot && <Mascot pose={mascot} size={96} />}
       <h2 className={s.emptyTitle}>{title}</h2>
       {children}
     </div>

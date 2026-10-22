@@ -72,7 +72,7 @@ describe("scheduleState", () => {
     status: Session["status"],
   ): Session => ({ id: "s", classId: "class-1", date, status });
 
-  it("buổi hôm nay mời điểm danh", () => {
+  it("buổi hôm nay có thể điểm danh", () => {
     expect(scheduleState(session("2026-10-18", "planned"), "2026-10-18")).toEqual({
       label: "Điểm danh",
       tone: "primary",

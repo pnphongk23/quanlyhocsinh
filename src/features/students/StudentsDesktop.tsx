@@ -250,7 +250,7 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
             onChange={save.markUnsaved}
           />
           <p className={d.muted13}>
-            Chỉ lưu số điện thoại trong hồ sơ. Chưa gửi lời mời hoặc tin nhắn.
+            Phụ huynh dùng số này để đăng ký và đăng nhập.
           </p>
           <Button size="lg" type="submit">
             Lưu học sinh
