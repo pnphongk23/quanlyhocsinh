@@ -160,6 +160,22 @@ describe('classes API', () => {
     expect(items.map((row) => row.session_number)).toEqual(items.map((_, index) => index + 1));
   });
 
+  it('does not rebuild sessions when a stale schedule update loses the version check', async () => {
+    const owner = await registerWorkspaceAtIp('+84900000144', 'Class stale schedule', '198.51.100.44');
+    const today = vnToday();
+    const todayDay = weekdayOf(today);
+    const nextDay = todayDay === 7 ? 1 : todayDay + 1;
+    const created = await call('/v1/classes', post({ name: 'Lịch', weekdays: [todayDay], start_time: '18:00' }), owner.token);
+    const classId = created.body.id as string;
+    const changed = await call(`/v1/classes/${classId}`, { method: 'PATCH', body: JSON.stringify({ weekdays: [nextDay], base_version: 1 }) }, owner.token);
+    expect(changed.status).toBe(200);
+    const before = await call(`/v1/classes/${classId}/sessions?from=${today}&to=${addDays(today, 56)}`, {}, owner.token);
+    const stale = await call(`/v1/classes/${classId}`, { method: 'PATCH', body: JSON.stringify({ weekdays: [todayDay], start_time: '19:00', base_version: 1 }) }, owner.token);
+    expect(stale.status).toBe(409);
+    const after = await call(`/v1/classes/${classId}/sessions?from=${today}&to=${addDays(today, 56)}`, {}, owner.token);
+    expect(after.body.items).toEqual(before.body.items);
+  });
+
   it('checks the role matrix for every class endpoint', async () => {
     const owner = await registerWorkspaceAtIp('+84900000121', 'Class role matrix', '198.51.100.21');
     const target = await insertClass(owner.workspaceId, 'C1', owner.userId);

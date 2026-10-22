@@ -34,6 +34,11 @@ function resolveRequestId(request: Request): string {
 }
 
 const app = new Hono<AppEnv>();
+const requestStartedAt = new WeakMap<Request, number>();
+
+function logPath(path: string): string {
+  return path.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, ':id');
+}
 
 interface ScheduledJob {
   name: string;
@@ -58,11 +63,13 @@ export async function scheduled(
   context: ExecutionContext,
 ): Promise<void> {
   for (const job of scheduledJobs) {
+    const startedAt = performance.now();
     try {
       await job.run(controller, env, context);
     } catch {
       // A failed cron task must not prevent the other task from running.
-      console.error(JSON.stringify({ level: 'error', code: 'scheduled_job_failed', job: job.name }));
+      console.error(JSON.stringify({ request_id: crypto.randomUUID(), path: '/scheduled', code: 'scheduled_job_failed',
+        duration_ms: Math.round(performance.now() - startedAt) }));
     }
   }
 }
@@ -88,6 +95,7 @@ app.use('/v1/*', async (c, next) => {
 });
 
 app.use('*', async (c, next) => {
+  requestStartedAt.set(c.req.raw, performance.now());
   const requestId = resolveRequestId(c.req.raw);
   c.set('requestId', requestId);
   c.header('X-Request-Id', requestId);
@@ -138,15 +146,14 @@ app.onError((error, c) => {
     );
   }
 
-  // Log tối thiểu, không có SĐT/mật khẩu/token/nội dung nhận xét/body.
-  console.error(
-    JSON.stringify({
-      level: 'error',
-      request_id: requestId,
-      path: c.req.path,
-      method: c.req.method,
-      code: 'internal',
-    }),
+    // Log tối thiểu, không có SĐT/mật khẩu/token/nội dung nhận xét/body.
+    console.error(
+      JSON.stringify({
+        request_id: requestId,
+        path: logPath(c.req.path),
+        code: 'internal',
+        duration_ms: Math.round(performance.now() - (requestStartedAt.get(c.req.raw) ?? performance.now())),
+      }),
   );
   return c.json(
     {

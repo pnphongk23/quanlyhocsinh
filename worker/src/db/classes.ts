@@ -41,7 +41,7 @@ function validateName(value: unknown): string {
 /** Chèn buổi lặp cho các ngày khớp `bits`, bỏ qua ngày đã có buổi của lớp (kể cả buổi lẻ/đã hủy)
  *  để một lần đổi lịch hoặc một lượt cron không bao giờ tạo hai buổi cùng lớp trong cùng một ngày. */
 export function insertSessions(db: D1Database, workspaceId: string, classId: string, bits: number,
-  startTime: string, from: string, until: string, now: string) {
+  startTime: string, from: string, until: string, now: string, expectedVersion?: number) {
   const statements: D1PreparedStatement[] = [];
   const cursor = new Date(`${from}T00:00:00.000Z`);
   const last = new Date(`${until}T00:00:00.000Z`);
@@ -53,10 +53,11 @@ export function insertSessions(db: D1Database, workspaceId: string, classId: str
        (id, workspace_id, class_id, date, start_time, origin, is_makeup, status, note,
         cancelled_at, cancelled_by, created_at, updated_at, updated_by, version)
        SELECT ?, ?, ?, ?, ?, 'recurring', 0, 'planned', '', NULL, NULL, ?, ?, ?, 1
-       WHERE NOT EXISTS (SELECT 1 FROM class_sessions existing
-         WHERE existing.workspace_id = ? AND existing.class_id = ? AND existing.date = ?)`,
-    ).bind(crypto.randomUUID(), workspaceId, classId, date, startTime, now, now, null,
-      workspaceId, classId, date));
+        WHERE NOT EXISTS (SELECT 1 FROM class_sessions existing
+          WHERE existing.workspace_id = ? AND existing.class_id = ? AND existing.date = ?)
+          ${expectedVersion === undefined ? '' : 'AND EXISTS (SELECT 1 FROM classes WHERE workspace_id = ? AND id = ? AND version = ?)'} `,
+      ).bind(crypto.randomUUID(), workspaceId, classId, date, startTime, now, now, null,
+        workspaceId, classId, date, ...(expectedVersion === undefined ? [] : [workspaceId, classId, expectedVersion])));
   }
   return statements;
 }
@@ -146,18 +147,20 @@ export async function updateClass(db: D1Database, identity: Identity, classId: s
     // `insertSessions` bỏ qua ngày đã có buổi nên ngày giữ lại chỉ có đúng buổi cũ.
     statements.push(db.prepare(`UPDATE class_sessions SET origin = 'manual', updated_at = ?, updated_by = ?, version = version + 1
       WHERE workspace_id = ? AND class_id = ? AND date >= ? AND status = 'planned' AND origin = 'recurring'
+      AND EXISTS (SELECT 1 FROM classes c WHERE c.workspace_id = class_sessions.workspace_id AND c.id = class_sessions.class_id AND c.version = ?)
       AND (EXISTS (SELECT 1 FROM attendance a WHERE a.session_id = class_sessions.id)
         OR EXISTS (SELECT 1 FROM session_comments sc WHERE sc.session_id = class_sessions.id)
         OR EXISTS (SELECT 1 FROM homework_sections hs WHERE hs.session_id = class_sessions.id))`)
-      .bind(now, identity.userId, identity.workspaceId, classId, today));
+        .bind(now, identity.userId, identity.workspaceId, classId, today, old.version));
     statements.push(db.prepare(`DELETE FROM class_sessions WHERE workspace_id = ? AND class_id = ? AND date >= ?
       AND status = 'planned' AND origin = 'recurring'
+      AND EXISTS (SELECT 1 FROM classes c WHERE c.workspace_id = class_sessions.workspace_id AND c.id = class_sessions.class_id AND c.version = ?)
       AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.session_id = class_sessions.id)
       AND NOT EXISTS (SELECT 1 FROM session_comments sc WHERE sc.session_id = class_sessions.id)
       AND NOT EXISTS (SELECT 1 FROM homework_sections hs WHERE hs.session_id = class_sessions.id)`)
-      .bind(identity.workspaceId, classId, today));
+        .bind(identity.workspaceId, classId, today, old.version));
     if (status === 'active') {
-      statements.push(...insertSessions(db, identity.workspaceId, classId, weekdays, startTime, today, until, now));
+      statements.push(...insertSessions(db, identity.workspaceId, classId, weekdays, startTime, today, until, now, old.version));
     }
   }
   statements.push(db.prepare(`UPDATE classes SET name = ?, weekdays = ?, start_time = ?, status = ?,
@@ -166,7 +169,8 @@ export async function updateClass(db: D1Database, identity: Identity, classId: s
       WHERE workspace_id = ? AND id = ? AND version = ?`)
     .bind(name, weekdays, startTime, status, changedSchedule ? 1 : 0, until, now, identity.userId,
       identity.workspaceId, classId, old.version));
-  await db.batch(statements);
+  const results = await db.batch(statements);
+  if ((results.at(-1)?.meta.changes ?? 0) === 0) throw conflict('version_conflict');
   return { id: classId, name, status, weekdays: weekdayList(weekdays), start_time: startTime, version: old.version + 1 };
 }
 

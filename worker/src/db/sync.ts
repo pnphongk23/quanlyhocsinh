@@ -155,11 +155,15 @@ function version(c:Command,row:Row):void {
   if (c.base_version>row.version) throw validationError(undefined,'base_version_ahead');
 }
 async function prior(db:D1Database,i:SyncIdentity,c:Command):Promise<Result|null> {
-  const row=await one(db,'SELECT membership_id,workspace_id,result FROM applied_commands WHERE command_id=?',c.id);
+  const row=await one(db,'SELECT membership_id,workspace_id,result FROM applied_commands WHERE command_id=? AND workspace_id=?',c.id,i.workspaceId);
   if (!row) return null;
-  if (row.membership_id!==i.membershipId || row.workspace_id!==i.workspaceId) return {id:c.id,status:'rejected',error:{code:'conflict',message:'Conflict.',details:{reason:'command_id_used'}}};
+  if (row.membership_id!==i.membershipId) return {id:c.id,status:'rejected',error:{code:'conflict',message:'Conflict.',details:{reason:'retry'}}};
   const original=JSON.parse(row.result);
+  if(original.status==='rejected')return original;
   return {...original,status:'duplicate',original_status:original.status};
+}
+async function foreignCommandIdUsed(db:D1Database,i:SyncIdentity,c:Command):Promise<boolean> {
+  return (await one(db,'SELECT command_id FROM applied_commands WHERE command_id=? AND workspace_id<>?',c.id,i.workspaceId))!==null;
 }
 function marker(i:SyncIdentity,c:Command,r:Result,conditional:boolean):SQL {
   return q(`INSERT INTO applied_commands(command_id,workspace_id,membership_id,type,status,result,applied_at)
@@ -268,9 +272,13 @@ export async function push(db:D1Database,i:SyncIdentity,commands:Command[],reque
         }
         evict(i,c);
         result=plan.result; break;
-      } catch (error) {
-        const duplicate=await prior(db,i,c);
-        if (duplicate) {result=duplicate;break;}
+        } catch (error) {
+          const duplicate=await prior(db,i,c);
+          if (duplicate) {result=duplicate;break;}
+          if (await foreignCommandIdUsed(db,i,c)) {
+            result={id:c.id,status:'rejected',error:{code:'conflict',message:'Conflict.',details:{reason:'retry'},request_id:requestId}};
+            break;
+          }
         const mapped=error instanceof ApiError ? error : mapTriggerError(error,new ApiError(409,'conflict','Conflict.',{reason:'constraint_failed'}));
         result={id:c.id,status:'rejected',error:errorBody(mapped,requestId).error};
         try {await commit(db,i,c,{result,rest:[]});} catch {result=await prior(db,i,c) ?? result;}

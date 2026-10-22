@@ -316,13 +316,24 @@ describe('sync scope and read protocol',()=>{
     const c=command('score.set',{test_id:f.test,student_id:f.s1,value:8});
     expect((await f.send([c],'teacher')).body.results[0]).toMatchObject({status:'rejected',error:{code:'forbidden'}});
     await db.prepare("UPDATE role_permissions SET level='write' WHERE role_id=? AND perm_group='scores'").bind(f.a.roles.teacher).run();
-    expect((await f.send([c],'teacher')).body.results[0]).toMatchObject({status:'duplicate',original_status:'rejected'});
+    expect((await f.send([c],'teacher')).body.results[0]).toMatchObject({status:'rejected',error:{code:'forbidden'}});
     expect((await f.send([command('score.set',c.payload)],'teacher')).body.results[0].status).toBe('applied');
     const other=await insertGuardianMembership(f.a.workspaceId,f.teacherUser,f.a.roles.guardian!,[f.s1]);
     await db.prepare('UPDATE auth_sessions SET membership_id=? WHERE user_id=?').bind(other,f.teacherUser).run();
     await db.prepare("UPDATE memberships SET status='disabled' WHERE id=?").bind(f.actors.teacher.mid).run();
     expect((await f.snap('teacher')).status).toBe(404);expect((await f.pull(0,'teacher')).status).toBe(404);
     expect((await f.send([],'teacher')).status).toBe(404);expect((await f.page('student','teacher')).status).toBe(404);
+  });
+  it('does not reveal command receipts across workspaces',async()=>{
+    const f=await setup(),b=await registerWorkspace(fakePhone(),'Receipt isolation');
+    const applied=command('attendance.set',{session_id:f.ses,student_id:f.s1,status:'present'});
+    expect((await f.send([applied])).body.results[0].status).toBe('applied');
+    const classId=await insertClass(b.workspaceId,'Receipt isolation',b.userId);
+    const sessionId=await insertSession(b.workspaceId,classId,today(),b.userId);
+    const crossWorkspace={...applied,payload:{session_id:sessionId,student_id:await insertStudent(b.workspaceId,classId,'Other student',null,b.userId),status:'present'}};
+    const response=await call('/v1/sync/push',post({membership_id:b.membershipId,device_id:uid(),commands:[crossWorkspace]}),b.token);
+    expect(response.body.results[0]).toMatchObject({status:'rejected',error:{code:'conflict',details:{reason:'retry'}}});
+    expect(JSON.stringify(response.body)).not.toContain('command_id_used');
   });
   it('validates request shape, UUIDs, malformed cursors, snapshot entities and required password changes',async()=>{
     const f=await setup();
