@@ -55,4 +55,4 @@ API login và các khoá JSON đã được xác minh đúng; app unsigned vẫn
 
 ## Cập nhật từ iOS-18
 
-Đã thử build Staging ad-hoc với entitlement riêng và chạy lại flow đăng nhập trên simulator iPhone 16 sạch. Maestro login vẫn không đạt; theo brief đã dừng, không gửi lệnh attendance và không thử đăng nhập lại. Chưa xác minh được nguyên nhân hoặc GET điểm danh độc lập; trạng thái staging vẫn `BLOCKED` (xem `report-i18.md`).
+Chẩn đoán bổ sung đã xác định flow login trước đó truyền số có tiền tố `84` vào trường chỉ nhận 9 chữ số; thao tác chạm cũng bị bàn phím che. Sau khi chuẩn hoá số nội địa và đưa nút lên vùng nhìn thấy, app nhận HTTP 200 và lưu token Keychain thành công; không tái hiện `-34018`. Điểm danh staging được đổi rồi khôi phục qua UI, xác minh GET độc lập với version 3 → 4 → 5 (HTTP 200 mỗi lượt). Đăng nhập phụ huynh thành công nhưng dữ liệu không giải mã do payload `report_publication.snapshot.homework` thiếu `excellent` so với API spec; xem bằng chứng và quyết định cần thiết trong `report-i18.md`. `Features/Guardian` không được sửa vì brief I-18 giới hạn phạm vi đó.
