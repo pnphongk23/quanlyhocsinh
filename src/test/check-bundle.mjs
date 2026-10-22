@@ -32,6 +32,6 @@ for (const key of shellKeys) {
 }
 assert(!closure([shellKeys[0]]).includes(shellKeys[1]), "Staff shell includes guardian shell");
 assert(!closure([shellKeys[1]]).includes(shellKeys[0]), "Guardian shell includes staff shell");
-const firstRoutes = ["src/features/classes/ClassListPage.tsx", "src/roles/guardian/GuardianOverviewPage.tsx"];
+const firstRoutes = ["src/features/classes/ClassListPage.tsx", "src/roles/guardian/GuardianClassPage.tsx"];
 for (const key of firstRoutes) assert(manifest[key]?.isDynamicEntry, `${key} must be a lazy first route`);
 console.log(JSON.stringify({ initial, staffFirstRoute: measure([entry, shellKeys[0], firstRoutes[0]]), guardianFirstRoute: measure([entry, shellKeys[1], firstRoutes[1]]) }, null, 2));

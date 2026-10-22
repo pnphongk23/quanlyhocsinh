@@ -7,7 +7,7 @@ import {
   defaultChildMonth,
 } from "./guardianRead";
 import { longDayMonth, scoreText } from "./guardianFormat";
-import { MonthSwitch } from "./guardianUi";
+import { MonthSwitch, useBackTarget } from "./guardianUi";
 import GuardianNoChild from "./guardianEmpty";
 import g from "./guardian.module.css";
 
@@ -18,6 +18,7 @@ import g from "./guardian.module.css";
  */
 export default function GuardianScoresPage() {
   const { child, error } = useGuardianContext();
+  const back = useBackTarget();
   const [month, setMonth] = useState<string | null>(null);
   if (error) {
     return (
@@ -45,7 +46,7 @@ export default function GuardianScoresPage() {
 
   return (
     <main className={g.page}>
-      <PageHeader eyebrow={child.student.name} title="Điểm số" />
+      <PageHeader backTo={back} eyebrow={child.student.name} title="Điểm số" />
       <MonthSwitch
         month={current}
         months={months.length ? months : [current]}

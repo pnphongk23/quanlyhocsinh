@@ -98,22 +98,23 @@ function useSettingsData() {
       }).label} · ${subtitleFor(current)}`
     : "";
 
-  return {
+    return {
     state,
     memberships,
     current,
     multipleRoles: memberships.length > 1,
     name,
     phone,
-    roleLine,
-    subtitleFor,
+      roleLine,
+      guardian: current?.role.scope_kind === "linked_students",
+      subtitleFor,
   };
 }
 
 function SettingsMobile() {
   const navigate = useNavigate();
-  const { state, memberships, current, multipleRoles, name, phone, roleLine } =
-    useSettingsData();
+    const { state, memberships, current, multipleRoles, name, phone, roleLine, guardian } =
+      useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
   const [blocked, setBlocked] = useState(false);
@@ -139,8 +140,9 @@ function SettingsMobile() {
   }
 
   return (
-    <main className={s.page}>
-      <h1 className={s.pageTitle}>Cài đặt</h1>
+      <main className={s.page}>
+        {guardian && <Link to="/ph" className={s.backButton} aria-label="Quay lại phụ huynh"><Icon name="back" size={20} /></Link>}
+        <h1 className={s.pageTitle}>Cài đặt</h1>
       {pending > 0 && (
         <p className={s.banner} role="status">
           {online
@@ -230,8 +232,8 @@ function SettingsMobile() {
 
 function SettingsDesktop() {
   const navigate = useNavigate();
-  const { state, memberships, current, multipleRoles, name, phone, roleLine, subtitleFor } =
-    useSettingsData();
+    const { state, memberships, current, multipleRoles, name, phone, roleLine, subtitleFor, guardian } =
+      useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
   const [blocked, setBlocked] = useState(false);
@@ -288,7 +290,8 @@ function SettingsDesktop() {
 
   return (
     <main className={s.page}>
-      <header>
+        <header>
+          {guardian && <Link to="/ph" className={s.backButton} aria-label="Quay lại phụ huynh"><Icon name="back" size={20} /></Link>}
         <p className={s.breadcrumb}>
           <span>Cài đặt</span>
           <span aria-hidden="true">/</span>

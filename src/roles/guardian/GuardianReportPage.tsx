@@ -1,3 +1,4 @@
+import { formatScore } from "../../data/scoreFormat";
 import { getChildMonthlyReport } from "../../data/repositories/guardian";
 import { Button, Card, PageHeader } from "../../shared/ui";
 import { useGuardianContext } from "./guardianContext";
@@ -6,7 +7,7 @@ import {
   publishedReportMonths,
 } from "./guardianRead";
 import { longDayMonth, monthLabel } from "./guardianFormat";
-import { ChildEmpty, StarRow } from "./guardianUi";
+import { ChildEmpty, StarRow, useBackTarget } from "./guardianUi";
 import GuardianNoChild from "./guardianEmpty";
 import g from "./guardian.module.css";
 
@@ -19,6 +20,7 @@ const REPUBLISH_NOTICE = "Điểm có cập nhật, cần phát hành lại";
  */
 export default function GuardianReportPage() {
   const { child, error } = useGuardianContext();
+  const back = useBackTarget();
   if (error) {
     return (
       <p className={g.error} role="alert">
@@ -45,7 +47,7 @@ export default function GuardianReportPage() {
   if (loadError) {
     return (
       <main className={g.page}>
-        <PageHeader eyebrow={child.student.name} title="Báo cáo" />
+        <PageHeader backTo={back} eyebrow={child.student.name} title="Báo cáo" />
         <p className={g.error} role="alert">
           {loadError}
         </p>
@@ -57,6 +59,7 @@ export default function GuardianReportPage() {
     return (
       <main className={g.page}>
         <PageHeader
+        backTo={back}
           eyebrow={child.student.name}
           title={`Báo cáo tháng ${Number(month.slice(5, 7))}`}
         />
@@ -73,6 +76,7 @@ export default function GuardianReportPage() {
   return (
     <main className={g.page}>
       <PageHeader
+        backTo={back}
         eyebrow={child.student.name}
         title={`Báo cáo tháng ${Number(month.slice(5, 7))}`}
       />
@@ -181,7 +185,7 @@ export default function GuardianReportPage() {
                 </span>
                 <b className={g.scoreValue}>
                   {score && score.value !== null
-                    ? `${score.value.toFixed(1)}/${test.max}`
+                    ? `${formatScore(score.value)}/${test.max}`
                     : "Chưa có điểm"}
                 </b>
               </li>

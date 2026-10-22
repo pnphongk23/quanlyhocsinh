@@ -58,31 +58,7 @@
   text-decoration: none;
 }
 
-/* Chip chọn con (ảnh 15) */
-.chips {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-}
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-  min-height: 44px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 15px;
-  font-weight: 600;
-}
-.chipActive {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-}
+/* Avatar chữ của con (chip đầu trang, sheet Chọn con) */
 .avatar {
   display: inline-flex;
   align-items: center;
@@ -95,15 +71,11 @@
   font-size: 12px;
   font-weight: 700;
 }
-.avatarActive {
-  background: var(--color-surface);
-  color: var(--color-primary);
-}
 
 /* Thẻ số liệu */
 .statRow {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
 }
 .statCard {
@@ -271,16 +243,6 @@
   color: var(--color-muted);
   font-size: 13px;
   line-height: 1.45;
-}
-.hwFlag {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 4px 8px;
-  border-radius: var(--radius-chip);
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
-  font-size: 12px;
-  font-weight: 600;
 }
 .hwList {
   display: grid;
@@ -577,16 +539,137 @@
   line-height: 1.45;
 }
 
-@media print {
-  .page {
-    display: block;
-    color: #171717;
-    background: #fff;
+/* Tab Lớp học của con */
+.classLayout {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.classAside,
+.classSessions {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+.classMeta {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.navRows {
+  display: grid;
+  gap: 8px;
+}
+.navRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.navRowText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.monthGroup {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.monthHeading {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.sessionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+  min-width: 0;
+}
+.sessionMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+/* Tab Nhận xét của cô */
+.timeline {
+  display: grid;
+  gap: 12px;
+}
+.wordCard {
+  text-decoration: none;
+  color: var(--color-text);
+}
+.wordCard h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.ticketCard h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+/* Buổi học */
+.cancelBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-neutral-soft);
+  color: var(--color-text);
+  font-size: 15px;
+}
+.sessionCols {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.sessionCol {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+.sessionCol:empty {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .classLayout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 24px;
   }
-  .page > * {
-    break-inside: avoid;
+  .classAside {
+    order: 2;
+    position: sticky;
+    top: 80px;
   }
-  .pdfButton {
-    display: none !important;
+  .classSessions {
+    order: 1;
+  }
+  .sessionCols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 }

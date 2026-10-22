@@ -7,31 +7,33 @@ import RegisterPage from "../features/auth/RegisterPage";
 import SettingsPage from "../features/settings/SettingsPage";
 import { createSeed } from "./fixtures/seed";
 import { replaceStore } from "../data/store";
+import { getSession } from "../data/auth/session";
 import type { StoreState } from "../data/types";
-import GuardianAttendancePage from "../roles/guardian/GuardianAttendancePage";
+import GuardianClassPage from "../roles/guardian/GuardianClassPage";
 import GuardianCommentsPage from "../roles/guardian/GuardianCommentsPage";
-import GuardianHomeworkPage from "../roles/guardian/GuardianHomeworkPage";
-import GuardianOverviewPage from "../roles/guardian/GuardianOverviewPage";
+import GuardianSessionPage from "../roles/guardian/GuardianSessionPage";
 import GuardianReportPage from "../roles/guardian/GuardianReportPage";
 import GuardianScoresPage from "../roles/guardian/GuardianScoresPage";
-import GuardianTicketPage from "../roles/guardian/GuardianTicketPage";
-import { Component as GuardianShell } from "../roles/guardian/GuardianShell";
+import GuardianShell from "../roles/guardian/GuardianShell";
 
 const seed = createSeed() as StoreState;
+seed.homeworkSections.push({ id: "fixture-upcoming-homework", sessionId: "6a-extra-session", kind: "reading", title: "Đọc bài", description: "Ôn nội dung bài đọc." });
 replaceStore({ ...seed, reportPublications: [] });
+if (new URLSearchParams(window.location.search).get("child") === "none") {
+  const session = getSession();
+  const membership = session?.me.memberships.find((item) => item.id === session.activeMembershipId);
+  if (membership?.role.scope_kind === "linked_students") membership.students = [];
+}
 
 const routes = [
   {
     path: "/ph",
     Component: GuardianShell,
     children: [
-      { index: true, Component: GuardianOverviewPage },
-      { path: "diem-danh", Component: GuardianAttendancePage },
-      { path: "diem-so", Component: GuardianScoresPage },
-      { path: "nhan-xet", Component: GuardianCommentsPage },
-      { path: "nhan-xet/:sessionId", Component: GuardianTicketPage },
-      { path: "btvn", Component: GuardianHomeworkPage },
-      { path: "btvn/:sessionId", Component: GuardianHomeworkPage },
+        { index: true, Component: GuardianClassPage },
+        { path: "diem", Component: GuardianScoresPage },
+        { path: "nhan-xet", Component: GuardianCommentsPage },
+        { path: "buoi/:sessionId", Component: GuardianSessionPage },
       { path: "bao-cao", Component: GuardianReportPage },
     ],
   },
@@ -39,6 +41,13 @@ const routes = [
   { path: "/dang-ky", Component: RegisterPage },
 ];
 
-const path = new URLSearchParams(window.location.search).get("route") ?? "/ph";
-const router = createMemoryRouter(routes, { initialEntries: [path] });
+const params = new URLSearchParams(window.location.search);
+const path = params.get("route") ?? "/ph";
+const entry = params.get("from") === "comments"
+  ? { pathname: path, state: { from: "nhan-xet" } }
+  : path;
+const router = createMemoryRouter(routes, { initialEntries: [entry] });
 createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />);
+if (params.get("sheet") === "1") {
+  window.setTimeout(() => document.querySelector<HTMLButtonElement>("button[aria-haspopup='dialog']")?.click(), 300);
+}

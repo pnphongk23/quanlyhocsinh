@@ -34,6 +34,7 @@ const activeSession = (kind: "staff" | "guardian"): WebSession => {
         status: "active",
         scope_epoch: 1,
         permissions: role.permissions,
+        ...(linked ? { students: [{ id: "6a-student-1", name: "Trần Gia Bảo", class_id: "6a", class_name: "Tiếng Anh giao tiếp 6A" }] } : {}),
       }],
     },
   };
@@ -96,19 +97,33 @@ describe("foundation route integration", () => {
   });
 
   it.each([
-    ["/ph", "Tổng quan"], ["/ph/diem-danh", "Điểm danh"],
-    ["/ph/diem-so", "Điểm số"], ["/ph/nhan-xet", "Nhận xét"],
-    ["/ph/nhan-xet/session-a", "Phiếu buổi học"],
-    ["/ph/btvn", "Bài tập về nhà"], ["/ph/btvn/session-a", "Bài tập về nhà"],
+    ["/ph", "Tiếng Anh giao tiếp 6A"],
+    ["/ph/nhan-xet", "Nhận xét của cô"],
+    ["/ph/buoi/session-a", "Buổi học"],
+    ["/ph/diem", "Điểm số"],
     ["/ph/bao-cao", "Báo cáo tháng"],
   ])("guardian %s renders inside its lazy shell", async (path, title) => {
     authState.session = activeSession("guardian");
     const router = open(path);
-    expect(await screen.findByRole("navigation", { name: "Điều hướng phụ huynh" })).toBeVisible();
+    expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
     const main = document.querySelector<HTMLElement>('[data-role="guardian"] > main')!;
     expect(main).toBeVisible();
     expect(main.textContent).toContain(title);
     expect(screen.queryByRole("navigation", { name: "Điều hướng nhân sự" })).toBeNull();
+    router.dispose();
+  });
+
+  it.each([
+    ["/ph/diem-danh", "/ph"],
+    ["/ph/diem-so", "/ph/diem"],
+    ["/ph/btvn", "/ph"],
+    ["/ph/nhan-xet/session-a", "/ph/buoi/session-a"],
+    ["/ph/btvn/session-a", "/ph/buoi/session-a"],
+  ])("redirects retired guardian route %s", async (path, destination) => {
+    authState.session = activeSession("guardian");
+    const router = open(path);
+    await screen.findByRole("navigation", { name: "Điều hướng chính" });
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe(destination));
     router.dispose();
   });
 
@@ -148,7 +163,7 @@ describe("foundation route integration", () => {
     authState.session = activeSession("guardian");
     await router.navigate("/");
     fireEvent.click(await screen.findByRole("link", { name: "Khung phụ huynh" }));
-    expect(await screen.findByRole("heading", { name: "Tổng quan" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Tiếng Anh giao tiếp 6A" })).toBeVisible();
     router.dispose();
   });
 

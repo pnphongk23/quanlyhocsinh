@@ -95,7 +95,11 @@ describe("chuyển hướng theo vai trò đang dùng", () => {
     expect(await finalPath("/lop/6a/buoi-hoc/6a-session-7", "/ph")).toBe("/ph");
     expect(await finalPath("/lich", "/ph")).toBe("/ph");
     expect(await finalPath("/lop/6a/diem", "/ph")).toBe("/ph");
-    expect(await finalPath("/ph/diem-danh", "/ph/diem-danh")).toBe("/ph/diem-danh");
+    expect(await finalPath("/ph/diem-danh", "/ph")).toBe("/ph");
+    expect(await finalPath("/ph/diem-so", "/ph/diem")).toBe("/ph/diem");
+    expect(await finalPath("/ph/btvn", "/ph")).toBe("/ph");
+    expect(await finalPath("/ph/nhan-xet/6a-session-7", "/ph/buoi/6a-session-7")).toBe("/ph/buoi/6a-session-7");
+    expect(await finalPath("/ph/btvn/6a-session-7", "/ph/buoi/6a-session-7")).toBe("/ph/buoi/6a-session-7");
   });
 
   it("nhân sự vào /ph thì về /lop", async () => {

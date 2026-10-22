@@ -4,20 +4,34 @@ import {
   type ChildTicket,
 } from "../../data/repositories/guardian";
 import { PageHeader } from "../../shared/ui";
+import { motionClass } from "../../shared/motion";
 import { useGuardianContext } from "./guardianContext";
-import {
-  homeworkLevelLabel,
-  homeworkLevelTone,
-  longDayMonth,
-} from "./guardianFormat";
+import { childTeacherWords, type ChildTeacherWord } from "./guardianRead";
+import { longDayMonth, monthYearLabel } from "./guardianFormat";
 import GuardianNoChild from "./guardianEmpty";
-import { ChildEmpty, GuardianPill, StarRow } from "./guardianUi";
+import { ChildEmpty, FROM_COMMENTS, StarRow } from "./guardianUi";
 import { Mascot, starPose } from "../../shared/ui/Mascot";
 import g from "./guardian.module.css";
 
+type TimelineItem =
+  | { kind: "ticket"; date: string; ticket: ChildTicket }
+  | { kind: "word"; date: string; word: ChildTeacherWord };
+
+function groupByMonth(items: TimelineItem[]) {
+  const groups: Array<{ month: string; items: TimelineItem[] }> = [];
+  for (const item of items) {
+    const month = item.date.slice(0, 7);
+    const last = groups[groups.length - 1];
+    if (last && last.month === month) last.items.push(item);
+    else groups.push({ month, items: [item] });
+  }
+  return groups;
+}
+
 /**
- * PH · Nhận xét (ảnh 14): danh sách Phiếu buổi học mới nhất trước, mỗi phiếu có
- * mức sao, câu mẫu, ghi chú và kết quả chấm BTVN buổi trước (nếu có).
+ * PH · Nhận xét của cô (tab 2): dòng thời gian mới nhất trên cùng, nhóm theo
+ * tháng, gồm phiếu buổi học đã gửi và "Lời cô" của báo cáo tháng đã phát hành.
+ * Bấm phiếu mở Buổi học, bấm Lời cô mở Báo cáo tháng; tab này vẫn sáng.
  */
 export default function GuardianCommentsPage() {
   const { child, error } = useGuardianContext();
@@ -33,22 +47,32 @@ export default function GuardianCommentsPage() {
   }
 
   let tickets: ChildTicket[] = [];
+  let words: ChildTeacherWord[] = [];
   let loadError = "";
   try {
     tickets = listChildTickets(child.student.id);
+    words = childTeacherWords(child.student.id);
   } catch (cause) {
     loadError =
       cause instanceof Error
         ? cause.message
-        : "Không đọc được phiếu buổi học của con.";
+        : "Không đọc được nhận xét của cô.";
   }
 
+  const items: TimelineItem[] = [
+    ...words.map((word) => ({ kind: "word" as const, date: word.date, word })),
+    ...tickets.map((ticket) => ({
+      kind: "ticket" as const,
+      date: ticket.date,
+      ticket,
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+  const newestTicket = items.find((item) => item.kind === "ticket");
+  const groups = groupByMonth(items);
+
   return (
-    <main className={g.page}>
-      <PageHeader eyebrow={child.student.name} title="Nhận xét" />
-      <p className={g.intro}>
-        Phiếu buổi học theo từng buổi: sao, câu mẫu, ghi chú và kết quả BTVN.
-      </p>
+    <div className={g.page}>
+      <PageHeader eyebrow={child.student.name} title="Nhận xét của cô" />
 
       {loadError && (
         <p className={g.error} role="alert">
@@ -56,60 +80,66 @@ export default function GuardianCommentsPage() {
         </p>
       )}
 
-      {!loadError && tickets.length === 0 && (
-        <ChildEmpty title="Chưa có phiếu buổi học">
-          <p>Cô gửi phiếu sau buổi học, phiếu hiện ở đây khi cô đã gửi.</p>
+      {!loadError && items.length === 0 && (
+        <ChildEmpty title="Chưa có nhận xét của cô">
+          <p>Cô gửi phiếu sau buổi học, nhận xét hiện ở đây khi cô đã gửi.</p>
         </ChildEmpty>
       )}
 
-      {tickets.map((ticket, index) => (
-        <Link
-          key={ticket.comment.id}
-          to={`/ph/nhan-xet/${ticket.session.id}`}
-          aria-label={`Mở phiếu buổi học buổi ${ticket.sessionNumber}`}
-          className={
-            g.ticketCard + (index === 0 ? " " + g.ticketCardNew : "")
-          }
-        >
-          <div className={g.cardHead}>
-            <h2>
-              Buổi {ticket.sessionNumber} · {longDayMonth(ticket.date)}
-            </h2>
-            <span className={g.ticketMeta}>
-              {index === 0 && <GuardianPill tone="primary">Mới</GuardianPill>}
-              <StarRow level={ticket.stars} />
-            </span>
-          </div>
-          <div className={g.ticketBody}>
-            <Mascot pose={starPose(ticket.stars)} size={56} />
-            <p className={g.ticketText}>{ticket.template}</p>
-          </div>
-          {ticket.note && (
-            <div className={g.noteBlock}>
-              <span className={g.noteBlockLabel}>Ghi chú</span>
-              <p>{ticket.note}</p>
-            </div>
-          )}
-          {ticket.homework.sections.length > 0 &&
-            ticket.homework.sessionNumber !== null && (
-              <div className={g.resultBlock}>
-                <h3 className={g.resultLabel}>
-                  Kết quả BTVN buổi {ticket.homework.sessionNumber}
-                </h3>
-                <div className={g.pillRow}>
-                  {ticket.homework.sections.map((result) => (
-                    <GuardianPill
-                      key={result.section.id}
-                      tone={homeworkLevelTone(result.level)}
-                    >
-                      {result.kindLabel} · {homeworkLevelLabel(result.level)}
-                    </GuardianPill>
-                  ))}
-                </div>
-              </div>
+      {groups.map((group) => (
+        <section key={group.month} className={g.monthGroup}>
+          <h2 className={g.monthHeading}>{monthYearLabel(group.month)}</h2>
+          <div className={g.timeline}>
+            {group.items.map((item) =>
+              item.kind === "ticket" ? (
+                <Link
+                  key={item.ticket.comment.id}
+                  to={`/ph/buoi/${item.ticket.session.id}`}
+                  state={FROM_COMMENTS}
+                  aria-label={`Mở buổi học buổi ${item.ticket.sessionNumber}`}
+                  className={`${g.ticketCard} ${motionClass.pressable}`}
+                >
+                  <div className={g.cardHead}>
+                    <h3>
+                      Buổi {item.ticket.sessionNumber} ·{" "}
+                      {longDayMonth(item.ticket.date)}
+                    </h3>
+                    <StarRow level={item.ticket.stars} />
+                  </div>
+                  <div className={g.ticketBody}>
+                    {item === newestTicket && (
+                      <Mascot pose={starPose(item.ticket.stars)} size={56} />
+                    )}
+                    <p className={g.ticketText}>{item.ticket.template}</p>
+                  </div>
+                  {item.ticket.note && (
+                    <div className={g.noteBlock}>
+                      <span className={g.noteBlockLabel}>Ghi chú</span>
+                      <p>{item.ticket.note}</p>
+                    </div>
+                  )}
+                </Link>
+              ) : (
+                <Link
+                  key={`word-${item.word.month}`}
+                  to="/ph/bao-cao"
+                  state={FROM_COMMENTS}
+                  aria-label={`Mở báo cáo tháng ${Number(item.word.month.slice(5, 7))}`}
+                  className={`${g.noteBox} ${g.wordCard} ${motionClass.pressable}`}
+                >
+                  <div className={g.cardHead}>
+                    <h3>
+                      Lời cô · Báo cáo tháng {Number(item.word.month.slice(5, 7))}
+                    </h3>
+                    <span className={g.hint}>{longDayMonth(item.word.date)}</span>
+                  </div>
+                  <p>{item.word.text}</p>
+                </Link>
+              ),
             )}
-        </Link>
+          </div>
+        </section>
       ))}
-    </main>
+    </div>
   );
 }
