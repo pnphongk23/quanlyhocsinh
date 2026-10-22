@@ -77,7 +77,9 @@ struct AuthFlowView: View {
 
     private var teacherShell: some View {
         NavigationStack {
-            TeacherRootView(auth: model)
+            TeacherRootView(auth: model) {
+                AnyView(AuthSettingsView(model: model, onClose: { model.show(.main) }))
+            }
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { model.show(.settings) } label: {
