@@ -44,9 +44,6 @@ export const notFound = () => new ApiError(404, 'not_found', 'Not found.');
 export const conflict = (reason: string, message = 'Conflict.') =>
   new ApiError(409, 'conflict', message, { reason });
 
-export const accountNotResettable = () =>
-  new ApiError(409, 'account_not_resettable', 'Account cannot be reset.');
-
 export const payloadTooLarge = () =>
   new ApiError(413, 'payload_too_large', 'Payload too large.');
 

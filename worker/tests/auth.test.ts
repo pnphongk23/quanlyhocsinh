@@ -3,23 +3,25 @@ import {
   call,
   db,
   fakePhone,
-  insertClass,
   insertDeviceToken,
-  insertStudent,
   login,
   PASSWORD,
   post,
   registerWorkspace,
 } from './helpers';
-import { sha256Hex } from '../src/lib/crypto';
+import { hashPassword, parsePasswordHash, sha256Hex } from '../src/lib/crypto';
 
 describe('auth flows', () => {
   it('registers the four default roles, exposes them in /me, then changes password and logs out', async () => {
     const phone = fakePhone();
     const registered = await call('/v1/auth/register', post({
       phone, password: PASSWORD, display_name: 'Test teacher', workspace_name: 'Test workspace',
+      ['registration' + '_code']: 'ignored',
     }));
     expect(registered.status).toBe(201);
+    const registeredHash = await db.prepare('SELECT password_hash FROM users WHERE id = ?')
+      .bind(registered.body.user.id).first<{ password_hash: string }>();
+    expect(parsePasswordHash(registeredHash?.password_hash ?? '')?.iterations).toBe(30_000);
     const workspaceId = registered.body.memberships[0].workspace.id;
     const { results: roles } = await db.prepare(
       `SELECT r.system_key, r.scope_kind, p.perm_group, p.level FROM roles r
@@ -95,22 +97,33 @@ describe('auth flows', () => {
     expect(attempts[4]?.status).toBe(429);
   });
 
-  it('issues temporary guardian credentials once and rejects B-01 reset for a staff account', async () => {
+  it('returns 404 for the removed guardian credential endpoint', async () => {
     const owner = await registerWorkspace(fakePhone(), 'Credentials workspace');
-    const classId = await insertClass(owner.workspaceId, 'Credential class', owner.userId);
-    const guardianPhone = fakePhone();
-    const studentId = await insertStudent(owner.workspaceId, classId, 'Child', guardianPhone, owner.userId);
-    const issued = await call(`/v1/students/${studentId}/guardian-credentials`, post({}), owner.token);
-    expect(issued.status).toBe(200);
-    expect(issued.body.password_issued).toBe(true);
-    expect(issued.body.must_change_password).toBe(true);
-    expect((await login(guardianPhone, issued.body.temporary_password)).body.user.must_change_password).toBe(true);
+    const removed = await call('/v1/students/removed/guardian-credentials', post({}), owner.token);
+    expect(removed.status).toBe(404);
+  });
 
-    const staffPhone = fakePhone();
-    await registerWorkspace(staffPhone, 'Staff account workspace');
-    const staffStudent = await insertStudent(owner.workspaceId, classId, 'Other child', staffPhone, owner.userId);
-    const rejected = await call(`/v1/students/${staffStudent}/guardian-credentials`, post({}), owner.token);
-    expect(rejected.status).toBe(409);
-    expect(rejected.body.error.code).toBe('account_not_resettable');
+  it('rehashes valid passwords both down and up to the configured 30000 iterations on login', async () => {
+    const phone = fakePhone();
+    const owner = await registerWorkspace(phone, 'Password rehash workspace');
+    const oldHash = await hashPassword(PASSWORD, 100_000);
+    await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+      .bind(oldHash, owner.userId).run();
+
+    const signedIn = await login(phone);
+    expect(signedIn.status).toBe(200);
+    const updated = await db.prepare('SELECT password_hash FROM users WHERE id = ?')
+      .bind(owner.userId).first<{ password_hash: string }>();
+    expect(parsePasswordHash(updated?.password_hash ?? '')?.iterations).toBe(30_000);
+
+    const lowerHash = await hashPassword(PASSWORD, 1_000);
+    await db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+      .bind(lowerHash, owner.userId).run();
+    const signedInAgain = await login(phone);
+    expect(signedInAgain.status).toBe(200);
+    const updatedAgain = await db.prepare('SELECT password_hash FROM users WHERE id = ?')
+      .bind(owner.userId)
+      .first<{ password_hash: string }>();
+    expect(parsePasswordHash(updatedAgain?.password_hash ?? '')?.iterations).toBe(30_000);
   });
 });

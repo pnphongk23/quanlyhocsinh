@@ -11,9 +11,8 @@ export default defineConfig({
         r2Buckets: { REPORT_PDFS: 'test-report-pdfs' },
         bindings: {
           TEST_MIGRATIONS: migrations,
-          PBKDF2_ITERATIONS: '1000',
+            PBKDF2_ITERATIONS: '30000',
           ENVIRONMENT: 'test',
-          REGISTRATION_CODE: '',
         },
       },
     }),

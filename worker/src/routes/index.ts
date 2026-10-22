@@ -16,8 +16,7 @@ import { requireAuth } from '../middleware/auth';
 
 export const apiRoutes = new Hono<AppEnv>();
 
-// Auth làm đủ ở pha 1 (kể cả /me, đổi vai trò, cấp mật khẩu phụ huynh).
-// Đăng ký TRƯỚC các stub để /students/:id/guardian-credentials không bị nuốt.
+// Auth làm đủ ở pha 1 (kể cả /me và đổi vai trò).
 apiRoutes.route('/', authRoutes);
 
 apiRoutes.get('/health', (c) =>

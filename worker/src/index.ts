@@ -95,7 +95,7 @@ app.use('*', async (c, next) => {
   c.header('Referrer-Policy', 'no-referrer');
 
   const path = c.req.path;
-  if (path.startsWith('/v1/auth/') || path.endsWith('/guardian-credentials')) {
+    if (path.startsWith('/v1/auth/')) {
     c.header('Cache-Control', 'no-store');
   }
 

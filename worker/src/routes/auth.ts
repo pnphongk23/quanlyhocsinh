@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../types';
 import {
   DEFAULT_ROLES,
-  ISSUE_PASSWORD_POLICY,
   LOGIN_IP_POLICY,
   LOGIN_PHONE_POLICY,
   REGISTER_IP_POLICY,
@@ -10,20 +9,13 @@ import {
   changePassword,
   checkThrottle,
   clearThrottle,
-  countDisqualifyingMemberships,
   createSession,
   findActiveMembership,
-  findStudentForAccess,
   findUserByPhone,
-  getGuardianRoleId,
   getMe,
   getUserById,
   getUserPhone,
-  issueGuardianCredentials,
-  issuePasswordKey,
   listActiveMemberships,
-  listGuardianLinks,
-  listStudentIdsByParentPhone,
   loginIpKey,
   loginPhoneKey,
   logoutSession,
@@ -35,12 +27,10 @@ import {
   toUserView,
   updateSessionMembership,
 } from '../db/auth';
-import { requireAccess } from '../db/authz';
 import { getClientIp } from '../lib/client-ip';
 import {
   hashPassword,
   newSessionToken,
-  newTemporaryPassword,
   dummyVerify,
   resolveIterations,
   verifyPassword,
@@ -48,9 +38,7 @@ import {
 import {
   ApiError,
   accountDisabled,
-  accountNotResettable,
   conflict,
-  forbidden,
   invalidCredentials,
   notFound,
   rateLimited,
@@ -94,13 +82,6 @@ authRoutes.post('/auth/register', async (c) => {
     max: 100,
   }) as string;
   const displayName = optionalDisplayName(body);
-
-  const registrationCode = c.env.REGISTRATION_CODE;
-  if (registrationCode !== undefined && registrationCode !== '') {
-    if (body.registration_code !== registrationCode) {
-      throw forbidden({ reason: 'registration_code_required' });
-    }
-  }
 
   await recordThrottleFailure(db, registerIpKey(ip), REGISTER_IP_POLICY);
 
@@ -364,84 +345,6 @@ authRoutes.put('/session/membership', requireAuth, async (c) => {
   return c.json({
     active_membership_id: membership.id,
     device_registration_cleared: true,
-  });
-});
-
-authRoutes.post('/students/:student_id/guardian-credentials', requireAuth, async (c) => {
-  const db = c.env.DB;
-  const identity = c.get('identity');
-  const studentId = c.req.param('student_id');
-
-  const student = await findStudentForAccess(db, identity.workspaceId, studentId);
-  if (!student) throw notFound();
-
-  requireAccess(identity, 'students', 'write', {
-    classId: student.class_id,
-    studentId: student.id,
-  });
-
-  if (student.parent_phone === null || student.parent_phone === '') {
-    throw validationError({ parent_phone: 'required' });
-  }
-
-  const issueKey = issuePasswordKey(identity.membershipId);
-  const issueCheck = await checkThrottle(db, issueKey, ISSUE_PASSWORD_POLICY);
-  if (!issueCheck.allowed) throw rateLimited(issueCheck.retryAfterSeconds);
-  await recordThrottleFailure(db, issueKey, ISSUE_PASSWORD_POLICY);
-
-  const target = await findUserByPhone(db, student.parent_phone);
-  if (target) {
-    const disqualifying = await countDisqualifyingMemberships(
-      db,
-      target.id,
-      identity.workspaceId,
-    );
-    if (disqualifying > 0) throw accountNotResettable();
-  }
-
-  const guardianRoleId = await getGuardianRoleId(db, identity.workspaceId);
-  if (guardianRoleId === null) throw new ApiError(500, 'internal', 'Guardian role missing.');
-
-  const linkedStudentIds = await listStudentIdsByParentPhone(
-    db,
-    identity.workspaceId,
-    student.parent_phone,
-  );
-  const existingLinks = target
-    ? await listGuardianLinks(db, target.id, identity.workspaceId)
-    : [];
-  const newLinkCount = linkedStudentIds.filter((id) => !existingLinks.includes(id)).length;
-
-  const body = await readJsonObject(c.req.raw);
-  const displayName = optionalDisplayName(body);
-
-  const iterations = resolveIterations(c.env.PBKDF2_ITERATIONS);
-  const temporaryPassword = newTemporaryPassword();
-  const tempPasswordHash = await hashPassword(temporaryPassword, iterations);
-
-  const result = await issueGuardianCredentials(db, {
-    workspaceId: identity.workspaceId,
-    studentId: student.id,
-    parentPhone: student.parent_phone,
-    existingUserId: target?.id ?? null,
-    newUserId: crypto.randomUUID(),
-    membershipId: crypto.randomUUID(),
-    guardianRoleId,
-    tempPasswordHash,
-    displayName,
-    now: nowIso(),
-    linkedStudentIds,
-    newLinkCount,
-  });
-
-  return c.json({
-    phone: student.parent_phone,
-    temporary_password: temporaryPassword,
-    must_change_password: true,
-    created_user: target === null,
-    password_issued: true,
-    linked_student_ids: linkedStudentIds,
-    user_id: result.userId,
   });
 });
 

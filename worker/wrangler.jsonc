@@ -8,7 +8,7 @@
   },
   "vars": {
     "ENVIRONMENT": "local",
-    "PBKDF2_ITERATIONS": "100000",
+    "PBKDF2_ITERATIONS": "30000",
     // CORS cho /v1/*: danh sách origin (phân tách dấu phẩy), rỗng = không cho origin nào.
     "ALLOWED_ORIGINS": ""
   },
@@ -28,7 +28,7 @@
       "name": "qlh-staging-api",
       "vars": {
         "ENVIRONMENT": "staging",
-        "PBKDF2_ITERATIONS": "100000",
+        "PBKDF2_ITERATIONS": "30000",
         // Origin được phép gọi /v1/* (phân tách dấu phẩy, khớp chính xác). Hiện chưa có
         // project Pages riêng cho mảng Web nên dùng origin của Pages prototype
         // (quanlyhocsinh-proto) cộng các cổng dev/Preview của máy cục bộ.

@@ -22,12 +22,11 @@ Resources (prefix `qlh-staging-` only; there is no production yet): Worker `qlh-
 
 ```sh
 npx wrangler d1 migrations apply DB --remote --env staging
-printf '%s' "$REGISTRATION_CODE" | npx wrangler secret put REGISTRATION_CODE --env staging
 npx wrangler deploy --env staging
 ```
 
-- `REGISTRATION_CODE` is a Worker secret. Keep the local value in `.dev.vars` (gitignored); never commit or print it. When it is set, `POST /v1/auth/register` requires the same `registration_code` in the body.
-- `PBKDF2_ITERATIONS=100000` is a plain var in the staging config; hashes carry their own iteration count, so changing it does not break stored passwords.
+- `PBKDF2_ITERATIONS=30000` is the default Worker Free setting; hashes carry their own iteration count, so existing hashes remain readable and are rehashed after a successful login when needed.
+- Parent accounts do not have a first-password or temporary-password issuance flow yet. Operators can reset a password manually using `plans/20261021-mvp/backend/runbook-reset-password.md`.
 - R2 is not enabled for this account yet, so report PDF upload/download returns `503 pdf_storage_unavailable` until the `REPORT_PDFS` block is uncommented in `wrangler.jsonc` and a bucket exists.
 - The cron trigger (`* * * * *`) runs session generation and push dispatch on staging.
 - Staging runs on the Workers Free plan: CPU limits cannot be configured (`limits.cpu_ms` is rejected with error `100328`). Measure with `wrangler tail --format json` and read `cpuTime` / `outcome`.

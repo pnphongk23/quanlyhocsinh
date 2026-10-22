@@ -38,10 +38,8 @@ export interface Env {
   FCM_SERVICE_ACCOUNT?: string;
   FCM_PROJECT_ID?: string;
   ENVIRONMENT?: string;
-  /** Số vòng PBKDF2, mặc định 100000 (api-spec Q8). Test dùng số nhỏ. */
-  PBKDF2_ITERATIONS?: string;
-  /** Q3 mặc định: đặt biến thì bắt buộc mã đăng ký, để trống thì mở. */
-  REGISTRATION_CODE?: string;
+    /** Số vòng PBKDF2, mặc định 30000 để tương thích Workers Free. */
+    PBKDF2_ITERATIONS?: string;
   /**
    * Danh sách origin được phép gọi API (CORS), phân tách bằng dấu phẩy, ví dụ
    * `https://qlh.pages.dev,http://localhost:5173`. Rỗng/không đặt = không cho origin nào.

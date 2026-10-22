@@ -1,4 +1,4 @@
-export const DEFAULT_PBKDF2_ITERATIONS = 100_000;
+export const DEFAULT_PBKDF2_ITERATIONS = 30_000;
 export const MAX_PBKDF2_ITERATIONS = 100_000;
 
 export function base64UrlEncode(bytes: Uint8Array): string {
@@ -119,21 +119,4 @@ export async function dummyVerify(password: string, iterations: number): Promise
 export function newSessionToken(): { token: string; tokenHashPromise: Promise<string> } {
   const token = `qlh_${base64UrlEncode(randomBytes(32))}`;
   return { token, tokenHashPromise: sha256Hex(token) };
-}
-
-const TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-/** Mật khẩu tạm 10 ký tự từ bảng 32 ký tự, in dạng 'XXXXX-XXXXX' (≈ 50 bit). */
-export function newTemporaryPassword(): string {
-  const chars: string[] = [];
-  const limit = 256 - (256 % TEMP_PASSWORD_ALPHABET.length);
-  while (chars.length < 10) {
-    const bytes = randomBytes(16);
-    for (const byte of bytes) {
-      if (byte >= limit) continue;
-      chars.push(TEMP_PASSWORD_ALPHABET[byte % TEMP_PASSWORD_ALPHABET.length] ?? '');
-      if (chars.length === 10) break;
-    }
-  }
-  return `${chars.slice(0, 5).join('')}-${chars.slice(5).join('')}`;
 }

@@ -1,5 +1,4 @@
 PBKDF2_ITERATIONS
-REGISTRATION_CODE
 FCM_SERVICE_ACCOUNT
 FCM_PROJECT_ID
 # CORS cho /v1/*: origin web cách nhau bằng dấu phẩy, rỗng = không cho origin nào.
