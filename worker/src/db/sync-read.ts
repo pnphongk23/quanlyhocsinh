@@ -1,6 +1,7 @@
 import type { Identity, PermGroup } from '../types';
 import { ApiError, notFound, validationError } from '../lib/errors';
 import { requireAccess } from './authz';
+import { classTeacherNameSql } from './class-teacher';
 
 type Row=Record<string,any>;
 type Entity={ table:string; keys:string[]; fields:string[]; group:PermGroup; day?:string; join?:string };
@@ -48,7 +49,9 @@ function visibility(i:Identity,name:string):string {
 function fields(i:Identity,name:string):string {
   const e=entities[name]!;
   const list=e.fields.filter(f=>!(i.scopeKind==='linked_students' && ((name==='student' && f==='parent_phone')||(name==='class_session'&&f==='note'))));
-  if (i.scopeKind==='linked_students' && name==='class') return 'e.id,e.name,e.status,e.version';
+    if (name==='class') return i.scopeKind==='linked_students'
+      ? `e.id,e.name,e.status,e.version,${classTeacherNameSql('e')} AS teacher_name`
+      : `e.id,e.name,e.status,e.weekdays,e.start_time,e.version,${classTeacherNameSql('e')} AS teacher_name`;
   return list.map(f=>`e.${f}`).join(',');
 }
 function decode(name:string,row:Row):Row {

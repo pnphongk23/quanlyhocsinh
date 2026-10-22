@@ -59,8 +59,8 @@ describe('classes API', () => {
     const parentToken = await clubToken(owner.workspaceId, parentUser, parentMembership);
     const parentClass = await call('/v1/classes', {}, parentToken);
     expect(parentClass.status).toBe(200);
-    expect(parentClass.body.items).toEqual([{ id: classId, name: 'Lớp A', status: 'active' }]);
-    expect((await call(`/v1/classes/${classId}`, {}, parentToken)).body).toEqual({ id: classId, name: 'Lớp A', status: 'active' });
+      expect(parentClass.body.items).toEqual([{ id: classId, name: 'Lớp A', status: 'active', teacher_name: 'Teacher Sample' }]);
+      expect((await call(`/v1/classes/${classId}`, {}, parentToken)).body).toEqual({ id: classId, name: 'Lớp A', status: 'active', teacher_name: 'Teacher Sample' });
     expect((await call(`/v1/classes/${classId}`, { method: 'PATCH', body: JSON.stringify({ status: 'archived', base_version: 1 }) }, parentToken)).status).toBe(403);
 
     const other = await registerWorkspaceAtIp('+84900000105', 'Other workspace', '198.51.100.11');
@@ -71,6 +71,45 @@ describe('classes API', () => {
     expect(updated.status).toBe(200);
     expect(updated.body).toMatchObject({ name: 'Lớp A+', version: 2 });
     expect((await call(`/v1/classes/${classId}`, { method: 'PATCH', body: JSON.stringify({ name: 'stale', base_version: 1 }) }, owner.token)).status).toBe(409);
+  });
+
+  it('chooses the first named active teacher by assignment time, then falls back to the first named active Admin', async () => {
+    const owner = await registerWorkspaceAtIp('+84900000106', 'Class teacher display', '198.51.100.12');
+    const classId = await insertClass(owner.workspaceId, 'Lớp Lan', owner.userId);
+    const child = await insertStudent(owner.workspaceId, classId, 'Con A', null, owner.userId);
+    const parent = await insertUser('+84900000107');
+    const parentMembership = await insertGuardianMembership(owner.workspaceId, parent, owner.roles.guardian!, [child]);
+    const parentToken = await clubToken(owner.workspaceId, parent, parentMembership);
+    const unnamedUser = await insertUser('+84900000108', '   ');
+    const firstTeacher = await insertUser('+84900000109', 'Cô Lan');
+    const secondTeacher = await insertUser('+84900000110', 'Thầy Minh');
+    const disabledTeacher = await insertUser('+84900000111', 'Cô nghỉ');
+    const disabledUser = await insertUser('+84900000112', 'Thầy đã nghỉ');
+    const unnamedMembership = await insertMembership(owner.workspaceId, unnamedUser, owner.roles.teacher!, [classId]);
+    const firstMembership = await insertMembership(owner.workspaceId, firstTeacher, owner.roles.teacher!, [classId]);
+    const secondMembership = await insertMembership(owner.workspaceId, secondTeacher, owner.roles.teacher!, [classId]);
+    const disabledMembership = await insertMembership(owner.workspaceId, disabledTeacher, owner.roles.teacher!, [classId]);
+    await insertMembership(owner.workspaceId, disabledUser, owner.roles.teacher!, [classId]);
+    await db.prepare('UPDATE member_classes SET created_at = ? WHERE membership_id = ?').bind('2026-01-01T00:00:00.000Z', unnamedMembership).run();
+    await db.prepare('UPDATE member_classes SET created_at = ? WHERE membership_id = ?').bind('2026-01-02T00:00:00.000Z', firstMembership).run();
+    await db.prepare('UPDATE member_classes SET created_at = ? WHERE membership_id = ?').bind('2026-01-03T00:00:00.000Z', secondMembership).run();
+    await db.prepare("UPDATE memberships SET status = 'disabled' WHERE id = ?").bind(disabledMembership).run();
+    await db.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").bind(disabledUser).run();
+
+    const list = await call('/v1/classes', {}, parentToken);
+    expect(list.body.items).toEqual([{ id: classId, name: 'Lớp Lan', status: 'active', teacher_name: 'Cô Lan' }]);
+    const detail = await call(`/v1/classes/${classId}`, {}, parentToken);
+    expect(detail.body).toEqual(list.body.items[0]);
+
+    const me = await call('/v1/me', {}, parentToken);
+    const student = me.body.memberships[0].students[0];
+    expect(student).toEqual({ id: child, name: 'Con A', class_id: classId, class_name: 'Lớp Lan', teacher_name: 'Cô Lan' });
+    expect(Object.keys(student).sort()).toEqual(['class_id', 'class_name', 'id', 'name', 'teacher_name']);
+
+    await db.prepare("UPDATE memberships SET status = 'disabled' WHERE id IN (?, ?)").bind(firstMembership, secondMembership).run();
+    expect((await call(`/v1/classes/${classId}`, {}, parentToken)).body.teacher_name).toBe('Teacher Sample');
+    await db.prepare('UPDATE users SET display_name = NULL WHERE id = ?').bind(owner.userId).run();
+    expect((await call(`/v1/classes/${classId}`, {}, parentToken)).body.teacher_name).toBeNull();
   });
 
   it('replaces today\'s recurring session when start_time changes (one session per day, numbered)', async () => {

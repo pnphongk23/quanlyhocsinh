@@ -206,7 +206,7 @@ describe('sync scope and read protocol',()=>{
     expect((await f.send([command('test.create',{id:uid(),class_id:f.other,name:'T',date:today()})],'teacher')).body.results[0].error.code).toBe('not_found');
     expect((await f.send([command('test.create',{id:uid(),class_id:f.cls,name:'T',date:today()})],'teacher')).body.results[0].status).toBe('applied');
   });
-  it('filters snapshot/pull by each role and strips guardian-only fields',async()=>{
+    it('filters snapshot/pull by each role and strips guardian-only fields',async()=>{
     const f=await setup();await f.send([command('score.set',{test_id:f.test,student_id:f.s1,value:1}),command('score.set',{test_id:f.test,student_id:f.s2,value:2})]);
     for (const actor of ['admin','teacher','ta','p1','p2'] as const) {
       const snap=await f.snap(actor);expect(snap.status).toBe(200);expect(snap.body.entities).toContain('student');
@@ -221,8 +221,30 @@ describe('sync scope and read protocol',()=>{
         expect(snap.body.entities).not.toContain('report');expect(snap.body.entities).not.toContain('conflict');
         expect(pulled.body.upserts.score).toHaveLength(1);
       }
-    }
-  });
+      }
+    });
+    it('includes teacher_name in guardian class snapshot and replays class updates after teacher name or assignment changes',async()=>{
+      const f=await setup();
+      await db.prepare("UPDATE users SET display_name='Cô Lan' WHERE id=?").bind(f.teacherUser).run();
+      const snapshot=await f.snap('p1');
+      const classPage=await f.page('class','p1');
+      expect(classPage.body.items).toEqual([
+        expect.objectContaining({id:f.cls,name:'C1',teacher_name:'Cô Lan'}),
+      ]);
+      expect(Object.keys(classPage.body.items[0]).sort()).toEqual(['id','name','status','teacher_name','version']);
+      expect(JSON.stringify(classPage.body.items)).not.toMatch(/phone|user_id|membership_id|teacher_id/i);
+
+      await db.prepare("UPDATE users SET display_name='Cô Mai' WHERE id=?").bind(f.teacherUser).run();
+      const renamed=await f.pull(snapshot.body.cursor,'p1',snapshot.body.epoch);
+      expect(renamed.body.upserts.class).toContainEqual(expect.objectContaining({id:f.cls,teacher_name:'Cô Mai'}));
+
+      const nextTeacher=await insertUser(fakePhone(),'Cô An');
+      const nextMembership=await insertMembership(f.a.workspaceId,nextTeacher,f.a.roles.teacher!,[]);
+      await db.prepare('INSERT INTO member_classes (workspace_id,membership_id,class_id,created_at) VALUES (?,?,?,?)')
+        .bind(f.a.workspaceId,nextMembership,f.cls,'2025-01-01T00:00:00.000Z').run();
+      const reassigned=await f.pull(renamed.body.cursor,'p1',snapshot.body.epoch);
+      expect(reassigned.body.upserts.class).toContainEqual(expect.objectContaining({id:f.cls,teacher_name:'Cô An'}));
+    });
   it('omits legacy PDF metadata from report publication snapshot pages and pulls',async()=>{
     const f=await setup(),reportId=uid(),publicationId=uid(),month=today().slice(0,7),now=new Date().toISOString();
     await db.prepare(`INSERT INTO reports(id,workspace_id,class_id,student_id,month,status,general_comment,needs_republish,publication_count,published_at,version,created_at,updated_at,updated_by)

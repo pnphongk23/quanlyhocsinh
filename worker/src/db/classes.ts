@@ -2,10 +2,11 @@ import { requireAccess } from './authz';
 import type { Identity } from '../types';
 import { nowIso } from '../lib/time';
 import { conflict, notFound, validationError } from '../lib/errors';
+import { classTeacherNameSql } from './class-teacher';
 
 type ClassRow = {
   id: string; name: string; status: 'active' | 'archived'; weekdays: number;
-  start_time: string; version: number;
+  start_time: string; version: number; teacher_name?: string | null;
 };
 
 function dayString(date: Date): string { return date.toISOString().slice(0, 10); }
@@ -101,22 +102,24 @@ export async function listClasses(db: D1Database, identity: Identity, status: st
     scope = ` AND c.id IN (${identity.classIds.map(() => '?').join(',')})`;
     bindings.push(...identity.classIds);
   }
-  const rows = await db.prepare(`SELECT c.id, c.name, c.status, c.weekdays, c.start_time, c.version
-    FROM classes c WHERE c.workspace_id = ?${filter}${scope} ORDER BY c.name, c.id`).bind(...bindings).all<ClassRow>();
+    const rows = await db.prepare(`SELECT c.id, c.name, c.status, c.weekdays, c.start_time, c.version,
+      ${classTeacherNameSql('c')} AS teacher_name
+      FROM classes c WHERE c.workspace_id = ?${filter}${scope} ORDER BY c.name, c.id`).bind(...bindings).all<ClassRow>();
   if (identity.scopeKind === 'linked_students') {
     requireAccess(identity, 'classes', 'read');
-    return rows.results.map(({ id, name, status: rowStatus }) => ({ id, name, status: rowStatus }));
+      return rows.results.map(({ id, name, status: rowStatus, teacher_name }) => ({ id, name, status: rowStatus, teacher_name }));
   }
   requireAccess(identity, 'classes', 'read');
   return rows.results.map((row) => ({ ...row, weekdays: weekdayList(row.weekdays) }));
 }
 
 export async function getClass(db: D1Database, identity: Identity, classId: string) {
-  const row = await db.prepare(`SELECT id, name, status, weekdays, start_time, version
-    FROM classes WHERE workspace_id = ? AND id = ?`).bind(identity.workspaceId, classId).first<ClassRow>();
+    const row = await db.prepare(`SELECT c.id, c.name, c.status, c.weekdays, c.start_time, c.version,
+      ${classTeacherNameSql('c')} AS teacher_name
+      FROM classes c WHERE c.workspace_id = ? AND c.id = ?`).bind(identity.workspaceId, classId).first<ClassRow & { teacher_name: string | null }>();
   if (!row) throw notFound();
   requireAccess(identity, 'classes', 'read', { classId });
-  if (identity.scopeKind === 'linked_students') return { id: row.id, name: row.name, status: row.status };
+    if (identity.scopeKind === 'linked_students') return { id: row.id, name: row.name, status: row.status, teacher_name: row.teacher_name };
   return { ...row, weekdays: weekdayList(row.weekdays) };
 }
 

@@ -162,6 +162,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | | Đăng nhập bằng SĐT và OTP | ◐ |
 | | Hướng dẫn cài PWA, mở bằng Safari | ✗ |
 | Con của tôi | Chuyển giữa các con | ✓ |
+| Lớp học | Hiển thị tên giáo viên phụ trách theo tên hiển thị trong hồ sơ | ✓ |
 | | Tổng quan: chuyên cần, điểm bài mới nhất, nhận xét mới nhất | ✓ |
 | Điểm danh | Xem theo tháng, thống kê, ghi chú từng buổi | ✓ |
 | Điểm số | Điểm từng bài và xu hướng của con | ◐ |
@@ -172,6 +173,8 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | Báo cáo | Chọn kỳ, xem trước, tải PDF, chia sẻ | ✓ |
 | Học phí | Xem phiếu học phí theo tháng, lịch sử đã thu (thiết kế trước) | ✗ |
 | Cài đặt | Hồ sơ, Việt/Anh, thông báo, đổi mật khẩu, đăng xuất | ◐ |
+
+Tên giáo viên phụ trách lấy từ `users.display_name` của membership nhân sự đang hoạt động được gán lớp; chọn người có thời điểm gán sớm nhất, rồi theo id. Nếu không có tên giáo viên hợp lệ, dùng Admin đang hoạt động đầu tiên có tên; nếu không có thì trả `null`. Người dùng bị vô hiệu không được chọn.
 
 ### 5.3 Hệ thống
 

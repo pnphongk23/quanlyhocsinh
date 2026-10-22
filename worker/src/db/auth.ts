@@ -1,5 +1,6 @@
 import { conflict, forbidden, notFound, ApiError } from '../lib/errors';
 import { isoAfterMs, isoAt } from '../lib/time';
+import { classTeacherNameSql } from './class-teacher';
 import type { PermGroup, PermLevel, Permissions, ScopeKind } from '../types';
 
 export const ROLE_SYSTEM_KEYS = ['admin', 'teacher', 'assistant', 'guardian'] as const;
@@ -106,6 +107,7 @@ export interface GuardianStudentSummary {
   name: string;
   class_id: string;
   class_name: string;
+  teacher_name: string | null;
 }
 
 export interface UserView {
@@ -197,7 +199,7 @@ function addGuardianStudents(memberships: MembershipSummary[], rows: GuardianStu
   const studentsByWorkspace = new Map<string, GuardianStudentSummary[]>();
   for (const row of rows) {
     const students = studentsByWorkspace.get(row.workspace_id) ?? [];
-    students.push({ id: row.id, name: row.name, class_id: row.class_id, class_name: row.class_name });
+      students.push({ id: row.id, name: row.name, class_id: row.class_id, class_name: row.class_name, teacher_name: row.teacher_name });
     studentsByWorkspace.set(row.workspace_id, students);
   }
   return memberships.map((membership) => membership.role.scope_kind === 'linked_students'
@@ -206,7 +208,8 @@ function addGuardianStudents(memberships: MembershipSummary[], rows: GuardianStu
 }
 
 function linkedStudentsStatement(db: D1Database, userId: string) {
-  return db.prepare(`SELECT m.workspace_id, s.id, s.name, s.class_id, c.name AS class_name
+    return db.prepare(`SELECT m.workspace_id, s.id, s.name, s.class_id, c.name AS class_name,
+        ${classTeacherNameSql('c')} AS teacher_name
       FROM memberships m
       JOIN roles r ON r.id = m.role_id AND r.scope_kind = 'linked_students'
       JOIN guardian_student gs ON gs.user_id = m.user_id AND gs.workspace_id = m.workspace_id

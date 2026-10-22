@@ -36,11 +36,11 @@ describe('guardian children in membership views', () => {
     const registeredA = registered.body.memberships.find((row: any) => row.workspace.id === teacherA.workspaceId);
     const registeredB = registered.body.memberships.find((row: any) => row.workspace.id === teacherB.workspaceId);
     expect(registeredA.students).toEqual([
-      { id: childA1, name: 'Child A1', class_id: classA, class_name: 'A class' },
-      { id: childA2, name: 'Child A2', class_id: classA, class_name: 'A class' },
+        { id: childA1, name: 'Child A1', class_id: classA, class_name: 'A class', teacher_name: 'Giáo viên Mẫu' },
+        { id: childA2, name: 'Child A2', class_id: classA, class_name: 'A class', teacher_name: 'Giáo viên Mẫu' },
     ]);
     expect(registeredB.students).toEqual([
-      { id: childB, name: 'Child B', class_id: classB, class_name: 'B class' },
+        { id: childB, name: 'Child B', class_id: classB, class_name: 'B class', teacher_name: 'Giáo viên Mẫu' },
     ]);
     expect(JSON.stringify(registered.body.memberships)).not.toContain(unrelatedChild);
     expect(JSON.stringify(registered.body.memberships)).not.toContain('parent_phone');
@@ -72,7 +72,7 @@ describe('guardian children in membership views', () => {
     });
     expect(otherParent.status).toBe(201);
     expect(otherParent.body.memberships[0].students).toEqual([
-      { id: unrelatedChild, name: 'Unrelated child', class_id: classA, class_name: 'A class' },
+        { id: unrelatedChild, name: 'Unrelated child', class_id: classA, class_name: 'A class', teacher_name: 'Giáo viên Mẫu' },
     ]);
     expect(JSON.stringify(otherParent.body.memberships)).not.toContain(childA1);
 
