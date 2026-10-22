@@ -16,14 +16,11 @@ const entities:Record<string,Entity>={
   homework_grade:{table:'homework_grades',keys:['section_id','student_id'],fields:['section_id','student_id','level','version','updated_at'],group:'comments_reports',join:'JOIN homework_sections hs ON hs.id=e.section_id JOIN class_sessions parent ON parent.id=hs.session_id',day:'parent.date'},
   report:{table:'reports',keys:['id'],fields:['id','class_id','student_id','month','status','general_comment','needs_republish','publication_count','published_at','version'],group:'comments_reports',day:"e.month||'-01'"},
   report_publication:{table:'report_publications',keys:['id'],fields:['id','report_id','class_id','student_id','month','publication_no','published_at','snapshot'],group:'comments_reports',day:"e.month||'-01'"},
-  conflict:{table:'sync_conflicts',keys:['id'],fields:['id','entity','k1','k2','server_value','server_version','client_value','created_at','resolved_at','version'],group:'comments_reports'},
 };
-const groups:Record<string,PermGroup>={attendance:'sessions_attendance',score:'scores',slip:'comments_reports',homework_grade:'comments_reports'};
 const literal=(v:string)=>`'${v.replaceAll("'","''")}'`;
 function allowed(i:Identity,name:string):boolean {
   const e=entities[name];if (!e) return false;
-  if (i.scopeKind==='linked_students' && (name==='report'||name==='conflict')) return false;
-  if (name==='conflict') return Object.values(groups).some(g=>i.permissions[g]==='write');
+  if (i.scopeKind==='linked_students' && name==='report') return false;
   try {requireAccess(i,e.group,'read');return true;} catch {return false;}
 }
 function scope(i:Identity,alias:string,isClass=false,studentColumn?:string):string {
@@ -38,7 +35,6 @@ function visibility(i:Identity,name:string):string {
   const guardian=i.scopeKind==='linked_students';
   const studentKey=name==='student' ? 'id' : ['attendance','score','slip','homework_grade','report','report_publication'].includes(name) ? 'student_id' : undefined;
   const clauses=[scope(i,'e',name==='class',studentKey)];
-  if (name==='conflict') clauses.push(`(${Object.entries(groups).filter(([,g])=>i.permissions[g]==='write').map(([n])=>`e.entity=${literal(n)}`).join(' OR ')||'0'})`);
   if (guardian) {
     if (name==='test') clauses.push('e.archived=0');
     if (name==='score') clauses.push('parent.archived=0');
@@ -57,7 +53,6 @@ function fields(i:Identity,name:string):string {
 }
 function decode(name:string,row:Row):Row {
   if (name==='class' && row.weekdays!==undefined) row.weekdays=Array.from({length:7},(_,i)=>i+1).filter(day=>(row.weekdays & (1<<(day-1)))!==0);
-  if (name==='conflict') {row.server_value=JSON.parse(row.server_value);row.client_value=JSON.parse(row.client_value);}
   if (name==='report_publication') {row.snapshot=JSON.parse(row.snapshot);row.has_pdf=Boolean(row.has_pdf);}
   if (name==='test') row.archived=Boolean(row.archived);
   if (name==='class_session') row.is_makeup=Boolean(row.is_makeup);
@@ -102,8 +97,7 @@ export async function pull(db:D1Database,i:Identity,cursor:number,epoch:number,l
   const names=Object.keys(entities).filter(n=>allowed(i,n));
   const logScope=scope(i,'l',false);
   const own=i.scopeKind==='linked_students' ? `AND (l.student_id IS NULL OR l.student_id IN (SELECT student_id FROM guardian_student WHERE workspace_id=${literal(i.workspaceId)} AND user_id=${literal(i.userId)}))` : '';
-  const conflicts=i.scopeKind==='linked_students' ? '' : `AND (l.entity<>'conflict' OR EXISTS(SELECT 1 FROM sync_conflicts cf WHERE cf.id=l.k1 AND cf.workspace_id=l.workspace_id AND (${Object.entries(groups).filter(([,g])=>i.permissions[g]==='write').map(([n])=>`cf.entity=${literal(n)}`).join(' OR ')||'0'})))`;
-  const logWhere=`l.workspace_id=? AND l.seq>? AND (${logScope}) ${own} ${conflicts} AND l.entity IN (${names.map(literal).join(',')||"''"})`;
+  const logWhere=`l.workspace_id=? AND l.seq>? AND (${logScope}) ${own} AND l.entity IN (${names.map(literal).join(',')||"''"})`;
   const page=`SELECT l.* FROM change_log l WHERE ${logWhere} ORDER BY seq LIMIT ?`;
   const cte=`WITH page AS (${page})`;
   const statements=[meta(db,i),db.prepare(page).bind(i.workspaceId,cursor,limit+1)];

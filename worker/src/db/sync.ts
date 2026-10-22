@@ -90,7 +90,7 @@ async function initialState(db:D1Database,i:SyncIdentity,commands:Command[]):Pro
     const p=c.payload;
     add('students',p.student_id);
     if(Array.isArray(p.student_ids)) for(const sid of p.student_ids) add('students',sid);
-    add('classes',p.class_id);add('class_sessions',p.session_id);add('tests',p.test_id);add('homework_sections',p.section_id);add('sync_conflicts',p.conflict_id);
+    add('classes',p.class_id);add('class_sessions',p.session_id);add('tests',p.test_id);add('homework_sections',p.section_id);
     if(c.type.startsWith('test.')) add('tests',p.id);
     if(c.type.startsWith('homework.section.')) add('homework_sections',p.id);
     if(c.type==='homework.assign' && Array.isArray(p.sections)) for(const section of p.sections) add('homework_sections',section?.id);
@@ -129,10 +129,10 @@ async function stateRow(db:D1Database,i:SyncIdentity,table:string,key:string,sec
 }
 function evict(i:SyncIdentity,c:Command):void {
   const prefix=c.type.split('.')[0];
-  const tables=prefix==='attendance' ? ['attendance','class_sessions','sync_conflicts']
-    : prefix==='score' ? ['scores','sync_conflicts'] : prefix==='test' ? ['tests','scores']
-    : prefix==='slip' ? ['session_comments','sync_conflicts'] : prefix==='homework' ? ['homework_sections','homework_grades','sync_conflicts']
-    : ['attendance','scores','session_comments','homework_grades','sync_conflicts','class_sessions'];
+  const tables=prefix==='attendance' ? ['attendance','class_sessions']
+    : prefix==='score' ? ['scores'] : prefix==='test' ? ['tests','scores']
+    : prefix==='slip' ? ['session_comments'] : prefix==='homework' ? ['homework_sections','homework_grades']
+    : ['attendance','scores','session_comments','homework_grades','class_sessions'];
   for(const key of i.syncState?.keys() ?? []) if(tables.some(t=>key.startsWith(t+':'))) i.syncState!.delete(key);
 }
 async function resource(db:D1Database,i:SyncIdentity,table:string,key:unknown,group:PermGroup):Promise<Row> {
@@ -220,22 +220,16 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
   const v=row?.version ?? 0;
   if (!row && c.base_version>0) throw notFound();
   if (c.base_version>v) throw validationError(undefined,'base_version_ahead');
+  // Last write wins: a stale base_version is applied like any other write, because the order that
+  // matters is the order the server received the commands, not the version the device had seen.
+  // An identical value needs no write, no history row and no notification.
   const same=row && def.fields.every(f=>row[f]===values[f]);
   const result:Result={id:c.id,status:'applied',version:v+1};
-  if (c.base_version<v) {
-    if (same) {
-      result.version=v; result.noop=true;
-      return {result,receiptOnly:true,rest:[],first:q(`INSERT INTO applied_commands(command_id,workspace_id,membership_id,type,status,result,applied_at)
-        SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM ${def.table} WHERE workspace_id=? AND ${def.key}=? AND student_id=? AND version=?)`,
-      c.id,i.workspaceId,i.membershipId,c.type,'applied',JSON.stringify(result),now,i.workspaceId,parent.id,p.student_id,v)};
-    }
-    const existing=await one(db,`SELECT * FROM sync_conflicts WHERE workspace_id=? AND entity=? AND k1=? AND k2=? AND resolved_at IS NULL`,i.workspaceId,entity,parent.id,p.student_id);
-    const conflictId=existing?.id ?? crypto.randomUUID(),server=Object.fromEntries(def.fields.map(f=>[f,row![f]]));
-    return {result:{id:c.id,status:'conflict',conflict_id:conflictId,server:{...server,version:v}},rest:[],first:q(`INSERT INTO sync_conflicts(id,workspace_id,class_id,entity,k1,k2,server_value,server_version,client_value,client_base_version,command_id,membership_id,created_at,updated_at)
-      SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM ${def.table} WHERE workspace_id=? AND ${def.key}=? AND student_id=? AND version=?)
-      ON CONFLICT(entity,k1,k2) WHERE resolved_at IS NULL DO UPDATE SET server_value=excluded.server_value,server_version=excluded.server_version,
-      client_value=excluded.client_value,client_base_version=excluded.client_base_version,command_id=excluded.command_id,membership_id=excluded.membership_id,updated_at=excluded.updated_at,version=sync_conflicts.version+1`,
-    conflictId,i.workspaceId,parent.class_id,entity,parent.id,p.student_id,JSON.stringify(server),v,JSON.stringify(values),c.base_version,c.id,i.membershipId,now,now,i.workspaceId,parent.id,p.student_id,v)};
+  if (same) {
+    result.version=v; result.noop=true;
+    return {result,receiptOnly:true,rest:[],first:q(`INSERT INTO applied_commands(command_id,workspace_id,membership_id,type,status,result,applied_at)
+      SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM ${def.table} WHERE workspace_id=? AND ${def.key}=? AND student_id=? AND version=?)`,
+    c.id,i.workspaceId,i.membershipId,c.type,'applied',JSON.stringify(result),now,i.workspaceId,parent.id,p.student_id,v)};
   }
   const fields=def.fields,args=fields.map(f=>values[f]);
   const first=row ? q(`UPDATE ${def.table} SET ${fields.map(f=>`${f}=?`).join(',')},version=version+1,updated_at=?,updated_by=? WHERE workspace_id=? AND ${def.key}=? AND student_id=? AND version=?`,...args,now,i.userId,i.workspaceId,parent.id,p.student_id,v)
@@ -393,37 +387,9 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
     return {result,rest,first:q('DELETE FROM homework_sections WHERE workspace_id=? AND id=? AND version=?',i.workspaceId,row.id,row.version)};
   }
   if (c.type==='conflict.resolve') {
-    const cf=await stateRow(db,i,'sync_conflicts',id(p.conflict_id));
-    if (!cf) throw notFound();
-    requireAccess(i,groups[cf.entity]!,'write',{classId:cf.class_id});
-    memberOf(p.choice,['server','client']);
-    if (cf.resolved_at!==null) throw conflict('conflict_resolved');
-    const def=cells[cf.entity]!;
-    const close=q(`UPDATE sync_conflicts SET resolved_at=?,resolved_by=?,resolution=?,updated_at=?,version=version+1
-      WHERE workspace_id=? AND id=? AND version=? AND resolved_at IS NULL`,now,i.userId,p.choice,now,i.workspaceId,cf.id,cf.version);
-    if (p.choice==='server') return {result,first:close,rest};
-    const row=await one(db,`SELECT * FROM ${def.table} WHERE workspace_id=? AND ${def.key}=? AND student_id=?`,i.workspaceId,cf.k1,cf.k2);
-    if (!row) throw notFound();
-    if (row.version!==cf.server_version) {
-      const server=Object.fromEntries(def.fields.map(f=>[f,row[f]]));
-      return {result:{id:c.id,status:'rejected',error:{code:'conflict',message:'Conflict.',details:{reason:'conflict_stale'}}},rest,first:q(`UPDATE sync_conflicts SET server_value=?,server_version=?,updated_at=?,version=version+1 WHERE workspace_id=? AND id=? AND version=?`,
-        JSON.stringify(server),row.version,now,i.workspaceId,cf.id,cf.version)};
-    }
-    const plan=await cellPlan(db,i,{...c,type:cf.entity==='homework_grade' ? 'homework.grade.set' : `${cf.entity}.set`,base_version:cf.server_version,
-      payload:{...JSON.parse(cf.client_value),[def.key]:cf.k1,student_id:cf.k2}},cf.entity);
-    if (plan.result.status!=='applied') {
-      // A writer advanced the cell between the two reads: refresh the still-open conflict and retry resolution.
-      const current=await one(db,`SELECT * FROM ${def.table} WHERE workspace_id=? AND ${def.key}=? AND student_id=?`,i.workspaceId,cf.k1,cf.k2);
-      if (!current) throw notFound();
-      return {result:{id:c.id,status:'rejected',error:{code:'conflict',message:'Conflict.',details:{reason:'conflict_stale'}}},rest:[],
-        first:q('UPDATE sync_conflicts SET server_value=?,server_version=?,updated_at=?,version=version+1 WHERE workspace_id=? AND id=? AND version=?',
-          JSON.stringify(Object.fromEntries(def.fields.map(f=>[f,current[f]]))),current.version,now,i.workspaceId,cf.id,cf.version)};
-    }
-    plan.first!.sql+=` AND EXISTS(SELECT 1 FROM sync_conflicts WHERE workspace_id=? AND id=? AND version=? AND resolved_at IS NULL)`;
-    plan.first!.args.push(i.workspaceId,cf.id,cf.version);
-    close.sql+=` AND ${ack(c)}`;
-    plan.rest.push(close);
-    return plan;
+    // Conflicts are never recorded in the MVP: the later command always wins (docs/architecture.md 5,
+    // api-spec.md 6.5), so the sync_conflicts table stays empty and there is nothing to resolve.
+    throw validationError(undefined,'conflicts_not_used');
   }
   throw validationError(undefined,'unknown_command');
 }

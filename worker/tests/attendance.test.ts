@@ -86,12 +86,13 @@ describe('attendance read API', () => {
       expect(history).toMatchObject({ old_status: 'late', new_status: 'excused', changed_by: owner.userId });
       const stale = await pushCommands(owner.token, owner.membershipId, [syncCommand('attendance.set',
         { session_id: firstSession, student_id: firstStudent, status: 'absent' }, 1)]);
-      expect(stale.body.results).toEqual([expect.objectContaining({
-        status: 'conflict', server: expect.objectContaining({ status: 'excused', version: 2 }),
-      })]);
+      expect(stale.body.results).toEqual([expect.objectContaining({ status: 'applied', version: 3 })]);
+      const finalCell = await db.prepare('SELECT status, version FROM attendance WHERE session_id = ? AND student_id = ?')
+        .bind(firstSession, firstStudent).first<{ status: string; version: number }>();
+      expect(finalCell).toMatchObject({ status: 'absent', version: 3 });
       const statuses = await db.prepare('SELECT DISTINCT status FROM attendance WHERE workspace_id = ?')
         .bind(owner.workspaceId).all<{ status: string }>();
-      expect(statuses.results.map((row) => row.status).sort()).toEqual(['absent', 'excused', 'late', 'present']);
+      expect(statuses.results.map((row) => row.status).sort()).toEqual(['absent', 'late', 'present']);
     });
 
     it('rejects attendance writes for a cancelled session through sync push', async () => {

@@ -38,34 +38,47 @@ describe('sync commands and recovery',()=>{
     expect((await db.prepare('SELECT COUNT(*) n FROM notifications WHERE workspace_id=?').bind(f.a.workspaceId).first<any>())!.n).toBe(1);
     expect((await db.prepare('SELECT status FROM class_sessions WHERE id=?').bind(f.ses).first<any>())!.status).toBe('held');
   });
-  it('keeps both device values, noops stale identical values, and resolves conflicts',async()=>{
+  it('applies a stale base_version instead of storing a conflict and still writes history',async()=>{
     const f=await setup();const payload={test_id:f.test,student_id:f.s1,value:10};
     expect((await f.send([command('score.set',payload)])).body.results[0].version).toBe(1);
     expect((await f.send([command('score.set',payload)])).body.results[0]).toMatchObject({status:'applied',version:1,noop:true});
-    const conflict=await f.send([command('score.set',{...payload,value:12})]);
-    const cf=conflict.body.results[0];expect(cf).toMatchObject({status:'conflict',server:{value:10,version:1}});
-    let stored=await db.prepare('SELECT * FROM sync_conflicts WHERE id=?').bind(cf.conflict_id).first<any>();
-    expect(JSON.parse(stored!.client_value)).toEqual({value:12});
-    await f.send([command('score.set',{...payload,value:13},1)]);
-    const stale=await f.send([command('conflict.resolve',{conflict_id:cf.conflict_id,choice:'client'})]);
-    expect(stale.body.results[0]).toMatchObject({status:'rejected',error:{details:{reason:'conflict_stale'}}});
-    const resolved=await f.send([command('conflict.resolve',{conflict_id:cf.conflict_id,choice:'client'})]);
-    expect(resolved.body.results[0].status).toBe('applied');
-    expect((await db.prepare('SELECT value FROM scores WHERE test_id=? AND student_id=?').bind(f.test,f.s1).first<any>())!.value).toBe(12);
-    stored=await db.prepare('SELECT * FROM sync_conflicts WHERE id=?').bind(cf.conflict_id).first<any>();expect(stored!.resolution).toBe('client');
+    const later=await f.send([command('score.set',{...payload,value:12})]);
+    expect(later.body.results[0]).toMatchObject({status:'applied',version:2});
+    expect(await db.prepare('SELECT value,version FROM scores WHERE test_id=? AND student_id=?').bind(f.test,f.s1).first<any>())
+      .toMatchObject({value:12,version:2});
+    const history=await db.prepare('SELECT old_value,new_value FROM score_history WHERE test_id=? AND student_id=? ORDER BY id').bind(f.test,f.s1).all<any>();
+    expect(history.results).toEqual([{old_value:10,new_value:12}]);
+    expect((await db.prepare('SELECT COUNT(*) n FROM sync_conflicts WHERE workspace_id=?').bind(f.a.workspaceId).first<any>())!.n).toBe(0);
+    const resolved=await f.send([command('conflict.resolve',{conflict_id:uid(),choice:'client'})]);
+    expect(resolved.body.results[0]).toMatchObject({status:'rejected',error:{details:{reason:'conflicts_not_used'}}});
   });
-  it('handles all four cell conflict types and the server choice',async()=>{
+  it('lets the later arrival win for every cell type and never records conflicts',async()=>{
     const f=await setup(),section=uid();
     await f.send([command('homework.assign',{session_id:f.ses,sections:[{id:section,kind:'reading'}]})]);
     for (const [type,base,other] of [
       ['attendance.set',{session_id:f.ses,student_id:f.s1,status:'present'},{status:'absent'}],
       ['slip.set',{session_id:f.ses,student_id:f.s1,stars:3,note:''},{stars:1}],
       ['homework.grade.set',{section_id:section,student_id:f.s1,level:'done'},{level:'not_done'}],
+      ['score.set',{test_id:f.test,student_id:f.s1,value:4},{value:2}],
     ] as const) {
-      expect((await f.send([command(type,base)])).body.results[0].status).toBe('applied');
-      const r=(await f.send([command(type,{...base,...other})])).body.results[0];expect(r.status).toBe('conflict');
-      expect((await f.send([command('conflict.resolve',{conflict_id:r.conflict_id,choice:'server'})])).body.results[0].status).toBe('applied');
+      expect((await f.send([command(type,base)])).body.results[0]).toMatchObject({status:'applied',version:1});
+      expect((await f.send([command(type,{...base,...other},0)])).body.results[0]).toMatchObject({status:'applied',version:2});
     }
+    expect(await db.prepare('SELECT status FROM attendance WHERE session_id=? AND student_id=?').bind(f.ses,f.s1).first<any>()).toMatchObject({status:'absent'});
+    expect(await db.prepare('SELECT stars FROM session_comments WHERE session_id=? AND student_id=?').bind(f.ses,f.s1).first<any>()).toMatchObject({stars:1});
+    expect(await db.prepare('SELECT level FROM homework_grades WHERE section_id=? AND student_id=?').bind(section,f.s1).first<any>()).toMatchObject({level:'not_done'});
+    expect(await db.prepare('SELECT value FROM scores WHERE test_id=? AND student_id=?').bind(f.test,f.s1).first<any>()).toMatchObject({value:2});
+    expect((await db.prepare('SELECT COUNT(*) n FROM sync_conflicts WHERE workspace_id=?').bind(f.a.workspaceId).first<any>())!.n).toBe(0);
+  });
+  it('applies two parallel writes to one cell in arrival order without losing either',async()=>{
+    const f=await setup(),payload={test_id:f.test,student_id:f.s1,value:8};
+    await f.send([command('score.set',payload)]);
+    const updates=await Promise.all([f.send([command('score.set',{...payload,value:9},1)]),f.send([command('score.set',{...payload,value:10},1)])]);
+    expect(updates.map(r=>r.body.results[0].status)).toEqual(['applied','applied']);
+    const row=await db.prepare('SELECT value,version FROM scores WHERE test_id=? AND student_id=?').bind(f.test,f.s1).first<any>();
+    expect([9,10]).toContain(row!.value);expect(row!.version).toBe(3);
+    expect((await db.prepare('SELECT COUNT(*) n FROM score_history WHERE test_id=? AND student_id=?').bind(f.test,f.s1).first<any>())!.n).toBe(2);
+    expect((await db.prepare('SELECT COUNT(*) n FROM sync_conflicts WHERE workspace_id=?').bind(f.a.workspaceId).first<any>())!.n).toBe(0);
   });
   it('commits valid commands around a rejected command, and creates dependencies in order',async()=>{
     const f=await setup(),test=uid();
@@ -204,18 +217,28 @@ describe('sync scope and read protocol',()=>{
     await db.prepare('DELETE FROM member_classes WHERE membership_id=?').bind(f.actors.teacher.mid).run();
     expect((await f.send([command('test.create',{id:uid(),class_id:f.cls,name:'T',date:today()})],'teacher')).body.results[0].error.code).toBe('not_found');
   });
-  it('arbitrates concurrent devices and duplicate UUIDs without duplicate side effects',async()=>{
-    const f=await setup(),payload={test_id:f.test,student_id:f.s1,value:8};
-    const same=command('score.set',payload);
-    const retries=await Promise.all([f.send([same]),f.send([same])]);
-    expect(retries.map(r=>r.body.results[0].status).sort()).toEqual(['applied','duplicate']);
-    const updates=await Promise.all([f.send([command('score.set',{...payload,value:9},1)]),f.send([command('score.set',{...payload,value:10},1)])]);
-    expect(updates.map(r=>r.body.results[0].status).sort()).toEqual(['applied','conflict']);
-    expect((await db.prepare('SELECT COUNT(*) n FROM score_history WHERE test_id=? AND student_id=?').bind(f.test,f.s1).first<any>())!.n).toBe(1);
-    const inbox=await db.prepare('SELECT event_version FROM notifications WHERE workspace_id=?').bind(f.a.workspaceId).first<any>();expect(inbox!.event_version).toBe(2);
-    const cf=(await f.page('conflict')).body.items[0];expect(cf.entity).toBe('score');
-    expect((await f.send([command('conflict.resolve',{conflict_id:cf.id,choice:'server'})],'ta')).body.results[0].error.code).toBe('forbidden');
-    const ta=await f.pull(0,'ta');expect(ta.body.upserts.conflict).toBeUndefined();expect(ta.body.deleted.some((r:any)=>r.entity==='conflict')).toBe(false);
+  it('orders two devices by server arrival and pulls one final value, with duplicate UUIDs applied once',async()=>{
+    const f=await setup(),deviceA=uid(),deviceB=uid();
+    const older=new Date(Date.now()-60000).toISOString(),newer=new Date(Date.now()-30000).toISOString();
+    // Device A reaches the server first, device B second: B wins on cell 1.
+    const first=command('score.set',{test_id:f.test,student_id:f.s1,value:5});first.created_at=older;
+    const second=command('score.set',{test_id:f.test,student_id:f.s1,value:11});second.created_at=newer;
+    expect((await f.send([first],'admin',deviceA)).body.results[0]).toMatchObject({status:'applied',version:1});
+    expect((await f.send([second],'admin',deviceB)).body.results[0]).toMatchObject({status:'applied',version:2});
+    // Reversed order on cell 2: B arrives first even though A's command was created earlier, A still wins.
+    const third=command('score.set',{test_id:f.test,student_id:f.s2,value:6});third.created_at=newer;
+    const fourth=command('score.set',{test_id:f.test,student_id:f.s2,value:9});fourth.created_at=older;
+    expect((await f.send([third],'admin',deviceB)).body.results[0]).toMatchObject({status:'applied',version:1});
+    expect((await f.send([fourth],'admin',deviceA)).body.results[0]).toMatchObject({status:'applied',version:2});
+    const cells=async(actor:'admin'|'teacher')=> (await f.pull(0,actor)).body.upserts.score
+      .map((r:any)=>[r.student_id,r.value,r.version]).sort((a:any,b:any)=>a[0]<b[0]?-1:1);
+    expect(await cells('admin')).toEqual([[f.s1,11,2],[f.s2,9,2]].sort((a:any,b:any)=>a[0]<b[0]?-1:1));
+    expect(await cells('teacher')).toEqual(await cells('admin'));
+    // The same UUID delivered twice is acknowledged once and applied once.
+    const retry=await f.send([fourth],'admin',deviceA);
+    expect(retry.body.results[0]).toMatchObject({status:'duplicate',original_status:'applied'});
+    expect((await db.prepare('SELECT COUNT(*) n FROM score_history WHERE test_id=? AND student_id=?').bind(f.test,f.s2).first<any>())!.n).toBe(1);
+    expect((await db.prepare('SELECT COUNT(*) n FROM sync_conflicts WHERE workspace_id=?').bind(f.a.workspaceId).first<any>())!.n).toBe(0);
   });
   it('uses current permissions and keeps rejected acknowledgements idempotent',async()=>{
     const f=await setup();
