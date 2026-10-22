@@ -196,15 +196,12 @@ actor SQLiteStore: LocalStore {
         try transaction {
             for result in results {
                 switch result.status {
-                // `conflict` is the legacy name of "the other device's value is what the server keeps";
-                // it confirms this command the same way `applied` does, and `pull` then brings the
-                // server value back into the cache (last write wins). Nothing is shown to the teacher.
-                case .applied, .conflict:
+                case .applied:
                     try db.execute("DELETE FROM commands WHERE scope=? AND id=? AND state='sending'", [scope.storageKey,result.id.uuidString])
                 case .duplicate:
                     if result.originalStatus == .rejected {
                         try reject(result)
-                    } else if result.originalStatus == .applied || result.originalStatus == .conflict {
+                    } else if result.originalStatus == .applied {
                         try db.execute("DELETE FROM commands WHERE scope=? AND id=? AND state='sending'", [scope.storageKey,result.id.uuidString])
                     } else {
                         // A duplicate without original_status acknowledges nothing; replay the same UUID.
@@ -253,8 +250,10 @@ actor SQLiteStore: LocalStore {
     }
     func apply(_ page: PullPage) throws {
         try transaction {
-            for (entity, values) in page.upserts { for value in values { try upsert(entity: entity, value: value) } }
-            for key in page.deleted {
+            for (entity, values) in page.upserts where SyncEntity.allowed.contains(entity) {
+                for value in values { try upsert(entity: entity, value: value) }
+            }
+            for key in page.deleted where SyncEntity.allowed.contains(key.entity) {
                 try db.execute("DELETE FROM records WHERE scope=? AND key=?", [scope.storageKey,key.storageKey])
             }
             try setPosition(SyncPosition(cursor: page.cursor, epoch: page.epoch))
@@ -282,7 +281,9 @@ actor SQLiteStore: LocalStore {
     func installSnapshot(_ records: [String: [JSONValue]], position: SyncPosition) throws {
         try transaction {
             try db.execute("DELETE FROM records WHERE scope=?", [scope.storageKey])
-            for (entity, values) in records { for value in values { try upsert(entity: entity, value: value) } }
+            for (entity, values) in records where SyncEntity.allowed.contains(entity) {
+                for value in values { try upsert(entity: entity, value: value) }
+            }
             try setPosition(position)
         }
     }

@@ -102,6 +102,34 @@ final class CoreTests: XCTestCase {
         let replay = try await store.claimBatch(now: now.addingTimeInterval(1))
         XCTAssertEqual(replay.map(\.id), [edit.id], "an unqualified duplicate must stay claimable with its UUID")
     }
+    func testAppliedNoopAcknowledgesTheCommand() async throws {
+        let store = try store(), now = Date(timeIntervalSince1970: 1000), edit = command(cell())
+        try await store.write(1, forKey: edit.recordKey, enqueueing: edit)
+        _ = try await store.claimBatch(now: now)
+        try await store.acknowledge([CommandResult(id: edit.id, status: .applied, version: 1, noop: true)])
+        let count = try await store.pendingCommandCount()
+        XCTAssertEqual(count, 0)
+    }
+    func testRejectedValidationErrorRemainsQueuedAsError() async throws {
+        let store = try store(), now = Date(timeIntervalSince1970: 1000), edit = command(cell())
+        try await store.write(1, forKey: edit.recordKey, enqueueing: edit)
+        _ = try await store.claimBatch(now: now)
+        try await store.acknowledge([CommandResult(id: edit.id, status: .rejected,
+            error: APIError(code: "validation_error", message: nil, details: nil, requestId: nil))])
+        let queued = try await store.queuedCommands()
+        XCTAssertEqual(queued.map(\.command.id), [edit.id])
+        XCTAssertEqual(queued.first?.state, "rejected")
+    }
+    func testPullIgnoresUnknownEntitiesAndAdvancesCursor() async throws {
+        let store = try store(), key = RecordKey(entity: "conflict", k1: "legacy")
+        let unknown = JSONValue.object(["id": .string("legacy"), "version": .number(1)])
+        try await store.apply(PullPage(cursor: 4, epoch: 3, hasMore: false, serverTime: "fixture",
+            upserts: ["conflict": [unknown]], deleted: [RecordKey(entity: "future_entity", k1: "x")]))
+        let record = try await store.read(JSONValue.self, forKey: key.storageKey)
+        let position = try await store.position()
+        XCTAssertNil(record)
+        XCTAssertEqual(position, SyncPosition(cursor: 4, epoch: 3))
+    }
     func testReopenAndScopeIsolation() async throws {
         let path = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString + ".sqlite").path
         defer { try? FileManager.default.removeItem(atPath: path) }

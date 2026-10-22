@@ -2,8 +2,7 @@ import XCTest
 @testable import QuanLyLop
 
 /// `SyncCoordinator` is the only writer of the offline-UX state: a failed sync and a rejected
-/// command must each surface in the app frame, a clean sync must clear it again, and a legacy
-/// `conflict` result must stay invisible (last write wins, `api-spec.md` mục 6).
+/// command must each surface in the app frame, and a clean sync must clear it again.
 final class SyncReportingTests: XCTestCase {
     let scope = CacheScope(userId: "status-user", workspaceId: "status-workspace", membershipId: "status-member")
     let deviceId = "status-device"
@@ -50,16 +49,39 @@ final class SyncReportingTests: XCTestCase {
         XCTAssertEqual(center.rejectedCommandCount, 1)
     }
 
-    func testLegacyConflictIsAcknowledgedLikeAppliedAndStaysQuiet() async throws {
-        let store = try store(), center = SyncStatusCenter(), command = attendanceCommand()
+    func testUnknownSnapshotEntitiesAreIgnored() async throws {
+        let store = try store()
+        let manifest = Data(#"{"cursor":5,"epoch":3,"window":{"from":"2026-07-23","to":"2026-12-16"},"entities":["conflict","future_entity"]}"#.utf8)
+        let pull = PullPage(cursor: 5, epoch: 3, hasMore: false, serverTime: "fixture", upserts: [:], deleted: [])
+        let api = StubAPIClient(baseURL: baseURL(), fixtures: [
+            .init(method: .get, path: "sync/snapshot", query: ["membership_id": scope.membershipId]): manifest,
+            .init(method: .get, path: "sync/pull", query: ["membership_id": scope.membershipId, "cursor": "5", "epoch": "3", "limit": "200"]):
+                try WireJSON.encoder().encode(pull)
+        ])
+        try await SyncCoordinator(api: api, store: store, deviceId: deviceId).synchronize(now: now)
+        let position = try await store.position()
+        XCTAssertEqual(position, SyncPosition(cursor: 5, epoch: 3))
+    }
+
+    func testConflictStatusIsInvalidAndReplaysTheSameUUID() async throws {
+        let store = try store(), command = attendanceCommand()
+        try await store.apply(PullPage(cursor: 5, epoch: 3, hasMore: false, serverTime: "fixture", upserts: [:], deleted: []))
         try await store.write(1, forKey: command.recordKey, enqueueing: command)
-        let api = StubAPIClient(baseURL: baseURL(), fixtures: try fixtures(command: command,
-            result: CommandResult(id: command.id, status: .conflict, version: 4)))
-        try await SyncCoordinator(api: api, store: store, deviceId: deviceId, status: center).synchronize(now: now)
-        // The server keeps the other device's value; the outbox row is done and nothing is flagged.
-        let pending = try await store.pendingCommandCount()
-        XCTAssertEqual(pending, 0)
-        XCTAssertEqual(center.state, .synced)
+        let request = try APIEndpoint.json(method: .post, path: "sync/push",
+            body: PushRequest(membershipId: scope.membershipId, deviceId: deviceId, commands: [command.wire]))
+        let malformed = Data("{\"epoch\":3,\"cursor\":9,\"results\":[{\"id\":\"\(command.id.uuidString.lowercased())\",\"status\":\"conflict\"}]}".utf8)
+        let pull = PullPage(cursor: 5, epoch: 3, hasMore: false, serverTime: "fixture", upserts: [:], deleted: [])
+        let api = StubAPIClient(baseURL: baseURL(), fixtures: [
+            request: malformed,
+            .init(method: .get, path: "sync/pull", query: ["membership_id": scope.membershipId, "cursor": "5", "epoch": "3", "limit": "200"]):
+                try WireJSON.encoder().encode(pull)
+        ])
+        do {
+            try await SyncCoordinator(api: api, store: store, deviceId: deviceId).synchronize(now: now)
+            XCTFail("unknown command statuses must fail decoding")
+        } catch {}
+        let replay = try await store.claimBatch(now: now.addingTimeInterval(10))
+        XCTAssertEqual(replay.map(\.id), [command.id])
     }
 
     func testFailedSyncShowsErrorAndALaterCleanSyncClearsIt() async throws {

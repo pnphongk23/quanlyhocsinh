@@ -2,10 +2,13 @@ import Foundation
 
 /// Final statuses of a pushed command (`api-spec.md` mục 6.1).
 ///
-/// `conflict` is a legacy status: the current rule is last-write-wins (the change that reaches the
-/// server last wins; no two values, no teacher choice), so it is acknowledged exactly like
-/// `applied`. The case stays so an old server or a stale response still decodes; it is never shown.
-enum CommandStatus: String, Codable, Sendable { case applied, duplicate, conflict, rejected }
+enum CommandStatus: String, Codable, Sendable { case applied, duplicate, rejected }
+enum SyncEntity {
+    static let allowed: Set<String> = [
+        "class", "student", "class_session", "test", "attendance", "score", "slip",
+        "homework_section", "homework_grade", "report", "report_publication"
+    ]
+}
 struct CommandResult: Codable, Sendable, Equatable {
     let id: UUID
     let status: CommandStatus
@@ -73,8 +76,7 @@ actor SyncCoordinator {
         }
     }
     /// One failed sync or one rejected command is enough for the app frame to show the save-error
-    /// pill; a successful sync clears it unless rejected commands remain queued. A legacy `conflict`
-    /// is not an error: the server keeps the value that arrived last and `pull` brings it back.
+  /// pill; a successful sync clears it unless rejected commands remain queued.
     private func report(syncFailed: Bool) async {
         let rejected = (try? await store.rejectedCommandCount()) ?? 0
         status.record(syncFailed: syncFailed, rejectedCommands: rejected)
@@ -95,7 +97,7 @@ actor SyncCoordinator {
                     try await store.acknowledge(results)
                     // Unacknowledged/malformed duplicates remain in the queue and replay later.
                     let acknowledged = Set(results.filter {
-                        $0.status != .duplicate || [.applied, .conflict, .rejected].contains($0.originalStatus)
+                      $0.status != .duplicate || [.applied, .rejected].contains($0.originalStatus)
                     }.map(\.id))
                     let missing = batch.map(\.id).filter { !acknowledged.contains($0) }
                     try await store.retry(missing, now: now, minimumDelay: 0)
@@ -129,10 +131,10 @@ actor SyncCoordinator {
         let membership = store.scope.membershipId
         let manifest = try await api.send(.init(method: .get, path: "sync/snapshot", query: ["membership_id": membership]), as: SnapshotManifest.self)
         var records: [String: [JSONValue]] = [:]
-        for entity in manifest.entities {
-            // `conflict` stays decodable only so a server that still lists the legacy entity does not
-            // fail the whole snapshot; the app has no conflict surface any more (last write wins).
-            guard ["class", "student", "class_session", "test", "attendance", "score", "slip", "homework_section", "homework_grade", "report", "report_publication", "conflict"].contains(entity) else { throw SyncFailure.invalidResponse }
+          for entity in manifest.entities {
+              // The server contract has a fixed entity set. Ignore unknown additions so one
+              // unsupported entity cannot prevent the supported snapshot from installing.
+              guard SyncEntity.allowed.contains(entity) else { continue }
             var after: String?
             repeat {
                 try Task.checkCancellation()
@@ -151,7 +153,11 @@ actor SyncCoordinator {
         while true {
             try Task.checkCancellation()
             let query = ["membership_id": store.scope.membershipId, "cursor": String(position.cursor), "epoch": String(position.epoch), "limit": "200"]
-            let page = try await api.send(.init(method: .get, path: "sync/pull", query: query), as: PullPage.self)
+              let received = try await api.send(.init(method: .get, path: "sync/pull", query: query), as: PullPage.self)
+              let page = PullPage(cursor: received.cursor, epoch: received.epoch, hasMore: received.hasMore,
+                                  serverTime: received.serverTime,
+                                  upserts: received.upserts.filter { SyncEntity.allowed.contains($0.key) },
+                                  deleted: received.deleted.filter { SyncEntity.allowed.contains($0.entity) })
             guard page.epoch == position.epoch, page.cursor >= position.cursor,
                   !page.hasMore || page.cursor > position.cursor else { throw SyncFailure.invalidResponse }
             try await store.apply(page)

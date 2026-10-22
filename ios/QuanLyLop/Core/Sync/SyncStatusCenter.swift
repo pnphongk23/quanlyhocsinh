@@ -17,8 +17,8 @@ enum SaveState: String, Sendable, Equatable, CaseIterable {
 /// polling. A failed sync and a command the server rejected both mean the same thing to the teacher
 /// — this edit is not on the server yet — so they share one visible state.
 ///
-/// There is deliberately no conflict state: two devices editing one cell are resolved by the server
-/// last-write-wins (`api-spec.md` mục 6, chốt 2026-10-21), no flag and no choice for the teacher.
+/// Two devices editing one cell are resolved by the server last-write-wins (`api-spec.md` mục 6,
+/// chốt 2026-10-21), with no flag and no choice for the teacher.
 @Observable
 final class SyncStatusCenter: @unchecked Sendable {
     static let shared = SyncStatusCenter()
