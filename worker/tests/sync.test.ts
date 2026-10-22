@@ -103,10 +103,14 @@ describe('sync commands and recovery',()=>{
     const f=await setup();
     await f.send([command('score.set',{test_id:f.test,student_id:f.s1,value:0})]);
     expect((await f.send([command('test.update',{id:f.test,name:'Updated',max:20},1)])).body.results[0].version).toBe(2);
-    expect((await f.send([command('test.update',{id:f.test,max:10},1)])).body.results[0].error.code).toBe('version_conflict');
+    // A stale base_version still applies: the later command wins, no version_conflict.
+    expect((await f.send([command('test.update',{id:f.test,name:'Updated again',max:20},1)])).body.results[0])
+      .toMatchObject({status:'applied',version:3});
+    expect((await f.send([command('test.update',{id:f.test,name:'Ahead'},9)])).body.results[0].error.details.reason).toBe('base_version_ahead');
     await f.send([command('score.set',{test_id:f.test,student_id:f.s1,value:18},1)]);
     expect((await f.send([command('test.update',{id:f.test,max:10},2)])).body.results[0].error.details.reason).toBe('max_below_score');
     expect((await f.send([command('score.set',{test_id:f.test,student_id:f.s1,value:21},2)])).body.results[0].error.details.reason).toBe('score_above_max');
+    expect(await db.prepare('SELECT name,version FROM tests WHERE id=?').bind(f.test).first<any>()).toMatchObject({name:'Updated again',version:3});
     expect((await f.send([command('test.delete',{id:f.test},2)])).body.results[0].outcome).toBe('archived');
     const test=await insertTest(f.a.workspaceId,f.cls,f.a.userId,15,today());
     await f.send([command('score.set',{test_id:test,student_id:f.s1,value:null})]);
@@ -124,6 +128,23 @@ describe('sync commands and recovery',()=>{
     expect((await f.send([command('homework.section.delete',{id:a},2)])).body.results[0].error.details.reason).toBe('section_has_grades');
     expect((await f.send([command('homework.section.delete',{id:b},1)])).body.results[0].status).toBe('applied');
     expect((await db.prepare('SELECT COUNT(*) n FROM notifications WHERE workspace_id=?').bind(f.a.workspaceId).first<any>())!.n).toBe(2);
+  });
+  it('applies object commands with a stale base_version and keeps business rejections',async()=>{
+    const f=await setup(),section=uid();
+    await f.send([command('homework.assign',{session_id:f.ses,sections:[{id:section,kind:'reading'}]})]);
+    expect((await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading',title:'First'},1)])).body.results[0])
+      .toMatchObject({status:'applied',version:2});
+    // Two devices, both editing from the version they had seen: the later one wins.
+    expect((await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading',title:'Later'},1)])).body.results[0])
+      .toMatchObject({status:'applied',version:3});
+    expect(await db.prepare('SELECT title,version FROM homework_sections WHERE id=?').bind(section).first<any>())
+      .toMatchObject({title:'Later',version:3});
+    // A base_version from the future is still rejected, and business rules still win over "later".
+    expect((await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading',title:'Ahead'},9)])).body.results[0])
+      .toMatchObject({status:'rejected',error:{details:{reason:'base_version_ahead'}}});
+    await f.send([command('homework.grade.set',{section_id:section,student_id:f.s1,level:'done'})]);
+    expect((await f.send([command('homework.section.delete',{id:section},1)])).body.results[0].error.details.reason).toBe('section_has_grades');
+    expect((await f.send([command('test.update',{id:uid()},1)])).body.results[0].error.code).toBe('not_found');
   });
   it('rolls back a partially executed assignment if a later section violates uniqueness',async()=>{
     const f=await setup(),a=uid();

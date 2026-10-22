@@ -148,11 +148,11 @@ async function student(db:D1Database,i:SyncIdentity,studentId:unknown,parent:Row
   if (onDate && (s.enrolled_at>onDate || (s.left_at!==null && s.left_at<onDate))) throw validationError(undefined,'student_not_enrolled_on_date');
   return s;
 }
+/** Object commands follow the same "later command wins" rule as cells: a stale base_version still
+ * applies (the server bumps version from what it currently holds). Only a base_version from the
+ * future is rejected; business rules (archived test, missing row, max below score…) still reject. */
 function version(c:Command,row:Row):void {
-  if (c.base_version!==row.version) throw new ApiError(409,'version_conflict','Version conflict.',{server:publicRow(row)});
-}
-function publicRow(row:Row):Row {
-  const {workspace_id,created_by,updated_by,created_at,...rest}=row; return rest;
+  if (c.base_version>row.version) throw validationError(undefined,'base_version_ahead');
 }
 async function prior(db:D1Database,i:SyncIdentity,c:Command):Promise<Result|null> {
   const row=await one(db,'SELECT membership_id,workspace_id,result FROM applied_commands WHERE command_id=?',c.id);
