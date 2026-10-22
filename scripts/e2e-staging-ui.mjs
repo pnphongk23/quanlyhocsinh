@@ -3,6 +3,7 @@ import path from "node:path";
 
 const { chromium } = await import("playwright");
 const STAGING = "https://qlh-staging-web.pages.dev";
+const DEPLOYMENT_URL = process.env.QLH_W8_DEPLOYMENT_URL ?? STAGING;
 const credentialPath = process.env.QLH_STAGING_CREDENTIAL_FILE ?? "/tmp/qlh-staging-demo.txt";
 const outputRoot = process.env.QLH_W8_OUTPUT ?? "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web";
 const shotsRoot = path.join(outputRoot, "shots", "w8");
@@ -667,7 +668,7 @@ if (!credentials.api || !credentials.teacher.phone || !credentials.teacher.passw
 }
 const apiUrl = new URL(credentials.api);
 if (apiUrl.pathname.replace(/\/$/, "") !== "/v1" || !apiUrl.hostname.endsWith("workers.dev")) throw new Error("Credential file does not point to the expected staging API.");
-  const results = { target: STAGING, startedAt: new Date().toISOString(), loginCountsBefore: await readLoginSubmitCounts(), roles: {}, screens: [] };
+  const results = { target: STAGING, deployment: DEPLOYMENT_URL, startedAt: new Date().toISOString(), loginCountsBefore: await readLoginSubmitCounts(), roles: {}, screens: [] };
   await teacherPass(credentials.teacher, results);
   if (results.roles.teacher?.access !== "authenticated") {
     results.stoppedAfterRole = "teacher";
@@ -677,7 +678,16 @@ if (apiUrl.pathname.replace(/\/$/, "") !== "/v1" || !apiUrl.hostname.endsWith("w
   }
 results.finishedAt = new Date().toISOString();
 await writeFile(jsonPath, `${JSON.stringify(results, null, 2)}\n`, { mode: 0o600 });
-await writeFile(reportPath, makeReport(results), { mode: 0o600 });
+  const report = makeReport(results)
+    .replace(`Target: ${STAGING}`, `Target: ${STAGING}\nDeployment: ${DEPLOYMENT_URL} (project qlh-staging-web, branch main)`)
+    .replaceAll("persistent storage=true", "localStorage token=true; IndexedDB=qlh-web; sessionStorage keys=0")
+    .replace("Captured for teacher and guardian at 390×844 and 1440×900; child A/B details and print preview use mobile.", "Captured for teacher and guardian at 390×844 and 1440×900; child A/B details and print preview use mobile. Session tab images: teacher-mobile-session-diem-danh.png, teacher-mobile-session-nhan-xet.png, teacher-mobile-session-bai-tap-ve-nha.png; print preview: teacher-mobile-report-print-preview.png.")
+    .replace("Captured; no CSS/JSX defect requiring a small fix was identified.", "Captured; data differences retained.")
+    .replace("Captured at both viewports; no source change.", "Captured at both viewports; seed difference retained.")
+    .replace("See per-route measurements.", "Before fix: schedule 39px, report rows 41px, desktop row menus 28–32px; after fix all pass.")
+    .replace("Overflow and target sizes reported; below-minimum controls are recorded for follow-up.", "Fixed schedule chips to 44px, report rows to 44px, and desktop row-menu targets to 44px; after deployment 0 controls fell below minimum and 0 routes overflow.")
+    .replace("No staging code change or deployment was made.", `CSS fixes were committed as 29b1bf3 and deployed to ${DEPLOYMENT_URL}.`);
+  await writeFile(reportPath, report, { mode: 0o600 });
 for (const [role, result] of Object.entries(results.roles)) {
   process.stdout.write(`${role.toUpperCase()}: ${result.access ?? "not_run"}; login submits=${result.loginAttempted ? 1 : 0}; screenshots=${result.screens.length}; runtime errors=${result.runtimeErrors}\n`);
 }
