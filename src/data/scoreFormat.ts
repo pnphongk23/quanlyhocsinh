@@ -7,6 +7,8 @@ export function parseHalfScore(raw: string): number | null {
   return value;
 }
 
-export function formatScore(value: number): string {
-  return Number.isInteger(value) ? String(value) : String(value).replace(".", ",");
+/** Hiển thị điểm: bỏ ".0", số lẻ dùng dấu phẩy (10 → "10", 7.5 → "7,5"). */
+export function formatScore(value: number | null): string {
+  if (value === null) return "Chưa có điểm";
+  return String(Number(value.toFixed(2))).replace(".", ",");
 }
