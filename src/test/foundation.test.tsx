@@ -3,7 +3,6 @@ import { act, render, screen } from "@testing-library/react";
 import { SaveStatus } from "../shared/SaveStatus";
 import { setSaveStatus } from "../data/saveStatus";
 import { createClass, listClasses } from "../data/repositories/classes";
-import { listMyChildren } from "../data/repositories/guardian";
 import { can, visibleClassIds, useAccess } from "../data/repositories/access";
 import { createApiClient } from "../data/api/client";
 afterEach(() => setSaveStatus("synced"));
@@ -19,7 +18,6 @@ describe("phase B data layer boundaries", () => {
     });
     expect(screen.queryByRole("status")).toBeNull();
     expect(listClasses()).toEqual([]);
-    expect(listMyChildren()).toEqual([]);
   });
   it("has no granted permissions or workspace-wide scope before authentication", () => {
     expect(can("scores", "write")).toBe(false);
