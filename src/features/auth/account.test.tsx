@@ -4,9 +4,9 @@ import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import type { MeResponse } from "../../data/api/types";
 
-const { request, assertCanLogout } = vi.hoisted(() => ({ request: vi.fn(), assertCanLogout: vi.fn() }));
-vi.mock("../../data/sync", () => ({ api: { request }, syncNow: vi.fn() }));
-vi.mock("../../data/outbox", () => ({ assertCanLogout }));
+const { request, assertCanLogout, pendingCommandCount } = vi.hoisted(() => ({ request: vi.fn(), assertCanLogout: vi.fn(), pendingCommandCount: vi.fn() }));
+vi.mock("../../data/sync", () => ({ api: { request }, syncNow: vi.fn(), scheduleSync: vi.fn() }));
+vi.mock("../../data/outbox", () => ({ assertCanLogout, pendingCommandCount }));
 
 import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
@@ -16,6 +16,13 @@ import ChangePasswordPage from "../settings/ChangePasswordPage";
 import { clearSession, getSession } from "../../data/auth/session";
 import { login } from "../../data/auth";
 import { accountRoutes } from "../../roles/account/routes";
+
+// jsdom chưa cài `showModal`/`close` cho <dialog>; chỉ cần đủ để Modal mở/đóng.
+const dialogProto = Object.getPrototypeOf(document.createElement("dialog")) as HTMLDialogElement;
+if (typeof dialogProto.showModal !== "function") {
+  dialogProto.showModal = function showModal(this: HTMLDialogElement) { this.setAttribute("open", ""); };
+  dialogProto.close = function close(this: HTMLDialogElement) { this.removeAttribute("open"); };
+}
 
 const memberships: MeResponse["memberships"] = [
   { id: "staff-1", workspace: { id: "w1", name: "Lớp của cô Lan" }, role: { id: "r1", name: "Giáo viên", system_key: null, scope_kind: "workspace" as const }, status: "active" as const, scope_epoch: 1, permissions: { classes: "write", students: "write", sessions_attendance: "write", scores: "write", lectures: "read", comments_reports: "write" } },
@@ -34,7 +41,7 @@ function Harness({ initial = "/dang-nhap" }: { initial?: string }) {
 }
 
 beforeEach(async () => {
-  await clearSession(); activeMembershipId = memberships[0].id; request.mockReset(); assertCanLogout.mockReset().mockResolvedValue(undefined);
+  await clearSession(); activeMembershipId = memberships[0].id; request.mockReset(); assertCanLogout.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
   request.mockImplementation(async (endpoint: string, options?: { body?: { membership_id: string } }) => {
     if (endpoint === "POST /auth/login" || endpoint === "POST /auth/register") return loginResponse();
     if (endpoint === "GET /me") return me();
@@ -100,9 +107,11 @@ describe("account and auth screens", () => {
     expect(await screen.findByRole("heading", { name: "Đăng nhập" })).toBeInTheDocument();
     signedOutView.unmount();
     await login("+84900000001", "x");
-    assertCanLogout.mockRejectedValueOnce(new Error("Còn 1 thay đổi chưa đồng bộ."));
+    pendingCommandCount.mockResolvedValue(1);
     render(<Harness initial="/cai-dat"/>); fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Còn 1 thay đổi chưa đồng bộ."); expect(request).not.toHaveBeenCalledWith("POST /auth/logout", expect.anything());
+    expect(await screen.findByText(/Còn 1 thay đổi chưa đồng bộ/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Chưa thể đăng xuất")).toBeInTheDocument();
+    expect(request).not.toHaveBeenCalledWith("POST /auth/logout", expect.anything());
   });
 
   it("ships a Vietnamese standalone manifest with both maskable icon sizes", () => {

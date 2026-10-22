@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 
-const account = { id: "w4-user", phone: "", display_name: "Cô Lan", must_change_password: false };
+const account = { id: "w4-user", phone: "+84900000001", display_name: "Cô Lan", must_change_password: false };
 const memberships = [
   { id: "w4-teacher", workspace: { id: "w4-workspace", name: "Lớp của cô Lan" }, role: { id: "w4-teacher-role", name: "Giáo viên", system_key: null, scope_kind: "workspace" }, status: "active", scope_epoch: 1, permissions: {} },
   { id: "w4-guardian", workspace: { id: "w4-workspace", name: "Lớp của cô Lan" }, role: { id: "w4-guardian-role", name: "Phụ huynh", system_key: null, scope_kind: "linked_students" }, status: "active", scope_epoch: 1, permissions: {} },
