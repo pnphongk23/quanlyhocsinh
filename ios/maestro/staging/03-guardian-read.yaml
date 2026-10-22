@@ -1,0 +1,38 @@
+# Read-only staging check: parent login, attendance, and the newest monthly report.
+# Credentials are supplied transiently from /tmp/qlh-staging-demo.txt by the runner.
+appId: vn.quanlylop.app
+name: staging-guardian-read
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Đăng nhập"
+    timeout: 30000
+- tapOn:
+    id: login.phone
+- inputText: ${STAGING_PHONE}
+- tapOn:
+    id: login.password
+- inputText: ${STAGING_PASSWORD}
+- swipe:
+    start: 50%, 60%
+    end: 50%, 30%
+    duration: 600
+- tapOn:
+    id: login.submit
+- extendedWaitUntil:
+    visible: "Tổng quan"
+    timeout: 45000
+- assertNotVisible: "Không tải được dữ liệu của con. Vui lòng thử lại."
+- tapOn:
+    id: guardian.tab.attendance
+- extendedWaitUntil:
+    visible: "Điểm danh"
+    timeout: 20000
+- assertNotVisible: "Không tải được dữ liệu của con. Vui lòng thử lại."
+- tapOn:
+    id: guardian.tab.reports
+- extendedWaitUntil:
+    visible: "Báo cáo tháng 10"
+    timeout: 20000
+- assertVisible: "Bài tập về nhà"
+- assertNotVisible: "Không tải được dữ liệu của con. Vui lòng thử lại."

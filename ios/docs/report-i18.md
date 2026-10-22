@@ -51,6 +51,29 @@ Ngày: 2026-10-22 · Nhánh `mvp-ios` · Worktree hiện tại.
 
 ## 4. Trạng thái
 
-Status: BLOCKED
+Status: DONE_WITH_CONCERNS
 
-Đăng nhập giáo viên và ghi/khôi phục điểm danh đã xác minh bằng UI cùng GET độc lập (HTTP 200; version 3 → 4 → 5). Luồng phụ huynh đăng nhập được nhưng màn dữ liệu bị chặn bởi sai hình dạng `report_publication.snapshot.homework` giữa staging và API spec; cần backend đồng bộ payload hoặc quyết định cho phép iOS adapter.
+Phần chữ P3 và phần chạy giáo viên đã hoàn tất; phần phụ huynh sau đó xác nhận API mới nhưng app hiện vẫn lỗi vì bản publication cũ. Chi tiết và đề xuất xử lý rủi ro ở mục mới bên dưới.
+
+## 5. Phụ huynh đọc staging (sau backend 59a0250)
+
+Ngày 2026-10-22 · Backend `59a0250`, staging `71bee1e8`. Không ghi/đổi dữ liệu staging.
+
+### Chạy app và đối chiếu API
+
+- Erase simulator iPhone 16, build Staging ký ad-hoc (`CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual`), cài và mở bằng `xcrun simctl launch`. Build và login thành công; API xác nhận tài khoản liên kết với 2 con.
+- Flow Maestro `03-guardian-read.yaml` đăng nhập nhưng fail ở assertion dữ liệu: app hiện `Không tải được dữ liệu của con. Vui lòng thử lại.`. Probe chỉ đọc bấm hai tab xác nhận lỗi vẫn hiện ở `Điểm danh` và `Báo cáo`; do dashboard không tạo được nên không có chip chọn con và không xem được nội dung hai tab. Không thể xác nhận giá trị attendance hoặc bảng BTVN hiển thị trên UI.
+- Login API và GET `/me`, manifest snapshot, trang students, trang report publications, report-list và attendance đều HTTP 200. Tài khoản có 2 con; `GET /students/{id}/reports?limit=20` trả không có báo cáo cho con thứ nhất, báo cáo tháng 10 của con thứ hai có `publication_count=3`.
+- GET publication tháng 10 mới nhất (bản số 3) trả HTTP 200, 2 dòng BTVN: `reading` = excellent 0, done 1, not_done 0; `vocabulary` = excellent 1, done 0, not_done 0. Tổng đối chiếu: excellent 1, done 1, not_done 0.
+- GET attendance riêng theo từng con trong tháng 10 trả HTTP 200, mỗi con 2 dòng: ngày 14/10 và 16/10 đều `present`; hai hồ sơ có dãy version lần lượt 5/1 và 4/1. Đây là số liệu máy chủ; màn app không tải nên không thể đối chiếu trực quan với tab phụ huynh.
+
+### Bản publication cũ vẫn làm hỏng màn
+
+- `GET /sync/snapshot/report_publication` HTTP 200 trả đủ 3 publication của báo cáo tháng 10. Bản #1 vẫn có `snapshot.homework[0]` với keys `count, kind, level`; bản #2 và #3 có đúng `done, excellent, kind, not_done`.
+- Spec backend mục 6.6 quy định entity `report_publication` trong snapshot chứa mọi bản đã phát hành. Client hiện lấy mọi dòng bằng `store.records(ReportPublication.self, entity: "report_publication")` trong `GuardianRepository.load` (dòng 419), trước khi lọc theo học sinh ở dòng 442; `ReportSnapshot.homework` là `[HomeworkSummary]`, và `HomeworkSummary` yêu cầu đủ `kind`, `excellent`, `done`, `notDone` (`Entities.swift` dòng 190–198, 223–228). GET `/students/{id}/reports` chỉ trả summary mới nhất theo tháng cho màn API; code iOS không gọi endpoint này để nạp dashboard.
+- Kết quả chạy thật với dữ liệu hiện tại xác nhận bản #1 sai làm giải mã toàn entity thất bại và `GuardianRepository.load()` ném lỗi; `GuardianRootView.load()` vì vậy hiện thông báo chung ở mọi tab. Việc bản #3 đúng không giúp màn dùng được khi bản #1 vẫn nằm trong snapshot.
+- Rủi ro đề xuất (không sửa trong task chỉ đọc): lọc/đọc bản publication mới nhất theo `publication_no` trước khi giải mã snapshot cho màn; hoặc giải mã độc lập từng publication, bỏ qua bản không hợp lệ và chỉ báo lỗi nếu không còn bản hợp lệ cho con/tháng. Thêm test fixture gồm bản #1 sai schema cùng bản #2/#3 đúng để đảm bảo dữ liệu cũ không chặn dashboard.
+
+### Dọn dẹp
+
+- Không sửa `Features/Guardian` hay mã app. Đã xóa flow probe tạm và artifact có thể chứa dữ liệu nhập; simulator iPhone 16 được erase + shutdown, DerivedData `/tmp/qlh-dd-guardian-read` được xóa. Chỉ commit báo cáo và flow Maestro đọc-only.
