@@ -1,23 +1,13 @@
-/** Phase A contract; persistence and sync are implemented in Phase B. */
-import { foundationUnavailable } from "../foundation";
+import { getStore } from "../store";
 import type { Test } from "../types";
-
-export const DEFAULT_TEST_MAX = 15;
-
-export const TEST_MAX_MIN = 1;
-
-export const TEST_MAX_MAX = 1000;
-
-export function validateTestMax(max: number): number { return 0; }
-
-export const listTests: (classId: string) => Test[] = () => [];
-
-export type TestInput = Omit<Test, "id" | "max" | "archived"> & {
-    max?: number;
-};
-
-export function createTest(input: TestInput): Test { return foundationUnavailable(); }
-
-export function updateTest(id: string, patch: Partial<Pick<Test, "name" | "date" | "max">>): Test { return foundationUnavailable(); }
-
-export function deleteTest(id: string): "deleted" | "archived" { return foundationUnavailable(); }
+import { commitState, persistCommand } from "../outbox";
+import { requirePermission, requireClassAccess } from "./access";
+import type { SyncCommand } from "../api/types";
+export const DEFAULT_TEST_MAX=15, TEST_MAX_MIN=1, TEST_MAX_MAX=1000;
+export function validateTestMax(max:number):number { if(!Number.isInteger(max)||max<TEST_MAX_MIN||max>TEST_MAX_MAX) throw new Error("Thang điểm phải là số nguyên từ 1 đến 1000."); return max; }
+export const listTests=(classId:string):Test[]=>getStore().tests.filter(t=>t.classId===classId&&!t.archived);
+export type TestInput=Omit<Test,"id"|"max"|"archived"> & {max?:number};
+function enqueue(item:Test, type:"test.create"|"test.update"|"test.delete", payload:object, base:number):void { const cmd={id:crypto.randomUUID(),type,payload,base_version:base,created_at:new Date().toISOString()} as SyncCommand; const wire={id:item.id,class_id:item.classId,name:item.name,date:item.date,max:item.max,archived:item.archived??false,version:(item as any).version??base}; void persistCommand("test",[item.id],type==="test.delete"?null:wire,cmd).catch(()=>{}); }
+export function createTest(input:TestInput):Test { requirePermission("scores","write"); requireClassAccess(input.classId); if(!getStore().classes.some(c=>c.id===input.classId)) throw new Error("Không tìm thấy lớp."); if(!input.name.trim()) throw new Error("Nhập tên bài kiểm tra."); const item:Test={...input,id:crypto.randomUUID(),max:validateTestMax(input.max??DEFAULT_TEST_MAX),archived:false}; commitState("tests",item.id,d=>{d.tests.push(item);}); enqueue(item,"test.create",{id:item.id,class_id:item.classId,name:item.name,date:item.date,max:item.max},0); return item; }
+export function updateTest(id:string,patch:Partial<Pick<Test,"name"|"date"|"max">>):Test { requirePermission("scores","write"); const current=getStore().tests.find(t=>t.id===id); if(!current) throw new Error("Không tìm thấy bài kiểm tra."); requireClassAccess(current.classId); if(current.archived) throw new Error("Bài kiểm tra đã lưu trữ, không sửa được."); const next={...current,...patch}; if(patch.name!==undefined&&!patch.name.trim()) throw new Error("Nhập tên bài kiểm tra."); if(patch.date!==undefined&&!patch.date.trim()) throw new Error("Chọn ngày kiểm tra."); if(patch.max!==undefined){validateTestMax(patch.max);const high=getStore().scores.filter(s=>s.testId===id&&s.value!==null).reduce((m,s)=>Math.max(m,s.value!),-Infinity);if(high!==-Infinity&&patch.max<high)throw new Error(`Không hạ thang điểm xuống dưới điểm đã nhập (${high}).`);} commitState("tests",id,d=>{d.tests=d.tests.map(t=>t.id===id?next:t);}); enqueue(next,"test.update",patch,(current as any).version??1); return next; }
+export function deleteTest(id:string):"deleted"|"archived" { requirePermission("scores","write"); const current=getStore().tests.find(t=>t.id===id); if(!current) throw new Error("Không tìm thấy bài kiểm tra."); requireClassAccess(current.classId); const hasScore=getStore().scores.some(s=>s.testId===id&&s.value!==null); if(hasScore){const next={...current,archived:true};commitState("tests",id,d=>{d.tests=d.tests.map(t=>t.id===id?next:t);});enqueue(next,"test.delete",{id},(current as any).version??1);return "archived";} commitState("tests",id,d=>{d.tests=d.tests.filter(t=>t.id!==id);d.scores=d.scores.filter(s=>s.testId!==id);}); enqueue(current,"test.delete",{id},(current as any).version??1);return "deleted"; }

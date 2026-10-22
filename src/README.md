@@ -1,4 +1,4 @@
-# Nền web — Đợt A
+# Nền web — W-1
 
 Chạy ở gốc repo: `npm ci`, `npm run dev`, `npm run typecheck`, `npm test`, `npm run build`.
 Node 22.19+; dependency cùng major với prototype, lockfile độc lập ở gốc.
@@ -8,14 +8,27 @@ Node 22.19+; dependency cùng major với prototype, lockfile độc lập ở g
 - `roles/guardian/routes.ts`: điểm ghép riêng của W-3; `GuardianShell.tsx` tải lười.
 - `roles/account/routes.ts`: điểm ghép riêng của W-4 cho auth/settings.
 - `features/`: worker tính năng tạo thư mục tại đây; Đợt A chưa có màn nghiệp vụ.
-- `shared/`: token, CSS Modules, UI, format, hooks, SaveStatus sao chép từ prototype P1.
+- `shared/`: token, CSS Modules, UI, format, hooks, SaveStatus và mascot dùng chung sao chép từ prototype.
 - `data/types.ts`: view model camelCase tương thích prototype, thứ trong tuần JS 0..6.
 - `data/api/`: kiểu wire snake_case theo api-spec, thứ trong tuần ISO 1..7; adapter ở Đợt B phải đổi rõ 0 ↔ 7.
 - `data/repositories/`: tên/hàm và kiểu tham số, kết quả MVP giữ theo prototype.
-- `data/store.ts`: facade đọc rỗng `getStore/useStore`; chưa có localStorage, seed, hay cập nhật dữ liệu.
+- `data/store.ts`: facade `getStore/useStore` đọc trạng thái đang hoạt động, hydrate từ Dexie theo danh tính hiện hành và phát thay đổi cho subscriber.
 - `data/homework.ts`, `reportModel.ts`: kiểu và chữ ký helper để màn sao chép import được; các phép tính chưa kết nối sẽ ném `FoundationUnavailableError`.
 - `data/saveStatus.ts`: nguồn trạng thái dùng bởi SaveStatus, chỉ hiện khi `error`.
-- `test/`: Testing Library/Vitest và phép đo gzip từ manifest sau build.
+- `test/`: Testing Library/Vitest, polyfill `matchMedia`, fixture giả và phép đo gzip từ manifest sau build.
+
+## Fixture dữ liệu cho test
+
+- Test mới nên import `createSeed` từ `src/test/fixtures/seed.ts`.
+- Các test W-2/W-3 hiện dùng đường dẫn tương thích `src/data/seed.ts`; file này chỉ re-export fixture test, không được import từ mã chạy ứng dụng. Khi sửa test, chuyển import sang `../../test/fixtures/seed`.
+- `src/data/defaults.ts` chỉ chứa role mặc định và ID ổn định phục vụ test/UI; không chứa tài khoản hay số điện thoại mẫu.
+
+## Lớp dữ liệu W-1 đợt B
+
+- `data/api/client.ts` gửi JSON, Bearer token, request ID, timeout và chuẩn hoá lỗi; base URL lấy từ `VITE_API_BASE_URL`, mặc định staging.
+- Token phiên web lưu trong `sessionStorage` (giới hạn bảo vệ của web: JavaScript cùng origin vẫn có thể đọc token); cache thực thể và hàng đợi ghi tách theo user/workspace/membership trong Dexie.
+- `data/sync.ts` tải snapshot/pull, đẩy lệnh tuần tự tối đa 50 mỗi request, giữ lệnh bị từ chối và kích hoạt đồng bộ khi mở/online/focus/định kỳ.
+- Tạo PDF/ảnh là trách nhiệm UI trên thiết bị. Client và repository không tải PDF lên hoặc xuống, không dùng R2.
 
 ## Thêm màn và repository
 

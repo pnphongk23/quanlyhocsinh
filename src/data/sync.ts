@@ -1,0 +1,132 @@
+import { ApiError, createApiClient } from "./api/client";
+import type { CommandResult, EntityMap, PullResponse, SyncCommand } from "./api/types";
+import { db, getCacheIdentity, identityKey, rowKey, stored, tableFor, type EntityName, type OutboxRow } from "./db";
+import { getToken } from "./auth/session";
+import { hydrateStore } from "./store";
+import { setSaveStatus } from "./saveStatus";
+const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
+export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_BASE_URL || defaultBase, getToken });
+let running: Promise<void> | null = null;
+let timer: ReturnType<typeof setTimeout> | undefined;
+const entities: Array<EntityName> = ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"];
+function keyParts(entity: EntityName, item: Record<string, unknown>): Array<string | number | null> {
+  switch (entity) {
+    case "attendance": case "slip": return [item.session_id as string, item.student_id as string];
+    case "score": return [item.test_id as string, item.student_id as string];
+    case "homework_grade": return [item.section_id as string, item.student_id as string];
+    default: return [item.id as string];
+  }
+}
+function toView(entity: EntityName, item: Record<string, any>): Record<string, any> {
+  switch (entity) {
+    case "class": return { id: item.id, name: item.name, status: item.status, weekdays: item.weekdays, time: item.start_time };
+    case "student": return { id: item.id, classId: item.class_id, name: item.name, parentPhone: item.parent_phone ?? "", enrolledAt: item.enrolled_at, leftAt: item.left_at, status: item.status };
+    case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status, note: item.note };
+    case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };
+    case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, max: item.max, archived: item.archived, version: item.version };
+    case "score": return { id: `${item.test_id}:${item.student_id}`, testId: item.test_id, studentId: item.student_id, value: item.value, version: item.version };
+    case "slip": return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, stars: item.stars, note: item.note, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at };
+    case "homework_section": return { id: item.id, sessionId: item.session_id, kind: item.kind, title: item.title, description: item.description, version: item.version };
+    case "homework_grade": return { sectionId: item.section_id, studentId: item.student_id, level: item.level ?? null, version: item.version };
+    case "report": return { id: item.id, classId: item.class_id, studentId: item.student_id, month: item.month, status: item.status, generalComment: item.general_comment, needsRepublish: item.needs_republish, publishedAt: item.published_at };
+    case "report_publication": return item;
+  }
+}
+function updateStoreView(entity: EntityName, item: Record<string, any>): void {
+  const view = toView(entity, item); const state = window.__QLH_STATE__;
+  if (!state) return;
+  const target = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "comments", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report: "reports", report_publication: "reports" } as const)[entity];
+  const list = state[target] as Array<Record<string, any>>; const k = entity === "attendance" ? `${item.session_id}:${item.student_id}` : entity === "score" ? `${item.test_id}:${item.student_id}` : entity === "slip" ? `${item.session_id}:${item.student_id}` : entity === "homework_grade" ? `${item.section_id}:${item.student_id}` : item.id;
+  const index = list.findIndex((entry) => entry.id === k || entry.id === item.id || (entry.sectionId === item.section_id && entry.studentId === item.student_id));
+  if (index >= 0) list[index] = view; else list.push(view);
+}
+declare global { interface Window { __QLH_STATE__?: import("./types").StoreState } }
+async function applyPull(page: any, identity: string): Promise<void> {
+  await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
+    for (const entity of entities) for (const item of page.upserts?.[entity] ?? []) {
+      const parts = keyParts(entity, item as Record<string, unknown>), key = `${identity}|${entity}|${parts.join("|")}`;
+      const table = tableFor(entity); const existing = await table.get(key) as any;
+      if (!existing || Number((item as any).version ?? 0) >= Number(existing.version ?? 0)) await table.put(stored(entity, key, item as object) as any);
+    }
+    for (const deleted of page.deleted ?? []) {
+      const entity = deleted.entity as EntityName; if (!entities.includes(entity)) continue;
+      await tableFor(entity).delete(`${identity}|${entity}|${[deleted.k1, deleted.k2].filter(Boolean).join("|")}`);
+    }
+    await db.meta.put({ key: identity, identity, cursor: page.cursor, epoch: page.epoch });
+  });
+}
+async function snapshot(identity: string, membershipId: string): Promise<void> {
+  const header = await api.request("GET /sync/snapshot", { query: { membership_id: membershipId } });
+  for (const entity of header.entities) {
+    if (!entities.includes(entity as EntityName)) continue;
+    let after: string | undefined;
+    do {
+      const page: {items: unknown[]; next_after: string | null} = await api.request(`GET /sync/snapshot/${entity}` as any, { query: { membership_id: membershipId, after, limit: 300 } }) as {items: unknown[]; next_after: string | null};
+      const table = tableFor(entity as EntityName);
+      await db.transaction("rw", [table, db.meta], async () => {
+        for (const item of page.items as any[]) { const key = `${identity}|${entity}|${keyParts(entity as EntityName, item).join("|")}`; await table.put(stored(entity as EntityName, key, item) as any); }
+        await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
+      });
+      after = page.next_after ?? undefined;
+    } while (after);
+  }
+  await pull(identity, membershipId);
+}
+async function pull(identity: string, membershipId: string): Promise<void> {
+  let meta = await db.meta.get(identity); if (!meta) { await snapshot(identity, membershipId); return; }
+  do {
+    try {
+      const page: PullResponse = await api.request("GET /sync/pull", { query: { membership_id: membershipId, cursor: meta.cursor, epoch: meta.epoch, limit: 200 } }) as PullResponse;
+      await applyPull(page, identity); meta = { ...meta, cursor: page.cursor, epoch: page.epoch };
+      if (!page.has_more) break;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409 && ["resync_required", "snapshot_required"].includes(error.error.code)) {
+        await clearIdentityCache(identity); await snapshot(identity, membershipId); break;
+      }
+      if (error instanceof ApiError && error.status === 404) { await clearIdentityCache(identity); break; }
+      throw error;
+    }
+  } while (true);
+}
+async function clearIdentityCache(identity: string): Promise<void> {
+  await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
+    for (const entity of entities) await tableFor(entity).where("identity").equals(identity).delete();
+    await db.meta.delete(identity);
+  });
+}
+export async function syncNow(): Promise<void> {
+  if (running) return running;
+  const cache = getCacheIdentity(); if (!cache || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) return;
+  const identity = identityKey();
+  running = (async () => {
+    try {
+      const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status !== "rejected").sortBy("created_at");
+      for (let i = 0; i < rows.length; i += 50) {
+        const batch = rows.slice(i, i + 50);
+        const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({ id, type, payload, base_version, created_at })) as SyncCommand[];
+        await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "sending" as const })));
+        let response;
+        try { response = await api.request("POST /sync/push", { body: { membership_id: cache.membershipId, device_id: getDeviceId(), commands } }); }
+        catch (e) { await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "pending" as const }))); throw e; }
+        for (const result of response.results) await applyCommandResult(result, identity);
+      }
+      await pull(identity, cache.membershipId); await hydrateStore();
+      const remaining = await db.outbox.where("identity").equals(identity).toArray();
+      setSaveStatus(remaining.some((x) => x.status === "rejected") ? "error" : remaining.length ? "local" : "synced");
+    } catch { setSaveStatus("error"); }
+  })().finally(() => { running = null; });
+  return running;
+}
+async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {
+  const row = await db.outbox.get(result.id); if (!row) return;
+  if (result.status === "rejected") { await db.outbox.put({ ...row, status: "rejected", error: result.error.code }); return; }
+  await db.outbox.delete(result.id);
+}
+function getDeviceId(): string {
+  const key = "qlh.device.v1"; let id = localStorage.getItem(key); if (!id) { id = crypto.randomUUID(); localStorage.setItem(key, id); } return id;
+}
+export function scheduleSync(delay = 2_000): void { if (timer) clearTimeout(timer); timer = setTimeout(() => { timer = undefined; void syncNow(); }, delay); }
+if (typeof window !== "undefined") {
+  window.addEventListener("online", () => void syncNow()); window.addEventListener("focus", () => void syncNow());
+  window.setInterval(() => void syncNow(), 120_000);
+}
