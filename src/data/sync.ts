@@ -4,6 +4,7 @@ import { db, getCacheIdentity, identityKey, rowKey, stored, tableFor, type Entit
 import { clearSession, getToken, invalidateActiveMembership } from "./auth/session";
 import { hydrateStore } from "./store";
 import { setSaveStatus } from "./saveStatus";
+import { logoutLockKey } from "./outbox";
 const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
 export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_BASE_URL || defaultBase, getToken });
 let running: Promise<void> | null = null;
@@ -106,12 +107,20 @@ async function clearIdentityCache(identity: string): Promise<void> {
     await db.meta.delete(identity);
   });
 }
-export async function clearUserCache(userId: string): Promise<void> {
+export async function clearUserCache(userId: string): Promise<boolean> {
   const identityPrefix = `${userId}:`;
-  await db.transaction("rw", [db.meta, db.outbox, ...entities.map((entity) => tableFor(entity))], async () => {
+  return db.transaction("rw", [db.meta, db.outbox, ...entities.map((entity) => tableFor(entity))], async () => {
+    const racedRows = await db.outbox.where("identity").startsWith(identityPrefix).count();
+    if (racedRows) {
+      await db.meta.put({ key: logoutLockKey(userId), identity: `logout:${userId}`, cursor: 0, epoch: 0, logoutState: "needs_login", updatedAt: Date.now() });
+      setSaveStatus("error");
+      return false;
+    }
     for (const entity of entities) await tableFor(entity).where("identity").startsWith(identityPrefix).delete();
     await db.meta.where("identity").startsWith(identityPrefix).delete();
     await db.outbox.where("identity").startsWith(identityPrefix).delete();
+    await db.meta.delete(logoutLockKey(userId));
+    return true;
   });
 }
 export const clearMembershipCache = clearIdentityCache;

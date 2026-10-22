@@ -9,7 +9,7 @@ export interface OutboxRow {
   error?: string; depends_on?: string;
   cell_key?: string;
 }
-export interface MetaRow { key: string; identity: string; cursor: number; epoch: number; }
+export interface MetaRow { key: string; identity: string; cursor: number; epoch: number; logoutState?: "pending" | "needs_login"; updatedAt?: number; }
 type Stored<T> = T & { identity: string; key: string; entity: string };
 
 export class AppDatabase extends Dexie {

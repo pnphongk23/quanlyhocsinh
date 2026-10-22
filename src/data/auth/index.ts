@@ -1,22 +1,24 @@
 import { api, clearUserCache } from "../sync";
 import { activateSession, activateMembershipCache, clearSession, getSession, setActiveMembershipId, updateMe } from "./session";
-import { assertCanLogout } from "../outbox";
+import { beginLogout, cancelLogout, clearLogoutLock } from "../outbox";
 import { getStore } from "../store";
 import { ApiError } from "../api/client";
 
 export async function login(phone: string, password: string): Promise<{ activeMembershipId: string | null; membershipCount: number }> {
   const result = await api.request("POST /auth/login", { body: { phone, password, device_label: typeof navigator === "undefined" ? "Web" : navigator.userAgent.slice(0, 80) } });
   const me = await api.request("GET /me", { authToken: result.token });
+    await clearLogoutLock(result.user.id);
     await activateSession(result.token, result.user, me, result.active_membership_id, me.memberships.length === 0);
   return { activeMembershipId: result.active_membership_id, membershipCount: result.memberships.length };
 }
 export async function registerTeacher(phone: string, password: string, displayName: string, workspaceName: string): Promise<void> {
   const result = await api.request("POST /auth/register", { body: { phone, password, display_name: displayName, workspace_name: workspaceName } });
-    const me = await api.request("GET /me", { authToken: result.token }); await activateSession(result.token, result.user, me, result.active_membership_id);
+    const me = await api.request("GET /me", { authToken: result.token }); await clearLogoutLock(result.user.id); await activateSession(result.token, result.user, me, result.active_membership_id);
 }
 export async function registerParent(phone: string, password: string, displayName: string): Promise<void> {
   const result = await api.request("POST /auth/register-guardian", { body: { phone, password, display_name: displayName } });
     const me = await api.request("GET /me", { authToken: result.token });
+    await clearLogoutLock(result.user.id);
     await activateSession(result.token, result.user, me, result.active_membership_id, true);
 }
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -24,11 +26,17 @@ export async function changePassword(currentPassword: string, newPassword: strin
   if (getSession()) await updateMe(await api.request("GET /me"));
 }
 export async function logout(): Promise<void> {
-  await assertCanLogout();
   const userId = getSession()?.user.id;
-  await api.request("POST /auth/logout");
-  if (userId) await clearUserCache(userId);
-  await clearSession();
+  if (!userId) { await clearSession(); return; }
+  await beginLogout(userId);
+  try {
+    await api.request("POST /auth/logout");
+    await clearUserCache(userId);
+    await clearSession();
+  } catch (error) {
+    await cancelLogout(userId);
+    throw error;
+  }
 }
 export async function switchMembership(membershipId: string): Promise<void> {
   const current = getSession(); if (!current) throw new Error("Bạn cần đăng nhập.");
@@ -52,7 +60,7 @@ export function authFailureMessage(error: unknown): string {
 export function authRedirect(role: "staff" | "guardian"): string {
   const session = getSession(); if (!session) return "/dang-nhap";
   const active = session.me.memberships.find((m) => m.id === session.activeMembershipId && m.status === "active");
-    if (!active) return session.guardianAccount ? (role === "guardian" ? "" : "/ph") : session.me.memberships.length > 1 ? "/chon-vai-tro" : "/dang-nhap";
+    if (!active) return session.guardianAccount ? (role === "guardian" ? "" : "/ph") : session.me.memberships.some((membership) => membership.status === "active") ? "/chon-vai-tro" : "/dang-nhap";
   const isGuardian = active.role.scope_kind === "linked_students";
   if ((role === "guardian") !== isGuardian) return isGuardian ? "/ph" : "/lop";
   return "";

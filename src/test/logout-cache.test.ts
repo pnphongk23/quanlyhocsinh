@@ -31,9 +31,9 @@ describe("logout cache cleanup", () => {
     }
     for (const identity of userAIdentities) await db.meta.put({ key: identity, identity, cursor: 5, epoch: 2 });
     await db.meta.put({ key: userBIdentity, identity: userBIdentity, cursor: 9, epoch: 3 });
-    for (const [id, identity] of [["a-1", userAIdentities[0]], ["a-2", userAIdentities[1]], ["b-1", userBIdentity]] as const) {
-      await db.outbox.put({ id, identity, type: "attendance.set", payload: {} as never, base_version: 0, membership_id: "membership", created_at: "2026-10-23T00:00:00Z", status: "pending" });
-    }
+      for (const [id, identity] of [["b-1", userBIdentity]] as const) {
+        await db.outbox.put({ id, identity, type: "attendance.set", payload: {} as never, base_version: 0, membership_id: "membership", created_at: "2026-10-23T00:00:00Z", status: "pending" });
+      }
 
     await clearUserCache("user-a");
 
@@ -50,5 +50,18 @@ describe("logout cache cleanup", () => {
     await hydrateStore();
     expect(getStore().classes).toHaveLength(1);
     expect(getStore().classes[0]?.id).toBe(`${userBIdentity}:row-0`);
+  });
+
+  it("retains cache and outbox when a command races the confirmed logout cleanup", async () => {
+    const identity = userAIdentities[0];
+    const id = `${identity}:class:row`;
+    await db.classes.put({ key: id, identity, entity: "class", id: "retained" } as never);
+    await db.outbox.put({ id: "racing-command", identity, type: "attendance.set", payload: {} as never, base_version: 0, membership_id: "membership-1", created_at: "2026-10-23T00:00:00Z", status: "pending" });
+
+    expect(await clearUserCache("user-a")).toBe(false);
+
+    expect(await db.classes.get(id)).toBeDefined();
+    expect(await db.outbox.get("racing-command")).toBeDefined();
+    expect(await db.meta.get("logout:user-a")).toMatchObject({ logoutState: "needs_login" });
   });
 });

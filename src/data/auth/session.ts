@@ -33,7 +33,7 @@ export async function activateSession(token: string, user: WebSession["user"], m
 }
 export async function updateMe(me: MeResponse): Promise<void> {
   if (!session) return;
-  const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active") ?? me.memberships.find((membership) => membership.status === "active");
+  const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
   session = { ...session, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null, guardianAccount: me.memberships.length === 0 || session.guardianAccount };
   persist(); await activateMembershipCache(active?.id ?? null);
 }
@@ -50,11 +50,24 @@ export function setActiveMembershipId(membershipId: string): void { if (!session
 
 export async function invalidateActiveMembership(): Promise<void> {
   if (!session) return;
-  const previous = session.activeMembershipId;
-  const fallback = session.me.memberships.find((membership) => membership.status === "active" && membership.id !== previous);
-  session = { ...session, activeMembershipId: fallback?.id ?? null, me: { ...session.me, active_membership_id: fallback?.id ?? null } };
+  const previous = session;
+  session = { ...session, activeMembershipId: null, me: { ...session.me, active_membership_id: null } };
   persist();
-  await activateMembershipCache(fallback?.id ?? null);
+  setCacheIdentity(null);
+  await hydrateStore();
+  try {
+    const me = await api.request("GET /me");
+    if (!session || session.user.id !== previous.user.id || session.token !== previous.token) return;
+    if (me.memberships.length === 0) { await clearSession(); return; }
+    const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
+    session = { ...session, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null };
+    persist();
+    if (!active) return;
+    setCacheIdentity({ userId: session.user.id, workspaceId: active.workspace.id, membershipId: active.id });
+    await hydrateStore();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) await clearSession();
+  }
 }
 
 let initialization: Promise<void> | null = null;
@@ -67,18 +80,21 @@ export function initializeSession(): Promise<void> {
       const previousId = session.activeMembershipId;
       const previousMembership = session.me.memberships.find((membership) => membership.id === previousId);
       const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
-      const fallback = me.memberships.find((membership) => membership.status === "active");
-      if (previousId && (!active || active.id !== previousId) && previousMembership) {
-        await clearMembershipCache(`${session.user.id}:${previousMembership.workspace.id}:${previousId}`);
-      }
-      session = { ...session, me, user: me.user, activeMembershipId: active?.id ?? fallback?.id ?? null, guardianAccount: me.memberships.length === 0 || session.guardianAccount };
+        if (previousId && (!active || active.id !== previousId) && previousMembership) {
+          await clearMembershipCache(`${session.user.id}:${previousMembership.workspace.id}:${previousId}`);
+        }
+        session = { ...session, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null, guardianAccount: me.memberships.length === 0 || session.guardianAccount };
       persist();
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         await clearSession();
         return;
       }
-      if (error instanceof ApiError && error.status === 403 && session.activeMembershipId) {
+        if (error instanceof ApiError && error.status === 403 && error.error.code === "account_disabled") {
+          await clearSession();
+          return;
+        }
+        if (error instanceof ApiError && (error.status === 403 || error.status === 404) && session.activeMembershipId) {
         const previousId = session.activeMembershipId;
         const previous = session.me.memberships.find((membership) => membership.id === previousId);
         if (previous) {

@@ -4,9 +4,9 @@ import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import type { MeResponse } from "../../data/api/types";
 
-const { request, assertCanLogout, pendingCommandCount, clearUserCache } = vi.hoisted(() => ({ request: vi.fn(), assertCanLogout: vi.fn(), pendingCommandCount: vi.fn(), clearUserCache: vi.fn() }));
+const { request, beginLogout, cancelLogout, clearLogoutLock, pendingCommandCount, clearUserCache } = vi.hoisted(() => ({ request: vi.fn(), beginLogout: vi.fn(), cancelLogout: vi.fn(), clearLogoutLock: vi.fn(), pendingCommandCount: vi.fn(), clearUserCache: vi.fn() }));
 vi.mock("../../data/sync", () => ({ api: { request }, syncNow: vi.fn(), scheduleSync: vi.fn(), clearUserCache }));
-vi.mock("../../data/outbox", () => ({ assertCanLogout, pendingCommandCount }));
+vi.mock("../../data/outbox", () => ({ beginLogout, cancelLogout, clearLogoutLock, pendingCommandCount }));
 
 import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
@@ -42,7 +42,7 @@ function Harness({ initial = "/dang-nhap" }: { initial?: string }) {
 }
 
 beforeEach(async () => {
-  await clearSession(); activeMembershipId = memberships[0].id; registeredTeacher = false; request.mockReset(); clearUserCache.mockReset().mockResolvedValue(undefined); assertCanLogout.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
+  await clearSession(); activeMembershipId = memberships[0].id; registeredTeacher = false; request.mockReset(); clearUserCache.mockReset().mockResolvedValue(undefined); beginLogout.mockReset().mockResolvedValue(undefined); cancelLogout.mockReset().mockResolvedValue(undefined); clearLogoutLock.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
   request.mockImplementation(async (endpoint: string, options?: { body?: { membership_id: string } }) => {
     if (endpoint === "POST /auth/login") return loginResponse();
     if (endpoint === "POST /auth/register") {
@@ -133,7 +133,7 @@ describe("account and auth screens", () => {
 
     const pendingLogout = logout();
     await waitFor(() => expect(request).toHaveBeenCalledWith("POST /auth/logout"));
-    expect(assertCanLogout).toHaveBeenCalledOnce();
+      expect(beginLogout).toHaveBeenCalledWith(user.id);
     expect(clearUserCache).not.toHaveBeenCalled();
 
     confirmLogout(undefined);

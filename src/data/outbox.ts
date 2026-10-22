@@ -25,8 +25,9 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
   const recordTable = tableFor(entity);
   const row: OutboxRow = { id: crypto.randomUUID(), identity, type: command.type, payload: command.payload, base_version: ("base_version" in command && command.base_version !== undefined ? command.base_version : 0), membership_id: cache.membershipId, created_at: command.created_at, status: "pending", cell_key: cellKey };
   try {
-    await db.transaction("rw", [recordTable, db.outbox], async () => {
-      if (wireRecord) await recordTable.put(stored(entity, key, wireRecord) as any); else await recordTable.delete(key);
+      await db.transaction("rw", [recordTable, db.outbox, db.meta], async () => {
+        if (await db.meta.get(logoutLockKey(cache.userId))) throw new Error("Đang đăng xuất, thử lại sau.");
+        if (wireRecord) await recordTable.put(stored(entity, key, wireRecord) as any); else await recordTable.delete(key);
         const matching = cellKey ? await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "pending").first() : undefined;
         const finalRow = matching ? { ...row, base_version: matching.base_version } : row;
         if (matching) await db.outbox.delete(matching.id);
@@ -40,8 +41,10 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
     setSaveStatus("local");
       commitState("pending", row.id, (draft) => { draft.pending = [...draft.pending.filter((item) => item.entity !== command.type || item.recordId !== key), { id: row.id, entity: command.type, recordId: key, createdAt: row.created_at }]; });
     scheduleSync();
-  } catch {
-    setSaveStatus("error"); throw new Error("Không lưu được vào bộ nhớ trên thiết bị.");
+    } catch (error) {
+      setSaveStatus("error");
+      if (error instanceof Error && error.message === "Đang đăng xuất, thử lại sau.") throw error;
+      throw new Error("Không lưu được vào bộ nhớ trên thiết bị.");
   }
 }
 export async function pendingCommandCount(): Promise<number> {
@@ -50,4 +53,24 @@ export async function pendingCommandCount(): Promise<number> {
   const prefix = `${cache.userId}:`;
   return (await db.outbox.toArray()).filter((row) => row.identity.startsWith(prefix)).length;
 }
-export async function assertCanLogout(): Promise<void> { if (await pendingCommandCount()) throw new Error("Đồng bộ các thay đổi đang chờ trước khi đăng xuất."); }
+export const logoutLockKey = (userId: string): string => `logout:${userId}`;
+export async function beginLogout(userId: string): Promise<void> {
+  if (typeof indexedDB === "undefined") return;
+  await db.transaction("rw", [db.meta, db.outbox], async () => {
+    if (await db.meta.get(logoutLockKey(userId))) throw new Error("Đang đăng xuất, thử lại sau.");
+    if ((await db.outbox.toArray()).some((row) => row.identity.startsWith(`${userId}:`))) {
+      throw new Error("Đồng bộ các thay đổi đang chờ trước khi đăng xuất.");
+    }
+    await db.meta.put({ key: logoutLockKey(userId), identity: `logout:${userId}`, cursor: 0, epoch: 0, logoutState: "pending", updatedAt: Date.now() });
+  });
+}
+export async function cancelLogout(userId: string): Promise<void> {
+  await db.transaction("rw", db.meta, async () => {
+    const lock = await db.meta.get(logoutLockKey(userId));
+    if (lock?.logoutState === "pending") await db.meta.delete(lock.key);
+  });
+}
+export async function clearLogoutLock(userId: string): Promise<void> {
+  if (typeof indexedDB === "undefined") return;
+  await db.meta.delete(logoutLockKey(userId));
+}
