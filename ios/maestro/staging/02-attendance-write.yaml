@@ -24,7 +24,14 @@ name: staging-attendance-write
 - tapOn:
     text: "${STAGING_STUDENT_LATE_FIELD}"
 - inputText: "18:12"
-- hideKeyboard
+- scrollUntilVisible:
+    element:
+      text: "Lưu điểm danh"
+    direction: DOWN
+- swipe:
+    start: 50%, 60%
+    end: 50%, 30%
+    duration: 600
 - tapOn:
     text: "Lưu điểm danh"
 - extendedWaitUntil:
