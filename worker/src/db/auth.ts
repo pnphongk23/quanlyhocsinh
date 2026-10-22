@@ -1,4 +1,4 @@
-import { conflict, forbidden, notFound, ApiError, validationError } from '../lib/errors';
+import { conflict, forbidden, notFound, ApiError } from '../lib/errors';
 import { isoAfterMs, isoAt } from '../lib/time';
 import type { PermGroup, PermLevel, Permissions, ScopeKind } from '../types';
 
@@ -493,13 +493,6 @@ export interface RegisterGuardianInput {
   expiresAt: string;
 }
 
-export async function guardianPhoneExists(db: D1Database, phone: string): Promise<boolean> {
-  const row = await db.prepare('SELECT 1 AS match FROM students WHERE parent_phone = ? LIMIT 1')
-    .bind(phone)
-    .first<{ match: number }>();
-  return row !== null;
-}
-
 /** Tạo tài khoản phụ huynh và liên kết mọi hồ sơ đã khai số điện thoại này. */
 export async function registerGuardian(
   db: D1Database,
@@ -513,9 +506,8 @@ export async function registerGuardian(
         WHERE s.parent_phone = ?
         ORDER BY r.workspace_id`,
     )
-      .bind(input.phone)
-      .all<{ workspace_id: string; role_id: string }>();
-  if (workspaces.length === 0) throw validationError(undefined, 'guardian_phone_not_found');
+    .bind(input.phone)
+    .all<{ workspace_id: string; role_id: string }>();
   const membershipIds = new Map(workspaces.map((row) => [row.workspace_id, crypto.randomUUID()]));
   const activeMembershipId = workspaces.length === 1 ? membershipIds.get(workspaces[0]!.workspace_id)! : null;
 

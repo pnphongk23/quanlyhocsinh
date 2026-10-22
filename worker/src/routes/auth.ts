@@ -15,7 +15,6 @@ import {
   getMe,
   getUserById,
   getUserPhone,
-  guardianPhoneExists,
   listActiveMemberships,
   loginIpKey,
   loginPhoneKey,
@@ -168,9 +167,6 @@ authRoutes.post('/auth/register-guardian', async (c) => {
   const displayName = optionalDisplayName(body);
 
   await recordThrottleFailure(db, throttleKey, REGISTER_IP_POLICY);
-  if (!(await guardianPhoneExists(db, phone))) {
-    throw validationError(undefined, 'guardian_phone_not_found');
-  }
   if (await findUserByPhone(db, phone)) throw conflict('phone_registered');
 
   const iterations = resolveIterations(c.env.PBKDF2_ITERATIONS);
