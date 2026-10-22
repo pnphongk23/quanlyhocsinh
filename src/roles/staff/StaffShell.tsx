@@ -44,10 +44,11 @@ export function Component() {
     ? `Lớp của ${userName}`
     : membership?.workspace.name ?? "Lớp học";
   const links = desktopItems.map(([to, label]) => {
+    const requiresClass = to.startsWith("class-");
     const href = to.startsWith("class-")
       ? classPath(activeClass?.id, to.slice("class-".length))
       : to;
-    return { href, label };
+    return { href, label, disabled: requiresClass && !activeClass };
   });
 
   return (
@@ -102,21 +103,34 @@ export function Component() {
           )}
         </div>
           <nav className={styles.staffSideNav} aria-label="Điều hướng nhân sự">
-            {links.map(({ href, label }) => (
-              <NavLink
-                key={label}
-                to={href}
-                end
-                className={({ isActive }) => {
-                  const scoreReport =
-                    label === "Điểm số" && pathname.includes("/bao-cao-diem");
-                  const selected = isActive || scoreReport;
-                  return `${styles.staffNavItem}${selected ? ` ${styles.staffNavActive}` : ""}`;
-                }}
-              >
-                {label}
-              </NavLink>
-          ))}
+            {links.map(({ href, label, disabled }) => {
+              if (disabled) {
+                return (
+                  <span
+                    key={label}
+                    className={`${styles.staffNavItem} ${styles.staffNavDisabled}`}
+                    aria-disabled="true"
+                  >
+                    {label}
+                  </span>
+                );
+              }
+              return (
+                <NavLink
+                  key={label}
+                  to={href}
+                  end
+                  className={({ isActive }) => {
+                    const scoreReport =
+                      label === "Điểm số" && pathname.includes("/bao-cao-diem");
+                    const selected = isActive || scoreReport;
+                    return `${styles.staffNavItem}${selected ? ` ${styles.staffNavActive}` : ""}`;
+                  }}
+                >
+                  {label}
+                </NavLink>
+              );
+            })}
         </nav>
         <SaveStatus className={styles.staffDesktopSaveStatus} />
       </aside>

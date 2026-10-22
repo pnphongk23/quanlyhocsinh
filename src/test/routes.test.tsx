@@ -173,6 +173,45 @@ describe("foundation route integration", () => {
     router.dispose();
   });
 
+  it("locks class-dependent staff navigation when no class is selected", async () => {
+    authState.session = activeSession("staff");
+    const fixture = createSeed();
+    fixture.currentClassId = null;
+    replaceStore(fixture);
+    const router = open("/lop");
+
+    const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
+    expect(navigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    expect(navigation.querySelector('a[href="/lop"]')).toHaveAttribute("aria-current", "page");
+    const mobileNavigation = screen.getByRole("navigation", { name: "Điều hướng chính" });
+    expect(mobileNavigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    expect(mobileNavigation.querySelectorAll('[aria-disabled="true"]')).toHaveLength(0);
+    for (const label of ["Điểm danh", "Điểm số", "Học sinh", "Báo cáo"]) {
+      const item = screen.getByText(label).closest('[aria-disabled="true"]');
+      expect(item).not.toBeNull();
+      expect(item?.tagName).not.toBe("A");
+      expect(item?.className).not.toMatch(/staffNavActive/);
+    }
+
+    fireEvent.click(screen.getByText("Điểm danh"));
+    expect(router.state.location.pathname).toBe("/lop");
+    router.dispose();
+  });
+
+  it("activates only the matching staff navigation item when a class is selected", async () => {
+    authState.session = activeSession("staff");
+    const fixture = createSeed();
+    fixture.currentClassId = "6a";
+    replaceStore(fixture);
+    const router = open("/lop/6a/diem");
+
+    const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
+    expect(navigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Điểm số" })).toHaveAttribute("aria-current", "page");
+    expect(navigation.querySelectorAll('[aria-disabled="true"]')).toHaveLength(0);
+    router.dispose();
+  });
+
   it("redirects unauthenticated staff and guardian routes to sign in", async () => {
     const router = open("/lop/6a/buoi-hoc");
     expect(await screen.findByRole("heading", { name: "Đăng nhập" })).toBeVisible();
