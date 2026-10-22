@@ -223,7 +223,13 @@ try {
     reduced.push(await measureImmediateClose(browser, spec, true));
     targets.push(await measureTargets(browser, spec));
   }
-  console.log(JSON.stringify({ closeResults, reopened, reducedMotion: reduced, targets }, null, 2));
+  console.log(JSON.stringify({
+    browserVersion: await browser.version(),
+    closeResults,
+    reopened,
+    reducedMotion: reduced,
+    targets,
+  }, null, 2));
 } finally {
   await browser.close();
 }
