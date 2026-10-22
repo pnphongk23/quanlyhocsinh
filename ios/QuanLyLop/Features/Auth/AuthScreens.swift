@@ -179,6 +179,7 @@ struct AuthForgotPasswordView: View {
                 AuthBanner(text: String(localized: "feature.auth.lien.he.quan.tri.vien.khong.gian.lam.viec"), tone: .warning)
                 AuthNote(text: String(localized: "feature.auth.hien.chua.co.tu.phuc.hoi.mat.khau.cho.giao.vien"))
             } else {
+                // TODO(prototype copy): the prototype still describes the removed guardian password issue flow.
                 steps
             }
             AuthNote(text: String(localized: "feature.auth.khong.co.ma.nao.uoc.gui.en.ien.thoai.cua.ban"))
