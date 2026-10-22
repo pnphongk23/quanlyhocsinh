@@ -1,0 +1,162 @@
+/* Tab Điểm danh trên web desktop (ảnh 03). */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 0 0 8px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.table td {
+  height: 48px;
+  border-top: 1px solid var(--color-divider);
+  vertical-align: middle;
+}
+
+.studentName {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.statusGroup {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--color-neutral-soft);
+}
+
+.statusButton {
+  width: 74px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.statusButton:disabled {
+  cursor: default;
+}
+
+.on_present {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  box-shadow: inset 0 0 0 1.5px var(--color-success);
+}
+
+.on_late {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  box-shadow: inset 0 0 0 1.5px var(--color-warning);
+}
+
+.on_excused {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  box-shadow: inset 0 0 0 1.5px var(--color-primary-ink);
+}
+
+.on_absent {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  box-shadow: inset 0 0 0 1.5px var(--color-error);
+}
+
+.lateField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lateField span {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.timeInput {
+  box-sizing: border-box;
+  width: 104px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 14px;
+  text-align: center;
+}
+
+.timeInput::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.countRow {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.countRow b {
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+.countPresent {
+  color: var(--color-success);
+}
+.countLate {
+  color: var(--color-warning);
+}
+.countExcused {
+  color: var(--color-primary-ink);
+}
+.countAbsent {
+  color: var(--color-error);
+}
+
+.teacherRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.teacherAvatar {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-weight: 700;
+}
+
+.teacherName {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.teacherRole {
+  font-size: 13px;
+  color: var(--color-muted);
+}

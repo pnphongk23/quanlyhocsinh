@@ -1,0 +1,139 @@
+.dialog {
+  width: min(560px, calc(100% - 32px));
+  max-height: min(88dvh, 760px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-card);
+  overflow: auto;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.dialog::backdrop {
+  background: var(--color-scrim);
+}
+.frame {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--color-surface);
+}
+.header h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+.form {
+  display: grid;
+  gap: 20px;
+  padding: 8px 20px 20px;
+}
+.preview {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-row);
+  background: var(--color-bg);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.preview h3,
+.preview p {
+  margin: 0;
+}
+.preview h3 {
+  font-size: 16px;
+}
+.removedDates {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-inline-start: 20px;
+  text-transform: capitalize;
+}
+.kept {
+  color: var(--color-muted);
+}
+.warning,
+.archived {
+  color: var(--color-warning);
+}
+.offline {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--radius-chip);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 14px;
+}
+.reason {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: 14px;
+}
+.result {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--radius-chip);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-size: 14px;
+}
+.stickyBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  gap: 10px;
+  margin: 0 -20px -20px;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  background: var(--color-surface);
+  border-block-start: 1px solid var(--color-divider);
+}
+@media (max-width: 767px) {
+  .dialog {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+  }
+  .form {
+    flex: 1;
+    align-content: start;
+    padding-bottom: 20px;
+  }
+}
+@media (min-width: 768px) {
+  .header {
+    padding: 20px 24px 12px;
+  }
+  .form {
+    padding: 8px 24px 24px;
+  }
+  .stickyBar {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    margin: 0 -24px -24px;
+    padding: 12px 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog {
+    scroll-behavior: auto;
+  }
+}

@@ -1,0 +1,21 @@
+.page{display:grid;gap:12px;max-width:1100px;margin:0 auto;min-width:0}
+.stats{margin:0;color:var(--color-muted);font-size:13px;line-height:1.45}
+.list{display:grid;gap:8px}
+.student{display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 12px}
+.avatar{display:grid;width:40px;height:40px;flex:none;place-items:center;border-radius:50%;background:var(--color-primary-soft);color:var(--color-primary-ink);font-size:14px;font-weight:700}
+.details{display:grid;flex:1;gap:2px;min-width:0}
+.details strong{overflow-wrap:anywhere;font-size:16px;font-weight:600;line-height:1.35}
+.details span{color:var(--color-muted);font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.details span:last-child{font-size:13px}
+.moreButton{display:grid;flex:none;width:44px;height:44px;place-items:center;padding:0;border:0;border-radius:50%;background:transparent;color:var(--color-muted);cursor:pointer}
+.moreButton:hover,.moreButton:focus-visible{background:var(--color-bg);color:var(--color-text)}
+.tableWrap{padding:8px 16px;overflow-x:auto}
+.table{width:100%;min-width:620px;border-collapse:collapse;table-layout:fixed}
+.table th{padding:10px 8px;border-bottom:1px solid var(--color-border);color:var(--color-muted);font-size:13px;font-weight:600;text-align:left}
+.table th:nth-child(1){width:30%}.table th:nth-child(2){width:25%}.table th:nth-child(3){width:16%}.table th:nth-child(4){width:15%}.table th:nth-child(5){width:14%}
+.table td{padding:10px 8px;border-bottom:1px solid var(--color-divider);vertical-align:middle;font-size:14px;overflow-wrap:anywhere}
+.table td:first-child{display:grid;gap:3px}.table td strong{font-size:15px;font-weight:600}.table td small{color:var(--color-muted);font-size:13px;line-height:1.4}
+.form,.confirmation{display:grid;gap:14px}
+.note,.error,.confirmation p{margin:0;font-size:14px;line-height:1.5}.note{color:var(--color-muted)}.error{color:var(--color-error)}
+.visuallyHidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:560px){.student{gap:8px;padding:10px}.details{flex-basis:0}.details span{font-size:13px}.details span:last-child{font-size:12px}}

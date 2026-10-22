@@ -1,0 +1,144 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Đầu màn: 09-gv-lop-cua-toi (avatar 44px, chữ 14/700) */
+.avatar {
+  width: var(--tap);
+  height: var(--tap);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* Web 88: ô tìm 240x48 */
+.search {
+  height: 48px;
+  width: 240px;
+  padding: 0 16px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.search::placeholder {
+  color: var(--color-placeholder);
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+/* Thẻ "Hôm nay": 09 — nền chính, bo 16, đệm 12/16 */
+.today {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.todayText {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.todayEyebrow {
+  font-size: 14px;
+}
+
+.todayTitle {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.today > .todayAction {
+  color: var(--color-primary-ink);
+  flex: none;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.classLink {
+  display: block;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-card);
+}
+
+.classLink:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+/* Thẻ lớp: 09 (mobile bo 16 đệm 16) · web 88 (đệm 18/20) */
+.classCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.classCardSelected {
+  outline: 2px solid var(--color-primary);
+}
+
+.cardTitle {
+  min-width: 0;
+  font-size: 18px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    gap: 16px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .classCard {
+    padding: 18px 20px;
+  }
+
+  .cardTitle {
+    font-size: 20px;
+  }
+}

@@ -1,0 +1,302 @@
+/* Tab Nhận xét trên web desktop (ảnh 04). */
+.listColumn {
+  width: 400px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.listCard {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: 14px 12px 8px;
+  min-width: 0;
+}
+
+.filters {
+  margin-bottom: 8px;
+}
+
+.ticketList {
+  display: flex;
+  flex-direction: column;
+}
+
+.ticketRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 50px;
+  padding: 0 8px;
+  border: 0;
+  border-top: 1px solid var(--color-divider);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ticketRow:first-child {
+  border-top-color: transparent;
+}
+
+.ticketRowSelected {
+  background: var(--color-primary-soft);
+  border-radius: 10px;
+  border-top-color: transparent;
+}
+
+.ticketText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ticketName {
+  font-size: 14.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticketMeta {
+  font-size: 12px;
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticketBadge {
+  min-width: 76px;
+  flex: none;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.stars {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.editorColumn {
+  flex: 1;
+  min-width: 0;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+.editorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editorName {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.editorMeta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.starPicker {
+  display: flex;
+  gap: 10px;
+}
+
+.starOption {
+  flex: 1;
+  height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.starOption:disabled {
+  cursor: default;
+}
+
+.starOptionLabel {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.starOptionOn {
+  border: 2px solid var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.starOptionOn .starOptionLabel {
+  color: var(--color-primary-ink);
+}
+
+.templateBox {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+
+.templateMascot {
+  flex: none;
+}
+
+.templateCaption {
+  margin: 0 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.templateText {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.noteField {
+  display: block;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.noteInput {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.noteInput::placeholder {
+  color: #8892a2;
+}
+
+.homeworkBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.homeworkTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.homeworkList {
+  margin: 0;
+  padding: 2px 14px;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+
+.homeworkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+.homeworkRow:first-child {
+  border-top: 0;
+}
+
+.emptyHomework {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--color-bg);
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.levelExcellent,
+.levelDone,
+.levelNotDone,
+.levelNotGraded {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.levelExcellent {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.levelDone {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+
+.levelNotDone {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+
+.levelNotGraded {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-error);
+}
+
+.savedNote {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}

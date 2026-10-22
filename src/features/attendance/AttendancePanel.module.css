@@ -1,0 +1,436 @@
+/*
+ * Điểm danh: 16-gv-diem-danh (mobile) · 17-gv-buoi-chua-toi-ngay-hoc (khoá) ·
+ * 78-trang-thai-loi-luu (băng lỗi + nút Thử lại) · 89-web-diem-danh-lop (web).
+ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.summary {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary b {
+  color: var(--color-error);
+}
+
+.summaryActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+/* Băng nhắc khoá điểm danh: 17 — nền nhạt, chữ xanh đậm, biểu tượng 18px */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius-button);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.noticeIcon {
+  flex: none;
+  display: flex;
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rosterWrap {
+  min-width: 0;
+}
+
+.rosterList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Hàng học sinh: 16 — trắng, bo 12, cao 56, đệm 6/8/6/12 */
+.rowWrap {
+  position: relative;
+  min-width: 0;
+  border-radius: var(--radius-button);
+  overflow: hidden;
+}
+
+.swipeBackground {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.swipeAbsent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  background: var(--color-error);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.swipeLate {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 20px;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.studentRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 8px 6px 12px;
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  touch-action: pan-y;
+}
+
+.studentRowLocked {
+  opacity: 0.6;
+}
+
+.avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.person {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.personName {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.lateFields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lateLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.lateInput,
+.noteInput {
+  height: var(--tap);
+  min-height: var(--tap);
+  padding: 0 10px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.noteInput {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* Nút trạng thái: 16 — nút 96x44 chứa pill 13/600; web 89 — nút đặc 92x44 */
+.statusButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  height: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: transparent;
+  color: var(--status-fg, var(--color-text));
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--status-bg, var(--color-neutral-soft));
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.present {
+  --status-bg: var(--color-success-soft);
+  --status-fg: var(--color-success);
+}
+
+.late {
+  --status-bg: var(--color-warning-soft);
+  --status-fg: var(--color-warning);
+}
+
+.excused {
+  --status-bg: var(--color-primary-soft);
+  --status-fg: var(--color-primary-ink);
+}
+
+.absent {
+  --status-bg: var(--color-error-soft);
+  --status-fg: var(--color-error);
+}
+
+.unmarked {
+  --status-bg: var(--color-neutral-soft);
+  --status-fg: var(--color-muted);
+}
+
+.statusButton:disabled {
+  cursor: not-allowed;
+}
+
+/* Cần chú ý + ghi chú */
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.attention {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.attentionTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.warning {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.footnote {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+/* Băng lỗi lưu: 78 — nền đỏ nhạt, nút "Thử lại" đặc */
+.saveError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 8px 0 16px;
+  border-radius: var(--radius-button);
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.saveErrorIcon {
+  flex: none;
+  display: flex;
+}
+
+.saveErrorText {
+  flex: 1;
+  min-width: 0;
+}
+
+.retry {
+  flex: none;
+  height: var(--tap);
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-error);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-size: 14px;
+}
+
+/* Nút lưu: 16 — thanh dưới cùng, nút 52 cao */
+.stickyBar {
+  position: sticky;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  z-index: 5;
+  display: grid;
+  gap: 8px;
+  padding: 8px 0;
+  background: var(--color-bg);
+}
+
+.stickyBar > :last-child {
+  border-radius: var(--radius-button);
+}
+
+/* 17/81: nút bị vô hiệu hoá chuyển sang xám, chữ xám đậm */
+.stickyBar > button:disabled {
+  background: var(--color-input-border);
+  color: var(--color-muted);
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  .panel {
+    gap: 16px;
+  }
+
+  .summaryRow {
+    padding-top: 0;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    align-items: start;
+    gap: 16px;
+  }
+
+  /* web 89: thẻ bảng điểm danh trắng đệm 18/20, hàng có đường kẻ trên */
+  .rosterCard {
+    padding: 18px 20px;
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  .cardHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+  }
+
+  .cardTitle {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .cardSummary {
+    margin: 0;
+    font-size: 14px;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cardSummary b {
+    color: var(--color-text);
+  }
+
+  .rosterCard .rowWrap {
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .rosterCard .swipeBackground {
+    display: none;
+  }
+
+  .rosterCard .studentRow {
+    padding: 8px 0;
+    border-top: 1px solid var(--color-divider);
+    border-radius: 0;
+    background: transparent;
+    transform: none !important;
+  }
+
+  .rosterCard .avatar {
+    display: none;
+  }
+
+  .statusButton {
+    min-width: 92px;
+    background: var(--status-bg, var(--color-neutral-soft));
+    color: var(--status-fg, var(--color-text));
+  }
+
+  .statusPill {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: 14px;
+  }
+
+  .stickyBar {
+    position: static;
+    padding: 0;
+    background: transparent;
+  }
+}
