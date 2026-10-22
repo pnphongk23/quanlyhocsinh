@@ -1,0 +1,114 @@
+/* Tab Bài kiểm tra trên web desktop (ảnh 08…12). */
+.card {
+  padding: 18px 12px 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.table th {
+  padding: 0 4px 8px 12px;
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  height: 56px;
+  padding: 0 4px 0 12px;
+  border-top: 1px solid var(--color-divider);
+  font-size: 15px;
+  vertical-align: middle;
+}
+
+.testName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.menuWrap {
+  position: relative;
+  display: flex;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 9;
+  width: 200px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  box-shadow:
+    0 2px 6px rgb(20 24 31 / 0.08),
+    0 12px 32px rgb(20 24 31 / 0.16);
+}
+
+.menuItem,
+.menuItemDanger {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem {
+  color: var(--color-text);
+}
+
+.menuItemDanger {
+  color: var(--color-error);
+}
+
+.menuItem:hover,
+.menuItemDanger:hover {
+  background: var(--color-bg);
+}
+
+.badge {
+  justify-self: start;
+  font-size: 14px;
+  padding: 6px 12px;
+}
+
+.solidDanger {
+  background: var(--color-error);
+  color: var(--color-on-primary);
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.confirmText {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
