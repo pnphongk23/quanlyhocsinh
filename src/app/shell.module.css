@@ -10,13 +10,13 @@
 @media (min-width: 900px) { .content { padding: 32px; } }
 
 /* Staff shell follows the desktop sidebar and mobile tab bar in the prototype. */
-.staffDesktop { min-height: 100dvh; padding-bottom: calc(64px + env(safe-area-inset-bottom)); background: var(--color-bg); }
+.staffDesktop { min-height: 100dvh; overflow-x: clip; padding-bottom: calc(64px + env(safe-area-inset-bottom)); background: var(--color-bg); }
 .staffSkip { position: fixed; top: -100px; left: 8px; z-index: 20; padding: 12px; border-radius: var(--radius-button); background: var(--color-surface); color: var(--color-text); }
 .staffSkip:focus { top: 8px; }
 .staffContent { display: flex; min-width: 0; flex-direction: column; gap: 12px; padding: 12px 20px 16px; }
 .staffMobileSaveStatus { display: flex; width: fit-content; margin: calc(8px + env(safe-area-inset-top)) 20px 0; }
 .staffSidebar { display: none; }
-.staffTabbar { position: fixed; z-index: 10; right: 0; bottom: 0; left: 0; display: flex; padding: 0 4px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: var(--color-surface); }
+.staffTabbar { position: fixed; z-index: 10; right: 0; bottom: 0; left: 0; display: flex; box-sizing: border-box; width: 100dvw; padding: 0 4px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: var(--color-surface); }
 .staffTabbar a { display: flex; min-height: 56px; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding-top: 8px; margin-top: -1px; border-top: 3px solid transparent; color: var(--color-muted); text-decoration: none; font-size: 12px; font-weight: 600; }
 .staffTabbar a[aria-current="page"] { border-top-color: var(--color-primary); color: var(--color-primary); }
 @media (min-width: 1024px) {

@@ -84,15 +84,22 @@ export default function NewClassPage() {
             {error}
           </p>
         )}
-        <SaveStatus status={save.status} />
+          <SaveStatus status={save.status} />
           <div className={s.actions}>
-            <LinkButton className={s.cancel} variant="secondary" to="/lop">Huỷ</LinkButton>
             <div className={s.stickyBar}>
-            <Button type="submit" size="lg">
-              Tạo lớp
-            </Button>
+              <LinkButton
+                to="/lop"
+                variant="surface"
+                size="lg"
+                className={s.cancel}
+              >
+                Huỷ
+              </LinkButton>
+              <Button type="submit" size="lg">
+                Tạo lớp
+              </Button>
+            </div>
           </div>
-        </div>
       </form>
     </section>
   );

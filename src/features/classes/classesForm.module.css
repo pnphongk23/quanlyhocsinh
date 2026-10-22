@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: 100%;
+  max-width: 520px;
   min-height: calc(
     100dvh - var(--tabbar-height) - env(safe-area-inset-bottom) - 28px
   );
@@ -14,17 +14,6 @@
   flex-direction: column;
   flex: 1;
   gap: 16px;
-}
-
-.form {
-  min-width: 0;
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 640px;
-  margin-inline: auto;
-  padding: 20px;
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
 }
 
 .form > span {
@@ -100,12 +89,8 @@
   font-size: 14px;
 }
 
-.modalActions { display:flex; justify-content:flex-end; gap:8px; }
-.modalActions > button { min-width:96px; }
-
 .actions {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
   gap: 8px;
   margin-top: auto;
 }
@@ -115,25 +100,57 @@
   background: var(--color-bg);
 }
 
-.stickyBar > button { width: 100%; }
-.cancel { min-width: 96px; }
+.stickyBar .cancel {
+  display: none;
+}
 
 @media (min-width: 1024px) {
   .page {
     min-height: 0;
+    max-width: 640px;
+    margin-inline: auto;
+    width: 100%;
+  }
+
+  /* Form nằm trong thẻ ≤ 640px, căn giữa vùng nội dung */
+  .form {
+    flex: none;
+    padding: 20px;
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  .form .day,
+  .form .studentNoteText {
+    background: var(--color-bg);
+  }
+
+  .form .dayActive {
+    background: var(--color-primary);
+  }
+
+  /* Nút quay lại thẳng hàng với tiêu đề */
+  .page > header,
+  .page > header > div {
+    align-items: center;
   }
 
   .actions {
     margin-top: 0;
-    justify-content: flex-end;
   }
 
   .stickyBar {
-    background: transparent;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
     padding: 0;
+    background: transparent;
   }
 
-  .stickyBar > button { width: auto; min-width: 96px; }
+  .stickyBar .cancel {
+    display: inline-flex;
+    background: var(--color-bg);
+  }
 }
 
 @media (max-width: 1023px) {
@@ -144,8 +161,29 @@
     min-width: 0;
     margin-inline: 0;
   }
-  .form { width: 100%; min-width: 0; padding: 16px; }
-  .cancel { display: none; }
-  .modalActions > button:first-child { display:none; }
-  .modalActions > button:last-child { width:100%; }
+
+  .form {
+    min-width: 0;
+  }
+}
+
+/* Sửa lớp (modal): mobile chỉ nút chính tràn ngang, desktop Huỷ + Lưu căn phải */
+.modalActions {
+  display: grid;
+}
+
+.modalActions .cancel {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .modalActions .cancel {
+    display: inline-flex;
+  }
 }
