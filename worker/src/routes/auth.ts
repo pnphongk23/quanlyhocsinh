@@ -23,9 +23,11 @@ import {
   recordThrottleFailure,
   rehashPassword,
   registerIpKey,
+  registerGuardian,
   registerWorkspace,
   toUserView,
   updateSessionMembership,
+  workspaceCreateKey,
 } from '../db/auth';
 import { getClientIp } from '../lib/client-ip';
 import {
@@ -51,6 +53,8 @@ import { SESSION_TTL_MS, isoAfterMs, nowIso } from '../lib/time';
 import { requireAuth } from '../middleware/auth';
 
 export const authRoutes = new Hono<AppEnv>();
+
+const WORKSPACE_CREATE_POLICY = { limit: 5, windowMs: 60 * 60 * 1000 } as const;
 
 function requirePassword(value: unknown, field = 'password'): string {
   if (typeof value !== 'string' || value === '') {
@@ -148,14 +152,72 @@ authRoutes.post('/auth/register', async (c) => {
   );
 });
 
+authRoutes.post('/auth/register-guardian', async (c) => {
+  const db = c.env.DB;
+  const ip = getClientIp(c.req.raw);
+  const throttleKey = registerIpKey(ip);
+  const throttle = await checkThrottle(db, throttleKey, REGISTER_IP_POLICY);
+  if (!throttle.allowed) throw rateLimited(throttle.retryAfterSeconds);
+
+  const body = await readJsonObject(c.req.raw);
+  const phone = normalizePhone(body.phone);
+  if (phone === null) throw validationError({ phone: 'invalid_phone' });
+  const password = requirePassword(body.password);
+  assertPassword(password, phone);
+  const displayName = optionalDisplayName(body);
+
+  await recordThrottleFailure(db, throttleKey, REGISTER_IP_POLICY);
+  if (await findUserByPhone(db, phone)) throw conflict('phone_registered');
+
+  const iterations = resolveIterations(c.env.PBKDF2_ITERATIONS);
+  const passwordHash = await hashPassword(password, iterations);
+  const { token, tokenHashPromise } = newSessionToken();
+  const tokenHash = await tokenHashPromise;
+  const userId = crypto.randomUUID();
+  const sessionId = crypto.randomUUID();
+  const now = nowIso();
+  const expiresAt = isoAfterMs(SESSION_TTL_MS);
+
+  await registerGuardian(db, {
+    userId,
+    sessionId,
+    phone,
+    displayName,
+    passwordHash,
+    tokenHash,
+    now,
+    expiresAt,
+  });
+  const memberships = await listActiveMemberships(db, userId);
+  const activeMembershipId = memberships.length === 1 ? memberships[0]?.id ?? null : null;
+
+  return c.json({
+    token,
+    expires_at: expiresAt,
+    user: {
+      id: userId,
+      phone,
+      display_name: displayName,
+      must_change_password: false,
+    },
+    memberships,
+    active_membership_id: activeMembershipId,
+  }, 201);
+});
+
 authRoutes.post('/workspaces', requireAuth, async (c) => {
   const identity = c.get('identity');
+  const throttleKey = workspaceCreateKey(identity.userId);
+  const throttle = await checkThrottle(c.env.DB, throttleKey, WORKSPACE_CREATE_POLICY);
+  if (!throttle.allowed) throw rateLimited(throttle.retryAfterSeconds);
   const body = await readJsonObject(c.req.raw);
   const workspaceName = stringField(body, 'workspace_name', {
     required: true,
     min: 1,
     max: 100,
   }) as string;
+
+  await recordThrottleFailure(c.env.DB, throttleKey, WORKSPACE_CREATE_POLICY);
 
   const workspaceId = crypto.randomUUID();
   const membershipId = crypto.randomUUID();
@@ -250,7 +312,6 @@ authRoutes.post('/auth/login', async (c) => {
   if (user.status !== 'active') throw accountDisabled();
 
   const memberships = await listActiveMemberships(db, user.id);
-  if (memberships.length === 0) throw accountDisabled();
 
   const activeMembershipId = memberships.length === 1 ? memberships[0]?.id ?? null : null;
   const sessionId = crypto.randomUUID();

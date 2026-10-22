@@ -443,6 +443,75 @@ export async function registerWorkspace(
   }
 }
 
+export interface RegisterGuardianInput {
+  userId: string;
+  sessionId: string;
+  phone: string;
+  displayName: string | null;
+  passwordHash: string;
+  tokenHash: string;
+  now: string;
+  expiresAt: string;
+}
+
+/** Tạo tài khoản phụ huynh và liên kết mọi hồ sơ đã khai số điện thoại này. */
+export async function registerGuardian(
+  db: D1Database,
+  input: RegisterGuardianInput,
+): Promise<void> {
+  const { results: workspaces } = await db
+    .prepare(
+      `SELECT DISTINCT r.workspace_id, r.id AS role_id
+         FROM students s
+         JOIN roles r ON r.workspace_id = s.workspace_id AND r.system_key = 'guardian'
+        WHERE s.parent_phone = ?
+        ORDER BY r.workspace_id`,
+    )
+    .bind(input.phone)
+    .all<{ workspace_id: string; role_id: string }>();
+  const membershipIds = new Map(workspaces.map((row) => [row.workspace_id, crypto.randomUUID()]));
+  const activeMembershipId = workspaces.length === 1 ? membershipIds.get(workspaces[0]!.workspace_id)! : null;
+
+  const statements: D1PreparedStatement[] = [
+    db.prepare(`INSERT INTO users
+        (id, phone, display_name, password_hash, must_change_password,
+         password_changed_at, status, created_at, version)
+       VALUES (?, ?, ?, ?, 0, ?, 'active', ?, 1)`)
+      .bind(input.userId, input.phone, input.displayName, input.passwordHash, input.now, input.now),
+  ];
+  for (const row of workspaces) {
+    statements.push(
+      db.prepare(`INSERT INTO guardian_student (workspace_id, user_id, student_id, created_at)
+        SELECT ?, ?, id, ? FROM students WHERE workspace_id = ? AND parent_phone = ?`)
+        .bind(row.workspace_id, input.userId, input.now, row.workspace_id, input.phone),
+    );
+  }
+  for (const row of workspaces) {
+    statements.push(
+      db.prepare(`INSERT INTO memberships
+          (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version)
+         VALUES (?, ?, ?, ?, 'active', 1, ?, 1)`)
+        .bind(membershipIds.get(row.workspace_id)!, row.workspace_id, input.userId, row.role_id, input.now),
+    );
+  }
+  statements.push(sessionInsertStatement(db, {
+    id: input.sessionId,
+    userId: input.userId,
+    membershipId: activeMembershipId,
+    tokenHash: input.tokenHash,
+    deviceLabel: null,
+    createdAt: input.now,
+    expiresAt: input.expiresAt,
+  }));
+
+  try {
+    await db.batch(statements);
+  } catch (error) {
+    if (isUniquePhoneError(error)) throw conflict('phone_registered');
+    throw error;
+  }
+}
+
 export interface AddWorkspaceInput {
   workspaceId: string;
   membershipId: string;
@@ -717,6 +786,10 @@ export function loginIpKey(ip: string): string {
 
 export function registerIpKey(ip: string): string {
   return `register:ip:${ip}`;
+}
+
+export function workspaceCreateKey(userId: string): string {
+  return `workspace:user:${userId}`;
 }
 
 export function assertNotGuardianRole(scopeKind: ScopeKind | undefined): void {

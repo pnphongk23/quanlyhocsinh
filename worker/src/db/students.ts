@@ -38,6 +38,56 @@ async function linkedUsersForPhone(db: D1Database, phone: string | null) {
   return results.map((row) => row.id);
 }
 
+function enableGuardianMembershipStatements(
+  db: D1Database,
+  workspaceId: string,
+  userId: string,
+  now: string,
+): D1PreparedStatement[] {
+  return [
+    db.prepare(`UPDATE memberships
+      SET status = 'active', scope_epoch = scope_epoch + 1, version = version + 1
+      WHERE workspace_id = ? AND user_id = ?
+        AND role_id = (SELECT id FROM roles WHERE workspace_id = ? AND system_key = 'guardian')`)
+      .bind(workspaceId, userId, workspaceId),
+    db.prepare(`INSERT INTO memberships
+        (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version)
+      SELECT ?, ?, ?, r.id, 'active', 1, ?, 1 FROM roles r
+       WHERE r.workspace_id = ? AND r.system_key = 'guardian'
+         AND NOT EXISTS (SELECT 1 FROM memberships m
+           WHERE m.workspace_id = r.workspace_id AND m.user_id = ? AND m.role_id = r.id)`)
+      .bind(crypto.randomUUID(), workspaceId, userId, now, workspaceId, userId),
+  ];
+}
+
+function removeGuardianScopeStatements(
+  db: D1Database,
+  workspaceId: string,
+  userId: string,
+  now: string,
+): D1PreparedStatement[] {
+  const guardianMembership = `SELECT m.id FROM memberships m
+    JOIN roles r ON r.id = m.role_id AND r.workspace_id = m.workspace_id
+    WHERE m.workspace_id = ? AND m.user_id = ? AND r.system_key = 'guardian'
+      AND m.status = 'disabled'`;
+  return [
+    db.prepare(`UPDATE memberships
+      SET status = CASE WHEN EXISTS (SELECT 1 FROM guardian_student gs
+        WHERE gs.workspace_id = memberships.workspace_id AND gs.user_id = memberships.user_id)
+        THEN 'active' ELSE 'disabled' END,
+        scope_epoch = scope_epoch + 1, version = version + 1
+      WHERE workspace_id = ? AND user_id = ?
+        AND role_id = (SELECT id FROM roles WHERE workspace_id = ? AND system_key = 'guardian')
+        AND status = 'active'`)
+      .bind(workspaceId, userId, workspaceId),
+    db.prepare(`UPDATE auth_sessions SET revoked_at = ?
+      WHERE revoked_at IS NULL AND membership_id IN (${guardianMembership})`)
+      .bind(now, workspaceId, userId),
+    db.prepare(`DELETE FROM device_tokens WHERE membership_id IN (${guardianMembership})`)
+      .bind(workspaceId, userId),
+  ];
+}
+
 export async function listStudents(db: D1Database, identity: Identity, classId: string, status: string | null) {
   const cls = await db.prepare('SELECT id FROM classes WHERE workspace_id = ? AND id = ?')
     .bind(identity.workspaceId, classId).first();
@@ -84,12 +134,10 @@ export async function createStudent(db: D1Database, identity: Identity, classId:
       (id, workspace_id, class_id, name, parent_phone, enrolled_at, left_at, status, created_at, updated_at, updated_by, version)
       VALUES (?, ?, ?, ?, ?, ?, NULL, 'active', ?, ?, ?, 1)`)
     .bind(id, identity.workspaceId, classId, name, phone, input.enrolled_at, now, now, identity.userId),
-  ...linkedUsers.map((userId) => db.prepare(`INSERT OR IGNORE INTO guardian_student (workspace_id, user_id, student_id, created_at)
-      VALUES (?, ?, ?, ?)`)
-    .bind(identity.workspaceId, userId, id, now)),
-  ...linkedUsers.map((userId) => db.prepare(`UPDATE memberships SET scope_epoch = scope_epoch + 1, version = version + 1
-      WHERE workspace_id = ? AND user_id = ? AND status = 'active'`)
-    .bind(identity.workspaceId, userId))];
+    ...linkedUsers.map((userId) => db.prepare(`INSERT OR IGNORE INTO guardian_student (workspace_id, user_id, student_id, created_at)
+        VALUES (?, ?, ?, ?)`)
+      .bind(identity.workspaceId, userId, id, now)),
+    ...linkedUsers.flatMap((userId) => enableGuardianMembershipStatements(db, identity.workspaceId, userId, now))];
   await db.batch(stmts);
   return { id, class_id: classId, name, parent_phone: phone, enrolled_at: input.enrolled_at,
     left_at: null, status: 'active', version: 1 };
@@ -127,15 +175,16 @@ export async function updateStudent(db: D1Database, identity: Identity, studentI
       updated_at = ?, updated_by = ?, version = version + 1
       WHERE workspace_id = ? AND id = ? AND version = ?`)
     .bind(name, phone, status, leftAt, now, identity.userId, identity.workspaceId, studentId, old.version));
-  for (const userId of addedUsers) {
-    statements.push(db.prepare(`INSERT OR IGNORE INTO guardian_student (workspace_id, user_id, student_id, created_at)
-      VALUES (?, ?, ?, ?)`).bind(identity.workspaceId, userId, studentId, now));
-  }
-  for (const userId of new Set([...affectedUsers, ...addedUsers])) {
-    statements.push(db.prepare(`UPDATE memberships SET scope_epoch = scope_epoch + 1, version = version + 1
-      WHERE workspace_id = ? AND user_id = ? AND status = 'active'`)
-      .bind(identity.workspaceId, userId));
-  }
+    for (const userId of addedUsers) {
+      statements.push(db.prepare(`INSERT OR IGNORE INTO guardian_student (workspace_id, user_id, student_id, created_at)
+        VALUES (?, ?, ?, ?)`).bind(identity.workspaceId, userId, studentId, now));
+    }
+    for (const userId of affectedUsers) {
+      statements.push(...removeGuardianScopeStatements(db, identity.workspaceId, userId, now));
+    }
+    for (const userId of addedUsers) {
+      statements.push(...enableGuardianMembershipStatements(db, identity.workspaceId, userId, now));
+    }
   await db.batch(statements);
   return { id: studentId, class_id: old.class_id, name, parent_phone: phone,
     enrolled_at: old.enrolled_at, left_at: leftAt, status, version: old.version + 1 };
