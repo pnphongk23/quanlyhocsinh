@@ -127,7 +127,7 @@
   transform: translateX(var(--ind-x, 0px));
   pointer-events: none;
 }
-.slideBarReady { transition: transform 200ms var(--ease-standard), width 200ms var(--ease-standard); }
+.slideBarReady { transition: transform 200ms var(--ease-standard); }
 
 .tab {
   display: flex;

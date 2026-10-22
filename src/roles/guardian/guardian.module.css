@@ -320,8 +320,8 @@
 .monthSwitch button {
   display: grid;
   place-items: center;
-  width: 40px;
-  min-height: 40px;
+  width: 44px;
+  min-height: 44px;
   padding: 0;
   border: 0;
   border-radius: 50%;

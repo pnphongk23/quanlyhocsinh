@@ -15,9 +15,7 @@
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition:
-    transform 100ms var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard);
+  transition: transform 100ms var(--ease-standard);
 }
 .button:active:not(:disabled) {
   transform: scale(0.98);
@@ -180,7 +178,6 @@
   color: var(--color-muted);
   font-size: 15px;
   font-weight: 600;
-  transition: color var(--dur-fast) var(--ease-standard);
 }
 .segmentOn {
   color: var(--color-text);

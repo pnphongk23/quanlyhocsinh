@@ -83,7 +83,5 @@
   pointer-events: none;
 }
 .indicatorReady {
-  transition:
-    transform var(--dur-base) var(--ease-standard),
-    width var(--dur-base) var(--ease-standard);
+  transition: transform var(--dur-base) var(--ease-standard);
 }
