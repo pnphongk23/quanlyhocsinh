@@ -10,7 +10,7 @@ import { getStore, replaceStore } from "../data/store";
 import { createSeed } from "./fixtures/seed";
 import { api } from "../data/sync";
 
-vi.mock("../data/sync", () => ({ api: { request: vi.fn() }, syncNow: vi.fn() }));
+vi.mock("../data/sync", () => ({ api: { request: vi.fn() }, clearUserCache: vi.fn(async () => undefined), syncNow: vi.fn() }));
 
 const user = { id: "parent-user", phone: "+84900000001", display_name: "Phụ huynh", must_change_password: false };
 const guardianMembership = {

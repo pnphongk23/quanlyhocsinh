@@ -1,5 +1,7 @@
 import type { MeResponse } from "../api/types";
+import { ApiError } from "../api/client";
 import { hydrateStore, setCacheIdentity } from "../store";
+import { api, clearMembershipCache, syncNow } from "../sync";
 
 const KEY = "qlh.session.v1";
 const LEGACY_KEY = KEY;
@@ -39,7 +41,7 @@ export async function activateMembershipCache(membershipId: string | null): Prom
   const membership = session?.me.memberships.find((m) => m.id === membershipId && m.status === "active");
   if (!session || !membership) { setCacheIdentity(null); await hydrateStore(); return; }
   setCacheIdentity({ userId: session.user.id, workspaceId: membership.workspace.id, membershipId: membership.id });
-  await hydrateStore(); void import("../sync").then(({ syncNow }) => syncNow());
+  await hydrateStore(); void syncNow();
 }
 export async function clearSession(): Promise<void> {
   session = null; persist(); setCacheIdentity(null); await hydrateStore();
@@ -61,20 +63,17 @@ export function initializeSession(): Promise<void> {
   initialization = (async () => {
     if (!session) return;
     try {
-      const { api } = await import("../sync");
       const me = await api.request("GET /me");
       const previousId = session.activeMembershipId;
       const previousMembership = session.me.memberships.find((membership) => membership.id === previousId);
       const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
       const fallback = me.memberships.find((membership) => membership.status === "active");
       if (previousId && (!active || active.id !== previousId) && previousMembership) {
-        const { clearMembershipCache } = await import("../sync");
         await clearMembershipCache(`${session.user.id}:${previousMembership.workspace.id}:${previousId}`);
       }
       session = { ...session, me, user: me.user, activeMembershipId: active?.id ?? fallback?.id ?? null, guardianAccount: me.memberships.length === 0 || session.guardianAccount };
       persist();
     } catch (error) {
-      const { ApiError } = await import("../api/client");
       if (error instanceof ApiError && error.status === 401) {
         await clearSession();
         return;
@@ -83,7 +82,6 @@ export function initializeSession(): Promise<void> {
         const previousId = session.activeMembershipId;
         const previous = session.me.memberships.find((membership) => membership.id === previousId);
         if (previous) {
-          const { clearMembershipCache } = await import("../sync");
           await clearMembershipCache(`${session.user.id}:${previous.workspace.id}:${previousId}`);
         }
         await invalidateActiveMembership();

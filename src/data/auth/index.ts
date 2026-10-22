@@ -1,4 +1,4 @@
-import { api } from "../sync";
+import { api, clearUserCache } from "../sync";
 import { activateSession, activateMembershipCache, clearSession, getSession, setActiveMembershipId, updateMe } from "./session";
 import { assertCanLogout } from "../outbox";
 import { getStore } from "../store";
@@ -24,7 +24,11 @@ export async function changePassword(currentPassword: string, newPassword: strin
   if (getSession()) await updateMe(await api.request("GET /me"));
 }
 export async function logout(): Promise<void> {
-  await assertCanLogout(); await api.request("POST /auth/logout"); await clearSession();
+  await assertCanLogout();
+  const userId = getSession()?.user.id;
+  await api.request("POST /auth/logout");
+  if (userId) await clearUserCache(userId);
+  await clearSession();
 }
 export async function switchMembership(membershipId: string): Promise<void> {
   const current = getSession(); if (!current) throw new Error("Bạn cần đăng nhập.");

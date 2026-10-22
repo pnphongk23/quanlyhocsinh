@@ -104,6 +104,7 @@ Quy ước:
 - **Quyền khi offline:** quyền được cache trên máy chỉ để ẩn hoặc khoá nút. Khi đồng bộ hoặc mở app, máy chủ kiểm lại; nếu membership bị thu hồi thì ẩn cache của membership đó, lệnh bị từ chối được giữ lại và hiện lỗi, không tự xoá.
 - **Ngoại lệ duy nhất cho quy tắc chỉ hiện lỗi:** sau khi bấm Gửi nhận xét lúc mất mạng, hiện một thông báo ngắn "sẽ gửi khi có mạng".
 - **Bảo vệ dữ liệu:** chặn đăng xuất khi còn lệnh chờ (giải thích lý do khi chặn). Gọi `navigator.storage.persist()` khi hỗ trợ và bắt lỗi quota. Không hiện thường trực số thay đổi chưa đồng bộ; chỉ hiện khi lỗi.
+- **Đăng xuất:** sau khi máy chủ xác nhận và outbox rỗng, xoá toàn bộ cache Dexie của user qua mọi workspace/membership, gồm cursor/epoch và outbox; giữ database trống cho tài khoản tiếp theo. Thu hồi membership vẫn chỉ ẩn cache membership và giữ lệnh bị từ chối theo quy tắc trên.
 - **Service worker:** chỉ cache phần khung app và font (precache). Dữ liệu API đi qua Dexie, không qua cache của service worker. Không tự reload khi người dùng đang nhập.
 
 ## 6. Hiệu năng

@@ -11,7 +11,13 @@ function appShellServiceWorker(): Plugin {
     generateBundle(_options, bundle) {
       const entry = Object.values(bundle).find((item): item is OutputChunk => item.type === "chunk" && !!item.isEntry);
       if (!entry) throw new Error("Could not find the app entry for service worker precache.");
-      const assets = new Set<string>(["/", `/${entry.fileName}`]);
+      const assets = new Set<string>([
+        "/",
+        `/${entry.fileName}`,
+        "/fonts/plus-jakarta-sans-latin.woff2",
+        "/fonts/plus-jakarta-sans-latin-ext.woff2",
+        "/fonts/plus-jakarta-sans-vietnamese.woff2",
+      ]);
       const visit = (chunk: OutputChunk) => {
         for (const file of chunk.viteMetadata?.importedCss ?? []) assets.add(`/${file}`);
         for (const file of chunk.imports) {

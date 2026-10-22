@@ -106,6 +106,14 @@ async function clearIdentityCache(identity: string): Promise<void> {
     await db.meta.delete(identity);
   });
 }
+export async function clearUserCache(userId: string): Promise<void> {
+  const identityPrefix = `${userId}:`;
+  await db.transaction("rw", [db.meta, db.outbox, ...entities.map((entity) => tableFor(entity))], async () => {
+    for (const entity of entities) await tableFor(entity).where("identity").startsWith(identityPrefix).delete();
+    await db.meta.where("identity").startsWith(identityPrefix).delete();
+    await db.outbox.where("identity").startsWith(identityPrefix).delete();
+  });
+}
 export const clearMembershipCache = clearIdentityCache;
 export async function syncNow(): Promise<void> {
   if (timer) { clearTimeout(timer); timer = undefined; }

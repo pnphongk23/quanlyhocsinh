@@ -4,8 +4,8 @@ import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import type { MeResponse } from "../../data/api/types";
 
-const { request, assertCanLogout, pendingCommandCount } = vi.hoisted(() => ({ request: vi.fn(), assertCanLogout: vi.fn(), pendingCommandCount: vi.fn() }));
-vi.mock("../../data/sync", () => ({ api: { request }, syncNow: vi.fn(), scheduleSync: vi.fn() }));
+const { request, assertCanLogout, pendingCommandCount, clearUserCache } = vi.hoisted(() => ({ request: vi.fn(), assertCanLogout: vi.fn(), pendingCommandCount: vi.fn(), clearUserCache: vi.fn() }));
+vi.mock("../../data/sync", () => ({ api: { request }, syncNow: vi.fn(), scheduleSync: vi.fn(), clearUserCache }));
 vi.mock("../../data/outbox", () => ({ assertCanLogout, pendingCommandCount }));
 
 import LoginPage from "./LoginPage";
@@ -14,7 +14,7 @@ import RolePickerPage from "./RolePickerPage";
 import SettingsPage from "../settings/SettingsPage";
 import ChangePasswordPage from "../settings/ChangePasswordPage";
 import { clearSession, getSession } from "../../data/auth/session";
-import { login } from "../../data/auth";
+import { login, logout } from "../../data/auth";
 import { accountRoutes } from "../../roles/account/routes";
 
 // jsdom chưa cài `showModal`/`close` cho <dialog>; chỉ cần đủ để Modal mở/đóng.
@@ -42,7 +42,7 @@ function Harness({ initial = "/dang-nhap" }: { initial?: string }) {
 }
 
 beforeEach(async () => {
-  await clearSession(); activeMembershipId = memberships[0].id; registeredTeacher = false; request.mockReset(); assertCanLogout.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
+  await clearSession(); activeMembershipId = memberships[0].id; registeredTeacher = false; request.mockReset(); clearUserCache.mockReset().mockResolvedValue(undefined); assertCanLogout.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
   request.mockImplementation(async (endpoint: string, options?: { body?: { membership_id: string } }) => {
     if (endpoint === "POST /auth/login") return loginResponse();
     if (endpoint === "POST /auth/register") {
@@ -124,6 +124,21 @@ describe("account and auth screens", () => {
     expect(await screen.findByText(/Còn 1 thay đổi chưa đồng bộ/)).toBeInTheDocument();
     expect(screen.getByLabelText("Chưa thể đăng xuất")).toBeInTheDocument();
     expect(request).not.toHaveBeenCalledWith("POST /auth/logout", expect.anything());
+  });
+
+  it("clears the user cache only after the server confirms logout", async () => {
+    await login("+84900000001", "fixture-password");
+    let confirmLogout!: (value: undefined) => void;
+    request.mockImplementationOnce(() => new Promise<undefined>((resolve) => { confirmLogout = resolve; }));
+
+    const pendingLogout = logout();
+    await waitFor(() => expect(request).toHaveBeenCalledWith("POST /auth/logout"));
+    expect(assertCanLogout).toHaveBeenCalledOnce();
+    expect(clearUserCache).not.toHaveBeenCalled();
+
+    confirmLogout(undefined);
+    await pendingLogout;
+    expect(clearUserCache).toHaveBeenCalledWith(user.id);
   });
 
   it("ships a Vietnamese standalone manifest with both maskable icon sizes", () => {

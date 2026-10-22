@@ -18,7 +18,7 @@ function RouteError() {
   return <main className={styles.content}><h1>Không thể mở màn hình</h1><Link to="/">Về trang đầu</Link></main>;
 }
 export const routes: RouteObject[] = [{
-    element: <RootLayout />, errorElement: <RouteError />,
+      element: <RootLayout />, errorElement: <RouteError />, HydrateFallback: () => null,
   children: [
     { path: "/", element: <FoundationHome /> },
       ...guardRoutes(staffRoutes, "staff"), ...guardRoutes(guardianRoutes, "guardian"), ...accountRoutes,
