@@ -80,6 +80,39 @@ describe('sync commands and recovery',()=>{
     expect((await db.prepare('SELECT COUNT(*) n FROM score_history WHERE test_id=? AND student_id=?').bind(f.test,f.s1).first<any>())!.n).toBe(2);
     expect((await db.prepare('SELECT COUNT(*) n FROM sync_conflicts WHERE workspace_id=?').bind(f.a.workspaceId).first<any>())!.n).toBe(0);
   });
+  it('accepts half-step scores end to end and rejects other fractions',async()=>{
+    const f=await setup();
+    const results=await f.send([
+      command('score.set',{test_id:f.test,student_id:f.s1,value:7.5}),
+      command('score.set',{test_id:f.test,student_id:f.s2,value:0.5}),
+      command('score.set',{test_id:f.test,student_id:f.s1,value:15}),
+      command('score.set',{test_id:f.test,student_id:f.s1,value:7.5}),
+      command('score.set',{test_id:f.test,student_id:f.s1,value:7.3}),
+      command('score.set',{test_id:f.test,student_id:f.s1,value:7.25}),
+      command('score.set',{test_id:f.test,student_id:f.s1,value:15.5}),
+      command('score.set',{test_id:f.test,student_id:f.s1,value:-0.5}),
+      command('score.set',{test_id:f.test,student_id:f.s1,value:'7.5'}),
+    ]);
+    expect(results.body.results.map((r:any)=>r.status)).toEqual([
+      'applied','applied','applied','applied','rejected','rejected','rejected','rejected','rejected',
+    ]);
+    expect(results.body.results.slice(4).map((r:any)=>r.error.code)).toEqual([
+      'validation_error','validation_error','validation_error','validation_error','validation_error',
+    ]);
+    expect(results.body.results.slice(4).map((r:any)=>r.error.details?.reason)).toEqual([
+      'invalid_score_step','invalid_score_step','score_above_max','invalid_score','invalid_score',
+    ]);
+
+    const snapshot=await f.page('score');
+    expect(snapshot.body.items).toContainEqual(expect.objectContaining({student_id:f.s1,value:7.5}));
+    expect(snapshot.body.items).toContainEqual(expect.objectContaining({student_id:f.s2,value:0.5}));
+    const pulled=await f.pull();
+    expect(pulled.body.upserts.score).toContainEqual(expect.objectContaining({student_id:f.s1,value:7.5}));
+    expect(pulled.body.upserts.score).toContainEqual(expect.objectContaining({student_id:f.s2,value:0.5}));
+    const month=today().slice(0,7),report=await call(`/v1/students/${f.s1}/report-preview?month=${month}`,{},f.actors.admin.token);
+    expect(report.status).toBe(200);
+    expect(report.body.tests).toContainEqual(expect.objectContaining({test_id:f.test,value:7.5}));
+  });
   it('commits valid commands around a rejected command, and creates dependencies in order',async()=>{
     const f=await setup(),test=uid();
     const r=await f.send([command('test.create',{id:test,class_id:f.cls,name:'T',date:today()}),

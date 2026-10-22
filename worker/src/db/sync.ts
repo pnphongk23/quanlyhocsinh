@@ -212,6 +212,7 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
   } else if (entity==='score') {
     if (p.value!==null && (typeof p.value!=='number' || !Number.isFinite(p.value) || p.value<0)) throw validationError(undefined,'invalid_score');
     if (p.value>parent.max) throw validationError(undefined,'score_above_max');
+    if (p.value!==null && !Number.isInteger(p.value*2)) throw validationError(undefined,'invalid_score_step');
     values={value:p.value};
   } else if (entity==='slip') values={stars:memberOf(p.stars,[null,1,2,3]),note:text(p.note,1000)};
   else values={level:memberOf(p.level,[null,'excellent','done','not_done'])};
