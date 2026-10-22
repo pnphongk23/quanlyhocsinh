@@ -159,7 +159,6 @@ final class AuthModel {
 
     func changePassword(current: String, newPassword: String, confirmation: String) async {
         message = nil
-        let forcedChange = screen == .forcedPassword
         let user = session?.user ?? identity?.user
         do {
             guard let user else { throw AuthValidationError.missingField }
@@ -183,7 +182,7 @@ final class AuthModel {
                detail.code == "invalid_credentials" {
                 message = AuthCopy.wrongCurrent
             } else if let validation = error as? AuthValidationError, validation == .samePassword {
-                message = forcedChange ? AuthCopy.sameAsTemp : AuthCopy.sameAsCurrent
+                message = AuthCopy.sameAsCurrent
             } else { message = Self.userMessage(error) }
         }
     }

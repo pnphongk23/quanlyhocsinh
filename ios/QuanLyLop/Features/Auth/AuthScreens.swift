@@ -51,7 +51,7 @@ struct AuthLoginView: View {
                         .multilineTextAlignment(.center)
                 }
                 .buttonStyle(.plain)
-                AuthHintCard(lead: String(localized: "feature.auth.phu.huynh.c87f8d0d"), text: String(localized: "feature.auth.dung.so.ien.thoai.a.ang.ky.voi.giao.vien.va.mat"))
+                  AuthHintCard(lead: String(localized: "feature.auth.phu.huynh.c87f8d0d"), text: String(localized: "feature.auth.phu.huynh.dung.so.trong.ho.so.hoc.sinh"))
             }
             .padding(.top, 32)
             Spacer(minLength: 0)
@@ -114,24 +114,23 @@ struct AuthForcedPasswordView: View {
     @State private var confirmation = ""
 
     private var tooShort: Bool { !newPassword.isEmpty && newPassword.count < 8 }
-    private var matchesTypedTemp: Bool { !newPassword.isEmpty && newPassword == current }
+    private var matchesCurrent: Bool { !newPassword.isEmpty && newPassword == current }
     private var mismatch: Bool { !confirmation.isEmpty && confirmation != newPassword }
-    private var duplicateTemp: Bool { matchesTypedTemp || model.message == AuthCopy.sameAsTemp }
+    private var duplicateCurrent: Bool { matchesCurrent || model.message == AuthCopy.sameAsCurrent }
     private var blocked: Bool {
-        duplicateTemp || tooShort || mismatch || current.isEmpty || newPassword.isEmpty || confirmation.isEmpty
+        duplicateCurrent || tooShort || mismatch || current.isEmpty || newPassword.isEmpty || confirmation.isEmpty
     }
 
     var body: some View {
         AuthPage {
-            AuthTitle(text: String(localized: "feature.auth.oi.mat.khau"))
-            AuthDescription(text: String(localized: "feature.auth.ban.ang.dung.mat.khau.tam.do.giao.vien.cap.hay.a"))
+              AuthTitle(text: String(localized: "feature.auth.oi.mat.khau"))
             VStack(spacing: 20) {
-                AuthPasswordField(label: String(localized: "feature.auth.mat.khau.hien.tai.mat.khau.tam"), value: $current,
-                                  identifier: "forced.current")
+                  AuthPasswordField(label: String(localized: "feature.auth.mat.khau.hien.tai"), value: $current,
+                                    identifier: "forced.current")
                 AuthPasswordField(label: String(localized: "feature.auth.mat.khau.moi"), value: $newPassword,
                                   autoComplete: .newPassword,
-                                  hasError: tooShort || duplicateTemp,
-                                  errorText: duplicateTemp ? AuthCopy.sameAsTemp : nil,
+                                    hasError: tooShort || duplicateCurrent,
+                                    errorText: duplicateCurrent ? AuthCopy.sameAsCurrent : nil,
                                   identifier: "forced.new",
                                   strengthPassword: newPassword)
                 AuthPasswordField(label: String(localized: "feature.auth.nhap.lai.mat.khau.moi"), value: $confirmation,
@@ -140,9 +139,9 @@ struct AuthForcedPasswordView: View {
                                   identifier: "forced.confirm")
                 VStack(spacing: 10) {
                     AuthCheckRow(ok: newPassword.count >= 8, text: String(localized: "feature.auth.toi.thieu.8.ky.tu"))
-                    AuthCheckRow(ok: !newPassword.isEmpty && !duplicateTemp, text: String(localized: "feature.auth.khac.mat.khau.tam"))
+                      AuthCheckRow(ok: !newPassword.isEmpty && !duplicateCurrent, text: String(localized: "feature.auth.khac.mat.khau.hien.tai"))
                 }
-                if let message = model.message, !duplicateTemp {
+                  if let message = model.message, !duplicateCurrent {
                     Text(message).appText(AuthText.fieldError).foregroundStyle(AppColors.error)
                 }
                 AuthSubmitButton(title: String(localized: "feature.auth.oi.mat.khau.va.tiep.tuc"), disabled: blocked) {
@@ -163,27 +162,16 @@ struct AuthForgotPasswordView: View {
     let model: AuthModel
     @State private var phone = ""
 
-    private var isTeacher: Bool { model.recoveryIsTeacher }
-
     var body: some View {
         AuthPage {
             AuthBackButton { model.show(.login) }
-            AuthTitle(text: String(localized: "feature.auth.quen.mat.khau"))
-            AuthDescription(text: isTeacher
-                            ? String(localized: "feature.auth.giao.vien.chua.tu.at.lai.mat.khau.uoc")
-                            : String(localized: "feature.auth.nho.giao.vien.cap.lai.mat.khau.cho.so.ien.thoai"))
+              AuthTitle(text: String(localized: "feature.auth.quen.mat.khau"))
+              AuthDescription(text: AuthCopy.forgotPasswordDescription)
             AuthPhoneField(label: String(localized: "feature.auth.so.ien.thoai.cua.ban"), digits: $phone, readOnly: true,
                            identifier: "forgot.phone")
                 .padding(.top, 22)
 
-            if isTeacher {
-                AuthBanner(text: String(localized: "feature.auth.lien.he.quan.tri.vien.khong.gian.lam.viec"), tone: .warning)
-                AuthNote(text: String(localized: "feature.auth.hien.chua.co.tu.phuc.hoi.mat.khau.cho.giao.vien"))
-            } else {
-                // TODO(prototype copy): the prototype still describes the removed guardian password issue flow.
-                steps
-            }
-            AuthNote(text: String(localized: "feature.auth.khong.co.ma.nao.uoc.gui.en.ien.thoai.cua.ban"))
+              steps
             Spacer(minLength: 0)
             AuthSubmitButton(title: String(localized: "feature.auth.quay.lai.ang.nhap")) { model.show(.login) }
                 .padding(.top, 24)
@@ -193,9 +181,8 @@ struct AuthForgotPasswordView: View {
 
     private var steps: some View {
         VStack(spacing: 18) {
-            step(1, String(localized: "feature.auth.bao.so.ien.thoai.nay.cho.giao.vien.cua.con"))
-            step(2, String(localized: "feature.auth.giao.vien.bam.cap.lai.mat.khau.o.ho.so.hoc.sinh"))
-            step(3, String(localized: "feature.auth.ang.nhap.bang.mat.khau.tam.roi.oi.mat.khau.moi"))
+              step(1, AuthCopy.forgotPasswordStepOne)
+              step(2, AuthCopy.forgotPasswordStepTwo)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)

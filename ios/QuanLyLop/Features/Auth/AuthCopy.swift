@@ -7,10 +7,12 @@ enum AuthCopy {
     static let loginLocked = String(localized: "feature.auth.thu.sai.qua.nhieu.lan.thu.lai.sau.15.phut")
     static let passwordTooShort = String(localized: "feature.auth.mat.khau.phai.co.it.nhat.8.ky.tu")
     static let passwordMismatch = String(localized: "feature.auth.mat.khau.nhap.lai.khong.khop")
-    static let sameAsTemp = String(localized: "feature.auth.mat.khau.moi.khong.uoc.trung.mat.khau.tam")
     static let sameAsCurrent = String(localized: "feature.auth.mat.khau.moi.phai.khac.mat.khau.hien.tai")
     static let wrongCurrent = String(localized: "feature.auth.mat.khau.hien.tai.khong.ung")
     static let logoutFailed = String(localized: "feature.auth.khong.the.ang.xuat")
+    static let forgotPasswordDescription = String(localized: "feature.auth.nguoi.van.hanh.dat.lai.mat.khau")
+    static let forgotPasswordStepOne = String(localized: "feature.auth.lien.he.nguoi.van.hanh")
+    static let forgotPasswordStepTwo = String(localized: "feature.auth.nguoi.van.hanh.dat.lai.thu.cong")
 }
 
 /// Why sign-out was refused: `pendingCommandCount()` was above zero

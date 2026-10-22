@@ -673,18 +673,6 @@
         }
       }
     },
-    "feature.auth.ang.nhap.bang.mat.khau.tam.roi.oi.mat.khau.moi": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đăng nhập bằng mật khẩu tạm rồi đổi mật khẩu mới."
-          }
-        }
-      }
-    },
     "feature.auth.ang.tai.tai.khoan": {
       "comment": "Chuỗi hiển thị trong Features/Auth.",
       "extractionState": "manual",
@@ -733,18 +721,6 @@
         }
       }
     },
-    "feature.auth.ban.ang.dung.mat.khau.tam.do.giao.vien.cap.hay.a": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bạn đang dùng mật khẩu tạm do giáo viên cấp. Hãy đặt mật khẩu mới để tiếp tục."
-          }
-        }
-      }
-    },
     "feature.auth.ban.oi.uoc.vai.tro.bat.cu.luc.nao.trong.cai.at": {
       "comment": "Chuỗi hiển thị trong Features/Auth.",
       "extractionState": "manual",
@@ -765,18 +741,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Báo cáo"
-          }
-        }
-      }
-    },
-    "feature.auth.bao.so.ien.thoai.nay.cho.giao.vien.cua.con": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Báo số điện thoại này cho giáo viên của con."
           }
         }
       }
@@ -937,18 +901,6 @@
         }
       }
     },
-    "feature.auth.dung.so.ien.thoai.a.ang.ky.voi.giao.vien.va.mat": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "dùng số điện thoại đã đăng ký với giáo viên và mật khẩu giáo viên cấp."
-          }
-        }
-      }
-    },
     "feature.auth.giao.vien": {
       "comment": "Chuỗi hiển thị trong Features/Auth.",
       "extractionState": "manual",
@@ -961,30 +913,6 @@
         }
       }
     },
-    "feature.auth.giao.vien.bam.cap.lai.mat.khau.o.ho.so.hoc.sinh": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Giáo viên bấm “Cấp lại mật khẩu” ở hồ sơ học sinh."
-          }
-        }
-      }
-    },
-    "feature.auth.giao.vien.chua.tu.at.lai.mat.khau.uoc": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Giáo viên chưa tự đặt lại mật khẩu được."
-          }
-        }
-      }
-    },
     "feature.auth.hay.cho.ong.bo.xong.roi.ang.xuat": {
       "comment": "Chuỗi hiển thị trong Features/Auth.",
       "extractionState": "manual",
@@ -993,18 +921,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hãy chờ đồng bộ xong rồi đăng xuất."
-          }
-        }
-      }
-    },
-    "feature.auth.hien.chua.co.tu.phuc.hoi.mat.khau.cho.giao.vien": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hiện chưa có tự phục hồi mật khẩu cho giáo viên. Quản trị viên sẽ cấp mật khẩu mới cho bạn."
           }
         }
       }
@@ -1069,30 +985,6 @@
         }
       }
     },
-    "feature.auth.khac.mat.khau.tam": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Khác mật khẩu tạm"
-          }
-        }
-      }
-    },
-    "feature.auth.khong.co.ma.nao.uoc.gui.en.ien.thoai.cua.ban": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Không có mã nào được gửi đến điện thoại của bạn."
-          }
-        }
-      }
-    },
     "feature.auth.khong.the.ang.xuat": {
       "comment": "Chuỗi hiển thị trong Features/Auth.",
       "extractionState": "manual",
@@ -1125,18 +1017,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Không thể đọc cấu hình ứng dụng."
-          }
-        }
-      }
-    },
-    "feature.auth.lien.he.quan.tri.vien.khong.gian.lam.viec": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Liên hệ quản trị viên không gian làm việc"
           }
         }
       }
@@ -1213,18 +1093,6 @@
         }
       }
     },
-    "feature.auth.mat.khau.hien.tai.mat.khau.tam": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mật khẩu hiện tại (mật khẩu tạm)"
-          }
-        }
-      }
-    },
     "feature.auth.mat.khau.moi": {
       "comment": "Chuỗi hiển thị trong Features/Auth.",
       "extractionState": "manual",
@@ -1233,18 +1101,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mật khẩu mới"
-          }
-        }
-      }
-    },
-    "feature.auth.mat.khau.moi.khong.uoc.trung.mat.khau.tam": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mật khẩu mới không được trùng mật khẩu tạm."
           }
         }
       }
@@ -1341,18 +1197,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nhập lại mật khẩu mới"
-          }
-        }
-      }
-    },
-    "feature.auth.nho.giao.vien.cap.lai.mat.khau.cho.so.ien.thoai": {
-      "comment": "Chuỗi hiển thị trong Features/Auth.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nhờ giáo viên cấp lại mật khẩu cho số điện thoại của bạn."
           }
         }
       }
@@ -7652,7 +7496,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Điểm phải từ 0 đến %@."
+            "value": "Điểm phải từ 0 đến %@, theo bước 0,5."
           }
         }
       }
@@ -7700,7 +7544,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Điểm từ 0 đến %@"
+            "value": "Điểm từ 0 đến %@, theo bước 0,5"
           }
         }
       }
@@ -8301,6 +8145,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lỗi lưu — vui lòng thử lại"
+          }
+        }
+      }
+    },
+    "feature.auth.phu.huynh.dung.so.trong.ho.so.hoc.sinh": {
+      "comment": "Chuỗi hiển thị trong Features/Auth.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dùng số điện thoại đã khai trong hồ sơ học sinh và mật khẩu tài khoản."
+          }
+        }
+      }
+    },
+    "feature.auth.nguoi.van.hanh.dat.lai.mat.khau": {
+      "comment": "Chuỗi hiển thị trong Features/Auth.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Người vận hành sẽ đặt lại mật khẩu cho bạn. Không gửi mã xác nhận."
+          }
+        }
+      }
+    },
+    "feature.auth.lien.he.nguoi.van.hanh": {
+      "comment": "Chuỗi hiển thị trong Features/Auth.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liên hệ người vận hành và cung cấp số điện thoại tài khoản."
+          }
+        }
+      }
+    },
+    "feature.auth.nguoi.van.hanh.dat.lai.thu.cong": {
+      "comment": "Chuỗi hiển thị trong Features/Auth.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Người vận hành sẽ đặt lại mật khẩu thủ công."
+          }
+        }
+      }
+    },
+    "feature.auth.khac.mat.khau.hien.tai": {
+      "comment": "Chuỗi hiển thị trong Features/Auth.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khác mật khẩu hiện tại"
           }
         }
       }
