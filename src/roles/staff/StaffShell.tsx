@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { getSession } from "../../data/auth/session";
 import { getStore, replaceStore, useStore } from "../../data/store";
 import SaveStatus from "../../shared/SaveStatus";
 import { Icon } from "../../shared/ui";
+import { PageTransition } from "../../shared/motion";
 import styles from "../../app/shell.module.css";
 
 const desktopItems = [
@@ -17,6 +18,10 @@ const desktopItems = [
 
 function classPath(classId: string | undefined, section: string): string {
   return classId ? `/lop/${classId}/${section}` : "/lop";
+}
+
+function isDetailPath(pathname: string): boolean {
+  return pathname.split("/").filter(Boolean).length > 2;
 }
 
 export function Component() {
@@ -115,8 +120,8 @@ export function Component() {
         </nav>
         <SaveStatus className={styles.staffDesktopSaveStatus} />
       </aside>
-      <main id="staff-content" className={styles.staffContent}>
-        <Outlet />
+        <main id="staff-content" className={styles.staffContent}>
+          <PageTransition detail={isDetailPath(pathname)} />
       </main>
       <nav className={styles.staffTabbar} aria-label="Điều hướng chính">
         <NavLink to="/lop">

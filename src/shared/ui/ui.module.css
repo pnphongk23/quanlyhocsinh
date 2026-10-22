@@ -15,6 +15,12 @@
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    transform 100ms var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+.button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 .md {
   min-height: 48px;
@@ -27,6 +33,14 @@
   width: 100%;
   border-radius: var(--radius-control);
   font-size: 16px;
+}
+.block {
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  .button { min-width: 96px; }
+  .lg { width: auto; }
+  .block { width: 100%; }
 }
 .secondary {
   background: var(--color-primary-soft);
@@ -149,12 +163,15 @@
 
 /* Segmented */
 .segmented {
+  position: relative;
   display: flex;
   padding: 3px;
   border-radius: 12px;
   background: var(--color-border);
 }
 .segment {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-height: var(--tap);
   border: 0;
@@ -163,10 +180,14 @@
   color: var(--color-muted);
   font-size: 15px;
   font-weight: 600;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 .segmentOn {
-  background: var(--color-surface);
   color: var(--color-text);
+}
+.segmentThumb {
+  border-radius: 10px;
+  background: var(--color-surface);
 }
 
 /* Đầu trang */
@@ -180,7 +201,7 @@
 }
 .pageHeaderMain {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
   min-width: 0;
   flex: 1;
@@ -274,6 +295,24 @@
 .dialog::backdrop {
   background: var(--color-scrim);
 }
+.dialog[open] {
+  animation: dialogIn var(--dur-slow) var(--ease-out) both;
+}
+.dialog[open]::backdrop {
+  animation: backdropIn var(--dur-slow) var(--ease-out) both;
+}
+.dialog[open][data-closing] {
+  animation: dialogOut var(--dur-base) var(--ease-in) both;
+}
+.dialog[open][data-closing]::backdrop {
+  animation: backdropOut var(--dur-base) var(--ease-in) both;
+}
+@keyframes dialogIn { from { opacity: 0; transform: scale(0.96); } }
+@keyframes dialogOut { to { opacity: 0; transform: scale(0.96); } }
+@keyframes sheetIn { from { transform: translateY(100%); } }
+@keyframes sheetOut { to { transform: translateY(100%); } }
+@keyframes backdropIn { from { opacity: 0; } }
+@keyframes backdropOut { to { opacity: 0; } }
 .dialogBody {
   flex: 1 1 auto;
   min-height: 0;
@@ -304,6 +343,8 @@
   .sheet .dialogFooter {
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
+  .sheet[open] { animation-name: sheetIn; }
+  .sheet[open][data-closing] { animation-name: sheetOut; }
 }
 .dialogHeader {
   display: flex;

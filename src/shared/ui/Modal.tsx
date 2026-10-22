@@ -1,5 +1,6 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Button } from "./Button";
+import { useAnimatedDialog } from "./useAnimatedDialog";
 import s from "./ui.module.css";
 export interface ModalProps {
   open: boolean;
@@ -19,12 +20,7 @@ export function Modal({
   sheet = false,
 }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
+  useAnimatedDialog(ref, open);
   return (
     <dialog
       ref={ref}
