@@ -141,9 +141,9 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
     return { roster: roster.length, records, sent, homework };
   }
 
-  function cancel(session: Session) {
+  async function cancel(session: Session) {
     try {
-      cancelSession(session.id);
+      await cancelSession(session.id);
       setConfirmSession(null);
       setError("");
     } catch (cause) {

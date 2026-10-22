@@ -195,14 +195,14 @@ export default function ReportsPage() {
     return saveReport({ classId, studentId: student.id, month });
   }
 
-  /** Lưu nhận xét chung của tháng (nháp trên máy, dùng được khi mất mạng). */
-  function persistComment(value: string) {
+  /** Lưu nhận xét chung của tháng qua API. */
+  async function persistComment(value: string) {
     if (!selected || !canWrite) return;
     if (value.trim() === (selected.record?.generalComment ?? "")) return;
     save.markUnsaved();
     try {
       const record = ensureReport(selected.report.student);
-      saveReportComment(record.id, value);
+      await saveReportComment(record.id, value);
       save.clearStatus();
       resetNotices();
       setMessage("Đã lưu nhận xét chung.");
@@ -223,12 +223,12 @@ export default function ReportsPage() {
     persistComment(suggestion);
   }
 
-  function publishRow(row: ReviewRow) {
+  async function publishRow(row: ReviewRow) {
     if (!row.slot.publishable) return;
     save.markUnsaved();
     try {
       const record = row.record ?? ensureReport(row.report.student);
-      publishReport(record.id);
+        await publishReport(record.id);
       save.clearStatus();
       resetNotices();
       setMessage(
@@ -244,15 +244,15 @@ export default function ReportsPage() {
     }
   }
 
-  function publishAll() {
+  async function publishAll() {
     const waiting = rows.filter((row) => row.slot.publishable);
     if (!waiting.length) return;
     save.markUnsaved();
     try {
-      waiting.forEach((row) => {
+      for (const row of waiting) {
         const record = row.record ?? ensureReport(row.report.student);
-        publishReport(record.id);
-      });
+        await publishReport(record.id);
+      }
       save.clearStatus();
       resetNotices();
       setMessage(`Đã phát hành ${waiting.length} báo cáo.`);

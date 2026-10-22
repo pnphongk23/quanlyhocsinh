@@ -123,9 +123,9 @@ export default function ClassDesktopHeader({
       label: "Lưu trữ lớp",
       icon: "archive",
       danger: true,
-      onSelect: () => {
+      onSelect: async () => {
         try {
-          archiveClass(classId);
+          await archiveClass(classId);
           setError("");
           setOptionsOpen(false);
         } catch (cause) {

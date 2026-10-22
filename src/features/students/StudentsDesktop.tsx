@@ -69,11 +69,11 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
 
   if (!klass) return null;
 
-  function addStudent(event: FormEvent<HTMLFormElement>) {
+  async function addStudent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     try {
-      createStudent({
+      await createStudent({
         classId,
         name: String(data.get("name") ?? "").trim(),
         parentPhone: String(data.get("phone") ?? "").trim(),
@@ -92,12 +92,12 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
     }
   }
 
-  function savePhone(event: FormEvent<HTMLFormElement>) {
+  async function savePhone(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!phoneFor) return;
     const data = new FormData(event.currentTarget);
     try {
-      updateStudentPhone(phoneFor.id, String(data.get("phone") ?? ""));
+      await updateStudentPhone(phoneFor.id, String(data.get("phone") ?? ""));
       setPhoneFor(null);
       setPhoneError("");
     } catch (cause) {
@@ -300,10 +300,10 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
           <Button
             variant="danger"
             size="md"
-            onClick={() => {
+            onClick={async () => {
               if (!leavingStudent) return;
               try {
-                markStudentLeft(leavingStudent.id, todayISO());
+                await markStudentLeft(leavingStudent.id, todayISO());
                 setLeavingStudent(null);
               } catch (cause) {
                 setError(

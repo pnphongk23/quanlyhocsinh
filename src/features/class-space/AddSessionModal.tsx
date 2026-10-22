@@ -53,7 +53,7 @@ export default function AddSessionModal({
           return;
         }
       } else {
-        createExtraSession({ classId, date, time, note: note.trim() || undefined });
+        await createExtraSession({ classId, date, time, note: note.trim() || undefined });
       }
       onClose();
     } catch (cause) {

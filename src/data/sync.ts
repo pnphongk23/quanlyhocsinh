@@ -1,7 +1,7 @@
 import { ApiError, createApiClient } from "./api/client";
 import type { CommandResult, EntityMap, PullResponse, SyncCommand } from "./api/types";
 import { db, getCacheIdentity, identityKey, rowKey, stored, tableFor, type EntityName, type OutboxRow } from "./db";
-import { getToken } from "./auth/session";
+import { clearSession, getToken, invalidateActiveMembership } from "./auth/session";
 import { hydrateStore } from "./store";
 import { setSaveStatus } from "./saveStatus";
 const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
@@ -88,12 +88,15 @@ async function pull(identity: string, membershipId: string): Promise<void> {
       const page: PullResponse = await api.request("GET /sync/pull", { query: { membership_id: membershipId, cursor: meta.cursor, epoch: meta.epoch, limit: 200 } }) as PullResponse;
       await applyPull(page, identity); meta = { ...meta, cursor: page.cursor, epoch: page.epoch };
       if (!page.has_more) break;
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 409 && ["resync_required", "snapshot_required"].includes(error.error.code)) {
-        await clearIdentityCache(identity); await snapshot(identity, membershipId); break;
-      }
-      if (error instanceof ApiError && error.status === 404) { await clearIdentityCache(identity); break; }
-      throw error;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 409 && ["resync_required", "snapshot_required"].includes(error.error.code)) {
+          await clearIdentityCache(identity); await snapshot(identity, membershipId); break;
+        }
+        if (error instanceof ApiError && error.status === 401) { await clearIdentityCache(identity); await clearSession(); break; }
+        if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+          await clearIdentityCache(identity); await invalidateActiveMembership(); break;
+        }
+        throw error;
     }
   } while (true);
 }
@@ -103,6 +106,7 @@ async function clearIdentityCache(identity: string): Promise<void> {
     await db.meta.delete(identity);
   });
 }
+export const clearMembershipCache = clearIdentityCache;
 export async function syncNow(): Promise<void> {
   if (timer) { clearTimeout(timer); timer = undefined; }
   if (running) return running;
@@ -127,8 +131,17 @@ export async function syncNow(): Promise<void> {
         const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({ id, type, payload, base_version, created_at })) as SyncCommand[];
         await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "sending" as const })));
         let response;
-        try { response = await api.request("POST /sync/push", { body: { membership_id: cache.membershipId, device_id: getDeviceId(), commands } }); }
-        catch (e) { await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "pending" as const }))); throw e; }
+          try { response = await api.request("POST /sync/push", { body: { membership_id: cache.membershipId, device_id: getDeviceId(), commands } }); }
+          catch (e) {
+            if (e instanceof ApiError && e.status === 401) {
+              await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "pending" as const })));
+              await clearIdentityCache(identity); await clearSession();
+            } else if (e instanceof ApiError && (e.status === 403 || e.status === 404)) {
+              await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "rejected" as const, error: e.error.code })));
+              await clearIdentityCache(identity); await invalidateActiveMembership();
+            } else await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "pending" as const })));
+            throw e;
+          }
           const returned = new Set<string>();
           for (const result of response.results) { returned.add(result.id); await applyCommandResult(result, identity); }
           for (const row of batch) if (!returned.has(row.id)) await db.outbox.update(row.id, { status: "pending" });

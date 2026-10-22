@@ -1,9 +1,11 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { db, identityKey, setCacheIdentity } from "../data/db";
+import { db, identityKey, setCacheIdentity, stored } from "../data/db";
 import { getSaveStatus, setSaveStatus } from "../data/saveStatus";
+import { ApiError } from "../data/api/client";
 
-vi.mock("../data/auth/session", () => ({ getToken: () => "fake-token" }));
+const auth = vi.hoisted(() => ({ clearSession: vi.fn(), invalidateActiveMembership: vi.fn() }));
+vi.mock("../data/auth/session", () => ({ getToken: () => "fake-token", ...auth }));
 
 const identity = { userId: "test-user", workspaceId: "test-workspace", membershipId: "test-membership" };
 const identityId = `${identity.userId}:${identity.workspaceId}:${identity.membershipId}`;
@@ -35,5 +37,40 @@ describe("sync rejection persistence", () => {
 
     expect(await db.outbox.get("cmd-rejected")).toMatchObject({ status: "rejected", error: "forbidden" });
     expect(getSaveStatus()).toBe("error");
+  });
+
+  it("hides membership cache and preserves its rejected outbox on a permission revoke", async () => {
+    const { api, syncNow } = await import("../data/sync");
+    const id = identityKey();
+    await db.classes.put(stored("class", `${id}|class|class-a`, { id: "class-a", name: "Fixture", status: "active", weekdays: [1], start_time: "09:00" } as never) as never);
+    await db.outbox.put({
+      id: "cmd-revoked", identity: id, type: "attendance.set",
+      payload: { session_id: "session-a", student_id: "student-a", status: "present" },
+      base_version: 2, membership_id: identity.membershipId, created_at: "2026-10-23T00:00:00Z", status: "pending",
+    });
+    vi.spyOn(api, "request").mockRejectedValue(new ApiError(403, { code: "account_disabled", message: "Disabled", request_id: "fixture" }));
+
+    await syncNow();
+
+    expect(await db.classes.get(`${id}|class|class-a`)).toBeUndefined();
+    expect(await db.outbox.get("cmd-revoked")).toMatchObject({ status: "rejected", error: "account_disabled" });
+    expect(auth.invalidateActiveMembership).toHaveBeenCalledOnce();
+  });
+
+  it("clears the session on 401 but retains the pending command", async () => {
+    const { api, syncNow } = await import("../data/sync");
+    const id = identityKey();
+    await db.meta.put({ key: id, identity: id, cursor: 0, epoch: 1 });
+    await db.outbox.put({
+      id: "cmd-expired", identity: id, type: "attendance.set",
+      payload: { session_id: "session-a", student_id: "student-a", status: "present" },
+      base_version: 2, membership_id: identity.membershipId, created_at: "2026-10-23T00:00:00Z", status: "pending",
+    });
+    vi.spyOn(api, "request").mockRejectedValue(new ApiError(401, { code: "unauthorized", message: "Expired", request_id: "fixture" }));
+
+    await syncNow();
+
+    expect(await db.outbox.get("cmd-expired")).toMatchObject({ status: "pending" });
+    expect(auth.clearSession).toHaveBeenCalledOnce();
   });
 });

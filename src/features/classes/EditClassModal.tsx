@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { ApiError } from "../../data/api/client";
 import { getClass, updateClass } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
 import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
@@ -19,22 +20,26 @@ export function EditClassModal({
   const access = useAccess();
   const [name, setName] = useState(klass?.name ?? "");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   if (!access.can("classes", "write")) return null;
   if (!klass) return null;
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
+    setSaving(true);
     try {
-        updateClass(classId, { name });
+      await updateClass(classId, { name });
       save.clearStatus();
       setError("");
       onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không lưu được lớp.");
+      setError(cause instanceof ApiError ? cause.error.message : cause instanceof Error ? cause.message : "Không lưu được lớp.");
       save.setStatus("error");
+      setSaving(false);
     }
   }
   return (
-    <Modal title="Sửa lớp" open onClose={onClose}>
+    <Modal title="Sửa lớp" open onClose={saving ? () => {} : onClose}>
       <form className={s.form} onSubmit={submit}>
         <Input
           label="Tên lớp"
@@ -47,6 +52,7 @@ export function EditClassModal({
         />
           <Button
             type="button"
+            disabled={saving}
             variant="secondary"
             onClick={() => {
               onClose();
@@ -61,7 +67,7 @@ export function EditClassModal({
           </p>
         )}
         <SaveStatus status={save.status} />
-        <Button type="submit">Lưu thay đổi</Button>
+        <Button type="submit" disabled={saving}>Lưu thay đổi</Button>
       </form>
     </Modal>
   );

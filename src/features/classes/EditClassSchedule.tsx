@@ -103,7 +103,7 @@ export function EditClassSchedule({
     onClose();
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+    async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     if (!days.length) {
@@ -115,7 +115,7 @@ export function EditClassSchedule({
       return;
     }
     try {
-      const updated = updateClassSchedule(classId, { weekdays: days, time }, localToday());
+        const updated = await updateClassSchedule(classId, { weekdays: days, time }, localToday());
       setResult(
         `Đã cập nhật lịch: bỏ ${updated.removed}, thêm ${updated.added}${
           updated.retimed ? `, đổi giờ ${updated.retimed}` : ""

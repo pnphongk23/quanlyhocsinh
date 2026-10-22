@@ -16,7 +16,7 @@ export default function NewClassPage() {
   const [time, setTime] = useState("18:30");
   const [error, setError] = useState("");
   if (!access.can("classes", "write")) return <NoAccess what="mục tạo lớp" />;
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     if (
       !name.trim() ||
@@ -28,7 +28,7 @@ export default function NewClassPage() {
       return;
     }
     try {
-      createClass({ name, weekdays: days, time });
+      await createClass({ name, weekdays: days, time });
       save.clearStatus();
       setError("");
       navigate("/lop", { replace: true });

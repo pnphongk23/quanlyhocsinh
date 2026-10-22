@@ -45,11 +45,11 @@ export default function StudentsPage() {
 
   if (desktop) return <StudentsDesktop classId={classId} />;
 
-  function addStudent(event: FormEvent<HTMLFormElement>) {
+  async function addStudent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     try {
-      createStudent({
+      await createStudent({
         classId,
         name: String(data.get("name") ?? "").trim(),
         parentPhone: String(data.get("phone") ?? "").trim(),
@@ -64,10 +64,10 @@ export default function StudentsPage() {
     }
   }
 
-  function markLeft() {
+  async function markLeft() {
     if (!leavingId) return;
     try {
-      markStudentLeft(leavingId, todayISO());
+      await markStudentLeft(leavingId, todayISO());
       setLeavingId(null);
       setError("");
     } catch (cause) {

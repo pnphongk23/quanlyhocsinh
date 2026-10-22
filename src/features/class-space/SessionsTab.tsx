@@ -54,9 +54,9 @@ export default function SessionsTab() {
     };
   }, []);
 
-  function cancel(session: Session) {
+  async function cancel(session: Session) {
     try {
-      cancelSession(session.id);
+      await cancelSession(session.id);
       setError("");
       setConfirmSession(null);
     } catch (cause) {

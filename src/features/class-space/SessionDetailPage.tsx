@@ -93,10 +93,10 @@ export default function SessionDetailPage() {
       </EmptyState>
     );
 
-  function cancel() {
+  async function cancel() {
     if (!session) return;
     try {
-      cancelSession(session.id);
+      await cancelSession(session.id);
       setError("");
       navigate(`/lop/${classId}/buoi-hoc`);
     } catch (cause) {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { MEMBER_IDS, ROLE_IDS } from "../../data/defaults";
@@ -9,6 +9,9 @@ import type { StoreState } from "../../data/types";
 import ReportPreview from "./ReportPreview";
 import ReportsPage from "./ReportsPage";
 import { buildMonthlyStudentReport, type MonthlyStudentReport } from "../../data/reportModel";
+
+const reportApi = vi.hoisted(() => ({ request: vi.fn(async (_endpoint: string, options?: { body?: { general_comment?: string } }) => ({ general_comment: options?.body?.general_comment })) }));
+vi.mock("../../data/sync", () => ({ api: { request: reportApi.request } }));
 
 /** Bỏ các comment phân cách React chèn giữa hai text node khi render tĩnh. */
 const text = (html: string) => html.replace(/<!-- -->/g, "");
@@ -169,9 +172,9 @@ describe("màn duyệt & phát hành báo cáo (ảnh 13)", () => {
     );
   });
 
-  it("lưu nhận xét chung xong thì em đó đủ dữ liệu để phát hành", () => {
+    it("lưu nhận xét chung xong thì em đó đủ dữ liệu để phát hành", async () => {
     const state = seedStore();
-    saveReportComment(
+      await saveReportComment(
       "6a-student-0-report",
       "Con chăm chỉ và tiến bộ đều trong tháng 10.",
     );
