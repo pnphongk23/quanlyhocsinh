@@ -2,7 +2,7 @@
 # Thông tin đăng nhập KHÔNG nằm trong repo: truyền qua `-e` từ `/tmp/qlh-staging-demo.txt`, ví dụ
 #   maestro --device <udid> test -e STAGING_PHONE=... -e STAGING_PASSWORD=... ios/maestro/staging/01-login.yaml
 # `STAGING_PHONE` là 9 số nội địa (app đã có tiền tố +84 và tự chuẩn hoá trước khi gửi).
-# Ảnh chụp không chứa mật khẩu (ô mật khẩu đã bị xoá khi sang màn kế tiếp).
+  # Không chụp ảnh để tránh lưu dữ liệu tài khoản ngoài ý muốn.
 appId: vn.quanlylop.app
 name: staging-login
 ---
@@ -27,4 +27,3 @@ name: staging-login
     timeout: 45000
 - assertNotVisible:
     id: saveStatus.error
-- takeScreenshot: staging-classes

@@ -1,0 +1,30 @@
+appId: vn.quanlylop.app
+name: staging-attendance-restore
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 30000
+- tapOn:
+    text: "${STAGING_CLASS_NAME}"
+- extendedWaitUntil:
+    visible: "${STAGING_SESSION_TITLE}"
+    timeout: 20000
+- tapOn:
+    text: "${STAGING_SESSION_TITLE}"
+- extendedWaitUntil:
+    visible: "Điểm danh"
+    timeout: 20000
+- tapOn:
+    text: "${STAGING_STUDENT_LATE_LABEL}"
+- tapOn:
+    text: "${STAGING_STUDENT_EXCUSED_LABEL}"
+- tapOn:
+    text: "${STAGING_STUDENT_PRESENT_LABEL}"
+- tapOn:
+    text: "Lưu điểm danh"
+- extendedWaitUntil:
+    visible: "${STAGING_STUDENT_PRESENT_LABEL}"
+    timeout: 45000
+- assertNotVisible:
+    id: saveStatus.error

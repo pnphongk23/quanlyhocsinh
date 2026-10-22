@@ -120,6 +120,19 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(queued.map(\.command.id), [edit.id])
         XCTAssertEqual(queued.first?.state, "rejected")
     }
+    func testInvalidScoreStepRejectionRemainsQueuedAsError() async throws {
+        let store = try store(), now = Date(timeIntervalSince1970: 1000), edit = command(cell())
+        try await store.write(1, forKey: edit.recordKey, enqueueing: edit)
+        _ = try await store.claimBatch(now: now)
+        try await store.acknowledge([CommandResult(id: edit.id, status: .rejected,
+            error: APIError(code: "invalid_score_step", message: nil, details: nil, requestId: nil))])
+        let queued = try await store.queuedCommands()
+        XCTAssertEqual(queued.map(\.command.id), [edit.id])
+        XCTAssertEqual(queued.first?.state, "rejected")
+        XCTAssertEqual(queued.first?.error?.code, "invalid_score_step")
+        let count = try await store.pendingCommandCount()
+        XCTAssertEqual(count, 1)
+    }
     func testPullIgnoresUnknownEntitiesAndAdvancesCursor() async throws {
         let store = try store(), key = RecordKey(entity: "conflict", k1: "legacy")
         let unknown = JSONValue.object(["id": .string("legacy"), "version": .number(1)])
