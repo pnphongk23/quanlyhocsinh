@@ -95,6 +95,7 @@ async function clearIdentityCache(identity: string): Promise<void> {
   });
 }
 export async function syncNow(): Promise<void> {
+  if (timer) { clearTimeout(timer); timer = undefined; }
   if (running) return running;
   const cache = getCacheIdentity(); if (!cache || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) return;
     const identity = identityKey();
