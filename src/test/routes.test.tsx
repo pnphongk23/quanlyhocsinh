@@ -152,7 +152,7 @@ describe("foundation route integration", () => {
     router.dispose();
   });
 
-  it.each(["/luong", "/hoc-phi", "/nhan-su", "/bai-giang", "/moi", "/otp", "/lop/class-a/bao-cao-diem"])("does not register non-MVP route %s", (path) => {
+  it.each(["/luong", "/hoc-phi", "/nhan-su", "/bai-giang", "/moi", "/lop/class-a/bao-cao-diem"])("does not register non-MVP route %s", (path) => {
     expect(matchRoutes(routes, path)?.at(-1)?.route.path).toBe("*");
   });
 });

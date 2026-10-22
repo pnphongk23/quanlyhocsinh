@@ -5,7 +5,11 @@ import { initializeSession } from "../data/auth/session";
 import { staffRoutes } from "../roles/staff/routes";
 import { guardianRoutes } from "../roles/guardian/routes";
 import { accountRoutes } from "../roles/account/routes";
+import { PwaGuideGate } from "../features/pwa/PwaGuideGate";
 import styles from "./shell.module.css";
+function RootLayout() {
+  return <PwaGuideGate><Outlet /></PwaGuideGate>;
+}
 function FoundationHome() {
   return <main className={styles.content}><h1>Quản lý lớp</h1><p>Khung ứng dụng · Đợt A</p><nav className={styles.nav} aria-label="Mở khung theo vai trò"><Link to="/lop">Khung nhân sự</Link><Link to="/ph">Khung phụ huynh</Link><Link to="/dang-nhap">Đăng nhập</Link></nav></main>;
 }
@@ -14,7 +18,7 @@ function RouteError() {
   return <main className={styles.content}><h1>Không thể mở màn hình</h1><Link to="/">Về trang đầu</Link></main>;
 }
 export const routes: RouteObject[] = [{
-  element: <Outlet />, errorElement: <RouteError />,
+    element: <RootLayout />, errorElement: <RouteError />,
   children: [
     { path: "/", element: <FoundationHome /> },
       ...guardRoutes(staffRoutes, "staff"), ...guardRoutes(guardianRoutes, "guardian"), ...accountRoutes,
