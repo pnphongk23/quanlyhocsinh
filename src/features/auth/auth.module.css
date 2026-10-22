@@ -1,0 +1,625 @@
+/*
+ * Màn Tài khoản theo ảnh thiết kế đã duyệt `design/auth-r4/` (01…24):
+ * mobile là trang đầy đủ 390 px, web desktop là thẻ trắng 480 px giữa nền xám.
+ * Màu lấy từ token chung (`--color-primary` #2F5BEA), không thêm màu cứng.
+ */
+
+.page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 24px 24px;
+  background: var(--color-bg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* --------------------------------------------------------------- thương hiệu */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 24px;
+  font-weight: 700;
+  flex: none;
+}
+.brandMascot {
+  margin-left: auto;
+}
+.brandName {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.title {
+  margin-top: 30px;
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.description {
+  margin-top: 8px;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--color-muted);
+}
+
+/* ------------------------------------------------------------------ biểu mẫu */
+
+.form {
+  display: grid;
+  gap: 20px;
+  margin-top: 24px;
+}
+.field {
+  display: grid;
+  gap: 8px;
+}
+.field > label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.fieldError {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+.phoneBox,
+.passwordBox,
+.textBox {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  border: 1.5px solid var(--color-input-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.phoneBox:focus-within,
+.passwordBox:focus-within,
+.textBox:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.prefix {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 0 16px;
+  border-right: 1.5px solid var(--color-input-border);
+  color: var(--color-muted);
+  font-size: 17px;
+  font-weight: 600;
+  flex: none;
+}
+.phoneInput,
+.passwordInput,
+.textInput {
+  flex: 1;
+  min-width: 0;
+  height: 54px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 17px;
+  font-family: inherit;
+}
+.phoneInput:focus,
+.passwordInput:focus,
+.textInput:focus {
+  outline: none;
+}
+.phoneInput::placeholder,
+.passwordInput::placeholder,
+.textInput::placeholder {
+  color: var(--color-placeholder);
+}
+.passwordInput {
+  padding-right: 8px;
+}
+.eye {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.eye:hover {
+  background: var(--color-neutral-soft);
+}
+.readOnlyTag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 14px;
+  color: var(--color-muted);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.boxReadOnly {
+  background: var(--color-neutral-soft);
+  border-color: var(--color-input-border);
+}
+.boxDisabled {
+  background: var(--color-neutral-soft);
+  border-color: var(--color-input-border);
+  color: var(--color-muted);
+}
+.boxDisabled .prefix,
+.boxDisabled .phoneInput,
+.boxDisabled .passwordInput {
+  color: var(--color-muted);
+}
+.boxError {
+  border-color: var(--color-error);
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ thông báo */
+
+.banner {
+  display: block;
+  padding: 14px 16px;
+  border-radius: var(--radius-control);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.bannerError {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+.bannerWarn {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.bannerInfo {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+.bannerTop {
+  margin-top: 22px;
+}
+
+/* --------------------------------------------------------------------- nút */
+
+.submit {
+  margin-top: 6px;
+  min-height: 56px;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 17px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.submit:hover:not(:disabled) {
+  background: var(--color-primary-ink);
+}
+.submit:disabled {
+  background: var(--color-input-border-strong);
+  color: var(--color-surface);
+  cursor: not-allowed;
+}
+.submitSticky {
+  margin-top: auto;
+}
+
+.forgotRow {
+  display: flex;
+  justify-content: flex-end;
+}
+.forgotLink {
+  color: var(--color-primary);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.forgotLink:hover {
+  text-decoration: underline;
+}
+
+/* --------------------------------------------------------- khối dưới biểu mẫu */
+
+.footerBlock {
+  display: grid;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 32px;
+}
+.registerRow {
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--color-muted);
+}
+.registerLink {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+.registerLink:hover {
+  text-decoration: underline;
+}
+.hintCard {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--color-neutral-soft);
+  color: var(--color-text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.hintCard strong {
+  font-weight: 700;
+}
+
+.forgotPhone {
+  margin-top: 22px;
+}
+.buttonLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  text-decoration: none;
+}
+.formFill {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+/* --------------------------------------------------------- độ mạnh + quy tắc */
+
+.strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.strengthBars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  flex: 1;
+}
+.strengthBar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-divider);
+}
+.strengthBarOn {
+  background: var(--color-success);
+}
+.strengthLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-success);
+  min-width: 52px;
+  text-align: right;
+}
+.checks {
+  display: grid;
+  gap: 10px;
+}
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  color: var(--color-muted);
+}
+.checkDot {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-divider);
+  color: var(--color-success);
+  flex: none;
+}
+.checkOk {
+  color: var(--color-success);
+}
+.checkOk .checkDot {
+  background: var(--color-success-soft);
+}
+
+/* ------------------------------------------------------- nút quay lại + bước */
+
+.backButton {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgb(20 24 31 / 0.04);
+}
+.backButton:hover {
+  background: var(--color-neutral-soft);
+}
+.backLink {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.backLink:hover {
+  text-decoration: underline;
+}
+.backRow {
+  margin-bottom: 20px;
+}
+
+.steps {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+.step {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: 16px;
+  line-height: 1.45;
+}
+.stepNum {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+.note {
+  margin-top: 18px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+/* -------------------------------------------------------------- chọn vai trò */
+
+.roleList {
+  display: grid;
+  gap: 14px;
+  margin-top: 26px;
+}
+.roleCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: var(--radius-row);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+.roleCard:hover {
+  background: var(--color-neutral-soft);
+}
+.roleAvatar {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 17px;
+  font-weight: 700;
+  flex: none;
+}
+.roleText {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.roleName {
+  font-size: 19px;
+  font-weight: 700;
+}
+.roleMeta {
+  font-size: 15px;
+  color: var(--color-muted);
+}
+.roleChevron {
+  color: var(--color-muted);
+  flex: none;
+}
+.pickerFooter {
+  margin-top: auto;
+  padding-top: 28px;
+  font-size: 15px;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ web ≥1024 */
+
+@media (min-width: 1024px) {
+  .page {
+    place-items: center;
+    padding: 48px 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 480px;
+    padding: 32px;
+    border-radius: 20px;
+    background: var(--color-surface);
+    box-shadow: 0 18px 48px rgb(20 24 31 / 0.08);
+  }
+  .logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    font-size: 20px;
+  }
+  .brandName {
+    font-size: 17px;
+  }
+  .title {
+    margin-top: 22px;
+    font-size: 30px;
+  }
+  .description {
+    font-size: 15px;
+  }
+  .form {
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .field {
+    gap: 6px;
+  }
+  .field > label {
+    font-size: 14px;
+  }
+  .phoneBox,
+  .passwordBox,
+  .textBox {
+    min-height: 48px;
+  }
+  .prefix {
+    padding: 0 14px;
+    font-size: 15px;
+  }
+  .phoneInput,
+  .passwordInput,
+  .textInput {
+    height: 46px;
+    padding: 0 14px;
+    font-size: 15px;
+  }
+  .eye {
+    width: 40px;
+    height: 40px;
+  }
+  .readOnlyTag {
+    font-size: 13px;
+  }
+  .banner {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  .bannerTop {
+    margin-top: 18px;
+  }
+  .submit {
+    min-height: 48px;
+    margin-top: 4px;
+    border-radius: var(--radius-button);
+    font-size: 15px;
+  }
+  .forgotLink {
+    font-size: 14px;
+  }
+  .footerBlock {
+    margin-top: 18px;
+    padding-top: 0;
+    gap: 12px;
+  }
+  .registerRow {
+    font-size: 14px;
+  }
+  .hintCard {
+    font-size: 13px;
+    background: var(--color-bg);
+    padding: 12px 14px;
+  }
+  .strengthLabel {
+    font-size: 13px;
+  }
+  .checkRow {
+    font-size: 14px;
+  }
+  .note {
+    font-size: 14px;
+  }
+  .steps {
+    margin-top: 18px;
+    gap: 14px;
+  }
+  .step {
+    font-size: 14px;
+  }
+  .roleList {
+    margin-top: 20px;
+    gap: 12px;
+  }
+  .roleCard {
+    background: var(--color-bg);
+    padding: 14px 16px;
+  }
+  .roleAvatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+  .roleName {
+    font-size: 17px;
+  }
+  .roleMeta {
+    font-size: 14px;
+  }
+  .pickerFooter {
+    font-size: 14px;
+  }
+  .backButton {
+    display: none;
+  }
+  .backLink {
+    display: inline-flex;
+  }
+}

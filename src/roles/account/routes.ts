@@ -1,12 +1,15 @@
 import type { RouteObject } from "react-router-dom";
-import { placeholderRoute } from "../../app/placeholderRoute";
-/** W-4 owns account UI; W-1 adds real session/guards in Phase B. */
+/** Auth/settings stay separate lazy chunks from the staff and guardian apps. */
 export const accountRoutes: RouteObject[] = [
-  { path: "/dang-nhap", lazy: placeholderRoute("Đăng nhập") },
-  { path: "/dang-ky", lazy: placeholderRoute("Tạo không gian làm việc") },
-  { path: "/quen-mat-khau", lazy: placeholderRoute("Quên mật khẩu") },
-  { path: "/doi-mat-khau-bat-buoc", lazy: placeholderRoute("Đổi mật khẩu") },
-  { path: "/chon-vai-tro", lazy: placeholderRoute("Chọn vai trò") },
-  { path: "/cai-dat", lazy: placeholderRoute("Cài đặt") },
-  { path: "/cai-dat/doi-mat-khau", lazy: placeholderRoute("Đổi mật khẩu") },
+  { path: "/dang-nhap", lazy: async () => ({ Component: (await import("../../features/auth/LoginPage")).default }) },
+  { path: "/dang-ky", lazy: async () => ({ Component: (await import("../../features/auth/RegisterPage")).default }) },
+  { path: "/quen-mat-khau", lazy: async () => ({ Component: (await import("../../features/auth/ForgotPasswordPage")).default }) },
+  { path: "/chon-vai-tro", lazy: async () => ({ Component: (await import("../../features/auth/RolePickerPage")).default }) },
+  {
+    lazy: () => import("../staff/StaffShell"),
+    children: [
+      { path: "/cai-dat", lazy: async () => ({ Component: (await import("../../features/settings/SettingsPage")).default }) },
+      { path: "/cai-dat/doi-mat-khau", lazy: async () => ({ Component: (await import("../../features/settings/ChangePasswordPage")).default }) },
+    ],
+  },
 ];
