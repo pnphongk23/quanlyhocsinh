@@ -90,15 +90,16 @@ describe('guardian children in membership views', () => {
     expect((await login(teacherPhone!.phone)).body.memberships[0]).not.toHaveProperty('students');
   });
 
-  it('does not create a membership or expose children for an unlinked guardian', async () => {
+  it('rejects guardian registration when the phone is not linked to a student', async () => {
     const parentPhone = fakePhone();
     const registered = await call('/v1/auth/register-guardian', {
       ...post({ phone: parentPhone, password: PASSWORD }),
       headers: { 'cf-connecting-ip': '198.51.100.94' },
     });
-    expect(registered.status).toBe(201);
-    expect(registered.body.memberships).toEqual([]);
-    expect((await call('/v1/me', {}, registered.body.token)).body.memberships).toEqual([]);
-    expect((await login(parentPhone)).body.memberships).toEqual([]);
+    expect(registered.status).toBe(422);
+    expect(registered.body.error).toMatchObject({
+      code: 'validation_error', details: { reason: 'guardian_phone_not_found' },
+    });
+    expect(await db.prepare('SELECT id FROM users WHERE phone = ?').bind(parentPhone).first()).toBeNull();
   });
 });
