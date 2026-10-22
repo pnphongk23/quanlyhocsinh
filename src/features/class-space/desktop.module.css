@@ -32,6 +32,11 @@
 }
 
 .crumbLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
   color: var(--color-muted);
   text-decoration: none;
 }
