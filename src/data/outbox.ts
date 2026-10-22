@@ -44,5 +44,10 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
     setSaveStatus("error"); throw new Error("Không lưu được vào bộ nhớ trên thiết bị.");
   }
 }
-export async function pendingCommandCount(): Promise<number> { const identity = identityKey(); return db.outbox.where("identity").equals(identity).count(); }
+export async function pendingCommandCount(): Promise<number> {
+  const cache = getCacheIdentity();
+  if (!cache) return 0;
+  const prefix = `${cache.userId}:`;
+  return (await db.outbox.toArray()).filter((row) => row.identity.startsWith(prefix)).length;
+}
 export async function assertCanLogout(): Promise<void> { if (await pendingCommandCount()) throw new Error("Đồng bộ các thay đổi đang chờ trước khi đăng xuất."); }

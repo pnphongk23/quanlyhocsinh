@@ -97,9 +97,10 @@ async function clearIdentityCache(identity: string): Promise<void> {
 export async function syncNow(): Promise<void> {
   if (running) return running;
   const cache = getCacheIdentity(); if (!cache || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) return;
-  const identity = identityKey();
-  running = (async () => {
-    try {
+    const identity = identityKey();
+    running = (async () => {
+      try {
+        await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
         while (true) {
           const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").sortBy("created_at");
           if (!rows.length) break;
