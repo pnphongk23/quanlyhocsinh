@@ -6,12 +6,26 @@ import { defaultRoles } from "../data/defaults";
 import { replaceStore } from "../data/store";
 import { createSeed } from "./fixtures/seed";
 
-const authState = vi.hoisted(() => ({ session: null as WebSession | null }));
+const authState = vi.hoisted(() => ({
+  session: null as WebSession | null,
+  switchMembership: vi.fn(async (membershipId: string) => {
+    if (!authState.session) return;
+    authState.session = {
+      ...authState.session,
+      activeMembershipId: membershipId,
+      me: { ...authState.session.me, active_membership_id: membershipId },
+    };
+  }),
+}));
 vi.mock("../data/auth/session", () => ({
   getSession: () => authState.session,
   getToken: () => authState.session?.token ?? null,
   subscribeSession: () => () => undefined,
   initializeSession: vi.fn(async () => undefined),
+}));
+vi.mock("../data/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../data/auth")>()),
+  switchMembership: authState.switchMembership,
 }));
 
 import { routes } from "../app/routes";
@@ -37,6 +51,25 @@ const activeSession = (kind: "staff" | "guardian"): WebSession => {
         ...(linked ? { students: [{ id: "6a-student-1", name: "Trần Gia Bảo", class_id: "6a", class_name: "Tiếng Anh giao tiếp 6A" }] } : {}),
       }],
     },
+  };
+};
+
+const guardianAccountWithoutMembership = (): WebSession => {
+  const session = activeSession("guardian");
+  return {
+    ...session,
+    activeMembershipId: null,
+    guardianAccount: true,
+    me: { ...session.me, active_membership_id: null, memberships: [] },
+  };
+};
+
+const multiRoleSession = (): WebSession => {
+  const session = activeSession("staff");
+  const guardian = activeSession("guardian").me.memberships[0];
+  return {
+    ...session,
+    me: { ...session.me, memberships: [...session.me.memberships, guardian] },
   };
 };
 
@@ -144,6 +177,73 @@ describe("foundation route integration", () => {
     const router = open("/lop/6a/buoi-hoc");
     expect(await screen.findByRole("heading", { name: "Đăng nhập" })).toBeVisible();
     expect(router.state.location.pathname).toBe("/dang-nhap");
+    router.dispose();
+  });
+
+  it.each(["staff", "guardian"] as const)(
+    "renders /cai-dat in the active %s shell",
+    async (kind) => {
+      authState.session = activeSession(kind);
+      const router = open("/cai-dat");
+      const ownNavigation = kind === "guardian" ? "Điều hướng chính" : "Điều hướng nhân sự";
+        expect(await screen.findByRole("navigation", { name: ownNavigation })).toBeVisible();
+        expect(
+          document.querySelector(
+            `[data-role="${kind === "guardian" ? "staff" : "guardian"}"]`,
+          ),
+        ).toBeNull();
+      router.dispose();
+    },
+  );
+
+  it("keeps /cai-dat/doi-mat-khau inside the active guardian shell on mobile", async () => {
+    authState.session = activeSession("guardian");
+    vi.stubGlobal("matchMedia", (media: string) => ({
+      matches: false,
+      media,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent() { return false; },
+    }));
+    const router = open("/cai-dat/doi-mat-khau");
+    expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Đổi mật khẩu" })).toBeVisible();
+    expect(screen.queryByRole("navigation", { name: "Điều hướng nhân sự" })).toBeNull();
+    router.dispose();
+  });
+
+  it("keeps guardian settings inside the shell with no linked children", async () => {
+    authState.session = guardianAccountWithoutMembership();
+    const router = open("/ph");
+    expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: "Tài khoản và cài đặt" })).toBeVisible();
+    fireEvent.click(screen.getByRole("link", { name: "Tài khoản và cài đặt" }));
+    expect(await screen.findByRole("heading", { name: "Tài khoản của tôi" })).toBeVisible();
+    expect(document.querySelector('[data-role="guardian"]')).not.toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Điều hướng nhân sự" })).toBeNull();
+    router.dispose();
+  });
+
+  it("switches role from guardian settings into the selected shell", async () => {
+    authState.session = multiRoleSession();
+    const router = open("/cai-dat");
+    expect(await screen.findByRole("navigation", { name: "Điều hướng nhân sự" })).toBeVisible();
+    fireEvent.click(await screen.findByRole("button", { name: /Phụ huynh/ }));
+    expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
+    expect(router.state.location.pathname).toBe("/ph");
+    await vi.waitFor(() => expect(screen.queryByRole("navigation", { name: "Điều hướng nhân sự" })).toBeNull());
+    router.dispose();
+  });
+
+  it("redirects guardian away from teacher routes before rendering the staff shell", async () => {
+    authState.session = activeSession("guardian");
+    const router = open("/lop");
+    expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
+    expect(router.state.location.pathname).toBe("/ph");
+    expect(screen.queryByRole("navigation", { name: "Điều hướng nhân sự" })).toBeNull();
     router.dispose();
   });
 

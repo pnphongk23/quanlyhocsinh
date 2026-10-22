@@ -81,11 +81,21 @@ function useSettingsData() {
     if (membership.role.scope_kind !== "linked_students") {
       return membership.workspace.name;
     }
-    const children = listMyChildren().map(({ student, className }) => {
-      const shortName = student.name.trim().split(/\s+/).slice(-2).join(" ");
+    const children =
+      membership.id === current?.id
+        ? listMyChildren().map(({ student, className }) => ({
+            name: student.name,
+            className,
+          }))
+        : (membership.students ?? []).map((student) => ({
+            name: student.name,
+            className: student.class_name,
+          }));
+    const labels = children.map(({ name: childName, className }) => {
+      const shortName = childName.trim().split(/\s+/).slice(-2).join(" ");
       return `${shortName} (${className ? classShortLabel(className) : "—"})`;
     });
-    return children.length ? children.join(", ") : "Chưa liên kết con";
+    return labels.length ? labels.join(", ") : "Chưa liên kết con";
   }
 
   const roleLine = current
@@ -96,25 +106,29 @@ function useSettingsData() {
         system: current.role.system_key === "admin",
         permissions: current.permissions,
       }).label} · ${subtitleFor(current)}`
-    : "";
+    : session?.guardianAccount
+      ? "Phụ huynh · Chưa liên kết con"
+      : "";
 
-    return {
+  return {
     state,
     memberships,
     current,
     multipleRoles: memberships.length > 1,
     name,
     phone,
-      roleLine,
-      guardian: current?.role.scope_kind === "linked_students",
-      subtitleFor,
+    roleLine,
+    guardian:
+      current?.role.scope_kind === "linked_students" ||
+      (!current && session?.guardianAccount === true),
+    subtitleFor,
   };
 }
 
 function SettingsMobile() {
   const navigate = useNavigate();
-    const { state, memberships, current, multipleRoles, name, phone, roleLine, guardian } =
-      useSettingsData();
+  const { state, memberships, current, multipleRoles, name, phone, roleLine, guardian } =
+    useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
   const [blocked, setBlocked] = useState(false);
@@ -140,8 +154,7 @@ function SettingsMobile() {
   }
 
   return (
-      <main className={s.page}>
-        {guardian && <Link to="/ph" className={s.backButton} aria-label="Quay lại phụ huynh"><Icon name="back" size={20} /></Link>}
+      <main className={`${s.page}${guardian ? ` ${s.guardianPage}` : ""}`}>
         <h1 className={s.pageTitle}>Cài đặt</h1>
       {pending > 0 && (
         <p className={s.banner} role="status">
@@ -232,8 +245,8 @@ function SettingsMobile() {
 
 function SettingsDesktop() {
   const navigate = useNavigate();
-    const { state, memberships, current, multipleRoles, name, phone, roleLine, subtitleFor, guardian } =
-      useSettingsData();
+  const { state, memberships, current, multipleRoles, name, phone, roleLine, subtitleFor, guardian } =
+    useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
   const [blocked, setBlocked] = useState(false);
@@ -289,9 +302,8 @@ function SettingsDesktop() {
   }
 
   return (
-    <main className={s.page}>
+      <main className={`${s.page}${guardian ? ` ${s.guardianPage}` : ""}`}>
         <header>
-          {guardian && <Link to="/ph" className={s.backButton} aria-label="Quay lại phụ huynh"><Icon name="back" size={20} /></Link>}
         <p className={s.breadcrumb}>
           <span>Cài đặt</span>
           <span aria-hidden="true">/</span>
@@ -308,7 +320,7 @@ function SettingsDesktop() {
         </p>
       )}
 
-      <div className={s.grid}>
+        <div className={`${s.grid}${guardian ? ` ${s.guardianGrid}` : ""}`}>
         <div className={s.column}>
           <section className={s.card} aria-label="Hồ sơ">
             <h2 className={s.cardHead}>Hồ sơ</h2>

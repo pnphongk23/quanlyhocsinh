@@ -15,6 +15,8 @@ import GuardianSessionPage from "../roles/guardian/GuardianSessionPage";
 import GuardianReportPage from "../roles/guardian/GuardianReportPage";
 import GuardianScoresPage from "../roles/guardian/GuardianScoresPage";
 import GuardianShell from "../roles/guardian/GuardianShell";
+import { Component as AccountShell } from "../roles/account/AccountShell";
+import ChangePasswordPage from "../features/settings/ChangePasswordPage";
 
 const seed = createSeed() as StoreState;
 seed.homeworkSections.push({ id: "fixture-upcoming-homework", sessionId: "6a-extra-session", kind: "reading", title: "Đọc bài", description: "Ôn nội dung bài đọc." });
@@ -37,7 +39,13 @@ const routes = [
       { path: "bao-cao", Component: GuardianReportPage },
     ],
   },
-  { path: "/cai-dat", Component: SettingsPage },
+    {
+      Component: AccountShell,
+      children: [
+        { path: "/cai-dat", Component: SettingsPage },
+        { path: "/cai-dat/doi-mat-khau", Component: ChangePasswordPage },
+      ],
+    },
   { path: "/dang-ky", Component: RegisterPage },
 ];
 

@@ -222,6 +222,11 @@
 /* ------------------------------------------------------------------ web ≥1024 */
 
 @media (min-width: 1024px) {
+  .guardianPage {
+    width: min(100%, 640px);
+    margin-inline: auto;
+  }
+
   .page {
     gap: 18px;
   }
@@ -243,6 +248,9 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
     gap: 20px;
     align-items: start;
+  }
+  .guardianGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
   .column {
     display: grid;
