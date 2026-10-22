@@ -160,13 +160,10 @@ final class I4FeatureStore: ObservableObject {
         guard let store else { return String(localized: "feature.scores.khong.luu.uoc.iem") }
         for (studentID, raw) in values {
             guard let student = students.first(where: { $0.id == studentID }) else { continue }
+            if ScoreRules.isInvalid(raw, max: test.maxScore) {
+                return String.localizedStringWithFormat(String(localized: "feature.scores.iem.phai.tu.0.en"), String(describing: (test.maxScore)))
+            }
             let parsed = Self.parseScore(raw)
-            if raw.trimmingCharacters(in: .whitespaces).isEmpty == false, parsed == nil {
-                return String.localizedStringWithFormat(String(localized: "feature.scores.iem.phai.tu.0.en"), String(describing: (test.maxScore)))
-            }
-            if let parsed, parsed < 0 || parsed > Double(test.maxScore) {
-                return String.localizedStringWithFormat(String(localized: "feature.scores.iem.phai.tu.0.en"), String(describing: (test.maxScore)))
-            }
             let old = score(testID: test.id, studentID: student.id)
             if old?.value == parsed { continue }
             if old == nil && parsed == nil { continue }

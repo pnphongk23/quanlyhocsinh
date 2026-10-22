@@ -5,13 +5,13 @@ final class ScoreRulesTests: XCTestCase {
     func testEmptyBoxIsNotAnErrorAndInvalidValuesAre() {
         XCTAssertFalse(ScoreRules.isInvalid("", max: 15))
         XCTAssertTrue(ScoreRules.isEmpty("  "))
-        XCTAssertFalse(ScoreRules.isInvalid("0", max: 15))
-        XCTAssertFalse(ScoreRules.isInvalid("15", max: 15))
-        XCTAssertFalse(ScoreRules.isInvalid("7,5", max: 15))
+        for value in ["0", "0,5", "7,5", "7.5", "15"] {
+            XCTAssertFalse(ScoreRules.isInvalid(value, max: 15), "Expected \(value) to be valid")
+        }
         XCTAssertFalse(ScoreRules.isInvalid(" 8 ", max: 15))
-        XCTAssertTrue(ScoreRules.isInvalid("15.1", max: 15))
-        XCTAssertTrue(ScoreRules.isInvalid("-1", max: 15))
-        XCTAssertTrue(ScoreRules.isInvalid("abc", max: 15))
+        for value in ["7,3", "7,25", "15,5", "-0,5", "abc"] {
+            XCTAssertTrue(ScoreRules.isInvalid(value, max: 15), "Expected \(value) to be invalid")
+        }
     }
 
     func testMissingCountOnlyCountsSavedValues() {
@@ -39,10 +39,10 @@ final class ScoreRulesTests: XCTestCase {
         XCTAssertEqual(TestDeletion.delete.message, "Bài chưa có điểm nào nên sẽ bị xoá hẳn.")
     }
 
-    func testInputTextKeepsTypedNumbersWithoutTrailingZero() {
+    func testInputTextUsesVietnameseDecimalSeparatorWithoutTrailingZeroes() {
         XCTAssertEqual(ScoreRules.inputText(nil), "")
         XCTAssertEqual(ScoreRules.inputText(9), "9")
-        XCTAssertEqual(ScoreRules.inputText(7.5), "7.5")
+        XCTAssertEqual(ScoreRules.inputText(7.5), "7,5")
         XCTAssertEqual(ScoreRules.inputText(0), "0")
     }
 

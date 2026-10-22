@@ -480,14 +480,6 @@ struct TestScoresView: View {
     }
 }
 
-extension ScoreRules {
-    /// Raw text of a saved score (`String(6)` → "6", `String(7.5)` → "7.5").
-    static func inputText(_ value: Double?) -> String {
-        guard let value else { return "" }
-        return value == value.rounded() ? String(Int(value)) : String(value)
-    }
-}
-
 /// Full page "Tạo bài kiểm tra" (`NewTestPage.tsx`).
 struct TestEditorView: View {
     @ObservedObject var data: I4FeatureStore

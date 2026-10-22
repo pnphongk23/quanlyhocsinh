@@ -7,7 +7,14 @@ enum ScoreRules {
         let trimmed = raw.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty { return false }
         guard let value = Double(trimmed.replacingOccurrences(of: ",", with: ".")) else { return true }
-        return !value.isFinite || value < 0 || value > Double(max)
+        guard value.isFinite, value >= 0, value <= Double(max) else { return true }
+        return abs(value * 2 - (value * 2).rounded()) > 1e-9
+    }
+
+    /// Text shown in a score field: localized decimal separator without trailing zeroes.
+    static func inputText(_ value: Double?) -> String {
+        guard let value else { return "" }
+        return I4Format.score(value)
     }
 
     static func isEmpty(_ raw: String) -> Bool {

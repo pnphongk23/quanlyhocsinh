@@ -48,7 +48,7 @@ enum I4Format {
         let formatter = NumberFormatter()
         formatter.locale = Locale(identifier: "vi_VN")
         formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 1
+        formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = 1
         return formatter
     }()
