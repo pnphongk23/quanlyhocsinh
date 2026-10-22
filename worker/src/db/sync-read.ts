@@ -49,11 +49,11 @@ function fields(i:Identity,name:string):string {
   const e=entities[name]!;
   const list=e.fields.filter(f=>!(i.scopeKind==='linked_students' && ((name==='student' && f==='parent_phone')||(name==='class_session'&&f==='note'))));
   if (i.scopeKind==='linked_students' && name==='class') return 'e.id,e.name,e.status,e.version';
-  return list.map(f=>`e.${f}`).join(',')+(name==='report_publication' ? ',(e.pdf_key IS NOT NULL) has_pdf' : '');
+  return list.map(f=>`e.${f}`).join(',');
 }
 function decode(name:string,row:Row):Row {
   if (name==='class' && row.weekdays!==undefined) row.weekdays=Array.from({length:7},(_,i)=>i+1).filter(day=>(row.weekdays & (1<<(day-1)))!==0);
-  if (name==='report_publication') {row.snapshot=JSON.parse(row.snapshot);row.has_pdf=Boolean(row.has_pdf);}
+  if (name==='report_publication') row.snapshot=JSON.parse(row.snapshot);
   if (name==='test') row.archived=Boolean(row.archived);
   if (name==='class_session') row.is_makeup=Boolean(row.is_makeup);
   if (name==='report') row.needs_republish=Boolean(row.needs_republish);

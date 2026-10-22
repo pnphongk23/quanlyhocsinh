@@ -1,6 +1,6 @@
 import { requireAccess } from "./authz";
 import type { Identity } from "../types";
-import { ApiError, notFound, conflict, forbidden } from "../lib/errors";
+import { notFound, forbidden } from "../lib/errors";
 
 export async function listClassReports(
   db: D1Database,
@@ -219,12 +219,11 @@ export async function getPublication(
     snapshot: string;
     published_by: string;
     published_at: string;
-    pdf_key: string | null;
-    pdf_bytes: number | null;
   };
   const row = await db
     .prepare(
-      `SELECT p.* FROM report_publications p WHERE p.workspace_id=? AND p.report_id=? AND p.publication_no=?`,
+      `SELECT p.id,p.workspace_id,p.class_id,p.student_id,p.report_id,p.month,p.publication_no,p.snapshot,p.published_by,p.published_at
+      FROM report_publications p WHERE p.workspace_id=? AND p.report_id=? AND p.publication_no=?`,
     )
     .bind(i.workspaceId, reportId, no)
     .first<PublicationRow>();
@@ -234,93 +233,5 @@ export async function getPublication(
     studentId: row.student_id,
   });
   if (i.scopeKind === "linked_students" && !row.published_at) return null;
-  return {
-    ...row,
-    snapshot: JSON.parse(row.snapshot),
-    has_pdf: row.pdf_key !== null,
-  };
-}
-
-export async function uploadPublicationPdf(
-  db: D1Database,
-  bucket: R2Bucket | undefined,
-  i: Identity,
-  reportId: string,
-  no: number,
-  bytes: ArrayBuffer,
-) {
-  const row = await db
-    .prepare(
-      `SELECT p.id,p.workspace_id,p.class_id,p.student_id,p.pdf_key FROM report_publications p
-   WHERE p.workspace_id=? AND p.report_id=? AND p.publication_no=?`,
-    )
-    .bind(i.workspaceId, reportId, no)
-    .first<{
-      id: string;
-      workspace_id: string;
-      class_id: string;
-      student_id: string;
-      pdf_key: string | null;
-    }>();
-  if (!row) throw notFound();
-  requireAccess(i, "comments_reports", "write", {
-    classId: row.class_id,
-    studentId: row.student_id,
-  });
-  if (!bucket)
-    throw new ApiError(
-      503,
-      "pdf_storage_unavailable",
-      "PDF storage is unavailable.",
-    );
-  if (row.pdf_key !== null) throw conflict("pdf_already_uploaded");
-  const key = `reports/${row.workspace_id}/${reportId}/${no}.pdf`;
-  await bucket.put(key, bytes, {
-    httpMetadata: { contentType: "application/pdf" },
-  });
-  await db
-    .prepare(
-      `UPDATE report_publications SET pdf_key=?,pdf_bytes=? WHERE id=? AND workspace_id=? AND pdf_key IS NULL`,
-    )
-    .bind(key, bytes.byteLength, row.id, i.workspaceId)
-    .run();
-  const current = await db
-    .prepare(
-      "SELECT pdf_key FROM report_publications WHERE workspace_id=? AND id=?",
-    )
-    .bind(i.workspaceId, row.id)
-    .first<{ pdf_key: string | null }>();
-  if (current?.pdf_key !== key) throw conflict("pdf_already_uploaded");
-  return { report_id: reportId, publication_no: no, has_pdf: true };
-}
-
-export async function downloadPublicationPdf(
-  db: D1Database,
-  bucket: R2Bucket | undefined,
-  i: Identity,
-  reportId: string,
-  no: number,
-) {
-  const row = await db
-    .prepare(
-      `SELECT p.pdf_key,p.class_id,p.student_id FROM report_publications p
-   WHERE p.workspace_id=? AND p.report_id=? AND p.publication_no=?`,
-    )
-    .bind(i.workspaceId, reportId, no)
-    .first<{ pdf_key: string | null; class_id: string; student_id: string }>();
-  if (!row) throw notFound();
-  requireAccess(i, "comments_reports", "read", {
-    classId: row.class_id,
-    studentId: row.student_id,
-  });
-  if (!bucket)
-    throw new ApiError(
-      503,
-      "pdf_storage_unavailable",
-      "PDF storage is unavailable.",
-    );
-  if (!row.pdf_key) throw notFound();
-  const object = await bucket.get(row.pdf_key);
-  if (!object) throw notFound();
-  return object;
+    return { ...row, snapshot: JSON.parse(row.snapshot) };
 }

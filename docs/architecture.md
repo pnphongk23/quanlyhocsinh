@@ -22,13 +22,13 @@ Dựa trên hai lượt review độc lập (hai model khác nhau) cho cùng m�
 | Backend | Cloudflare Worker dùng Hono, một điểm vào đồng bộ (nhận lệnh trong hàng đợi, trả thay đổi); cron trigger sinh buổi học | Supabase (giới hạn số dự án free), Firebase, VPS/Dokploy (phải vận hành, chưa có VPS), Railway (tốn phí, giữ làm dự phòng) |
 | Cơ sở dữ liệu | D1 (SQLite), trigger SQLite ghi lịch sử, nhóm thay đổi bằng `batch` (atomic) | Postgres (không cần ở quy mô này; tầng repository giữ chỗ để chuyển sau) |
 | Đăng nhập | Tự làm trong Worker: OTP lưu dạng băm, hạn ngắn, giới hạn số lần gửi và thử; SMS qua API nhà cung cấp Việt Nam (đề xuất eSMS); phiên đăng nhập dài bằng cookie hoặc token ký | Dịch vụ auth bên thứ ba |
-| PDF | Sinh **trên máy giáo viên** khi phát hành (thư viện tải lười, nhúng font tiếng Việt), tải lên R2 riêng tư; bản chụp của phiên bản đã phát hành giữ nguyên | Sinh trên Worker free (10 ms CPU, có thể vượt), Chromium |
-| Lưu file | R2 riêng tư (PDF báo cáo, tệp bài giảng); tải về bằng link ký ngắn hạn do Worker cấp sau khi kiểm quyền | Link công khai |
+| PDF báo cáo | Sinh trên máy khách; lưu bản chụp dữ liệu của phiên bản đã phát hành trên máy chủ. Tải PDF/ảnh tạo file trên máy khách | Lưu PDF trên máy chủ hoặc R2 |
+| Lưu file | R2 riêng tư cho tệp bài giảng; tải về bằng link ký ngắn hạn do Worker cấp sau khi kiểm quyền | Link công khai |
 | Push | Web Push chuẩn (VAPID) gửi từ Worker, đăng ký lưu trong D1, kèm inbox trong DB | OneSignal/FCM SDK |
 | Hosting | Cloudflare Pages (tĩnh, không giới hạn) | VPS |
 | Lỗi | Sentry tải lười + log máy chủ, lọc SĐT và nội dung nhận xét | ELK tự host |
 
-Chỗ hai review khác nhau và đã chọn: dùng chỉ Dexie (không TanStack Query), ngân sách JS 200 KB gzip. PDF ban đầu chọn sinh ở máy chủ, nay đổi sang máy giáo viên vì giới hạn CPU của Worker free.
+Chỗ hai review khác nhau và đã chọn: dùng chỉ Dexie (không TanStack Query), ngân sách JS 200 KB gzip. PDF báo cáo được tạo trên máy khách; máy chủ chỉ lưu snapshot dữ liệu, không lưu tệp PDF.
 
 ## 3. Cấu trúc thư mục
 

@@ -33,7 +33,6 @@ export interface Identity {
 
 export interface Env {
   DB: D1Database;
-  REPORT_PDFS?: R2Bucket;
   /** JSON service account secret used by FCM HTTP v1. */
   FCM_SERVICE_ACCOUNT?: string;
   FCM_PROJECT_ID?: string;

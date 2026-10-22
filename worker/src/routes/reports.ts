@@ -1,17 +1,14 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
-import { notFound, payloadTooLarge, validationError } from "../lib/errors";
+import { notFound, validationError } from "../lib/errors";
 import { requireAccess } from "../db/authz";
 import {
-  downloadPublicationPdf,
   getPublication,
   listClassReports,
   listStudentReports,
   previewReport,
   reportNotificationStatements,
-  uploadPublicationPdf,
 } from "../db/reports";
-import { MAX_PDF_BYTES } from "../lib/http";
 
 export const reportsRoutes = new Hono<AppEnv>();
 const validMonth = (s: string | undefined): s is string =>
@@ -240,44 +237,4 @@ reportsRoutes.get("/reports/:id/publications/:no", async (c) => {
   );
   if (!row) throw notFound();
   return c.json(row);
-});
-reportsRoutes.put("/reports/:id/publications/:no/pdf", async (c) => {
-  const no = Number(c.req.param("no"));
-  if (!Number.isInteger(no) || no < 1)
-    throw validationError({ publication_no: "Expected positive integer." });
-  if (
-    (c.req.header("content-type")?.split(";")[0] ?? "").trim().toLowerCase() !==
-    "application/pdf"
-  )
-    throw validationError({ content_type: "Expected application/pdf." });
-  const bytes = await c.req.arrayBuffer();
-  if (bytes.byteLength > MAX_PDF_BYTES) throw payloadTooLarge();
-  const result = await uploadPublicationPdf(
-    c.env.DB,
-    c.env.REPORT_PDFS,
-    c.get("identity"),
-    c.req.param("id"),
-    no,
-    bytes,
-  );
-  return c.json(result);
-});
-reportsRoutes.get("/reports/:id/publications/:no/pdf", async (c) => {
-  const no = Number(c.req.param("no"));
-  if (!Number.isInteger(no) || no < 1)
-    throw validationError({ publication_no: "Expected positive integer." });
-  const object = await downloadPublicationPdf(
-    c.env.DB,
-    c.env.REPORT_PDFS,
-    c.get("identity"),
-    c.req.param("id"),
-    no,
-  );
-  const body = object.body;
-  if (!body) throw notFound();
-  return c.body(body, 200, {
-    "content-type": "application/pdf",
-    "content-length": String(object.size),
-    "cache-control": "private, no-store",
-  });
 });

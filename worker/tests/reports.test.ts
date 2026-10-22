@@ -1,6 +1,4 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import app from "../src/index";
-import type { Env } from "../src/types";
 import {
   call,
   clubToken,
@@ -14,10 +12,9 @@ import {
   post,
   put,
   registerWorkspace,
-  testEnv,
 } from "./helpers";
 
-describe("reports routes and optional PDF storage", () => {
+describe("reports routes and publication snapshots", () => {
   let f: {
     classId: string;
     studentId: string;
@@ -381,42 +378,29 @@ describe("reports routes and optional PDF storage", () => {
       ).status,
     ).toBe(404);
   });
-  it("saves drafts, publishes snapshots and reads them without R2", async () => {
-    const noR2 = { ...testEnv, REPORT_PDFS: undefined } as unknown as Env,
-      month = "2026-09";
-    const draft = await app.request(
-      `https://api.test/v1/students/${f.studentId}/reports/${month}`,
-      {
-        method: "PUT",
-        headers: {
-          authorization: `Bearer ${f.token}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ general_comment: "No R2 fake" }),
-      },
-      noR2,
-    );
-    expect(draft.status).toBe(200);
-    const response = await app.request(
-      `https://api.test/v1/students/${f.studentId}/reports/${month}/publish`,
-      {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${f.token}`,
-          "content-type": "application/json",
-        },
-        body: "{}",
-      },
-      noR2,
+  it("saves drafts, publishes snapshots and reads them without PDF metadata", async () => {
+    const month = "2026-09";
+    expect((await call(
+      `/v1/students/${f.studentId}/reports/${month}`,
+      put({ general_comment: "Snapshot fake" }),
+      f.token,
+    )).status).toBe(200);
+    const response = await call(
+      `/v1/students/${f.studentId}/reports/${month}/publish`,
+      post({}),
+      f.token,
     );
     expect(response.status).toBe(201);
-    const publication = (await response.json()) as { report_id: string };
-    const snapshot = await app.request(
-      `https://api.test/v1/reports/${publication.report_id}/publications/1`,
-      { headers: { authorization: `Bearer ${f.token}` } },
-      noR2,
+    const snapshot = await call(
+      `/v1/reports/${response.body.report_id}/publications/1`,
+      {},
+      f.token,
     );
     expect(snapshot.status).toBe(200);
+    expect(snapshot.body.snapshot).toBeTypeOf("object");
+    for (const field of ["pdf_key", "pdf_bytes", "has_pdf"]) {
+      expect(snapshot.body).not.toHaveProperty(field);
+    }
   });
   it("returns homework counts grouped by kind in previews and publication snapshots", async () => {
     const grades = [
@@ -509,180 +493,15 @@ describe("reports routes and optional PDF storage", () => {
       );
     }
   });
-  it("uploads and streams PDF with REPORT_PDFS, returns 503 when the optional binding is absent", async () => {
-    const path = `/v1/reports/${f.reportId}/publications/1/pdf`,
-      pdf = new TextEncoder().encode("%PDF-fake");
-    expect(testEnv.REPORT_PDFS).toBeDefined();
-    const uploaded = await call(
-      path,
-      {
+  it("returns 404 for removed PDF upload and download routes for teachers and guardians", async () => {
+    const path = `/v1/reports/${f.reportId}/publications/1/pdf`;
+    for (const token of [f.teacher, f.guardian]) {
+      expect((await call(path, {
         method: "PUT",
         headers: { "content-type": "application/pdf" },
-        body: pdf,
-      },
-      f.token,
-    );
-    expect(uploaded.status).toBe(200);
-    const downloaded = await app.request(
-      `https://api.test${path}`,
-      { headers: { authorization: `Bearer ${f.token}` } },
-      testEnv,
-    );
-    expect(downloaded.status).toBe(200);
-    expect(downloaded.headers.get("content-type")).toBe("application/pdf");
-    await downloaded.arrayBuffer();
-    const parentRead = await app.request(
-      `https://api.test${path}`,
-      { headers: { authorization: `Bearer ${f.guardian}` } },
-      testEnv,
-    );
-    expect(parentRead.status).toBe(200);
-    await parentRead.arrayBuffer();
-    const assistantRead = await app.request(
-      `https://api.test${path}`,
-      { headers: { authorization: `Bearer ${f.assistant}` } },
-      testEnv,
-    );
-    expect(assistantRead.status).toBe(200);
-    await assistantRead.arrayBuffer();
-    expect(
-      (await app.request(`https://api.test${path}`, {}, testEnv)).status,
-    ).toBe(401);
-    const teacherRead = await app.request(
-      `https://api.test${path}`,
-      { headers: { authorization: `Bearer ${f.teacher}` } },
-      testEnv,
-    );
-    expect(teacherRead.status).toBe(200);
-    await teacherRead.arrayBuffer();
-    expect(
-      (
-        await app.request(
-          `https://api.test${path}`,
-          { headers: { authorization: `Bearer ${f.wrongGuardian}` } },
-          testEnv,
-        )
-      ).status,
-    ).toBe(404);
-    expect(
-      (
-        await app.request(
-          `https://api.test${path}`,
-          { headers: { authorization: `Bearer ${f.otherWorkspace}` } },
-          testEnv,
-        )
-      ).status,
-    ).toBe(404);
-    expect(
-      (
-        await call(
-          path,
-          {
-            method: "PUT",
-            headers: { "content-type": "application/pdf" },
-            body: pdf,
-          },
-          f.guardian,
-        )
-      ).status,
-    ).toBe(403);
-    const publishFor = async (month: string) => {
-      await call(
-        `/v1/students/${f.studentId}/reports/${month}`,
-        put({ general_comment: "PDF matrix fake" }),
-        f.token,
-      );
-      return call(
-        `/v1/students/${f.studentId}/reports/${month}/publish`,
-        post({}),
-        f.token,
-      );
-    };
-    const teacherPublication = await publishFor("2026-11"),
-      teacherPath = `/v1/reports/${teacherPublication.body.report_id}/publications/1/pdf`;
-    expect(
-      (
-        await call(
-          teacherPath,
-          {
-            method: "PUT",
-            headers: { "content-type": "application/pdf" },
-            body: pdf,
-          },
-          f.teacher,
-        )
-      ).status,
-    ).toBe(200);
-    const assistantPublication = await publishFor("2026-12"),
-      assistantPath = `/v1/reports/${assistantPublication.body.report_id}/publications/1/pdf`;
-    expect(
-      (
-        await call(
-          assistantPath,
-          {
-            method: "PUT",
-            headers: { "content-type": "application/pdf" },
-            body: pdf,
-          },
-          f.assistant,
-        )
-      ).status,
-    ).toBe(403);
-    expect(
-      (
-        await call(assistantPath, {
-          method: "PUT",
-          headers: { "content-type": "application/pdf" },
-          body: pdf,
-        })
-      ).status,
-    ).toBe(401);
-    expect(
-      (
-        await call(
-          assistantPath,
-          {
-            method: "PUT",
-            headers: { "content-type": "application/pdf" },
-            body: pdf,
-          },
-          f.otherWorkspace,
-        )
-      ).status,
-    ).toBe(404);
-    const envWithoutBucket = {
-      ...testEnv,
-      REPORT_PDFS: undefined,
-    } as unknown as Env;
-    for (const method of ["PUT", "GET"]) {
-      const response = await app.request(
-        `https://api.test${path}`,
-        {
-          method,
-          headers: {
-            authorization: `Bearer ${f.token}`,
-            "content-type": "application/pdf",
-          },
-          body: method === "PUT" ? pdf : undefined,
-        },
-        envWithoutBucket,
-      );
-      const body = (await response.json()) as { error: { code: string } };
-      expect(response.status).toBe(503);
-      expect(body.error.code).toBe("pdf_storage_unavailable");
+        body: "%PDF-fake",
+      }, token)).status).toBe(404);
+      expect((await call(path, { method: "GET" }, token)).status).toBe(404);
     }
-    const forbiddenResponse = await app.request(
-      `https://api.test${path}`,
-      {
-        method: "PUT",
-        headers: {
-          authorization: `Bearer ${f.guardian}`,
-          "content-type": "application/pdf",
-        },
-        body: pdf,
-      },
-      envWithoutBucket,
-    );
-    expect(forbiddenResponse.status).toBe(403);
   });
 });

@@ -3,7 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { AppEnv, Env } from './types';
 import { apiRoutes } from './routes';
 import { ApiError, errorBody, payloadTooLarge } from './lib/errors';
-import { isPdfUploadRequest, maxBodyBytes } from './lib/http';
+import { maxBodyBytes } from './lib/http';
 import { generateUpcomingSessions } from './db/session-generation';
 import { runScheduledPush } from './db/notification-dispatch';
 
@@ -104,11 +104,6 @@ app.use('*', async (c, next) => {
   if (declared !== undefined && Number(declared) > limit) {
     throw payloadTooLarge();
   }
-  if (isPdfUploadRequest(c.req.raw)
-    && (await c.req.raw.clone().arrayBuffer()).byteLength > limit) {
-      throw payloadTooLarge();
-  }
-
   await next();
 });
 
