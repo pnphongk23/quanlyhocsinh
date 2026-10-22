@@ -48,7 +48,7 @@ const activeSession = (kind: "staff" | "guardian"): WebSession => {
         status: "active",
         scope_epoch: 1,
         permissions: role.permissions,
-        ...(linked ? { students: [{ id: "6a-student-1", name: "Trần Gia Bảo", class_id: "6a", class_name: "Tiếng Anh giao tiếp 6A" }] } : {}),
+        ...(linked ? { students: [{ id: "6a-student-1", name: "Trần Gia Bảo", class_id: "6a", class_name: "Tiếng Anh giao tiếp 6A", teacher_name: "Cô Lan" }] } : {}),
       }],
     },
   };
@@ -195,6 +195,26 @@ describe("foundation route integration", () => {
       router.dispose();
     },
   );
+
+  it("shows the desktop role card only for a multi-role guardian", async () => {
+    authState.session = activeSession("guardian");
+    const singleRoleRouter = open("/cai-dat");
+    expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Vai trò" })).toBeNull();
+    singleRoleRouter.dispose();
+
+    const multiRole = multiRoleSession();
+    const parentMembership = multiRole.me.memberships.find((item) => item.role.scope_kind === "linked_students")!;
+    authState.session = {
+      ...multiRole,
+      activeMembershipId: parentMembership.id,
+      me: { ...multiRole.me, active_membership_id: parentMembership.id },
+    };
+    const multiRoleRouter = open("/cai-dat");
+    expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
+    expect(await screen.findByRole("region", { name: "Vai trò" })).toBeVisible();
+    multiRoleRouter.dispose();
+  });
 
   it("keeps /cai-dat/doi-mat-khau inside the active guardian shell on mobile", async () => {
     authState.session = activeSession("guardian");

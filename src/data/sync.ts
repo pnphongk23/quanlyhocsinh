@@ -1,10 +1,11 @@
 import { ApiError, createApiClient } from "./api/client";
-import type { CommandResult, EntityMap, PullResponse, SyncCommand } from "./api/types";
+import type { ApiClass, CommandResult, EntityMap, PullResponse, SyncCommand } from "./api/types";
 import { db, getCacheIdentity, identityKey, rowKey, stored, tableFor, type EntityName, type OutboxRow } from "./db";
 import { clearSession, getToken, invalidateActiveMembership } from "./auth/session";
 import { hydrateStore } from "./store";
 import { setSaveStatus } from "./saveStatus";
 import { logoutLockKey } from "./outbox";
+import { classFromApi } from "./api/mapping";
 const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
 export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_BASE_URL || defaultBase, getToken });
 let running: Promise<void> | null = null;
@@ -20,7 +21,7 @@ function keyParts(entity: EntityName, item: Record<string, unknown>): Array<stri
 }
 function toView(entity: EntityName, item: Record<string, any>): Record<string, any> {
   switch (entity) {
-    case "class": return { id: item.id, name: item.name, status: item.status, weekdays: item.weekdays, time: item.start_time };
+    case "class": return classFromApi(item as unknown as ApiClass);
     case "student": return { id: item.id, classId: item.class_id, name: item.name, parentPhone: item.parent_phone ?? "", enrolledAt: item.enrolled_at, leftAt: item.left_at, status: item.status };
       case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status, note: item.note, version: item.version };
     case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };

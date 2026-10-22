@@ -5,8 +5,8 @@ import { defaultRoles, MEMBER_IDS, ROLE_IDS } from "../../data/defaults";
 export function createSeed(): StoreState {
   const state: StoreState = {
     classes: [
-      { id:"6a", name:"Tiếng Anh giao tiếp 6A", weekdays:[1,3], time:"18:00", status:"active" },
-      { id:"ielts", name:"IELTS 7.0", weekdays:[2,4], time:"19:30", status:"active" },
+      { id:"6a", name:"Tiếng Anh giao tiếp 6A", weekdays:[1,3], time:"18:00", teacherName:"Cô Lan", status:"active" },
+      { id:"ielts", name:"IELTS 7.0", weekdays:[2,4], time:"19:30", teacherName:null, status:"active" },
       ], students: [], sessions: [], attendance: [], tests: [], scores: [], comments: [], homeworkSections: [], homeworkGrades: [], reports: [], reportPublications: [], changeLogs: [], pending: [],
     auth: { phone:"fixture-user", memberIds:[MEMBER_IDS.lanAdmin, MEMBER_IDS.lanTeacher] }, currentClassId:"6a", roles:defaultRoles(), members:[], activeMemberId:MEMBER_IDS.lanAdmin,
   };

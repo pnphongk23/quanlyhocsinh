@@ -1,4 +1,5 @@
 import { getStore } from "../../data/store";
+import { getSession } from "../../data/auth/session";
 import { can, requirePermission } from "../../data/repositories/access";
 import {
   STUDENT_ACCESS_ERROR,
@@ -163,9 +164,19 @@ export function childScoresMonth(
 
 /** Giáo viên chính của lớp con (để hiện "Nhận xét của cô Lan", ảnh 08). */
 export function childTeacherName(studentId: string): string | null {
-  childOf(studentId);
-  // The web snapshot has no class-staff assignment field yet.
-  return null;
+  const child = childOf(studentId);
+  const teacherName = getStore().classes.find(
+    (item) => item.id === child.student.classId,
+  )?.teacherName;
+  if (teacherName) return teacherName;
+  const session = getSession();
+  const membership = session?.me.memberships.find(
+    (item) => item.id === session.activeMembershipId && item.status === "active",
+  );
+  return (
+    membership?.students?.find((student) => student.id === studentId)?.teacher_name ??
+    null
+  );
 }
 
 /** Các tháng có báo cáo ĐÃ phát hành của con, mới nhất trước. */

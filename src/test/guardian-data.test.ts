@@ -9,6 +9,7 @@ import { getExtraSessionUpdateError, updateExtraSession } from "../data/reposito
 import { getStore, replaceStore } from "../data/store";
 import { createSeed } from "./fixtures/seed";
 import { api } from "../data/sync";
+import { childTeacherName } from "../roles/guardian/guardianRead";
 
 vi.mock("../data/sync", () => ({ api: { request: vi.fn() }, clearUserCache: vi.fn(async () => undefined), syncNow: vi.fn() }));
 
@@ -18,7 +19,7 @@ const guardianMembership = {
   workspace: { id: "ws-a", name: "Lớp A" },
   role: { id: "guardian", name: "Phụ huynh", system_key: null, scope_kind: "linked_students" as const },
   permissions: { classes: "none", students: "none", sessions_attendance: "read", scores: "read", lectures: "none", comments_reports: "read" } as const,
-  students: [{ id: "6a-student-1", name: "Nguyễn Minh Anh", class_id: "6a", class_name: "Tiếng Anh giao tiếp 6A" }],
+  students: [{ id: "6a-student-1", name: "Nguyễn Minh Anh", class_id: "6a", class_name: "Tiếng Anh giao tiếp 6A", teacher_name: "Cô Lan" }],
 };
 
 function me(memberships: MeResponse["memberships"] = [guardianMembership]): MeResponse {
@@ -47,7 +48,7 @@ describe("guardian membership data", () => {
   });
 
   it("changes the linked child scope with the active workspace membership", async () => {
-    const second = { ...guardianMembership, id: "parent-ws-b", workspace: { id: "ws-b", name: "Lớp B" }, students: [{ id: "ielts-student-3", name: "Phạm Đức Dũng", class_id: "ielts", class_name: "IELTS 7.0" }] };
+    const second = { ...guardianMembership, id: "parent-ws-b", workspace: { id: "ws-b", name: "Lớp B" }, students: [{ id: "ielts-student-3", name: "Phạm Đức Dũng", class_id: "ielts", class_name: "IELTS 7.0", teacher_name: null }] };
     await activateSession("fake-token", user, me([guardianMembership, second] as MeResponse["memberships"]), second.id);
     replaceStore(createSeed());
     expect(linkedStudentIds()).toEqual(new Set(["ielts-student-3"]));
@@ -65,6 +66,22 @@ describe("guardian membership data", () => {
     await startParentSession([]);
     expect(listMyChildren()).toEqual([]);
     expect(linkedStudentIds()).toEqual(new Set());
+  });
+
+  it("uses the teacher display name from the active membership if class cache is missing it", async () => {
+    await startParentSession();
+    getStore().classes.find((item) => item.id === "6a")!.teacherName = null;
+    expect(childTeacherName("6a-student-1")).toBe("Cô Lan");
+  });
+
+  it("returns null when the membership says no teacher is assigned", async () => {
+    const membership = {
+      ...guardianMembership,
+      students: guardianMembership.students.map((student) => ({ ...student, teacher_name: null })),
+    };
+    await startParentSession([membership]);
+    getStore().classes.find((item) => item.id === "6a")!.teacherName = null;
+    expect(childTeacherName("6a-student-1")).toBeNull();
   });
 
   it("registers without memberships and keeps account actions available", async () => {

@@ -31,7 +31,7 @@ function sessionFor(state: ReturnType<typeof createSeed>, memberIds: string[], a
       ? (member.studentIds ?? []).flatMap((studentId) => {
         const student = state.students.find((item) => item.id === studentId);
         const klass = student && state.classes.find((item) => item.id === student.classId);
-        return student && klass ? [{ id: student.id, name: student.name, class_id: student.classId, class_name: klass.name }] : [];
+        return student && klass ? [{ id: student.id, name: student.name, class_id: student.classId, class_name: klass.name, teacher_name: klass.teacherName ?? null }] : [];
       })
       : undefined;
     return {

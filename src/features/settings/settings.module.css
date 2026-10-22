@@ -223,7 +223,7 @@
 
 @media (min-width: 1024px) {
   .guardianPage {
-    width: min(100%, 640px);
+    width: min(100%, 960px);
     margin-inline: auto;
   }
 
@@ -250,7 +250,10 @@
     align-items: start;
   }
   .guardianGrid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  }
+  .guardianPage .formFooter {
+    padding-bottom: 0;
   }
   .column {
     display: grid;

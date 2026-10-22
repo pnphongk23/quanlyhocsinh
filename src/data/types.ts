@@ -3,6 +3,7 @@ export interface Class {
   name: string;
   weekdays: number[];
   time: string;
+  teacherName?: string | null;
   status: "active" | "archived";
 }
 

@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { ReactElement } from "react";
 import { MEMBER_IDS } from "../../data/defaults";
 import { createSeed } from "../../data/seed";
-import { replaceStore } from "../../data/store";
+import { getStore, replaceStore } from "../../data/store";
 import { switchRole } from "../../data/repositories/access";
 import {
   getChildMonthlyReport,
@@ -85,8 +85,9 @@ describe("PH · Lớp học của con (tab 1)", () => {
       replaceStore(state);
       switchRole(MEMBER_IDS.lanGuardian);
       const html = renderPage(<GuardianClassPage />);
-    expect(html).toContain("Tiếng Anh giao tiếp 6A");
-    expect(html).toContain("Thứ Hai, Thứ Tư · 18:00");
+      expect(html).toContain("Tiếng Anh giao tiếp 6A");
+      expect(html).toContain("Thứ Hai, Thứ Tư · 18:00");
+      expect(html).toContain("Giáo viên Cô Lan");
     expect(html).toContain("Chuyên cần tháng 10");
     expect(html).toContain("3/4");
     expect(html).toContain("buổi · 0 muộn, 1 có phép");
@@ -151,14 +152,23 @@ describe("PH · Lớp học của con (tab 1)", () => {
       attendance: null,
       stars: null,
     });
-    expect(
+
+      expect(
       feed.every(
         (item, index) =>
           index === 0 ||
           feed[index - 1].session.date >= item.session.date,
       ),
-    ).toBe(true);
-  });
+      ).toBe(true);
+    });
+
+    it("không hiện nhãn giáo viên khi teacher_name là null", () => {
+      seedGuardian();
+      getStore().classes.find((item) => item.id === "6a")!.teacherName = null;
+      const html = renderPage(<GuardianClassPage />);
+      expect(html).toContain("Thứ Hai, Thứ Tư · 18:00");
+      expect(html).not.toContain("Giáo viên");
+    });
 
   it("đầu trang có chip con và avatar tài khoản; bấm chip mở sheet Chọn con", () => {
     seedGuardian();
@@ -293,7 +303,7 @@ describe("PH · Phiếu buổi học (ảnh 08)", () => {
     );
     expect(html).toContain("Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
     expect(html).toContain("Buổi 8 · Thứ Tư 14/10");
-      expect(html).toContain("Nhận xét của giáo viên");
+      expect(html).toContain("Nhận xét của Cô Lan");
     expect(html).toContain(
       "Con hoàn thành 3 sao 🌟🌟🌟. Tập trung, tích cực học tập. Ghi bài đầy đủ, hiểu bài!",
     );

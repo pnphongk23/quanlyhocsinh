@@ -11,7 +11,13 @@ export interface ApiMembership {
   workspace: { id: string; name: string };
   role: { id: string; name: string; system_key: string | null; scope_kind: ScopeKind };
   /** Guardian-only scope supplied by login/register-guardian/GET /me. */
-  students?: Array<{ id: string; name: string; class_id: string; class_name: string }>;
+  students?: Array<{
+    id: string;
+    name: string;
+    class_id: string;
+    class_name: string;
+    teacher_name: string | null;
+  }>;
 }
 export interface MeResponse {
   user: ApiUser; active_membership_id: string | null;
@@ -20,7 +26,7 @@ export interface MeResponse {
 export interface LoginResponse { token: string; expires_at: string; user: ApiUser; memberships: ApiMembership[]; active_membership_id: string | null }
 interface Versioned { version: number }
 interface Cell extends Versioned { student_id: string; updated_at: string }
-export interface ApiClass extends Versioned { id: string; name: string; status: "active" | "archived"; weekdays: number[]; start_time: string }
+export interface ApiClass extends Versioned { id: string; name: string; status: "active" | "archived"; weekdays: number[]; start_time: string; teacher_name: string | null }
 export interface ApiStudent extends Versioned { id: string; class_id: string; name: string; parent_phone?: string | null; enrolled_at: string; left_at: string | null; status: "active" | "left" }
 export interface ApiSession extends Versioned { id: string; class_id: string; date: string; start_time: string; origin: "recurring" | "manual"; is_makeup: boolean; status: "planned" | "held" | "cancelled"; note?: string }
 export interface ApiAttendance extends Cell { session_id: string; status: "present" | "late" | "excused" | "absent"; note: string; late_at: string | null }
