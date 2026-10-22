@@ -1,6 +1,6 @@
 import type { ApiErrorBody, ApiClass, ApiStudent, ApiSession, ApiReport, LoginResponse, MeResponse, Page, PushRequest, PushResponse, PullResponse, SnapshotResponse, ReportPreview } from "./types";
 export interface ApiClientOptions { baseUrl: string; getToken: () => string | null; fetch?: typeof fetch }
-export interface RequestOptions<Body> { body?: Body; query?: Record<string, string | number | undefined>; signal?: AbortSignal; requestId?: string }
+export interface RequestOptions<Body> { body?: Body; query?: Record<string, string | number | undefined>; signal?: AbortSignal; requestId?: string; authToken?: string }
 type Endpoint<Response, Body = never> = { response: Response; body: Body };
 export type ApiEndpoints = {
   "POST /auth/login": Endpoint<LoginResponse, { phone: string; password: string; device_label?: string }>;
@@ -47,7 +47,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(new DOMException("Request timed out", "TimeoutError")), 15_000);
     const signal = request.signal ? AbortSignal.any([request.signal, controller.signal]) : controller.signal;
-    const token = options.getToken();
+      const token = request.authToken ?? options.getToken();
     try {
         const response = await fetcher(absoluteBase ? url : `${url.pathname}${url.search}`, {
         method, signal, headers: {

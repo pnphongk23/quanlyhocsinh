@@ -13,9 +13,9 @@ async function readDemoConfig(path: string): Promise<DemoConfig> {
     const pair = line.trim().match(/^([^:]+):\s*(.*)$/);
     if (!pair) continue;
     const [key, value] = [pair[1].trim(), pair[2].trim()];
-    if (!indent && /giáo viên/i.test(key)) { section = "teacher"; continue; }
-    if (!indent && /phụ huynh/i.test(key)) { section = "parent"; continue; }
-    if (!indent && /multi-role/i.test(key)) { section = "multi"; continue; }
+      if (!indent && /^multi-role\b/i.test(key)) { section = "multi"; continue; }
+      if (!indent && /^giáo viên\b/i.test(key)) { section = "teacher"; continue; }
+      if (!indent && /^phụ huynh\b/i.test(key)) { section = "parent"; continue; }
     if (/^API$/i.test(key)) config.api = value;
     else if (/^phone$/i.test(key) && section === "teacher") config.phone = value;
     else if (/^password$/i.test(key) && section === "teacher") config.password = value;
@@ -24,7 +24,7 @@ async function readDemoConfig(path: string): Promise<DemoConfig> {
   return config;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
   "writes attendance through repository/outbox, verifies pull and duplicate idempotency",
@@ -32,24 +32,40 @@ it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
     const configPath = process.env.QLH_STAGING_CREDENTIAL_FILE;
     expect(configPath, "Set QLH_STAGING_CREDENTIAL_FILE to the local demo credential file").toBeTruthy();
     const config = await readDemoConfig(configPath!);
-    expect(config.api && config.phone && config.password, "Demo credential fields are unavailable").toBeTruthy();
-    vi.stubEnv("VITE_API_BASE_URL", config.api);
+      expect(config.api && config.phone && config.password, "Demo credential fields are unavailable").toBeTruthy();
+      const configuredBase = new URL(config.api);
+      expect(configuredBase.pathname.replace(/\/$/, "")).toMatch(/\/v1$/);
+      console.log(`STAGING_SMOKE api_base=${configuredBase.host}${configuredBase.pathname}`);
+      vi.stubEnv("VITE_API_BASE_URL", config.api);
+      sessionStorage.clear();
+      localStorage.removeItem("qlh.session.v1");
+      vi.resetModules();
 
-    const originalFetch = globalThis.fetch.bind(globalThis);
-    const pushes: Array<{ results?: Array<Record<string, any>> }> = [];
-    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
-      const isPush = url.pathname.endsWith("/sync/push");
-      const response = await originalFetch(input, init);
-      if (isPush) pushes.push(await response.clone().json() as { results?: Array<Record<string, any>> });
-      return response;
-    });
+      const originalFetch = globalThis.fetch.bind(globalThis);
+      const pushes: Array<{ results?: Array<Record<string, any>> }> = [];
+      vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+        const isPush = url.pathname.endsWith("/sync/push");
+        const response = await originalFetch(input, init);
+        const authPath = /\/auth\/login$|\/me$/.test(url.pathname);
+        const syncPath = /\/sync\/(snapshot|pull)|\/classes(?:\/|$)/.test(url.pathname);
+        if (!response.ok) console.log(`STAGING_SMOKE http=${response.status} url=${url.host}${url.pathname} x-request-id=${response.headers.get("x-request-id") ?? "missing"}`);
+        else if (authPath || syncPath) {
+          const authHeader = new Headers(init?.headers).has("Authorization") ? "present" : "absent";
+          console.log(`STAGING_SMOKE http=${response.status} url=${url.host}${url.pathname}${authPath ? ` authorization=${authHeader}` : ""}`);
+        }
+        if (isPush) pushes.push(await response.clone().json() as { results?: Array<Record<string, any>> });
+        return response;
+      });
     Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
 
-    const [{ login, switchMembership }, { getSession }, { syncNow }, { db }, { getStore }, { saveAttendance }, { persistCommand }] = await Promise.all([
-      import("../data/auth"), import("../data/auth/session"), import("../data/sync"),
-      import("../data/db"), import("../data/store"), import("../data/repositories/attendance"), import("../data/outbox"),
-    ]);
+      const [{ login, switchMembership }, { getSession }, { syncNow }, { db }, { getStore }, { saveAttendance }, { persistCommand }] = await Promise.all([
+        import("../data/auth"), import("../data/auth/session"), import("../data/sync"),
+        import("../data/db"), import("../data/store"), import("../data/repositories/attendance"), import("../data/outbox"),
+      ]);
+
+      const loginUrl = new URL("auth/login", `${config.api.replace(/\/$/, "")}/`);
+      expect(loginUrl.pathname).toBe("/v1/auth/login");
 
     await db.open();
     await Promise.all(db.tables.map((table) => table.clear()));
@@ -62,14 +78,16 @@ it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
         console.log(`STAGING_SMOKE login=REJECTED error_code=${code}`);
         throw error;
       }
-    const memberships = getSession()?.me.memberships.filter((membership) => membership.status === "active") ?? [];
+      const memberships = getSession()?.me.memberships.filter((membership) => membership.status === "active") ?? [];
+      console.log(`STAGING_SMOKE active_memberships=${memberships.length}`);
     let chosen: { membershipId: string; sessionId: string; studentId: string; eligible: boolean } | undefined;
     const today = new Date().toISOString().slice(0, 10);
 
     for (const membership of memberships) {
-      await switchMembership(membership.id);
-      await syncNow();
-      const state = getStore();
+        await switchMembership(membership.id);
+        await syncNow();
+        const state = getStore();
+        console.log(`STAGING_SMOKE membership=${memberships.indexOf(membership) + 1} role=${membership.role.system_key ?? "custom"} workspace=${membership.workspace.name} class_names=${state.classes.map((klass) => klass.name).join(",") || "none"} sessions=${state.sessions.length} students=${state.students.length}`);
       const demoClass = state.classes.find((klass) => klass.id === config.classId)
         ?? state.classes.find((klass) => /6a/i.test(klass.name));
       if (!demoClass) continue;
@@ -131,7 +149,7 @@ it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
     expect(duplicate?.status).toBe("duplicate");
     const afterDuplicatePull = getStore().attendance.find((row) => row.sessionId === target.sessionId && row.studentId === target.studentId);
     expect(afterDuplicatePull?.status).toBe(desired);
-    console.log("STAGING_SMOKE attendance=applied pull=verified replay=duplicate");
+      console.log(`STAGING_SMOKE attendance=applied value=${desired} pull=verified replay=duplicate`);
   },
   90_000,
 );

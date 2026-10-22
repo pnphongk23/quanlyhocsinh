@@ -6,7 +6,7 @@ import { ApiError } from "../api/client";
 
 export async function login(phone: string, password: string): Promise<{ activeMembershipId: string | null; membershipCount: number }> {
   const result = await api.request("POST /auth/login", { body: { phone, password, device_label: typeof navigator === "undefined" ? "Web" : navigator.userAgent.slice(0, 100) } });
-  const me = await api.request("GET /me");
+  const me = await api.request("GET /me", { authToken: result.token });
   await activateSession(result.token, result.user, me, result.active_membership_id);
   return { activeMembershipId: result.active_membership_id, membershipCount: result.memberships.length };
 }
