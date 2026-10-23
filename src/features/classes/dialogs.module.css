@@ -41,6 +41,14 @@
   gap: var(--space-8);
 }
 
+/* Desktop: nút ngang, căn phải, nút phụ (phần tử sau trong DOM) nằm bên trái nút chính */
+@media (min-width: 1024px) {
+  .actions {
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+  }
+}
+
 /* Nút trong hộp thoại theo thiết kế bo 12 (shared dùng 14 cho cỡ lớn) */
 .actions > * {
   border-radius: var(--radius-button);

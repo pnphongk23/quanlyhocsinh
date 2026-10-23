@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import {
   createExtraSession,
   getExtraSessionUpdateError,
@@ -26,6 +26,7 @@ export default function AddSessionModal({
 }: AddSessionModalProps) {
   const today = todayISO();
   const access = useAccess();
+  const formId = useId();
   const [date, setDate] = useState(session?.date ?? today);
   const [time, setTime] = useState(session?.time ?? classTime);
   const [note, setNote] = useState(session?.note ?? "");
@@ -71,8 +72,24 @@ export default function AddSessionModal({
       open
       onClose={close}
       title={session ? "Sửa buổi lẻ" : "Thêm buổi lẻ"}
+      footer={
+        <>
+          <Button
+            variant="secondary"
+            type="button"
+            className={s.footerCancel}
+            onClick={close}
+            disabled={saving}
+          >
+            Đóng
+          </Button>
+          <Button type="submit" form={formId} disabled={saving}>
+            {saving ? "Đang lưu…" : session ? "Lưu thay đổi" : "Lưu buổi học"}
+          </Button>
+        </>
+      }
     >
-      <form className={s.form} onSubmit={submit}>
+      <form id={formId} className={s.form} onSubmit={submit}>
         <p className={s.formIntro}>
           {session
             ? "Cập nhật ngày, giờ hoặc ghi chú cho buổi đang chờ học."
@@ -120,14 +137,6 @@ export default function AddSessionModal({
         <div className={s.formStatus}>
           <SaveStatus />
           {error && <p id="extra-session-error" className={s.error} role="alert">{error}</p>}
-        </div>
-        <div className={s.formActions}>
-          <Button type="submit" disabled={saving}>
-            {saving ? "Đang lưu…" : session ? "Lưu thay đổi" : "Lưu buổi học"}
-          </Button>
-          <Button variant="secondary" type="button" onClick={close} disabled={saving}>
-            Đóng
-          </Button>
         </div>
       </form>
     </Sheet>

@@ -250,7 +250,7 @@
   align-items: center;
   gap: var(--space-8);
   margin-top: -4px;
-  padding: 0 var(--space-4) 0 var(--space-12);
+  padding: 0 var(--space-12);
   font-size: var(--text-sm);
   color: var(--color-muted);
 }
@@ -570,7 +570,10 @@
   .tab {
     gap: 18px;
   }
-  .studentList {
+  .studentList,
+  .columns,
+  .testCard,
+  .desktopSaveRow {
     max-width: 720px;
   }
   .tabHead a,
@@ -580,14 +583,21 @@
     border-radius: var(--radius-button);
     font-size: 15px;
   }
-  .saveBar {
-    position: static;
-    padding: 0;
-    background: transparent;
+  /* Tạo bài kiểm tra: thẻ ≤ 640 căn giữa như /lop/moi; Huỷ bên trái nút chính, căn phải */
+  .formPage {
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+  .formPage > .form {
+    padding: var(--space-20);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
   }
   .actions {
-    grid-template-columns: auto auto;
-    justify-content: start;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
     align-items: center;
     gap: var(--space-12);
   }

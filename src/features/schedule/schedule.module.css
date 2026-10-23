@@ -396,6 +396,10 @@
 }
 
 @media (min-width: 1024px) {
+  /* Lề trái thẳng với tiêu đề và sidebar (rules.md §1), không căn giữa */
+  .page {
+    margin-inline: 0;
+  }
   .page {
     gap: 14px;
   }

@@ -357,14 +357,14 @@
   gap: var(--space-8);
 }
 
-.formActions {
-  display: grid;
-  gap: var(--space-8);
+/* Nút phụ trong footer sheet: mobile đã có "Đóng" ở đầu sheet, desktop đặt ở trái nút chính */
+.footerCancel {
+  display: none;
 }
 
-@media (min-width: 640px) {
-  .formActions {
-    grid-template-columns: 1fr 1fr;
+@media (min-width: 1024px) {
+  .footerCancel {
+    display: inline-flex;
   }
 }
 
