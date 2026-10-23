@@ -11,13 +11,15 @@ export const sessions = [
 ];
 export const classes = classIds.map((id, i) => ({ id, name: ["Lớp 6A", "Lớp 7B", "Lớp trống"][i], status: "active", weekdays: [2, 5], start_time: "17:00", teacher_name: "Cô Demo", version: 1 }));
 export const tests = [{ id: "demo-test", class_id: classIds[0], name: "Kiểm tra giữa kỳ", date: "2026-10-20", max: 15, archived: false, version: 1 }];
-export const scores = students.map((s, i) => ({ test_id: "demo-test", student_id: s.id, value: i ? 12 + i / 10 : 0, updated_at: "2026-10-20T10:00:00Z", version: 1 }));
+export const scores = students.map((s, i) => ({ test_id: "demo-test", student_id: s.id, value: i ? 10 + i / 2 : 0, updated_at: "2026-10-20T10:00:00Z", version: 1 }));
 export const attendance = sessions.flatMap((session) => students.map((student, i) => ({ session_id: session.id, student_id: student.id, status: i === 2 ? "absent" : "present", note: "", late_at: null, updated_at: `${session.date}T10:00:00Z`, version: 1 })));
 export const slips = students.map((s, i) => ({ session_id: "demo-past", student_id: s.id, stars: (i % 3) + 1, note: "Làm bài tốt, tiếp tục luyện tập.", status: "sent", sent_at: "2026-10-20T12:00:00Z", version: 1 }));
 export const homeworkSections = [{ id: "demo-homework", class_id: classIds[0], session_id: "demo-past", kind: "vocabulary", title: "Ôn từ vựng Unit 3", description: "Đọc và luyện phát âm." }];
 export const homeworkGrades = students.map((s, i) => ({ section_id: "demo-homework", student_id: s.id, level: ["excellent", "done", "not_done"][i % 3], updated_at: "2026-10-20T12:00:00Z", version: 1 }));
 export const reports = students.slice(0, 3).map((s, i) => ({ id: `demo-report-${i}`, class_id: classIds[0], student_id: s.id, month: "2026-10", status: "published", general_comment: "Tiến bộ tốt.", needs_republish: false, publication_count: 1, published_at: "2026-10-22T12:00:00Z", version: 1 }));
-export const publications = reports.map((r, i) => ({ id: `demo-pub-${i}`, report_id: r.id, class_id: r.class_id, student_id: r.student_id, month: r.month, publication_no: 1, published_at: r.published_at, snapshot: {} }));
+// Use the compatibility cache path in the guardian view: an empty publication
+// snapshot would intentionally hide the otherwise published demo report.
+export const publications = [];
 export const entities = { classes, students, sessions, attendance, tests, scores, slips, homeworkSections, homeworkGrades, reports, reportPublications: publications };
 
 export function sessionFor(role = "staff") {
