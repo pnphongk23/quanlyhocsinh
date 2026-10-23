@@ -19,3 +19,4 @@ export { ActionFooter } from "./ActionFooter";
 export { NoAccess } from "./NoAccess";
 export { UnsavedChangesDialog } from "./UnsavedChangesDialog";
 export type { UnsavedChangesDialogProps } from "./UnsavedChangesDialog";
+export type { BeforeClose } from "./useGuardedClose";
