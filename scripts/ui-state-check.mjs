@@ -15,7 +15,12 @@ const base = `http://127.0.0.1:${port}`;
 const planDir = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024";
 const runTag = (process.env.STATE_RUN ?? "latest").replace(/[^a-zA-Z0-9_-]/g, "");
 const results = [];
-const viewports = [{ width: 390, height: 844 }, { width: 1280, height: 800 }];
+const viewports = [
+  { width: 390, height: 844 },
+  { width: 1024, height: 800 },
+  { width: 1280, height: 800 },
+  { width: 1440, height: 900 },
+];
 let server, browser;
 
 async function seed(page) {
@@ -97,7 +102,7 @@ async function inspect(vp, label, route) {
         if (await selector.count()) {
           await selector.first().click();
           await page.getByRole("option", { name: "Lớp 6A", exact: true }).click();
-          await page.getByRole("button", { name: /^Lớp 6A/ }).waitFor({ state: "visible" });
+            await page.getByRole("button", { name: /Lớp 6A/ }).waitFor({ state: "visible" });
         }
       }
     if (label.startsWith("F7") && target === "web") {
@@ -159,17 +164,17 @@ async function inspect(vp, label, route) {
     if (label === "F3-the-lop-selected" || label.startsWith("F7")) {
       const selected=await page.evaluate(()=>{
         const selectors={
-          segmented:'[class*="segmented"] button[aria-pressed="true"],[class*="Segmented"] button[aria-pressed="true"]',
-          chip:'button[aria-pressed="true"]:not([aria-label$=" sao"]):not([class*="segment"]):not([class*="Segment"])',
-          row:'tr[aria-selected="true"],[role="row"][aria-selected="true"],tr[class*="selected"],[role="row"][class*="selected"]'
+            segmented:'[class*="segmented"] button[aria-pressed="true"],[class*="Segmented"] button[aria-pressed="true"]',
+            chip:'button[aria-pressed="true"]:not([aria-label$=" sao"]):not([class*="segment"]):not([class*="Segment"]):not([class*="ticketRow"])',
+            row:'tr[aria-selected="true"],[role="row"][aria-selected="true"],tr[class*="selected"],[role="row"][class*="selected"],button[aria-pressed="true"][class*="ticketRowSelected"]'
         };
         const token=getComputedStyle(document.documentElement).getPropertyValue("--state-selected-bg").trim();
         const probe=document.createElement("span");probe.style.backgroundColor=token;document.body.append(probe);const tokenBg=getComputedStyle(probe).backgroundColor;probe.remove();
-        const groups=Object.fromEntries(Object.entries(selectors).map(([kind,selector])=>[kind,[...document.querySelectorAll(selector)].filter((el)=>{const r=el.getBoundingClientRect();return r.width&&r.height&&!el.closest('aside nav,nav[aria-label="Mục của lớp"],.staffTabbar,[role="tablist"],[role="group"][aria-label="Chọn mức sao"]')}).map((el)=>{const st=getComputedStyle(el);return{text:(el.textContent||"").trim().slice(0,40),tag:el.tagName,role:el.getAttribute("role"),bg:st.backgroundColor,borderWidth:st.borderWidth,outline:st.outlineStyle,focused:el.matches(":focus")}})]));
-        return{token,tokenBg,groups};
-      });
-      for(const [kind,items] of Object.entries(selected.groups)){
-        const bad=items.filter((item)=>item.bg!==selected.tokenBg||item.borderWidth!=="0px"||(!item.focused&&item.outline!=="none"));
+          const groups=Object.fromEntries(Object.entries(selectors).map(([kind,selector])=>[kind,[...document.querySelectorAll(selector)].filter((el)=>{const r=el.getBoundingClientRect();return r.width&&r.height&&!el.closest('aside nav,nav[aria-label="Mục của lớp"],.staffTabbar,[role="tablist"],[role="group"][aria-label="Chọn mức sao"]')}).map((el)=>{const st=getComputedStyle(el);return{text:(el.textContent||"").trim().slice(0,40),tag:el.tagName,role:el.getAttribute("role"),bg:st.backgroundColor,borderWidth:st.borderWidth,borderWidths:[st.borderTopWidth,st.borderRightWidth,st.borderBottomWidth,st.borderLeftWidth],borderColors:[st.borderTopColor,st.borderRightColor,st.borderBottomColor,st.borderLeftColor],outline:st.outlineStyle,focused:el.matches(":focus")}})]));
+          return{token,tokenBg,groups};
+        });
+        for(const [kind,items] of Object.entries(selected.groups)){
+          const bad=items.filter((item)=>item.bg!==selected.tokenBg||item.borderColors?.some((color,index)=>parseFloat(item.borderWidths?.[index]??"0")>0&&color!=="rgba(0, 0, 0, 0)"&&color!==item.bg)||(!item.focused&&item.outline!=="none"));
         results.push({target,viewport:`${vp.width}x${vp.height}`,item:`Selected ${kind} token fill`,result:items.length?(bad.length?"FAIL":"PASS"):"SKIP",evidence:`token=${selected.token||"missing"}; selected=${JSON.stringify(items)}; mismatches=${JSON.stringify(bad)}`});
       }
     }
@@ -196,7 +201,11 @@ async function captureF8(vp) {
     const busyFrames = await page.evaluate(() => window.__busyFrames);
     const spinnerFrames = await page.evaluate(() => window.__spinnerFrames);
     results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F8 busy+spinner painted", result: busyFrames > 0 && spinnerFrames > 0 ? "PASS" : "FAIL", evidence: `aria-busy RAF frames=${busyFrames}; spinner RAF frames=${spinnerFrames}` });
-    await page.waitForFunction(() => [...document.querySelectorAll("*")].some((el) => el.childElementCount===0 && el.textContent?.trim()==="Chờ đồng bộ" && el.getClientRects().length), null, { timeout: 7000 }).catch(() => {});
+      await page.waitForFunction(() => [...document.querySelectorAll("*")].some((el) => {
+        if (el.childElementCount !== 0 || el.textContent?.trim() !== "Chờ đồng bộ") return false;
+        const rect = el.getBoundingClientRect(), style = getComputedStyle(el);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+      }), null, { timeout: 4000 }).catch(() => {});
     const pending = await firstVisible(page.getByText("Chờ đồng bộ", { exact: true }));
     const pendingVisible = Boolean(pending);
     await page.screenshot({ path: path.join(out, `F8-pending-${vp.width}.png`), fullPage: false, animations: "disabled" });
@@ -211,12 +220,18 @@ async function captureF8(vp) {
 
     const offline = await open(vp, "/lop/demo-6a/bai-kiem-tra/demo-test");
     try {
-      await offline.context.setOffline(true);
-      await offline.page.getByRole("textbox", { name: "Điểm Học sinh 1" }).fill("11");
-      await offline.page.getByRole("button", { name: "Lưu điểm", exact: true }).click();
-      const offlinePill = await firstVisible(offline.page.getByText("Đã lưu trên máy · sẽ đồng bộ khi có mạng", { exact: true }));
-      if (!offlinePill) throw new Error("offline SaveStatus has no visible instance");
-      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F8 offline pill", result: "PASS", evidence: "visible offline SaveStatus instance; entered score retained" });
+        await offline.context.setOffline(true);
+        await offline.page.getByRole("textbox", { name: "Điểm Học sinh 1" }).fill("11");
+        await offline.page.getByRole("button", { name: "Lưu điểm", exact: true }).click();
+        await offline.page.waitForFunction(() => [...document.querySelectorAll("*")].some((el) => {
+          if (el.childElementCount !== 0 || el.textContent?.trim() !== "Đã lưu trên máy · sẽ đồng bộ khi có mạng") return false;
+          const rect = el.getBoundingClientRect(), style = getComputedStyle(el);
+          return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+        }), null, { timeout: 4000 }).catch(() => {});
+        const offlinePill = await firstVisible(offline.page.getByText("Đã lưu trên máy · sẽ đồng bộ khi có mạng", { exact: true }));
+        if (!offlinePill) throw new Error("offline SaveStatus has no visible instance");
+        await offline.page.screenshot({ path: path.join(out, `F8-offline-${vp.width}.png`), fullPage: false, animations: "disabled" });
+        results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F8 offline pill", result: "PASS", evidence: "visible offline SaveStatus instance; entered score retained" });
     } catch (error) {
       const evidence = await offline.page.locator("body").innerText().catch(() => "");
       const out = path.join(planDir, "shots", "after");
@@ -250,8 +265,8 @@ async function captureF8(vp) {
       save=editor.getByRole("button",{name:"Lưu phần",exact:true});
       await save.click();
       await homework.page.waitForTimeout(500);
-      const errorMessage=homework.page.locator('[role="status"],[role="alert"]').filter({hasText:/Lỗi/i}).first();
-      const hasError=await errorMessage.isVisible().catch(()=>false);
+        const errorMessage=await firstVisible(homework.page.locator('[role="status"],[role="alert"]').filter({hasText:/Lỗi/i}));
+        const hasError=Boolean(errorMessage);
       const kept=await title.inputValue().catch(()=>"");
       const remains=await editor.isVisible().catch(()=>false);
       const result=hasError&&kept==="Bài tập lỗi lưu kiểm tra"&&remains?"PASS":"FAIL";
@@ -259,7 +274,7 @@ async function captureF8(vp) {
         const out=path.join(planDir,"shots","after");
         await homework.page.screenshot({path:path.join(out,`F8-homework-error-${vp.width}.png`),fullPage:false}).catch(()=>{});
       }
-      results.push({target,viewport:`${vp.width}x${vp.height}`,item:"F8 homework storage error retains editor/value",result,evidence:`error=${hasError?((await errorMessage.innerText()).trim().slice(0,80)):"missing role=status/alert containing 'Lỗi'"}; editor=${remains}; value retained=${kept==="Bài tập lỗi lưu kiểm tra"}; known behavior: src/data/repositories/homework.ts:8 catches persistCommand rejection`});
+        results.push({target,viewport:`${vp.width}x${vp.height}`,item:"F8 homework storage error retains editor/value",result,evidence:`error=${hasError?((await errorMessage.innerText()).trim().slice(0,80)):"missing visible role=status/alert containing 'Lỗi'"}; editor=${remains}; value retained=${kept==="Bài tập lỗi lưu kiểm tra"}; known behavior: src/data/repositories/homework.ts:8 catches persistCommand rejection`});
     } catch(error) {
       const body=await homework.page.locator("body").innerText().catch(()=>"");
       const out=path.join(planDir,"shots","after");
@@ -283,11 +298,12 @@ async function checkF9(vp) {
     await cells.first().focus();
     const activeName = () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.getAttribute("name") ?? document.activeElement?.textContent?.trim() ?? "");
     const before = await activeName();
-    await page.keyboard.press("ArrowDown"); const down = await activeName();
-    await page.keyboard.press("ArrowUp"); const up = await activeName();
-    await page.keyboard.press("Enter"); const enter = await activeName();
-    const passed = Boolean(before && down !== before && up === before && enter !== before);
-    results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F9 Enter/↓/↑ moves score cell", result: passed ? "PASS" : "FAIL", evidence: `ArrowDown changed=${down!==before}; ArrowUp returned=${up===before}; Enter moved=${enter!==before}` });
+      await page.keyboard.press("ArrowDown"); const down = await activeName();
+      await page.keyboard.press("ArrowUp"); const up = await activeName();
+      await page.keyboard.press("Enter"); const enter = await activeName();
+      const passed = Boolean(before && down !== before && up === before && enter !== before);
+      if (!passed) await page.screenshot({ path: path.join(planDir, "shots", "after", `F9-score-keyboard-failure-${vp.width}.png`), fullPage: false }).catch(() => {});
+      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F9 Enter/↓/↑ moves score cell", result: passed ? "PASS" : "FAIL", evidence: `ArrowDown changed=${down!==before}; ArrowUp returned=${up===before}; Enter moved=${enter!==before}` });
   } catch (error) { results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F9 Enter/↓/↑ moves score cell", result: "FAIL", evidence: String(error).split("\n")[0] }); }
   finally { await context.close(); }
 }

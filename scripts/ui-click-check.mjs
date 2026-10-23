@@ -1,10 +1,11 @@
-import { access } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 import { entities, identity, sessionFor } from "./ui-audit-fixtures/demo.mjs";
 
 const base = "http://127.0.0.1:5191";
 const root = process.cwd();
+const failureShots = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024/shots/after";
 const results = [];
 let server;
 
@@ -105,8 +106,11 @@ async function test(title, viewport, role, route, action) {
     await page.waitForFunction(() => document.body.innerText.trim().length > 10, null, { timeout: 10000 });
     const detail = await action(page);
     results.push({ title, viewport: viewport.width + "x" + viewport.height, result: "PASS", detail });
-  } catch (error) {
-    results.push({ title, viewport: viewport.width + "x" + viewport.height, result: "FAIL", detail: error instanceof Error ? error.message : String(error) });
+    } catch (error) {
+      const shot = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${viewport.width}.png`;
+      await mkdir(failureShots, { recursive: true });
+      await page.screenshot({ path: failureShots + "/click-failure-" + shot, fullPage: false }).catch(() => {});
+      results.push({ title, viewport: viewport.width + "x" + viewport.height, result: "FAIL", detail: `${error instanceof Error ? error.message : String(error)}; screenshot=${failureShots}/click-failure-${shot}` });
   } finally { await context.close(); }
 }
 
