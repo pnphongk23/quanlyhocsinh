@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:click": "node scripts/ui-click-check.mjs",
-    "test:save": "node scripts/ui-save-check.mjs"
+      "test:save": "node scripts/ui-save-check.mjs",
+      "test:state": "node scripts/ui-state-check.mjs"
   },
   "dependencies": {
     "dexie": "^4.4.6",

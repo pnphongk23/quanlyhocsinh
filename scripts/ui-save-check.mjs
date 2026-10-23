@@ -1,4 +1,4 @@
-import { access, writeFile } from "node:fs/promises";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
@@ -132,13 +132,39 @@ async function dirtyModalClose(page, dialog, method = "button") {
   await guard.getByRole("button", { name: "Ở lại", exact: true }).click();
 }
 async function doubleClickAndMeasure(page, button, label, options = {}) {
+  const buttonIndex = await button.evaluate((el) => [...document.querySelectorAll("button")].indexOf(el));
+  const buttonHandle = await button.elementHandle();
+  const initialName = await button.evaluate((el) => el.getAttribute("aria-label") || el.innerText.trim());
+  await page.evaluate((index) => {
+    const target = [...document.querySelectorAll("button")][index];
+    window.__saveBusyMeasure = { painted: false, start: null, end: null };
+    const sample = () => {
+      const measure = window.__saveBusyMeasure;
+      if (!measure) return;
+      const busy = target?.getAttribute("aria-busy") === "true";
+      if (busy) { measure.painted = true; if (measure.start === null) measure.start = performance.now(); }
+      else if (measure.start !== null && measure.end === null) measure.end = performance.now();
+      if (measure.end === null) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  }, buttonIndex);
   const outboxBefore = await outboxCount(page);
   const pushBefore = counts.pushRequests, commandBefore = counts.pushCommands, directBefore = counts.directWrites.length;
   try { await button.dblclick(); }
   catch (error) { check(`${label} · save remains clickable`, false, error instanceof Error ? error.message : String(error)); }
   await page.waitForTimeout(250);
   const outboxDuring = await outboxCount(page);
-  await page.waitForTimeout(1350);
+  let successLabelVisible = false;
+  let accessibleNameReturned = true;
+  if (options.inPlace) {
+    const done = page.getByRole("button", { name: /Đã lưu/ }).filter({ visible: true });
+    successLabelVisible = await done.first().waitFor({ state: "visible", timeout: 1800 }).then(() => done.first().isVisible()).catch(() => false);
+    check(`${label} · accessible success label`, successLabelVisible, "expected primary button accessible name to change to 'Đã lưu' during the success hold");
+    if (options.returnName) {
+      accessibleNameReturned = await page.getByRole("button", { name: options.returnName, exact: true }).waitFor({ state: "visible", timeout: 6000 }).then(() => true).catch(() => false);
+      check(`${label} · success hold ends and original name returns`, accessibleNameReturned, `expected button name to return to '${options.returnName}' after the 1.6 s hold`);
+    } else await page.waitForTimeout(1350);
+  } else await page.waitForTimeout(1350);
   const outboxAfter = await outboxCount(page);
   const pushDelta = counts.pushRequests - pushBefore, commandDelta = counts.pushCommands - commandBefore;
   const direct = counts.directWrites.slice(directBefore);
@@ -149,11 +175,23 @@ async function doubleClickAndMeasure(page, button, label, options = {}) {
     const expectedOutbox = options.expectedOutbox ?? 1;
     check(`${label} · one write request`, pushDelta === 1 || outboxDelta === expectedOutbox, `expected one push request or ${expectedOutbox} outbox command(s) for one logical write; push=${pushDelta}, commands=${commandDelta}, outbox delta=${outboxDelta}`);
   }
-  const bodyText = await page.locator("body").innerText();
-  const textForSavedCheck = options.allowedSavedPhrase ? bodyText.replaceAll(options.allowedSavedPhrase, "") : bodyText;
-  check(`${label} · no saved banner`, !textForSavedCheck.includes("Đã lưu"), options.allowedSavedPhrase ? `only allowed phrase: ${options.allowedSavedPhrase}` : "page must not say 'Đã lưu'");
-  if (options.closes) check(`${label} · modal/form closes`, await button.count() === 0 || !await button.isVisible(), "expected modal/form to close after save");
-  else check(`${label} · save button returns disabled`, await button.isDisabled(), "expected save button disabled after save");
+  await page.waitForFunction(() => window.__saveBusyMeasure?.end !== null, null, { timeout: 2500 }).catch(() => {});
+  const busy = await page.evaluate(() => { const m=window.__saveBusyMeasure; return { painted:m?.painted ?? false, duration:m?.start === null || m?.start === undefined ? 0 : (m.end ?? performance.now())-m.start }; });
+  check(`${label} · aria-busy painted ≥350 ms`, busy.painted && busy.duration >= 350, `painted=${busy.painted}; duration=${busy.duration.toFixed(1)} ms`);
+  if (options.closes) {
+    const stillAttached = await buttonHandle.evaluate((el) => el.isConnected).catch(() => false);
+    check(`${label} · modal/form closes`, !stillAttached, "expected original save button to detach after save");
+  } else {
+    const settledButton = page.getByRole("button", { name: options.returnName ?? initialName, exact: true });
+    const buttonVisible = await settledButton.waitFor({ state: "visible", timeout: 2000 }).then(() => true).catch(() => false);
+    const disabled = buttonVisible ? await settledButton.isDisabled() : false;
+    if (!disabled && (label.startsWith("Score entry") || label === "Score grid")) {
+      const safe = label.toLowerCase().replaceAll(" ", "-");
+      await mkdir("/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024/shots/after", { recursive: true });
+      await page.screenshot({ path: `/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024/shots/after/F8-${safe}-button-enabled.png`, fullPage: false });
+    }
+    check(`${label} · save button returns disabled`, buttonVisible && disabled, buttonVisible ? `expected save button disabled after success hold ended; enabled=${!disabled}` : `no accessible button named '${options.returnName ?? initialName}' after success hold`);
+  }
 }
 async function checkButtonState(label, button, wantDisabled) {
   const disabled = await button.isDisabled();
@@ -181,7 +219,7 @@ try {
     await checkButtonState("Attendance opens disabled", save, true);
     await chip.click();
     await checkButtonState("Attendance change enables save", save, false);
-    await doubleClickAndMeasure(page, save, `Attendance ${vp.width}`, { expectedOutbox: 8 });
+    await doubleClickAndMeasure(page, save, `Attendance ${vp.width}`, { expectedOutbox: 8, inPlace: true });
     const groupAfter = page.getByRole("group", { name: "Trạng thái của Học sinh 1" });
     check("Attendance UI changed", vp.width === 390 ? (await page.locator("body").innerText()).includes("Vắng") : await groupAfter.getByRole("button", { name: "Muộn", exact: true }).getAttribute("aria-pressed") === "true", "changed status should remain visible after save");
     if (vp.width === 390) {
@@ -204,7 +242,7 @@ try {
     if (vp.width === 390) await dirtyNavigation(page, page.getByRole("link", { name: "Quay lại" }).first());
     else await dirtyNavigation(page, page.getByRole("link", { name: "Quay lại" }).first());
     await type(input, "10.5");
-    await doubleClickAndMeasure(page, save, `Score entry ${vp.width}`);
+    await doubleClickAndMeasure(page, save, `Score entry ${vp.width}`, { inPlace: true, returnName: "Lưu điểm" });
   });
 
   await caseRun("score grid desktop", D, "/lop/demo-6a/diem", async (page) => {
@@ -212,7 +250,7 @@ try {
     const save = page.getByRole("button", { name: "Lưu điểm", exact: true });
     await checkButtonState("Score grid opens disabled", save, true);
     await type(input, "10.5"); await checkButtonState("Score grid valid enables save", save, false);
-    await doubleClickAndMeasure(page, save, "Score grid");
+    await doubleClickAndMeasure(page, save, "Score grid", { inPlace: true, returnName: "Lưu điểm" });
   });
 
   for (const vp of [M, D]) await caseRun(`create class ${vp.width}`, vp, "/lop/moi", async (page) => {
@@ -265,7 +303,7 @@ try {
       await type(modal.locator("textarea#ticket-note"), "Ghi chú kiểm tra.");
       await dirtyModalClose(page, modal, "escape");
       note("Comments ticket dirty-close tested", `viewport=${vp.width}`);
-      await doubleClickAndMeasure(page, modal.getByRole("button", { name: "Lưu", exact: true }), `Comments ${vp.width}`, { closes: true });
+      await doubleClickAndMeasure(page, modal.getByRole("button", { name: "Lưu", exact: true }), `Comments ${vp.width}`, { inPlace: true, closes: true });
     } else {
       // Desktop renders an inline TicketEditor, not the mobile sheet/dialog.
       const editor = page.locator("#desktop-ticket-note");
@@ -290,7 +328,7 @@ try {
       await checkButtonState("Homework valid enables save", save, false);
       await dirtyModalClose(page, modal, "escape");
       check("Homework sheet stays open after choosing stay", await modal.isVisible(), "sheet should remain available after unsaved-close confirmation");
-      await doubleClickAndMeasure(page, save, `Homework ${vp.width}`, { closes: true });
+      await doubleClickAndMeasure(page, save, `Homework ${vp.width}`, { closes: true, inPlace: true });
     } else {
       await page.getByRole("button", { name: /^\+ / }).first().click();
       const form = page.locator("#homework-desktop-form");
@@ -302,7 +340,7 @@ try {
       const guard = await waitDialog(page, /Bài tập chưa lưu/i);
       await guard.getByRole("button", { name: "Ở lại", exact: true }).click();
       check("Homework desktop editor stays open after choosing stay", await form.isVisible(), "editor should remain after unsaved-close confirmation");
-      await doubleClickAndMeasure(page, save, `Homework ${vp.width}`, { closes: true });
+      await doubleClickAndMeasure(page, save, `Homework ${vp.width}`, { closes: true, inPlace: true });
     }
   });
 
@@ -330,7 +368,7 @@ try {
     const next = page.getByRole("textbox", { name: "Mật khẩu mới", exact: true }); const confirm = page.getByRole("textbox", { name: "Nhập lại mật khẩu mới", exact: true });
     await type(current, "Demo-Old-Pass!1"); await type(next, "Demo-New-Pass!2"); await type(confirm, "Demo-New-Pass!2");
     await checkButtonState("Change password valid enables save", save, false);
-    await doubleClickAndMeasure(page, save, `Change password ${vp.width}`, { direct: true, closes: vp.width === 390, allowedSavedPhrase: "Đã lưu mật khẩu mới" });
+    await doubleClickAndMeasure(page, save, `Change password ${vp.width}`, { direct: true, closes: vp.width === 390 });
   });
 
   for (const vp of [M, D]) await caseRun(`register ${vp.width}`, vp, "/dang-ky", async (page) => {
@@ -371,7 +409,7 @@ const lines = [
   "", "## Failed assertions", "",
   ...(failed.length ? failed.map((r) => `- **${r.kind}** — ${r.label}: ${r.detail}`) : ["No failures."]),
   "", "## Notes", "",
-  "Request totals aggregate across isolated scenarios; per-action request/outbox evidence is recorded in the measurements above. A network batch is counted as one `/sync/push` request and its individual commands are reported separately. Passwords and phone values are fake test inputs and are never printed.", "",
+  "Success-label in-place flows: attendance, score entry, score grid, homework save (editor closes after transient success), and mobile comments-ticket save (sheet closes after transient success). Closure/navigation without success-copy assertions: create/edit class, add student, ticket send confirmation, create test, archive class, change password, and registration.", "Request totals aggregate across isolated scenarios; per-action request/outbox evidence is recorded in the measurements above. A network batch is counted as one `/sync/push` request and its individual commands are reported separately. Passwords and phone values are fake test inputs and are never printed.", "",
 ];
 await writeFile(RESULT, lines.join("\n"));
 console.log(`PASS ${passed}; FAIL ${failed.length}; INFO ${info.length}; results: ${RESULT}`);
