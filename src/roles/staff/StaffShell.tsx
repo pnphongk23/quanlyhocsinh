@@ -7,13 +7,11 @@ import { Icon } from "../../shared/ui";
 import { PageTransition } from "../../shared/motion";
 import styles from "../../app/shell.module.css";
 
-const desktopItems = [
-  ["/lop", "Lớp"],
-  ["class-diem-danh", "Điểm danh"],
-  ["class-diem", "Điểm số"],
-  ["class-hoc-sinh", "Học sinh"],
-  ["class-bao-cao", "Báo cáo"],
-  ["/cai-dat", "Cài đặt"],
+const classSections = [
+  ["diem-danh", "Điểm danh"],
+  ["diem", "Điểm số"],
+  ["hoc-sinh", "Học sinh"],
+  ["bao-cao", "Báo cáo"],
 ] as const;
 
 function classPath(classId: string | undefined, section: string): string {
@@ -43,13 +41,17 @@ export function Component() {
   const workspaceLabel = userName
     ? `Lớp của ${userName}`
     : membership?.workspace.name ?? "Lớp học";
-  const links = desktopItems.map(([to, label]) => {
-    const requiresClass = to.startsWith("class-");
-    const href = to.startsWith("class-")
-      ? classPath(activeClass?.id, to.slice("class-".length))
-      : to;
-    return { href, label, disabled: requiresClass && !activeClass };
-  });
+  const classSelected = pathname.startsWith("/lop/");
+  const navLinkClass =
+    (child: boolean, scoreReport = false) =>
+    ({ isActive }: { isActive: boolean }) =>
+      [
+        styles.staffNavItem,
+        child ? styles.staffNavChild : "",
+        isActive || scoreReport ? styles.staffNavActive : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
 
   return (
     <div className={styles.staffDesktop} data-role="staff">
@@ -102,35 +104,33 @@ export function Component() {
             </div>
           )}
         </div>
-          <nav className={styles.staffSideNav} aria-label="Điều hướng nhân sự">
-            {links.map(({ href, label, disabled }) => {
-              if (disabled) {
-                return (
-                  <span
-                    key={label}
-                    className={`${styles.staffNavItem} ${styles.staffNavDisabled}`}
-                    aria-disabled="true"
-                  >
-                    {label}
-                  </span>
-                );
-              }
-              return (
-                <NavLink
-                  key={label}
-                  to={href}
-                  end
-                  className={({ isActive }) => {
-                    const scoreReport =
-                      label === "Điểm số" && pathname.includes("/bao-cao-diem");
-                    const selected = isActive || scoreReport;
-                    return `${styles.staffNavItem}${selected ? ` ${styles.staffNavActive}` : ""}`;
-                  }}
-                >
-                  {label}
-                </NavLink>
-              );
-            })}
+        <nav className={styles.staffSideNav} aria-label="Điều hướng nhân sự">
+          <NavLink
+            to="/lop"
+            end
+            className={(state) =>
+              `${navLinkClass(false)(state)}${activeClass && classSelected ? ` ${styles.staffNavGroupOpen}` : ""}`
+            }
+          >
+            Lớp
+          </NavLink>
+          {activeClass &&
+            classSections.map(([section, label]) => (
+              <NavLink
+                key={section}
+                to={classPath(activeClass.id, section)}
+                end
+                className={navLinkClass(
+                  true,
+                  section === "diem" && pathname.includes("/bao-cao-diem"),
+                )}
+              >
+                {label}
+              </NavLink>
+            ))}
+          <NavLink to="/cai-dat" end className={navLinkClass(false)}>
+            Cài đặt
+          </NavLink>
         </nav>
         <SaveStatus className={styles.staffDesktopSaveStatus} />
       </aside>

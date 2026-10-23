@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSeed } from "../../test/fixtures/seed";
@@ -67,7 +67,8 @@ describe("Lưu trữ lớp ở đầu màn desktop", () => {
     expect(mocks.archiveClass).toHaveBeenCalledTimes(1);
     expect(mocks.archiveClass).toHaveBeenCalledWith("6a");
     await act(async () => finish());
-    expect(screen.queryByRole("dialog")).toBeNull();
+    // Nút giữ trạng thái đang lưu tối thiểu 400 ms rồi hộp mới đóng.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("lỗi mạng: giữ hộp mở và hiện lỗi trong hộp", async () => {

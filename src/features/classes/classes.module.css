@@ -99,7 +99,8 @@
 }
 
 .classCardSelected {
-  outline: 2px solid var(--color-primary);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 .cardTitle {

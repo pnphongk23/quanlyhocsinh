@@ -1,5 +1,6 @@
 import type { MutableRefObject, ReactNode } from "react";
 import type { Class, Session } from "../../data/types";
+import { EmptyState } from "../../shared/ui";
 import ClassDesktopHeader from "./ClassDesktopHeader";
 import AttendanceDesktop from "../attendance/AttendanceDesktop";
 import CommentsDesktop from "../comments/CommentsDesktop";
@@ -24,6 +25,7 @@ export default function SessionDetailDesktop({
   onHomeworkDirtyChange,
   homeworkSaveRef,
   onCancel,
+  onEdit,
 }: {
   classId: string;
     klass: Class;
@@ -37,6 +39,8 @@ export default function SessionDetailDesktop({
   onHomeworkDirtyChange?: (dirty: boolean) => void;
   homeworkSaveRef?: MutableRefObject<(() => unknown) | null>;
   onCancel: () => void;
+  /** Chỉ có với buổi lẻ đang chờ học. */
+  onEdit?: () => void;
 }) {
   const cancelled = session.status === "cancelled";
 
@@ -71,6 +75,9 @@ export default function SessionDetailDesktop({
         extraMenuItems={
           canWrite && !cancelled && session.status === "planned"
             ? [
+                ...(onEdit
+                  ? [{ label: "Sửa buổi lẻ", icon: "edit" as const, onSelect: onEdit }]
+                  : []),
                 {
                   label: "Hủy buổi",
                   icon: "archive",
@@ -83,11 +90,11 @@ export default function SessionDetailDesktop({
       />
 
       {cancelled ? (
-        <div className={s.card + " " + s.emptyCard}>
-          <p className={s.emptyTitle}>Buổi này đã huỷ</p>
-          <p className={s.emptyText}>
-            Không cần điểm danh, nhận xét hay giao bài.
-          </p>
+        <div className={s.card}>
+          <EmptyState
+            title="Buổi này đã huỷ"
+            description="Không cần điểm danh, nhận xét hay giao bài."
+          />
         </div>
       ) : (
         // Ba tab cùng gắn sẵn (chỉ ẩn tab khác) để đổi tab không mất điểm danh

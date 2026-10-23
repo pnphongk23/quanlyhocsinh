@@ -250,7 +250,7 @@ export function EditClassSchedule({
           )}
           <footer className={s.stickyBar}>
             <SaveStatus status={save.status} />
-            <Button type="submit" size="lg" disabled={!action.canSave} loading={action.saving}>
+            <Button type="submit" size="lg" disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
               Lưu lịch
             </Button>
           </footer>

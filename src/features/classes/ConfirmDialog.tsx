@@ -5,8 +5,9 @@ import s from "./dialogs.module.css";
 export interface ConfirmAction {
   label: string;
   variant?: ButtonVariant;
-  /** Đang xử lý: khoá nút để không bấm lần hai. */
+  /** Đang xử lý: nút hiện vòng quay và khoá để không bấm lần hai. */
   busy?: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }
 
@@ -19,12 +20,15 @@ export function ConfirmDialog({
   open,
   title,
   message,
+  error,
   actions,
   onDismiss,
 }: {
   open: boolean;
   title: string;
   message?: ReactNode;
+  /** Lỗi của lần xác nhận vừa rồi: hộp giữ mở để thử lại. */
+  error?: string;
   actions: ConfirmAction[];
   onDismiss?: () => void;
 }) {
@@ -42,6 +46,11 @@ export function ConfirmDialog({
       <div className={s.dialog} role="dialog" aria-modal="true" aria-label={title}>
         <p className={s.title}>{title}</p>
         {message && <p className={s.message}>{message}</p>}
+        {error && (
+          <p className={s.error} role="alert">
+            {error}
+          </p>
+        )}
         <div className={s.actions}>
           {actions.map((action, index) => (
             <Button
@@ -49,7 +58,8 @@ export function ConfirmDialog({
               size="lg"
               variant={action.variant ?? "primary"}
               autoFocus={index === 0}
-              disabled={action.busy}
+              loading={action.busy}
+              disabled={action.disabled}
               onClick={action.onClick}
             >
               {action.label}

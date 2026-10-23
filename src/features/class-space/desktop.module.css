@@ -1,5 +1,5 @@
 /*
- * Khung web desktop của "Chi tiết lớp" (ảnh round-4 01…15): breadcrumb + tiêu
+ * Khung web desktop của "Chi tiết lớp" (ảnh round-4 01…15): tiêu
  * đề + hàng tab, nền thẻ trắng 16px, chữ theo bảng thiết kế 1360×934.
  * Chỉ dùng ở breakpoint ≥ 1024px; mobile giữ CSS riêng của từng màn.
  */
@@ -22,39 +22,6 @@
   flex: none;
 }
 
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  font-size: var(--text-md);
-  color: var(--color-muted);
-  min-height: 20px;
-}
-
-.crumbLink {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 36px;
-  min-height: 36px;
-  color: var(--color-muted);
-  text-decoration: none;
-}
-.crumbLink:hover,
-.crumbLink:focus-visible {
-  color: var(--color-primary-ink);
-  text-decoration: underline;
-}
-
-.crumbSep {
-  color: #a3abb8;
-}
-
-.crumbCurrent {
-  color: var(--color-text);
-  font-weight: 600;
-}
-
 .titleRow {
   display: flex;
   align-items: center;
@@ -74,12 +41,6 @@
   letter-spacing: -0.01em;
   line-height: 36px;
   overflow-wrap: anywhere;
-}
-
-.subtitle {
-  margin: var(--space-2) 0 0;
-  font-size: var(--text-md);
-  color: var(--color-muted);
 }
 
 .headerActions {
@@ -394,7 +355,7 @@
   gap: 3px;
   padding: 3px;
   border-radius: var(--radius-button);
-  background: #e6e9ee;
+  background: var(--color-border);
 }
 
 .segment {
@@ -415,10 +376,12 @@
   font-size: var(--text-md);
 }
 
+.segment:hover:not(.segmentActive) { background: var(--state-hover-bg); }
+.segment:focus-visible { outline: none; box-shadow: var(--state-focus-ring); }
+
 .segmentActive {
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: var(--shadow-sm);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 .inlineHint {
@@ -520,7 +483,8 @@ button.listRow {
 }
 
 .listRowSelected {
-  background: var(--color-primary-soft);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
   border-radius: 10px;
   border-top-color: transparent;
 }

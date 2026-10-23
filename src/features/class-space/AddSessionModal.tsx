@@ -100,7 +100,7 @@ export default function AddSessionModal({
           >
             Đóng
           </Button>
-          <Button type="submit" form={formId} disabled={!action.canSave} loading={action.saving}>
+          <Button type="submit" form={formId} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
             {session ? "Lưu thay đổi" : "Lưu buổi học"}
           </Button>
         </>

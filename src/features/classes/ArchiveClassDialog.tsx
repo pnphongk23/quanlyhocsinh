@@ -47,20 +47,11 @@ export function ArchiveClassDialog({
     <ConfirmDialog
       open={open}
       title={`Lưu trữ lớp ${className}?`}
-      message={
-        <>
-          Lớp sẽ ẩn khỏi danh sách. Dữ liệu điểm danh, điểm, nhận xét vẫn được giữ.
-          {error && (
-            <>
-              <br />
-              <strong role="alert">{error}</strong>
-            </>
-          )}
-        </>
-      }
+      message="Lớp sẽ ẩn khỏi danh sách. Dữ liệu điểm danh, điểm, nhận xét vẫn được giữ."
+      error={error}
       actions={[
         { label: "Lưu trữ", variant: "danger", busy: action.saving, onClick: () => void confirm() },
-        { label: "Huỷ", variant: "neutral", busy: action.saving, onClick: onClose },
+        { label: "Huỷ", variant: "neutral", disabled: action.saving, onClick: onClose },
       ]}
       onDismiss={onClose}
     />

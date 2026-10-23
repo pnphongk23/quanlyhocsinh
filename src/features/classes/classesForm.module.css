@@ -47,8 +47,8 @@
 }
 
 .dayActive {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 .scaleNote {
@@ -104,10 +104,6 @@
   .form .day,
   .form .studentNoteText {
     background: var(--color-bg);
-  }
-
-  .form .dayActive {
-    background: var(--color-primary);
   }
 
   /* Nút quay lại thẳng hàng với tiêu đề */

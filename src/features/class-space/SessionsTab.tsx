@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getClass } from "../../data/repositories/classes";
-import {
-  cancelSession,
-  listSessions,
-  sessionPrefix,
-} from "../../data/repositories/sessions";
+import { listSessions, sessionPrefix } from "../../data/repositories/sessions";
 import { splitSessions } from "../../data/sessionGroups";
 import { useAccess } from "../../data/repositories/access";
 import { useStore, hasStorageError } from "../../data/store";
@@ -15,14 +11,15 @@ import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import SessionsDesktop from "./SessionsDesktop";
 import {
   Button,
+  EmptyState,
   Fab,
   Icon,
   NoAccess,
   Pill,
 } from "../../shared/ui";
 import { ConfirmDialog } from "../classes/ConfirmDialog";
-import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import AddSessionModal from "./AddSessionModal";
+import { useCancelSession } from "./useCancelSession";
 import s from "./sessions.module.css";
 
 export default function SessionsTab() {
@@ -38,7 +35,6 @@ export default function SessionsTab() {
   );
   const [modalSession, setModalSession] = useState<Session | null | undefined>();
   const [confirmSession, setConfirmSession] = useState<Session | null>(null);
-  const [error, setError] = useState("");
   const groups = splitSessions(sessions, today);
   const spotlight = groups.current[0] ?? null;
   const upcoming = [...groups.current.slice(1), ...groups.upcoming].sort((a, b) =>
@@ -55,27 +51,7 @@ export default function SessionsTab() {
     };
   }, []);
 
-  async function cancel(session: Session) {
-    try {
-      await cancelSession(session.id);
-      setError("");
-      setConfirmSession(null);
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không hủy được buổi học. Vui lòng thử lại.",
-      );
-      setConfirmSession(null);
-    }
-  }
-
-  const cancelling = useSaveAction<string | null>({
-    baseline: null,
-    value: confirmSession?.id ?? null,
-    validate: (value) => value !== null,
-    save: () => confirmSession && cancel(confirmSession),
-  });
+  const cancelling = useCancelSession(() => setConfirmSession(null));
 
   const renderSessionRow = (session: Session) => {
     const missed = session.status === "planned" && session.date <= today;
@@ -108,7 +84,10 @@ export default function SessionsTab() {
             <Button variant="secondary" size="sm" onClick={() => setModalSession(session)}>
               Sửa buổi lẻ
             </Button>
-            <Button variant="danger" size="sm" onClick={() => setConfirmSession(session)}>
+            <Button variant="danger" size="sm" onClick={() => {
+              cancelling.clearError();
+              setConfirmSession(session);
+            }}>
               Hủy buổi
             </Button>
           </div>
@@ -140,36 +119,18 @@ export default function SessionsTab() {
   return (
     <section className={s.tab} aria-label="Buổi học">
       {!online && <p className={s.offline}>Ngoại tuyến · dữ liệu trên thiết bị</p>}
-      {error && (
-        <p className={s.error} role="alert">
-          {error}
-        </p>
-      )}
-
       {!sessions.length ? (
-        <div className={s.emptyBlock}>
-          <span className={s.emptyIcon} aria-hidden="true">
-            <Icon name="calendar" size={32} />
-          </span>
-          <div className={s.emptyText}>
-            <h2 className={s.emptyTitle}>Lớp chưa có buổi học</h2>
-            <p className={s.emptyHint}>
-              Buổi học tự sinh theo lịch lặp của lớp. Bạn có thể thêm buổi lẻ
-              ngoài lịch nếu cần.
-            </p>
-          </div>
-          {canWrite && (
-            <Button
-              size="lg"
-              onClick={() => {
-                setError("");
-                setModalSession(null);
-              }}
-            >
-              Thêm buổi lẻ
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          title="Lớp chưa có buổi học"
+          description="Buổi học tự sinh theo lịch lặp của lớp. Bạn có thể thêm buổi lẻ ngoài lịch nếu cần."
+          action={
+            canWrite && (
+              <Button size="lg" onClick={() => setModalSession(null)}>
+                Thêm buổi lẻ
+              </Button>
+            )
+          }
+        />
       ) : (
         <>
           {spotlight && (
@@ -191,32 +152,10 @@ export default function SessionsTab() {
                   className={s.primaryAction}
                   to={`/lop/${classId}/buoi-hoc/${spotlight.id}`}
                 >
-                  {spotlight.date === today && spotlight.status === "planned"
-                    ? "Điểm danh"
-                    : "Xem buổi"}
+                  Xem buổi
                 </Link>
                 {spotlight.date > today && spotlight.status === "planned" && (
                   <p className={s.lockedHint}>Điểm danh mở vào ngày học.</p>
-                )}
-                {spotlight.status === "planned" && canWrite && (
-                  <div className={s.rowActions}>
-                    {spotlight.origin === "manual" && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setModalSession(spotlight)}
-                      >
-                        Sửa buổi lẻ
-                      </Button>
-                    )}
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => setConfirmSession(spotlight)}
-                    >
-                      Hủy buổi
-                    </Button>
-                  </div>
                 )}
               </article>
             </section>
@@ -241,7 +180,11 @@ export default function SessionsTab() {
                 {groups.past.map(renderSessionRow)}
               </div>
             ) : (
-              <p className={s.inlineHint}>Chưa có buổi học nào đã qua.</p>
+              <EmptyState
+                size="compact"
+                title="Chưa có buổi học nào đã qua"
+                description="Các buổi đã diễn ra sẽ hiện ở đây."
+              />
             )}
           </section>
         </>
@@ -257,13 +200,7 @@ export default function SessionsTab() {
         />
       )}
       {canWrite && (
-        <Fab
-          label="Thêm buổi"
-          onClick={() => {
-            setError("");
-            setModalSession(null);
-          }}
-        />
+        <Fab label="Thêm buổi" onClick={() => setModalSession(null)} />
       )}
       <ConfirmDialog
         open={confirmSession !== null}
@@ -271,20 +208,21 @@ export default function SessionsTab() {
           confirmSession ? formatDayMonth(confirmSession.date) : ""
         }?`}
         message="Buổi học sẽ được đánh dấu là đã huỷ. Không thể hoàn tác."
+        error={cancelling.error}
         actions={[
           {
             label: "Huỷ buổi học",
             variant: "danger",
-            busy: !cancelling.canSave,
-            onClick: () => void cancelling.submit(),
+            busy: cancelling.busy,
+            onClick: () => confirmSession && void cancelling.run(confirmSession.id),
           },
           {
             label: "Giữ buổi học",
             variant: "neutral",
-            onClick: () => setConfirmSession(null),
+            onClick: () => !cancelling.busy && setConfirmSession(null),
           },
         ]}
-        onDismiss={() => setConfirmSession(null)}
+        onDismiss={() => !cancelling.busy && setConfirmSession(null)}
       />
     </section>
   );

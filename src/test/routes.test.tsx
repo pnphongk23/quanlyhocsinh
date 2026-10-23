@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider, matchRoutes } from "react-router-dom";
 import type { WebSession } from "../data/auth/session";
 import { defaultRoles } from "../data/defaults";
@@ -186,15 +186,11 @@ describe("foundation route integration", () => {
     const mobileNavigation = screen.getByRole("navigation", { name: "Điều hướng chính" });
     expect(mobileNavigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     expect(mobileNavigation.querySelectorAll('[aria-disabled="true"]')).toHaveLength(0);
+    expect(navigation.querySelectorAll("a")).toHaveLength(2);
+    expect(within(navigation).getByRole("link", { name: "Cài đặt" })).toBeVisible();
     for (const label of ["Điểm danh", "Điểm số", "Học sinh", "Báo cáo"]) {
-      const item = screen.getByText(label).closest('[aria-disabled="true"]');
-      expect(item).not.toBeNull();
-      expect(item?.tagName).not.toBe("A");
-      expect(item?.className).not.toMatch(/staffNavActive/);
+      expect(within(navigation).queryByText(label)).toBeNull();
     }
-
-    fireEvent.click(screen.getByText("Điểm danh"));
-    expect(router.state.location.pathname).toBe("/lop");
     router.dispose();
   });
 
@@ -209,6 +205,10 @@ describe("foundation route integration", () => {
     expect(navigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Điểm số" })).toHaveAttribute("aria-current", "page");
     expect(navigation.querySelectorAll('[aria-disabled="true"]')).toHaveLength(0);
+    const children = ["Điểm danh", "Điểm số", "Học sinh", "Báo cáo"];
+    expect(
+      Array.from(navigation.querySelectorAll("a")).map((link) => link.textContent),
+    ).toEqual(["Lớp", ...children, "Cài đặt"]);
     router.dispose();
   });
 

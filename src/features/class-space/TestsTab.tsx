@@ -5,10 +5,9 @@ import { listTests } from "../../data/repositories/tests";
 import { useAccess } from "../../data/repositories/access";
 import { useStore } from "../../data/store";
 import { formatDayMonthLong } from "../../shared/format";
-import { LinkButton, NoAccess, Pill } from "../../shared/ui";
+import { EmptyState, LinkButton, NoAccess, Pill } from "../../shared/ui";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import TestsDesktop from "../scores/TestsDesktop";
-import { ChartIcon } from "../scores/ScoreIcons";
 import s from "../scores/scores.module.css";
 
 export default function TestsTab() {
@@ -29,24 +28,17 @@ export default function TestsTab() {
   // Trạng thái rỗng: design/reference/75-trang-thai-rong-chua-co-bai-kiem-tra.html
   if (!tests.length)
     return (
-      <div className={s.emptyScore}>
-        <span className={s.emptyIcon}>
-          <ChartIcon size={32} />
-        </span>
-        <div className={s.emptyText}>
-          <p className={s.emptyTitle}>Chưa có bài kiểm tra</p>
-          <p className={s.emptyDesc}>
-            Tạo bài kiểm tra đầu tiên, sau đó nhập điểm cho cả lớp.
-          </p>
-        </div>
-        {canWrite && (
-          <div className={s.emptyActions}>
+      <EmptyState
+        title="Chưa có bài kiểm tra"
+        description="Tạo bài kiểm tra đầu tiên, sau đó nhập điểm cho cả lớp."
+        action={
+          canWrite && (
             <LinkButton size="lg" to={`/lop/${classId}/bai-kiem-tra/moi`}>
               Tạo bài kiểm tra
             </LinkButton>
-          </div>
-        )}
-      </div>
+          )
+        }
+      />
     );
 
   return (

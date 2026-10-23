@@ -41,6 +41,17 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     expect(html).not.toContain("OTP");
   });
 
+  it("Đầu trang lớp chỉ có tên lớp, nút và tab; thẻ Buổi hiện tại chỉ còn Xem buổi", () => {
+    const html = render(<SessionsDesktop classId="6a" />);
+    expect(html).not.toContain("Đường dẫn");
+    expect(html).not.toMatch(/học sinh · .*hôm nay/);
+    expect(html).toContain("Mục của lớp");
+    const card = html.split("Buổi hiện tại")[1].split("</div>")[0];
+    expect(card).toContain("Xem buổi");
+    expect(card).not.toContain("Hủy buổi");
+    expect(card).not.toContain("Sửa buổi lẻ");
+  });
+
   it("Điểm danh: 4 trạng thái, ô giờ đến, nút lưu; không quản lý phân công", () => {
     const session = getSession("6a-session-7")!;
     const klass = getClass("6a")!;

@@ -151,7 +151,10 @@ export default function ClassListPage() {
               )}
             </EmptyState>
           ) : visible.length === 0 ? (
-            <EmptyState title="Không tìm thấy lớp" />
+            <EmptyState
+              title="Không tìm thấy lớp"
+              description="Thử tìm bằng tên lớp hoặc tên học sinh khác."
+            />
           ) : (
             <div className={s.grid}>
               {visible.map((item) => (

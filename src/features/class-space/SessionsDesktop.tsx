@@ -1,11 +1,7 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { getClass } from "../../data/repositories/classes";
-import {
-  cancelSession,
-  listSessions,
-  sessionPrefix,
-} from "../../data/repositories/sessions";
+import { listSessions, sessionPrefix } from "../../data/repositories/sessions";
 import { listStudentsForSession } from "../../data/repositories/students";
 import { listAttendance } from "../../data/repositories/attendance";
 import { listComments } from "../../data/repositories/comments";
@@ -20,12 +16,13 @@ import {
   todayISO,
   weekdayNames,
 } from "../../shared/format";
-import { Button, LinkButton, Pill } from "../../shared/ui";
+import { Button, EmptyState, LinkButton, Pill } from "../../shared/ui";
 import { ConfirmDialog } from "../classes/ConfirmDialog";
 import { ClassOptionsMenu, type ClassOption } from "../classes/ClassOptionsMenu";
 import AddSessionModal from "./AddSessionModal";
 import { studentsForSession } from "../attendance/sessionRoster";
 import ClassDesktopHeader from "./ClassDesktopHeader";
+import { useCancelSession } from "./useCancelSession";
 import s from "./desktop.module.css";
 
 /** "Thứ Hai, 19/10" — ngày ngắn dưới số buổi (ảnh 01). */
@@ -121,8 +118,7 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
   const [menuSessionId, setMenuSessionId] = useState<string | null>(null);
   const [confirmSession, setConfirmSession] = useState<Session | null>(null);
   const [addSession, setAddSession] = useState<Session | null | undefined>();
-  const [error, setError] = useState("");
-  const cancelling = useRef(false);
+  const cancelling = useCancelSession(() => setConfirmSession(null));
   const comments = listComments(classId);
 
   if (!klass) return null;
@@ -142,32 +138,10 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
     return { roster: roster.length, records, sent, homework };
   }
 
-  async function cancel(session: Session) {
-    if (cancelling.current) return;
-    cancelling.current = true;
-    try {
-      await cancelSession(session.id);
-      setConfirmSession(null);
-      setError("");
-    } catch (cause) {
-      setConfirmSession(null);
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không hủy được buổi học. Vui lòng thử lại.",
-      );
-    } finally {
-      cancelling.current = false;
-    }
-  }
-
   const primaryAction = canWrite ? (
     <Button
       size="md"
-      onClick={() => {
-        setError("");
-        setAddSession(null);
-      }}
+      onClick={() => setAddSession(null)}
     >
       Thêm buổi lẻ
     </Button>
@@ -192,6 +166,7 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
         danger: true,
         onSelect: () => {
           setMenuSessionId(null);
+          cancelling.clearError();
           setConfirmSession(session);
         },
       });
@@ -208,11 +183,6 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
   return (
     <main className={s.page}>
       <ClassDesktopHeader classId={classId} klass={klass} actions={primaryAction} />
-      {error && (
-        <p role="alert" className={s.error}>
-          {error}
-        </p>
-      )}
       <div className={s.split}>
         <section className={s.mainColumn} aria-label="Buổi học">
           <div className={s.card + " " + s.cardFlush}>
@@ -322,8 +292,12 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={6} className={s.muted14}>
-                        Chưa có buổi học nào đã qua.
+                      <td colSpan={6}>
+                        <EmptyState
+                          size="compact"
+                          title="Chưa có buổi học nào đã qua"
+                          description="Các buổi đã diễn ra sẽ hiện ở đây."
+                        />
                       </td>
                     </tr>
                   )}
@@ -336,7 +310,7 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
         <aside className={s.sideColumn}>
           {spotlight && (
             <div className={s.card}>
-              <p className={s.label13}>Buổi hiện tại</p>
+              <h2 className={s.sectionTitle}>Buổi hiện tại</h2>
               <p
                 style={{
                   margin: "6px 0 0",
@@ -358,28 +332,8 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
                 size="md"
                 className={s.fullWidth}
               >
-                {spotlight.date === today ? "Điểm danh" : "Xem buổi"}
+                Xem buổi
               </LinkButton>
-              {canWrite && spotlight.status === "planned" && (
-                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  {spotlight.origin === "manual" && (
-                    <Button
-                      variant="neutral"
-                      className={s.flex1}
-                      onClick={() => setAddSession(spotlight)}
-                    >
-                      Sửa buổi lẻ
-                    </Button>
-                  )}
-                  <Button
-                    variant="danger"
-                    className={s.flex1}
-                    onClick={() => setConfirmSession(spotlight)}
-                  >
-                    Hủy buổi
-                  </Button>
-                </div>
-              )}
             </div>
           )}
 
@@ -431,7 +385,10 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
                   <Button
                     variant="danger"
                     className={s.flex1}
-                    onClick={() => setConfirmSession(manual)}
+                    onClick={() => {
+                      cancelling.clearError();
+                      setConfirmSession(manual);
+                    }}
                   >
                     Hủy buổi
                   </Button>
@@ -471,19 +428,21 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
           confirmSession ? formatDayMonth(confirmSession.date) : ""
         }?`}
         message="Buổi học sẽ được đánh dấu là đã huỷ. Không thể hoàn tác."
+        error={cancelling.error}
         actions={[
           {
             label: "Huỷ buổi học",
             variant: "danger",
-            onClick: () => confirmSession && cancel(confirmSession),
+            busy: cancelling.busy,
+            onClick: () => confirmSession && void cancelling.run(confirmSession.id),
           },
           {
             label: "Giữ buổi học",
             variant: "neutral",
-            onClick: () => setConfirmSession(null),
+            onClick: () => !cancelling.busy && setConfirmSession(null),
           },
         ]}
-        onDismiss={() => setConfirmSession(null)}
+        onDismiss={() => !cancelling.busy && setConfirmSession(null)}
       />
     </main>
   );

@@ -90,7 +90,7 @@ export function EditClassModal({
             >
               Huỷ
             </Button>
-            <Button type="submit" disabled={!action.canSave} loading={action.saving}>
+            <Button type="submit" disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
               Lưu thay đổi
             </Button>
           </div>

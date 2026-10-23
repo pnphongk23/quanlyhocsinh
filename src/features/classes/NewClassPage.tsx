@@ -115,7 +115,7 @@ export default function NewClassPage() {
             >
               Huỷ
             </LinkButton>
-            <Button type="submit" size="lg" disabled={!action.canSave} loading={action.saving}>
+            <Button type="submit" size="lg" disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
               Tạo lớp
             </Button>
           </ActionFooter>

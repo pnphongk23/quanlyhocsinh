@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { formatDayMonth, formatWeekdayDate, weekdayNames } from "../../shared/format";
-import { Pill } from "../../shared/ui";
+import { EmptyState, Pill } from "../../shared/ui";
 import type { TodayAgenda, TodayEntry } from "./todayModel";
 import s from "./today.module.css";
 
@@ -52,12 +52,18 @@ export function TodayCard({ agenda }: { agenda: TodayAgenda }) {
               <Entry key={entry.session.id} entry={entry} />
             ))}
           </ul>
-          {!hasTasks && <p className={s.note}>Không có việc cần làm</p>}
+          {!hasTasks && (
+            <EmptyState size="compact" title="Không có việc cần làm" />
+          )}
         </>
       ) : (
         <>
-          <p className={s.note}>Hôm nay không có buổi học.</p>
-          {agenda.next ? (
+          <EmptyState
+            size="compact"
+            title="Hôm nay không có buổi học"
+            description={agenda.next ? undefined : "Chưa có buổi nào sắp tới."}
+          />
+          {agenda.next && (
             <>
               <p className={s.nextLabel}>
                 Buổi kế tiếp · {formatWeekdayDate(agenda.next.session.date)}
@@ -66,8 +72,6 @@ export function TodayCard({ agenda }: { agenda: TodayAgenda }) {
                 <Entry entry={agenda.next} showDate />
               </ul>
             </>
-          ) : (
-            <p className={s.note}>Chưa có buổi nào sắp tới.</p>
           )}
         </>
       )}

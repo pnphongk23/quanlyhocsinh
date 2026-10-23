@@ -6,7 +6,6 @@ import {
   setCurrentClass,
 } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
-import { listStudents } from "../../data/repositories/students";
 import type { Class, PermissionGroup, Session } from "../../data/types";
 import {
   formatClassSchedule,
@@ -68,8 +67,9 @@ export function activeClassTab(pathname: string): string {
 }
 
 /**
- * Khung đầu màn "Chi tiết lớp" trên web desktop (ảnh 01…15): breadcrumb, tiêu
- * đề lớp hoặc buổi, phụ đề, nút "…", nút chính của tab và hàng 5 tab.
+ * Khung đầu màn "Chi tiết lớp" trên web desktop (ảnh 01…15): tiêu đề lớp hoặc
+ * buổi, nút "…", nút chính của tab và hàng 5 tab. Không breadcrumb: sidebar và
+ * tab "Buổi học" là đường quay lại.
  * Mobile dùng khung riêng trong ClassSpaceLayout nên không bị ảnh hưởng.
  */
 export default function ClassDesktopHeader({
@@ -96,8 +96,6 @@ export default function ClassDesktopHeader({
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const canWriteClasses = access.can("classes", "write");
   const visibleTabs = TABS.filter((tab) => access.can(tab.group, "read"));
-  const studentCount = listStudents(classId).length;
-  const activeLabel = visibleTabs.find((tab) => tab.to === active)?.label;
   const tabsRef = useRef<HTMLElement>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const indicatorReady = useSlideIndicator(tabsRef, active);
@@ -139,55 +137,11 @@ export default function ClassDesktopHeader({
   return (
     <>
       <header className={s.header}>
-        <nav className={s.breadcrumb} aria-label="Đường dẫn">
-          <Link className={s.crumbLink} to="/lop">
-            Lớp
-          </Link>
-          <span className={s.crumbSep} aria-hidden="true">
-            /
-          </span>
-          {session ? (
-            <>
-              <Link className={s.crumbLink} to={`/lop/${classId}/buoi-hoc`}>
-                {klass.name}
-              </Link>
-              <span className={s.crumbSep} aria-hidden="true">
-                /
-              </span>
-              <Link className={s.crumbLink} to={`/lop/${classId}/buoi-hoc`}>
-                Buổi học
-              </Link>
-              <span className={s.crumbSep} aria-hidden="true">
-                /
-              </span>
-              <span className={s.crumbCurrent}>{sessionPrefix(session)}</span>
-            </>
-          ) : (
-            <>
-              <Link className={s.crumbLink} to={`/lop/${classId}/buoi-hoc`}>
-                {klass.name}
-              </Link>
-              {activeLabel && (
-                <>
-                  <span className={s.crumbSep} aria-hidden="true">
-                    /
-                  </span>
-                  <span className={s.crumbCurrent}>{activeLabel}</span>
-                </>
-              )}
-            </>
-          )}
-        </nav>
         <div className={s.titleRow}>
           <div className={s.titleBlock}>
             <h1 className={s.title}>
               {session ? sessionHeading(session, klass.time) : klass.name}
             </h1>
-            <p className={s.subtitle}>
-              {session
-                ? klass.name
-                : classSubtitle(klass, studentCount)}
-            </p>
           </div>
           <div className={s.headerActions}>
             {canWriteClasses && (
