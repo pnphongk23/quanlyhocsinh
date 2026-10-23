@@ -365,35 +365,13 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
                   ? "Điểm danh mở vào ngày học."
                   : "Buổi học đã tới ngày."}
               </p>
-              <div style={{ display: "flex", gap: 8 }}>
-                <LinkButton
-                  to={`/lop/${classId}/buoi-hoc/${manual.id}`}
-                  className={s.flex1}
-                >
-                  Xem buổi
-                </LinkButton>
-                {canWrite && (
-                  <Button
-                    variant="neutral"
-                    className={s.flex13}
-                    onClick={() => setAddSession(manual)}
-                  >
-                    Sửa buổi lẻ
-                  </Button>
-                )}
-                {canWrite && (
-                  <Button
-                    variant="danger"
-                    className={s.flex1}
-                    onClick={() => {
-                      cancelling.clearError();
-                      setConfirmSession(manual);
-                    }}
-                  >
-                    Hủy buổi
-                  </Button>
-                )}
-              </div>
+              <LinkButton
+                to={`/lop/${classId}/buoi-hoc/${manual.id}`}
+                size="md"
+                className={s.fullWidth}
+              >
+                Xem buổi
+              </LinkButton>
             </div>
           )}
 

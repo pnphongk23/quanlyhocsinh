@@ -52,6 +52,24 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     expect(card).not.toContain("Sửa buổi lẻ");
   });
 
+  it("Thẻ Buổi lẻ sắp tới chỉ còn Xem buổi", () => {
+    const seed = createSeed();
+    seed.sessions.push({
+      id: "6a-extra-later",
+      classId: "6a",
+      date: "2099-01-01",
+      time: "17:00",
+      origin: "manual",
+      status: "planned",
+    });
+    replaceStore(seed);
+    const html = render(<SessionsDesktop classId="6a" />);
+    const card = html.split("Buổi lẻ sắp tới")[1].split("Lịch lặp")[0];
+    expect(card).toContain("Xem buổi");
+    expect(card).not.toContain("Hủy buổi");
+    expect(card).not.toContain("Sửa buổi lẻ");
+  });
+
   it("Điểm danh: 4 trạng thái, ô giờ đến, nút lưu; không quản lý phân công", () => {
     const session = getSession("6a-session-7")!;
     const klass = getClass("6a")!;

@@ -41,7 +41,16 @@ export function Component() {
   const workspaceLabel = userName
     ? `Lớp của ${userName}`
     : membership?.workspace.name ?? "Lớp học";
-  const classSelected = pathname.startsWith("/lop/");
+  const path = pathname.replace(/\/$/, "");
+  // Đúng một mục selected: mục con khớp route thì mục con, không thì "Lớp".
+  const childMatch =
+    activeClass !== undefined &&
+    classSections.some(
+      ([section]) =>
+        path === classPath(activeClass.id, section) ||
+        (section === "diem" && path.includes("/bao-cao-diem")),
+    );
+  const lopSelected = path.startsWith("/lop") && !childMatch;
   const navLinkClass =
     (child: boolean, scoreReport = false) =>
     ({ isActive }: { isActive: boolean }) =>
@@ -108,9 +117,13 @@ export function Component() {
           <NavLink
             to="/lop"
             end
-            className={(state) =>
-              `${navLinkClass(false)(state)}${activeClass && classSelected ? ` ${styles.staffNavGroupOpen}` : ""}`
-            }
+            className={[
+              styles.staffNavItem,
+              lopSelected ? styles.staffNavActive : "",
+              childMatch ? styles.staffNavGroupOpen : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
           >
             Lớp
           </NavLink>

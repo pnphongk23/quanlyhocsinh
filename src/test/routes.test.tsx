@@ -212,6 +212,37 @@ describe("foundation route integration", () => {
     router.dispose();
   });
 
+  it.each(["/lop", "/lop/6a/buoi-hoc", "/lop/6a/bai-kiem-tra", "/lop/6a/buoi-hoc/6a-session-7"])(
+    "selects Lớp when no class section matches %s",
+    async (url) => {
+      authState.session = activeSession("staff");
+      const fixture = createSeed();
+      fixture.currentClassId = "6a";
+      replaceStore(fixture);
+      const router = open(url);
+      const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
+      const selected = Array.from(navigation.querySelectorAll("a")).filter((link) =>
+        /staffNavActive/.test(link.className),
+      );
+      expect(selected.map((link) => link.textContent)).toEqual(["Lớp"]);
+      router.dispose();
+    },
+  );
+
+  it("selects only the matching section, not Lớp, on a class section", async () => {
+    authState.session = activeSession("staff");
+    const fixture = createSeed();
+    fixture.currentClassId = "6a";
+    replaceStore(fixture);
+    const router = open("/lop/6a/diem");
+    const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
+    const selected = Array.from(navigation.querySelectorAll("a")).filter(
+      (link) => /staffNavActive/.test(link.className),
+    );
+    expect(selected.map((link) => link.textContent)).toEqual(["Điểm số"]);
+    router.dispose();
+  });
+
   it("redirects unauthenticated staff and guardian routes to sign in", async () => {
     const router = open("/lop/6a/buoi-hoc");
     expect(await screen.findByRole("heading", { name: "Đăng nhập" })).toBeVisible();
