@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, PageHeader } from "../../shared/ui";
+import { Card, EmptyState, PageHeader } from "../../shared/ui";
 import { useGuardianContext } from "./guardianContext";
 import {
   childMonths,
@@ -62,7 +62,7 @@ export default function GuardianScoresPage() {
       {data && (
         <>
           {data.rows.length === 0 ? (
-            <p className={g.muted}>Chưa có bài kiểm tra nào trong tháng này.</p>
+            <EmptyState size="compact" title="Chưa có bài kiểm tra nào trong tháng này" />
           ) : (
             <Card className={g.card}>
               <div className={g.cardHead}>

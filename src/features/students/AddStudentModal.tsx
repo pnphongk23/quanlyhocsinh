@@ -45,7 +45,7 @@ export default function AddStudentModal({
         onClose={closeNow}
         beforeClose={guard.beforeClose}
         footer={
-          <Button size="lg" type="submit" form={formId} disabled={!action.canSave} loading={action.saving}>
+          <Button size="lg" type="submit" form={formId} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
             Lưu học sinh
           </Button>
         }

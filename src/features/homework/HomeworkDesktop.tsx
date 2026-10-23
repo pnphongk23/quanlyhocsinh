@@ -25,8 +25,7 @@ import { useStore } from "../../data/store";
 import { useSaveStatus } from "../../shared/SaveStatus";
 import { formatDayMonth } from "../../shared/format";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { Button, Pill, UnsavedChangesDialog } from "../../shared/ui";
-import { Mascot } from "../../shared/ui/Mascot";
+import { Button, EmptyState, Pill, UnsavedChangesDialog } from "../../shared/ui";
 import type {
   HomeworkKind,
   HomeworkLevel,
@@ -55,6 +54,13 @@ type Editor =
   | { mode: "edit"; sectionId: string };
 
 const EDITOR_FORM_ID = "homework-desktop-form";
+interface EditorState {
+  dirty: boolean;
+  canSave: boolean;
+  saving: boolean;
+  justSaved: boolean;
+}
+const IDLE_EDITOR_STATE: EditorState = { dirty: false, canSave: false, saving: false, justSaved: false };
 
 /** "Thứ Hai 19/10" trong banner buổi chấm — chỉ để đối chiếu, không bắt buộc. */
 function weekdayDay(iso: string): string {
@@ -89,7 +95,7 @@ export default function HomeworkDesktop({
     {},
   );
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [editorState, setEditorState] = useState({ dirty: false, canSave: false });
+  const [editorState, setEditorState] = useState<EditorState>(IDLE_EDITOR_STATE);
   const editorSubmit = useRef<(() => Promise<boolean>) | null>(null);
   const [pendingEditor, setPendingEditor] = useState<{ apply: () => void } | null>(
     null,
@@ -214,6 +220,8 @@ export default function HomeworkDesktop({
       <Button
         size="md"
         disabled={!gradeAction.canSave}
+        loading={gradeAction.saving}
+        done={gradeAction.justSaved}
         onClick={() => void gradeAction.submit()}
       >
         Lưu kết quả chấm
@@ -224,6 +232,8 @@ export default function HomeworkDesktop({
         type="submit"
         form={EDITOR_FORM_ID}
         disabled={!editorState.canSave}
+        loading={editorState.saving}
+        done={editorState.justSaved}
       >
         Lưu bài tập
       </Button>
@@ -278,19 +288,22 @@ export default function HomeworkDesktop({
         ctx.previous.state === "first" ? "first" : "none-given",
       );
       return (
-          <div className={d.card + " " + d.emptyCard}>
-            <Mascot pose="cho" size={88} />
-            <p className={d.emptyTitle}>{copy.title}</p>
-          <p className={d.emptyText}>{copy.body}</p>
-          {canWrite && (
-            <Button
-              variant="secondary"
-              size="md"
-              onClick={() => setView("today")}
-            >
-              Giao BTVN ở Bài tập hôm nay
-            </Button>
-          )}
+        <div className={d.card}>
+          <EmptyState
+            title={copy.title}
+            description={copy.body}
+            action={
+              canWrite ? (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setView("today")}
+                >
+                  Giao BTVN ở Bài tập hôm nay
+                </Button>
+              ) : undefined
+            }
+          />
         </div>
       );
     }
@@ -383,27 +396,27 @@ export default function HomeworkDesktop({
   const todayBody = (() => {
     if (!ctx.today.sections.length && !editor) {
       return (
-          <div className={d.card + " " + d.emptyCard}>
-            <Mascot pose="cho" size={88} />
-            <p className={d.emptyTitle}>Buổi này chưa có bài tập về nhà</p>
-          <p className={d.emptyText}>
-            Thêm phần để giao cho cả lớp. Tối đa 4 phần, mỗi loại một phần. Có
-            thể bỏ trống nếu buổi này không giao bài.
-          </p>
-          {canWrite && (
-            <div className={s.addButtons}>
-              {HOMEWORK_KINDS.map((kind) => (
-                <Button
-                  key={kind}
-                  variant="secondary"
-                  size="md"
-                  onClick={() => openAdd(kind)}
-                >
-                  + {HOMEWORK_KIND_LABELS[kind]}
-                </Button>
-              ))}
-            </div>
-          )}
+        <div className={d.card}>
+          <EmptyState
+            title="Buổi này chưa có bài tập về nhà"
+            description="Thêm phần để giao cho cả lớp. Tối đa 4 phần, mỗi loại một phần. Có thể bỏ trống nếu buổi này không giao bài."
+            action={
+              canWrite ? (
+                <div className={s.addButtons}>
+                  {HOMEWORK_KINDS.map((kind) => (
+                    <Button
+                      key={kind}
+                      variant="secondary"
+                      size="md"
+                      onClick={() => openAdd(kind)}
+                    >
+                      + {HOMEWORK_KIND_LABELS[kind]}
+                    </Button>
+                  ))}
+                </div>
+              ) : undefined
+            }
+          />
         </div>
       );
     }
@@ -677,7 +690,7 @@ function SectionForm({
   onDone: () => void;
   onCancel: () => void;
   /** Báo trạng thái cho nút "Lưu bài tập" ở đầu tab (nằm ngoài form). */
-  onStateChange: (state: { dirty: boolean; canSave: boolean }) => void;
+  onStateChange: (state: EditorState) => void;
   submitRef: MutableRefObject<(() => Promise<boolean>) | null>;
 }) {
   const save = useSaveStatus();
@@ -728,10 +741,15 @@ function SectionForm({
   }
   submitRef.current = submitForm;
   useEffect(() => {
-    onStateChange({ dirty: action.dirty, canSave: action.canSave });
-  }, [action.dirty, action.canSave, onStateChange]);
+    onStateChange({
+      dirty: action.dirty,
+      canSave: action.canSave,
+      saving: action.saving,
+      justSaved: action.justSaved,
+    });
+  }, [action.dirty, action.canSave, action.saving, action.justSaved, onStateChange]);
   useEffect(
-    () => () => onStateChange({ dirty: false, canSave: false }),
+    () => () => onStateChange(IDLE_EDITOR_STATE),
     [onStateChange],
   );
 
@@ -819,7 +837,13 @@ function SectionForm({
         <Button variant="neutral" onClick={onCancel}>
           Hủy
         </Button>
-        <Button type="submit" className={s.flex14} disabled={!action.canSave}>
+        <Button
+          type="submit"
+          className={s.flex14}
+          disabled={!action.canSave}
+          loading={action.saving}
+          done={action.justSaved}
+        >
           Lưu phần
         </Button>
       </div>

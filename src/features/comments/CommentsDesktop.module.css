@@ -255,15 +255,6 @@
   border-top: 0;
 }
 
-.emptyHomework {
-  margin: 0;
-  padding: var(--space-12) 14px;
-  border-radius: 12px;
-  background: var(--color-bg);
-  font-size: var(--text-md);
-  color: var(--color-muted);
-}
-
 .levelExcellent,
 .levelDone,
 .levelNotDone,

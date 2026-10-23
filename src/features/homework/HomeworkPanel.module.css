@@ -311,10 +311,6 @@
   display: flex;
 }
 
-.savedPill {
-  align-self: flex-start;
-}
-
 /* Danh sách phần đã giao (51) */
 .sectionList {
   display: flex;
@@ -375,17 +371,6 @@
   background: var(--color-neutral-soft);
   color: var(--color-muted);
 }
-.emptyMascot {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-}
-.emptyLine {
-  margin: 0;
-  font-size: var(--text-md);
-  color: var(--color-muted);
-}
-
 /* Thông báo chung */
 .readOnlyNotice {
   margin: 0;

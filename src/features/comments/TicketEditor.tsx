@@ -14,7 +14,7 @@ import type {
   StarLevel,
 } from "../../data/types";
 import { useAccess } from "../../data/repositories/access";
-import { Button, Pill } from "../../shared/ui";
+import { Button, EmptyState, Pill } from "../../shared/ui";
 import { Mascot, starPose } from "../../shared/ui/Mascot";
 import { readDraft, writeDraft } from "./draftStore";
 import type { SheetHomework } from "./CommentTicketSheet";
@@ -228,11 +228,14 @@ export default function TicketEditor({
             ))}
           </ul>
         ) : (
-          <p className={s.emptyHomework}>
-            {homework.state === "first"
-              ? "Buổi đầu · chưa có BTVN buổi trước"
-              : "Buổi trước không giao BTVN"}
-          </p>
+          <EmptyState
+            size="compact"
+            title={
+              homework.state === "first"
+                ? "Buổi đầu · chưa có BTVN buổi trước"
+                : "Buổi trước không giao BTVN"
+            }
+          />
         )}
         {canWrite && (
           <Button variant="secondary" size="md" onClick={onGoHomework}>

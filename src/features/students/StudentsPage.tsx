@@ -54,10 +54,10 @@ export default function StudentsPage() {
     if (!leavingId) return;
     try {
       await markStudentLeft(leavingId, todayISO());
-      setLeavingId(null);
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể cập nhật trạng thái học sinh.");
+      throw cause;
     }
   }
 
@@ -78,7 +78,7 @@ export default function StudentsPage() {
 
       {error && <p role="alert" className={s.error}>{error}</p>}
       {students.length === 0 ? (
-          <Card><EmptyState title="Chưa có học sinh" mascot="cho"><p>Thêm học sinh để bắt đầu quản lý lớp.</p></EmptyState></Card>
+          <Card><EmptyState title="Chưa có học sinh" description="Thêm học sinh để bắt đầu quản lý lớp." /></Card>
       ) : (
         <div className={s.list}>{students.map((student) => {
           const { initials, enrollment } = rowContent(student);
@@ -117,7 +117,13 @@ export default function StudentsPage() {
         <div className={s.confirmation}>
           <p>Ngày nghỉ là hôm nay. Điểm và điểm danh cũ vẫn được giữ trong lịch sử lớp.</p>
           {error && <p role="alert" className={s.error}>{error}</p>}
-          <Button variant="danger" disabled={!markLeft.canSave} onClick={() => void markLeft.submit()}>Xác nhận nghỉ học</Button>
+          <Button
+            variant="danger"
+            disabled={!markLeft.canSave}
+            loading={markLeft.saving}
+            done={markLeft.justSaved}
+            onClick={async () => { if (await markLeft.submit()) setLeavingId(null); }}
+          >Xác nhận nghỉ học</Button>
         </div>
       </Modal>
 

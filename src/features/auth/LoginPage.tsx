@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authFailureMessage, login } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
+import { Button } from "../../shared/ui";
 import { Mascot } from "../../shared/ui/Mascot";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { PasswordField, PhoneField } from "./authUi";
@@ -38,7 +39,7 @@ export default function LoginPage() {
       <PhoneField value={phone} onChange={(value) => setForm((f) => ({ ...f, phone: value }))} error={Boolean(error)} id="login-phone" />
       <PasswordField label="Mật khẩu" value={password} onChange={(value) => setForm((f) => ({ ...f, password: value }))} error={Boolean(error)} autoComplete="current-password" id="login-password" />
       <div className={s.forgotRow}><Link to={`/quen-mat-khau${phone ? `?sdt=+84${phone.replace(/\D/g, "")}` : ""}`} className={s.forgotLink}>Quên mật khẩu?</Link></div>
-      <button type="submit" className={s.submit} disabled={!action.canSave} aria-busy={loading || undefined}>{loading ? "Đang đăng nhập…" : "Đăng nhập"}</button>
+      <Button type="submit" size="lg" block className={s.submitAction} disabled={!action.canSave} loading={loading} done={action.justSaved}>Đăng nhập</Button>
     </form>
       <div className={s.footerBlock}><p className={s.registerRow}>Chưa có tài khoản? · <Link to="/dang-ky" className={s.registerLink}>Tạo tài khoản</Link></p></div>
   </div></main>;

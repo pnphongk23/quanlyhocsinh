@@ -13,7 +13,7 @@ import { useAccess } from "../../data/repositories/access";
 import type { Attendance as AttendanceRecord } from "../../data/types";
 import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { ActionFooter, Button, NoAccess } from "../../shared/ui";
+import { ActionFooter, Button, EmptyState, NoAccess } from "../../shared/ui";
 import { studentsForSession } from "./sessionRoster";
 import s from "./AttendancePanel.module.css";
 
@@ -476,9 +476,10 @@ export default function AttendancePanel({
                   </p>
                 ))
               ) : (
-                <p className={s.warning}>
-                  Chưa có học sinh vắng 2 buổi liên tiếp.
-                </p>
+                <EmptyState
+                  size="compact"
+                  title="Chưa có học sinh vắng 2 buổi liên tiếp"
+                />
               )}
             </article>
             {desktop && (
@@ -500,6 +501,8 @@ export default function AttendancePanel({
             size="lg"
             onClick={save}
             disabled={viewOnly || !action.canSave}
+            loading={action.saving}
+            done={action.justSaved}
             aria-describedby={viewOnlyNoticeId}
           >
             {readOnly ? "Điểm danh" : "Lưu điểm danh"}

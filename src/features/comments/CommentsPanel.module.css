@@ -211,25 +211,6 @@
   color: var(--color-muted);
 }
 
-/* 44: băng tối "Sẽ gửi khi có mạng" nằm trên nút gửi */
-.toast {
-  position: fixed;
-  left: 20px;
-  right: 20px;
-  bottom: calc(var(--sticky-bottom) + 72px);
-  z-index: var(--z-toast);
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  min-height: 48px;
-  padding: 0 var(--space-16);
-  border-radius: var(--radius-button);
-  background: var(--color-text);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
-}
-
 /* 41/42: hàng đầu sheet — tay nắm, avatar 44, tên 20/700, nhãn trạng thái */
 .sheetHead {
   width: 100%;
@@ -468,11 +449,6 @@
   white-space: nowrap;
 }
 
-.homeworkEmpty {
-  font-size: var(--text-md);
-  color: var(--color-muted);
-}
-
 .homeworkLink {
   align-self: start;
   display: inline-flex;
@@ -617,12 +593,5 @@
     opacity: 1;
     background: var(--color-neutral-soft);
     color: var(--color-placeholder);
-  }
-
-  .toast {
-    left: auto;
-    right: 32px;
-    bottom: 32px;
-    width: auto;
   }
 }

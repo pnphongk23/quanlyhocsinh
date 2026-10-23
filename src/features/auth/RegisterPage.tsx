@@ -4,7 +4,7 @@ import { authFailureMessage, registerParent, registerTeacher } from "../../data/
 import { ApiError } from "../../data/api/client";
 import { getSession } from "../../data/auth/session";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { Icon, Segmented } from "../../shared/ui";
+import { Button, Icon, Segmented } from "../../shared/ui";
 import { CheckRow, PasswordField, PasswordStrength, PhoneField } from "./authUi";
 import s from "./auth.module.css";
 import r from "./registerGuardian.module.css";
@@ -100,7 +100,7 @@ export default function RegisterPage() {
           <div className={s.checks}><CheckRow ok={password.length >= 8}>Tối thiểu 8 ký tự</CheckRow></div>
           <PasswordField label="Nhập lại mật khẩu" value={confirm} onChange={setField("confirm")} autoComplete="new-password" id="register-confirm" error={mismatch} errorText={mismatch ? "Mật khẩu nhập lại không khớp." : undefined} />
           <p className={s.note}>{guardian ? "Con sẽ tự hiện ở đây khi hồ sơ học sinh có đúng số điện thoại này. Chưa khớp hồ sơ nào thì bạn vẫn dùng được tài khoản." : "Người tạo là quản trị viên đầu tiên của không gian làm việc."}</p>
-          <button type="submit" className={s.submit} disabled={!action.canSave} aria-busy={loading || undefined}>{loading ? "Đang tạo…" : guardian ? "Tạo tài khoản" : "Tạo không gian làm việc"}</button>
+          <Button type="submit" size="lg" block className={s.submitAction} disabled={!action.canSave} loading={loading} done={action.justSaved}>{guardian ? "Tạo tài khoản" : "Tạo không gian làm việc"}</Button>
         </form>
       </div>
     </main>

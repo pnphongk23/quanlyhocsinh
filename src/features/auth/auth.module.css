@@ -229,6 +229,9 @@
   color: var(--color-muted);
   cursor: not-allowed;
 }
+.submitAction {
+  margin-top: var(--space-8);
+}
 .submitSticky {
   margin-top: auto;
 }

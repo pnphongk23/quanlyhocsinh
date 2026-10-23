@@ -16,7 +16,7 @@ import type {
 import { formatDayMonth } from "../../shared/format";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { Button, Modal, Pill, Sheet, UnsavedChangesDialog } from "../../shared/ui";
+import { Button, EmptyState, Modal, Pill, Sheet, UnsavedChangesDialog } from "../../shared/ui";
 import { Mascot, starPose } from "../../shared/ui/Mascot";
 import {
   homeworkLine,
@@ -311,7 +311,7 @@ export default function CommentTicketSheet({
             ))}
           </ul>
         ) : (
-          <p className={s.homeworkEmpty}>{previousLine.text}</p>
+          <EmptyState size="compact" title={previousLine.text} />
         )}
         {!readOnly && (
           <button
@@ -341,7 +341,7 @@ export default function CommentTicketSheet({
   );
 
   const footer = readOnly ? undefined : (
-    <Button size="lg" onClick={save} disabled={!action.canSave}>
+    <Button size="lg" onClick={save} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
       Lưu
     </Button>
   );

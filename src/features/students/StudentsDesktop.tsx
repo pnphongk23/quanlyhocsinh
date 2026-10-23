@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { getClass } from "../../data/repositories/classes";
 import {
   createStudent,
@@ -13,7 +13,7 @@ import { useAccess } from "../../data/repositories/access";
 import type { Attendance, Class, Session, Student } from "../../data/types";
 import { todayISO } from "../../shared/format";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { Button, Input, Modal, UnsavedChangesDialog } from "../../shared/ui";
+import { Button, EmptyState, Input, Modal, UnsavedChangesDialog } from "../../shared/ui";
 import { ClassOptionsMenu, type ClassOption } from "../classes/ClassOptionsMenu";
 import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
 import s from "./StudentsDesktop.module.css";
@@ -116,6 +116,20 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
         </div>
 
       <div className={d.card}>
+        {students.length === 0 ? (
+          <EmptyState
+            title="Chưa có học sinh"
+            description="Thêm học sinh để bắt đầu quản lý lớp."
+            action={
+              canWrite ? (
+                <Button size="md" onClick={() => setAdding(true)}>
+                  + Thêm học sinh
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <>
         <table className={s.table}>
           <colgroup>
             <col />
@@ -176,6 +190,8 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
             Số điện thoại phụ huynh được lưu trong hồ sơ học sinh.
             Một số điện thoại có thể liên kết với nhiều con.
         </p>
+          </>
+        )}
       </div>
 
       {adding && (
@@ -252,6 +268,7 @@ function AddStudentModal({
             type="submit"
             form="add-student-form"
             loading={action.saving}
+            done={action.justSaved}
             disabled={!action.canSave}
           >
             Lưu học sinh
@@ -337,6 +354,7 @@ function PhoneModal({
             type="submit"
             form="edit-phone-form"
             loading={action.saving}
+            done={action.justSaved}
             disabled={!action.canSave}
           >
             Lưu số điện thoại
@@ -384,22 +402,16 @@ function LeaveStudentModal({
   student: Student;
   onClose: () => void;
 }) {
-  const [busy, setBusy] = useState(false);
-  const lock = useRef(false);
-  const [error, setError] = useState("");
+  const action = useSaveAction({
+    baseline: false,
+    value: true,
+    save: () => markStudentLeft(student.id, todayISO()),
+  });
+  const error = action.error
+    ? errorText(action.error, "Không thể cập nhật trạng thái học sinh.")
+    : "";
   async function confirm() {
-    if (lock.current) return;
-    lock.current = true;
-    setBusy(true);
-    try {
-      await markStudentLeft(student.id, todayISO());
-      onClose();
-    } catch (cause) {
-      setError(errorText(cause, "Không thể cập nhật trạng thái học sinh."));
-    } finally {
-      lock.current = false;
-      setBusy(false);
-    }
+    if (await action.submit()) onClose();
   }
   return (
     <Modal
@@ -410,8 +422,9 @@ function LeaveStudentModal({
         <Button
           variant="danger"
           size="md"
-          loading={busy}
-          disabled={busy}
+          loading={action.saving}
+          done={action.justSaved}
+          disabled={!action.canSave}
           onClick={() => void confirm()}
         >
           Xác nhận nghỉ học

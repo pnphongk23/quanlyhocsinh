@@ -254,39 +254,10 @@
   font-weight: 600;
 }
 
-/* Trạng thái rỗng: dáng màn rỗng chung của design (74, 76) */
+/* Khung nền quanh EmptyState của ngày không có buổi */
 .empty {
-  display: grid;
-  justify-items: center;
-  gap: var(--space-16);
-  padding: 28px var(--space-24);
   border-radius: var(--radius-card);
   background: var(--color-surface);
-  text-align: center;
-}
-.emptyIcon {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: var(--radius-pill);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
-}
-.emptyText {
-  display: grid;
-  gap: var(--space-8);
-  justify-items: center;
-}
-.emptyTitle {
-  font-size: 20px;
-  font-weight: 700;
-}
-.emptyBody {
-  max-width: 30ch;
-  color: var(--color-muted);
-  font-size: var(--text-base);
-  line-height: 1.5;
 }
 
 /* Lịch tháng */

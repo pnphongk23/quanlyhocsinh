@@ -4,7 +4,7 @@ import { authFailureMessage, changePassword } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
-import { Icon } from "../../shared/ui";
+import { Button, Icon } from "../../shared/ui";
 import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
 import a from "../auth/auth.module.css";
 import s from "./settings.module.css";
@@ -85,9 +85,9 @@ export default function ChangePasswordPage() {
             Tối thiểu {PASSWORD_MIN_LENGTH} ký tự
           </CheckRow>
         </div>
-        <button type="submit" className={`${a.submit} ${a.submitSticky}`} disabled={!action.canSave} aria-busy={action.saving || undefined}>
-          {action.saving ? "Đang lưu…" : "Lưu mật khẩu mới"}
-        </button>
+        <Button type="submit" size="lg" block className={a.submitSticky} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
+          Lưu mật khẩu mới
+        </Button>
       </form>
     </main>
   );

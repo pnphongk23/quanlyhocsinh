@@ -163,6 +163,8 @@ export default function AttendanceDesktop({
             <Button
               size="md"
               disabled={!action.canSave}
+              loading={action.saving}
+              done={action.justSaved}
               onClick={() => void action.submit()}
             >
               Lưu điểm danh

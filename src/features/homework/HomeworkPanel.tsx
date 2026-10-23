@@ -29,7 +29,6 @@ import { formatDayMonth } from "../../shared/format";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import { Button, EmptyState, NoAccess, Pill, UnsavedChangesDialog } from "../../shared/ui";
-import { Mascot } from "../../shared/ui/Mascot";
 import type {
   HomeworkKind,
   HomeworkLevel,
@@ -209,14 +208,7 @@ export default function HomeworkPanel({
     return (
       <section className={styles.panel} aria-label="Bài tập về nhà">
         {backBar}
-        <div className={styles.noticeCard} role="status">
-          <span className={styles.noticeIcon}>
-            <Glyph size={20}>{infoIcon}</Glyph>
-          </span>
-          <p className={styles.noticeTitle}>
-            Buổi học đã hủy nên không giao hoặc chấm bài tập.
-          </p>
-        </div>
+        <EmptyState title="Buổi học đã hủy nên không giao hoặc chấm bài tập" />
       </section>
     );
 
@@ -283,18 +275,11 @@ export default function HomeworkPanel({
         previous.state === "first" ? "first" : "none-given",
       );
       return (
-        <>
-          <div className={styles.noticeCard} role="status">
-            <span className={styles.noticeIcon}>
-              <Glyph size={20}>{infoIcon}</Glyph>
-            </span>
-            <div>
-              <p className={styles.noticeTitle}>{copy.title}</p>
-              <p className={styles.noticeBody}>{copy.body}</p>
-            </div>
-          </div>
-          {canWrite && goToToday}
-        </>
+        <EmptyState
+          title={copy.title}
+          description={copy.body}
+          action={canWrite ? goToToday : undefined}
+        />
       );
     }
     if (!activeProgress || !activeSection) return null;
@@ -482,11 +467,6 @@ export default function HomeworkPanel({
               {todayGradingText(grading)}
             </p>
           </div>
-          {sections.length > 0 && (
-            <Pill tone="success" className={styles.savedPill}>
-              Đã lưu · phụ huynh đã thấy
-            </Pill>
-          )}
           {sections.length > 0 ? (
             <div className={styles.sectionList}>
               {sections.map((section) => (
@@ -521,10 +501,7 @@ export default function HomeworkPanel({
               ))}
             </div>
           ) : (
-              <div className={styles.emptyMascot}>
-                <Mascot pose="cho" size={72} />
-                <p className={styles.emptyLine}>Chưa giao phần bài tập nào.</p>
-            </div>
+            <EmptyState size="compact" title="Chưa giao phần bài tập nào" />
           )}
           {canWrite && addLabel && (
             <button
@@ -819,7 +796,7 @@ function SectionEditor({
             {!action.valid && (
               <p className={styles.footHint}>Nhập tiêu đề để lưu phần bài tập</p>
             )}
-            <Button size="lg" onClick={submit} disabled={!action.canSave}>
+            <Button size="lg" onClick={submit} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
               Lưu phần
             </Button>
           </>
@@ -886,7 +863,7 @@ function SectionEditor({
             {!action.dirty && (
               <p className={styles.footHint}>Chưa có thay đổi để lưu</p>
             )}
-            <Button size="lg" onClick={submit} disabled={!action.canSave}>
+            <Button size="lg" onClick={submit} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
               Lưu
             </Button>
           </>

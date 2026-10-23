@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   buildTicketRows,
@@ -15,8 +15,9 @@ import {
 } from "../../data/repositories/comments";
 import { getSession, sessionNumber } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
-import type { StoreState } from "../../data/types";
+import type { StoreState, Student } from "../../data/types";
 import { useOnline } from "../../shared/hooks/useOnline";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, EmptyState, Pill } from "../../shared/ui";
 import SendTicketsDialog from "./SendTicketsDialog";
 import TicketEditor, { StarRow, desktopTicketLabel } from "./TicketEditor";
@@ -50,7 +51,6 @@ export default function CommentsDesktop({
   const [filter, setFilter] = useState<TicketFilter>("all");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [dialogError, setDialogError] = useState("");
-  const [toast, setToast] = useState(false);
 
   const session = getSession(sessionId);
   const canWrite = access.can("comments_reports", "write") && !readOnly;
@@ -76,19 +76,31 @@ export default function CommentsDesktop({
   const leftStudents = leftStudentsForSession(state, sessionId);
 
   useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(false), 4000);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
-  useEffect(() => {
     setConfirmOpen(false);
-    setToast(false);
   }, [sessionId]);
 
   useEffect(() => {
     if (online) flushQueuedTickets();
   }, [online, sessionId]);
+
+  const sending = useSaveAction({
+    baseline: "",
+    value: sendable.map((row) => row.student.id).join(","),
+    validate: (value) => value !== "",
+    save: confirmSend,
+  });
+  // Gửi xong phiếu đổi sang "sent" ngay; giữ số liệu hộp xác nhận cho tới khi hộp đóng.
+  const dialogInfo = useRef({ sendCount: 0, skipped: [] as Student[], ungraded });
+  if (!sending.saving) {
+    dialogInfo.current = {
+      sendCount: sendable.length,
+      skipped: skipped.map((row) => row.student),
+      ungraded,
+    };
+  }
+  async function confirmAndClose() {
+    if (await sending.submit()) setConfirmOpen(false);
+  }
 
   if (!session) return null;
   const sessionNo = sessionNumber(session);
@@ -110,17 +122,16 @@ export default function CommentsDesktop({
 
   function confirmSend() {
     try {
-      const result = sendSessionTickets(
+      sendSessionTickets(
         sessionId,
         sendable.map((row) => row.student.id),
       );
-      setConfirmOpen(false);
       setDialogError("");
-      setToast(result.queued);
     } catch (cause) {
       setDialogError(
         cause instanceof Error ? cause.message : "Không gửi được phiếu.",
       );
+      throw cause;
     }
   }
 
@@ -217,7 +228,7 @@ export default function CommentsDesktop({
                   );
                 })
               ) : (
-                <p className={d.muted14}>Không có học sinh trong mục này.</p>
+                <EmptyState size="compact" title="Không có học sinh trong mục này" />
               )}
             </div>
           </div>
@@ -246,21 +257,16 @@ export default function CommentsDesktop({
         </section>
       </div>
 
-      {toast && (
-        <p role="status" className={d.successNote}>
-          Sẽ gửi khi có mạng
-        </p>
-      )}
-
       <SendTicketsDialog
         open={confirmOpen}
         sessionNumber={sessionNo}
-        sendCount={sendable.length}
-        skipped={skipped.map((row) => row.student)}
-        ungraded={ungraded}
+        sendCount={dialogInfo.current.sendCount}
+        skipped={dialogInfo.current.skipped}
+        ungraded={dialogInfo.current.ungraded}
         previousSessionNumber={previousNumber}
         error={dialogError}
-        onConfirm={confirmSend}
+        busy={sending.saving}
+        onConfirm={() => void confirmAndClose()}
         onClose={() => {
           setConfirmOpen(false);
           setDialogError("");

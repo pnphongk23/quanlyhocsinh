@@ -19,6 +19,7 @@ import { listTests } from "../../data/repositories/tests";
 import { useStore } from "../../data/store";
 import type { Report, Student } from "../../data/types";
 import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
+import { SAVE_MIN_VISIBLE_MS } from "../../shared/hooks/useSaveAction";
 import { Collapse } from "../../shared/motion";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
@@ -247,8 +248,11 @@ export default function ReportsPage() {
     if (publishLock.current) return;
     publishLock.current = true;
     setPublishing(kind);
+    const startedAt = Date.now();
     try {
       await run();
+      const remaining = SAVE_MIN_VISIBLE_MS - (Date.now() - startedAt);
+      if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
     } finally {
       publishLock.current = false;
       setPublishing(null);
@@ -374,10 +378,10 @@ export default function ReportsPage() {
           }}
           onBlur={(event) => persistComment(event.target.value)}
         />
+      ) : commentValue ? (
+        <p className={styles.commentText}>{commentValue}</p>
       ) : (
-        <p className={styles.commentText}>
-          {commentValue || "Chưa có nhận xét chung."}
-        </p>
+        <EmptyState size="compact" title="Chưa có nhận xét chung" />
       )}
       {canWrite && suggestion && (
         <Button

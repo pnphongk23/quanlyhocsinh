@@ -1,5 +1,5 @@
 import { formatDate, formatScore } from "../../shared/format";
-import { Button, Icon } from "../../shared/ui";
+import { Button, EmptyState, Icon } from "../../shared/ui";
 import type { MonthlyStudentReport } from "../../data/reportModel";
 import { reportMonthTitle } from "./reviewStatus";
 import styles from "./ReportsPage.module.css";
@@ -118,9 +118,7 @@ export default function ReportPreview({
             })}
           </ul>
         ) : (
-          <p className={styles.blockNote}>
-            Chưa có phiếu nào được gửi trong tháng này.
-          </p>
+          <EmptyState size="compact" title="Chưa có phiếu nào được gửi trong tháng này" />
         )}
       </section>
 
@@ -151,9 +149,7 @@ export default function ReportPreview({
             </tbody>
           </table>
         ) : (
-          <p className={styles.blockNote}>
-            Chưa có kết quả bài tập nào được gửi trong tháng này.
-          </p>
+          <EmptyState size="compact" title="Chưa có kết quả bài tập nào được gửi trong tháng này" />
         )}
         <p className={styles.blockFootnote}>
           Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.
@@ -179,9 +175,7 @@ export default function ReportPreview({
             ))}
           </ul>
         ) : (
-          <p className={styles.blockNote}>
-            Không có bài kiểm tra trong tháng này.
-          </p>
+          <EmptyState size="compact" title="Không có bài kiểm tra trong tháng này" />
         )}
         <p className={styles.blockFootnote}>
           Bài chưa có điểm cần chấm trước khi phát hành.
@@ -193,7 +187,7 @@ export default function ReportPreview({
         {report.generalComment ? (
           <p className={styles.commentText}>{report.generalComment}</p>
         ) : (
-          <p className={styles.blockNote}>Chưa có nhận xét chung.</p>
+          <EmptyState size="compact" title="Chưa có nhận xét chung" />
         )}
       </section>
 

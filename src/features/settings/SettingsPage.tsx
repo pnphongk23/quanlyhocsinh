@@ -13,7 +13,7 @@ import { pendingCommandCount } from "../../data/outbox";
 import { scheduleSync } from "../../data/sync";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useOnline } from "../../shared/hooks/useOnline";
-import { Icon, Modal, PageHeader } from "../../shared/ui";
+import { Button, Icon, Modal, PageHeader } from "../../shared/ui";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
 import { EMPTY_PASSWORD_FORM, isPasswordFormValid } from "./ChangePasswordPage";
@@ -482,14 +482,15 @@ function SettingsDesktop() {
                 </p>
               )}
               <div className={s.formFooter}>
-                <button
+                <Button
                   type="submit"
-                  className={s.saveButton}
+                  size="md"
                   disabled={!action.canSave}
-                  aria-busy={action.saving || undefined}
+                  loading={action.saving}
+                  done={action.justSaved}
                 >
-                  {action.saving ? "Đang lưu…" : "Lưu mật khẩu mới"}
-                </button>
+                  Lưu mật khẩu mới
+                </Button>
               </div>
             </form>
             <div className={s.divider} />

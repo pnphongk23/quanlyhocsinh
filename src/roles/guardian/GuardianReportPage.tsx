@@ -1,6 +1,6 @@
 import { formatScore } from "../../data/scoreFormat";
 import { getChildMonthlyReport } from "../../data/repositories/guardian";
-import { Button, Card, PageHeader } from "../../shared/ui";
+import { Button, Card, EmptyState, PageHeader } from "../../shared/ui";
 import { useGuardianContext } from "./guardianContext";
 import {
   defaultChildMonth,
@@ -137,9 +137,7 @@ export default function GuardianReportPage() {
           Tốt = Hoàn thành tốt · Chưa = Chưa hoàn thành
         </p>
         {body.homework.length === 0 ? (
-          <p className={g.muted}>
-            Chưa có kết quả bài tập đã gửi trong tháng này.
-          </p>
+          <EmptyState size="compact" title="Chưa có kết quả bài tập đã gửi trong tháng này" />
         ) : (
           <table className={g.table}>
             <thead>
@@ -172,7 +170,7 @@ export default function GuardianReportPage() {
           <h2>Điểm từng bài</h2>
         </div>
         {body.tests.length === 0 ? (
-          <p className={g.muted}>Không có bài kiểm tra trong tháng này.</p>
+          <EmptyState size="compact" title="Không có bài kiểm tra trong tháng này" />
         ) : (
           <ul className={g.scoreList}>
             {body.tests.map(({ test, score }) => (
