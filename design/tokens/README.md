@@ -25,6 +25,7 @@ Màu, bo góc, chuyển động giữ nguyên giá trị.
 | `--state-selected-*`, `--state-hover-bg`, `--state-pressed-bg`, `--state-focus-ring`, `--state-disabled-opacity`, `--state-success-*`, `--state-error-*`, `--state-pending-*` | Trạng thái thành phần dùng chung; bảng ở `design/ux-v2/rules.md` mục 6. Giá trị lấy từ token màu có sẵn |
 | `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms | Loading tối thiểu và thời gian giữ "Đã lưu" |
 | `--empty-mascot` 96px, `--empty-mascot-compact` 56px | Cỡ Mít trong `EmptyState` |
+| `--grid-col-name-min/max`, `--grid-col-test-max`, `--grid-cell-input-min`, `--grid-resize-step` | Độ rộng cột và bước kéo của bảng điểm |
 
 | Đổi | Trước → sau |
 |---|---|

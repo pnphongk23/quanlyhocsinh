@@ -154,6 +154,13 @@
   --empty-mascot: 96px;
   --empty-mascot-compact: 56px;
 
+  /* Bảng điểm: độ rộng cột và bước kéo */
+  --grid-col-name-min: 140px;
+  --grid-col-name-max: 280px;
+  --grid-col-test-max: 240px;
+  --grid-cell-input-min: 140px;
+  --grid-resize-step: 8px;
+
   font-family: var(--font-sans);
   color: var(--color-text);
   background: var(--color-bg);
