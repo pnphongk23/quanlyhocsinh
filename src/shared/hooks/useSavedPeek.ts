@@ -50,6 +50,8 @@ export function useSaveAndLeave(): SaveAndLeave {
   const { peek, cancel: cancelPeek } = useSavedPeek();
   const [done, setDone] = useState(false);
   const alive = useRef(true);
+  // Mỗi cancel()/run() mới tăng thế hệ: lần chạy cũ thấy thế hệ đổi thì không hiện "Đã lưu" và không proceed.
+  const generation = useRef(0);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -57,20 +59,21 @@ export function useSaveAndLeave(): SaveAndLeave {
     };
   }, []);
   const cancel = useCallback(() => {
+    generation.current += 1;
     cancelPeek();
     setDone(false);
   }, [cancelPeek]);
   const run = useCallback(
     async (save: () => Promise<unknown>, proceed: () => void) => {
+      const mine = ++generation.current;
+      const current = () => alive.current && generation.current === mine;
       const ok = await save();
-      if (ok === false || !alive.current) return;
+      if (ok === false || !current()) return;
       setDone(true);
-      if (await peek()) {
-        setDone(false);
-        proceed();
-      } else if (alive.current) {
-        setDone(false);
-      }
+      const stillWanted = await peek();
+      if (!current()) return;
+      setDone(false);
+      if (stillWanted) proceed();
     },
     [peek],
   );

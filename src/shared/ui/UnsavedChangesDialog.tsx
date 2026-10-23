@@ -43,7 +43,8 @@ export function UnsavedChangesDialog({
       className={s.confirmDialog}
       onCancel={(event) => {
         event.preventDefault();
-        onStay();
+        // Đang lưu hoặc vừa lưu xong và chờ rời màn: không cho Ở lại bằng Esc.
+        if (!saving && !done) onStay();
       }}
     >
       <p className={s.confirmTitle}>{title}</p>
@@ -70,6 +71,8 @@ export function UnsavedChangesDialog({
         <button
           type="button"
           className={s.confirmButton + " " + s.confirmStay}
+          disabled={saving || done}
+          aria-disabled={saving || done || undefined}
           onClick={onStay}
         >
           Ở lại

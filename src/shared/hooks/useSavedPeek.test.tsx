@@ -2,7 +2,7 @@ import { act, fireEvent, render, renderHook, screen } from "@testing-library/rea
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnsavedChangesDialog } from "../ui/UnsavedChangesDialog";
-import { SAVED_PEEK_MS, useSavedPeek } from "./useSavedPeek";
+import { SAVED_PEEK_MS, useSaveAndLeave, useSavedPeek } from "./useSavedPeek";
 import { useSaveAction } from "./useSaveAction";
 import { useUnsavedCloseGuard } from "./useUnsavedCloseGuard";
 
@@ -133,15 +133,15 @@ describe("Lưu trong hộp thoại rời màn", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("Ở lại trong lúc chờ: không đóng", async () => {
+  it("đã lưu và đang chờ: Ở lại bị khoá, vẫn đóng sau SAVED_PEEK_MS", async () => {
     const onClose = vi.fn();
     render(<Guarded save={() => true} onClose={onClose} />);
     fireEvent.click(screen.getByText("Thử đóng"));
     fireEvent.click(screen.getByText("Lưu", { selector: "button" }));
     await advance(400);
-    fireEvent.click(screen.getByText("Ở lại"));
-    await advance(SAVED_PEEK_MS * 2);
-    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Ở lại")).toBeDisabled();
+    await advance(SAVED_PEEK_MS);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("lỗi: giữ hộp thoại, không 'Đã lưu', không đóng", async () => {
@@ -153,5 +153,57 @@ describe("Lưu trong hộp thoại rời màn", () => {
     expect(screen.queryByText("Đã lưu")).toBeNull();
     expect(screen.getByRole("dialog", { hidden: true })).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("Ở lại khi save đang pending", () => {
+  it("cancel() trực tiếp trong lúc save pending: save thành công cũng không done, không proceed", async () => {
+    const { result } = renderHook(() => useSaveAndLeave());
+    const proceed = vi.fn();
+    let finish!: () => void;
+    let running!: Promise<void>;
+    act(() => {
+      running = result.current.run(() => new Promise<boolean>((resolve) => { finish = () => resolve(true); }), proceed);
+    });
+    act(() => result.current.cancel());
+    await act(async () => { finish(); await running; });
+    expect(result.current.done).toBe(false);
+    await advance(SAVED_PEEK_MS * 2);
+    expect(proceed).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("run mới thay run cũ: chỉ lần mới proceed", async () => {
+    const { result } = renderHook(() => useSaveAndLeave());
+    const first = vi.fn();
+    const second = vi.fn();
+    let finishFirst!: () => void;
+    let one!: Promise<void>;
+    act(() => {
+      one = result.current.run(() => new Promise<boolean>((resolve) => { finishFirst = () => resolve(true); }), first);
+    });
+    act(() => { void result.current.run(async () => true, second); });
+    await advance(SAVED_PEEK_MS);
+    await act(async () => { finishFirst(); await one; });
+    await advance(SAVED_PEEK_MS);
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("dialog: Ở lại và Esc bị khoá khi đang lưu và khi done", () => {
+    const onStay = vi.fn();
+    const { rerender, container } = render(<UnsavedChangesDialog open saving onSave={() => {}} onDiscard={() => {}} onStay={onStay} />);
+    const stay = screen.getByText("Ở lại", { selector: "button" });
+    expect(stay).toBeDisabled();
+    expect(stay).toHaveAttribute("aria-disabled", "true");
+    fireEvent(container.querySelector("dialog")!, new Event("cancel", { cancelable: true }));
+    expect(onStay).not.toHaveBeenCalled();
+    rerender(<UnsavedChangesDialog open done onSave={() => {}} onDiscard={() => {}} onStay={onStay} />);
+    expect(screen.getByText("Ở lại", { selector: "button" })).toBeDisabled();
+    fireEvent(container.querySelector("dialog")!, new Event("cancel", { cancelable: true }));
+    expect(onStay).not.toHaveBeenCalled();
+    rerender(<UnsavedChangesDialog open onSave={() => {}} onDiscard={() => {}} onStay={onStay} />);
+    fireEvent(container.querySelector("dialog")!, new Event("cancel", { cancelable: true }));
+    expect(onStay).toHaveBeenCalledTimes(1);
   });
 });
