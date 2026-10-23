@@ -5,7 +5,7 @@
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 
@@ -13,15 +13,15 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  padding-top: 8px;
+  gap: var(--space-8);
+  padding-top: var(--space-8);
 }
 
 .summary {
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -33,7 +33,7 @@
 .summaryActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   flex-wrap: nowrap;
 }
 
@@ -41,12 +41,12 @@
 .notice {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.45;
 }
 
@@ -57,14 +57,14 @@
 
 .hint {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
 .layout {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
 }
 
@@ -75,7 +75,7 @@
 .rosterList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 
@@ -97,10 +97,10 @@
   flex: 1;
   display: flex;
   align-items: center;
-  padding-left: 20px;
+  padding-left: var(--space-20);
   background: var(--color-error);
   color: #fff;
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
 }
 
@@ -109,10 +109,10 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 20px;
+  padding-right: var(--space-20);
   background: var(--color-warning-soft);
   color: var(--color-warning);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
 }
 
@@ -120,9 +120,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 56px;
-  padding: 6px 8px 6px 12px;
+  padding: 6px var(--space-8) 6px var(--space-12);
   border-radius: var(--radius-button);
   background: var(--color-surface);
   touch-action: pan-y;
@@ -141,7 +141,7 @@
   border-radius: 50%;
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
 }
 
@@ -149,18 +149,18 @@
   flex: 1;
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .personName {
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 500;
 }
 
 .lateFields {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   flex-wrap: wrap;
 }
 
@@ -168,7 +168,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
@@ -194,7 +194,8 @@
   flex: none;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  /* Mép phải pill thẳng cột dù nhãn dài ngắn khác nhau (Có mặt / Vắng); desktop căn giữa trong nút đặc */
+  justify-content: flex-end;
   min-width: 96px;
   height: var(--tap);
   min-height: var(--tap);
@@ -208,12 +209,12 @@
 .statusPill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-12);
   border-radius: var(--radius-pill);
   background: var(--status-bg, var(--color-neutral-soft));
   color: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -250,31 +251,31 @@
 .sideColumn {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 
 .attention {
   display: grid;
   gap: 6px;
-  padding: 14px 16px;
+  padding: 14px var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
 
 .attentionTitle {
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 700;
 }
 
 .warning {
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.5;
   color: var(--color-muted);
 }
 
 .footnote {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
@@ -282,13 +283,13 @@
 .saveError {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 52px;
-  padding: 0 8px 0 16px;
+  padding: 0 var(--space-8) 0 var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
@@ -305,35 +306,25 @@
 .retry {
   flex: none;
   height: var(--tap);
-  padding: 0 16px;
+  padding: 0 var(--space-16);
   border: 0;
   border-radius: var(--radius-button);
   background: var(--color-error);
   color: #fff;
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
 .error {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 10px var(--space-12);
+  border-radius: var(--radius-button);
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
-/* Nút lưu: 16 — thanh dưới cùng, nút 52 cao */
-.stickyBar {
-  position: sticky;
-  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
-  z-index: 5;
-  display: grid;
-  gap: 8px;
-  padding: 8px 0;
-  background: var(--color-bg);
-}
-
+/* Nút lưu: 16 — thanh dưới cùng (ActionFooter), nút 52 cao */
 .stickyBar > :last-child {
   border-radius: var(--radius-button);
 }
@@ -347,7 +338,7 @@
 
 @media (min-width: 1024px) {
   .panel {
-    gap: 16px;
+    gap: var(--space-16);
   }
 
   .summaryRow {
@@ -358,12 +349,12 @@
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
     align-items: start;
-    gap: 16px;
+    gap: var(--space-16);
   }
 
   /* web 89: thẻ bảng điểm danh trắng đệm 18/20, hàng có đường kẻ trên */
   .rosterCard {
-    padding: 18px 20px;
+    padding: 18px var(--space-20);
     border-radius: var(--radius-card);
     background: var(--color-surface);
   }
@@ -372,7 +363,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--space-8);
     flex-wrap: wrap;
     padding-bottom: 10px;
   }
@@ -385,7 +376,7 @@
 
   .cardSummary {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--text-md);
     color: var(--color-muted);
     font-variant-numeric: tabular-nums;
   }
@@ -404,7 +395,7 @@
   }
 
   .rosterCard .studentRow {
-    padding: 8px 0;
+    padding: var(--space-8) 0;
     border-top: 1px solid var(--color-divider);
     border-radius: 0;
     background: transparent;
@@ -417,6 +408,7 @@
 
   .statusButton {
     min-width: 92px;
+    justify-content: center;
     background: var(--status-bg, var(--color-neutral-soft));
     color: var(--status-fg, var(--color-text));
   }
@@ -425,7 +417,7 @@
     padding: 0;
     border-radius: 0;
     background: transparent;
-    font-size: 14px;
+    font-size: var(--text-md);
   }
 
   .stickyBar {

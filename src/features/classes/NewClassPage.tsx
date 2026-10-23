@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createClass } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
 import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
-import { Button, Input, LinkButton, NoAccess, PageHeader } from "../../shared/ui";
+import { ActionFooter, Button, Input, LinkButton, NoAccess, PageHeader } from "../../shared/ui";
 import { WeekdayPicker } from "./WeekdayPicker";
 import s from "./classesForm.module.css";
 
@@ -85,21 +85,19 @@ export default function NewClassPage() {
           </p>
         )}
           <SaveStatus status={save.status} />
-          <div className={s.actions}>
-            <div className={s.stickyBar}>
-              <LinkButton
-                to="/lop"
-                variant="surface"
-                size="lg"
-                className={s.cancel}
-              >
-                Huỷ
-              </LinkButton>
-              <Button type="submit" size="lg">
-                Tạo lớp
-              </Button>
-            </div>
-          </div>
+          <ActionFooter>
+            <LinkButton
+              to="/lop"
+              variant="surface"
+              size="lg"
+              className={s.cancel}
+            >
+              Huỷ
+            </LinkButton>
+            <Button type="submit" size="lg">
+              Tạo lớp
+            </Button>
+          </ActionFooter>
       </form>
     </section>
   );

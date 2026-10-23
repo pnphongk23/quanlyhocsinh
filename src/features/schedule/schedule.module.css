@@ -1,11 +1,11 @@
 /* Số đo lấy từ design/reference/14-gv-lich-theo-ngay.html và 15-gv-lich-theo-thang.html */
 .page {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
   width: min(100%, 720px);
   min-width: 0;
   margin: 0 auto;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  padding-bottom: var(--space-24);
 }
 
 /* Bộ chuyển Ngày | Tháng: ghi đè nhẹ lên Segmented dùng chung (padding 3, bán kính 8, cỡ chữ 14) */
@@ -16,7 +16,7 @@
   min-height: var(--tap);
   border-radius: 8px;
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .viewSwitch button[aria-selected="true"] {
@@ -33,9 +33,11 @@
 }
 .filterScroller {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8);
   overflow-x: auto;
-  padding: 2px 2px 4px;
+  /* 2px đệm giữ vòng focus của chip khỏi bị cắt; lề âm trả chip về đúng lề trang */
+  margin-inline: calc(-1 * var(--space-2));
+  padding: var(--space-2) var(--space-2) var(--space-4);
   scrollbar-width: none;
   overscroll-behavior-inline: contain;
 }
@@ -47,12 +49,12 @@
   max-width: min(220px, 62vw);
   min-height: var(--tap);
   overflow: hidden;
-  padding: 8px 12px;
+  padding: var(--space-8) var(--space-12);
   border: 1px solid transparent;
   border-radius: 8px;
   background: var(--color-surface);
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -67,11 +69,11 @@
 .errorBanner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 52px;
-  padding: 0 16px;
-  border-radius: 12px;
-  font-size: 14px;
+  padding: 0 var(--space-16);
+  border-radius: var(--radius-button);
+  font-size: var(--text-md);
   font-weight: 600;
   line-height: 1.4;
 }
@@ -80,7 +82,7 @@
   color: var(--color-warning);
 }
 .errorBanner {
-  padding-right: 8px;
+  padding-right: var(--space-8);
   background: var(--color-error-soft);
   color: var(--color-error);
 }
@@ -91,12 +93,12 @@
 .retryButton {
   flex: none;
   height: var(--tap);
-  padding: 0 16px;
+  padding: 0 var(--space-16);
   border: 0;
   border-radius: var(--radius-button);
   background: var(--color-error);
   color: var(--color-on-primary);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
@@ -104,7 +106,7 @@
 .dayBar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   padding: 6px;
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -124,7 +126,7 @@
 .dayBarCenter {
   display: grid;
   flex: 1;
-  gap: 2px;
+  gap: var(--space-2);
   min-width: 0;
   justify-items: center;
   text-align: center;
@@ -132,14 +134,14 @@
 .dayLabel {
   max-width: 100%;
   overflow: hidden;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .dayHint {
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 .dayJump {
   min-height: 20px;
@@ -147,7 +149,7 @@
   border: 0;
   background: none;
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -155,15 +157,15 @@
 /* Thẻ buổi học */
 .cards {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
 }
 .card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
-  padding: 16px;
+  padding: var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   color: var(--color-text);
@@ -171,8 +173,9 @@
 }
 .cardLead {
   flex: none;
-  width: 56px;
-  font-size: 16px;
+  min-width: 72px;
+  white-space: nowrap;
+  font-size: var(--text-base);
   font-weight: 700;
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
@@ -180,17 +183,17 @@
 .cardBody {
   display: grid;
   flex: 1;
-  gap: 2px;
+  gap: var(--space-2);
   min-width: 0;
 }
 .cardTitle {
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 600;
   overflow-wrap: break-word;
 }
 .cardMeta {
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.35;
 }
 .cardAction {
@@ -202,17 +205,17 @@
   border-radius: var(--radius-button);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .cardStatus {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-12);
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -240,14 +243,14 @@
 /* Nhóm "Chưa điểm danh" / "Sắp tới" / ngày đang chọn */
 .group {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
 }
 .groupLabel {
   margin: 0;
-  padding: 0 4px;
+  padding: 0;
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
@@ -255,8 +258,8 @@
 .empty {
   display: grid;
   justify-items: center;
-  gap: 16px;
-  padding: 28px 24px;
+  gap: var(--space-16);
+  padding: 28px var(--space-24);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   text-align: center;
@@ -272,7 +275,7 @@
 }
 .emptyText {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
   justify-items: center;
 }
 .emptyTitle {
@@ -282,51 +285,51 @@
 .emptyBody {
   max-width: 30ch;
   color: var(--color-muted);
-  font-size: 16px;
+  font-size: var(--text-base);
   line-height: 1.5;
 }
 
 /* Lịch tháng */
 .monthCard {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--space-12);
+  padding: var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
 .monthHead {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .monthTitle {
   flex: 1;
   margin: 0;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 700;
   text-align: center;
 }
 .monthJump {
   justify-self: center;
   min-height: 24px;
-  padding: 0 8px;
+  padding: 0 var(--space-8);
   border: 0;
   background: none;
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .monthGrid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: var(--space-2);
   text-align: center;
 }
 .monthWeekday {
-  padding: 4px 0;
+  padding: var(--space-4) 0;
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 .monthDay,
@@ -335,7 +338,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--space-2);
   min-width: 0;
   min-height: var(--tap);
   border: 0;
@@ -397,7 +400,7 @@
     gap: 14px;
   }
   .card {
-    padding: 18px 20px;
+    padding: 18px var(--space-20);
   }
   .monthDay,
   .monthEmpty {

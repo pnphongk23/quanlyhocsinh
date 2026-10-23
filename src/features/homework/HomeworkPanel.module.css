@@ -8,7 +8,7 @@
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 
@@ -23,12 +23,12 @@
   gap: 6px;
   min-height: var(--tap);
   height: var(--tap);
-  padding: 0 12px;
+  padding: 0 var(--space-12);
   border: 0;
   border-radius: var(--radius-button);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -41,19 +41,19 @@
   display: flex;
   gap: 3px;
   padding: 3px;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-border);
 }
 .segment {
   flex: 1;
   min-height: var(--tap);
   height: var(--tap);
-  padding: 0 8px;
+  padding: 0 var(--space-8);
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-chip);
   background: transparent;
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -68,19 +68,19 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px 16px;
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
 .cardTitle {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 700;
   line-height: 1.35;
 }
 .cardMeta {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.45;
   color: var(--color-muted);
 }
@@ -103,7 +103,7 @@
   border-radius: var(--radius-pill);
   background: var(--color-neutral-soft);
   color: var(--color-text);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .kindChipOn {
@@ -117,7 +117,7 @@
 }
 .partKind {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -134,7 +134,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .progressStrong {
   font-size: 15px;
@@ -150,12 +150,12 @@
   width: 100%;
   min-height: var(--tap);
   height: var(--tap);
-  padding: 0 12px;
+  padding: 0 var(--space-12);
   border: 0;
   border-radius: var(--radius-button);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .softButton:disabled {
@@ -169,8 +169,8 @@
 .studentCard {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: var(--space-8);
+  padding: 10px var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
@@ -178,7 +178,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .avatar {
   flex: none;
@@ -189,7 +189,7 @@
   border-radius: 50%;
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 .studentName {
@@ -202,48 +202,48 @@
 .badges {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-4);
   margin-left: auto;
 }
 .absentChip {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: var(--space-4) 10px;
   border-radius: var(--radius-pill);
   background: var(--color-warning-soft);
   color: var(--color-warning);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
 }
 .pendingChip {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  padding: var(--space-4) var(--space-12);
   border-radius: var(--radius-pill);
   background: var(--color-neutral-soft);
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .levels {
   display: flex;
-  gap: 4px;
+  gap: var(--space-4);
   padding: 3px;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-bg);
 }
 .levelButton {
   flex: 1;
   min-height: var(--tap);
-  padding: 2px 4px;
+  padding: var(--space-2) var(--space-4);
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-chip);
   background: transparent;
   color: var(--color-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
   line-height: 1.2;
 }
@@ -268,7 +268,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 12px 16px;
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
@@ -279,13 +279,13 @@
 }
 .noticeTitle {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 700;
   line-height: 1.4;
 }
 .noticeBody {
-  margin: 2px 0 0;
-  font-size: 14px;
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-md);
   line-height: 1.45;
   color: var(--color-muted);
 }
@@ -298,12 +298,12 @@
 .gradingBanner {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: var(--space-8);
+  padding: var(--space-12) 14px;
   border-radius: var(--radius-card);
   background: var(--color-warning-soft);
   color: var(--color-warning);
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.45;
 }
 .gradingBannerIcon {
@@ -324,7 +324,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 8px 0;
+  padding: var(--space-8) 0;
 }
 .sectionRow + .sectionRow {
   border-top: 1px solid var(--color-divider);
@@ -335,7 +335,7 @@
   height: 36px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: var(--radius-chip);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
 }
@@ -345,7 +345,7 @@
 }
 .sectionKind {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -359,7 +359,7 @@
 }
 .sectionDescription {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.45;
   color: var(--color-muted);
 }
@@ -382,28 +382,28 @@
 }
 .emptyLine {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
 }
 
 /* Thông báo chung */
 .readOnlyNotice {
   margin: 0;
-  padding: 10px 12px;
+  padding: 10px var(--space-12);
   border-radius: var(--radius-button);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 .errorBanner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   padding: 10px 14px;
   border-radius: var(--radius-button);
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
@@ -411,7 +411,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: var(--z-overlay);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -420,13 +420,13 @@
 .sheet {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
   width: 100%;
   max-width: 520px;
   max-height: 88dvh;
   overflow-y: auto;
   padding: 8px 20px calc(20px + env(safe-area-inset-bottom));
-  border-radius: 20px 20px 0 0;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--color-surface);
   color: var(--color-text);
 }
@@ -454,7 +454,7 @@
   height: 36px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: var(--radius-chip);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
 }
@@ -462,7 +462,7 @@
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 700;
   line-height: 1.3;
 }
@@ -475,16 +475,16 @@
 .kindGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .kindOption {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   height: 56px;
-  padding: 0 12px;
+  padding: 0 var(--space-12);
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-bg);
   color: var(--color-text);
   font-size: 15px;
@@ -509,24 +509,24 @@
   line-height: 1.2;
 }
 .takenLabel {
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 500;
   white-space: nowrap;
 }
 .helper {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
 .formField {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-4);
 }
 .label {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 .optional {
@@ -537,9 +537,9 @@
 .textarea {
   width: 100%;
   box-sizing: border-box;
-  padding: 12px;
+  padding: var(--space-12);
   border: 1.5px solid transparent;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-bg);
   color: var(--color-text);
   font-size: 15px;
@@ -561,11 +561,11 @@
 }
 .sheetError {
   margin: 0;
-  padding: 10px 12px;
+  padding: 10px var(--space-12);
   border-radius: var(--radius-button);
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
@@ -582,10 +582,10 @@
   flex: none;
   min-height: var(--tap);
   height: var(--tap);
-  padding: 0 16px;
+  padding: 0 var(--space-16);
   border: 0;
   border-radius: var(--radius-button);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .deleteButton {
@@ -600,7 +600,7 @@
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.4;
   color: var(--color-muted);
 }
@@ -608,8 +608,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px;
-  border-radius: 12px;
+  padding: var(--space-12);
+  border-radius: var(--radius-button);
   background: var(--color-error-soft);
 }
 .confirmTitle {
@@ -620,15 +620,15 @@
 }
 .confirmText {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.45;
   color: var(--color-muted);
 }
 .confirmActions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8);
   justify-content: flex-end;
-  padding-top: 4px;
+  padding-top: var(--space-4);
 }
 .savedHint {
   display: flex;
@@ -636,7 +636,7 @@
   justify-content: center;
   gap: 6px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-success);
 }
@@ -645,21 +645,21 @@
   align-items: center;
   gap: 6px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
 @media (min-width: 1024px) {
   .panel {
-    gap: 12px;
+    gap: var(--space-12);
   }
   .studentCard {
-    padding: 12px 20px;
+    padding: var(--space-12) var(--space-20);
   }
   .card {
-    padding: 16px 20px;
+    padding: var(--space-16) var(--space-20);
   }
   .levelButton {
-    font-size: 13px;
+    font-size: var(--text-sm);
   }
 }

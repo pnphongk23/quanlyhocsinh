@@ -17,6 +17,7 @@ import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { formatDayMonthLong } from "../../shared/format";
 import type { SaveState, Test } from "../../data/types";
 import {
+  ActionFooter,
   Button,
   EmptyState,
   Icon,
@@ -324,7 +325,7 @@ export default function TestScoresPage() {
             />
           </div>
         ) : (
-          <div className={s.saveBar}>
+          <ActionFooter>
             <SaveBarContent
               status={status}
               error={error}
@@ -332,7 +333,7 @@ export default function TestScoresPage() {
               dirty={dirty}
               onSave={save}
             />
-          </div>
+          </ActionFooter>
         ))}
       <UnsavedChangesDialog
         open={blocker.state === "blocked"}
@@ -479,7 +480,7 @@ function SaveBarContent({
         </div>
       )}
       {invalidCount > 0 ? (
-        <p className={s.saveReason}>Sửa 1 ô lỗi để lưu điểm</p>
+        <p className={s.saveReason}>Sửa {invalidCount} ô lỗi để lưu điểm</p>
       ) : (
         !dirty && (
           <p className={s.saveReason + " " + s.saveReasonMuted}>

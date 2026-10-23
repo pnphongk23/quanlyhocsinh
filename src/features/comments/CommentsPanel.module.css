@@ -9,7 +9,7 @@
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
 }
 
@@ -17,18 +17,18 @@
 .infoBanner {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: var(--space-8);
+  padding: var(--space-12) 14px;
   border-radius: var(--radius-button);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.5;
 }
 
 .infoBanner > svg {
   flex: none;
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }
 
 /* 40: ba bộ lọc pill cao 44, chữ 13/600; bộ lọc đang chọn nền xanh */
@@ -48,7 +48,7 @@
   border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -61,7 +61,7 @@
 /* Danh sách phiếu */
 .list {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -72,7 +72,7 @@
   width: 100%;
   display: grid;
   gap: 10px;
-  padding: 12px 16px;
+  padding: var(--space-12) var(--space-16);
   border: 0;
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -83,7 +83,7 @@
 .ticketHead {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 
@@ -96,14 +96,14 @@
   border-radius: 50%;
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 
 .ticketName {
   flex: 1;
   min-width: 0;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -120,7 +120,7 @@
 .starsLine {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-2);
   min-height: 20px;
 }
 
@@ -130,18 +130,18 @@
 }
 
 .noStars {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--color-warning);
 }
 
 .homeworkLine {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
 .homeworkLineWarning {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-warning);
 }
@@ -149,15 +149,15 @@
 /* 47: em đã rời lớp — thẻ viền nét đứt, không có phiếu của buổi này */
 .leftCard {
   display: grid;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
   border: 1px dashed var(--color-input-border-strong);
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
 
 .leftText {
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.5;
   color: var(--color-muted);
 }
@@ -179,11 +179,11 @@
 
 .error {
   margin: 0;
-  padding: 12px 16px;
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   line-height: 1.5;
 }
@@ -191,11 +191,11 @@
 /* 40: nút gửi cả lớp dính đáy màn, cao 52 */
 .footer {
   position: sticky;
-  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
-  z-index: 5;
+  bottom: var(--sticky-bottom);
+  z-index: var(--z-sticky);
   display: flex;
-  gap: 8px;
-  padding: 8px 0;
+  gap: var(--space-8);
+  padding: var(--space-8) 0;
   background: var(--color-bg);
 }
 
@@ -208,7 +208,7 @@
 .footer > button:disabled {
   opacity: 1;
   background: var(--color-neutral-soft);
-  color: var(--color-placeholder);
+  color: var(--color-muted);
 }
 
 /* 44: băng tối "Sẽ gửi khi có mạng" nằm trên nút gửi */
@@ -216,13 +216,13 @@
   position: fixed;
   left: 20px;
   right: 20px;
-  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 72px);
-  z-index: 6;
+  bottom: calc(var(--sticky-bottom) + 72px);
+  z-index: var(--z-toast);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 48px;
-  padding: 0 16px;
+  padding: 0 var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-text);
   color: #fff;
@@ -234,7 +234,7 @@
 .sheetHead {
   width: 100%;
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .grabber {
@@ -255,7 +255,7 @@
 .sheetTitleRow .avatar {
   width: 44px;
   height: 44px;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 .sheetTitleText {
@@ -270,7 +270,7 @@
 }
 
 .sheetSub {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
 }
 
@@ -283,17 +283,17 @@
 .draftRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   flex-wrap: wrap;
 }
 
 .draftPill {
   flex: none;
-  padding: 6px 12px;
+  padding: 6px var(--space-12);
   border-radius: var(--radius-pill);
   background: var(--color-warning-soft);
   color: var(--color-warning);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -301,7 +301,7 @@
 .draftHint {
   flex: 1;
   min-width: 140px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.4;
   color: var(--color-muted);
 }
@@ -310,7 +310,7 @@
 .starPicker {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .starOption {
@@ -318,8 +318,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 0 12px;
+  gap: var(--space-4);
+  padding: 0 var(--space-12);
   border: 2px solid transparent;
   border-radius: var(--radius-button);
   background: var(--color-bg);
@@ -343,8 +343,8 @@
 .templateBox {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-bg);
 }
@@ -354,7 +354,7 @@
 }
 
 .templateText {
-  font-size: 16px;
+  font-size: var(--text-base);
   line-height: 1.55;
 }
 
@@ -363,13 +363,13 @@
   align-items: center;
   gap: 6px;
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
 .noteField {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .noteLabel {
@@ -378,7 +378,7 @@
 }
 
 .noteOptional {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 400;
   color: var(--color-muted);
 }
@@ -386,7 +386,7 @@
 .noteInput {
   width: 100%;
   min-height: 56px;
-  padding: 12px;
+  padding: var(--space-12);
   border: 0;
   border-radius: var(--radius-button);
   background: var(--color-bg);
@@ -408,8 +408,8 @@
 /* 41/42: khối BTVN buổi trước chỉ đọc */
 .homeworkBlock {
   display: grid;
-  gap: 8px;
-  padding-top: 12px;
+  gap: var(--space-8);
+  padding-top: var(--space-12);
   border-top: 1px solid var(--color-divider);
 }
 
@@ -419,7 +419,7 @@
 }
 
 .homeworkReadOnly {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 400;
   color: var(--color-muted);
 }
@@ -436,7 +436,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
   font-size: 15px;
 }
 
@@ -469,7 +469,7 @@
 }
 
 .homeworkEmpty {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
 }
 
@@ -477,7 +477,7 @@
   align-self: start;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-4);
   min-height: var(--tap);
   padding: 0;
   border: 0;
@@ -492,7 +492,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--color-success);
 }
@@ -501,11 +501,11 @@
 .scrim {
   position: fixed;
   inset: 0;
-  z-index: 9;
+  z-index: var(--z-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: var(--space-20);
   background: var(--color-scrim);
 }
 
@@ -515,8 +515,8 @@
   max-height: calc(100dvh - 32px);
   overflow: auto;
   display: grid;
-  gap: 12px;
-  padding: 20px;
+  gap: var(--space-12);
+  padding: var(--space-20);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   color: var(--color-text);
@@ -532,15 +532,15 @@
 .confirmStats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .statSend,
 .statSkip {
   display: grid;
-  gap: 2px;
+  gap: var(--space-2);
   align-content: start;
-  padding: 10px 12px;
+  padding: 10px var(--space-12);
   border-radius: var(--radius-button);
 }
 
@@ -563,16 +563,16 @@
 
 .statSend span,
 .statSkip span {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
 .confirmWarning {
-  padding: 10px 12px;
+  padding: 10px var(--space-12);
   border-radius: var(--radius-button);
   background: var(--color-warning-soft);
   color: var(--color-warning);
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.5;
 }
 
@@ -588,7 +588,7 @@
 
 .confirmActions {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .confirmActions > * {
@@ -610,7 +610,7 @@
   .footer > button {
     flex: 0 0 auto;
     width: auto;
-    padding: 0 24px;
+    padding: 0 var(--space-24);
   }
 
   .footer > button:disabled {

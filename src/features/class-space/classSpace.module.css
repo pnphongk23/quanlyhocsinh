@@ -7,7 +7,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  margin: -12px -20px -16px;
+  margin: calc(-1 * var(--page-top)) calc(-1 * var(--page-x)) calc(-1 * var(--page-bottom));
 }
 
 .header {
@@ -18,8 +18,9 @@
 .headerRow {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 12px 12px 4px;
+  gap: var(--space-4);
+  /* Mũi tên lùi và nút ⋯ (vùng bấm 44) thẳng lề trang: glyph cách mép nút ~17px */
+  padding: var(--space-12) calc(var(--page-x) - var(--space-16)) var(--space-4);
 }
 
 .iconButton {
@@ -40,7 +41,7 @@
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 22px;
+  font-size: var(--text-xl);
   font-weight: 700;
   letter-spacing: -0.01em;
   overflow: hidden;
@@ -57,9 +58,10 @@
 .subTabs {
   position: relative;
   display: flex;
-  gap: 4px;
+  /* gap 0: 5 tab vừa khít ở 375 (chữ đầu/cuối thẳng lề 20); space-between chia đều khe ở khổ rộng hơn */
+  gap: 0;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 var(--space-12);
   overflow-x: auto;
   scrollbar-width: none;
   border-bottom: 1px solid var(--color-border);
@@ -86,11 +88,11 @@
   display: inline-flex;
   align-items: center;
   height: 48px;
-  padding: 0 8px;
+  padding: 0 var(--space-8);
   margin-bottom: -1px;
   border-bottom: 3px solid transparent;
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
@@ -106,24 +108,24 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 4px 20px 0;
+  gap: var(--space-12);
+  padding: var(--space-4) var(--page-x) var(--page-bottom);
 }
 
 .error {
   margin: 0;
-  padding: 12px 16px;
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.5;
 }
 
 @media (min-width: 1024px) {
   .space {
     margin: 0;
-    gap: 16px;
+    gap: var(--space-16);
   }
 
   .header {
@@ -131,17 +133,17 @@
   }
 
   .headerRow {
-    padding: 16px 20px 4px;
+    padding: var(--space-16) var(--space-20) var(--space-4);
   }
 
   .subTabs {
-    padding: 0 20px;
+    padding: 0 var(--space-20);
     justify-content: flex-start;
     overflow: visible;
   }
 
   .body {
     padding: 0;
-    gap: 16px;
+    gap: var(--space-16);
   }
 }

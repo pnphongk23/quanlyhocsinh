@@ -570,6 +570,9 @@ export default function ReportsPage() {
                   size="lg"
                   onClick={publishAll}
                   disabled={!summary.publishable}
+                  aria-describedby={
+                    summary.publishable ? undefined : "publish-disabled-reason"
+                  }
                   title={
                     summary.publishable
                       ? undefined
@@ -578,6 +581,11 @@ export default function ReportsPage() {
                 >
                   {publishAllLabel(summary.publishable)}
                 </Button>
+              )}
+              {canWrite && !summary.publishable && (
+                <p id="publish-disabled-reason" className={styles.publishNote}>
+                  Không còn báo cáo nào cần phát hành.
+                </p>
               )}
               {canWrite && (
                 <p className={styles.publishNote}>

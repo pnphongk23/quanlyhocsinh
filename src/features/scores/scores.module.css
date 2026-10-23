@@ -2,7 +2,7 @@
 .formPage {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-16);
   max-width: 520px;
   min-width: 0;
 }
@@ -10,9 +10,7 @@
    44px = đệm trên/dưới của vùng nội dung trong TeacherShell. */
 @media (max-width: 1023px) {
   .formPage {
-    min-height: calc(
-      100dvh - var(--tabbar-height) - env(safe-area-inset-bottom) - 44px
-    );
+    min-height: var(--content-min-h);
   }
   .form {
     flex: 1;
@@ -24,43 +22,43 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-16);
 }
 .field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .label {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .hint {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
   line-height: 1.5;
 }
 .actions {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .cancelButton {
   min-height: 48px;
   border-radius: var(--radius-button);
-  font-size: 16px;
+  font-size: var(--text-base);
 }
 
 /* Thông báo lỗi (design/reference/78-trang-thai-loi-luu.html) */
 .errorBanner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 52px;
-  padding: 0 8px 0 16px;
-  border-radius: 12px;
+  padding: 0 var(--space-8) 0 var(--space-16);
+  border-radius: var(--radius-button);
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .errorBannerText {
@@ -69,12 +67,12 @@
 }
 .retryButton {
   min-height: 44px;
-  padding: 0 16px;
+  padding: 0 var(--space-16);
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-error);
   color: var(--color-on-primary);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -85,17 +83,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 24px 40px;
+  gap: var(--space-16);
+  padding: var(--space-24) 40px;
   text-align: center;
 }
 /* Căn giữa trong khoảng trống còn lại giữa dải tab của lớp và thanh tab dưới
    (design/reference/75). 156px = phần đầu lớp + đệm nội dung hai đầu. */
 @media (max-width: 1023px) {
   .emptyScore {
-    min-height: calc(
-      100dvh - var(--tabbar-height) - env(safe-area-inset-bottom) - 156px
-    );
+    min-height: calc(var(--content-min-h) - 112px);
   }
 }
 @media (min-width: 1024px) {
@@ -117,21 +113,21 @@
 .emptyText {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .emptyTitle {
   font-size: 20px;
   font-weight: 700;
 }
 .emptyDesc {
-  font-size: 16px;
+  font-size: var(--text-base);
   color: var(--color-muted);
   line-height: 1.5;
 }
 .emptyActions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   width: 100%;
 }
 
@@ -139,7 +135,7 @@
 .tab {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 .tabHead {
@@ -149,14 +145,14 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 /* Thẻ bài kiểm tra (design/reference/20-gv-nhap-diem.html) */
 .testRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   color: var(--color-text);
@@ -166,18 +162,18 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
   min-width: 0;
 }
 .testName {
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .testMeta {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
 }
 
@@ -185,7 +181,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 /* Nút "⋯" mở tuỳ chọn bài kiểm tra, cùng kiểu với màn chi tiết bài giảng. */
@@ -219,29 +215,29 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
 .testCardText {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
   min-width: 0;
 }
 .testCardName {
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 700;
 }
 .testCardMeta {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
 }
 .switchTest {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-4);
   flex: none;
   font-size: 15px;
   font-weight: 600;
@@ -252,10 +248,10 @@
 .columns {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   margin-top: -4px;
-  padding: 0 4px 0 12px;
-  font-size: 13px;
+  padding: 0 var(--space-4) 0 var(--space-12);
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 .colStudent {
@@ -269,20 +265,20 @@
 .studentList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .studentRow {
   display: flex;
   flex-direction: column;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-surface);
 }
 .studentRowMain {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 56px;
-  padding: 6px 12px;
+  padding: 6px var(--space-12);
 }
 .studentRow:focus-within {
   outline: 2px solid var(--color-primary);
@@ -297,14 +293,14 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
 }
 .studentName {
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 500;
 }
 .studentMissing {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-warning);
 }
@@ -316,7 +312,7 @@
   padding: 0;
   box-sizing: border-box;
   border: 1.5px solid transparent;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-bg);
   color: var(--color-text);
   text-align: center;
@@ -348,41 +344,31 @@
 .rowError {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 12px 8px;
-  font-size: 13px;
+  gap: var(--space-4);
+  padding: 0 var(--space-12) var(--space-8);
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-error);
 }
 .draftNotice {
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 10px var(--space-12);
+  border-radius: var(--radius-button);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 .draftNotice a {
   color: inherit;
   font-weight: 700;
 }
-.saveBar {
-  position: sticky;
-  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px 0;
-  background: var(--color-bg);
-}
 .saveReason {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-error);
   text-align: center;
 }
 .saveReasonMuted {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 400;
   color: var(--color-muted);
 }
@@ -390,10 +376,10 @@
   width: 100%;
   min-height: 52px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-primary);
   color: var(--color-on-primary);
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 .saveButton:disabled {
@@ -405,13 +391,13 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 /* Hộp thoại chưa lưu (design/reference/80-trang-thai-chua-luu-hoi-khi-roi-man.html) */
 .confirmDialog {
   width: min(520px, calc(100% - 32px));
-  padding: 24px;
+  padding: var(--space-24);
   border: 0;
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -422,7 +408,7 @@
 .confirmDialog[open] {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-16);
 }
 .confirmDialog::backdrop {
   background: var(--color-scrim);
@@ -433,21 +419,21 @@
   letter-spacing: -0.01em;
 }
 .confirmBody {
-  font-size: 16px;
+  font-size: var(--text-base);
   color: var(--color-muted);
   line-height: 1.5;
 }
 .confirmActions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 .confirmButton {
   width: 100%;
   min-height: 52px;
   border: 0;
-  border-radius: 12px;
-  font-size: 16px;
+  border-radius: var(--radius-button);
+  font-size: var(--text-base);
   font-weight: 600;
 }
 .confirmPrimary {
@@ -473,20 +459,19 @@
 }
 .table {
   width: 100%;
-  min-width: 640px;
   border-collapse: collapse;
 }
 .table th {
-  padding: 8px;
+  padding: var(--space-8);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   text-align: center;
   vertical-align: top;
 }
 .table td {
-  padding: 6px 8px;
+  padding: 6px var(--space-8);
   border-bottom: 1px solid var(--color-divider);
   font-size: 15px;
   font-variant-numeric: tabular-nums;
@@ -496,11 +481,21 @@
 .table td:first-child {
   position: sticky;
   left: 0;
+  width: 112px;
+  min-width: 112px;
+  max-width: 112px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   background: var(--color-surface);
   text-align: left;
 }
+/* Cột bài kiểm tra luôn đủ rộng để thấy ngay cạnh cột tên; thêm bài thì bảng cuộn ngang. */
+.table th:not(:first-child),
+.table td:not(:first-child) {
+  min-width: 120px;
+}
 .table th:first-child {
-  z-index: 1;
+  z-index: var(--z-raised);
 }
 .studentCell {
   font-weight: 500;
@@ -510,31 +505,34 @@
   opacity: 0.62;
 }
 .leftStudentLabel {
-  margin-inline-start: 8px;
+  margin-inline-start: var(--space-8);
   color: var(--color-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 .testLink {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: var(--space-2);
   min-height: var(--tap);
   color: var(--color-text);
   text-decoration: none;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 .testDate {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 400;
   color: var(--color-muted);
   white-space: nowrap;
 }
 /* Ô điểm bấm được: mở màn nhập điểm của đúng bài và đúng em. */
 .cellLink {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-height: var(--tap);
   border-radius: 8px;
   color: inherit;
@@ -558,13 +556,13 @@
 }
 .cellMissing {
   display: block;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-warning);
 }
 .gridNote {
-  padding-top: 12px;
-  font-size: 13px;
+  padding-top: var(--space-12);
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 @media (min-width: 1024px) {
@@ -591,6 +589,6 @@
     grid-template-columns: auto auto;
     justify-content: start;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-12);
   }
 }

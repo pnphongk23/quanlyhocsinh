@@ -1,11 +1,9 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-16);
   max-width: 520px;
-  min-height: calc(
-    100dvh - var(--tabbar-height) - env(safe-area-inset-bottom) - 28px
-  );
+  min-height: var(--content-min-h);
 }
 
 /* 10-gv-tao-lop-moi: các trường cách nhau 16px, nút "Tạo lớp" nằm sát đáy màn */
@@ -13,7 +11,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: 16px;
+  gap: var(--space-16);
 }
 
 .form > span {
@@ -22,36 +20,30 @@
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .label {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
-/* 10: 7 ô ngày, cao 44, bo 12, khe 8 */
+/* 10: 7 ô ngày một hàng ở mọi khổ mobile (khe 4 để đủ 44px ở 375), cao 44, bo 12 */
 .dayGrid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-4);
 }
 
 .day {
-  min-width: 44px;
+  min-width: 0;
   min-height: var(--tap);
   border: 0;
   border-radius: var(--radius-button);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
-}
-
-@media (max-width: 380px) {
-  .dayGrid {
-    grid-template-columns: repeat(4, minmax(44px, 1fr));
-  }
 }
 
 .dayActive {
@@ -60,7 +52,7 @@
 }
 
 .scaleNote {
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.5;
   color: var(--color-muted);
 }
@@ -71,36 +63,25 @@
 }
 
 .studentNoteTitle {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
 .studentNoteText {
-  padding: 12px 14px;
+  padding: var(--space-12) 14px;
   border-radius: var(--radius-button);
   background: var(--color-surface);
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.5;
 }
 
 .error {
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
-.actions {
-  display: grid;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.stickyBar {
-  padding: 8px 0;
-  background: var(--color-bg);
-}
-
-.stickyBar .cancel {
+.cancel {
   display: none;
 }
 
@@ -115,7 +96,7 @@
   /* Form nằm trong thẻ ≤ 640px, căn giữa vùng nội dung */
   .form {
     flex: none;
-    padding: 20px;
+    padding: var(--space-20);
     border-radius: var(--radius-card);
     background: var(--color-surface);
   }
@@ -135,19 +116,11 @@
     align-items: center;
   }
 
-  .actions {
-    margin-top: 0;
+  .dayGrid {
+    gap: var(--space-8);
   }
 
-  .stickyBar {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 0;
-    background: transparent;
-  }
-
-  .stickyBar .cancel {
+  .form .cancel {
     display: inline-flex;
     background: var(--color-bg);
   }
@@ -180,7 +153,7 @@
   .modalActions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
+    gap: var(--space-8);
   }
 
   .modalActions .cancel {

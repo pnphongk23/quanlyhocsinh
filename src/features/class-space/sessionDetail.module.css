@@ -8,7 +8,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  margin: -12px -20px -16px;
+  margin: calc(-1 * var(--page-top)) calc(-1 * var(--page-x)) calc(-1 * var(--page-bottom));
 }
 
 .header {
@@ -19,8 +19,9 @@
 .headerRow {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 12px 12px 0;
+  gap: var(--space-4);
+  /* Mũi tên lùi và nút ⋯ (vùng bấm 44) thẳng lề trang: glyph cách mép nút ~17px */
+  padding: var(--space-12) calc(var(--page-x) - var(--space-16)) 0;
 }
 
 .iconButton {
@@ -71,7 +72,7 @@
 }
 
 .eyebrow {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -81,7 +82,7 @@
 .titleLine {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 
@@ -98,7 +99,7 @@
 .tabs {
   display: flex;
   margin: 0;
-  padding: 0 20px;
+  padding: 0 var(--page-x);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -109,13 +110,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 var(--space-4);
   margin-bottom: -1px;
   border: 0;
   border-bottom: 3px solid transparent;
   background: transparent;
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -130,17 +131,17 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 4px 20px calc(16px + env(safe-area-inset-bottom));
+  gap: var(--space-12);
+  padding: var(--space-4) var(--page-x) var(--page-bottom);
 }
 
 .error {
   margin: 0;
-  padding: 12px 16px;
+  padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   line-height: 1.5;
 }
@@ -150,20 +151,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 16px;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   text-align: center;
 }
 
 .dateTitle {
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
 .dateMeta {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
 }
 
@@ -173,9 +174,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: var(--space-16);
   flex: 1;
-  padding: 32px 20px;
+  padding: var(--space-32) var(--space-20);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   text-align: center;
@@ -194,7 +195,7 @@
 .emptyText {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .emptyTitle {
@@ -204,7 +205,7 @@
 }
 
 .emptyTextLine {
-  font-size: 16px;
+  font-size: var(--text-base);
   line-height: 1.5;
   color: var(--color-muted);
 }
@@ -212,7 +213,7 @@
 .emptyActions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   width: 100%;
 }
 
@@ -223,7 +224,7 @@
 @media (min-width: 1024px) {
   .detail {
     margin: 0;
-    gap: 16px;
+    gap: var(--space-16);
   }
 
   .header {
@@ -231,12 +232,12 @@
   }
 
   .headerRow {
-    padding: 16px 20px 0;
+    padding: var(--space-16) var(--space-20) 0;
   }
 
   .tabs {
     margin: 0;
-    padding: 0 20px;
+    padding: 0 var(--space-20);
   }
 
   .tab {
@@ -245,7 +246,7 @@
   }
 
   .body {
-    padding: 0 0 16px;
-    gap: 16px;
+    padding: 0 0 var(--space-16);
+    gap: var(--space-16);
   }
 }

@@ -12,7 +12,7 @@ import {
 import { useAccess } from "../../data/repositories/access";
 import type { Attendance as AttendanceRecord } from "../../data/types";
 import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
-import { Button, NoAccess } from "../../shared/ui";
+import { ActionFooter, Button, NoAccess } from "../../shared/ui";
 import { studentsForSession } from "./sessionRoster";
 import s from "./AttendancePanel.module.css";
 
@@ -460,7 +460,7 @@ export default function AttendancePanel({
       </div>
 
       {!desktop && (
-        <div className={s.stickyBar}>
+        <ActionFooter className={s.stickyBar}>
           {errorBanner}
           <Button
             size="lg"
@@ -470,7 +470,7 @@ export default function AttendancePanel({
           >
             {readOnly ? "Điểm danh" : "Lưu điểm danh"}
           </Button>
-        </div>
+        </ActionFooter>
       )}
     </section>
   );
