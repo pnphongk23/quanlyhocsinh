@@ -427,8 +427,14 @@
   .actionFooter {
     position: static;
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
     padding: 0;
     background: transparent;
+  }
+  /* Banner/thông báo dài chiếm một dòng riêng phía trên hàng nút */
+  .actionFooter > [role="alert"] {
+    flex: 1 0 100%;
   }
 }

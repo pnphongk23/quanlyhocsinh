@@ -389,9 +389,19 @@
 }
 .desktopSaveRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-12);
+}
+/* Desktop: banner lỗi một dòng riêng; nút Lưu theo nội dung (min 96), căn phải */
+.desktopSaveRow > .errorBanner {
+  flex: 1 0 100%;
+}
+.desktopSaveRow .saveButton {
+  width: auto;
+  min-width: var(--button-min-w-desktop);
+  padding: 0 var(--space-24);
 }
 
 /* Hộp thoại chưa lưu (design/reference/80-trang-thai-chua-luu-hoi-khi-roi-man.html) */
