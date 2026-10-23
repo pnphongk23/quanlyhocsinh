@@ -3,6 +3,8 @@
   "name": "qlh-staging-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-21",
+  // Chạy Worker gần D1 (Smart Placement học từ lưu lượng thật).
+  "placement": { "mode": "smart" },
   "observability": {
     "enabled": false
   },
@@ -26,6 +28,7 @@
   "env": {
     "staging": {
       "name": "qlh-staging-api",
+      "placement": { "mode": "smart" },
       "vars": {
         "ENVIRONMENT": "staging",
         "PBKDF2_ITERATIONS": "30000",

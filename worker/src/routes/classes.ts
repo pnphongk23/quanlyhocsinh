@@ -11,9 +11,10 @@ classesRoutes.get('/classes', async (c) => {
 });
 classesRoutes.post('/classes', async (c) => {
   const body = await readJsonObject(c.req.raw);
-  return c.json(await createClass(c.env.DB, c.get('identity'), {
-    name: body.name, weekdays: body.weekdays, start_time: body.start_time,
-  }), 201);
+  const { record, created } = await createClass(c.env.DB, c.get('identity'), {
+    name: body.name, weekdays: body.weekdays, start_time: body.start_time, id: body.id,
+  });
+  return c.json(record, created ? 201 : 200);
 });
 classesRoutes.get('/classes/:id', async (c) =>
   c.json(await getClass(c.env.DB, c.get('identity'), c.req.param('id'))));

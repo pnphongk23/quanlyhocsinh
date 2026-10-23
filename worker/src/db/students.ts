@@ -1,4 +1,5 @@
 import { requireAccess } from './authz';
+import { findIdOwner, idConflict, isConstraintError, parseClientId } from './client-id';
 import type { Identity } from '../types';
 import { nowIso } from '../lib/time';
 import { conflict, notFound, validationError } from '../lib/errors';
@@ -118,8 +119,21 @@ export async function getStudent(db: D1Database, identity: Identity, studentId: 
   return rowView(row, identity.scopeKind === 'linked_students');
 }
 
+async function existingStudentView(db: D1Database, identity: Identity, classId: string, id: string) {
+  const owner = await findIdOwner(db, id);
+  if (!owner) return null;
+  if (owner.table !== 'students' || owner.workspace_id !== identity.workspaceId || owner.class_id !== classId) {
+    throw idConflict();
+  }
+  const row = await db.prepare(`SELECT id, class_id, name, parent_phone, enrolled_at, left_at, status, version
+    FROM students WHERE workspace_id = ? AND id = ?`).bind(identity.workspaceId, id).first<StudentRow>();
+  if (!row) throw idConflict();
+  return rowView(row);
+}
+
+/** `created = false` khi `id` do client gửi đã có trong lớp (gửi lại): trả bản hiện có, không ghi gì. */
 export async function createStudent(db: D1Database, identity: Identity, classId: string,
-  input: { name: unknown; parent_phone?: unknown; enrolled_at: unknown }) {
+  input: { name: unknown; parent_phone?: unknown; enrolled_at: unknown; id?: unknown }) {
   const cls = await db.prepare('SELECT id FROM classes WHERE workspace_id = ? AND id = ?')
     .bind(identity.workspaceId, classId).first();
   if (!cls) throw notFound();
@@ -127,7 +141,12 @@ export async function createStudent(db: D1Database, identity: Identity, classId:
   const name = nameValue(input.name);
   const phone = phoneValue(input.parent_phone);
   if (!isDate(input.enrolled_at)) throw validationError({ enrolled_at: 'must_be_date' });
-  const id = crypto.randomUUID();
+  const clientId = parseClientId(input as Record<string, unknown>);
+  if (clientId) {
+    const existing = await existingStudentView(db, identity, classId, clientId);
+    if (existing) return { record: existing, created: false };
+  }
+  const id = clientId ?? crypto.randomUUID();
   const now = nowIso();
   const linkedUsers = await linkedUsersForPhone(db, phone);
   const stmts = [db.prepare(`INSERT INTO students
@@ -138,9 +157,16 @@ export async function createStudent(db: D1Database, identity: Identity, classId:
         VALUES (?, ?, ?, ?)`)
       .bind(identity.workspaceId, userId, id, now)),
     ...linkedUsers.flatMap((userId) => enableGuardianMembershipStatements(db, identity.workspaceId, userId, now))];
-  await db.batch(stmts);
-  return { id, class_id: classId, name, parent_phone: phone, enrolled_at: input.enrolled_at,
-    left_at: null, status: 'active', version: 1 };
+  try {
+    await db.batch(stmts);
+  } catch (error) {
+    if (!clientId || !isConstraintError(error)) throw error;
+    const existing = await existingStudentView(db, identity, classId, clientId);
+    if (!existing) throw error;
+    return { record: existing, created: false };
+  }
+  return { record: { id, class_id: classId, name, parent_phone: phone, enrolled_at: input.enrolled_at,
+    left_at: null, status: 'active', version: 1 }, created: true };
 }
 
 export async function updateStudent(db: D1Database, identity: Identity, studentId: string,

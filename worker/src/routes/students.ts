@@ -10,9 +10,10 @@ studentsRoutes.get('/classes/:id/students', async (c) => c.json({ items: await l
 )}));
 studentsRoutes.post('/classes/:id/students', async (c) => {
   const body = await readJsonObject(c.req.raw);
-  return c.json(await createStudent(c.env.DB, c.get('identity'), c.req.param('id'), {
-    name: body.name, parent_phone: body.parent_phone, enrolled_at: body.enrolled_at,
-  }), 201);
+  const { record, created } = await createStudent(c.env.DB, c.get('identity'), c.req.param('id'), {
+    name: body.name, parent_phone: body.parent_phone, enrolled_at: body.enrolled_at, id: body.id,
+  });
+  return c.json(record, created ? 201 : 200);
 });
 studentsRoutes.get('/students/:id', async (c) =>
   c.json(await getStudent(c.env.DB, c.get('identity'), c.req.param('id'))));

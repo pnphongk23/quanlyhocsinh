@@ -1,4 +1,5 @@
-import { requireAccess } from './authz';
+import { isInScope, requireAccess } from './authz';
+import { findIdOwner, idConflict, isConstraintError, parseClientId } from './client-id';
 import type { Identity } from '../types';
 import { nowIso } from '../lib/time';
 import { conflict, notFound, validationError } from '../lib/errors';
@@ -63,14 +64,32 @@ export function insertSessions(db: D1Database, workspaceId: string, classId: str
   return statements;
 }
 
+async function existingClassView(db: D1Database, identity: Identity, id: string) {
+  const owner = await findIdOwner(db, id);
+  if (!owner) return null;
+  if (owner.table !== 'classes' || owner.workspace_id !== identity.workspaceId
+    || !isInScope(identity, { classId: id })) throw idConflict();
+  const row = await db.prepare(`SELECT id, name, status, weekdays, start_time, version
+    FROM classes WHERE workspace_id = ? AND id = ?`).bind(identity.workspaceId, id).first<ClassRow>();
+  if (!row) throw idConflict();
+  return { id: row.id, name: row.name, status: row.status, weekdays: weekdayList(row.weekdays),
+    start_time: row.start_time, version: row.version };
+}
+
+/** `created = false` khi `id` do client gửi đã có (gửi lại): trả bản hiện có, không ghi gì. */
 export async function createClass(db: D1Database, identity: Identity, input: {
-  name: unknown; weekdays: unknown; start_time: unknown;
+  name: unknown; weekdays: unknown; start_time: unknown; id?: unknown;
 }) {
   requireAccess(identity, 'classes', 'write');
   const name = validateName(input.name);
   const weekdays = parseWeekdays(input.weekdays);
   const startTime = validateTime(input.start_time);
-  const id = crypto.randomUUID();
+  const clientId = parseClientId(input as Record<string, unknown>);
+  if (clientId) {
+    const existing = await existingClassView(db, identity, clientId);
+    if (existing) return { record: existing, created: false };
+  }
+  const id = clientId ?? crypto.randomUUID();
   const now = nowIso();
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
   const until = dayString(new Date(new Date(`${today}T00:00:00Z`).getTime() + 56 * 86400000));
@@ -84,8 +103,16 @@ export async function createClass(db: D1Database, identity: Identity, input: {
       .bind(identity.workspaceId, identity.membershipId, id, now),
     ...insertSessions(db, identity.workspaceId, id, weekdays, startTime, today, until, now),
   ];
-  await db.batch(statements);
-  return { id, name, status: 'active', weekdays: weekdayList(weekdays), start_time: startTime, version: 1 };
+  try {
+    await db.batch(statements);
+  } catch (error) {
+    if (!clientId || !isConstraintError(error)) throw error;
+    const existing = await existingClassView(db, identity, clientId);
+    if (!existing) throw error;
+    return { record: existing, created: false };
+  }
+  return { record: { id, name, status: 'active', weekdays: weekdayList(weekdays), start_time: startTime, version: 1 },
+    created: true };
 }
 
 export async function listClasses(db: D1Database, identity: Identity, status: string | null) {

@@ -35,7 +35,8 @@ sessionsRoutes.get('/calendar', async (c) => {
 });
 sessionsRoutes.post('/classes/:id/sessions', async (c) => {
   const body = await readJsonObject(c.req.raw);
-  return c.json(await createManualSession(c.env.DB, c.get('identity'), c.req.param('id'), body), 201);
+  const { record, created } = await createManualSession(c.env.DB, c.get('identity'), c.req.param('id'), body);
+  return c.json(record, created ? 201 : 200);
 });
 sessionsRoutes.post('/sessions/:id/cancel', async (c) =>
   c.json(await cancelSession(c.env.DB, c.get('identity'), c.req.param('id'))));

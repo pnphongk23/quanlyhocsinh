@@ -1,4 +1,5 @@
 import { requireAccess } from './authz';
+import { findIdOwner, idConflict, parseClientId } from './client-id';
 import type { Identity } from '../types';
 import { nowIso } from '../lib/time';
 import { conflict, notFound, validationError } from '../lib/errors';
@@ -67,6 +68,19 @@ export async function listCalendar(db: D1Database, identity: Identity, from: str
     ...(identity.scopeKind === 'linked_students' ? {} : {}) }));
 }
 
+async function existingSessionView(db: D1Database, identity: Identity, classId: string, id: string) {
+  const owner = await findIdOwner(db, id);
+  if (!owner) return null;
+  if (owner.table !== 'class_sessions' || owner.workspace_id !== identity.workspaceId || owner.class_id !== classId) {
+    throw idConflict();
+  }
+  const row = await db.prepare(`${SESSION_SELECT} WHERE cs.workspace_id = ? AND cs.id = ?`)
+    .bind(identity.workspaceId, id).first<SessionRow>();
+  if (!row) throw idConflict();
+  return mapSession(row);
+}
+
+/** `created = false` khi `id` do client gửi đã có trong lớp (gửi lại): trả bản hiện có, không ghi gì. */
 export async function createManualSession(db: D1Database, identity: Identity, classId: string,
   input: Record<string, unknown>) {
   const cls = await db.prepare('SELECT id FROM classes WHERE workspace_id = ? AND id = ?')
@@ -78,7 +92,12 @@ export async function createManualSession(db: D1Database, identity: Identity, cl
   if (input.is_makeup !== undefined && typeof input.is_makeup !== 'boolean') throw validationError({ is_makeup: 'must_be_boolean' });
   const note = input.note === undefined ? '' : input.note;
   if (typeof note !== 'string' || note.length > 500) throw validationError({ note: 'must_be_at_most_500' });
-  const id = crypto.randomUUID();
+  const clientId = parseClientId(input);
+  if (clientId) {
+    const existing = await existingSessionView(db, identity, classId, clientId);
+    if (existing) return { record: existing, created: false };
+  }
+  const id = clientId ?? crypto.randomUUID();
   const now = nowIso();
   try {
     await db.prepare(`INSERT INTO class_sessions
@@ -88,14 +107,19 @@ export async function createManualSession(db: D1Database, identity: Identity, cl
       .bind(id, identity.workspaceId, classId, input.date, input.start_time, input.is_makeup ? 1 : 0,
         note, now, now, identity.userId).run();
   } catch (error) {
+    if (clientId && String(error).includes('class_sessions.id')) {
+      const existing = await existingSessionView(db, identity, classId, clientId);
+      if (existing) return { record: existing, created: false };
+    }
     if (String(error).includes('UNIQUE')) throw conflict('session_exists');
     throw error;
   }
   const number = await db.prepare(`SELECT COUNT(*) AS count FROM class_sessions
     WHERE class_id = ? AND status <> 'cancelled' AND (date < ? OR (date = ? AND start_time <= ?))`)
     .bind(classId, input.date, input.date, input.start_time).first<{ count: number }>();
-  return { id, class_id: classId, date: input.date, start_time: input.start_time, origin: 'manual',
-    is_makeup: input.is_makeup === true, status: 'planned', note, session_number: number?.count ?? null, version: 1 };
+  return { record: { id, class_id: classId, date: input.date, start_time: input.start_time, origin: 'manual',
+    is_makeup: input.is_makeup === true, status: 'planned', note, session_number: number?.count ?? null, version: 1 },
+    created: true };
 }
 
 export async function cancelSession(db: D1Database, identity: Identity, sessionId: string) {
