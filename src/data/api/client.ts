@@ -11,7 +11,7 @@ export type ApiEndpoints = {
   "GET /me": Endpoint<MeResponse>;
   "PUT /session/membership": Endpoint<{ active_membership_id: string; device_registration_cleared: true }, { membership_id: string }>;
   "GET /classes": Endpoint<{ items: ApiClass[] }>;
-  "POST /classes": Endpoint<ApiClass, { name: string; weekdays: number[]; start_time: string }>;
+  "POST /classes": Endpoint<ApiClass, { id?: string; name: string; weekdays: number[]; start_time: string }>;
   "POST /sync/push": Endpoint<PushResponse, PushRequest>;
   "GET /sync/pull": Endpoint<PullResponse>;
   "GET /sync/snapshot": Endpoint<SnapshotResponse>;
@@ -19,7 +19,7 @@ export type ApiEndpoints = {
     } & { [P in `PATCH /sessions/${string}`]: Endpoint<ApiSession, { date?: string; start_time?: string; note?: string; base_version?: number }> }
       & { [P in `PATCH /classes/${string}`]: Endpoint<ApiClass, { name?: string; weekdays?: number[]; start_time?: string; status?: "archived" }> }
     & { [P in `GET /sync/snapshot/${string}`]: Endpoint<{ items: unknown[]; next_after: string | null }> }
-    & { [P in `POST /classes/${string}/students`]: Endpoint<ApiStudent, { name: string; parent_phone?: string; enrolled_at: string }> }
+    & { [P in `POST /classes/${string}/students`]: Endpoint<ApiStudent, { id?: string; name: string; parent_phone?: string; enrolled_at: string }> }
     & { [P in `PATCH /students/${string}`]: Endpoint<ApiStudent, { name?: string; parent_phone?: string; status?: "left"; left_at?: string }> }
     & { [P in `GET /classes/${string}/reports`]: Endpoint<{items: ApiReport[]}> }
     & { [P in `PUT /students/${string}/reports/${string}`]: Endpoint<ApiReport, {general_comment:string}> }

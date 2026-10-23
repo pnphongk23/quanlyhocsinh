@@ -23,7 +23,7 @@ export async function registerParent(phone: string, password: string, displayNam
 }
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   await api.request("POST /auth/change-password", { body: { current_password: currentPassword, new_password: newPassword } });
-  if (getSession()) await updateMe(await api.request("GET /me"));
+  if (getSession()) void api.request("GET /me").then(updateMe).catch(() => undefined);
 }
 export async function logout(): Promise<void> {
   const userId = getSession()?.user.id;
