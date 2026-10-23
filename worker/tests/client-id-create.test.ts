@@ -48,6 +48,19 @@ describe('client-supplied id on create', () => {
     expect(await changes(t.workspaceId)).toBe(logged);
   });
 
+  it('normalizes the id to lowercase so an uppercase then lowercase replay is the same record', async () => {
+    const t = await owner('Cid case');
+    const classId = await insertClass(t.workspaceId, 'C', t.userId);
+    const lower = crypto.randomUUID();
+    const first = await call(`/v1/classes/${classId}/students`, post({ ...studentBody, id: lower.toUpperCase() }), t.token);
+    expect(first.status).toBe(201);
+    expect(first.body.id).toBe(lower);
+    const second = await call(`/v1/classes/${classId}/students`, post({ ...studentBody, id: lower }), t.token);
+    expect(second.status).toBe(200);
+    expect(second.body).toEqual(first.body);
+    expect(await count('SELECT COUNT(*) AS n FROM students WHERE id = ?', lower)).toBe(1);
+  });
+
   it('class: without id the response shape is unchanged and the server generates the id', async () => {
     const t = await owner('Cid class noid');
     const res = await call('/v1/classes', post(classBody), t.token);

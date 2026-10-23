@@ -7,11 +7,11 @@ export type IdOwner = { table: IdTable; workspace_id: string; class_id: string }
 
 export const idConflict = () => new ApiError(409, 'id_conflict', 'Conflict.');
 
-/** `id` tuỳ chọn do client sinh: vắng ⇒ undefined; có mà không phải UUID ⇒ 422. */
+/** `id` tuỳ chọn do client sinh: vắng ⇒ undefined; có mà không phải UUID ⇒ 422. Chuẩn hoá về chữ thường. */
 export function parseClientId(body: Record<string, unknown>): string | undefined {
   if (!('id' in body) || body.id === undefined) return undefined;
   if (typeof body.id !== 'string' || !UUID.test(body.id)) throw validationError({ id: 'must_be_uuid' });
-  return body.id;
+  return body.id.toLowerCase();
 }
 
 /** Nơi `id` đang được dùng (bảng nào, workspace nào, lớp nào), hoặc null nếu chưa có. */
