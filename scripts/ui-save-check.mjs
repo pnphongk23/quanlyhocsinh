@@ -3,6 +3,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 import { entities, identity, sessionFor } from "./ui-audit-fixtures/demo.mjs";
+import { mockWriteResponse } from "./ui-audit-fixtures/mock-write-responses.mjs";
 
 const BASE = "http://127.0.0.1:5192";
 const RESULT = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-audit/ui-save-check-results.md";
@@ -26,10 +27,12 @@ async function setupMock(page, role = "staff", cleanAuth = false, draftComment =
   await page.route("**/v1/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const method = request.method();
-    if (method !== "GET" && method !== "HEAD" && !url.pathname.startsWith("/v1/sync/")) counts.directWrites.push(`${method} ${url.pathname}`);
-    if (url.pathname.endsWith("/me")) return route.fulfill({ json: sessionFor(role).me });
-    if (url.pathname === "/v1/sync/snapshot") return route.fulfill({ json: { cursor: 0, epoch: 1, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"] } });
+      const method = request.method();
+      if (method !== "GET" && method !== "HEAD" && !url.pathname.startsWith("/v1/sync/")) counts.directWrites.push(`${method} ${url.pathname}`);
+      if (url.pathname.endsWith("/me")) return route.fulfill({ json: sessionFor(role).me });
+      const writeResponse = mockWriteResponse(request, mockEntities);
+      if (writeResponse) return route.fulfill({ json: writeResponse });
+      if (url.pathname === "/v1/sync/snapshot") return route.fulfill({ json: { cursor: 0, epoch: 1, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"] } });
     const entity = url.pathname.match(/\/v1\/sync\/snapshot\/([^/]+)$/)?.[1];
     if (entity) {
       const table = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "slips", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report: "reports", report_publication: "reportPublications" })[entity] ?? entity + "s";
@@ -263,7 +266,7 @@ try {
     await checkButtonState("Create class invalid disables save", save, true);
     check("Create class invalid guidance visible", await page.getByText(/Nhập tên lớp.*chọn ngày học/s).count() > 0, "missing invalid helper");
     await type(name, "Lớp kiểm tra save");
-    await doubleClickAndMeasure(page, save, `Create class ${vp.width}`, { closes: true, direct: true });
+    await doubleClickAndMeasure(page, save, `Create class ${vp.width}`, { closes: true, direct: true, inPlace: true });
   });
 
   for (const vp of [M, D]) await caseRun(`edit class modal ${vp.width}`, vp, "/lop/demo-6a/buoi-hoc", async (page) => {
@@ -279,7 +282,7 @@ try {
     const name = modal.getByRole("textbox", { name: "Tên lớp" }); await type(name, "Lớp 6A sửa");
     await checkButtonState("Edit class change enables save", save, false);
     await dirtyModalClose(page, modal);
-    await doubleClickAndMeasure(page, save, `Edit class ${vp.width}`, { closes: true, direct: true });
+    await doubleClickAndMeasure(page, save, `Edit class ${vp.width}`, { closes: true, direct: true, inPlace: true });
   });
 
   for (const vp of [M, D]) await caseRun(`add student modal ${vp.width}`, vp, "/lop/demo-6a/hoc-sinh", async (page) => {
@@ -290,7 +293,7 @@ try {
     const name = modal.getByRole("textbox", { name: "Họ và tên học sinh" }); await type(name, "Học sinh kiểm tra");
     await checkButtonState("Add student valid enables save", save, false);
     await dirtyModalClose(page, modal, vp.width === 390 ? "escape" : "button");
-    await doubleClickAndMeasure(page, save, `Add student ${vp.width}`, { closes: true, direct: true });
+    await doubleClickAndMeasure(page, save, `Add student ${vp.width}`, { closes: true, direct: true, inPlace: true });
   });
 
   for (const vp of [M, D]) await caseRun(`comments ticket ${vp.width}`, vp, "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet", async (page) => {
@@ -349,7 +352,7 @@ try {
     await checkButtonState("New test opens disabled", save, true);
     await type(page.getByRole("textbox", { name: "Tên bài kiểm tra" }), "Bài kiểm tra kiểm thử");
     await checkButtonState("New test valid enables save", save, false);
-    await doubleClickAndMeasure(page, save, `New test ${vp.width}`, { closes: true });
+    await doubleClickAndMeasure(page, save, `New test ${vp.width}`, { closes: true, inPlace: true });
   });
 
   for (const vp of [M, D]) await caseRun(`archive class ${vp.width}`, vp, "/lop/demo-6a/buoi-hoc", async (page) => {
@@ -368,7 +371,7 @@ try {
     const next = page.getByRole("textbox", { name: "Mật khẩu mới", exact: true }); const confirm = page.getByRole("textbox", { name: "Nhập lại mật khẩu mới", exact: true });
     await type(current, "Demo-Old-Pass!1"); await type(next, "Demo-New-Pass!2"); await type(confirm, "Demo-New-Pass!2");
     await checkButtonState("Change password valid enables save", save, false);
-    await doubleClickAndMeasure(page, save, `Change password ${vp.width}`, { direct: true, closes: vp.width === 390 });
+    await doubleClickAndMeasure(page, save, `Change password ${vp.width}`, { direct: true, closes: vp.width === 390, inPlace: true });
   });
 
   for (const vp of [M, D]) await caseRun(`register ${vp.width}`, vp, "/dang-ky", async (page) => {
@@ -409,7 +412,7 @@ const lines = [
   "", "## Failed assertions", "",
   ...(failed.length ? failed.map((r) => `- **${r.kind}** — ${r.label}: ${r.detail}`) : ["No failures."]),
   "", "## Notes", "",
-  "Success-label in-place flows: attendance, score entry, score grid, homework save (editor closes after transient success), and mobile comments-ticket save (sheet closes after transient success). Closure/navigation without success-copy assertions: create/edit class, add student, ticket send confirmation, create test, archive class, change password, and registration.", "Request totals aggregate across isolated scenarios; per-action request/outbox evidence is recorded in the measurements above. A network batch is counted as one `/sync/push` request and its individual commands are reported separately. Passwords and phone values are fake test inputs and are never printed.", "",
+  "Success-label flows: attendance, score entry, score grid, homework, mobile comments-ticket save, create/edit class, add student, create test, and change password; close-after-save flows wait for accessible 'Đã lưu' before asserting closure. Exceptions without that label: ticket send confirmation, archive class, and registration.", "Request totals aggregate across isolated scenarios; per-action request/outbox evidence is recorded in the measurements above. A network batch is counted as one `/sync/push` request and its individual commands are reported separately. Passwords and phone values are fake test inputs and are never printed.", "",
 ];
 await writeFile(RESULT, lines.join("\n"));
 console.log(`PASS ${passed}; FAIL ${failed.length}; INFO ${info.length}; results: ${RESULT}`);

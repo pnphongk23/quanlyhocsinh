@@ -3,6 +3,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 import { entities, identity, sessionFor } from "./ui-audit-fixtures/demo.mjs";
+import { mockWriteResponse } from "./ui-audit-fixtures/mock-write-responses.mjs";
 
 const target = process.argv.find((arg) => arg.startsWith("--target="))?.split("=")[1]
   ?? process.argv[process.argv.indexOf("--target") + 1];
@@ -25,10 +26,12 @@ let server, browser;
 
 async function seed(page) {
   page.setDefaultTimeout(7000);
-  await page.route("**/v1/**", async (route) => {
-    const req = route.request(), url = new URL(req.url()), method = req.method();
-    if (url.pathname.endsWith("/me")) return route.fulfill({ json: sessionFor("staff").me });
-    if (url.pathname === "/v1/sync/snapshot") return route.fulfill({ json: { cursor: 0, epoch: 1, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"] } });
+    await page.route("**/v1/**", async (route) => {
+      const req = route.request(), url = new URL(req.url()), method = req.method();
+      if (url.pathname.endsWith("/me")) return route.fulfill({ json: sessionFor("staff").me });
+      const writeResponse = mockWriteResponse(req, entities);
+      if (writeResponse) return route.fulfill({ json: writeResponse });
+      if (url.pathname === "/v1/sync/snapshot") return route.fulfill({ json: { cursor: 0, epoch: 1, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"] } });
     const entity = url.pathname.match(/\/v1\/sync\/snapshot\/([^/]+)$/)?.[1];
     if (entity) {
       const table = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "slips", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report: "reports", report_publication: "reportPublications" })[entity] ?? `${entity}s`;
@@ -295,6 +298,11 @@ async function checkF9(vp) {
   const { page, context } = await open(vp, route);
   try {
     const cells = page.getByRole("textbox", { name: /Điểm/ });
+    await cells.nth(1).waitFor({ state: "visible", timeout: 8000 });
+    // Snapshot đầu tiên có thể làm bảng điểm dựng lại một lần (lỗi tầng dữ liệu đã chuyển lane Data):
+    // đợi bảng ổn định rồi mới đặt focus.
+    await page.waitForTimeout(400);
+    await cells.nth(1).waitFor({ state: "visible", timeout: 8000 });
     await cells.first().focus();
     const activeName = () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.getAttribute("name") ?? document.activeElement?.textContent?.trim() ?? "");
     const before = await activeName();

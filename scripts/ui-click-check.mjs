@@ -2,6 +2,7 @@ import { access, mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
 import { entities, identity, sessionFor } from "./ui-audit-fixtures/demo.mjs";
+import { mockWriteResponse } from "./ui-audit-fixtures/mock-write-responses.mjs";
 
 const base = "http://127.0.0.1:5191";
 const root = process.cwd();
@@ -41,10 +42,13 @@ async function seed(page, role) {
 
 async function setup(page, role) {
   page.setDefaultTimeout(6000);
-  await page.route("**/v1/**", async (route) => {
-    const url = new URL(route.request().url());
-    if (url.pathname.endsWith("/me")) return route.fulfill({ json: sessionFor(role).me });
-    if (url.pathname === "/v1/sync/snapshot") return route.fulfill({ json: { cursor: 0, epoch: 1, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"] } });
+    await page.route("**/v1/**", async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      if (url.pathname.endsWith("/me")) return route.fulfill({ json: sessionFor(role).me });
+      const writeResponse = mockWriteResponse(request, entities);
+      if (writeResponse) return route.fulfill({ json: writeResponse });
+      if (url.pathname === "/v1/sync/snapshot") return route.fulfill({ json: { cursor: 0, epoch: 1, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"] } });
     const entity = url.pathname.match(/\/v1\/sync\/snapshot\/([^/]+)$/)?.[1];
     if (entity) {
       const table = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "slips", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report: "reports", report_publication: "reportPublications" })[entity] ?? entity + "s";
