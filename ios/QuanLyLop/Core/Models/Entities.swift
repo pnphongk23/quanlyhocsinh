@@ -35,7 +35,7 @@ struct ClassSession: Codable, Sendable, Equatable, Identifiable {
     let status: SessionStatus
     let note: String?
     let version: Int
-    // Q16: only the server supplies numbering. Never derive it from a partial cache.
+    // Stored value is only a hint: `SessionNumbering` recomputes it whenever sessions are read.
     private let serverSessionNumber: Int?
     var sessionNumber: Int? { status == .cancelled ? nil : serverSessionNumber }
 
@@ -50,6 +50,10 @@ struct ClassSession: Codable, Sendable, Equatable, Identifiable {
         self.origin = origin; self.isMakeup = isMakeup; self.status = status
         self.note = note; self.version = version
         self.serverSessionNumber = status == .cancelled ? nil : sessionNumber
+    }
+    func withSessionNumber(_ number: Int?) -> ClassSession {
+        ClassSession(id: id, classId: classId, date: date, startTime: startTime, origin: origin, isMakeup: isMakeup,
+                     status: status, note: note, version: version, sessionNumber: number)
     }
     func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
