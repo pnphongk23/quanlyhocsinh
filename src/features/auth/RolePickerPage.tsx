@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { authFailureMessage, switchMembership } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
@@ -26,8 +26,11 @@ export default function RolePickerPage() {
   const revoked = state.activeMemberId !== null && !active;
   const single = session && !revoked && !active && memberships.length === 1 ? memberships[0] : null;
   const singleId = single?.id;
+  const autoChosen = useRef<string | null>(null);
   useEffect(() => {
-    if (single) void choose(single.id, single.role.scope_kind === "linked_students");
+    if (!single || autoChosen.current === single.id) return;
+    autoChosen.current = single.id;
+    void choose(single.id, single.role.scope_kind === "linked_students");
   }, [singleId]);
   if (!session) return <Navigate to="/dang-nhap" replace />;
   const phoneLabel = `+84 ${normalizePhone(session.user.phone).replace(/(\d{3})(\d{3})(\d{3})/, "$1 $2 $3")}`;
@@ -89,6 +92,7 @@ export default function RolePickerPage() {
                 type="button"
                 className={s.roleCard}
                 disabled={busy}
+                aria-busy={busy || undefined}
                 onClick={() => void choose(membership.id, guardian)}
               >
                 <span className={s.roleAvatar} aria-hidden="true">{badge.initials}</span>

@@ -14,7 +14,9 @@ import { scheduleSync } from "../../data/sync";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useOnline } from "../../shared/hooks/useOnline";
 import { Icon, Modal, PageHeader } from "../../shared/ui";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
+import { EMPTY_PASSWORD_FORM, isPasswordFormValid } from "./ChangePasswordPage";
 import a from "../auth/auth.module.css";
 import { roleBadge } from "../auth/roleBadge";
 import s from "./settings.module.css";
@@ -131,12 +133,15 @@ function SettingsMobile() {
     useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
+  const [signingOut, setSigningOut] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
   const [error, setError] = useState("");
   if (!getSession()) return <Navigate to="/dang-nhap" replace />;
 
   async function signOut() {
+    if (signingOut) return;
+    setSigningOut(true);
     setError("");
     try {
       const count = await pendingCommandCount();
@@ -150,6 +155,8 @@ function SettingsMobile() {
     } catch {
       setBlockedCount(pending);
       setBlocked(true);
+    } finally {
+      setSigningOut(false);
     }
   }
 
@@ -232,7 +239,7 @@ function SettingsMobile() {
         </p>
       )}
 
-      <button type="button" className={s.logout} onClick={() => void signOut()}>
+      <button type="button" className={s.logout} disabled={signingOut} aria-busy={signingOut || undefined} onClick={() => void signOut()}>
         Đăng xuất
       </button>
 
@@ -253,43 +260,45 @@ function SettingsDesktop() {
     useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
+  const [signingOut, setSigningOut] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState("");
+  const [form, setForm] = useState(EMPTY_PASSWORD_FORM);
+  const { current: currentPassword, next, confirm } = form;
+  const [roleError, setRoleError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const action = useSaveAction({
+    baseline: EMPTY_PASSWORD_FORM,
+    value: form,
+    validate: isPasswordFormValid,
+    save: (v) => changePassword(v.current, v.next),
+  });
   if (!getSession()) return <Navigate to="/dang-nhap" replace />;
 
+  const setField = (key: keyof typeof form) => (value: string) => {
+    setSaved(false);
+    setForm((f) => ({ ...f, [key]: value }));
+  };
   const mismatch = confirm.length > 0 && confirm !== next;
-  const invalid =
-    !currentPassword || next.length < PASSWORD_MIN_LENGTH || mismatch || !confirm;
+  const sameAsCurrent = next.length > 0 && next === currentPassword;
+  const error = action.error
+    ? authFailureMessage(action.error)
+    : sameAsCurrent
+      ? "Mật khẩu mới phải khác mật khẩu hiện tại."
+      : roleError;
 
   async function savePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
-    setSaved(false);
-    if (currentPassword === next) {
-      setError("Mật khẩu mới phải khác mật khẩu hiện tại.");
-      return;
-    }
-    setBusy(true);
-    try {
-      await changePassword(currentPassword, next);
+    if (await action.submit()) {
       setSaved(true);
-      setCurrentPassword("");
-      setNext("");
-      setConfirm("");
-    } catch (cause) {
-      setError(authFailureMessage(cause));
-    } finally {
-      setBusy(false);
+      setForm(EMPTY_PASSWORD_FORM);
     }
   }
 
   async function signOut() {
+    if (signingOut) return;
+    setSigningOut(true);
     try {
       const count = await pendingCommandCount();
       if (count > 0) {
@@ -302,6 +311,8 @@ function SettingsDesktop() {
     } catch {
       setBlockedCount(pending);
       setBlocked(true);
+    } finally {
+      setSigningOut(false);
     }
   }
 
@@ -388,6 +399,7 @@ function SettingsDesktop() {
                       type="button"
                       className={s.roleRow}
                       disabled={busy}
+                      aria-busy={busy || undefined}
                       onClick={async () => {
                         setBusy(true);
                         try {
@@ -399,7 +411,7 @@ function SettingsDesktop() {
                             { replace: true },
                           );
                         } catch (cause) {
-                          setError(authFailureMessage(cause));
+                          setRoleError(authFailureMessage(cause));
                         } finally {
                           setBusy(false);
                         }
@@ -433,20 +445,14 @@ function SettingsDesktop() {
               <PasswordField
                 label="Mật khẩu hiện tại"
                 value={currentPassword}
-                onChange={(value) => {
-                  setCurrentPassword(value);
-                  setSaved(false);
-                }}
+                onChange={setField("current")}
                 autoComplete="current-password"
                 id="settings-current"
               />
               <PasswordField
                 label="Mật khẩu mới"
                 value={next}
-                onChange={(value) => {
-                  setNext(value);
-                  setSaved(false);
-                }}
+                onChange={setField("next")}
                 autoComplete="new-password"
                 id="settings-new"
                 hint={<PasswordStrength password={next} />}
@@ -454,7 +460,7 @@ function SettingsDesktop() {
               <PasswordField
                 label="Nhập lại mật khẩu mới"
                 value={confirm}
-                onChange={setConfirm}
+                onChange={setField("confirm")}
                 autoComplete="new-password"
                 id="settings-confirm"
                 error={mismatch}
@@ -479,9 +485,10 @@ function SettingsDesktop() {
                 <button
                   type="submit"
                   className={s.saveButton}
-                  disabled={invalid || busy}
+                  disabled={!action.canSave}
+                  aria-busy={action.saving || undefined}
                 >
-                  {busy ? "Đang lưu…" : "Lưu mật khẩu mới"}
+                  {action.saving ? "Đang lưu…" : "Lưu mật khẩu mới"}
                 </button>
               </div>
             </form>
@@ -493,7 +500,7 @@ function SettingsDesktop() {
                   Thoát khỏi tài khoản trên trình duyệt này.
                 </p>
               </div>
-              <button type="button" className={s.logout} onClick={() => void signOut()}>
+              <button type="button" className={s.logout} disabled={signingOut} aria-busy={signingOut || undefined} onClick={() => void signOut()}>
                 Đăng xuất
               </button>
             </div>

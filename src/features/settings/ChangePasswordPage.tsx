@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authFailureMessage, changePassword } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { Icon } from "../../shared/ui";
 import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
@@ -10,36 +11,40 @@ import s from "./settings.module.css";
 
 const PASSWORD_MIN_LENGTH = 8;
 
+
+export const EMPTY_PASSWORD_FORM = { current: "", next: "", confirm: "" };
+
+/** Đủ ba ô, mật khẩu mới từ 8 ký tự, khớp ô nhập lại và khác mật khẩu hiện tại. */
+export function isPasswordFormValid(v: typeof EMPTY_PASSWORD_FORM): boolean {
+  return Boolean(v.current) && v.next.length >= PASSWORD_MIN_LENGTH && v.next === v.confirm && v.next !== v.current;
+}
+
 export default function ChangePasswordPage() {
   const desktop = useIsDesktop();
   const navigate = useNavigate();
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState(EMPTY_PASSWORD_FORM);
+  const { current, next, confirm } = form;
+  const setField = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const action = useSaveAction({
+    baseline: EMPTY_PASSWORD_FORM,
+    value: form,
+    validate: isPasswordFormValid,
+    save: (v) => changePassword(v.current, v.next),
+  });
   if (!getSession()) return <Navigate to="/dang-nhap" replace />;
   if (desktop) return <Navigate to="/cai-dat" replace />;
 
   const mismatch = confirm.length > 0 && confirm !== next;
-  const blocked = !current || next.length < PASSWORD_MIN_LENGTH || mismatch || !confirm;
+  const sameAsCurrent = next.length > 0 && next === current;
+  const error = action.error
+    ? authFailureMessage(action.error)
+    : sameAsCurrent
+      ? "Mật khẩu mới phải khác mật khẩu hiện tại."
+      : "";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
-    if (current === next) {
-      setError("Mật khẩu mới phải khác mật khẩu hiện tại.");
-      return;
-    }
-    setBusy(true);
-    try {
-      await changePassword(current, next);
-      navigate("/cai-dat", { replace: true });
-    } catch (cause) {
-      setError(authFailureMessage(cause));
-    } finally {
-      setBusy(false);
-    }
+    if (await action.submit()) navigate("/cai-dat", { replace: true });
   }
 
   return (
@@ -52,14 +57,14 @@ export default function ChangePasswordPage() {
         <PasswordField
           label="Mật khẩu hiện tại"
           value={current}
-          onChange={(value) => { setCurrent(value); setError(""); }}
+          onChange={setField("current")}
           autoComplete="current-password"
           id="change-current"
         />
         <PasswordField
           label="Mật khẩu mới"
           value={next}
-          onChange={(value) => { setNext(value); setError(""); }}
+          onChange={setField("next")}
           autoComplete="new-password"
           id="change-new"
           error={Boolean(error)}
@@ -69,7 +74,7 @@ export default function ChangePasswordPage() {
         <PasswordField
           label="Nhập lại mật khẩu mới"
           value={confirm}
-          onChange={setConfirm}
+          onChange={setField("confirm")}
           autoComplete="new-password"
           id="change-confirm"
           error={mismatch}
@@ -80,8 +85,8 @@ export default function ChangePasswordPage() {
             Tối thiểu {PASSWORD_MIN_LENGTH} ký tự
           </CheckRow>
         </div>
-        <button type="submit" className={`${a.submit} ${a.submitSticky}`} disabled={blocked || busy}>
-          {busy ? "Đang lưu…" : "Lưu mật khẩu mới"}
+        <button type="submit" className={`${a.submit} ${a.submitSticky}`} disabled={!action.canSave} aria-busy={action.saving || undefined}>
+          {action.saving ? "Đang lưu…" : "Lưu mật khẩu mới"}
         </button>
       </form>
     </main>
