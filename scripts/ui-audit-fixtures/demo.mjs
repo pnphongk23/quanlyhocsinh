@@ -16,7 +16,7 @@ export const attendance = sessions.flatMap((session) => students.map((student, i
 export const slips = students.map((s, i) => ({ session_id: "demo-past", student_id: s.id, stars: (i % 3) + 1, note: "Làm bài tốt, tiếp tục luyện tập.", status: "sent", sent_at: "2026-10-20T12:00:00Z", version: 1 }));
 export const homeworkSections = [{ id: "demo-homework", class_id: classIds[0], session_id: "demo-past", kind: "vocabulary", title: "Ôn từ vựng Unit 3", description: "Đọc và luyện phát âm." }];
 export const homeworkGrades = students.map((s, i) => ({ section_id: "demo-homework", student_id: s.id, level: ["excellent", "done", "not_done"][i % 3], updated_at: "2026-10-20T12:00:00Z", version: 1 }));
-export const reports = students.slice(0, 3).map((s, i) => ({ id: `demo-report-${i}`, class_id: classIds[0], student_id: s.id, month: "2026-10", status: "published", general_comment: "Tiến bộ tốt.", needs_republish: false, publication_count: 1, published_at: "2026-10-22T12:00:00Z", version: 1 }));
+export const reports = students.slice(0, 3).map((s, i) => ({ id: `demo-report-${i}`, class_id: classIds[0], student_id: s.id, month: "2026-10", status: i === 0 ? "draft" : "published", general_comment: "Tiến bộ tốt.", needs_republish: false, publication_count: i === 0 ? 0 : 1, published_at: i === 0 ? null : "2026-10-22T12:00:00Z", version: 1 }));
 // Use the compatibility cache path in the guardian view: an empty publication
 // snapshot would intentionally hide the otherwise published demo report.
 export const publications = [];

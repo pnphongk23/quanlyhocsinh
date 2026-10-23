@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build && node src/test/check-bundle.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:click": "node scripts/ui-click-check.mjs"
+    "test:click": "node scripts/ui-click-check.mjs",
+    "test:save": "node scripts/ui-save-check.mjs"
   },
   "dependencies": {
     "dexie": "^4.4.6",
