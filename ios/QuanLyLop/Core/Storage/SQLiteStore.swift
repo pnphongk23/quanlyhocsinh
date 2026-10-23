@@ -116,6 +116,10 @@ actor SQLiteStore: LocalStore {
         try db.execute("SELECT key FROM records WHERE scope=? AND entity=? ORDER BY key", [scope.storageKey, entity])
             .compactMap { try read(type, forKey: $0["key"]!) }
     }
+    /// Class sessions with locally computed numbers; the `class_session` snapshot does not carry them.
+    func classSessions() throws -> [ClassSession] {
+        SessionNumbering.numbered(try records(ClassSession.self, entity: "class_session"))
+    }
     /// Like `records`, but a row whose JSON no longer fits `Value` is left out instead of failing the whole read.
     /// Only decoding problems are tolerated; storage errors still throw. `skipped` counts the dropped rows
     /// so callers never need to look at (or log) their content.

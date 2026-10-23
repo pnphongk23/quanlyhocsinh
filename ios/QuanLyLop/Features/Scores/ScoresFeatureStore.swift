@@ -67,7 +67,7 @@ final class I4FeatureStore: ObservableObject {
         do {
             classes = try await store.records(Classroom.self, entity: "class")
             students = try await store.records(Student.self, entity: "student")
-            sessions = try await store.records(ClassSession.self, entity: "class_session")
+            sessions = try await store.classSessions()
             attendance = try await store.records(Attendance.self, entity: "attendance")
             tests = try await store.records(TestDefinition.self, entity: "test")
             scores = try await store.records(Score.self, entity: "score")

@@ -50,10 +50,9 @@ struct GuardianChildData: Sendable, Identifiable {
         let rows = orderedSessions
             .filter { $0.status == .held && $0.date.hasPrefix(month) }
             .reversed()
-            .compactMap { session -> GuardianAttendanceRow? in
-                guard let number = session.sessionNumber else { return nil }
+            .map { session -> GuardianAttendanceRow in
                 let record = attendances.first { $0.studentId == student.id && $0.sessionId == session.id }
-                return GuardianAttendanceRow(session: session, number: number, attendance: record)
+                return GuardianAttendanceRow(session: session, number: session.sessionNumber, attendance: record)
             }
         return GuardianAttendanceMonth(month: month, rows: Array(rows))
     }
@@ -112,7 +111,7 @@ struct GuardianChildData: Sendable, Identifiable {
     /// `getChildHomework`: các buổi có giao BTVN cho con, mới nhất trước.
     var homeworkSessions: [GuardianHomeworkSession] {
         orderedSessions
-            .filter { $0.sessionNumber != nil }
+            .filter { $0.status != .cancelled }
             .filter { session in homeworkSections.contains { $0.sessionId == session.id } }
             .reversed()
             .map { session in
@@ -138,8 +137,7 @@ struct GuardianChildData: Sendable, Identifiable {
         let sent = slips.contains {
             $0.sessionId == gradingSession.id && $0.studentId == student.id && $0.status == .sent
         }
-        guard sent, let previous = previousSession(before: gradingSession),
-              previous.sessionNumber != nil else { return nil }
+        guard sent, let previous = previousSession(before: gradingSession) else { return nil }
         let sections = homeworkSections.filter { $0.sessionId == previous.id }
         guard !sections.isEmpty else { return nil }
         return GuardianHomeworkSession(session: previous, parts: parts(of: previous, graded: true),
@@ -182,7 +180,7 @@ struct GuardianSentSlip: Identifiable, Sendable {
 
 struct GuardianAttendanceRow: Identifiable, Sendable {
     let session: ClassSession
-    let number: Int
+    let number: Int?
     let attendance: Attendance?
     var id: String { session.id }
     var status: AttendanceStatus? { attendance?.status }
@@ -308,7 +306,7 @@ enum GuardianFormat {
         name.split(whereSeparator: \.isWhitespace).suffix(2).joined(separator: " ")
     }
 
-    /// "Buổi 18" hoặc "Buổi bù" khi máy chủ không trả số buổi.
+    /// "Buổi 18"; buổi huỷ không có số nên hiện "Buổi bù" / "Buổi học".
     static func sessionPrefix(_ session: ClassSession) -> String {
         if let number = session.sessionNumber { return String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.b945f512"), String(describing: (number))) }
         return session.origin == .manual ? String(localized: "feature.guardian.buoi.bu") : String(localized: "feature.guardian.buoi.hoc")
@@ -415,7 +413,7 @@ enum GuardianRepository {
     static func dashboard(from store: SQLiteStore) async throws -> GuardianDashboard {
         async let childrenTask = store.records(Student.self, entity: "student")
         async let classesTask = store.records(Classroom.self, entity: "class")
-        async let sessionsTask = store.records(ClassSession.self, entity: "class_session")
+        async let sessionsTask = store.classSessions()
         async let attendanceTask = store.records(Attendance.self, entity: "attendance")
         async let testsTask = store.records(TestDefinition.self, entity: "test")
         async let scoresTask = store.records(Score.self, entity: "score")

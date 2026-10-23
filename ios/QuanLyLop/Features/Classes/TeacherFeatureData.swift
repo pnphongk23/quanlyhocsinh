@@ -126,7 +126,7 @@ final class TeacherFeatureData {
         do {
             classes = try await store.records(Classroom.self, entity: "class").sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             students = try await store.records(Student.self, entity: "student")
-            sessions = try await store.records(ClassSession.self, entity: "class_session").sorted { ($0.date, $0.startTime) < ($1.date, $1.startTime) }
+            sessions = try await store.classSessions().sorted { ($0.date, $0.startTime) < ($1.date, $1.startTime) }
             attendance = try await store.records(Attendance.self, entity: "attendance")
             tests = try await store.records(TestDefinition.self, entity: "test").filter { !$0.archived }
             scores = try await store.records(Score.self, entity: "score")
@@ -289,8 +289,8 @@ final class TeacherFeatureData {
         activeStudents(in: classID).filter(hasAbsenceWarning).count
     }
 
-    /// `sessionPrefix` of `data/repositories/sessions.ts`: numbering comes from the server
-    /// only (Q16); a cancelled session has no number.
+    /// `sessionPrefix` of `data/repositories/sessions.ts`: numbering is computed on the device
+    /// (`SessionNumbering`); a cancelled session has no number.
     static func sessionPrefix(_ session: ClassSession) -> String {
         if let number = session.sessionNumber { return String.localizedStringWithFormat(String(localized: "feature.classes.buoi"), String(describing: (number))) }
         return session.isMakeup ? String(localized: "feature.classes.buoi.bu") : String(localized: "feature.classes.buoi.hoc")
