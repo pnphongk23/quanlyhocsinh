@@ -89,6 +89,8 @@ export function useSaveAction<T>({
   const valid = validity !== false && typeof validity !== "string";
   const canSave = dirty && valid && !saving;
 
+  const isEqualRef = useRef(isEqual);
+  isEqualRef.current = isEqual;
   const latest = useRef({ value, dirty, valid, save });
   latest.current = { value, dirty, valid, save };
 
@@ -101,6 +103,7 @@ export function useSaveAction<T>({
     setSaving(true);
     setError(null);
     const startedAt = Date.now();
+    const baselineAtStart = lastBaseline.current;
     let ok = false;
     let failure: unknown = null;
     try {
@@ -117,7 +120,9 @@ export function useSaveAction<T>({
     if (mounted.current) {
       setSaving(false);
       if (ok) {
-        setSaved({ value: current.value });
+        // Ghi xong mà baseline đã đổi theo (store cập nhật trong lúc giữ loading) thì baseline mới
+        // là sự thật; đè bằng giá trị đã gõ ("9.5" so với "9,5") sẽ khiến nút lưu bật lại.
+        if (isEqualRef.current(baselineAtStart, lastBaseline.current)) setSaved({ value: current.value });
         setJustSaved(true);
         holdTimer.current = setTimeout(() => setJustSaved(false), SAVE_SUCCESS_HOLD_MS);
       } else {
