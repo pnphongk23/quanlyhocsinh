@@ -6,6 +6,7 @@ import { useSaveStatus } from "../../shared/SaveStatus";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, Input, Modal, UnsavedChangesDialog } from "../../shared/ui";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
+import { savedPeek } from "../closeAfterSaved";
 import s from "./classesForm.module.css";
 
 export function EditClassModal({
@@ -36,6 +37,7 @@ export function EditClassModal({
     event.preventDefault();
     if (await action.submit()) {
       save.clearStatus();
+      await savedPeek();
       onClose();
     } else {
       save.setStatus("error");

@@ -5,11 +5,14 @@ import { createSeed } from "../../test/fixtures/seed";
 import AddStudentModal from "../students/AddStudentModal";
 import { ArchiveClassDialog } from "./ArchiveClassDialog";
 import { EditClassModal } from "./EditClassModal";
+import NewClassPage from "./NewClassPage";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 
 const repo = vi.hoisted(() => ({
   createStudent: vi.fn(),
   updateClass: vi.fn(),
   archiveClass: vi.fn(),
+  createClass: vi.fn(),
 }));
 vi.mock("../../data/repositories/students", async (original) => ({
   ...(await original<typeof import("../../data/repositories/students")>()),
@@ -19,6 +22,7 @@ vi.mock("../../data/repositories/classes", async (original) => ({
   ...(await original<typeof import("../../data/repositories/classes")>()),
   updateClass: repo.updateClass,
   archiveClass: repo.archiveClass,
+  createClass: repo.createClass,
 }));
 
 const unsavedDialog = () =>
@@ -76,7 +80,9 @@ describe("trạng thái nút lưu và đóng khi nhập dở", () => {
       gate.resolve();
       await gate.promise;
     });
-    await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.getByRole("button", { name: /Đã lưu/ })).toBeInTheDocument(), { timeout: 3000 });
+    expect(onClose).not.toHaveBeenCalled();
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce(), { timeout: 3000 });
   });
 
   it("thêm học sinh: đóng khi đã nhập dở thì hỏi, bỏ thay đổi thì đóng", async () => {
@@ -118,6 +124,8 @@ describe("trạng thái nút lưu và đóng khi nhập dở", () => {
       gate.resolve();
       await gate.promise;
     });
+    await screen.findByText("Đã lưu");
+    expect(onClose).not.toHaveBeenCalled();
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   });
 
@@ -171,5 +179,24 @@ describe("trạng thái nút lưu và đóng khi nhập dở", () => {
     fireEvent.click(screen.getByRole("button", { name: "Huỷ" }));
     expect(onClose).toHaveBeenCalledOnce();
     expect(repo.archiveClass).not.toHaveBeenCalled();
+  });
+
+  it("tạo lớp: nút hiện Đã lưu rồi mới điều hướng", async () => {
+    repo.createClass.mockResolvedValue(undefined);
+    const router = createMemoryRouter(
+      [
+        { path: "/lop/moi", element: <NewClassPage /> },
+        { path: "/lop", element: <p>Danh sách lớp</p> },
+      ],
+      { initialEntries: ["/lop/moi"] },
+    );
+    render(<RouterProvider router={router} />);
+    fireEvent.change(screen.getByLabelText(/Tên lớp/), { target: { value: "Lớp mới" } });
+    fireEvent.click(screen.getByRole("button", { name: "T2" }));
+    fireEvent.submit(screen.getByRole("button", { name: "Tạo lớp" }).closest("form") as HTMLFormElement);
+    await screen.findByText("Đã lưu");
+    expect(router.state.location.pathname).toBe("/lop/moi");
+    await waitFor(() => expect(router.state.location.pathname).toBe("/lop"));
+    router.dispose();
   });
 });

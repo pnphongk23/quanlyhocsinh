@@ -15,6 +15,7 @@ import {
   UnsavedChangesDialog,
 } from "../../shared/ui";
 import { WeekdayPicker } from "./WeekdayPicker";
+import { savedPeek } from "../closeAfterSaved";
 import s from "./classesForm.module.css";
 
 const EMPTY = { name: "", days: [] as number[], time: "18:30" };
@@ -46,6 +47,7 @@ export default function NewClassPage() {
     event.preventDefault();
     if (await action.submit()) {
       save.clearStatus();
+      await savedPeek();
       setDone(true);
     } else {
       save.setStatus("error");

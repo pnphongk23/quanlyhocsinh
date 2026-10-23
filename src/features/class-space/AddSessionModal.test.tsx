@@ -82,6 +82,8 @@ describe("AddSessionModal sửa buổi lẻ", () => {
       await response.promise;
     });
 
+    await screen.findByText("Đã lưu");
+    expect(onClose).not.toHaveBeenCalled();
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
     expect(fakeServer.request).toHaveBeenCalledWith(
       "PATCH /sessions/6a-extra-session",

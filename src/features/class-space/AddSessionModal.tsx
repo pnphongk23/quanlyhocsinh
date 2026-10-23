@@ -11,6 +11,7 @@ import { useSaveAction, deepEqual } from "../../shared/hooks/useSaveAction";
 import { Button, Sheet, UnsavedChangesDialog } from "../../shared/ui";
 import SaveStatus from "../../shared/SaveStatus";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
+import { savedPeek } from "../closeAfterSaved";
 import s from "./sessions.module.css";
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -69,7 +70,10 @@ export default function AddSessionModal({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (await action.submit()) onClose();
+    if (await action.submit()) {
+      await savedPeek();
+      onClose();
+    }
   }
   const error = action.error
     ? action.error instanceof Error && action.error.message !== "save_failed"
