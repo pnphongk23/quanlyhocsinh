@@ -74,7 +74,7 @@ final class I4FeatureStore: ObservableObject {
             slips = try await store.records(SessionSlip.self, entity: "slip")
             sections = try await store.records(HomeworkSection.self, entity: "homework_section")
             grades = try await store.records(HomeworkGrade.self, entity: "homework_grade")
-            publications = try await store.records(ReportPublication.self, entity: "report_publication")
+            publications = try await store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication").values
             reports = try await store.records(MonthlyReport.self, entity: "report")
             isReady = true
         } catch {
