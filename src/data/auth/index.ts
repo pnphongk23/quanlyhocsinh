@@ -55,7 +55,7 @@ export function authFailureMessage(error: unknown): string {
     if (error.status === 422 && error.error.details?.fields && typeof error.error.details.fields === "object" && "phone" in error.error.details.fields) return "Số điện thoại không hợp lệ.";
     return ({ invalid_credentials: "Số điện thoại hoặc mật khẩu chưa đúng.", rate_limited: "Bạn thử đăng nhập quá nhiều lần. Hãy chờ rồi thử lại.", account_disabled: "Tài khoản đã bị vô hiệu hoá.", password_change_required: "Bạn cần đổi mật khẩu để tiếp tục." } as Record<string, string>)[error.error.code] ?? "Không thể hoàn thành yêu cầu.";
   }
-  return error instanceof Error ? error.message : "Không thể hoàn thành yêu cầu.";
+  return "Không thể kết nối. Hãy kiểm tra mạng rồi thử lại.";
 }
 export function authRedirect(role: "staff" | "guardian"): string {
   const session = getSession(); if (!session) return "/dang-nhap";

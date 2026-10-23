@@ -209,11 +209,30 @@
   min-width: 0;
 }
 .pageHeaderMain {
+  --h1-size: var(--text-2xl);
   display: flex;
   align-items: center;
   gap: var(--space-12);
   min-width: 0;
   flex: 1;
+}
+.compactMain {
+  --h1-size: var(--text-xl);
+}
+@media (min-width: 1024px) {
+  .pageHeaderMain:not(.compactMain) {
+    --h1-size: var(--text-3xl);
+  }
+}
+/* Có dòng phụ: nút quay lại căn theo dòng tiêu đề chính, không theo cả khối. */
+.hasEyebrow {
+  align-items: flex-start;
+}
+.hasEyebrow .backButton {
+  margin-top: calc(
+    var(--text-md) * var(--leading-base) + var(--space-2) +
+      (var(--h1-size) * var(--leading-tight) - var(--tap)) / 2
+  );
 }
 .pageTitle {
   position: relative;

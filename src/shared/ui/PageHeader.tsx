@@ -20,7 +20,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <header className={s.pageHeader}>
-      <div className={s.pageHeaderMain}>
+      <div className={[s.pageHeaderMain, eyebrow ? s.hasEyebrow : "", compact ? s.compactMain : ""].filter(Boolean).join(" ")}>
         {backTo && (
           <Link to={backTo} className={s.backButton} aria-label="Quay lại">
             <Icon name="back" />

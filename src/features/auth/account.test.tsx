@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import type { MeResponse } from "../../data/api/types";
+import { ApiError } from "../../data/api/client";
 
 const { request, beginLogout, cancelLogout, clearLogoutLock, pendingCommandCount, clearUserCache } = vi.hoisted(() => ({ request: vi.fn(), beginLogout: vi.fn(), cancelLogout: vi.fn(), clearLogoutLock: vi.fn(), pendingCommandCount: vi.fn(), clearUserCache: vi.fn() }));
 vi.mock("../../data/sync", () => ({ api: { request }, syncNow: vi.fn(), scheduleSync: vi.fn(), clearUserCache }));
@@ -67,7 +68,7 @@ beforeEach(async () => {
 
 describe("account and auth screens", () => {
   it("shows login errors and routes successful login to role selection", async () => {
-    request.mockImplementationOnce(async () => { throw new Error("Số điện thoại hoặc mật khẩu chưa đúng."); });
+    request.mockImplementationOnce(async () => { throw new ApiError(401, { code: "invalid_credentials", message: "Sai thông tin", request_id: "test" }); });
     const { rerender } = render(<Harness/>);
     fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "900 000 001" } });
     fireEvent.change(screen.getByLabelText("Mật khẩu"), { target: { value: "correct horse" } });
