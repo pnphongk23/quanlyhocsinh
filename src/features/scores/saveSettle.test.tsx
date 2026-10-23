@@ -71,10 +71,15 @@ describe("nút Lưu điểm sau khi lưu xong", () => {
       fireEvent.change(screen.getByLabelText("Điểm Nguyễn Minh Anh"), {
         target: { value: typed },
       });
+      expect(screen.queryByText("Chưa có thay đổi để lưu")).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "Lưu điểm" }));
-      await advance(400);
+      await advance(100);
+      expect(screen.queryByText("Chưa có thay đổi để lưu")).toBeNull();
+      await advance(300);
+      expect(screen.queryByText("Chưa có thay đổi để lưu")).toBeNull();
       await advance(1600);
       expect(screen.getByRole("button", { name: "Lưu điểm" })).toBeDisabled();
+      expect(screen.getByText("Chưa có thay đổi để lưu")).toBeInTheDocument();
     },
   );
 });

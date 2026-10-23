@@ -545,7 +545,9 @@ function SaveBarContent({
       {invalidCount > 0 ? (
         <p className={s.saveReason}>Sửa {invalidCount} ô lỗi để lưu điểm</p>
       ) : (
-        !canSave && (
+        !canSave &&
+        !action.saving &&
+        !action.justSaved && (
           <p className={s.saveReason + " " + s.saveReasonMuted}>
             Chưa có thay đổi để lưu
           </p>
