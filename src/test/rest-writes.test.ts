@@ -8,7 +8,7 @@ import { createSeed } from "../data/seed";
 vi.mock("../data/auth/session", () => ({ getToken: () => "fake-token", getSession: () => ({ user: { id: "u" }, me: { memberships: [] } }), updateMe: vi.fn(), clearSession: vi.fn(), invalidateActiveMembership: vi.fn() }));
 vi.mock("../data/repositories/access", async (original) => ({ ...(await original<object>()), requirePermission: () => undefined, requireClassAccess: () => undefined, can: () => true, canAccessClass: () => true }));
 
-const sync = vi.hoisted(() => ({ scheduleSync: vi.fn(), syncNow: vi.fn(async () => undefined) }));
+const sync = vi.hoisted(() => ({ scheduleSync: vi.fn(), syncNow: vi.fn(async (): Promise<void> => undefined) }));
 vi.mock("../data/sync", async (original) => ({ ...(await original<object>()), ...sync }));
 
 const identity = { userId: "u", workspaceId: "w", membershipId: "m" };
@@ -52,24 +52,86 @@ describe("REST writes persist to the device cache", () => {
     spy.mockRestore();
   });
 
-  it("shows an error and recovers the record by pulling when the cache write fails", async () => {
+  const restoreFromPull = (table: "classes" | "students", entity: "class" | "student", wire: (id: string) => object, pick: () => string) => async () => {
+    const { stored } = await import("../data/db");
+    const { hydrateStore } = await import("../data/store");
+    const id = pick();
+    await db[table].put(stored(entity, `${identityKey()}|${entity}|${id}`, wire(id)) as never);
+    await hydrateStore();
+  };
+
+  it("createClass resolves when REST succeeds but the cache write fails, and recovers by pulling", async () => {
+    const { api } = await import("../data/sync");
+    const { hydrateStore, getStore } = await import("../data/store");
+    const { createClass } = await import("../data/repositories/classes");
+    setSaveStatus("synced");
+    const bodies: any[] = [];
+    vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => { bodies.push(options.body); return { ...classRow, id: options.body.id, name: "Lớp mới" }; }) as never);
+    vi.spyOn(db.classes, "put").mockRejectedValueOnce(new Error("quota"));
+    const restore = restoreFromPull("classes", "class", (id) => ({ ...classRow, id, name: "Lớp mới" }), () => bodies[0].id);
+    let statusDuringRecovery = "";
+    sync.syncNow.mockImplementationOnce(async () => { statusDuringRecovery = getSaveStatus(); await restore(); });
+    const created = await createClass({ name: "Lớp mới", weekdays: [1, 3], time: "18:00" });
+    expect(created.id).toBe(bodies[0].id);
+    expect(bodies).toHaveLength(1);
+    expect(statusDuringRecovery).not.toBe("error");
+    expect(getSaveStatus()).not.toBe("error");
+    await hydrateStore();
+    expect(getStore().classes.filter((c) => c.id === created.id)).toHaveLength(1);
+  });
+
+  it("createClass shows a sync error only when the recovery pull also fails to restore the cache", async () => {
+    const { api } = await import("../data/sync");
+    const { getStore } = await import("../data/store");
+    const { createClass } = await import("../data/repositories/classes");
+    setSaveStatus("synced");
+    vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => ({ ...classRow, id: options.body.id, name: "Lớp mới" })) as never);
+    vi.spyOn(db.classes, "put").mockRejectedValueOnce(new Error("quota"));
+    const created = await createClass({ name: "Lớp mới", weekdays: [1, 3], time: "18:00" });
+    expect(getStore().classes.some((c) => c.id === created.id)).toBe(true);
+    expect(getSaveStatus()).toBe("error");
+  });
+
+  it("retrying a create whose response was lost reuses the id and does not duplicate the class", async () => {
+    const { api } = await import("../data/sync");
+    const { getStore } = await import("../data/store");
+    const { createClass } = await import("../data/repositories/classes");
+    const ids: string[] = [];
+    vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => {
+      ids.push(options.body.id);
+      if (ids.length === 1) throw new TypeError("network");
+      return { ...classRow, id: options.body.id, name: "Lớp mới" };
+    }) as never);
+    const input = { name: "Lớp mới", weekdays: [1, 3], time: "18:00" };
+    await expect(createClass(input)).rejects.toThrow();
+    const created = await createClass(input);
+    expect(ids[1]).toBe(ids[0]);
+    expect(getStore().classes.filter((c) => c.id === created.id)).toHaveLength(1);
+  });
+
+  it("updateClass resolves when REST succeeds but the cache write fails, and recovers by pulling", async () => {
+    const { api } = await import("../data/sync");
+    const { getStore } = await import("../data/store");
+    const { updateClass } = await import("../data/repositories/classes");
+    setSaveStatus("synced");
+    vi.spyOn(api, "request").mockResolvedValue({ ...classRow, name: "Tên mới", version: 2 } as never);
+    vi.spyOn(db.classes, "put").mockRejectedValueOnce(new Error("quota"));
+    sync.syncNow.mockImplementationOnce(restoreFromPull("classes", "class", (id) => ({ ...classRow, id, name: "Tên mới", version: 2 }), () => "c1"));
+    await expect(updateClass("c1", { name: "Tên mới" })).resolves.toBeUndefined();
+    expect(getStore().classes.find((c) => c.id === "c1")?.name).toBe("Tên mới");
+    expect(getSaveStatus()).not.toBe("error");
+  });
+
+  it("shows an error and recovers the student record by pulling when the cache write fails", async () => {
     const { api } = await import("../data/sync");
     const { hydrateStore, getStore } = await import("../data/store");
     const { createStudent } = await import("../data/repositories/students");
     setSaveStatus("synced");
     vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => student(options.body.id)) as never);
     vi.spyOn(db.students, "put").mockRejectedValueOnce(new Error("quota"));
-    let statusAtSync = "";
-    sync.syncNow.mockImplementationOnce(async () => {
-      statusAtSync = getSaveStatus();
-      const { stored } = await import("../data/db");
-      const id = getStore().students[0].id;
-      await db.students.put(stored("student", `${identityKey()}|student|${id}`, student(id)) as never);
-      await hydrateStore();
-    });
+    sync.syncNow.mockImplementationOnce(restoreFromPull("students", "student", student, () => getStore().students[0].id));
     const created = await createStudent({ classId: "c1", name: "Dũng", parentPhone: "", enrolledAt: "2026-10-01" });
-    expect(statusAtSync).toBe("error");
-    expect(getStore().students.map((s) => s.id)).toEqual([created.id]);
+    expect(getSaveStatus()).not.toBe("error");
     await hydrateStore();
     expect(getStore().students.map((s) => s.id)).toEqual([created.id]);
   });

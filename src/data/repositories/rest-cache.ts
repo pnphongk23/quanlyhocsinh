@@ -20,9 +20,13 @@ async function cacheRemote(entity: EntityName, item: Wire, base?: Record<string,
   } catch { return false; }
 }
 
+async function recovered(entity: EntityName, id: string): Promise<boolean> {
+  try { return Boolean(await tableFor(entity).get(rowKey(entity, [id]))); } catch { return false; }
+}
+
 /**
  * Sau một ghi REST thành công: ghi cache bền, rồi bộ nhớ, rồi kéo đồng bộ ngay.
- * Nếu ghi cache lỗi thì vẫn cập nhật bộ nhớ, đặt trạng thái lỗi và kéo lại làm đường khôi phục.
+ * Nếu ghi cache lỗi thì vẫn cập nhật bộ nhớ, kéo lại để bù cache và chỉ đặt trạng thái lỗi nếu bản ghi vẫn chưa về cache.
  * Bỏ qua nếu người dùng đã đổi vai trò trong lúc chờ máy chủ (lần kéo của vai đó sẽ lấy bản ghi).
  */
 export async function commitRemote(identity: string, entity: EntityName, remote: Wire | undefined, base: Record<string, unknown> | undefined, apply: () => void): Promise<void> {
@@ -31,9 +35,9 @@ export async function commitRemote(identity: string, entity: EntityName, remote:
   if (identityKey() !== identity) return;
   apply();
   if (cached) { if (getCacheIdentity()) scheduleSync(0); return; }
-  // Máy chủ đã nhận nhưng cache máy lỗi: báo lỗi lưu và kéo lại để bản ghi về cache.
-  setSaveStatus("error");
+  // Máy chủ đã nhận nên thao tác đã thành công; cache máy lỗi thì kéo lại để bù, chỉ báo lỗi đồng bộ nếu bù cũng không được.
   await syncNow();
+  if (remote && !(await recovered(entity, remote.id))) setSaveStatus("error");
 }
 
 const pendingIds = new Map<string, string>();
