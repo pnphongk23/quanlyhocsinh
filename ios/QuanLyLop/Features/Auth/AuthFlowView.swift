@@ -2,15 +2,21 @@ import SwiftUI
 
 struct AuthFlowView: View {
     @State private var model: AuthModel
+    @State private var syncScheduler: SyncScheduler
+    @Environment(\.scenePhase) private var scenePhase
     private let configurationIsValid: Bool
 
     init(configuration: Result<AppConfiguration, AppConfigurationError>) {
         switch configuration {
         case .success(let value):
-            _model = State(initialValue: AuthModel(configuration: value))
+            let model = AuthModel(configuration: value)
+            _model = State(initialValue: model)
+            _syncScheduler = State(initialValue: Self.makeScheduler(model: model))
             configurationIsValid = true
         case .failure:
-            _model = State(initialValue: AuthModel(configuration: .fallback))
+            let model = AuthModel(configuration: .fallback)
+            _model = State(initialValue: model)
+            _syncScheduler = State(initialValue: Self.makeScheduler(model: model))
             configurationIsValid = false
         }
     }
@@ -29,7 +35,14 @@ struct AuthFlowView: View {
                 screens
             }
         }
-        .task { if model.screen == .loading { await model.restoreSession() } }
+          .task {
+              if model.screen == .loading { await model.restoreSession() }
+              updateSyncSchedule()
+          }
+          .onChange(of: scenePhase) { _, _ in updateSyncSchedule() }
+          .onChange(of: model.screen) { _, _ in updateSyncSchedule() }
+          .onChange(of: ConnectivityMonitor.shared.isOnline) { _, _ in updateSyncSchedule() }
+          .onDisappear { syncScheduler.setActive(false) }
         .preferredColorScheme(.light)
         .environment(model)
     }
@@ -40,6 +53,15 @@ struct AuthFlowView: View {
 #else
         nil
 #endif
+    }
+
+    private static func makeScheduler(model: AuthModel) -> SyncScheduler {
+        SyncScheduler(isOnline: { ConnectivityMonitor.shared.isOnline },
+                      synchronize: { await model.synchronizeWhileActive() })
+    }
+
+    private func updateSyncSchedule() {
+        syncScheduler.setActive(scenePhase == .active && model.isSyncEligible && ConnectivityMonitor.shared.isOnline)
     }
 
     @ViewBuilder private var screens: some View {

@@ -80,12 +80,13 @@ final class AuthModel {
     private let tokenStore: any TokenStore
     private let api: any APIClient
     private var activeStore: (any LocalStore)?
+    private(set) var activeSync: SyncCoordinator?
     private var returnToSettingsAfterRole = false
 
-    init(configuration: AppConfiguration) {
+    init(configuration: AppConfiguration, apiClient: (any APIClient)? = nil) {
         let store = KeychainTokenStore(service: "vn.quanlylop.\(configuration.environment.rawValue)")
         tokenStore = store
-        api = URLSessionAPIClient(configuration: configuration, tokenStore: store)
+        api = apiClient ?? URLSessionAPIClient(configuration: configuration, tokenStore: store)
     }
 
     func restoreSession() async {
@@ -228,7 +229,7 @@ final class AuthModel {
             let scopeStore = try makeStore(user: user, membershipId: "")
             let controller = SessionController(api: api, tokenStore: tokenStore, store: scopeStore)
             try await controller.logout()
-            session = nil; identity = nil; activeStore = nil; logoutBlock = nil
+            session = nil; identity = nil; activeStore = nil; activeSync = nil; logoutBlock = nil
             screen = .login
         } catch SessionFailure.pendingCommands(let count) {
             // Sign-out stays blocked while commands are pending (spec mục 5.3).
@@ -240,18 +241,22 @@ final class AuthModel {
     }
 
     func retrySync() async {
-        guard let activeStore else { return }
+        guard let activeSync else { return }
         message = nil
-        let key = "vn.quanlylop.device_id"
-        let deviceId: String
-        if let existing = UserDefaults.standard.string(forKey: key) { deviceId = existing }
-        else {
-            deviceId = UUID().uuidString
-            UserDefaults.standard.set(deviceId, forKey: key)
-        }
         do {
-            try await SyncCoordinator(api: api, store: activeStore, deviceId: deviceId).synchronize()
+            try await activeSync.synchronize()
         } catch { message = Self.userMessage(error) }
+    }
+
+    func synchronizeWhileActive() async {
+        guard isSyncEligible, let activeSync else { return }
+        try? await activeSync.synchronize()
+    }
+
+    var isSyncEligible: Bool {
+        guard let currentUser = session?.user ?? identity?.user,
+              !(currentUser.mustChangePassword), activeMembership != nil else { return false }
+        return screen == .main || screen == .settings || screen == .changePassword
     }
 
 #if DEBUG
@@ -270,7 +275,7 @@ final class AuthModel {
 
     /// Screenshot harness only: the login screen with its two prototype failure states.
     func applyDemoLogin(message: String?, locked: Bool) {
-        session = nil; identity = nil; activeStore = nil
+          session = nil; identity = nil; activeStore = nil; activeSync = nil
         self.screen = .login
         self.message = message
         self.isLocked = locked
@@ -302,7 +307,12 @@ final class AuthModel {
     private func prepareStore(for user: User, membershipId: String) async throws {
         let membership = memberships.first { $0.id == membershipId }
         guard let membership else { return }
-        activeStore = try makeStore(user: user, membershipId: membershipId, workspaceId: membership.workspace.id)
+        let store = try makeStore(user: user, membershipId: membershipId, workspaceId: membership.workspace.id)
+        activeStore = store
+        let key = "vn.quanlylop.device_id"
+        let deviceId = UserDefaults.standard.string(forKey: key) ?? UUID().uuidString
+        UserDefaults.standard.set(deviceId, forKey: key)
+        activeSync = SyncCoordinator(api: api, store: store, deviceId: deviceId)
     }
 
     private func makeStore(user: User, membershipId: String, workspaceId: String = "") throws -> SQLiteStore {

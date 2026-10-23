@@ -9,6 +9,23 @@ enum SyncEntity {
         "homework_section", "homework_grade", "report", "report_publication"
     ]
 }
+
+/// Prevents parallel pulls when multiple feature views create coordinators for the same cache.
+actor SyncRunGate {
+    static let shared = SyncRunGate()
+    private var activeScopes: [String: Task<Void, Error>] = [:]
+
+    func run(scope: String, operation: @escaping @Sendable () async throws -> Void) async throws {
+        if let running = activeScopes[scope] {
+            try await running.value
+            return
+        }
+        let running = Task { try await operation() }
+        activeScopes[scope] = running
+        defer { activeScopes[scope] = nil }
+        try await running.value
+    }
+}
 struct CommandResult: Codable, Sendable, Equatable {
     let id: UUID
     let status: CommandStatus
@@ -51,32 +68,30 @@ struct SnapshotPage: Codable, Sendable {
 }
 enum SyncFailure: Error { case invalidResponse }
 
-/// Call on launch, foreground, network restoration, after edits and every 120s while active.
+/// Call on launch, foreground, network restoration, after edits and every 60s while active.
 /// Retry deadlines live in SQLite: this actor never spins or sleeps waiting for the network.
 actor SyncCoordinator {
     private let api: any APIClient
     private let store: any LocalStore
     private let deviceId: String
     private let status: SyncStatusCenter
-    private var running = false
     init(api: any APIClient, store: any LocalStore, deviceId: String,
          status: SyncStatusCenter = .shared) {
         self.api = api; self.store = store; self.deviceId = deviceId; self.status = status
     }
     func synchronize(now: Date = .now) async throws {
-        guard !running else { return }
-        running = true
-        defer { running = false }
-        do {
-            try await run(now: now)
-            await report(syncFailed: false)
-        } catch {
-            await report(syncFailed: true)
-            throw error
+        try await SyncRunGate.shared.run(scope: store.scope.storageKey) { [self] in
+            do {
+                try await run(now: now)
+                await report(syncFailed: false)
+            } catch {
+                await report(syncFailed: true)
+                throw error
+            }
         }
     }
-    /// One failed sync or one rejected command is enough for the app frame to show the save-error
-  /// pill; a successful sync clears it unless rejected commands remain queued.
+      /// One failed sync or one rejected command is enough for the app frame to show the save-error
+      /// pill; a successful sync clears it unless rejected commands remain queued.
     private func report(syncFailed: Bool) async {
         let rejected = (try? await store.rejectedCommandCount()) ?? 0
         status.record(syncFailed: syncFailed, rejectedCommands: rejected)
