@@ -3,8 +3,8 @@
   "name": "qlh-staging-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-21",
-  // Chạy Worker gần D1 (Smart Placement học từ lưu lượng thật).
-  "placement": { "mode": "smart" },
+  // Chạy Worker gần D1 (APAC; đo theo colo: Worker ở HKG gọi D1 nhanh nhất).
+  "placement": { "region": "gcp:asia-east2" },
   "observability": {
     "enabled": false
   },
@@ -28,7 +28,7 @@
   "env": {
     "staging": {
       "name": "qlh-staging-api",
-      "placement": { "mode": "smart" },
+      "placement": { "region": "gcp:asia-east2" },
       "vars": {
         "ENVIRONMENT": "staging",
         "PBKDF2_ITERATIONS": "30000",
