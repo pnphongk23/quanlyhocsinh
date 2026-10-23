@@ -42,13 +42,13 @@
 }
 
 .studentBody {
-  min-width: var(--grid-student-min);
-  max-width: var(--grid-student-max);
+  min-width: var(--grid-col-name-min);
+  max-width: var(--grid-col-name-max);
 }
 
 .testBody {
-  min-width: var(--grid-test-min);
-  max-width: var(--grid-test-max);
+  min-width: var(--grid-cell-input-min);
+  max-width: var(--grid-col-test-max);
 }
 
 .studentBody[style*="width"],
@@ -129,7 +129,7 @@
 
 .cell {
   box-sizing: border-box;
-  width: var(--grid-test-min);
+  width: var(--grid-cell-input-min);
   height: 38px;
   padding: 0 var(--space-12);
   border: 1.5px solid var(--color-input-border);

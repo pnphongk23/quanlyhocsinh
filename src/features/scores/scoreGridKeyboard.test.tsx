@@ -7,10 +7,8 @@ import { replaceStore } from "../../data/store";
 import ScoreGridDesktop from "./ScoreGridDesktop";
 import TestScoresPage from "./TestScoresPage";
 import {
-  COLUMN_MAX,
-  COLUMN_MIN,
-  COLUMN_STEP,
-  CELL_DEFAULT,
+  columnLimits,
+  gridTokens,
   clampColumn,
   columnsKey,
   loadColumnWidths,
@@ -163,8 +161,8 @@ describe("bảng điểm desktop: độ rộng cột", () => {
     expect(columnsKey("6a")).toBe("qlh.scoreCols.v1.6a");
     expect(loadColumnWidths("6a")).toEqual({
       student: 200,
-      t1: COLUMN_MAX,
-      t2: COLUMN_MIN,
+      t1: columnLimits().max,
+      t2: columnLimits().min,
     });
     expect(loadColumnWidths("6b")).toEqual({});
   });
@@ -194,22 +192,22 @@ describe("bảng điểm desktop: độ rộng cột", () => {
       name: "Đổi độ rộng cột Học sinh",
     });
     expect(handle).toHaveAttribute("tabindex", "0");
-    const start = 140; // jsdom không đo được: bắt đầu từ mức tối thiểu của cột tên
+    const start = gridTokens().nameMin; // jsdom không đo được: bắt đầu từ mức tối thiểu của cột tên
     press(handle, "ArrowRight");
-    expect(loadColumnWidths("6a").student).toBe(start + COLUMN_STEP);
+    expect(loadColumnWidths("6a").student).toBe(start + gridTokens().step);
     press(handle, "ArrowRight");
     press(handle, "ArrowLeft");
-    expect(loadColumnWidths("6a").student).toBe(start + COLUMN_STEP);
+    expect(loadColumnWidths("6a").student).toBe(start + gridTokens().step);
     expect(
       document.querySelector<HTMLElement>("[data-col='student']")!.style.width,
-    ).toBe(`${start + COLUMN_STEP}px`);
+    ).toBe(`${start + gridTokens().step}px`);
     expect(loadColumnWidths("6b")).toEqual({});
 
     view.unmount();
     inRouter(<ScoreGridDesktop classId="6a" />);
     expect(
       document.querySelector<HTMLElement>("[data-col='student']")!.style.width,
-    ).toBe(`${start + COLUMN_STEP}px`);
+    ).toBe(`${start + gridTokens().step}px`);
   });
 
   it("kéo mép tiêu đề cột bài kiểm tra đổi độ rộng, thả chuột mới lưu", () => {
@@ -222,8 +220,8 @@ describe("bảng điểm desktop: độ rộng cột", () => {
     fireEvent.pointerMove(handle, { clientX: 140, pointerId: 1 });
     expect(loadColumnWidths("6a")[testId]).toBeUndefined();
     fireEvent.pointerUp(handle, { clientX: 140, pointerId: 1 });
-    expect(loadColumnWidths("6a")[testId]).toBe(clampColumn(CELL_DEFAULT + 40));
-    expect(cell(0, 0).style.width).toBe(`${CELL_DEFAULT + 40}px`);
+    expect(loadColumnWidths("6a")[testId]).toBe(clampColumn(gridTokens().cellMin + 40));
+    expect(cell(0, 0).style.width).toBe(`${gridTokens().cellMin + 40}px`);
   });
 });
 

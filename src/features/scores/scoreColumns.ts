@@ -1,18 +1,42 @@
 /** Độ rộng cột bảng điểm desktop: nhớ riêng từng lớp, chỉ trên máy này. */
 export const STUDENT_COLUMN = "student";
 
-/** Khoảng tự co theo nội dung của cột tên học sinh (px). */
-export const STUDENT_FIT_MIN = 140;
-export const STUDENT_FIT_MAX = 280;
-/** Cột bài kiểm tra tự co theo tiêu đề tới mức này (px). */
-export const TEST_FIT_MAX = 240;
-/** Giới hạn khi kéo hoặc bấm phím đổi độ rộng, mọi cột (px). */
-export const COLUMN_MIN = 96;
-export const COLUMN_MAX = 480;
-/** Mỗi lần bấm ←/→ trên tay nắm đổi từng này (px). */
-export const COLUMN_STEP = 8;
-/** Độ rộng ô nhập điểm khi cột chưa được chỉnh (px). */
-export const CELL_DEFAULT = 140;
+/** Giá trị token lưới điểm (px), đọc từ CSS để JS và CSS cùng một nguồn. */
+export interface GridTokens {
+  nameMin: number;
+  nameMax: number;
+  testMax: number;
+  cellMin: number;
+  step: number;
+}
+
+/** Mirror của --grid-col-name-min/max, --grid-col-test-max, --grid-cell-input-min, --grid-resize-step; chỉ dùng khi không đọc được CSS (jsdom). */
+const FALLBACK: GridTokens = { nameMin: 140, nameMax: 280, testMax: 240, cellMin: 140, step: 8 };
+
+const TOKEN_NAMES: Record<keyof GridTokens, string> = {
+  nameMin: "--grid-col-name-min",
+  nameMax: "--grid-col-name-max",
+  testMax: "--grid-col-test-max",
+  cellMin: "--grid-cell-input-min",
+  step: "--grid-resize-step",
+};
+
+export function gridTokens(): GridTokens {
+  const result = { ...FALLBACK };
+  if (typeof document === "undefined") return result;
+  const style = getComputedStyle(document.documentElement);
+  for (const key of Object.keys(TOKEN_NAMES) as (keyof GridTokens)[]) {
+    const value = parseFloat(style.getPropertyValue(TOKEN_NAMES[key]));
+    if (Number.isFinite(value)) result[key] = value;
+  }
+  return result;
+}
+
+/** Kéo hoặc bấm phím: tối thiểu bằng ô nhập, tối đa gấp đôi mức tối đa của cột tên. */
+export function columnLimits(): { min: number; max: number } {
+  const tokens = gridTokens();
+  return { min: tokens.cellMin, max: tokens.nameMax * 2 };
+}
 
 export type ColumnWidths = Record<string, number>;
 
@@ -20,7 +44,8 @@ export const columnsKey = (classId: string): string =>
   `qlh.scoreCols.v1.${classId}`;
 
 export function clampColumn(width: number): number {
-  return Math.min(COLUMN_MAX, Math.max(COLUMN_MIN, Math.round(width)));
+  const { min, max } = columnLimits();
+  return Math.min(max, Math.max(min, Math.round(width)));
 }
 
 /** Đọc lỗi (storage bị chặn, JSON hỏng, giá trị lạ) thì bỏ qua và dùng mặc định. */

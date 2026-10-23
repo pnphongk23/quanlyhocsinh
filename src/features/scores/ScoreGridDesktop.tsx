@@ -17,13 +17,9 @@ import s from "./ScoreGridDesktop.module.css";
 import d from "../class-space/desktop.module.css";
 import { formatScore, parseHalfScore } from "../../data/scoreFormat";
 import {
-  CELL_DEFAULT,
-  COLUMN_STEP,
   STUDENT_COLUMN,
-  STUDENT_FIT_MAX,
-  STUDENT_FIT_MIN,
-  TEST_FIT_MAX,
   clampColumn,
+  gridTokens,
   loadColumnWidths,
   saveColumnWidths,
   type ColumnWidths,
@@ -114,12 +110,7 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
 
   const widthStyle = (id: string): CSSProperties | undefined =>
     widths[id] === undefined ? undefined : { width: widths[id] };
-  const fitVars = {
-    "--grid-student-min": `${STUDENT_FIT_MIN}px`,
-    "--grid-student-max": `${STUDENT_FIT_MAX}px`,
-    "--grid-test-min": `${CELL_DEFAULT}px`,
-    "--grid-test-max": `${TEST_FIT_MAX}px`,
-  } as CSSProperties;
+
 
   const measureColumn = (id: string): number =>
     tableRef.current
@@ -235,7 +226,7 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
         </div>
       ) : (
         <div className={d.card + " " + s.card}>
-          <div className={s.scroll} style={fitVars}>
+          <div className={s.scroll}>
             <table className={s.table} ref={tableRef}>
               <thead>
                 <tr>
@@ -250,7 +241,7 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
                     <ColumnResizer
                       label="Đổi độ rộng cột Học sinh"
                       measure={() => measureColumn(STUDENT_COLUMN)}
-                      fallback={widths[STUDENT_COLUMN] ?? STUDENT_FIT_MIN}
+                      fallback={widths[STUDENT_COLUMN] ?? gridTokens().nameMin}
                       onResize={(width, commit) =>
                         resizeColumn(STUDENT_COLUMN, width, commit)
                       }
@@ -278,7 +269,7 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
                       <ColumnResizer
                         label={`Đổi độ rộng cột ${test.name}`}
                         measure={() => measureColumn(test.id)}
-                        fallback={widths[test.id] ?? CELL_DEFAULT}
+                        fallback={widths[test.id] ?? gridTokens().cellMin}
                         onResize={(width, commit) =>
                           resizeColumn(test.id, width, commit)
                         }
@@ -393,7 +384,7 @@ function ColumnResizer({
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     event.preventDefault();
     event.stopPropagation();
-    const delta = event.key === "ArrowLeft" ? -COLUMN_STEP : COLUMN_STEP;
+    const delta = event.key === "ArrowLeft" ? -gridTokens().step : gridTokens().step;
     onResize(current() + delta, true);
   }
 
