@@ -140,10 +140,10 @@ struct SessionHomeworkView: View {
         let giving = previousSession
         return VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 0) {
-                Text("BTVN \(giving?.sessionNumber.map { "buổi \($0)" } ?? "buổi trước") · \(I4Format.dayMonth(giving?.date ?? session.date))")
+                Text("BTVN \(giving.map(SessionLabel.inline(for:)) ?? "buổi trước") · \(I4Format.dayMonth(giving?.date ?? session.date))")
                     .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 21.6))
                     .foregroundStyle(AppColors.text)
-                Text(String.localizedStringWithFormat(String(localized: "feature.homework.cham.hom.nay.o.buoi.ket.qua.gui.kem.phieu"), String(describing: (session.sessionNumber ?? 0))))
+                Text(String.localizedStringWithFormat(String(localized: "feature.homework.cham.hom.nay.o.buoi.ket.qua.gui.kem.phieu"), SessionLabel.inline(for: session)))
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                     .foregroundStyle(AppColors.muted)
             }
@@ -306,7 +306,7 @@ struct SessionHomeworkView: View {
             Text(String.localizedStringWithFormat(String(localized: "feature.homework.mot.lan.cho.ca.lop"), String(describing: (HomeworkRules.partsCountLabel(todaySections.count)))))
                 .foregroundStyle(AppColors.muted)
             if let grading = gradingPlan.session {
-                let gradingLabel = grading.sessionNumber.map { String.localizedStringWithFormat(String(localized: "feature.homework.sessionNumber"), String(describing: ($0))) } ?? String(localized: "feature.homework.nextSession")
+                let gradingLabel = SessionLabel.inline(for: grading)
                 Text(String.localizedStringWithFormat(String(localized: "feature.homework.cham.o"), gradingLabel))
                     .foregroundStyle(AppColors.muted)
             } else {
@@ -323,10 +323,10 @@ struct SessionHomeworkView: View {
         let plan = gradingPlan
         if !plan.cancelled.isEmpty, let grading = plan.session {
             let cancelledSessions = plan.cancelled.map { String.localizedStringWithFormat(String(localized: "feature.homework.cancelledSession"), I4Format.dayMonth($0.date)) }.joined(separator: ", ")
-            I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.homework.a.bi.huy.btvn.buoi.cham.o.buoi.phu.huynh.thay.th"), cancelledSessions, String(describing: (session.sessionNumber ?? 0)), String(describing: (grading.sessionNumber ?? 0)), String(describing: (I4Format.weekdayDayMonth(grading.date)))),
+            I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.homework.a.bi.huy.btvn.buoi.cham.o.buoi.phu.huynh.thay.th"), cancelledSessions, SessionLabel.inline(for: session), SessionLabel.inline(for: grading), String(describing: (I4Format.weekdayDayMonth(grading.date)))),
                      tone: .warning, horizontal: 14)
         } else if plan.session == nil {
-            I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.homework.lich.lop.khong.con.buoi.nao.sau.buoi.phu.huynh.t"), String(describing: (session.sessionNumber ?? 0))),
+            I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.homework.lich.lop.khong.con.buoi.nao.sau.buoi.phu.huynh.t"), SessionLabel.inline(for: session)),
                      tone: .warning, horizontal: 14)
         }
     }

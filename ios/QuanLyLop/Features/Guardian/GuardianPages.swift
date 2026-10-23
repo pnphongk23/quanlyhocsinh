@@ -37,7 +37,7 @@ struct GuardianOverviewPage: View {
             GuardianTicketCard {
                 GuardianCardHead(title: String(localized: "feature.guardian.nhan.xet.moi.nhat"),
                                  trailing: AnyView(
-                                    Text(String.localizedStringWithFormat(String(localized: "feature.guardian.buoi"), String(describing: (item.session.sessionNumber ?? 0))))
+                                    Text(String.localizedStringWithFormat(String(localized: "feature.guardian.buoi"), SessionLabel.title(for: item.session)))
                                         .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                                         .foregroundStyle(AppColors.muted)))
                 GuardianStars(level: item.slip.stars ?? .one)
@@ -51,7 +51,7 @@ struct GuardianOverviewPage: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.guardian.mo.phieu.buoi.hoc.buoi"), String(describing: (item.session.sessionNumber ?? 0))))
+        .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.guardian.mo.phieu.buoi.hoc.buoi"), SessionLabel.title(for: item.session)))
     }
 
     private var recentScores: some View {
@@ -192,7 +192,7 @@ struct GuardianCommentsPage: View {
     private func ticket(_ item: GuardianSentSlip, isNew: Bool) -> some View {
         Button { openTicket(item.session) } label: {
             GuardianTicketCard(isNew: isNew) {
-                GuardianCardHead(title: String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.c9f84c0e"), String(describing: (item.session.sessionNumber ?? 0)), String(describing: (GuardianFormat.longDayMonth(item.session.date)))),
+                GuardianCardHead(title: String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.c9f84c0e"), SessionLabel.title(for: item.session), String(describing: (GuardianFormat.longDayMonth(item.session.date)))),
                                  trailing: AnyView(
                                     HStack(spacing: 8) {
                                         if isNew { AppPill(title: String(localized: "feature.guardian.moi"), tone: .primary) }
@@ -207,7 +207,7 @@ struct GuardianCommentsPage: View {
                 }
                 if let homework = child.gradedHomework(for: item.session), !homework.parts.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(String.localizedStringWithFormat(String(localized: "feature.guardian.ket.qua.btvn.buoi"), String(describing: (homework.sessionNumber))))
+                        Text(String.localizedStringWithFormat(String(localized: "feature.guardian.ket.qua.btvn.buoi"), SessionLabel.inline(for: homework.session)))
                             .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                             .foregroundStyle(AppColors.muted)
                         GuardianPillFlow(parts: homework.parts)
@@ -216,7 +216,7 @@ struct GuardianCommentsPage: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.guardian.mo.phieu.buoi.hoc.buoi"), String(describing: (item.session.sessionNumber ?? 0))))
+        .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.guardian.mo.phieu.buoi.hoc.buoi"), SessionLabel.title(for: item.session)))
     }
 }
 

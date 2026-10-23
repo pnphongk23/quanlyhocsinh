@@ -13,6 +13,42 @@
         }
       }
     },
+    "core.session.label.numbered": {
+      "comment": "Session label with its number.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi %@"
+          }
+        }
+      }
+    },
+    "core.session.label.makeup": {
+      "comment": "Label of a makeup session that has no number.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi bù"
+          }
+        }
+      }
+    },
+    "core.session.label.plain": {
+      "comment": "Label of a regular session that has no number.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi học"
+          }
+        }
+      }
+    },
     "core.apiError.accountDisabled": {
       "comment": "Tài khoản/membership bị vô hiệu.",
       "extractionState": "manual",
@@ -1561,6 +1597,18 @@
         }
       }
     },
+    "feature.classes.buoi.hoc": {
+      "comment": "Chuỗi hiển thị trong Features/Classes.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi học"
+          }
+        }
+      }
+    },
     "feature.classes.a.hieu": {
       "comment": "Chuỗi hiển thị trong Features/Classes.",
       "extractionState": "manual",
@@ -1777,30 +1825,6 @@
         }
       }
     },
-    "feature.classes.buoi": {
-      "comment": "Chuỗi hiển thị có giá trị động trong Features/Classes.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi %@"
-          }
-        }
-      }
-    },
-    "feature.classes.buoi.bu": {
-      "comment": "Chuỗi hiển thị trong Features/Classes.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi bù"
-          }
-        }
-      }
-    },
     "feature.classes.buoi.bu.bi.huy": {
       "comment": "Chuỗi hiển thị trong Features/Classes.",
       "extractionState": "manual",
@@ -1821,18 +1845,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Buổi hiện tại"
-          }
-        }
-      }
-    },
-    "feature.classes.buoi.hoc": {
-      "comment": "Chuỗi hiển thị trong Features/Classes.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi học"
           }
         }
       }
@@ -3884,7 +3896,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gửi phiếu buổi %@?"
+            "value": "Gửi phiếu %@?"
           }
         }
       }
@@ -3956,7 +3968,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Không có phiếu từ buổi %@. Phiếu buổi %@ trở về trước vẫn giữ."
+            "value": "Không có phiếu từ %@. Phiếu %@ trở về trước vẫn giữ."
           }
         }
       }
@@ -4004,7 +4016,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nhận xét buổi %@ · %@"
+            "value": "Nhận xét %@ · %@"
           }
         }
       }
@@ -4052,7 +4064,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Phiếu của buổi chỉ gồm em đang học vào ngày đó. Buổi %@ có %@ em."
+            "value": "Phiếu của buổi chỉ gồm em đang học vào ngày đó. %@ có %@ em."
           }
         }
       }
@@ -4400,31 +4412,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buổi %@ ›"
-          }
-        }
-      }
-    },
-    "feature.guardian.buoi.b945f512": {
-      "comment": "Chuỗi hiển thị có giá trị động trong Features/Guardian.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi %@"
-          }
-        }
-      }
-    },
-    "feature.guardian.buoi.bu": {
-      "comment": "Chuỗi hiển thị trong Features/Guardian.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi bù"
+            "value": "%@ ›"
           }
         }
       }
@@ -4436,7 +4424,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buổi %@ · %@"
+            "value": "%@ · %@"
           }
         }
       }
@@ -4473,18 +4461,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ buổi"
-          }
-        }
-      }
-    },
-    "feature.guardian.buoi.hoc": {
-      "comment": "Chuỗi hiển thị trong Features/Guardian.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi học"
           }
         }
       }
@@ -4712,7 +4688,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cô chấm ở buổi %@ · %@"
+            "value": "Cô chấm ở %@ · %@"
           }
         }
       }
@@ -5000,7 +4976,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kết quả BTVN buổi %@"
+            "value": "Kết quả BTVN %@"
           }
         }
       }
@@ -5012,7 +4988,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kết quả BTVN buổi %@ · %@"
+            "value": "Kết quả BTVN %@ · %@"
           }
         }
       }
@@ -5132,7 +5108,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mở phiếu buổi học buổi %@"
+            "value": "Mở phiếu %@"
           }
         }
       }
@@ -5660,7 +5636,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ đã bị hủy. BTVN buổi %@ chấm ở buổi %@ · %@. Phụ huynh thấy thay đổi này."
+            "value": "%@ đã bị hủy. BTVN %@ chấm ở %@ · %@. Phụ huynh thấy thay đổi này."
           }
         }
       }
@@ -5840,7 +5816,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chấm hôm nay ở buổi %@. Kết quả gửi kèm phiếu."
+            "value": "Chấm hôm nay ở %@. Kết quả gửi kèm phiếu."
           }
         }
       }
@@ -6020,7 +5996,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lịch lớp không còn buổi nào sau buổi %@. Phụ huynh thấy “Chưa có buổi chấm” cho tới khi bạn thêm buổi vào lịch."
+            "value": "Lịch lớp không còn buổi nào sau %@. Phụ huynh thấy “Chưa có buổi chấm” cho tới khi bạn thêm buổi vào lịch."
           }
         }
       }
@@ -6121,18 +6097,6 @@
         }
       }
     },
-    "feature.homework.nextSession": {
-      "comment": "Homework grading will happen at the next session",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "buổi sau"
-          }
-        }
-      }
-    },
     "feature.homework.nhap.tieu.e.phan.bai.tap": {
       "comment": "Chuỗi hiển thị trong Features/Homework.",
       "extractionState": "manual",
@@ -6177,18 +6141,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Phụ huynh thấy ngay khi lưu. Không đính kèm tệp."
-          }
-        }
-      }
-    },
-    "feature.homework.sessionNumber": {
-      "comment": "The homework grading session number",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "buổi %@"
           }
         }
       }

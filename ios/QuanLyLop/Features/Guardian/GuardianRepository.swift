@@ -232,7 +232,6 @@ struct GuardianHomeworkSession: Identifiable, Sendable {
     let parts: [GuardianHomeworkPart]
     let grading: GuardianGrading
     var id: String { session.id }
-    var sessionNumber: Int { session.sessionNumber ?? 0 }
 }
 
 struct GuardianTicketDetail: Identifiable, Sendable {
@@ -242,7 +241,6 @@ struct GuardianTicketDetail: Identifiable, Sendable {
     let previousParts: [GuardianHomeworkPart]
     let assigned: GuardianHomeworkSession?
     var id: String { session.id }
-    var sessionNumber: Int { session.sessionNumber ?? 0 }
 }
 
 // MARK: - Định dạng (`guardianFormat.ts`)
@@ -308,8 +306,7 @@ enum GuardianFormat {
 
     /// "Buổi 18"; buổi huỷ không có số nên hiện "Buổi bù" / "Buổi học".
     static func sessionPrefix(_ session: ClassSession) -> String {
-        if let number = session.sessionNumber { return String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.b945f512"), String(describing: (number))) }
-        return session.origin == .manual ? String(localized: "feature.guardian.buoi.bu") : String(localized: "feature.guardian.buoi.hoc")
+        SessionLabel.title(for: session)
     }
 }
 

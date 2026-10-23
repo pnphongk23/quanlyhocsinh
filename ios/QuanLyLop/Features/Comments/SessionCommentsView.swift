@@ -17,6 +17,12 @@ struct SessionCommentsView: View {
     }
 
     private var session: ClassSession? { data.session(id: sessionID) }
+    private var sessionInline: String {
+        SessionLabel.inline(for: session)
+    }
+    private var sessionInlineBefore: String {
+        session.map(SessionLabel.inlineBefore) ?? sessionInline
+    }
 
     private var previousSession: ClassSession? {
         guard let session else { return nil }
@@ -88,7 +94,7 @@ struct SessionCommentsView: View {
     }
 
     private func infoBanner(_ session: ClassSession) -> some View {
-        I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.comments.phieu.cua.buoi.chi.gom.em.ang.hoc.vao.ngay.o.buo"), String(describing: (session.sessionNumber ?? 0)), String(describing: (rows.count))))
+        I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.comments.phieu.cua.buoi.chi.gom.em.ang.hoc.vao.ngay.o.buo"), SessionLabel.title(for: session), String(describing: (rows.count))))
     }
 
     private var filters: some View {
@@ -187,7 +193,7 @@ struct SessionCommentsView: View {
                 AppPill(title: String.localizedStringWithFormat(String(localized: "feature.comments.a.roi.lop"), String(describing: (I4Format.dayMonth(student.leftAt ?? session?.date ?? "")))),
                         tone: .neutral)
             }
-            Text(String.localizedStringWithFormat(String(localized: "feature.comments.khong.co.phieu.tu.buoi.phieu.buoi.tro.ve.truoc.v"), String(describing: (session?.sessionNumber ?? 0)), String(describing: ((session?.sessionNumber ?? 0) - 1))))
+            Text(String.localizedStringWithFormat(String(localized: "feature.comments.khong.co.phieu.tu.buoi.phieu.buoi.tro.ve.truoc.v"), sessionInline, sessionInlineBefore))
                 .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                 .foregroundStyle(AppColors.muted)
             if let oldSession {
@@ -235,7 +241,7 @@ struct SessionCommentsView: View {
         let ungraded = CommentsRules.ungradedNotice(rows)
         let skipped = rows.filter { $0.stars == nil }
         let previousLabel = rows.first?.previousSessionNumber.map { String.localizedStringWithFormat(String(localized: "feature.comments.buoi"), String(describing: ($0))) } ?? String(localized: "feature.comments.previousSession")
-        return I4Dialog(title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.buoi"), String(describing: (session?.sessionNumber ?? 0))), content: {
+        return I4Dialog(title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.buoi"), sessionInline), content: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     statCard(value: "\(sendableRows.count)", label: String(localized: "feature.comments.ticketsToSend"),
@@ -456,7 +462,7 @@ struct I4TicketSheet: View {
                         .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 25))
                         .foregroundStyle(AppColors.text)
                         .lineLimit(1)
-                    Text(String.localizedStringWithFormat(String(localized: "feature.comments.nhan.xet.buoi"), String(describing: (session.sessionNumber ?? 0)), String(describing: (I4Format.dayMonth(session.date)))))
+                    Text(String.localizedStringWithFormat(String(localized: "feature.comments.nhan.xet.buoi"), SessionLabel.inline(for: session), String(describing: (I4Format.dayMonth(session.date)))))
                         .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                         .foregroundStyle(AppColors.muted)
                 }

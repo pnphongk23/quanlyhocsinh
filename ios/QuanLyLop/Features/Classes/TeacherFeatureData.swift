@@ -292,8 +292,7 @@ final class TeacherFeatureData {
     /// `sessionPrefix` of `data/repositories/sessions.ts`: numbering is computed on the device
     /// (`SessionNumbering`); a cancelled session has no number.
     static func sessionPrefix(_ session: ClassSession) -> String {
-        if let number = session.sessionNumber { return String.localizedStringWithFormat(String(localized: "feature.classes.buoi"), String(describing: (number))) }
-        return session.isMakeup ? String(localized: "feature.classes.buoi.bu") : String(localized: "feature.classes.buoi.hoc")
+        SessionLabel.title(for: session)
     }
 
     static func sessionOrder(_ first: ClassSession, _ second: ClassSession) -> Bool {
