@@ -438,3 +438,101 @@
     flex: 1 0 100%;
   }
 }
+
+/* Nút đang xử lý: giữ màu và bề rộng; nhãn ẩn (vẫn có trong DOM cho đọc màn hình), vòng quay ở giữa. */
+.button.loading:disabled {
+  background: var(--color-primary);
+  color: transparent;
+  cursor: progress;
+  --spinner: var(--color-on-primary);
+}
+.button.loading.secondary:disabled {
+  background: var(--color-primary-soft);
+  --spinner: var(--color-primary-ink);
+}
+.button.loading {
+  position: relative;
+}
+.button.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid var(--spinner, currentColor);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Dòng lý do nút lưu đang disabled */
+.actionHint {
+  margin: 0;
+  font-size: var(--text-md);
+  text-align: center;
+  color: var(--color-muted);
+}
+.actionHintError {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+/* Hộp thoại chưa lưu (design/reference/80-trang-thai-chua-luu-hoi-khi-roi-man.html) */
+.confirmDialog {
+  width: min(520px, calc(100% - 32px));
+  padding: var(--space-24);
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+/* Chỉ đổi cách xếp khi mở; đặt ngoài [open] sẽ ghi đè `dialog:not([open]) { display: none }`. */
+.confirmDialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+.confirmDialog::backdrop {
+  background: var(--color-scrim);
+}
+.confirmTitle {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.confirmBody {
+  font-size: var(--text-base);
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.confirmActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.confirmButton {
+  width: 100%;
+  min-height: var(--button-h-lg);
+  border: 0;
+  border-radius: var(--radius-button);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.confirmButton:disabled {
+  cursor: progress;
+}
+.confirmPrimary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.confirmDiscard {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+.confirmStay {
+  background: var(--color-neutral-soft);
+  color: var(--color-text);
+}
