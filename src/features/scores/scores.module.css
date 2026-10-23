@@ -365,21 +365,6 @@
   font-weight: 400;
   color: var(--color-muted);
 }
-.saveButton {
-  width: 100%;
-  min-height: 52px;
-  border: 0;
-  border-radius: var(--radius-button);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-.saveButton:disabled {
-  opacity: 1;
-  background: var(--color-input-border);
-  color: var(--color-muted);
-}
 .desktopSaveRow {
   display: flex;
   flex-wrap: wrap;
@@ -394,7 +379,6 @@
 .desktopSaveRow .saveButton {
   width: auto;
   min-width: var(--button-min-w-desktop);
-  padding: 0 var(--space-24);
 }
 
 /* Hộp thoại chưa lưu (design/reference/80-trang-thai-chua-luu-hoi-khi-roi-man.html) */

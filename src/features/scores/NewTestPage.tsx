@@ -128,7 +128,13 @@ export default function NewTestPage() {
           </p>
         )}
         <ActionFooter className={s.actions}>
-          <Button type="submit" size="lg" disabled={!action.canSave}>
+          <Button
+            type="submit"
+            size="lg"
+            loading={action.saving}
+            done={action.justSaved}
+            disabled={!action.canSave}
+          >
             Tạo bài và nhập điểm
           </Button>
           <Button

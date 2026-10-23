@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import {
   Link,
   useNavigate,
@@ -11,7 +11,7 @@ import { listStudents } from "../../data/repositories/students";
 import { deleteTest, listTests, updateTest } from "../../data/repositories/tests";
 import { listScores, saveScore } from "../../data/repositories/scores";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
-import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { useSaveAction, type SaveAction } from "../../shared/hooks/useSaveAction";
 import { useAccess } from "../../data/repositories/access";
 import { useSaveStatus } from "../../shared/SaveStatus";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
@@ -115,6 +115,7 @@ export default function TestScoresPage() {
   const focusStudentId = searchParams.get("hoc-sinh") ?? "";
   const focusRef = useRef<HTMLInputElement>(null);
   const removeLock = useRef(false);
+  const listRef = useRef<HTMLDivElement>(null);
   const focusMatched = students.some(
     (student) => student.id === focusStudentId,
   );
@@ -176,6 +177,18 @@ export default function TestScoresPage() {
       setStatus("error");
       return false;
     }
+  };
+  /** Enter chuyển xuống em kế tiếp; ở em cuối thì đóng bàn phím. */
+  const onScoreEnter = (event: KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    const next = listRef.current?.querySelector<HTMLInputElement>(
+      `input[data-row="${index + 1}"]:not(:disabled)`,
+    );
+    if (next) {
+      next.focus();
+      next.select();
+    } else event.currentTarget.blur();
   };
   const discardDrafts = () => {
     setDrafts((current) => clearClassTestDrafts(current, classId, currentTestIds));
@@ -294,8 +307,8 @@ export default function TestScoresPage() {
         <span className={s.colStudent}>Học sinh</span>
         <span className={s.colScore}>Điểm</span>
       </div>
-      <div className={s.studentList}>
-        {students.map((student) => {
+      <div className={s.studentList} ref={listRef}>
+        {students.map((student, index) => {
           const draft = valueFor(student.id);
           const invalid = isInvalidDraft(draft, testMax);
           const missing = draft.value.trim() === "";
@@ -327,9 +340,12 @@ export default function TestScoresPage() {
                   placeholder="–"
                   value={draft.value}
                   disabled={!canWrite}
+                  enterKeyHint={index === students.length - 1 ? "done" : "next"}
+                  data-row={index}
                   onChange={(event) =>
                     change(student.id, { value: event.target.value })
                   }
+                  onKeyDown={(event) => onScoreEnter(event, index)}
                 />
               </div>
               {invalid && (
@@ -349,8 +365,7 @@ export default function TestScoresPage() {
               status={status}
               error={error}
               invalidCount={invalidCount}
-              canSave={action.canSave}
-              onSave={action.submit}
+              action={action}
             />
           </div>
         ) : (
@@ -359,8 +374,7 @@ export default function TestScoresPage() {
               status={status}
               error={error}
               invalidCount={invalidCount}
-              canSave={action.canSave}
-              onSave={action.submit}
+              action={action}
             />
           </ActionFooter>
         ))}
@@ -486,7 +500,13 @@ function EditTestModal({
               <span className={s.errorBannerText}>{error}</span>
             </p>
           )}
-          <Button type="submit" size="lg" disabled={!action.canSave}>
+          <Button
+            type="submit"
+            size="lg"
+            loading={action.saving}
+            done={action.justSaved}
+            disabled={!action.canSave}
+          >
             Lưu thay đổi
           </Button>
         </form>
@@ -500,15 +520,15 @@ function SaveBarContent({
   status,
   error,
   invalidCount,
-  canSave,
-  onSave,
+  action,
 }: {
   status: SaveState;
   error: string;
   invalidCount: number;
-  canSave: boolean;
-  onSave: () => void;
+  action: SaveAction;
 }) {
+  const { canSave } = action;
+  const onSave = () => void action.submit();
   return (
     <>
       {status === "error" && (
@@ -531,14 +551,17 @@ function SaveBarContent({
           </p>
         )
       )}
-      <button
-        type="button"
+      <Button
+        size="lg"
+        block
         className={s.saveButton}
+        loading={action.saving}
+        done={action.justSaved}
         disabled={!canSave}
         onClick={onSave}
       >
         Lưu điểm
-      </button>
+      </Button>
     </>
   );
 }

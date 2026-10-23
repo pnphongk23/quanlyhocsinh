@@ -13,7 +13,6 @@
   border-collapse: separate;
   border-spacing: 0;
   width: max-content;
-  min-width: 100%;
 }
 
 .table th {
@@ -34,6 +33,58 @@
   white-space: nowrap;
 }
 
+/* Cột tự co theo nội dung trong khoảng min/max; kéo tay nắm thì width inline thắng. */
+.studentBody,
+.testBody {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studentBody {
+  min-width: var(--grid-student-min);
+  max-width: var(--grid-student-max);
+}
+
+.testBody {
+  min-width: var(--grid-test-min);
+  max-width: var(--grid-test-max);
+}
+
+.studentBody[style*="width"],
+.testBody[style*="width"] {
+  min-width: 0;
+  max-width: none;
+}
+
+.testName {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tay nắm đổi độ rộng ở mép phải tiêu đề cột. */
+.resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--space-8);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resizer:hover,
+.resizer:active {
+  background: var(--state-hover-bg);
+}
+
+.resizer:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  background: var(--state-hover-bg);
+}
+
 .testMeta {
   display: block;
   font-size: 12.5px;
@@ -47,7 +98,7 @@
   box-shadow: 6px 0 8px -6px rgb(20 24 31 / 0.15);
 }
 
-.studentCell {
+.table .studentCell {
   position: sticky;
   left: 0;
   z-index: calc(var(--z-raised) + 1);
@@ -78,7 +129,7 @@
 
 .cell {
   box-sizing: border-box;
-  width: 140px;
+  width: var(--grid-test-min);
   height: 38px;
   padding: 0 var(--space-12);
   border: 1.5px solid var(--color-input-border);

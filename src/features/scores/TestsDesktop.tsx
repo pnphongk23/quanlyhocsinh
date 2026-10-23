@@ -392,7 +392,12 @@ function TestFormModal({
             <Button variant="neutral" onClick={requestClose}>
               Hủy
             </Button>
-            <Button type="submit" disabled={!action.canSave}>
+            <Button
+              type="submit"
+              loading={action.saving}
+              done={action.justSaved}
+              disabled={!action.canSave}
+            >
               {test ? "Lưu thay đổi" : "Tạo bài"}
             </Button>
           </div>
