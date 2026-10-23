@@ -38,6 +38,10 @@ extension StubAPIClient { static func demo(baseURL:membershipId:bundle:) throws 
 `Accept: application/json`, `Content-Type` khi có body. `path` là tương đối (không chứa `://`, `..`);
 query được sắp theo khoá. **Query rỗng không tạo `?`** (đã sửa ở I-1b).
 
+Các POST tạo lớp, học sinh và buổi lẻ gửi UUID do client sinh, giữ nguyên trong suốt lần thử lại của
+cùng form và gửi dạng chữ thường. `200` (phát lại cùng ID) và `201` (tạo mới) đều giải mã thân phản hồi
+như thành công; `409 id_conflict` dùng lỗi chung của form hiện có, không tự sinh ID khác.
+
 `Content-Type` tự đặt: `endpoint.contentType` nếu có, ngược lại `application/json` khi có body, và
 không gửi header này khi không có body (GET/DELETE). `Accept` luôn `application/json`.
 
@@ -145,7 +149,7 @@ actor SyncCoordinator {
 }
 ```
 
-- Gọi khi mở app, khi lấy lại focus, sau mỗi lần sửa, sau khi có mạng và mỗi 120 giây khi đang mở
+- Gọi khi mở app, khi lấy lại foreground, sau mỗi lần sửa và mỗi 60 giây khi app active có mạng
   (hẹn giờ ở tầng App, không nằm trong Core).
 - Lần đầu (chưa có `position`) → `snapshot` rồi `pull`; sau đó vòng `push` (≤50 lệnh) rồi `pull`.
 - Không tiến `cursor` theo `push`; giữ lệnh khi mất mạng/`rejected`; `resync_required` /
