@@ -51,6 +51,7 @@ import {
   type HomeworkView,
 } from "./homeworkModel";
 import styles from "./HomeworkPanel.module.css";
+import { savedPeek } from "../closeAfterSaved";
 
 /* ------------------------------------------------------------------ icons */
 
@@ -662,6 +663,7 @@ function SectionEditor({
   async function submit() {
     if (await action.submit()) {
       save.clearStatus();
+      await savedPeek();
       onClose();
     } else {
       save.setStatus("error");

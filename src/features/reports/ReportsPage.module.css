@@ -146,8 +146,8 @@
   background: var(--color-surface);
 }
 .studentSelected {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 .studentButton {
   position: relative;

@@ -42,6 +42,7 @@ import {
 } from "./homeworkModel";
 import s from "./HomeworkDesktop.module.css";
 import d from "../class-space/desktop.module.css";
+import { savedPeek } from "../closeAfterSaved";
 
 const LEVEL_CLASS: Record<HomeworkLevel, string> = {
   excellent: s.levelExcellent,
@@ -736,7 +737,10 @@ function SectionForm({
 
   async function submitForm() {
     const ok = await action.submit();
-    if (ok) onDone();
+    if (ok) {
+      await savedPeek();
+      onDone();
+    }
     return ok;
   }
   submitRef.current = submitForm;

@@ -60,8 +60,8 @@
   white-space: nowrap;
 }
 .filterSelected {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 /* Thông báo: dùng dáng banner của design 79 */
@@ -325,8 +325,8 @@
   outline-offset: -1.5px;
 }
 .monthDaySelected {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
   font-weight: 700;
 }
 .dot,
@@ -340,7 +340,7 @@
   background: var(--color-primary);
 }
 .monthDaySelected .dot {
-  background: var(--color-on-primary);
+  background: var(--state-selected-fg);
 }
 
 .navButton:focus-visible,

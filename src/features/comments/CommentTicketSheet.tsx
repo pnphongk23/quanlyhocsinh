@@ -27,6 +27,7 @@ import {
 import { clearDraft, readDraft, writeDraft } from "./draftStore";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./CommentsPanel.module.css";
+import { savedPeek } from "../closeAfterSaved";
 
 export interface SheetHomeworkSection {
   id: string;
@@ -217,7 +218,10 @@ export default function CommentTicketSheet({
   }
 
   async function save() {
-    if (await action.submit()) onClose();
+    if (await action.submit()) {
+      await savedPeek();
+      onClose();
+    }
   }
 
   const pendingLine =

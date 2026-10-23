@@ -150,12 +150,13 @@
 }
 
 .starOptionOn {
-  border: 2px solid var(--color-primary);
-  background: var(--color-primary-soft);
+  border-color: transparent;
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 .starOptionOn .starOptionLabel {
-  color: var(--color-primary-ink);
+  color: var(--state-selected-fg);
 }
 
 .templateBox {
