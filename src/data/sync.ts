@@ -222,8 +222,8 @@ if (typeof window !== "undefined") {
   const visible = () => typeof document === "undefined" || document.visibilityState === "visible";
   const startPoll = () => { if (!poll && visible()) poll = setInterval(() => void syncNow(), pollInterval); };
   const stopPoll = () => { if (poll) { clearInterval(poll); poll = undefined; } };
-  // Several foreground events fire together on iOS; one already-running round pulls after them all.
-  const onForeground = () => { if (!running) void syncNow(); };
+  // A running round may have read its cursor already, so syncNow queues one more round instead of dropping the event.
+  const onForeground = () => void syncNow();
   window.addEventListener("online", onForeground);
   window.addEventListener("focus", onForeground);
   window.addEventListener("pageshow", onForeground);

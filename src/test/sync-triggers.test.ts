@@ -66,6 +66,20 @@ describe("sync triggers", () => {
     expect(pulls()).toBe(before + 2);
   });
 
+  it("pulls again when a foreground event arrives after the running round already read its cursor", async () => {
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    let fired = false;
+    server.hooks.afterPull = () => {
+      if (fired) return;
+      fired = true;
+      server.put("class", { id: "c2", name: "7B", status: "active", weekdays: [2], start_time: "10:00", teacher_name: null });
+      setVisibility("visible");
+    };
+    await d.syncNow();
+    await vi.waitFor(() => expect(d.getStore().classes).toHaveLength(2));
+  });
+
   it("does not raise the save error when a pull fails on the network with an empty outbox", async () => {
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
