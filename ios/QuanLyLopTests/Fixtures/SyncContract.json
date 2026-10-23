@@ -1,0 +1,27 @@
+{
+  "class": [{"id":"class-1","name":"Lớp mẫu","status":"active","weekdays":[2,4],"start_time":"18:00","version":3,"teacher_name":"Giáo viên mẫu"}],
+  "student": [{"id":"student-1","class_id":"class-1","name":"Học sinh mẫu","parent_phone":null,"enrolled_at":"2026-09-01","left_at":null,"status":"active","version":2}],
+  "class_session": [
+    {"id":"session-1","class_id":"class-1","date":"2026-10-02","start_time":"18:00","origin":"recurring","is_makeup":false,"status":"held","note":"ghi chú","version":4},
+    {"id":"session-2","class_id":"class-1","date":"2026-10-09","start_time":"18:00","origin":"manual","is_makeup":true,"status":"planned","version":1}
+  ],
+  "attendance": [{"session_id":"session-1","student_id":"student-1","status":"late","note":"","late_at":"18:10","version":2,"updated_at":"2026-10-02T11:30:00.000Z"}],
+  "test": [{"id":"test-1","class_id":"class-1","name":"Kiểm tra 15 phút","date":"2026-10-05","max":15,"archived":false,"version":1}],
+  "score": [{"test_id":"test-1","student_id":"student-1","value":12.5,"version":1,"updated_at":"2026-10-05T11:00:00.000Z"}],
+  "slip": [{"session_id":"session-1","student_id":"student-1","stars":3,"note":"Tốt","status":"sent","sent_at":"2026-10-02T12:00:00.000Z","version":2,"updated_at":"2026-10-02T12:00:00.000Z"}],
+  "homework_section": [{"id":"section-1","class_id":"class-1","session_id":"session-1","kind":"vocabulary","title":"Từ vựng","description":"","version":1}],
+  "homework_grade": [{"section_id":"section-1","student_id":"student-1","level":"excellent","version":1,"updated_at":"2026-10-09T11:00:00.000Z"}],
+  "report": [{"id":"report-1","class_id":"class-1","student_id":"student-1","month":"2026-10","status":"published","general_comment":"","needs_republish":false,"publication_count":1,"published_at":"2026-10-20T00:00:00.000Z","version":2}],
+  "report_publication": [{
+    "id":"publication-1","report_id":"report-1","class_id":"class-1","student_id":"student-1","month":"2026-10","publication_no":1,
+    "published_at":"2026-10-20T00:00:00.000Z",
+    "snapshot":{
+      "student_id":"student-1","month":"2026-10","ready":true,"general_comment":"Nhận xét giả",
+      "attendance":{"absent":0,"excused":0,"held_sessions":1,"late":1,"present":0},
+      "stars":{"one":0,"three":1,"two":0},
+      "homework":[{"done":0,"excellent":1,"kind":"vocabulary","not_done":0}],
+      "tests":[{"date":"2026-10-05","max":15,"name":"Kiểm tra 15 phút","test_id":"test-1","value":12.5},
+               {"date":"2026-10-12","max":15,"name":"Chưa chấm","test_id":"test-2","value":null}]
+    }
+  }]
+}
