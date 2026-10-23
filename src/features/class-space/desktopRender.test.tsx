@@ -54,7 +54,6 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
         canWrite
         readOnly={false}
         onCancel={() => {}}
-        onRestore={() => {}}
       />,
     );
     expect(html).toContain("Tất cả có mặt");

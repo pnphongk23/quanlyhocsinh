@@ -183,7 +183,8 @@ describe("Tuỳ chọn buổi học trong nút ⋯ ở đầu màn", () => {
     );
     replaceStore(state);
     const html = renderSession("/lop/6a/buoi-hoc/6a-session-8");
-    expect(html).toContain("Khôi phục buổi học");
+    expect(html).toContain("Buổi này đã huỷ");
+    expect(html).not.toContain("Khôi phục");
     expect(html).not.toContain('aria-label="Tuỳ chọn buổi học"');
     expect(html).not.toContain("Huỷ buổi");
   });

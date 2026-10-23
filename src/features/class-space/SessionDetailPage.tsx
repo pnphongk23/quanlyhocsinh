@@ -12,7 +12,6 @@ import {
   getSessionClass,
   hasSession,
   sessionPrefix,
-  setSessionStatus,
 } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
 import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
@@ -120,23 +119,6 @@ export default function SessionDetailPage() {
     }
   }
 
-  async function restore() {
-    if (!session || busy.current) return;
-    busy.current = true;
-    try {
-      await setSessionStatus(session.id, "planned");
-      setError("");
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không khôi phục được buổi học.",
-      );
-    } finally {
-      busy.current = false;
-    }
-  }
-
   function openTab(next: SessionTab) {
     if (next === tab) return;
     setSearchParams(new URLSearchParams({ tab: next }));
@@ -147,7 +129,7 @@ export default function SessionDetailPage() {
     <ConfirmDialog
       open={confirmCancel}
       title={`Huỷ buổi học ${formatDayMonth(session.date)}?`}
-      message="Buổi học sẽ được đánh dấu là đã huỷ. Bạn có thể khôi phục lại sau."
+      message="Buổi học sẽ được đánh dấu là đã huỷ. Không thể hoàn tác."
       actions={[
         {
           label: "Huỷ buổi học",
@@ -211,7 +193,6 @@ export default function SessionDetailPage() {
             setError("");
             setConfirmCancel(true);
           }}
-          onRestore={restore}
         />
         {cancelDialog}
         {unsavedDialog}
@@ -292,15 +273,10 @@ export default function SessionDetailPage() {
               <div className={s.emptyText}>
                 <h2 className={s.emptyTitle}>Buổi này đã huỷ</h2>
                 <p className={s.emptyTextLine}>
-                  Không cần điểm danh. Khôi phục nếu bạn huỷ nhầm.
+                  Không cần điểm danh.
                 </p>
               </div>
               <div className={s.emptyActions}>
-                {canWrite && (
-                  <Button size="lg" onClick={restore}>
-                    Khôi phục buổi học
-                  </Button>
-                )}
                 <LinkButton
                   variant="secondary"
                   size="lg"

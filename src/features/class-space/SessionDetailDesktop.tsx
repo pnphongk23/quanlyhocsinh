@@ -1,6 +1,5 @@
 import type { MutableRefObject, ReactNode } from "react";
 import type { Class, Session } from "../../data/types";
-import { Button } from "../../shared/ui";
 import ClassDesktopHeader from "./ClassDesktopHeader";
 import AttendanceDesktop from "../attendance/AttendanceDesktop";
 import CommentsDesktop from "../comments/CommentsDesktop";
@@ -25,7 +24,6 @@ export default function SessionDetailDesktop({
   onHomeworkDirtyChange,
   homeworkSaveRef,
   onCancel,
-  onRestore,
 }: {
   classId: string;
     klass: Class;
@@ -39,7 +37,6 @@ export default function SessionDetailDesktop({
   onHomeworkDirtyChange?: (dirty: boolean) => void;
   homeworkSaveRef?: MutableRefObject<(() => unknown) | null>;
   onCancel: () => void;
-  onRestore: () => void;
 }) {
   const cancelled = session.status === "cancelled";
 
@@ -89,14 +86,8 @@ export default function SessionDetailDesktop({
         <div className={s.card + " " + s.emptyCard}>
           <p className={s.emptyTitle}>Buổi này đã huỷ</p>
           <p className={s.emptyText}>
-            Không cần điểm danh, nhận xét hay giao bài. Khôi phục nếu bạn huỷ
-            nhầm.
+            Không cần điểm danh, nhận xét hay giao bài.
           </p>
-          {canWrite && (
-            <Button size="md" onClick={onRestore}>
-              Khôi phục buổi học
-            </Button>
-          )}
         </div>
       ) : (
         // Ba tab cùng gắn sẵn (chỉ ẩn tab khác) để đổi tab không mất điểm danh

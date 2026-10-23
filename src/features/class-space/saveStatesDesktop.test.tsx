@@ -136,7 +136,6 @@ function SessionHarness({
       readOnly={false}
       onDirtyChange={onDirty}
       onCancel={() => {}}
-      onRestore={() => {}}
     />
   );
 }

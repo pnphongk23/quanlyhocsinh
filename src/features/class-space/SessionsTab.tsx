@@ -270,7 +270,7 @@ export default function SessionsTab() {
         title={`Huỷ buổi học ${
           confirmSession ? formatDayMonth(confirmSession.date) : ""
         }?`}
-        message="Buổi học sẽ được đánh dấu là đã huỷ. Bạn có thể khôi phục lại sau."
+        message="Buổi học sẽ được đánh dấu là đã huỷ. Không thể hoàn tác."
         actions={[
           {
             label: "Huỷ buổi học",
