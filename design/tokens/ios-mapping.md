@@ -23,3 +23,10 @@ Chỉ tài liệu. `Tokens.swift` (mvp-ios `ios/QuanLyLop/Core/DesignSystem/Toke
 | `--fab-size` 56, `--fab-inset` 16 | Chưa có | Chỉ khi iOS dùng FAB |
 | `--dur-*`, `--ease-*` | Chưa có | Đề xuất `AppMotion` |
 | `--tap-desktop`, `--button-min-w-desktop`, `--sidebar-width`, `--content-max`, `--form-max`, `--guardian-max`, breakpoint 1024 | Không áp dụng | Chỉ web |
+| `--state-selected-bg/fg` | Chưa có | Đề xuất `AppColors.selectedBackground/selectedForeground` (= primarySoft/primaryInk) |
+| `--state-hover-bg`, `--state-pressed-bg` | Chưa có | Đề xuất `AppColors.pressed` (= border); iOS không có hover |
+| `--state-focus-ring` | `AppMetrics.focusRing` | Khớp |
+| `--state-disabled-opacity` 0.5 | Chưa có | Đề xuất `AppMetrics.disabledOpacity` |
+| `--state-success-*`, `--state-error-*`, `--state-pending-*` | Chưa có | Đề xuất `AppColors.stateSuccess/stateError/statePending` (+ `...Foreground`) = success/error/warning soft + đậm |
+| `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms | Chưa có | Đề xuất `AppMotion.loadingMinimum`, `AppMotion.successHold` |
+| `--empty-mascot` 96, `--empty-mascot-compact` 56 | Chưa có | Đề xuất `AppMetrics.emptyMascot`, `emptyMascotCompact` |

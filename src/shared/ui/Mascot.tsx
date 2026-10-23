@@ -49,10 +49,14 @@ const RATIO: Record<MascotPose, number> = {
 export function Mascot({
   pose = "main",
   size = 96,
+  cssSize,
   className,
 }: {
   pose?: MascotPose;
+  /** Cỡ px của ảnh; cũng là gợi ý bề rộng/chiều cao để chừa chỗ trước khi ảnh tải. */
   size?: number;
+  /** Chiều cao thật theo token, vd `var(--empty-mascot)`; bỏ trống thì dùng `size`. */
+  cssSize?: string;
   className?: string;
 }) {
   const base = `${import.meta.env.BASE_URL}mascot/mit-${FILES[pose]}`;
@@ -65,7 +69,7 @@ export function Mascot({
       aria-hidden="true"
       width={Math.round(size * RATIO[pose])}
       height={size}
-      style={{ height: size, width: "auto" }}
+      style={{ height: cssSize ?? size, width: "auto" }}
       loading="lazy"
       decoding="async"
       draggable={false}

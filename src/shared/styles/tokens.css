@@ -155,6 +155,24 @@
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
 
+  /* Trạng thái thành phần (bảng state contract: design/ux-v2/rules.md mục 6) */
+  --state-selected-bg: var(--color-primary-soft); /* đang chọn: nền, không viền */
+  --state-selected-fg: var(--color-primary-ink);
+  --state-hover-bg: var(--color-neutral-soft);
+  --state-pressed-bg: var(--color-border);
+  --state-focus-ring: var(--focus-ring);
+  --state-disabled-opacity: 0.5;                  /* thành phần không có nền riêng (hàng, thẻ, ô) */
+  --state-success-bg: var(--color-success-soft);
+  --state-success-fg: var(--color-success);
+  --state-error-bg: var(--color-error-soft);
+  --state-error-fg: var(--color-error);
+  --state-pending-bg: var(--color-warning-soft);  /* đã lưu trên máy, chờ đồng bộ */
+  --state-pending-fg: var(--color-warning);
+  --dur-loading-min: 400ms;   /* loading hiện tối thiểu (lưu cục bộ); trùng SAVE_MIN_VISIBLE_MS */
+  --dur-success-hold: 1600ms; /* giữ "Đã lưu"; trùng SAVE_SUCCESS_HOLD_MS */
+  --empty-mascot: 96px;
+  --empty-mascot-compact: 56px;
+
   font-family: var(--font-sans);
   color: var(--color-text);
   background: var(--color-bg);

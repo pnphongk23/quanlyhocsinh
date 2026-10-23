@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSaveAction } from "../hooks/useSaveAction";
+import { SAVE_MIN_VISIBLE_MS, useSaveAction } from "../hooks/useSaveAction";
 import { useUnsavedCloseGuard } from "../hooks/useUnsavedCloseGuard";
 import { Modal } from "./Modal";
 import { Sheet } from "./Sheet";
@@ -120,6 +120,8 @@ describe("useUnsavedCloseGuard", () => {
     fireEvent.click(screen.getByText("Lưu", { selector: "button" }));
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     expect(screen.getByText("mở")).toBeInTheDocument();
+    // Lần lưu thất bại giữ trạng thái đang lưu tối thiểu rồi mới cho thử lại.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, SAVE_MIN_VISIBLE_MS)); });
     fireEvent.click(screen.getByText("Lưu", { selector: "button" }));
     expect(await screen.findByText("đã đóng")).toBeInTheDocument();
     expect(save).toHaveBeenCalledTimes(2);

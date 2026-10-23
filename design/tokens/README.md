@@ -22,6 +22,9 @@ Màu, bo góc, chuyển động giữ nguyên giá trị.
 | `--safe-*`, `--tabbar-total` | Safe-area PWA; `--tabbar-total` = 0 trên desktop |
 | `--fab-*`, `--fab-pad`, `:root[data-has-fab]` | FAB neo màn hình và chừa đáy nội dung |
 | `--dur-press` | Thay 100ms ghi cứng |
+| `--state-selected-*`, `--state-hover-bg`, `--state-pressed-bg`, `--state-focus-ring`, `--state-disabled-opacity`, `--state-success-*`, `--state-error-*`, `--state-pending-*` | Trạng thái thành phần dùng chung; bảng ở `design/ux-v2/rules.md` mục 6. Giá trị lấy từ token màu có sẵn |
+| `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms | Loading tối thiểu và thời gian giữ "Đã lưu" |
+| `--empty-mascot` 96px, `--empty-mascot-compact` 56px | Cỡ Mít trong `EmptyState` |
 
 | Đổi | Trước → sau |
 |---|---|

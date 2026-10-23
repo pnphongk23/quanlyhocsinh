@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/** Trùng token `--dur-loading-min`: `saving` hiện tối thiểu từng này ms dù ghi cục bộ xong ngay. */
+export const SAVE_MIN_VISIBLE_MS = 400;
+/** Trùng token `--dur-success-hold`: `justSaved` giữ từng này ms sau khi lưu thành công. */
+export const SAVE_SUCCESS_HOLD_MS = 1600;
+
 export function deepEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
@@ -34,6 +39,8 @@ export interface SaveAction {
   valid: boolean;
   /** Đúng từ lúc bấm đến hết lần lưu, kể cả khi `save` đồng bộ. */
   saving: boolean;
+  /** Đúng `SAVE_SUCCESS_HOLD_MS` ms sau một lần lưu thành công (nút hiện "Đã lưu"). */
+  justSaved: boolean;
   /** `dirty && valid && !saving`: điều kiện bật nút lưu. */
   canSave: boolean;
   /** Lỗi của lần lưu gần nhất (null khi chưa lỗi hoặc đã lưu thành công). */
@@ -54,7 +61,18 @@ export function useSaveAction<T>({
   const [saved, setSaved] = useState<{ value: T } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [justSaved, setJustSaved] = useState(false);
   const lock = useRef(false);
+  const mounted = useRef(true);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearTimeout(holdTimer.current);
+    };
+  }, []);
 
   // Baseline từ ngoài đổi (dữ liệu tải lại, đổi bản ghi) thì bỏ giá trị "vừa lưu".
   const lastBaseline = useRef(baseline);
@@ -78,23 +96,35 @@ export function useSaveAction<T>({
     const current = latest.current;
     if (lock.current || !current.dirty || !current.valid) return false;
     lock.current = true;
+    clearTimeout(holdTimer.current);
+    setJustSaved(false);
     setSaving(true);
     setError(null);
+    const startedAt = Date.now();
+    let ok = false;
+    let failure: unknown = null;
     try {
       const result = await current.save(current.value);
-      if (result === false) {
-        setError(new Error("save_failed"));
-        return false;
-      }
-      setSaved({ value: current.value });
-      return true;
+      if (result === false) failure = new Error("save_failed");
+      else ok = true;
     } catch (cause) {
-      setError(cause ?? new Error("save_failed"));
-      return false;
-    } finally {
-      lock.current = false;
-      setSaving(false);
+      failure = cause ?? new Error("save_failed");
     }
+    // Ghi đã xong; chỉ giữ trạng thái đang lưu đủ lâu để người dùng thấy.
+    const remaining = SAVE_MIN_VISIBLE_MS - (Date.now() - startedAt);
+    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
+    lock.current = false;
+    if (mounted.current) {
+      setSaving(false);
+      if (ok) {
+        setSaved({ value: current.value });
+        setJustSaved(true);
+        holdTimer.current = setTimeout(() => setJustSaved(false), SAVE_SUCCESS_HOLD_MS);
+      } else {
+        setError(failure);
+      }
+    }
+    return ok;
   }, []);
 
   const reset = useCallback(() => {
@@ -102,5 +132,5 @@ export function useSaveAction<T>({
     setError(null);
   }, []);
 
-  return { dirty, valid, saving, canSave, error, submit, reset };
+  return { dirty, valid, saving, justSaved, canSave, error, submit, reset };
 }

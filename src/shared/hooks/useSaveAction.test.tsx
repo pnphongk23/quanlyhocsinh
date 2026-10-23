@@ -73,3 +73,59 @@ describe("useSaveAction", () => {
     expect(result.current.dirty).toBe(false);
   });
 });
+
+describe("useSaveAction thời gian hiển thị", () => {
+  const props = { baseline: { name: "A" }, value: { name: "B" }, save: vi.fn() };
+
+  it("saving giữ tối thiểu 400 ms dù save xong ngay; justSaved đúng 1,6 s", async () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = setup({ ...props, save: vi.fn() });
+      let pending!: Promise<boolean>;
+      act(() => { pending = result.current.submit(); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(399); });
+      expect(result.current.saving).toBe(true);
+      expect(result.current.justSaved).toBe(false);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      await expect(pending).resolves.toBe(true);
+      expect(result.current.saving).toBe(false);
+      expect(result.current.justSaved).toBe(true);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1599); });
+      expect(result.current.justSaved).toBe(true);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(result.current.justSaved).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lỗi: hết loading tối thiểu rồi giữ dirty, không justSaved, thử lại được", async () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = setup({ ...props, save: vi.fn(() => { throw new Error("x"); }) });
+      let pending!: Promise<boolean>;
+      act(() => { pending = result.current.submit(); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+      await expect(pending).resolves.toBe(false);
+      expect(result.current).toMatchObject({ saving: false, justSaved: false, dirty: true, canSave: true });
+      expect(result.current.error).toBeInstanceOf(Error);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("unmount giữa chừng: submit vẫn resolve, không cập nhật state", async () => {
+    vi.useFakeTimers();
+    try {
+      const { result, unmount } = setup({ ...props, save: vi.fn() });
+      let pending!: Promise<boolean>;
+      act(() => { pending = result.current.submit(); });
+      unmount();
+      await vi.advanceTimersByTimeAsync(400);
+      await expect(pending).resolves.toBe(true);
+      await vi.advanceTimersByTimeAsync(2000);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

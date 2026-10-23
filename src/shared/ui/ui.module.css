@@ -80,7 +80,8 @@
   padding: 14px var(--card-pad);
 }
 .cardSelected {
-  outline: 2px solid var(--color-primary);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 @media (min-width: 1024px) {
   .card {
@@ -106,6 +107,10 @@
   border-radius: var(--radius-chip);
   background: var(--color-bg);
   font-size: var(--text-md);
+}
+.chipOn {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 /* Pill trạng thái */
@@ -191,12 +196,18 @@
   font-size: var(--text-control);
   font-weight: 600;
 }
+.segment:hover:not(.segmentOn):not([aria-disabled="true"]) {
+  background: var(--state-hover-bg);
+}
+.segment[aria-disabled="true"] {
+  opacity: var(--state-disabled-opacity);
+}
 .segmentOn {
-  color: var(--color-text);
+  color: var(--state-selected-fg);
 }
 .segmentThumb {
   border-radius: var(--radius-chip);
-  background: var(--color-surface);
+  background: var(--state-selected-bg);
 }
 
 /* Đầu trang */
@@ -295,6 +306,23 @@
   font-size: var(--text-base);
   font-weight: 700;
   color: var(--color-text);
+}
+.emptyDescription {
+  max-width: var(--form-max);
+  font-size: var(--text-md);
+}
+.emptyAction {
+  margin-top: var(--space-8);
+}
+.emptyCompact {
+  gap: var(--space-4);
+  padding: var(--space-16);
+}
+.emptyCompact .emptyTitle {
+  font-size: var(--text-md);
+}
+.emptyCompact .emptyDescription {
+  font-size: var(--text-sm);
 }
 
 /* Biểu tượng */
@@ -535,4 +563,24 @@
 .confirmStay {
   background: var(--color-neutral-soft);
   color: var(--color-text);
+}
+
+/* Vừa lưu xong: nhãn thật ẩn nhưng vẫn chiếm chỗ để nút giữ bề rộng. */
+.button.done,
+.button.done:disabled {
+  position: relative;
+  background: var(--state-success-bg);
+  color: var(--state-success-fg);
+  cursor: default;
+}
+.doneLabelHidden {
+  visibility: hidden;
+}
+.doneLabel {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
 }
