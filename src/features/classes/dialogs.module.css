@@ -59,7 +59,8 @@
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  z-index: var(--z-menu);
+  /* Menu dùng chung lớp phủ .scrim (--z-overlay) để bắt bấm ngoài, nên phải nằm trên nó. */
+  z-index: calc(var(--z-overlay) + 1);
   width: 220px;
   padding: var(--space-4);
   display: flex;
