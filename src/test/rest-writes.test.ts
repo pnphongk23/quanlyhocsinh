@@ -39,6 +39,9 @@ describe("REST writes persist to the device cache", () => {
     const input = { classId: "c1", name: "An", parentPhone: "", enrolledAt: "2026-10-01" };
     await expect(createStudent(input)).rejects.toThrow();
     const created = await createStudent(input);
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toMatch(uuid);
     expect(ids[1]).toBe(ids[0]);
     expect(created.id).toBe(ids[0]);
     expect(sync.scheduleSync).toHaveBeenCalledWith(0);
@@ -92,8 +95,14 @@ describe("REST writes persist to the device cache", () => {
   });
 
   it("only accepts cancelling in setSessionStatus", async () => {
+    const { api } = await import("../data/sync");
+    const { replaceStore, getStore } = await import("../data/store");
     const { setSessionStatus } = await import("../data/repositories/sessions");
+    replaceStore({ ...getStore(), sessions: [{ id: "s1", classId: "c1", date: "2026-12-01", time: "18:00", origin: "recurring", status: "cancelled" } as never] });
+    const spy = vi.spyOn(api, "request");
     await expect(setSessionStatus("s1", "planned" as never)).rejects.toThrow(/khôi phục/);
+    expect(spy).not.toHaveBeenCalled();
+    expect(getStore().sessions[0].status).toBe("cancelled");
   });
 
   it("change password succeeds even if /me fails", async () => {
