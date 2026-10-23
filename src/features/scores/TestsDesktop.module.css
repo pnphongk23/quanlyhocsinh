@@ -1,6 +1,6 @@
 /* Tab Bài kiểm tra trên web desktop (ảnh 08…12). */
 .card {
-  padding: 18px 12px 8px;
+  padding: 18px var(--space-12) var(--space-8);
 }
 
 .table {
@@ -12,10 +12,10 @@
 .table th:not(:first-child), .table td:not(:first-child) { width: 1%; white-space: nowrap; }
 
 .table th {
-  padding: 0 4px 8px 12px;
+  padding: 0 var(--space-4) var(--space-8) var(--space-12);
   border-bottom: 1px solid var(--color-divider);
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   text-align: left;
   white-space: nowrap;
@@ -23,7 +23,7 @@
 
 .table td {
   height: 56px;
-  padding: 0 4px 0 12px;
+  padding: 0 var(--space-4) 0 var(--space-12);
   border-top: 1px solid var(--color-divider);
   font-size: 15px;
   vertical-align: middle;
@@ -53,7 +53,7 @@
   position: absolute;
   top: calc(100% + 2px);
   right: 0;
-  z-index: 9;
+  z-index: var(--z-menu);
   width: 200px;
   padding: 6px;
   display: flex;
@@ -71,7 +71,7 @@
   display: flex;
   align-items: center;
   min-height: 44px;
-  padding: 0 12px;
+  padding: 0 var(--space-12);
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -97,8 +97,8 @@
 
 .badge {
   justify-self: start;
-  font-size: 14px;
-  padding: 6px 12px;
+  font-size: var(--text-md);
+  padding: 6px var(--space-12);
 }
 
 .solidDanger {
@@ -114,8 +114,8 @@
 .dialogActions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
 }
 
 .confirmText {

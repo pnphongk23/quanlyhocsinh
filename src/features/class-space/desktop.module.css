@@ -9,24 +9,24 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
   min-height: 0;
-  padding-bottom: 20px;
+  padding-bottom: var(--space-20);
 }
 
 .header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-4);
   flex: none;
 }
 
 .breadcrumb {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: var(--space-8);
+  font-size: var(--text-md);
   color: var(--color-muted);
   min-height: 20px;
 }
@@ -59,7 +59,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-16);
   min-height: 60px;
 }
 
@@ -69,7 +69,7 @@
 
 .title {
   margin: 0;
-  font-size: 30px;
+  font-size: var(--text-3xl);
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 36px;
@@ -77,15 +77,15 @@
 }
 
 .subtitle {
-  margin: 2px 0 0;
-  font-size: 14px;
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-md);
   color: var(--color-muted);
 }
 
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   flex: none;
 }
 
@@ -164,13 +164,13 @@
 .card {
   background: var(--color-surface);
   border-radius: var(--radius-card);
-  padding: 18px 20px;
+  padding: 18px var(--space-20);
   box-sizing: border-box;
   min-width: 0;
 }
 
 .cardFlush {
-  padding: 18px 8px 6px;
+  padding: 18px var(--space-8) 6px;
 }
 
 .sectionTitle {
@@ -180,18 +180,18 @@
 }
 
 .label13 {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-muted);
 }
 
 .muted13 {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
 .muted14 {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
 }
 
@@ -215,17 +215,17 @@
 }
 
 .table th {
-  padding: 0 8px 8px 12px;
+  padding: 0 var(--space-8) var(--space-8) var(--space-12);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   text-align: left;
   white-space: nowrap;
 }
 
 .table td {
-  padding: 0 8px 0 12px;
+  padding: 0 var(--space-8) 0 var(--space-12);
   border-top: 1px solid var(--color-divider);
   font-size: 15px;
   vertical-align: middle;
@@ -269,7 +269,7 @@
 .stickyFirst td:first-child {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: calc(var(--z-raised) + 1);
   background: var(--color-surface);
   box-shadow: 6px 0 8px -6px rgb(20 24 31 / 0.15);
 }
@@ -318,13 +318,13 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-8);
   flex: none;
 }
 
 .split {
   display: flex;
-  gap: 16px;
+  gap: var(--space-16);
   align-items: flex-start;
   min-width: 0;
 }
@@ -334,7 +334,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .sideColumn {
@@ -342,7 +342,7 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .sideColumnNarrow {
@@ -350,7 +350,7 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .emptyCard {
@@ -358,8 +358,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 48px 24px;
+  gap: var(--space-8);
+  padding: var(--space-48) var(--space-24);
   text-align: center;
 }
 
@@ -383,7 +383,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
   flex: none;
 }
 
@@ -411,37 +411,37 @@
 }
 
 .segmentSmall {
-  padding: 8px 12px;
-  font-size: 14px;
+  padding: var(--space-8) var(--space-12);
+  font-size: var(--text-md);
 }
 
 .segmentActive {
   background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: 0 1px 2px rgb(20 24 31 / 0.12);
+  box-shadow: var(--shadow-sm);
 }
 
 .inlineHint {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
 .error {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 52px;
-  padding: 0 16px;
+  padding: 0 var(--space-16);
   border-radius: 12px;
   background: var(--color-error-soft);
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
 .successNote {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-success);
 }
@@ -485,13 +485,13 @@
 .fieldLabel {
   display: block;
   margin: 0 0 6px;
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
 .hint {
   margin: 6px 0 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
@@ -501,9 +501,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
   min-height: 52px;
-  padding: 4px 8px;
+  padding: var(--space-4) var(--space-8);
   border-top: 1px solid var(--color-divider);
   background: transparent;
   color: var(--color-text);
@@ -527,7 +527,7 @@ button.listRow {
 
 .statGrid {
   display: flex;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .statCard {
@@ -545,20 +545,20 @@ button.listRow {
 }
 
 .statLabel {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
 .statBox {
   flex: 1;
   min-width: 0;
-  padding: 8px 12px;
+  padding: var(--space-8) var(--space-12);
   border-radius: 12px;
   background: var(--color-bg);
 }
 
 .statBoxValue {
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 700;
   overflow-wrap: anywhere;
 }

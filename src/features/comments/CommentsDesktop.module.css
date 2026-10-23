@@ -4,19 +4,19 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 
 .listCard {
   background: var(--color-surface);
   border-radius: var(--radius-card);
-  padding: 14px 12px 8px;
+  padding: 14px var(--space-12) var(--space-8);
   min-width: 0;
 }
 
 .filters {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-8);
 }
 
 .ticketList {
@@ -27,10 +27,10 @@
 .ticketRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   width: 100%;
   height: 50px;
-  padding: 0 8px;
+  padding: 0 var(--space-8);
   border: 0;
   border-top: 1px solid var(--color-divider);
   background: transparent;
@@ -66,7 +66,7 @@
 }
 
 .ticketMeta {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -93,10 +93,10 @@
 .editor {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-12);
   background: var(--color-surface);
   border-radius: var(--radius-card);
-  padding: 18px 20px;
+  padding: 18px var(--space-20);
   min-width: 0;
 }
 
@@ -104,7 +104,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .editorName {
@@ -115,7 +115,7 @@
 
 .editorMeta {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }
 
@@ -131,7 +131,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--space-2);
   border: 1.5px solid var(--color-input-border);
   border-radius: 12px;
   background: var(--color-surface);
@@ -163,7 +163,7 @@
   align-items: center;
   gap: 14px;
   margin-top: 0;
-  padding: 12px 14px;
+  padding: var(--space-12) 14px;
   border-radius: 12px;
   background: var(--color-bg);
 }
@@ -173,7 +173,7 @@
 }
 
 .templateCaption {
-  margin: 0 0 4px;
+  margin: 0 0 var(--space-4);
   font-size: 12.5px;
   font-weight: 600;
   color: var(--color-muted);
@@ -216,18 +216,18 @@
 .homeworkBlock {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .homeworkTitle {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 
 .homeworkList {
   margin: 0;
-  padding: 2px 14px;
+  padding: var(--space-2) 14px;
   list-style: none;
   border-radius: 12px;
   background: var(--color-bg);
@@ -237,10 +237,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
   min-height: 36px;
   border-top: 1px solid var(--color-border);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 .homeworkRow:first-child {
@@ -249,10 +249,10 @@
 
 .emptyHomework {
   margin: 0;
-  padding: 12px 14px;
+  padding: var(--space-12) 14px;
   border-radius: 12px;
   background: var(--color-bg);
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-muted);
 }
 
@@ -263,7 +263,7 @@
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  padding: 4px 9px;
+  padding: var(--space-4) 9px;
   border-radius: 999px;
   font-size: 12.5px;
   font-weight: 600;
@@ -291,12 +291,12 @@
 
 .error {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-error);
 }
 
 .savedNote {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--color-muted);
 }

@@ -338,6 +338,7 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
                   fontSize: 20,
                   fontWeight: 700,
                   lineHeight: 1.3,
+                  textWrap: "balance",
                 }}
               >
                 {cardTitle(spotlight)}

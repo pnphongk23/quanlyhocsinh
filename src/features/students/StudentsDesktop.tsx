@@ -233,8 +233,13 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
           setAdding(false);
           save.clearStatus();
         }}
+        footer={
+          <Button size="lg" type="submit" form="add-student-form">
+            Lưu học sinh
+          </Button>
+        }
       >
-        <form className={s.form} onSubmit={addStudent}>
+        <form id="add-student-form" className={s.form} onSubmit={addStudent}>
           <Input
             label="Họ và tên học sinh"
             name="name"
@@ -253,9 +258,6 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
           <p className={d.muted13}>
             Phụ huynh dùng số này để đăng ký và đăng nhập.
           </p>
-          <Button size="lg" type="submit">
-            Lưu học sinh
-          </Button>
         </form>
       </Modal>
 
@@ -263,8 +265,13 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
         title="Sửa số điện thoại phụ huynh"
         open={phoneFor !== null}
         onClose={() => setPhoneFor(null)}
+        footer={
+          <Button size="lg" type="submit" form="edit-phone-form">
+            Lưu số điện thoại
+          </Button>
+        }
       >
-        <form className={s.form} onSubmit={savePhone}>
+        <form id="edit-phone-form" className={s.form} onSubmit={savePhone}>
           <Input
             label="Số điện thoại phụ huynh"
             name="phone"
@@ -281,9 +288,6 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
               {phoneError}
             </p>
           )}
-          <Button size="lg" type="submit">
-            Lưu số điện thoại
-          </Button>
         </form>
       </Modal>
 
@@ -292,12 +296,7 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
         title="Đánh dấu học sinh đã nghỉ?"
         open={leavingStudent !== null}
         onClose={() => setLeavingStudent(null)}
-      >
-        <div className={s.form}>
-          <p className={d.muted14}>
-            Ngày nghỉ là hôm nay. Điểm và điểm danh cũ vẫn được giữ trong lịch
-            sử lớp.
-          </p>
+        footer={
           <Button
             variant="danger"
             size="md"
@@ -317,6 +316,13 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
           >
             Xác nhận nghỉ học
           </Button>
+        }
+      >
+        <div className={s.form}>
+          <p className={d.muted14}>
+            Ngày nghỉ là hôm nay. Điểm và điểm danh cũ vẫn được giữ trong lịch
+            sử lớp.
+          </p>
         </div>
       </Modal>
     </main>
