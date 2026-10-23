@@ -2,19 +2,30 @@ import Foundation
 import Observation
 import UIKit
 
+struct ClientGeneratedID: Equatable, Sendable {
+    let rawValue: String
+
+    init(uuid: UUID = UUID()) {
+        rawValue = uuid.uuidString.lowercased()
+    }
+}
+
 struct TeacherClassRequest: Encodable {
+    let id: String
     let name: String
     let weekdays: [Int]
     let startTime: String
 }
 
 struct TeacherStudentRequest: Encodable {
+    let id: String
     let name: String
     let parentPhone: String?
     let enrolledAt: String
 }
 
 struct TeacherSessionRequest: Encodable {
+    let id: String
     let date: String
     let startTime: String
     let isMakeup: Bool
@@ -78,7 +89,7 @@ final class TeacherFeatureData {
         self.store = store
         api = URLSessionAPIClient(configuration: configuration,
                                   tokenStore: KeychainTokenStore(service: "vn.quanlylop.\(configuration.environment.rawValue)"))
-        sync = SyncCoordinator(api: api!, store: store, deviceId: UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString)
+        sync = auth.activeSync
         roleName = membership.role.name
         displayName = auth.currentUser?.displayName ?? membership.role.name
         canReadClasses = allows(membership, group: "classes", write: false)
@@ -125,8 +136,8 @@ final class TeacherFeatureData {
         }
     }
 
-    func createClass(name: String, weekdays: [Int], time: String) async throws {
-        let response = try await send(.post, path: "classes", body: TeacherClassRequest(name: name, weekdays: weekdays.sorted(), startTime: time), as: Classroom.self)
+    func createClass(id: String, name: String, weekdays: [Int], time: String) async throws {
+        let response = try await send(.post, path: "classes", body: TeacherClassRequest(id: id.lowercased(), name: name, weekdays: weekdays.sorted(), startTime: time), as: Classroom.self)
         try await cache(response, entity: "class")
         await refresh()
     }
@@ -149,8 +160,8 @@ final class TeacherFeatureData {
         await refresh()
     }
 
-    func addStudent(to classID: String, name: String, parentPhone: String?) async throws {
-        let request = TeacherStudentRequest(name: name.trimmingCharacters(in: .whitespacesAndNewlines), parentPhone: parentPhone?.nilIfBlank, enrolledAt: Self.todayString)
+    func addStudent(id: String, to classID: String, name: String, parentPhone: String?) async throws {
+        let request = TeacherStudentRequest(id: id.lowercased(), name: name.trimmingCharacters(in: .whitespacesAndNewlines), parentPhone: parentPhone?.nilIfBlank, enrolledAt: Self.todayString)
         let value = try await send(.post, path: "classes/\(classID)/students", body: request, as: Student.self)
         try await cache(value, entity: "student")
         await refresh()
@@ -170,8 +181,8 @@ final class TeacherFeatureData {
         await refresh()
     }
 
-    func addOneOffSession(classID: String, date: String, time: String, makeup: Bool, note: String = "") async throws {
-        let value = try await send(.post, path: "classes/\(classID)/sessions", body: TeacherSessionRequest(date: date, startTime: time, isMakeup: makeup, note: note), as: ClassSession.self)
+    func addOneOffSession(id: String, classID: String, date: String, time: String, makeup: Bool, note: String = "") async throws {
+        let value = try await send(.post, path: "classes/\(classID)/sessions", body: TeacherSessionRequest(id: id.lowercased(), date: date, startTime: time, isMakeup: makeup, note: note), as: ClassSession.self)
         try await cache(value, entity: "class_session")
         await refresh()
     }

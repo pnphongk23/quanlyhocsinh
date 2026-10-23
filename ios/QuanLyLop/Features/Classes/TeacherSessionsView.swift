@@ -265,6 +265,7 @@ struct TeacherExtraSessionSheet: View {
     @State private var note = ""
     @State private var error: String?
     @State private var saving = false
+    @State private var operationID: ClientGeneratedID?
 
     var body: some View {
         TeacherSheet(title: session == nil ? String(localized: "feature.classes.them.buoi.le") : String(localized: "feature.classes.sua.buoi.le")) {
@@ -362,10 +363,11 @@ struct TeacherExtraSessionSheet: View {
     private func save() async {
         saving = true
         defer { saving = false }
+        if operationID == nil { operationID = ClientGeneratedID() }
         let day = date.formatted(.iso8601.year().month().day().dateSeparator(.dash))
         let timeText = time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
         do {
-            try await data.addOneOffSession(classID: classID, date: day, time: timeText,
+              try await data.addOneOffSession(id: operationID!.rawValue, classID: classID, date: day, time: timeText,
                                             makeup: false, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
             dismiss()
         } catch {
@@ -373,4 +375,3 @@ struct TeacherExtraSessionSheet: View {
         }
     }
 }
-

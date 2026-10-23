@@ -166,6 +166,7 @@ struct TeacherAddStudentSheet: View {
     @State private var phone = ""
     @State private var error: String?
     @State private var saving = false
+    @State private var operationID: ClientGeneratedID?
 
     var body: some View {
         TeacherSheet(title: String(localized: "feature.classes.them.hoc.sinh")) {
@@ -196,8 +197,9 @@ struct TeacherAddStudentSheet: View {
         }
         saving = true
         defer { saving = false }
+        if operationID == nil { operationID = ClientGeneratedID() }
         do {
-            try await data.addStudent(to: classID, name: trimmed, parentPhone: phone)
+              try await data.addStudent(id: operationID!.rawValue, to: classID, name: trimmed, parentPhone: phone)
             dismiss()
         } catch {
             self.error = String(localized: "feature.classes.khong.the.luu.hoc.sinh.vui.long.thu.lai")

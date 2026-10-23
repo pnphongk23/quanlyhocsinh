@@ -12,6 +12,7 @@ struct TeacherNewClassView: View {
     @State private var timeSelection = Date.now
     @State private var error: String?
     @State private var saving = false
+    @State private var operationID: ClientGeneratedID?
 
     var body: some View {
         TeacherScroll {
@@ -145,8 +146,9 @@ struct TeacherNewClassView: View {
         }
         saving = true
         defer { saving = false }
+        if operationID == nil { operationID = ClientGeneratedID() }
         do {
-            try await data.createClass(name: name, weekdays: weekdays.sorted(), time: time)
+              try await data.createClass(id: operationID!.rawValue, name: name, weekdays: weekdays.sorted(), time: time)
             dismiss()
         } catch {
             self.error = String(localized: "feature.classes.khong.tao.uoc.lop.vui.long.thu.lai")

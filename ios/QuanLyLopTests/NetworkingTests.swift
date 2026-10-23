@@ -56,6 +56,8 @@ private final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
 }
 @MainActor
 final class NetworkingTests: XCTestCase {
+    private struct SuccessBody: Decodable, Sendable { let ok: Bool }
+
     func api() -> URLSessionAPIClient {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [FixtureURLProtocol.self]
@@ -76,6 +78,15 @@ final class NetworkingTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
         let body = try JSONDecoder().decode(JSONValue.self, from: XCTUnwrap(request.httpBody))
         XCTAssertEqual(body["base_version"], .number(3))
+    }
+
+    func testBothCreatedAndIdempotentSuccessStatusesDecodeTheBody() async throws {
+        for status in [200, 201] {
+            let path = "create-status-\(status)"
+            FixtureURLProtocol.transport.add("https://fixture.invalid/v1/\(path)", status: status, json: #"{"ok":true}"#)
+            let response = try await api().send(.init(method: .post, path: path, requiresAuthentication: false), as: SuccessBody.self)
+            XCTAssertTrue(response.ok)
+        }
     }
     func testErrorMappingRetryAfterAndSafeUserMessage() async throws {
         FixtureURLProtocol.transport.add("https://fixture.invalid/v1/limited", status: 429,
