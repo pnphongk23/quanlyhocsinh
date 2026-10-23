@@ -135,6 +135,7 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --tabbar-total: calc(var(--tabbar-height) + var(--safe-bottom));
+  --sticky-bottom: var(--tabbar-total); /* bottom của footer hành động dính, nằm trên tab dưới */
 
   /* FAB: neo theo màn hình, nội dung cuộn phải chừa --fab-clearance ở đáy */
   --fab-size: 56px;
@@ -143,6 +144,7 @@
   --fab-bottom: calc(var(--tabbar-total) + var(--fab-inset));
   --fab-clearance: calc(var(--fab-size) + var(--fab-inset) * 2);
   --fab-pad: 0px;                   /* đổi thành --fab-clearance khi trang có FAB */
+  --content-min-h: calc(100dvh - var(--tabbar-total) - var(--page-top) - var(--page-bottom)); /* chiều cao tối thiểu trang form để nút chính nằm sát đáy vùng nhìn thấy */
 
   /* Chuyển động (giữ nguyên) */
   --dur-press: 100ms;

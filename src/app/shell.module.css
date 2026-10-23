@@ -9,6 +9,8 @@
 .content h1 { font-size: var(--text-2xl); margin-bottom: var(--space-20); }
 @media (min-width: 1024px) { .content { padding: var(--space-32); } }
 
+.statusPage { display: grid; min-height: 100dvh; align-content: center; max-width: var(--form-max); margin-inline: auto; padding: var(--page-top) max(var(--page-x), var(--safe-right)) max(var(--page-bottom), var(--safe-bottom)) max(var(--page-x), var(--safe-left)); }
+
 /* Staff shell follows the desktop sidebar and mobile tab bar in the prototype. */
 .staffDesktop { min-height: 100dvh; overflow-x: clip; padding-bottom: var(--tabbar-total); background: var(--color-bg); }
 .staffSkip { position: fixed; top: -100px; left: var(--space-8); z-index: var(--z-toast); padding: var(--space-12); border-radius: var(--radius-button); background: var(--color-surface); color: var(--color-text); }
@@ -21,7 +23,7 @@
 .staffTabbar a[aria-current="page"] { border-top-color: var(--color-primary); color: var(--color-primary); }
 @media (min-width: 1024px) {
   .staffDesktop { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); height: calc(100dvh - 32px); min-height: 0; margin: 16px; padding: 0; overflow: hidden; border-radius: var(--radius-card); background: var(--color-bg); box-shadow: var(--shadow-frame); }
-  .staffSidebar { display: flex; min-height: 0; flex-direction: column; gap: 6px; padding: var(--space-20) 14px; overflow-y: auto; border-right: 1px solid var(--color-border); background: var(--color-surface); }
+  .staffSidebar { grid-column: 1; grid-row: 1; display: flex; min-height: 0; flex-direction: column; gap: 6px; padding: var(--space-20) 14px; overflow-y: auto; border-right: 1px solid var(--color-border); background: var(--color-surface); }
   .staffBrand { min-width: 0; padding: var(--space-4) var(--space-12) 14px; overflow: hidden; color: var(--color-primary); font-size: 17px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
   .staffClassPicker { position: relative; margin: 0 var(--space-4) var(--space-8); }
   .staffClassScope { display: grid; width: 100%; gap: 1px; padding: 10px var(--space-12); border: 0; border-radius: var(--radius-button); background: var(--color-bg); color: var(--color-muted); text-align: left; font: inherit; font-size: var(--text-xs); cursor: pointer; }
@@ -37,8 +39,9 @@
   .staffNavItem:hover:not(.staffNavActive):not(.staffNavDisabled) { background: var(--color-neutral-soft); }
   .staffNavActive { background: var(--color-primary-soft); color: var(--color-primary-ink); }
   .staffDesktopSaveStatus { display: flex; width: fit-content; align-self: flex-start; margin-top: auto; padding-top: var(--space-24); }
-  .staffContent { overflow-y: auto; }
+  .staffContent { grid-column: 2; grid-row: 1; overflow-y: auto; }
   .staffContent > * { width: 100%; max-width: var(--content-max); }
   .staffTabbar { display: none; }
-  .staffMobileSaveStatus { display: none; }
+  /* Hai selector (0,2,0) để thắng `.pill { display: inline-flex }` của SaveStatus dù CSS chunk nào nạp sau. */
+  .staffDesktop > .staffMobileSaveStatus { display: none; }
 }

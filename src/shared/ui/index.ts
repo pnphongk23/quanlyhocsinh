@@ -15,4 +15,5 @@ export type { IconName } from "./Icon";
 export type { PillTone } from "./Pill";
 export type { ButtonSize, ButtonVariant } from "./buttonClass";
 export { Fab } from "./Fab";
+export { ActionFooter } from "./ActionFooter";
 export { NoAccess } from "./NoAccess";

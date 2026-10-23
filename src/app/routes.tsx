@@ -7,6 +7,7 @@ import { guardianRoutes } from "../roles/guardian/routes";
 import { accountRoutes } from "../roles/account/routes";
 import { PwaGuideGate } from "../features/pwa/PwaGuideGate";
 import styles from "./shell.module.css";
+import { StatusPage } from "./StatusPage";
 function RootLayout() {
   return <PwaGuideGate><Outlet /></PwaGuideGate>;
 }
@@ -15,14 +16,14 @@ function FoundationHome() {
 }
 function RouteError() {
   useRouteError();
-  return <main className={styles.content}><h1>Không thể mở màn hình</h1><Link to="/">Về trang đầu</Link></main>;
+  return <StatusPage title="Không thể mở màn hình" />;
 }
 export const routes: RouteObject[] = [{
       element: <RootLayout />, errorElement: <RouteError />, HydrateFallback: () => null,
   children: [
     { path: "/", element: <FoundationHome /> },
       ...guardRoutes(staffRoutes, "staff"), ...guardRoutes(guardianRoutes, "guardian"), ...accountRoutes,
-    { path: "*", element: <main className={styles.content}><h1>Không tìm thấy màn hình</h1><Link to="/">Về trang đầu</Link></main> },
+    { path: "*", element: <StatusPage title="Không tìm thấy màn hình" /> },
   ],
 }];
 

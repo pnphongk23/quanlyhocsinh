@@ -62,6 +62,16 @@
   background: transparent;
   color: var(--color-muted);
 }
+/* Disabled: nền trung tính + chữ muted (≈6.9:1), không dùng opacity nên vẫn đọc được. */
+.button:disabled {
+  background: var(--color-neutral-soft);
+  color: var(--color-muted);
+  opacity: 1;
+  cursor: not-allowed;
+}
+.ghost:disabled {
+  background: transparent;
+}
 
 /* Card */
 .card {
@@ -373,5 +383,26 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Footer hành động đáy trang form */
+.actionFooter {
+  position: sticky;
+  bottom: var(--sticky-bottom);
+  z-index: var(--z-sticky);
+  display: grid;
+  gap: var(--space-8);
+  margin-top: auto;
+  padding: var(--space-8) 0;
+  background: var(--color-bg);
+}
+@media (min-width: 1024px) {
+  .actionFooter {
+    position: static;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0;
+    background: transparent;
   }
 }
