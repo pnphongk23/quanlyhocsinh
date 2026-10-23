@@ -116,6 +116,18 @@ actor SQLiteStore: LocalStore {
         try db.execute("SELECT key FROM records WHERE scope=? AND entity=? ORDER BY key", [scope.storageKey, entity])
             .compactMap { try read(type, forKey: $0["key"]!) }
     }
+    /// Like `records`, but a row whose JSON no longer fits `Value` is left out instead of failing the whole read.
+    /// Only decoding problems are tolerated; storage errors still throw. `skipped` counts the dropped rows
+    /// so callers never need to look at (or log) their content.
+    func recordsSkippingInvalid<Value: Decodable & Sendable>(_ type: Value.Type, entity: String) throws -> (values: [Value], skipped: Int) {
+        var values: [Value] = []
+        var skipped = 0
+        for row in try db.execute("SELECT key FROM records WHERE scope=? AND entity=? ORDER BY key", [scope.storageKey, entity]) {
+            do { if let value = try read(type, forKey: row["key"]!) { values.append(value) } }
+            catch is DecodingError { skipped += 1 }
+        }
+        return (values, skipped)
+    }
     func write<Value: Encodable & Sendable>(_ value: Value, forKey key: String, enqueueing command: PendingCommand? = nil) throws {
         let json = try encode(value)
         let tree = try JSONDecoder().decode(JSONValue.self, from: Data(json.utf8))

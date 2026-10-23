@@ -406,7 +406,13 @@ enum GuardianRepository {
         do { try await sync.synchronize() } catch {
             guard try await store.position() != nil else { throw error }
         }
+        return try await dashboard(from: store)
+    }
 
+    /// Every published version of a report stays on the server (`api-spec.md` 6.6), including old ones whose
+    /// snapshot predates the current shape. Those are decoded one by one and dropped when unreadable, so a
+    /// single stale version cannot hide the child's attendance, scores and newer reports.
+    static func dashboard(from store: SQLiteStore) async throws -> GuardianDashboard {
         async let childrenTask = store.records(Student.self, entity: "student")
         async let classesTask = store.records(Classroom.self, entity: "class")
         async let sessionsTask = store.records(ClassSession.self, entity: "class_session")
@@ -416,12 +422,16 @@ enum GuardianRepository {
         async let slipsTask = store.records(SessionSlip.self, entity: "slip")
         async let sectionsTask = store.records(HomeworkSection.self, entity: "homework_section")
         async let gradesTask = store.records(HomeworkGrade.self, entity: "homework_grade")
-        async let publicationTask = store.records(ReportPublication.self, entity: "report_publication")
+        async let publicationTask = store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication")
 
-        let (children, classes, sessions, attendances, tests, scores, slips, sections, grades, publications) = try await (
+        let (children, classes, sessions, attendances, tests, scores, slips, sections, grades, decodedPublications) = try await (
             childrenTask, classesTask, sessionsTask, attendanceTask, testsTask,
             scoresTask, slipsTask, sectionsTask, gradesTask, publicationTask
         )
+        let publications = decodedPublications.values
+        #if DEBUG
+        if decodedPublications.skipped > 0 { print("GuardianRepository: skipped \(decodedPublications.skipped) unreadable report publication(s)") }
+        #endif
         let classNames = Dictionary(uniqueKeysWithValues: classes.map { ($0.id, $0.name) })
         var childData: [GuardianChildData] = []
         for student in children {
