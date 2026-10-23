@@ -183,7 +183,7 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
   return (
     <main className={s.page}>
       <ClassDesktopHeader classId={classId} klass={klass} actions={primaryAction} />
-      <div className={s.split}>
+      <div className={s.split + " " + s.sessionsSplit}>
         <section className={s.mainColumn} aria-label="Buổi học">
           <div className={s.card + " " + s.cardFlush}>
             <h2 className={s.sectionTitle} style={{ padding: "0 12px 10px" }}>
@@ -307,7 +307,7 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
           </div>
         </section>
 
-        <aside className={s.sideColumn}>
+        <aside className={s.sideColumn + " " + s.sessionsSide}>
           {spotlight && (
             <div className={s.card}>
               <h2 className={s.sectionTitle}>Buổi hiện tại</h2>

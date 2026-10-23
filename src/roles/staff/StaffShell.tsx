@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { getSession } from "../../data/auth/session";
-import { getStore, replaceStore, useStore } from "../../data/store";
+import { setCurrentClass } from "../../data/repositories/classes";
+import { useStore } from "../../data/store";
 import SaveStatus from "../../shared/SaveStatus";
 import { Icon } from "../../shared/ui";
 import { PageTransition } from "../../shared/motion";
@@ -34,6 +35,19 @@ export function Component() {
   const activeClass = store.classes.find(
     (item) => item.id === store.currentClassId,
   );
+  // `hydrateStore` dựng lại store sau mỗi lần đồng bộ và không giữ lớp đang chọn:
+  // nhớ lớp đã chọn và đặt lại để picker, mục con và thẻ lớp không về "Chưa chọn lớp".
+  const lastClassId = useRef<string | null>(null);
+  if (store.currentClassId) lastClassId.current = store.currentClassId;
+  const restorable =
+    !store.currentClassId &&
+    lastClassId.current !== null &&
+    store.classes.some((item) => item.id === lastClassId.current)
+      ? lastClassId.current
+      : null;
+  useEffect(() => {
+    if (restorable) setCurrentClass(restorable);
+  }, [restorable]);
   const activeMember = store.members.find(
     (member) => member.id === store.activeMemberId,
   );
@@ -101,7 +115,7 @@ export function Component() {
                   role="option"
                   aria-selected={klass.id === activeClass?.id}
                   onClick={() => {
-                    replaceStore({ ...getStore(), currentClassId: klass.id });
+                    setCurrentClass(klass.id);
                     setClassMenuOpen(false);
                     if (pathname.startsWith("/lop/"))
                       navigate(`/lop/${klass.id}`);

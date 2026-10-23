@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider, matchRoutes } from "react-router-dom";
 import type { WebSession } from "../data/auth/session";
 import { defaultRoles } from "../data/defaults";
-import { replaceStore } from "../data/store";
+import { getStore, replaceStore } from "../data/store";
 import { createSeed } from "./fixtures/seed";
 
 const authState = vi.hoisted(() => ({
@@ -240,6 +240,27 @@ describe("foundation route integration", () => {
       (link) => /staffNavActive/.test(link.className),
     );
     expect(selected.map((link) => link.textContent)).toEqual(["Điểm số"]);
+    router.dispose();
+  });
+
+  it("picks a class from the sidebar picker and keeps it after the store is rebuilt", async () => {
+    authState.session = activeSession("staff");
+    const fixture = createSeed();
+    fixture.currentClassId = null;
+    replaceStore(fixture);
+    const router = open("/lop");
+    const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
+    expect(navigation.querySelectorAll("a")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: /Đang xem lớp/ }));
+    fireEvent.click(await screen.findByRole("option", { name: /6A/ }));
+    await waitFor(() => expect(navigation.querySelectorAll("a")).toHaveLength(6));
+    expect(screen.getByRole("button", { name: /Đang xem lớp/ })).toHaveTextContent("6A");
+
+    // Đồng bộ xong thì store dựng lại và quên lớp đã chọn.
+    act(() => replaceStore({ ...getStore(), currentClassId: null }));
+    await waitFor(() => expect(getStore().currentClassId).toBe("6a"));
+    expect(navigation.querySelectorAll("a")).toHaveLength(6);
     router.dispose();
   });
 

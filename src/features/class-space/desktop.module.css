@@ -540,3 +540,24 @@ button.listRow {
   flex: 1.3;
   min-width: 0;
 }
+
+/*
+ * Buổi học: bảng 6 cột cần chỗ riêng. Dưới 1440px cột phải xuống trên bảng,
+ * các thẻ chia đều một hàng; từ 1440px trở lên giữ hai cột cạnh nhau.
+ */
+@media (max-width: 1439px) {
+  .sessionsSplit {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sessionsSplit > .sessionsSide {
+    order: -1;
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .sessionsSplit > .sessionsSide > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
