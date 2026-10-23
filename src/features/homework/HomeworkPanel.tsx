@@ -673,7 +673,10 @@ function SectionEditor({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") requestClose();
+      if (event.key !== "Escape") return;
+      // Chặn hành động mặc định của Esc: nếu không, trình duyệt đóng luôn hộp thoại "chưa lưu" vừa mở.
+      event.preventDefault();
+      requestClose();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

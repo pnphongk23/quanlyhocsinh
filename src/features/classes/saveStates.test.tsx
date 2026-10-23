@@ -84,7 +84,7 @@ describe("trạng thái nút lưu và đóng khi nhập dở", () => {
     render(<AddStudentModal classId="6a" onClose={onClose} />);
     fireEvent.change(screen.getByLabelText(/Họ và tên học sinh/), { target: { value: "Em Dở" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Đóng" })[0]);
-    await waitFor(() => expect(unsavedDialog()).toHaveAttribute("open"));
+    await waitFor(() => expect(unsavedDialog()?.hasAttribute("open")).toBe(true));
     expect(onClose).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Bỏ thay đổi" }));
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
@@ -119,6 +119,20 @@ describe("trạng thái nút lưu và đóng khi nhập dở", () => {
       await gate.promise;
     });
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+  });
+
+  it("sửa lớp: chưa sửa gì thì Huỷ đóng ngay, không hỏi; sửa dở thì hỏi", async () => {
+    const onClose = vi.fn();
+    render(<EditClassModal classId="6a" onClose={onClose} onEditSchedule={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Huỷ" }));
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(unsavedDialog()?.hasAttribute("open") ?? false).toBe(false);
+
+    onClose.mockClear();
+    fireEvent.change(screen.getByLabelText(/Tên lớp/), { target: { value: "Lớp đang sửa" } });
+    fireEvent.click(screen.getByRole("button", { name: "Huỷ" }));
+    await waitFor(() => expect(unsavedDialog()?.hasAttribute("open")).toBe(true));
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("sửa lớp: tên rỗng thì nút tắt", () => {

@@ -83,7 +83,10 @@ export function EditClassModal({
               type="button"
               variant="secondary"
               disabled={action.saving}
-              onClick={closeNow}
+              onClick={() => {
+                // Sạch thì đóng ngay (không chạy animation ra); dở thì hỏi.
+                if (guard.beforeClose()) closeNow();
+              }}
             >
               Huỷ
             </Button>
