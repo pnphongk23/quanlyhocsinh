@@ -53,9 +53,9 @@ export function Mascot({
   className,
 }: {
   pose?: MascotPose;
-  /** Cỡ px của ảnh; cũng là gợi ý bề rộng/chiều cao để chừa chỗ trước khi ảnh tải. */
+  /** Cỡ px của ảnh; bị bỏ qua khi có `cssSize`. */
   size?: number;
-  /** Chiều cao thật theo token, vd `var(--empty-mascot)`; bỏ trống thì dùng `size`. */
+  /** Chiều cao theo token, vd `var(--empty-mascot)`; chỗ chừa lấy từ tỉ lệ ảnh. Bỏ trống thì dùng `size`. */
   cssSize?: string;
   className?: string;
 }) {
@@ -67,9 +67,9 @@ export function Mascot({
       srcSet={`${base}.webp 1x, ${base}@2x.webp 2x`}
       alt=""
       aria-hidden="true"
-      width={Math.round(size * RATIO[pose])}
-      height={size}
-      style={{ height: cssSize ?? size, width: "auto" }}
+      width={cssSize ? undefined : Math.round(size * RATIO[pose])}
+      height={cssSize ? undefined : size}
+      style={{ height: cssSize ?? size, width: "auto", aspectRatio: String(RATIO[pose]) }}
       loading="lazy"
       decoding="async"
       draggable={false}
