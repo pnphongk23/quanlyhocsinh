@@ -26,12 +26,12 @@ export function UnsavedChangesDialog({
   onStay,
 }: UnsavedChangesDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  // Chỉ có trong DOM khi mở: nút "Lưu" không lọt vào test hay trình đọc màn hình lúc đóng.
   useEffect(() => {
     const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    if (open && dialog && !dialog.open) dialog.showModal();
   }, [open]);
+  if (!open) return null;
   return (
     <dialog
       ref={ref}

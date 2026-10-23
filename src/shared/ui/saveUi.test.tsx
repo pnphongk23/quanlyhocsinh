@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ActionFooter } from "./ActionFooter";
 import { Button } from "./Button";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
@@ -38,8 +38,36 @@ describe("ActionFooter hint", () => {
 });
 
 describe("UnsavedChangesDialog", () => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value: vi.fn(function (this: HTMLDialogElement) { this.setAttribute("open", ""); }),
+    });
+  });
+  const noop = () => {};
+
+  it("đóng: không render gì (không có dialog, không có nút Lưu)", () => {
+    const { container } = render(<UnsavedChangesDialog open={false} onSave={noop} onDiscard={noop} onStay={noop} />);
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByRole("button", { name: "Lưu", hidden: true })).toBeNull();
+  });
+
+  it("mở: render dialog và gọi showModal; đóng lại thì gỡ khỏi DOM", () => {
+    const { container, rerender } = render(<UnsavedChangesDialog open onSave={noop} onDiscard={noop} onStay={noop} />);
+    expect(container.querySelector("dialog")?.hasAttribute("open")).toBe(true);
+    rerender(<UnsavedChangesDialog open={false} onSave={noop} onDiscard={noop} onStay={noop} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("Lưu bị khoá khi saving", () => {
-    render(<UnsavedChangesDialog open={false} saving onSave={() => {}} onDiscard={() => {}} onStay={() => {}} />);
+    render(<UnsavedChangesDialog open saving onSave={noop} onDiscard={noop} onStay={noop} />);
     expect(screen.getByText("Lưu", { selector: "button" })).toBeDisabled();
+  });
+
+  it("Ở lại gọi onStay", () => {
+    const onStay = vi.fn();
+    render(<UnsavedChangesDialog open onSave={noop} onDiscard={noop} onStay={onStay} />);
+    fireEvent.click(screen.getByText("Ở lại"));
+    expect(onStay).toHaveBeenCalledTimes(1);
   });
 });
