@@ -90,7 +90,7 @@ struct MembershipSelection { let activeMembershipId: String; let deviceRegistrat
 |---|---|
 | `Classroom` | `weekdays: [Int]?` (ISO), `startTime: String?` ("18:00"), `version: Int?` |
 | `Student` | `parentPhone: String?` (không hiện cho phụ huynh), `enrolledAt`, `leftAt`, `status` |
-| `ClassSession` | `sessionNumber: Int?` — **chỉ đọc từ server**, `nil` khi `status == .cancelled`. Không tự đếm buổi (Q16 đã chốt) |
+| `ClassSession` | `sessionNumber: Int?` — **iOS tự tính** (`SessionNumbering`, đọc qua `SQLiteStore.classSessions()`), vì `GET /sync/snapshot/class_session` không có `session_number`. Công thức khớp máy chủ (`worker/src/db/sessions.ts`): số buổi không hủy cùng lớp có `(date, start_time)` ≤ của buổi này; buổi hủy là `nil`; hai buổi trùng `(date, start_time)` cùng số. Số do máy chủ trả (nếu có) bị ghi đè bởi số tính cục bộ |
 | `Attendance` | `AttendanceStatus`: `present/late/excused/absent` — không có "Vắng thi" |
 | `TestDefinition` | `init(...)` và `decode` mặc định `maxScore = 15`; `1...1000`; `validate(score:)`, `validateNewMaximum(_:highestScore:)` |
 | `Score` | `value: Double?` — `nil` = "Chưa có điểm"; không có điểm trung bình |
