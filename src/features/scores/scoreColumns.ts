@@ -1,3 +1,7 @@
+import tokens from "../../../design/tokens/tokens.json";
+
+const px = (value: string): number => parseFloat(value);
+
 /** Độ rộng cột bảng điểm desktop: nhớ riêng từng lớp, chỉ trên máy này. */
 export const STUDENT_COLUMN = "student";
 
@@ -10,8 +14,14 @@ export interface GridTokens {
   step: number;
 }
 
-/** Mirror của --grid-col-name-min/max, --grid-col-test-max, --grid-cell-input-min, --grid-resize-step; chỉ dùng khi không đọc được CSS (jsdom). */
-const FALLBACK: GridTokens = { nameMin: 140, nameMax: 280, testMax: 240, cellMin: 140, step: 8 };
+/** Dự phòng khi không đọc được CSS (jsdom): lấy từ cùng nguồn token, không chép số. */
+const FALLBACK: GridTokens = {
+  nameMin: px(tokens.grid["grid-col-name-min"]),
+  nameMax: px(tokens.grid["grid-col-name-max"]),
+  testMax: px(tokens.grid["grid-col-test-max"]),
+  cellMin: px(tokens.grid["grid-cell-input-min"]),
+  step: px(tokens.grid["grid-resize-step"]),
+};
 
 const TOKEN_NAMES: Record<keyof GridTokens, string> = {
   nameMin: "--grid-col-name-min",

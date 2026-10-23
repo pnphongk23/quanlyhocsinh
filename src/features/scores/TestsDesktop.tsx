@@ -14,6 +14,7 @@ import { listStudents } from "../../data/repositories/students";
 import { useAccess } from "../../data/repositories/access";
 import { useStore } from "../../data/store";
 import type { Class, Student, Test } from "../../data/types";
+import { savedPeek } from "../closeAfterSaved";
 import { todayISO } from "../../shared/format";
 import {
   Button,
@@ -350,7 +351,10 @@ function TestFormModal({
   });
   async function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (await action.submit()) onClose();
+    if (await action.submit()) {
+      await savedPeek();
+      onClose();
+    }
   }
   const requestClose = () => (action.dirty ? setAsking(true) : onClose());
   return (

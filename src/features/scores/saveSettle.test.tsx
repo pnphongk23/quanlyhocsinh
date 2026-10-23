@@ -6,6 +6,8 @@ import { createSeed } from "../../test/fixtures/seed";
 import { replaceStore } from "../../data/store";
 import ScoreGridDesktop from "./ScoreGridDesktop";
 import TestScoresPage from "./TestScoresPage";
+import NewTestPage from "./NewTestPage";
+import TestsDesktop from "./TestsDesktop";
 
 function inRouter(node: ReactNode, path: string, url: string) {
   const router = createMemoryRouter([{ path, element: node }], {
@@ -82,4 +84,52 @@ describe("nút Lưu điểm sau khi lưu xong", () => {
       expect(screen.getByText("Chưa có thay đổi để lưu")).toBeInTheDocument();
     },
   );
+});
+
+describe("form lưu rồi đóng: hiện Đã lưu trước khi đóng", () => {
+  it("tạo bài ở trang riêng: Đã lưu hiện, sau 800 ms mới điều hướng", async () => {
+    const router = createMemoryRouter(
+      [
+        { path: "/lop/:classId/bai-kiem-tra/moi", element: <NewTestPage /> },
+        { path: "/lop/:classId/bai-kiem-tra/:testId", element: <p>Màn nhập điểm</p> },
+      ],
+      { initialEntries: ["/lop/6a/bai-kiem-tra/moi"] },
+    );
+    render(<RouterProvider router={router} />);
+    fireEvent.change(screen.getByLabelText(/Tên bài kiểm tra/), {
+      target: { value: "Bài thử" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Tạo bài và nhập điểm" }));
+    await advance(450);
+    expect(screen.getByText("Đã lưu")).toBeInTheDocument();
+    expect(router.state.location.pathname).toMatch(/moi$/);
+    await advance(900);
+    expect(router.state.location.pathname).not.toMatch(/moi$/);
+  });
+
+  it("modal tạo bài desktop: Đã lưu hiện, sau 800 ms mới đóng", async () => {
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+    Object.defineProperty(HTMLDialogElement.prototype, "close", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.removeAttribute("open");
+      },
+    });
+    inRouter(<TestsDesktop classId="6a" />, "/lop/:classId/*", "/lop/6a/bai-kiem-tra");
+    fireEvent.click(screen.getByRole("button", { name: "Tạo bài kiểm tra" }));
+    fireEvent.change(screen.getByLabelText(/Tên bài kiểm tra/), {
+      target: { value: "Bài thử" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Tạo bài" }));
+    await advance(450);
+    expect(screen.getByText("Đã lưu")).toBeInTheDocument();
+    await advance(900);
+    expect(screen.queryByText("Đã lưu")).toBeNull();
+    expect(screen.queryByLabelText(/Tên bài kiểm tra/)).toBeNull();
+  });
 });

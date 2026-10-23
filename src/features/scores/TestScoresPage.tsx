@@ -12,6 +12,7 @@ import { deleteTest, listTests, updateTest } from "../../data/repositories/tests
 import { listScores, saveScore } from "../../data/repositories/scores";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import { useSaveAction, type SaveAction } from "../../shared/hooks/useSaveAction";
+import { savedPeek } from "../closeAfterSaved";
 import { useAccess } from "../../data/repositories/access";
 import { useSaveStatus } from "../../shared/SaveStatus";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
@@ -466,7 +467,10 @@ function EditTestModal({
           className={s.form}
           onSubmit={async (event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            if (await action.submit()) onClose();
+            if (await action.submit()) {
+              await savedPeek();
+              onClose();
+            }
           }}
           noValidate
         >

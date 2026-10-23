@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useStore } from "../../data/store";
 import { createTest, DEFAULT_TEST_MAX } from "../../data/repositories/tests";
@@ -8,6 +8,7 @@ import { useSaveStatus } from "../../shared/SaveStatus";
 import { todayISO } from "../../shared/format";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { savedPeek } from "../closeAfterSaved";
 import {
   ActionFooter,
   Button,
@@ -33,6 +34,7 @@ export default function NewTestPage() {
   };
   const [form, setForm] = useState(initial);
   const [done, setDone] = useState<string | null>(null);
+  const created = useRef<string | null>(null);
   const action = useSaveAction({
     baseline: initial,
     value: form,
@@ -54,7 +56,7 @@ export default function NewTestPage() {
         date: value.date,
         max: Number(value.max.trim()),
       });
-      setDone(test.id);
+      created.current = test.id;
     },
   });
   const guard = useLeaveGuard(action.dirty && done === null);
@@ -69,8 +71,11 @@ export default function NewTestPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (await action.submit()) clearStatus();
-    else setStatus("error");
+    if (await action.submit()) {
+      clearStatus();
+      await savedPeek();
+      setDone(created.current);
+    } else setStatus("error");
   }
   const error = action.error
     ? action.error instanceof Error && action.error.message !== "save_failed"
@@ -154,7 +159,10 @@ export default function NewTestPage() {
         message="Bạn đang nhập dở. Tạo bài trước khi rời màn này?"
         saving={action.saving}
         onSave={async () => {
-          if (await action.submit()) guard.proceed();
+          if (await action.submit()) {
+            setDone(created.current);
+            guard.proceed();
+          }
         }}
         onDiscard={guard.proceed}
         onStay={guard.stay}

@@ -80,8 +80,8 @@
 }
 
 .resizer:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: inset var(--state-focus-ring);
   background: var(--state-hover-bg);
 }
 
