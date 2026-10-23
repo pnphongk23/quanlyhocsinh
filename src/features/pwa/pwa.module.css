@@ -1,6 +1,6 @@
 .page {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--z-toast);
   inset: 0;
   overflow-y: auto;
   background: #e9ecf2;
@@ -13,9 +13,9 @@
   width: 100%;
   min-height: 100%;
   margin: 0 auto;
-  padding: 48px 20px 28px;
+  padding: calc(var(--space-48) + var(--safe-top)) max(var(--page-x), var(--safe-right)) 28px max(var(--page-x), var(--safe-left));
   border-radius: 32px;
-  background: #f6f7f9;
+  background: var(--color-bg);
 }
 
 .content {
@@ -47,7 +47,7 @@
 
 .steps {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -57,7 +57,7 @@
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
   align-items: start;
-  gap: 12px;
+  gap: var(--space-12);
   padding: 12px 16px;
   border-radius: 24px;
   background: #fff;
@@ -98,7 +98,9 @@
 .more { display: grid; width: 46px; height: 40px; place-items: center; border: 2px solid #315cf5; border-radius: 14px; color: #171b24; }
 .menuMock span, .highlight { padding: 8px 12px; border-radius: 12px; background: #fff; font-weight: 650; white-space: nowrap; }
 .menuMock .highlight, .highlight { background: #e8edff; color: #2349c9; }
-.shareMock { gap: 12px; }
+.shareMock { gap: var(--space-12); }
+.shareMock { min-width: 0; }
+.shareMock .highlight { min-width: 0; white-space: normal; }
 .shareIcon { color: #2349c9; font-size: 24px; font-weight: 700; }
 
 .android {
@@ -115,18 +117,18 @@
   background: #315cf5;
   color: #fff;
   font: inherit;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 700;
   cursor: pointer;
 }
 
 .continue {
   position: fixed;
-  z-index: 1;
-  right: 20px;
-  bottom: max(16px, env(safe-area-inset-bottom));
-  left: 20px;
-  width: calc(100% - 40px);
+  z-index: var(--z-raised);
+  right: max(var(--page-x), var(--safe-right));
+  bottom: max(var(--space-16), var(--safe-bottom));
+  left: max(var(--page-x), var(--safe-left));
+  width: auto;
   box-shadow: 0 6px 20px #17203322;
 }
 
@@ -136,7 +138,7 @@
   .page { display: grid; place-items: center; padding: 24px; box-sizing: border-box; }
   .sheet { max-width: 760px; min-height: min(900px, calc(100dvh - 48px)); border-radius: 32px; padding: 40px; box-shadow: 0 12px 40px #1720331c; }
   .content { min-height: min(820px, calc(100dvh - 128px)); padding-bottom: 0; }
-  .step { grid-template-columns: 48px minmax(0, 1fr); gap: 16px; padding: 18px; }
+  .step { grid-template-columns: 48px minmax(0, 1fr); gap: var(--space-16); padding: 18px; }
   .number { width: 40px; height: 40px; }
   .android { margin-bottom: 14px; }
   .continue { position: static; width: 100%; margin-top: 16px; box-shadow: none; }

@@ -13,7 +13,7 @@ import { pendingCommandCount } from "../../data/outbox";
 import { scheduleSync } from "../../data/sync";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useOnline } from "../../shared/hooks/useOnline";
-import { Icon, Modal } from "../../shared/ui";
+import { Icon, Modal, PageHeader } from "../../shared/ui";
 import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
 import a from "../auth/auth.module.css";
 import { roleBadge } from "../auth/roleBadge";
@@ -155,7 +155,11 @@ function SettingsMobile() {
 
   return (
       <main className={`${s.page}${guardian ? ` ${s.guardianPage}` : ""}`}>
-        <h1 className={s.pageTitle}>Cài đặt</h1>
+        {guardian ? (
+          <PageHeader backTo="/ph" title="Cài đặt" />
+        ) : (
+          <h1 className={s.pageTitle}>Cài đặt</h1>
+        )}
       {pending > 0 && (
         <p className={s.banner} role="status">
           {online

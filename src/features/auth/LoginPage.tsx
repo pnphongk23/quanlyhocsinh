@@ -4,13 +4,10 @@ import { authFailureMessage, login } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
 import { Mascot } from "../../shared/ui/Mascot";
 import { PasswordField, PhoneField } from "./authUi";
+import { landingPathForSession } from "./landingPath";
 import s from "./auth.module.css";
 
-function landingPath() {
-  const session = getSession();
-  if (session?.me.memberships.length !== 1) return "/chon-vai-tro";
-  return session.me.memberships[0].role.scope_kind === "linked_students" ? "/ph" : "/lop";
-}
+const landingPath = () => landingPathForSession(getSession());
 
 export default function LoginPage() {
   const navigate = useNavigate();

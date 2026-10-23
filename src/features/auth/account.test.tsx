@@ -31,8 +31,9 @@ const memberships: MeResponse["memberships"] = [
 const user = { id: "user-1", phone: "+84900000001", display_name: "Cô Lan", must_change_password: false };
 let activeMembershipId: string | null = memberships[0].id;
 let registeredTeacher = false;
-const me = (): MeResponse => ({ user, active_membership_id: activeMembershipId, memberships });
-const loginResponse = () => ({ token: "test-token", expires_at: "2099-01-01T00:00:00Z", user, memberships, active_membership_id: activeMembershipId });
+let served: MeResponse["memberships"] = memberships;
+const me = (): MeResponse => ({ user, active_membership_id: activeMembershipId, memberships: served });
+const loginResponse = () => ({ token: "test-token", expires_at: "2099-01-01T00:00:00Z", user, memberships: served, active_membership_id: activeMembershipId });
 function Harness({ initial = "/dang-nhap" }: { initial?: string }) {
   return <MemoryRouter initialEntries={[initial]}><Routes>
     <Route path="/dang-nhap" element={<LoginPage/>}/><Route path="/dang-ky" element={<RegisterPage/>}/>
@@ -42,7 +43,7 @@ function Harness({ initial = "/dang-nhap" }: { initial?: string }) {
 }
 
 beforeEach(async () => {
-  await clearSession(); activeMembershipId = memberships[0].id; registeredTeacher = false; request.mockReset(); clearUserCache.mockReset().mockResolvedValue(undefined); beginLogout.mockReset().mockResolvedValue(undefined); cancelLogout.mockReset().mockResolvedValue(undefined); clearLogoutLock.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
+  await clearSession(); served = memberships; activeMembershipId = memberships[0].id; registeredTeacher = false; request.mockReset(); clearUserCache.mockReset().mockResolvedValue(undefined); beginLogout.mockReset().mockResolvedValue(undefined); cancelLogout.mockReset().mockResolvedValue(undefined); clearLogoutLock.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
   request.mockImplementation(async (endpoint: string, options?: { body?: { membership_id: string } }) => {
     if (endpoint === "POST /auth/login") return loginResponse();
     if (endpoint === "POST /auth/register") {
@@ -80,6 +81,48 @@ describe("account and auth screens", () => {
     expect(request).toHaveBeenCalledWith("POST /auth/login", expect.objectContaining({ body: expect.objectContaining({ phone: "+84900000001" }) }));
   });
 
+  async function loginAs(roles: MeResponse["memberships"], active: string | null) {
+    served = roles; activeMembershipId = active;
+    render(<Harness/>);
+    fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "900 000 001" } });
+    fireEvent.change(screen.getByLabelText("Mật khẩu"), { target: { value: "correct horse" } });
+    fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
+  }
+
+  it("skips the role picker when the account has no role and opens the guardian frame", async () => {
+    await loginAs([], null);
+    expect(await screen.findByRole("heading", { name: "Khung phụ huynh" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Chọn vai trò" })).not.toBeInTheDocument();
+  });
+
+  it("sends a signed-in account without roles from the picker to the guardian frame", async () => {
+    served = []; activeMembershipId = null;
+    await login("+84900000001", "x");
+    render(<Harness initial="/chon-vai-tro"/>);
+    expect(await screen.findByRole("heading", { name: "Khung phụ huynh" })).toBeInTheDocument();
+  });
+
+  it("goes straight to the only role without showing the picker", async () => {
+    await loginAs([memberships[0]], memberships[0].id);
+    expect(await screen.findByRole("heading", { name: "Khung nhân sự" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Chọn vai trò" })).not.toBeInTheDocument();
+  });
+
+  it("selects the only role itself when the server has no active membership yet", async () => {
+    served = [memberships[1]]; activeMembershipId = null;
+    await login("+84900000001", "x");
+    render(<Harness initial="/chon-vai-tro"/>);
+    expect(await screen.findByRole("heading", { name: "Khung phụ huynh" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Chọn vai trò" })).not.toBeInTheDocument();
+    expect(request).toHaveBeenCalledWith("PUT /session/membership", expect.objectContaining({ body: { membership_id: "guardian-1" } }));
+  });
+
+  it("shows the picker with the plural wording only for two or more roles", async () => {
+    await loginAs(memberships, null);
+    expect(await screen.findByRole("heading", { name: "Chọn vai trò" })).toBeInTheDocument();
+    expect(screen.getByText(/có hơn một vai trò/)).toBeInTheDocument();
+  });
+
   it("registers a teacher through the workspace API", async () => {
     render(<Harness initial="/dang-ky"/>);
     fireEvent.change(screen.getByLabelText("Tên hiển thị"), { target: { value: "Cô Lan" } });
@@ -112,6 +155,13 @@ describe("account and auth screens", () => {
     fireEvent.change(screen.getByLabelText("Nhập lại mật khẩu mới"), { target: { value: "new-password!" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu mật khẩu mới" }));
     await waitFor(() => expect(request).toHaveBeenCalledWith("POST /auth/change-password", expect.objectContaining({ body: { current_password: "old-password", new_password: "new-password!" } })));
+  });
+
+  it("gives a guardian a back button from mobile settings to the guardian frame", async () => {
+    served = [memberships[1]]; activeMembershipId = "guardian-1";
+    await login("+84900000001", "x");
+    render(<Harness initial="/cai-dat"/>);
+    expect(await screen.findByRole("link", { name: "Quay lại" })).toHaveAttribute("href", "/ph");
   });
 
   it("keeps a signed-out visitor on login and blocks logout when outbox has pending work", async () => {
