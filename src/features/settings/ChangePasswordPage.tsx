@@ -8,6 +8,7 @@ import { Button, Icon } from "../../shared/ui";
 import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
 import a from "../auth/auth.module.css";
 import s from "./settings.module.css";
+import { savedPeek } from "../closeAfterSaved";
 
 const PASSWORD_MIN_LENGTH = 8;
 
@@ -44,7 +45,10 @@ export default function ChangePasswordPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (await action.submit()) navigate("/cai-dat", { replace: true });
+    if (await action.submit()) {
+      await savedPeek();
+      navigate("/cai-dat", { replace: true });
+    }
   }
 
   return (

@@ -26,6 +26,7 @@ import {
 import AddStudentModal from "./AddStudentModal";
 import StudentsDesktop from "./StudentsDesktop";
 import s from "./students.module.css";
+import { savedPeek } from "../closeAfterSaved";
 
 export default function StudentsPage() {
   useStore();
@@ -122,7 +123,7 @@ export default function StudentsPage() {
             disabled={!markLeft.canSave}
             loading={markLeft.saving}
             done={markLeft.justSaved}
-            onClick={async () => { if (await markLeft.submit()) setLeavingId(null); }}
+            onClick={async () => { if (await markLeft.submit()) { await savedPeek(); setLeavingId(null); } }}
           >Xác nhận nghỉ học</Button>
         </div>
       </Modal>

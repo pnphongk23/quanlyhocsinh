@@ -5,6 +5,7 @@ import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, Input, Modal, UnsavedChangesDialog } from "../../shared/ui";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./students.module.css";
+import { savedPeek } from "../closeAfterSaved";
 
 const EMPTY = { name: "", phone: "" };
 
@@ -55,7 +56,10 @@ export default function AddStudentModal({
           className={s.form}
           onSubmit={async (event) => {
             event.preventDefault();
-            if (await action.submit()) onClose();
+            if (await action.submit()) {
+              await savedPeek();
+              onClose();
+            }
           }}
         >
           <Input

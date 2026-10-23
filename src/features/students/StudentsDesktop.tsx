@@ -18,6 +18,7 @@ import { ClassOptionsMenu, type ClassOption } from "../classes/ClassOptionsMenu"
 import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
 import s from "./StudentsDesktop.module.css";
 import d from "../class-space/desktop.module.css";
+import { savedPeek } from "../closeAfterSaved";
 
 /**
  * Tỉ lệ chuyên cần dạng "17/18": số buổi có đi học (Có mặt / Muộn / Có phép —
@@ -254,7 +255,10 @@ function AddStudentModal({
   const close = useGuardedClose(action.dirty, onClose);
   async function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (await action.submit()) onClose();
+    if (await action.submit()) {
+      await savedPeek();
+      onClose();
+    }
   }
   return (
     <>
@@ -340,7 +344,10 @@ function PhoneModal({
   const close = useGuardedClose(action.dirty, onClose);
   async function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (await action.submit()) onClose();
+    if (await action.submit()) {
+      await savedPeek();
+      onClose();
+    }
   }
   return (
     <>
@@ -411,7 +418,10 @@ function LeaveStudentModal({
     ? errorText(action.error, "Không thể cập nhật trạng thái học sinh.")
     : "";
   async function confirm() {
-    if (await action.submit()) onClose();
+    if (await action.submit()) {
+      await savedPeek();
+      onClose();
+    }
   }
   return (
     <Modal
