@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import s from "./ui.module.css";
+import { Button } from "./Button";
 
 export interface UnsavedChangesDialogProps {
   open: boolean;
@@ -7,6 +8,8 @@ export interface UnsavedChangesDialogProps {
   message?: string;
   /** Đang lưu: khoá nút Lưu và hiện `aria-busy`. */
   saving?: boolean;
+  /** Vừa lưu xong, đang chờ rời màn: nút Lưu hiện "Đã lưu". */
+  done?: boolean;
   onSave: () => void;
   onDiscard: () => void;
   onStay: () => void;
@@ -21,6 +24,7 @@ export function UnsavedChangesDialog({
   title = "Chưa lưu thay đổi",
   message = "Bạn đang sửa dở. Lưu trước khi rời màn này?",
   saving = false,
+  done = false,
   onSave,
   onDiscard,
   onStay,
@@ -45,19 +49,20 @@ export function UnsavedChangesDialog({
       <p className={s.confirmTitle}>{title}</p>
       <p className={s.confirmBody}>{message}</p>
       <div className={s.confirmActions}>
-        <button
-          type="button"
-          className={s.confirmButton + " " + s.confirmPrimary}
-          disabled={saving}
-          aria-busy={saving || undefined}
+        <Button
+          size="lg"
+          block
+          loading={saving}
+          done={done}
+          disabled={done}
           onClick={onSave}
         >
           Lưu
-        </button>
+        </Button>
         <button
           type="button"
           className={s.confirmButton + " " + s.confirmDiscard}
-          disabled={saving}
+          disabled={saving || done}
           onClick={onDiscard}
         >
           Bỏ thay đổi

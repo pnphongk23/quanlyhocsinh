@@ -42,7 +42,7 @@ import {
 } from "./homeworkModel";
 import s from "./HomeworkDesktop.module.css";
 import d from "../class-space/desktop.module.css";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek, useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 
 const LEVEL_CLASS: Record<HomeworkLevel, string> = {
   excellent: s.levelExcellent,
@@ -97,6 +97,7 @@ export default function HomeworkDesktop({
   );
   const [editor, setEditor] = useState<Editor | null>(null);
   const [editorState, setEditorState] = useState<EditorState>(IDLE_EDITOR_STATE);
+  const leave = useSaveAndLeave();
   const editorSubmit = useRef<(() => Promise<boolean>) | null>(null);
   const [pendingEditor, setPendingEditor] = useState<{ apply: () => void } | null>(
     null,
@@ -611,20 +612,25 @@ export default function HomeworkDesktop({
           title="Bài tập chưa lưu"
           message="Bạn đang soạn dở phần bài tập. Lưu trước khi chuyển?"
           saving={false}
-          onSave={async () => {
+          done={leave.done}
+          onSave={() => {
             if (!pendingEditor) return;
             const { apply } = pendingEditor;
-            if (await editorSubmit.current?.()) {
+            return leave.run(async () => Boolean(await editorSubmit.current?.()), () => {
               setPendingEditor(null);
               apply();
-            }
+            });
           }}
           onDiscard={() => {
+            leave.cancel();
             if (!pendingEditor) return;
             pendingEditor.apply();
             setPendingEditor(null);
           }}
-          onStay={() => setPendingEditor(null)}
+          onStay={() => {
+            leave.cancel();
+            setPendingEditor(null);
+          }}
         />
       )}
 
@@ -735,15 +741,14 @@ function SectionForm({
         ? action.error.message
         : "Không lưu được phần bài tập.";
 
-  async function submitForm() {
+  const saved = useSavedPeek();
+  /** `withPeek` false: chỉ lưu (hộp thoại rời màn tự chờ và tự chuyển sau khi hiện "Đã lưu"). */
+  async function submitForm(withPeek = true) {
     const ok = await action.submit();
-    if (ok) {
-      await savedPeek();
-      onDone();
-    }
+    if (ok && withPeek && (await saved.peek())) onDone();
     return ok;
   }
-  submitRef.current = submitForm;
+  submitRef.current = () => submitForm(false);
   useEffect(() => {
     onStateChange({
       dirty: action.dirty,
@@ -759,7 +764,7 @@ function SectionForm({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void submitForm();
+    void submitForm(true);
   }
 
   return (
@@ -838,7 +843,7 @@ function SectionForm({
       )}
 
       <div className={s.formActions}>
-        <Button variant="neutral" onClick={onCancel}>
+        <Button variant="neutral" onClick={() => { saved.cancel(); onCancel(); }}>
           Hủy
         </Button>
         <Button

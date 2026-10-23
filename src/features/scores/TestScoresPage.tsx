@@ -12,7 +12,7 @@ import { deleteTest, listTests, updateTest } from "../../data/repositories/tests
 import { listScores, saveScore } from "../../data/repositories/scores";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import { useSaveAction, type SaveAction } from "../../shared/hooks/useSaveAction";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek, useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import { useAccess } from "../../data/repositories/access";
 import { useSaveStatus } from "../../shared/SaveStatus";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
@@ -111,6 +111,7 @@ export default function TestScoresPage() {
   });
   const dirty = action.dirty;
   const guard = useLeaveGuard(dirty);
+  const leave = useSaveAndLeave();
   // Bấm một ô trong bảng điểm sẽ mở kèm `?hoc-sinh=…` để focus đúng ô của em đó.
   const [searchParams] = useSearchParams();
   const focusStudentId = searchParams.get("hoc-sinh") ?? "";
@@ -382,14 +383,18 @@ export default function TestScoresPage() {
       <UnsavedChangesDialog
         open={guard.blocked}
         testName={test.name}
-        onSave={async () => {
-          if (await action.submit()) guard.proceed();
-        }}
+        saving={action.saving}
+        done={leave.done}
+        onSave={() => leave.run(action.submit, guard.proceed)}
         onDiscard={() => {
+          leave.cancel();
           discardDrafts();
           guard.proceed();
         }}
-        onStay={guard.stay}
+        onStay={() => {
+          leave.cancel();
+          guard.stay();
+        }}
       />
       {editing && (
         <EditTestModal test={test} onClose={() => setEditing(false)} />
@@ -451,7 +456,11 @@ function EditTestModal({
         max: Number(value.max.trim()),
       }),
   });
-  const closeNow = onClose;
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
   const guard = useUnsavedCloseGuard(action, { onClose: closeNow });
   const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
   const error = action.error
@@ -467,10 +476,7 @@ function EditTestModal({
           className={s.form}
           onSubmit={async (event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            if (await action.submit()) {
-              await savedPeek();
-              onClose();
-            }
+            if ((await action.submit()) && (await saved.peek())) onClose();
           }}
           noValidate
         >

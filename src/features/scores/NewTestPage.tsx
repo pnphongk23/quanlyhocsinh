@@ -8,7 +8,7 @@ import { useSaveStatus } from "../../shared/SaveStatus";
 import { todayISO } from "../../shared/format";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek, useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import {
   ActionFooter,
   Button,
@@ -60,6 +60,8 @@ export default function NewTestPage() {
     },
   });
   const guard = useLeaveGuard(action.dirty && done === null);
+  const saved = useSavedPeek();
+  const leave = useSaveAndLeave();
   const listPath = `/lop/${classId}/bai-kiem-tra`;
   // Điều hướng sau khi state "đã lưu" được render để không bị chặn bởi chính màn này.
   useEffect(() => {
@@ -73,8 +75,7 @@ export default function NewTestPage() {
     event.preventDefault();
     if (await action.submit()) {
       clearStatus();
-      await savedPeek();
-      setDone(created.current);
+      if (await saved.peek()) setDone(created.current);
     } else setStatus("error");
   }
   const error = action.error
@@ -158,14 +159,21 @@ export default function NewTestPage() {
         title="Chưa tạo bài kiểm tra"
         message="Bạn đang nhập dở. Tạo bài trước khi rời màn này?"
         saving={action.saving}
-        onSave={async () => {
-          if (await action.submit()) {
+        done={leave.done}
+        onSave={() =>
+          leave.run(action.submit, () => {
             setDone(created.current);
             guard.proceed();
-          }
+          })
+        }
+        onDiscard={() => {
+          leave.cancel();
+          guard.proceed();
         }}
-        onDiscard={guard.proceed}
-        onStay={guard.stay}
+        onStay={() => {
+          leave.cancel();
+          guard.stay();
+        }}
       />
     </section>
   );

@@ -14,7 +14,7 @@ import { listStudents } from "../../data/repositories/students";
 import { useAccess } from "../../data/repositories/access";
 import { useStore } from "../../data/store";
 import type { Class, Student, Test } from "../../data/types";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 import { todayISO } from "../../shared/format";
 import {
   Button,
@@ -349,14 +349,16 @@ function TestFormModal({
       else createTest({ classId, ...input });
     },
   });
+  const saved = useSavedPeek();
   async function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (await action.submit()) {
-      await savedPeek();
-      onClose();
-    }
+    if ((await action.submit()) && (await saved.peek())) onClose();
   }
-  const requestClose = () => (action.dirty ? setAsking(true) : onClose());
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
+  const requestClose = () => (action.dirty ? setAsking(true) : closeNow());
   return (
     <>
       <Modal
@@ -428,9 +430,13 @@ function TestFormModal({
           title="Bài kiểm tra chưa lưu"
           message="Bạn đang nhập dở thông tin bài kiểm tra. Lưu trước khi đóng?"
           saving={action.saving}
+          done={action.justSaved}
           onSave={() => void submit()}
-          onDiscard={onClose}
-          onStay={() => setAsking(false)}
+          onDiscard={closeNow}
+          onStay={() => {
+            saved.cancel();
+            setAsking(false);
+          }}
         />
       )}
     </>

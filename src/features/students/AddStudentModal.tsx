@@ -5,7 +5,7 @@ import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, Input, Modal, UnsavedChangesDialog } from "../../shared/ui";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./students.module.css";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 
 const EMPTY = { name: "", phone: "" };
 
@@ -30,7 +30,11 @@ export default function AddStudentModal({
         enrolledAt: todayISO(),
       }),
   });
-  const closeNow = onClose;
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
   const guard = useUnsavedCloseGuard(action, { onClose: closeNow });
   const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
   const failed = action.error
@@ -56,10 +60,7 @@ export default function AddStudentModal({
           className={s.form}
           onSubmit={async (event) => {
             event.preventDefault();
-            if (await action.submit()) {
-              await savedPeek();
-              onClose();
-            }
+            if ((await action.submit()) && (await saved.peek())) onClose();
           }}
         >
           <Input

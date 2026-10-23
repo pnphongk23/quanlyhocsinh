@@ -8,7 +8,7 @@ import { Button, Icon } from "../../shared/ui";
 import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
 import a from "../auth/auth.module.css";
 import s from "./settings.module.css";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 
 const PASSWORD_MIN_LENGTH = 8;
 
@@ -23,6 +23,7 @@ export function isPasswordFormValid(v: typeof EMPTY_PASSWORD_FORM): boolean {
 export default function ChangePasswordPage() {
   const desktop = useIsDesktop();
   const navigate = useNavigate();
+  const saved = useSavedPeek();
   const [form, setForm] = useState(EMPTY_PASSWORD_FORM);
   const { current, next, confirm } = form;
   const setField = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -45,10 +46,7 @@ export default function ChangePasswordPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (await action.submit()) {
-      await savedPeek();
-      navigate("/cai-dat", { replace: true });
-    }
+    if ((await action.submit()) && (await saved.peek())) navigate("/cai-dat", { replace: true });
   }
 
   return (

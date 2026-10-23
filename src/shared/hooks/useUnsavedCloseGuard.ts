@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import type { BeforeClose } from "../ui/useGuardedClose";
 import type { UnsavedChangesDialogProps } from "../ui/UnsavedChangesDialog";
 import type { SaveAction } from "./useSaveAction";
+import { useSaveAndLeave } from "./useSavedPeek";
 
 export interface UnsavedCloseGuardOptions {
   /** Đóng modal/sheet (thường `() => setOpen(false)`). Gọi sau khi Lưu thành công hoặc Bỏ thay đổi. */
@@ -22,6 +23,7 @@ export function useUnsavedCloseGuard(
   { onClose, onDiscard, title, message }: UnsavedCloseGuardOptions,
 ): { beforeClose: BeforeClose; dialogProps: UnsavedChangesDialogProps } {
   const [asking, setAsking] = useState(false);
+  const leave = useSaveAndLeave();
   const beforeClose = useCallback(() => {
     if (action.saving) return false;
     if (!action.dirty) return true;
@@ -35,18 +37,22 @@ export function useUnsavedCloseGuard(
       title,
       message,
       saving: action.saving,
-      onSave: async () => {
-        if (await action.submit()) {
+      done: leave.done,
+      onSave: () =>
+        leave.run(action.submit, () => {
           setAsking(false);
           onClose();
-        }
-      },
+        }),
       onDiscard: () => {
+        leave.cancel();
         onDiscard?.();
         setAsking(false);
         onClose();
       },
-      onStay: () => setAsking(false),
+      onStay: () => {
+        leave.cancel();
+        setAsking(false);
+      },
     },
   };
 }

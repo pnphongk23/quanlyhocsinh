@@ -51,7 +51,7 @@ import {
   type HomeworkView,
 } from "./homeworkModel";
 import styles from "./HomeworkPanel.module.css";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 
 /* ------------------------------------------------------------------ icons */
 
@@ -630,7 +630,11 @@ function SectionEditor({
       });
     },
   });
-  const closeNow = onClose;
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
   const dirtyNow = action.dirty;
   useEffect(() => {
     onDirtyChange?.(dirtyNow);
@@ -663,8 +667,7 @@ function SectionEditor({
   async function submit() {
     if (await action.submit()) {
       save.clearStatus();
-      await savedPeek();
-      onClose();
+      if (await saved.peek()) onClose();
     } else {
       save.setStatus("error");
     }

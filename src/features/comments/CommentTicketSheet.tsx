@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   HOMEWORK_KIND_LABELS,
   HOMEWORK_LEVEL_LABELS,
@@ -27,7 +27,7 @@ import {
 import { clearDraft, readDraft, writeDraft } from "./draftStore";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./CommentsPanel.module.css";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 
 export interface SheetHomeworkSection {
   id: string;
@@ -175,10 +175,14 @@ export default function CommentTicketSheet({
       clearDraft(session.id, row.student.id);
     },
   });
+  const saved = useSavedPeek();
   const closeNow = () => {
+    saved.cancel();
     clearDraft(session.id, row.student.id);
     onClose();
   };
+  // Đổi sang học sinh khác khi đang chờ đóng: bỏ lần đóng cũ.
+  useEffect(() => saved.cancel, [saved, row.student.id]);
   const guard = useUnsavedCloseGuard(action, { onClose: closeNow });
   const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
   const error = action.error
@@ -218,10 +222,7 @@ export default function CommentTicketSheet({
   }
 
   async function save() {
-    if (await action.submit()) {
-      await savedPeek();
-      onClose();
-    }
+    if ((await action.submit()) && (await saved.peek())) onClose();
   }
 
   const pendingLine =

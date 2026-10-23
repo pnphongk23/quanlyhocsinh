@@ -15,7 +15,7 @@ import {
   UnsavedChangesDialog,
 } from "../../shared/ui";
 import { WeekdayPicker } from "./WeekdayPicker";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek, useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import s from "./classesForm.module.css";
 
 const EMPTY = { name: "", days: [] as number[], time: "18:30" };
@@ -38,6 +38,8 @@ export default function NewClassPage() {
       createClass({ name: value.name, weekdays: value.days, time: value.time }),
   });
   const guard = useLeaveGuard(action.dirty && !done);
+  const saved = useSavedPeek();
+  const leave = useSaveAndLeave();
   // Điều hướng sau khi state "đã lưu" được render để không bị chặn bởi chính màn này.
   useEffect(() => {
     if (done) navigate("/lop", { replace: true });
@@ -47,8 +49,7 @@ export default function NewClassPage() {
     event.preventDefault();
     if (await action.submit()) {
       save.clearStatus();
-      await savedPeek();
-      setDone(true);
+      if (await saved.peek()) setDone(true);
     } else {
       save.setStatus("error");
     }
@@ -125,14 +126,22 @@ export default function NewClassPage() {
       <UnsavedChangesDialog
         open={guard.blocked}
         saving={action.saving}
-        onSave={async () => {
-          if (await action.submit()) {
-            save.clearStatus();
-            guard.proceed();
-          }
+        done={leave.done}
+        onSave={() =>
+          leave.run(async () => {
+            const ok = await action.submit();
+            if (ok) save.clearStatus();
+            return ok;
+          }, guard.proceed)
+        }
+        onDiscard={() => {
+          leave.cancel();
+          guard.proceed();
         }}
-        onDiscard={guard.proceed}
-        onStay={guard.stay}
+        onStay={() => {
+          leave.cancel();
+          guard.stay();
+        }}
       />
     </section>
   );

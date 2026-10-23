@@ -6,7 +6,7 @@ import { useSaveStatus } from "../../shared/SaveStatus";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, Input, Modal, UnsavedChangesDialog } from "../../shared/ui";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 import s from "./classesForm.module.css";
 
 export function EditClassModal({
@@ -28,7 +28,11 @@ export function EditClassModal({
     validate: (value) => value.trim() !== "",
     save: (value) => updateClass(classId, { name: value }),
   });
-  const closeNow = onClose;
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
   const guard = useUnsavedCloseGuard(action, { onClose: closeNow });
   const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
   if (!access.can("classes", "write")) return null;
@@ -37,8 +41,7 @@ export function EditClassModal({
     event.preventDefault();
     if (await action.submit()) {
       save.clearStatus();
-      await savedPeek();
-      onClose();
+      if (await saved.peek()) onClose();
     } else {
       save.setStatus("error");
     }
@@ -68,7 +71,7 @@ export function EditClassModal({
             variant="secondary"
             onClick={() => {
               if (guard.beforeClose()) {
-                onClose();
+                closeNow();
                 onEditSchedule();
               }
             }}

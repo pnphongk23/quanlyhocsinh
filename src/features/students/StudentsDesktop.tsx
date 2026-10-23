@@ -18,7 +18,7 @@ import { ClassOptionsMenu, type ClassOption } from "../classes/ClassOptionsMenu"
 import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
 import s from "./StudentsDesktop.module.css";
 import d from "../class-space/desktop.module.css";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 
 /**
  * Tỉ lệ chuyên cần dạng "17/18": số buổi có đi học (Có mặt / Muộn / Có phép —
@@ -252,13 +252,15 @@ function AddStudentModal({
         enrolledAt: todayISO(),
       }),
   });
-  const close = useGuardedClose(action.dirty, onClose);
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
+  const close = useGuardedClose(action.dirty, closeNow);
   async function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (await action.submit()) {
-      await savedPeek();
-      onClose();
-    }
+    if ((await action.submit()) && (await saved.peek())) onClose();
   }
   return (
     <>
@@ -313,9 +315,13 @@ function AddStudentModal({
           title="Học sinh chưa lưu"
           message="Bạn đang nhập dở thông tin học sinh. Lưu trước khi đóng?"
           saving={action.saving}
+          done={action.justSaved}
           onSave={() => void submit()}
-          onDiscard={onClose}
-          onStay={close.stay}
+          onDiscard={closeNow}
+          onStay={() => {
+            saved.cancel();
+            close.stay();
+          }}
         />
       )}
     </>
@@ -341,13 +347,15 @@ function PhoneModal({
     validate: () => !phoneInvalid,
     save: (next) => updateStudentPhone(student.id, next),
   });
-  const close = useGuardedClose(action.dirty, onClose);
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
+  const close = useGuardedClose(action.dirty, closeNow);
   async function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (await action.submit()) {
-      await savedPeek();
-      onClose();
-    }
+    if ((await action.submit()) && (await saved.peek())) onClose();
   }
   return (
     <>
@@ -394,9 +402,13 @@ function PhoneModal({
         title="Số điện thoại chưa lưu"
         message="Bạn đang sửa dở số điện thoại. Lưu trước khi đóng?"
         saving={action.saving}
+        done={action.justSaved}
         onSave={() => void submit()}
-        onDiscard={onClose}
-        onStay={close.stay}
+        onDiscard={closeNow}
+        onStay={() => {
+            saved.cancel();
+            close.stay();
+          }}
       />
     </>
   );
@@ -417,17 +429,19 @@ function LeaveStudentModal({
   const error = action.error
     ? errorText(action.error, "Không thể cập nhật trạng thái học sinh.")
     : "";
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
   async function confirm() {
-    if (await action.submit()) {
-      await savedPeek();
-      onClose();
-    }
+    if ((await action.submit()) && (await saved.peek())) onClose();
   }
   return (
     <Modal
       title="Đánh dấu học sinh đã nghỉ?"
       open
-      onClose={onClose}
+      onClose={closeNow}
       footer={
         <Button
           variant="danger"

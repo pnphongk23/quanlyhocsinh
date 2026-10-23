@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import {
   Link,
   useNavigate,
@@ -84,6 +85,7 @@ export default function SessionDetailPage() {
   const cancelling = useCancelSession(() =>
     navigate(`/lop/${classId}/buoi-hoc`),
   );
+  const leave = useSaveAndLeave();
   const saveRef = useRef<(() => unknown) | null>(null);
   const homeworkSaveRef = useRef<(() => unknown) | null>(null);
   const [leaving, setLeaving] = useState(false);
@@ -151,25 +153,34 @@ export default function SessionDetailPage() {
       title="Chưa lưu thay đổi"
       message="Bạn đang điểm danh hoặc chấm bài dở. Lưu trước khi rời màn này?"
       saving={leaving}
-      onSave={async () => {
-        setLeaving(true);
-        try {
-          // Bản mobile của BTVN chưa có hàm lưu để gọi từ đây: ở lại để người dùng bấm Lưu.
-          if (homeworkDirty && !homeworkSaveRef.current) {
-            guard.stay();
-            return;
+      done={leave.done}
+      onSave={() =>
+        leave.run(async () => {
+          setLeaving(true);
+          try {
+            // Bản mobile của BTVN chưa có hàm lưu để gọi từ đây: ở lại để người dùng bấm Lưu.
+            if (homeworkDirty && !homeworkSaveRef.current) {
+              guard.stay();
+              return false;
+            }
+            const results = [
+              await saveRef.current?.(),
+              await homeworkSaveRef.current?.(),
+            ];
+            return results.every((result) => result !== false);
+          } finally {
+            setLeaving(false);
           }
-          const results = [
-            await saveRef.current?.(),
-            await homeworkSaveRef.current?.(),
-          ];
-          if (results.every((result) => result !== false)) guard.proceed();
-        } finally {
-          setLeaving(false);
-        }
+        }, guard.proceed)
+      }
+      onDiscard={() => {
+        leave.cancel();
+        guard.proceed();
       }}
-      onDiscard={guard.proceed}
-      onStay={guard.stay}
+      onStay={() => {
+        leave.cancel();
+        guard.stay();
+      }}
     />
   );
 

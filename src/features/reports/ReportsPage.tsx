@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import { useNavigate, useParams } from "react-router-dom";
 import { Mascot } from "../../shared/ui/Mascot";
 import { getClass } from "../../data/repositories/classes";
@@ -146,6 +147,7 @@ export default function ReportsPage() {
       commentDraft.value.trim() !== (draftRow.record?.generalComment ?? ""),
   );
   const guard = useLeaveGuard(commentDirty);
+  const leave = useSaveAndLeave();
   const [publishing, setPublishing] = useState<"row" | "all" | null>(null);
   const publishLock = useRef(false);
   const commentSaving = useRef<string | null>(null);
@@ -328,15 +330,22 @@ export default function ReportsPage() {
         open={guard.blocked}
         title="Nhận xét chung chưa lưu"
         message="Bạn đang sửa dở nhận xét chung. Lưu trước khi rời màn này?"
-        onSave={async () => {
-          if (commentDraft) await persistComment(commentDraft.value);
-          guard.proceed();
-        }}
+        done={leave.done}
+        onSave={() =>
+          leave.run(async () => {
+            if (commentDraft) await persistComment(commentDraft.value);
+            return true;
+          }, guard.proceed)
+        }
         onDiscard={() => {
+          leave.cancel();
           setCommentDraft(null);
           guard.proceed();
         }}
-        onStay={guard.stay}
+        onStay={() => {
+          leave.cancel();
+          guard.stay();
+        }}
       />
       {message && (
         <span role="status" className={styles.successMessage}>

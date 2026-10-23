@@ -11,7 +11,7 @@ import { useSaveAction, deepEqual } from "../../shared/hooks/useSaveAction";
 import { Button, Sheet, UnsavedChangesDialog } from "../../shared/ui";
 import SaveStatus from "../../shared/SaveStatus";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 import s from "./sessions.module.css";
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -62,7 +62,11 @@ export default function AddSessionModal({
       }
     },
   });
-  const closeNow = onClose;
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
   const guard = useUnsavedCloseGuard({ dirty: !deepEqual(form, initial), saving: action.saving, submit: action.submit }, { onClose: closeNow });
   const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
 
@@ -70,10 +74,7 @@ export default function AddSessionModal({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (await action.submit()) {
-      await savedPeek();
-      onClose();
-    }
+    if ((await action.submit()) && (await saved.peek())) onClose();
   }
   const error = action.error
     ? action.error instanceof Error && action.error.message !== "save_failed"

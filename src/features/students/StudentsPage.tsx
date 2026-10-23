@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "react-router-dom";
 import {
   listStudents,
@@ -26,7 +26,7 @@ import {
 import AddStudentModal from "./AddStudentModal";
 import StudentsDesktop from "./StudentsDesktop";
 import s from "./students.module.css";
-import { savedPeek } from "../closeAfterSaved";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 
 export default function StudentsPage() {
   useStore();
@@ -38,6 +38,9 @@ export default function StudentsPage() {
   const absenceWarnings = active.filter((student) => studentAbsenceWarning(student.id)).length;
   const [adding, setAdding] = useState(false);
   const [leavingId, setLeavingId] = useState<string | null>(null);
+  const saved = useSavedPeek();
+  // Đóng tay hoặc mở học sinh khác: bỏ lần đóng đang chờ của học sinh cũ.
+  useEffect(() => saved.cancel, [saved, leavingId]);
   const [menuStudentId, setMenuStudentId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const markLeft = useSaveAction<string | null>({
@@ -123,7 +126,7 @@ export default function StudentsPage() {
             disabled={!markLeft.canSave}
             loading={markLeft.saving}
             done={markLeft.justSaved}
-            onClick={async () => { if (await markLeft.submit()) { await savedPeek(); setLeavingId(null); } }}
+            onClick={async () => { if ((await markLeft.submit()) && (await saved.peek())) setLeavingId(null); }}
           >Xác nhận nghỉ học</Button>
         </div>
       </Modal>

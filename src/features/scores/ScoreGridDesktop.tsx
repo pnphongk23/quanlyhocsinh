@@ -1,4 +1,5 @@
 import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
+import { useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import { Link } from "react-router-dom";
 import { getClass } from "../../data/repositories/classes";
 import { listTests } from "../../data/repositories/tests";
@@ -105,6 +106,7 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
     },
   });
   const guard = useLeaveGuard(action.dirty);
+  const leave = useSaveAndLeave();
 
   if (!klass) return null;
 
@@ -331,14 +333,17 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
           title="Điểm chưa lưu"
           message="Bạn đang nhập điểm dở. Lưu trước khi rời màn này?"
           saving={action.saving}
-          onSave={async () => {
-            if (await action.submit()) guard.proceed();
-          }}
+          done={leave.done}
+          onSave={() => leave.run(action.submit, guard.proceed)}
           onDiscard={() => {
+            leave.cancel();
             setDrafts({});
             guard.proceed();
           }}
-          onStay={guard.stay}
+          onStay={() => {
+            leave.cancel();
+            guard.stay();
+          }}
         />
       )}
     </main>
