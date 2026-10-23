@@ -13,7 +13,7 @@ async function seed(page, role) {
   await page.addInitScript((value) => localStorage.setItem("qlh.session.v1", JSON.stringify(value)), session);
   await page.goto(base + "/dang-nhap", { waitUntil: "domcontentloaded" });
   await page.evaluate(async ({ role, identity, entities }) => {
-    const req = indexedDB.open("qlh-web", 1);
+    const req = indexedDB.open("qlh-web", 10);
     const db = await new Promise((resolve, reject) => {
       req.onupgradeneeded = () => {
         const indexes = { classes: ["key", "identity", "id"], students: ["key", "identity", "class_id", "id"], sessions: ["key", "identity", "class_id", "date", "id"], attendance: ["key", "identity", "session_id", "student_id"], tests: ["key", "identity", "class_id", "date", "id"], scores: ["key", "identity", "test_id", "student_id"], slips: ["key", "identity", "session_id", "student_id"], homeworkSections: ["key", "identity", "session_id", "id"], homeworkGrades: ["key", "identity", "section_id", "student_id"], reports: ["key", "identity", "class_id", "student_id", "month"], reportPublications: ["key", "identity", "report_id", "publication_no"], outbox: ["id", "identity", "status", "created_at"], meta: ["key", "identity"] };
