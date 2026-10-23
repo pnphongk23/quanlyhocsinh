@@ -5,7 +5,9 @@
   border-radius: var(--radius-pill);
   font-size: var(--text-sm);
   font-weight: 600;
-  white-space: nowrap;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .unsaved {
   background: var(--color-warning-soft);
