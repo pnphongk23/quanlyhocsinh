@@ -3,7 +3,7 @@
 .pageDetail {
   display: flex;
   flex-direction: column;
-  gap: var(--page-gap, 12px);
+  gap: var(--page-gap);
   min-width: 0;
 }
 .page {
@@ -51,7 +51,7 @@
 
 /* Lớp dùng lại */
 .pressable {
-  transition: transform 100ms var(--ease-standard);
+  transition: transform var(--dur-press) var(--ease-standard);
 }
 .pressable:active:not(:disabled) {
   transform: scale(0.98);

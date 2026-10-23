@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes } from "react";
+import { useEffect, type ButtonHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import s from "./fab.module.css";
 
 export interface FabProps
@@ -6,8 +7,19 @@ export interface FabProps
   label: string;
 }
 
+/**
+ * Nút nổi neo theo màn hình. Render qua portal ra `document.body` vì tổ tiên có
+ * `transform` (ví dụ `.page` sau animation chuyển trang) biến `position: fixed`
+ * thành neo theo tổ tiên đó. Đồng thời đặt `data-has-fab` trên `<html>` để
+ * `--fab-pad` chừa đáy vùng nội dung, thẻ cuối và nút ⋯ không bị che.
+ */
 export function Fab({ label, className, type = "button", ...props }: FabProps) {
-  return (
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-has-fab", "");
+    return () => root.removeAttribute("data-has-fab");
+  }, []);
+  return createPortal(
     <button
       type={type}
       aria-label={label}
@@ -16,7 +28,8 @@ export function Fab({ label, className, type = "button", ...props }: FabProps) {
       {...props}
     >
       <span aria-hidden="true" className={s.plus}>+</span>
-    </button>
+    </button>,
+    document.body,
   );
 }
 export default Fab;

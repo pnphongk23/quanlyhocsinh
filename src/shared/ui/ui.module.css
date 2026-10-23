@@ -3,41 +3,43 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: var(--tap);
-  padding: 0 16px;
+  padding: 0 var(--space-16);
   border: 0;
   border-radius: var(--radius-button);
   background: var(--color-primary);
   color: var(--color-on-primary);
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: transform 100ms var(--ease-standard);
+  transition: transform var(--dur-press) var(--ease-standard);
 }
 .button:active:not(:disabled) {
   transform: scale(0.98);
 }
 .md {
-  min-height: 48px;
-  padding: 0 20px;
+  min-height: var(--button-h-md);
+  padding: 0 var(--space-20);
   border-radius: var(--radius-control);
-  font-size: 15px;
+  font-size: var(--text-control);
 }
 .lg {
-  min-height: 52px;
+  min-height: var(--button-h-lg);
   width: 100%;
   border-radius: var(--radius-control);
-  font-size: 16px;
+  font-size: var(--text-base);
 }
 .block {
   width: 100%;
 }
+/* Desktop: nút rộng theo nội dung, kể cả trong cột flex/grid (không bị stretch); chỉ `block` mới tràn ngang. */
 @media (min-width: 1024px) {
-  .button { min-width: 96px; }
+  .button { min-width: var(--button-min-w-desktop); }
   .lg { width: auto; }
+  .button:not(.block) { width: fit-content; }
   .block { width: 100%; }
 }
 .secondary {
@@ -65,14 +67,14 @@
 .card {
   background: var(--color-surface);
   border-radius: var(--radius-card);
-  padding: 14px 16px;
+  padding: 14px var(--card-pad);
 }
 .cardSelected {
   outline: 2px solid var(--color-primary);
 }
 @media (min-width: 1024px) {
   .card {
-    padding: 18px 20px;
+    padding: 18px var(--card-pad);
   }
 }
 
@@ -80,9 +82,9 @@
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
   min-height: 52px;
-  padding: 10px 12px;
+  padding: 10px var(--space-12);
   background: var(--color-surface);
   border-radius: var(--radius-row);
 }
@@ -90,10 +92,10 @@
 /* Chip thống kê */
 .chip {
   display: inline-block;
-  padding: 8px 10px;
+  padding: var(--space-8) 10px;
   border-radius: var(--radius-chip);
   background: var(--color-bg);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 /* Pill trạng thái */
@@ -102,7 +104,7 @@
   align-items: center;
   padding: 5px 10px;
   border-radius: var(--radius-pill);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -130,13 +132,13 @@
 /* Ô nhập */
 .input {
   width: 100%;
-  min-height: 52px;
-  padding: 0 16px;
+  min-height: var(--control-h);
+  padding: 0 var(--space-16);
   border: 1.5px solid var(--color-input-border);
   border-radius: var(--radius-control);
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 16px;
+  font-size: var(--text-base);
 }
 .input::placeholder {
   color: var(--color-placeholder);
@@ -144,19 +146,19 @@
 .input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-soft);
+  box-shadow: var(--focus-ring);
 }
 .field {
   display: grid;
   gap: 6px;
 }
 .field > label {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 600;
 }
 .fieldError {
   color: var(--color-error);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 /* Segmented */
@@ -164,26 +166,26 @@
   position: relative;
   display: flex;
   padding: 3px;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-border);
 }
 .segment {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-raised);
   flex: 1;
   min-height: var(--tap);
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-chip);
   background: transparent;
   color: var(--color-muted);
-  font-size: 15px;
+  font-size: var(--text-control);
   font-weight: 600;
 }
 .segmentOn {
   color: var(--color-text);
 }
 .segmentThumb {
-  border-radius: 10px;
+  border-radius: var(--radius-chip);
   background: var(--color-surface);
 }
 
@@ -192,21 +194,21 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
   flex-wrap: wrap;
   min-width: 0;
 }
 .pageHeaderMain {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
   flex: 1;
 }
 .pageTitle {
   position: relative;
   display: grid;
-  gap: 2px;
+  gap: var(--space-2);
   min-width: 0;
 }
 .pageTitle:focus-within {
@@ -215,11 +217,11 @@
   border-radius: 8px;
 }
 .compactTitle h1 {
-  font-size: 22px;
+  font-size: var(--text-xl);
 }
 .eyebrow {
   color: var(--color-muted);
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 .backButton {
   width: var(--tap);
@@ -238,7 +240,7 @@
 .pageActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   flex-wrap: wrap;
 }
 
@@ -246,8 +248,8 @@
 .empty {
   display: grid;
   justify-items: center;
-  gap: 8px;
-  padding: 24px 16px;
+  gap: var(--space-8);
+  padding: var(--space-24) var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
   color: var(--color-muted);
@@ -261,7 +263,7 @@
   user-select: none;
 }
 .emptyTitle {
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 700;
   color: var(--color-text);
 }
@@ -275,7 +277,7 @@
 .dialog {
   border: 0;
   border-radius: var(--radius-card);
-  padding: 24px;
+  padding: var(--space-24);
   width: min(520px, calc(100% - 32px));
   max-height: 85dvh;
   flex-direction: column;
@@ -319,15 +321,22 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
-  padding-top: 12px;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
+  padding-top: var(--space-12);
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
 }
+/* Desktop: hàng nút của hộp thoại căn phải, không kéo dài. */
+@media (min-width: 1024px) {
+  .dialogFooter {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
 .sheet {
   margin-bottom: 0;
-  border-radius: 20px 20px 0 0;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
 }
 /* Bottom sheet mobile: tràn hết chiều ngang, footer chừa safe-area. */
 @media (max-width: 1023px) {
@@ -335,10 +344,10 @@
     width: 100%;
     max-width: 100%;
     padding-bottom: 0;
-    border-radius: 20px 20px 0 0;
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   }
   .sheet .dialogFooter {
-    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--space-16) + var(--safe-bottom));
   }
   .sheet[open] { animation-name: sheetIn; }
   .sheet[open][data-closing] { animation-name: sheetOut; }
@@ -347,8 +356,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: var(--space-16);
+  margin-bottom: var(--space-16);
 }
 
 /* Đang tải */
