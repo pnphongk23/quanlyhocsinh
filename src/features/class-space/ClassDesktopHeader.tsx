@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import {
-  archiveClass,
   getCurrentClassId,
   setCurrentClass,
 } from "../../data/repositories/classes";
@@ -21,6 +20,7 @@ import {
   ClassOptionsMenu,
   type ClassOption,
 } from "../classes/ClassOptionsMenu";
+import { ArchiveClassDialog } from "../classes/ArchiveClassDialog";
 import { EditClassModal } from "../classes/EditClassModal";
 import { EditClassSchedule } from "../classes/EditClassSchedule";
 import { sessionPrefix } from "../../data/repositories/sessions";
@@ -99,6 +99,7 @@ export default function ClassDesktopHeader({
   const studentCount = listStudents(classId).length;
   const activeLabel = visibleTabs.find((tab) => tab.to === active)?.label;
   const tabsRef = useRef<HTMLElement>(null);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const indicatorReady = useSlideIndicator(tabsRef, active);
 
   useEffect(() => {
@@ -126,16 +127,10 @@ export default function ClassDesktopHeader({
       label: "Lưu trữ lớp",
       icon: "archive",
       danger: true,
-      onSelect: async () => {
-        try {
-          await archiveClass(classId);
-          setError("");
-          setOptionsOpen(false);
-        } catch (cause) {
-          setError(
-            cause instanceof Error ? cause.message : "Không lưu trữ được lớp.",
-          );
-        }
+      onSelect: () => {
+        setOptionsOpen(false);
+        setError("");
+        setConfirmArchive(true);
       },
     },
   ];
@@ -236,6 +231,12 @@ export default function ClassDesktopHeader({
           {error}
         </p>
       )}
+      <ArchiveClassDialog
+        open={confirmArchive}
+        classId={classId}
+        className={klass.name}
+        onClose={() => setConfirmArchive(false)}
+      />
       {editOpen && (
         <EditClassModal
           classId={classId}

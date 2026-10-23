@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Link } from "react-router-dom";
 import { getClass } from "../../data/repositories/classes";
 import {
@@ -14,7 +15,13 @@ import { useAccess } from "../../data/repositories/access";
 import { useStore } from "../../data/store";
 import type { Class, Student, Test } from "../../data/types";
 import { todayISO } from "../../shared/format";
-import { Button, Input, Modal, Pill } from "../../shared/ui";
+import {
+  Button,
+  Input,
+  Modal,
+  Pill,
+  UnsavedChangesDialog,
+} from "../../shared/ui";
 import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
 import s from "./TestsDesktop.module.css";
 import d from "../class-space/desktop.module.css";
@@ -97,30 +104,6 @@ export default function TestsDesktop({ classId }: { classId: string }) {
   const [error, setError] = useState("");
 
   if (!klass) return null;
-
-  function submitTest(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!dialog || dialog.mode === "delete") return;
-    const data = new FormData(event.currentTarget);
-    const name = String(data.get("name") ?? "").trim();
-    const date = String(data.get("date") ?? "");
-    const max = Number(String(data.get("max") ?? "").trim());
-    setError("");
-    try {
-      if (dialog.mode === "create") {
-        createTest({ classId, name, date, max });
-      } else {
-        updateTest(dialog.test.id, { name, date, max });
-      }
-      setDialog(null);
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không lưu được bài kiểm tra.",
-      );
-    }
-  }
 
   function confirmDelete(test: Test) {
     try {
@@ -263,71 +246,11 @@ export default function TestsDesktop({ classId }: { classId: string }) {
       </div>
 
       {dialog && dialog.mode !== "delete" && (
-        <Modal
-          title={
-            dialog.mode === "create" ? "Tạo bài kiểm tra" : "Sửa bài kiểm tra"
-          }
-          open
-          onClose={() => {
-            setDialog(null);
-            setError("");
-          }}
-        >
-          <form className={s.form} onSubmit={submitTest}>
-            <Input
-              label="Tên bài kiểm tra"
-              name="name"
-              placeholder="Ví dụ: Kiểm tra Unit 8"
-              defaultValue={dialog.mode === "edit" ? dialog.test.name : ""}
-              autoFocus
-              required
-            />
-            <Input
-              label="Ngày kiểm tra"
-              name="date"
-              type="date"
-              defaultValue={
-                dialog.mode === "edit" ? dialog.test.date : todayISO()
-              }
-              required
-            />
-            <div>
-              <Input
-                label="Điểm tối đa"
-                name="max"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={1000}
-                step={1}
-                defaultValue={
-                  dialog.mode === "edit" ? dialog.test.max : DEFAULT_TEST_MAX
-                }
-                required
-              />
-              <p className={d.hint}>Số nguyên từ 1 đến 1000. Mặc định 15.</p>
-            </div>
-            {error && (
-              <p role="alert" className={d.error}>
-                {error}
-              </p>
-            )}
-            <div className={s.dialogActions}>
-              <Button
-                variant="neutral"
-                onClick={() => {
-                  setDialog(null);
-                  setError("");
-                }}
-              >
-                Hủy
-              </Button>
-              <Button type="submit">
-                {dialog.mode === "create" ? "Tạo bài" : "Lưu thay đổi"}
-              </Button>
-            </div>
-          </form>
-        </Modal>
+        <TestFormModal
+          classId={classId}
+          test={dialog.mode === "edit" ? dialog.test : undefined}
+          onClose={() => setDialog(null)}
+        />
       )}
 
       {dialog && dialog.mode === "delete" && (() => {
@@ -368,5 +291,124 @@ export default function TestsDesktop({ classId }: { classId: string }) {
         );
       })()}
     </main>
+  );
+}
+
+const MAX_SCORE_LIMIT = 1000;
+
+/** Form tạo/sửa bài kiểm tra: chỉ lưu khi có thay đổi hợp lệ; đóng khi nhập dở thì hỏi. */
+function TestFormModal({
+  classId,
+  test,
+  onClose,
+}: {
+  classId: string;
+  test?: Test;
+  onClose: () => void;
+}) {
+  const initial = {
+    name: test?.name ?? "",
+    date: test?.date ?? todayISO(),
+    max: String(test?.max ?? DEFAULT_TEST_MAX),
+  };
+  const [name, setName] = useState(initial.name);
+  const [date, setDate] = useState(initial.date);
+  const [max, setMax] = useState(initial.max);
+  const [asking, setAsking] = useState(false);
+  const maxNumber = Number(max.trim());
+  const maxInvalid =
+    max.trim() === "" ||
+    !Number.isInteger(maxNumber) ||
+    maxNumber < 1 ||
+    maxNumber > MAX_SCORE_LIMIT;
+  const action = useSaveAction({
+    baseline: initial,
+    value: { name: name.trim(), date, max: max.trim() },
+    isEqual: (a, b) =>
+      a.name.trim() === b.name.trim() && a.date === b.date && a.max === b.max,
+    validate: (next) => next.name !== "" && next.date !== "" && !maxInvalid,
+    save: (next) => {
+      const input = { name: next.name, date: next.date, max: Number(next.max) };
+      if (test) updateTest(test.id, input);
+      else createTest({ classId, ...input });
+    },
+  });
+  async function submit(event?: FormEvent) {
+    event?.preventDefault();
+    if (await action.submit()) onClose();
+  }
+  const requestClose = () => (action.dirty ? setAsking(true) : onClose());
+  return (
+    <>
+      <Modal
+        title={test ? "Sửa bài kiểm tra" : "Tạo bài kiểm tra"}
+        open
+        onClose={requestClose}
+      >
+        <form className={s.form} onSubmit={submit}>
+          <Input
+            label="Tên bài kiểm tra"
+            name="name"
+            placeholder="Ví dụ: Kiểm tra Unit 8"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            autoFocus
+            required
+          />
+          <Input
+            label="Ngày kiểm tra"
+            name="date"
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            required
+          />
+          <div>
+            <Input
+              label="Điểm tối đa"
+              name="max"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={MAX_SCORE_LIMIT}
+              step={1}
+              value={max}
+              onChange={(event) => setMax(event.target.value)}
+              required
+            />
+            <p className={maxInvalid ? d.error : d.hint}>
+              Số nguyên từ 1 đến 1000. Mặc định 15.
+            </p>
+          </div>
+          {action.error != null && (
+            <p role="alert" className={d.error}>
+              {action.error instanceof Error &&
+              action.error.message !== "save_failed"
+                ? action.error.message
+                : "Không lưu được bài kiểm tra."}
+            </p>
+          )}
+          <div className={s.dialogActions}>
+            <Button variant="neutral" onClick={requestClose}>
+              Hủy
+            </Button>
+            <Button type="submit" disabled={!action.canSave}>
+              {test ? "Lưu thay đổi" : "Tạo bài"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+      {asking && (
+        <UnsavedChangesDialog
+          open
+          title="Bài kiểm tra chưa lưu"
+          message="Bạn đang nhập dở thông tin bài kiểm tra. Lưu trước khi đóng?"
+          saving={action.saving}
+          onSave={() => void submit()}
+          onDiscard={onClose}
+          onStay={() => setAsking(false)}
+        />
+      )}
+    </>
   );
 }

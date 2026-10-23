@@ -22,6 +22,8 @@ export default function SessionDetailDesktop({
   readOnly,
   onDirtyChange,
   saveRef,
+  onHomeworkDirtyChange,
+  homeworkSaveRef,
   onCancel,
   onRestore,
 }: {
@@ -33,7 +35,9 @@ export default function SessionDetailDesktop({
   canWrite: boolean;
   readOnly: boolean;
   onDirtyChange?: (dirty: boolean) => void;
-  saveRef?: MutableRefObject<(() => void) | null>;
+  saveRef?: MutableRefObject<(() => unknown) | null>;
+  onHomeworkDirtyChange?: (dirty: boolean) => void;
+  homeworkSaveRef?: MutableRefObject<(() => unknown) | null>;
   onCancel: () => void;
   onRestore: () => void;
 }) {
@@ -94,23 +98,36 @@ export default function SessionDetailDesktop({
             </Button>
           )}
         </div>
-        ) : tab === "diem-danh" ? (
-          <AttendanceDesktop
-            classId={classId}
-            sessionId={session.id}
-            readOnly={readOnly}
-            onDirtyChange={onDirtyChange}
-            saveRef={saveRef}
-            tabBar={tabBar}
-          />
-      ) : tab === "nhan-xet" ? (
-        <CommentsDesktop
-          sessionId={session.id}
-          readOnly={readOnly}
-          tabBar={tabBar}
-        />
       ) : (
-        <HomeworkDesktop session={session} tabBar={tabBar} />
+        // Ba tab cùng gắn sẵn (chỉ ẩn tab khác) để đổi tab không mất điểm danh
+        // hay phần BTVN đang soạn dở, giống bản mobile.
+        <>
+          <div hidden={tab !== "diem-danh"}>
+            <AttendanceDesktop
+              classId={classId}
+              sessionId={session.id}
+              readOnly={readOnly}
+              onDirtyChange={onDirtyChange}
+              saveRef={saveRef}
+              tabBar={tabBar}
+            />
+          </div>
+          <div hidden={tab !== "nhan-xet"}>
+            <CommentsDesktop
+              sessionId={session.id}
+              readOnly={readOnly}
+              tabBar={tabBar}
+            />
+          </div>
+          <div hidden={tab !== "btvn"}>
+            <HomeworkDesktop
+              session={session}
+              tabBar={tabBar}
+              onDirtyChange={onHomeworkDirtyChange}
+              saveRef={homeworkSaveRef}
+            />
+          </div>
+        </>
       )}
     </main>
   );

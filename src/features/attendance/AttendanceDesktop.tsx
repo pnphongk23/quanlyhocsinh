@@ -14,6 +14,7 @@ import {
 import { useAccess } from "../../data/repositories/access";
 import type { Attendance as AttendanceRecord } from "../../data/types";
 import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
+import { deepEqual, useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button } from "../../shared/ui";
 import { studentsForSession } from "./sessionRoster";
 import s from "./AttendanceDesktop.module.css";
@@ -47,7 +48,7 @@ export default function AttendanceDesktop({
   sessionId: string;
   readOnly?: boolean;
   onDirtyChange?: (dirty: boolean) => void;
-  saveRef?: MutableRefObject<(() => void) | null>;
+  saveRef?: MutableRefObject<(() => unknown) | null>;
   /** Hàng 3 tab của buổi + nút chính, để nút nằm cùng hàng với tab. */
   tabBar: (actions: ReactNode) => ReactNode;
 }) {
@@ -62,30 +63,70 @@ export default function AttendanceDesktop({
     : [];
   const stored = listAttendance(sessionId);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
-  const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
-  const dirty = Object.keys(drafts).length > 0;
 
-  useEffect(() => {
-    onDirtyChange?.(dirty);
-  }, [dirty, onDirtyChange]);
-
-  if (!session) return null;
-
-  const draftFor = (studentId: string): Draft => {
+  const defaultDraft: Draft = { status: "present", lateAt: "", note: "" };
+  const storedDraft = (studentId: string): Draft | null => {
     const existing = stored.find((record) => record.studentId === studentId);
-    return (
-      drafts[studentId] ?? {
-        status: existing?.status ?? "present",
-        lateAt: existing?.lateAt ?? "",
-        note: existing?.note ?? "",
-      }
-    );
+    return existing
+      ? {
+          status: existing.status,
+          lateAt: existing.lateAt ?? "",
+          note: existing.note ?? "",
+        }
+      : null;
   };
+  const draftFor = (studentId: string): Draft =>
+    drafts[studentId] ?? storedDraft(studentId) ?? defaultDraft;
   const rows = students.map((student) => ({
     student,
     ...draftFor(student.id),
   }));
+  // Chưa có bản ghi nào của em thì "dữ liệu gốc" là chưa điểm danh: lưu lần đầu
+  // luôn được phép. `touched` chỉ tính ô người dùng đã sửa (dùng cho cảnh báo rời màn).
+  const baseline: Record<string, Draft | null> = {};
+  const value: Record<string, Draft> = {};
+  for (const student of students) {
+    baseline[student.id] = storedDraft(student.id);
+    value[student.id] = draftFor(student.id);
+  }
+  const touched = students.some(
+    (student) =>
+      !deepEqual(value[student.id], baseline[student.id] ?? defaultDraft),
+  );
+
+  const action = useSaveAction<Record<string, Draft | null>>({
+    baseline,
+    value,
+    save: () => {
+      try {
+        saveAttendanceBatch(
+          rows.map((row) => ({
+            sessionId,
+            studentId: row.student.id,
+            status: row.status,
+            note: row.note.trim(),
+            lateAt: row.status === "late" ? row.lateAt || null : null,
+          })),
+        );
+      } catch (cause) {
+        setStatus("error");
+        throw cause;
+      }
+      setDrafts({});
+      clearStatus();
+    },
+  });
+
+  useEffect(() => {
+    onDirtyChange?.(touched);
+  }, [touched, onDirtyChange]);
+
+  useEffect(() => {
+    if (saveRef) saveRef.current = () => action.submit();
+  });
+
+  if (!session) return null;
+
   const counts = STATES.map(
     (status) => rows.filter((row) => row.status === status).length,
   );
@@ -93,8 +134,6 @@ export default function AttendanceDesktop({
 
   function setRow(studentId: string, patch: Partial<Draft>) {
     markUnsaved();
-    setError("");
-    setSaved(false);
     setDrafts((current) => ({
       ...current,
       [studentId]: { ...draftFor(studentId), ...patch },
@@ -103,7 +142,6 @@ export default function AttendanceDesktop({
 
   function allPresent() {
     markUnsaved();
-    setSaved(false);
     setDrafts(
       Object.fromEntries(
         students.map((student) => [
@@ -114,33 +152,6 @@ export default function AttendanceDesktop({
     );
   }
 
-  function save() {
-    try {
-      saveAttendanceBatch(
-        rows.map((row) => ({
-          sessionId,
-          studentId: row.student.id,
-          status: row.status,
-          note: row.note.trim(),
-          lateAt: row.status === "late" ? row.lateAt || null : null,
-        })),
-      );
-      setDrafts({});
-      setError("");
-      setSaved(true);
-      clearStatus();
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Không lưu được điểm danh.",
-      );
-      setStatus("error");
-    }
-  }
-
-  useEffect(() => {
-    if (saveRef) saveRef.current = save;
-  });
-
   return (
     <div className={d.page}>
       {tabBar(
@@ -149,7 +160,11 @@ export default function AttendanceDesktop({
             <Button variant="secondary" size="md" onClick={allPresent}>
               Tất cả có mặt
             </Button>
-            <Button size="md" onClick={save}>
+            <Button
+              size="md"
+              disabled={!action.canSave}
+              onClick={() => void action.submit()}
+            >
               Lưu điểm danh
             </Button>
           </>
@@ -162,14 +177,11 @@ export default function AttendanceDesktop({
           Bây giờ bạn chỉ xem hoặc huỷ buổi.
         </p>
       )}
-      {error && (
+      {action.error != null && (
         <p role="alert" className={d.error}>
-          {error}
-        </p>
-      )}
-      {saved && !error && (
-        <p role="status" className={d.successNote}>
-          Đã lưu điểm danh buổi {sessionPrefix(session).toLowerCase()}.
+          {action.error instanceof Error && action.error.message !== "save_failed"
+            ? action.error.message
+            : "Không lưu được điểm danh."}
         </p>
       )}
 

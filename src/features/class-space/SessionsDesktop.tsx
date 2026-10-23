@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getClass } from "../../data/repositories/classes";
 import {
@@ -122,6 +122,7 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
   const [confirmSession, setConfirmSession] = useState<Session | null>(null);
   const [addSession, setAddSession] = useState<Session | null | undefined>();
   const [error, setError] = useState("");
+  const cancelling = useRef(false);
   const comments = listComments(classId);
 
   if (!klass) return null;
@@ -142,6 +143,8 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
   }
 
   async function cancel(session: Session) {
+    if (cancelling.current) return;
+    cancelling.current = true;
     try {
       await cancelSession(session.id);
       setConfirmSession(null);
@@ -153,6 +156,8 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
           ? cause.message
           : "Không hủy được buổi học. Vui lòng thử lại.",
       );
+    } finally {
+      cancelling.current = false;
     }
   }
 

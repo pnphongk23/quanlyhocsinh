@@ -9,7 +9,9 @@ import { useStore } from "../../data/store";
 import { orderScoreGridStudents } from "../../data/logic";
 import type { Class } from "../../data/types";
 import { formatDayMonth } from "../../shared/format";
-import { Button, LinkButton } from "../../shared/ui";
+import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { Button, LinkButton, UnsavedChangesDialog } from "../../shared/ui";
 import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
 import s from "./ScoreGridDesktop.module.css";
 import d from "../class-space/desktop.module.css";
@@ -52,51 +54,52 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
   );
   const canWrite = access.can("scores", "write");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+
+  // Giá trị đã lưu của mọi ô; bản nháp chỉ ghi đè ô người dùng đã gõ.
+  const baseline: Record<string, string> = {};
+  for (const test of tests) {
+    const scores = listScores(test.id);
+    for (const student of students) {
+      const score = scores.find((item) => item.studentId === student.id);
+      baseline[draftKey(test.id, student.id)] =
+        score && score.value !== null ? formatScore(score.value) : "";
+    }
+  }
+  const value = { ...baseline, ...drafts };
+  const maxOf = new Map(tests.map((test) => [test.id, test.max]));
+  const isInvalid = (key: string): boolean => {
+    if (value[key] === baseline[key]) return false;
+    const parsed = parseScoreInput(value[key]);
+    if (!parsed.ok) return true;
+    const max = maxOf.get(key.split(":")[0]);
+    return parsed.value !== null && max !== undefined && parsed.value > max;
+  };
+  const invalidCount = Object.keys(drafts).filter(isInvalid).length;
+
+  const action = useSaveAction<Record<string, string>>({
+    baseline,
+    value,
+    validate: () => invalidCount === 0,
+    save: (next) => {
+      for (const key of Object.keys(next)) {
+        if (next[key] === baseline[key]) continue;
+        const [testId, studentId] = key.split(":");
+        const parsed = parseScoreInput(next[key]);
+        if (!parsed.ok) throw new Error("Điểm phải theo bước 0,5. Ví dụ 7,5 hoặc 7.5.");
+        saveScore({ testId, studentId, value: parsed.value });
+      }
+      setDrafts({});
+    },
+  });
+  const guard = useLeaveGuard(action.dirty);
 
   if (!klass) return null;
 
-  function valueOf(testId: string, studentId: string): string {
-    const key = draftKey(testId, studentId);
-    if (key in drafts) return drafts[key];
-    const score = listScores(testId).find(
-      (item) => item.studentId === studentId,
-    );
-  return score && score.value !== null ? formatScore(score.value) : "";
-  }
-
   function setCell(testId: string, studentId: string, raw: string) {
-    setError("");
-    setMessage("");
     setDrafts((current) => ({
       ...current,
       [draftKey(testId, studentId)]: raw,
     }));
-  }
-
-  function save() {
-    const entries = Object.entries(drafts);
-    if (!entries.length) {
-      setMessage("Không có thay đổi cần lưu.");
-      return;
-    }
-    try {
-      for (const [key, raw] of entries) {
-        const [testId, studentId] = key.split(":");
-        const parsed = parseScoreInput(raw);
-        if (!parsed.ok)
-            throw new Error("Điểm phải theo bước 0,5. Ví dụ 7,5 hoặc 7.5.");
-        saveScore({ testId, studentId, value: parsed.value });
-      }
-      setDrafts({});
-      setError("");
-      setMessage(`Đã lưu ${entries.length} ô điểm.`);
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Không lưu được điểm.",
-      );
-    }
   }
 
   return (
@@ -106,22 +109,26 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
         klass={klass}
         actions={
           canWrite ? (
-            <Button size="md" onClick={save}>
+            <Button
+              size="md"
+              disabled={!action.canSave}
+              onClick={() => void action.submit()}
+            >
               Lưu điểm
             </Button>
           ) : undefined
         }
       />
 
-      {error && (
+      {action.error != null && (
         <p role="alert" className={d.error}>
-          {error}
+          {action.error instanceof Error && action.error.message !== "save_failed"
+            ? action.error.message
+            : "Không lưu được điểm."}
         </p>
       )}
-      {message && !error && (
-        <p role="status" className={d.successNote}>
-          {message}
-        </p>
+      {invalidCount > 0 && (
+        <p className={d.error}>Sửa {invalidCount} ô lỗi để lưu điểm</p>
       )}
 
       {!tests.length ? (
@@ -182,7 +189,8 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
                           inputMode="decimal"
                           aria-label={`Điểm ${test.name} của ${student.name}`}
                           placeholder="Chưa có điểm"
-                          value={valueOf(test.id, student.id)}
+                          value={value[draftKey(test.id, student.id)] ?? ""}
+                          aria-invalid={isInvalid(draftKey(test.id, student.id)) || undefined}
                           disabled={!canWrite}
                           onChange={(event) =>
                             setCell(test.id, student.id, event.target.value)
@@ -200,6 +208,22 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
             riêng theo thang điểm của bài đó.
           </p>
         </div>
+      )}
+      {guard.blocked && (
+        <UnsavedChangesDialog
+          open
+          title="Điểm chưa lưu"
+          message="Bạn đang nhập điểm dở. Lưu trước khi rời màn này?"
+          saving={action.saving}
+          onSave={async () => {
+            if (await action.submit()) guard.proceed();
+          }}
+          onDiscard={() => {
+            setDrafts({});
+            guard.proceed();
+          }}
+          onStay={guard.stay}
+        />
       )}
     </main>
   );

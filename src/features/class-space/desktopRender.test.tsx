@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { createSeed } from "../../test/fixtures/seed";
 import { replaceStore } from "../../data/store";
 import SessionsDesktop from "./SessionsDesktop";
@@ -14,15 +14,13 @@ import CommentsDesktop from "../comments/CommentsDesktop";
 import { getSession } from "../../data/repositories/sessions";
 import { getClass } from "../../data/repositories/classes";
 
-/** Render một màn desktop trong router để có Link/useLocation. */
+/** Render một màn desktop trong data router (có Link/useLocation/useBlocker). */
 function render(node: ReactNode, url = "/lop/6a/buoi-hoc"): string {
-  return renderToStaticMarkup(
-    <MemoryRouter initialEntries={[url]}>
-      <Routes>
-        <Route path="/lop/:classId/*" element={node} />
-      </Routes>
-    </MemoryRouter>,
+  const router = createMemoryRouter(
+    [{ path: "/lop/:classId/*", element: node }],
+    { initialEntries: [url] },
   );
+  return renderToStaticMarkup(<RouterProvider router={router} />);
 }
 
 beforeEach(() => {

@@ -22,7 +22,6 @@ import SendTicketsDialog from "./SendTicketsDialog";
 import TicketEditor, { StarRow, desktopTicketLabel } from "./TicketEditor";
 import {
   filterTicketRows,
-  sendableCount,
   sendButtonLabel,
   TICKET_FILTER_LABELS,
   TICKET_FILTERS,
@@ -62,11 +61,11 @@ export default function CommentsDesktop({
     rows.find((row) => row.student.id === requestedId) ??
     visibleRows[0] ??
     rows[0];
-  const sendable = rows.filter(
-    (row) => row.stars !== null && row.status !== "sent",
-  );
+  // Phiếu đang chờ gửi (queued) đã nằm trong hàng đợi đồng bộ: không chọn gửi lại,
+  // nếu không repository xếp thêm một lệnh `slip.send` cho cùng em.
+  const sendable = rows.filter((row) => row.status === "draft");
   const skipped = rows.filter((row) => row.stars === null);
-  const count = sendableCount(rows);
+  const count = sendable.length;
   const ungraded = ungradedHomeworkNotice(
     state,
     sessionId,

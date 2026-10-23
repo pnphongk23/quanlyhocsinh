@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Link,
-  useBlocker,
   useNavigate,
   useParams,
   useSearchParams,
@@ -18,6 +17,7 @@ import {
 import { useStore } from "../../data/store";
 import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
+import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import {
   Button,
   EmptyState,
@@ -28,6 +28,7 @@ import {
   Pill,
   Segmented,
   Sheet,
+  UnsavedChangesDialog,
 } from "../../shared/ui";
 import AttendancePanel from "../attendance/AttendancePanel";
 import CommentsPanel from "../comments/CommentsPanel";
@@ -43,11 +44,12 @@ import s from "./sessionDetail.module.css";
  */
 export type SessionTab = "diem-danh" | "nhan-xet" | "btvn";
 
-export const SESSION_TABS: ReadonlyArray<{ value: SessionTab; label: string }> = [
-  { value: "diem-danh", label: "Điểm danh" },
-  { value: "nhan-xet", label: "Nhận xét" },
-  { value: "btvn", label: "Bài tập về nhà" },
-];
+export const SESSION_TABS: ReadonlyArray<{ value: SessionTab; label: string }> =
+  [
+    { value: "diem-danh", label: "Điểm danh" },
+    { value: "nhan-xet", label: "Nhận xét" },
+    { value: "btvn", label: "Bài tập về nhà" },
+  ];
 
 export const DEFAULT_SESSION_TAB: SessionTab = "diem-danh";
 
@@ -58,29 +60,35 @@ export function sessionTabOf(value: string | null | undefined): SessionTab {
 }
 
 export default function SessionDetailPage() {
-    useStore();
+  useStore();
   const desktop = useIsDesktop();
   const { classId = "", sessionId = "" } = useParams();
   const navigate = useNavigate();
   const access = useAccess();
-    const klass = getSessionClass(sessionId);
-    const session = getSession(sessionId);
-  const future = session ? session.date > new Date().toISOString().slice(0, 10) : false;
+  const klass = getSessionClass(sessionId);
+  const session = getSession(sessionId);
+  const future = session
+    ? session.date > new Date().toISOString().slice(0, 10)
+    : false;
   const canWrite = access.can("sessions_attendance", "write");
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = sessionTabOf(searchParams.get("tab"));
-  const [dirty, setDirty] = useState(false);
+  // Điểm danh và chấm/soạn BTVN: cả hai giữ nguyên khi đổi tab nên dirty là hợp của hai phần.
+  const [attendanceDirty, setDirty] = useState(false);
+  const [homeworkDirty, setHomeworkDirty] = useState(false);
+  const dirty = attendanceDirty || homeworkDirty;
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [error, setError] = useState("");
-  const saveRef = useRef<(() => void) | null>(null);
+  const saveRef = useRef<(() => unknown) | null>(null);
+  const homeworkSaveRef = useRef<(() => unknown) | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const busy = useRef(false);
   // Đổi tab trong cùng màn không phải rời màn: chỉ hỏi khi đổi đường dẫn.
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      dirty && currentLocation.pathname !== nextLocation.pathname,
-  );
+  const guard = useLeaveGuard(dirty);
   useEffect(() => {
     setDirty(false);
+    setHomeworkDirty(false);
     setError("");
     setMenuOpen(false);
   }, [sessionId]);
@@ -89,32 +97,43 @@ export default function SessionDetailPage() {
       <NoAccess what="buổi học này" />
     ) : (
       <EmptyState title="Không tìm thấy buổi học">
-        <LinkButton to={`/lop/${classId}/buoi-hoc`}>Về danh sách buổi</LinkButton>
+        <LinkButton to={`/lop/${classId}/buoi-hoc`}>
+          Về danh sách buổi
+        </LinkButton>
       </EmptyState>
     );
 
   async function cancel() {
-    if (!session) return;
+    if (!session || busy.current) return;
+    busy.current = true;
     try {
       await cancelSession(session.id);
       setError("");
       navigate(`/lop/${classId}/buoi-hoc`);
     } catch (cause) {
+      setConfirmCancel(false);
       setError(
         cause instanceof Error ? cause.message : "Không hủy được buổi học.",
       );
+    } finally {
+      busy.current = false;
     }
   }
 
-  function restore() {
-    if (!session) return;
+  async function restore() {
+    if (!session || busy.current) return;
+    busy.current = true;
     try {
-      setSessionStatus(session.id, "planned");
+      await setSessionStatus(session.id, "planned");
       setError("");
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Không khôi phục được buổi học.",
+        cause instanceof Error
+          ? cause.message
+          : "Không khôi phục được buổi học.",
       );
+    } finally {
+      busy.current = false;
     }
   }
 
@@ -145,38 +164,31 @@ export default function SessionDetailPage() {
     />
   );
 
-  const unsavedDialog = (
-    <ConfirmDialog
-      open={blocker.state === "blocked"}
-      title="Điểm danh chưa lưu"
-      message="Bạn đang điểm danh dở buổi học. Lưu trước khi rời màn này?"
-      actions={[
-        {
-          label: "Lưu",
-          variant: "primary",
-          onClick: () => {
-            saveRef.current?.();
-            if (blocker.state === "blocked") blocker.proceed();
-          },
-        },
-        {
-          label: "Bỏ thay đổi",
-          variant: "danger",
-          onClick: () => {
-            if (blocker.state === "blocked") blocker.proceed();
-          },
-        },
-        {
-          label: "Ở lại",
-          variant: "neutral",
-          onClick: () => {
-            if (blocker.state === "blocked") blocker.reset();
-          },
-        },
-      ]}
-      onDismiss={() => {
-        if (blocker.state === "blocked") blocker.reset();
+  const unsavedDialog = guard.blocked && (
+    <UnsavedChangesDialog
+      open
+      title="Chưa lưu thay đổi"
+      message="Bạn đang điểm danh hoặc chấm bài dở. Lưu trước khi rời màn này?"
+      saving={leaving}
+      onSave={async () => {
+        setLeaving(true);
+        try {
+          // Bản mobile của BTVN chưa có hàm lưu để gọi từ đây: ở lại để người dùng bấm Lưu.
+          if (homeworkDirty && !homeworkSaveRef.current) {
+            guard.stay();
+            return;
+          }
+          const results = [
+            await saveRef.current?.(),
+            await homeworkSaveRef.current?.(),
+          ];
+          if (results.every((result) => result !== false)) guard.proceed();
+        } finally {
+          setLeaving(false);
+        }
       }}
+      onDiscard={guard.proceed}
+      onStay={guard.stay}
     />
   );
 
@@ -184,15 +196,17 @@ export default function SessionDetailPage() {
     return (
       <>
         <SessionDetailDesktop
-            classId={classId}
-            klass={klass}
-            session={session}
+          classId={classId}
+          klass={klass}
+          session={session}
           tab={tab}
           onTab={openTab}
           canWrite={canWrite}
           readOnly={future}
           onDirtyChange={setDirty}
           saveRef={saveRef}
+          onHomeworkDirtyChange={setHomeworkDirty}
+          homeworkSaveRef={homeworkSaveRef}
           onCancel={() => {
             setError("");
             setConfirmCancel(true);
@@ -247,7 +261,9 @@ export default function SessionDetailPage() {
                 type="button"
                 role="tab"
                 aria-selected={tab === item.value}
-                className={s.tab + (tab === item.value ? " " + s.tabActive : "")}
+                className={
+                  s.tab + (tab === item.value ? " " + s.tabActive : "")
+                }
                 onClick={() => openTab(item.value)}
               >
                 {item.label}
@@ -263,13 +279,11 @@ export default function SessionDetailPage() {
             {error}
           </p>
         )}
-          {cancelled ? (
+        {cancelled ? (
           <>
             <div className={s.dateCard}>
               <p className={s.dateTitle}>{formatWeekdayDate(session.date)}</p>
-              <p className={s.dateMeta}>
-                {sessionPrefix(session)} · đã huỷ
-              </p>
+              <p className={s.dateMeta}>{sessionPrefix(session)} · đã huỷ</p>
             </div>
             <div className={s.emptyBlock}>
               <span className={s.emptyIcon} aria-hidden="true">
@@ -297,9 +311,9 @@ export default function SessionDetailPage() {
               </div>
             </div>
           </>
-          ) : (
-            <>
-              <div hidden={tab !== "diem-danh"}>
+        ) : (
+          <>
+            <div hidden={tab !== "diem-danh"}>
               <AttendancePanel
                 classId={classId}
                 sessionId={session.id}
@@ -316,7 +330,10 @@ export default function SessionDetailPage() {
               />
             </div>
             <div hidden={tab !== "btvn"}>
-              <HomeworkPanel session={session} />
+              <HomeworkPanel
+                session={session}
+                onDirtyChange={setHomeworkDirty}
+              />
             </div>
           </>
         )}

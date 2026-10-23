@@ -1,4 +1,11 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
 import {
   HOMEWORK_KINDS,
   HOMEWORK_KIND_LABELS,
@@ -17,7 +24,8 @@ import { sessionNumber, sessionPrefix } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
 import { useSaveStatus } from "../../shared/SaveStatus";
 import { formatDayMonth } from "../../shared/format";
-import { Button, Pill } from "../../shared/ui";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { Button, Pill, UnsavedChangesDialog } from "../../shared/ui";
 import { Mascot } from "../../shared/ui/Mascot";
 import type {
   HomeworkKind,
@@ -60,9 +68,15 @@ function weekdayDay(iso: string): string {
 export default function HomeworkDesktop({
   session,
   tabBar,
+  onDirtyChange,
+  saveRef,
 }: {
   session: Session;
   tabBar: (actions: ReactNode) => ReactNode;
+  /** Báo cho màn buổi học biết còn chấm/soạn dở chưa lưu. */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Màn buổi học gọi để lưu hết trước khi rời màn. */
+  saveRef?: MutableRefObject<(() => unknown) | null>;
 }) {
   const state = useStore();
   const access = useAccess();
@@ -75,11 +89,57 @@ export default function HomeworkDesktop({
     {},
   );
   const [editor, setEditor] = useState<Editor | null>(null);
+  const [editorState, setEditorState] = useState({ dirty: false, canSave: false });
+  const editorSubmit = useRef<(() => Promise<boolean>) | null>(null);
+  const [pendingEditor, setPendingEditor] = useState<{ apply: () => void } | null>(
+    null,
+  );
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<HomeworkSection | null>(
     null,
   );
+
+  // Giá trị đã chấm của mọi ô; bản nháp chỉ ghi đè ô người dùng đã bấm.
+  const baselineGrades: Record<string, HomeworkLevel | null> = {};
+  for (const progress of ctx?.previous.sections ?? [])
+    for (const row of ctx?.previous.rows ?? [])
+      baselineGrades[`${progress.section.id}:${row.student.id}`] =
+        row.grades[progress.section.id] ?? null;
+  const valueGrades = { ...baselineGrades, ...drafts };
+  const gradeAction = useSaveAction<Record<string, HomeworkLevel | null>>({
+    baseline: baselineGrades,
+    value: valueGrades,
+    save: (next) => {
+      try {
+        for (const [key, level] of Object.entries(next)) {
+          if ((level ?? null) === (baselineGrades[key] ?? null)) continue;
+          const [sectionId, studentId] = key.split(":");
+          setHomeworkGrade(sectionId, studentId, level ?? null);
+        }
+      } catch (cause) {
+        save.setStatus("error");
+        throw cause;
+      }
+      setDrafts({});
+      save.clearStatus();
+    },
+  });
+  const dirty = gradeAction.dirty || (editor !== null && editorState.dirty);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    if (!saveRef) return;
+    saveRef.current = async () => {
+      if (gradeAction.dirty && !(await gradeAction.submit())) return false;
+      if (editor !== null && editorState.dirty)
+        return (await editorSubmit.current?.()) ?? true;
+      return true;
+    };
+  });
 
   if (!ctx) return null;
   const previousSections = ctx.previous.sections;
@@ -98,16 +158,12 @@ export default function HomeworkDesktop({
     : [];
 
   function levelOf(sectionId: string, studentId: string): HomeworkLevel | null {
-    const key = `${sectionId}:${studentId}`;
-    if (key in drafts) return drafts[key];
-    const row = ctx?.previous.rows.find((item) => item.student.id === studentId);
-    return row?.grades[sectionId] ?? null;
+    return valueGrades[`${sectionId}:${studentId}`] ?? null;
   }
 
   function pick(sectionId: string, studentId: string, level: HomeworkLevel) {
     if (!canWrite) return;
     setError("");
-    setMessage("");
     setDrafts((current) => ({
       ...current,
       [`${sectionId}:${studentId}`]: nextGrade(
@@ -120,35 +176,23 @@ export default function HomeworkDesktop({
   function draftAll(level: HomeworkLevel) {
     if (!canWrite || !activeSection) return;
     setError("");
-    setMessage("");
     const next: Record<string, HomeworkLevel | null> = {};
     for (const row of ctx?.previous.rows ?? [])
       next[`${activeSection.id}:${row.student.id}`] = level;
     setDrafts((current) => ({ ...current, ...next }));
   }
 
-  function saveGrades() {
-    const entries = Object.entries(drafts);
-    save.markUnsaved();
-    try {
-      for (const [key, level] of entries) {
-        const [sectionId, studentId] = key.split(":");
-        setHomeworkGrade(sectionId, studentId, level ?? null);
-      }
-      setDrafts({});
+  /** Đổi/đóng khung soạn phần: hỏi trước nếu đang soạn dở. */
+  function guardEditor(apply: () => void) {
+    if (editor !== null && editorState.dirty) setPendingEditor({ apply });
+    else apply();
+  }
+
+  function requestEditor(next: Editor | null) {
+    guardEditor(() => {
+      setEditor(next);
       setError("");
-      setMessage(
-        entries.length
-          ? `Đã lưu kết quả chấm ${entries.length} ô.`
-          : "Không có thay đổi cần lưu.",
-      );
-      save.clearStatus();
-    } catch (cause) {
-      save.setStatus("error");
-      setError(
-        cause instanceof Error ? cause.message : "Không lưu được kết quả chấm.",
-      );
-    }
+    });
   }
 
   const gradingBanner = (() => {
@@ -161,19 +205,26 @@ export default function HomeworkDesktop({
   })();
 
   function openAdd(kind: HomeworkKind) {
-    setEditor({ mode: "add", kind });
+    requestEditor({ mode: "add", kind });
     setView("today");
-    setError("");
-    setMessage("");
   }
 
   const headerAction =
     view === "previous" ? (
-      <Button size="md" onClick={saveGrades}>
+      <Button
+        size="md"
+        disabled={!gradeAction.canSave}
+        onClick={() => void gradeAction.submit()}
+      >
         Lưu kết quả chấm
       </Button>
     ) : editor ? (
-      <Button size="md" type="submit" form={EDITOR_FORM_ID}>
+      <Button
+        size="md"
+        type="submit"
+        form={EDITOR_FORM_ID}
+        disabled={!editorState.canSave}
+      >
         Lưu bài tập
       </Button>
     ) : (
@@ -192,7 +243,12 @@ export default function HomeworkDesktop({
           className={
             d.segment + (view === "previous" ? " " + d.segmentActive : "")
           }
-          onClick={() => setView("previous")}
+          onClick={() =>
+            guardEditor(() => {
+              setEditor(null);
+              setView("previous");
+            })
+          }
         >
           Bài tập buổi trước
         </button>
@@ -253,8 +309,6 @@ export default function HomeworkDesktop({
                 className={s.kindRow + (active ? " " + s.kindRowOn : "")}
                 onClick={() => {
                   setSelectedKind(progress.section.kind);
-                  setDrafts({});
-                  setMessage("");
                 }}
               >
                 <span className={s.kindName}>
@@ -420,7 +474,7 @@ export default function HomeworkDesktop({
                         className={s.iconButton}
                         aria-label={`Sửa phần ${HOMEWORK_KIND_LABELS[section.kind]}`}
                         onClick={() =>
-                          setEditor({ mode: "edit", sectionId: section.id })
+                          requestEditor({ mode: "edit", sectionId: section.id })
                         }
                       >
                         <svg
@@ -501,10 +555,11 @@ export default function HomeworkDesktop({
               gradingTotal={ctx.previous.rows.length}
               onDone={() => {
                 setEditor(null);
-                setMessage("Đã lưu bài tập · phụ huynh thấy ngay.");
                 setError("");
               }}
-              onCancel={() => setEditor(null)}
+              onCancel={() => requestEditor(null)}
+              onStateChange={setEditorState}
+              submitRef={editorSubmit}
             />
           </div>
         )}
@@ -521,12 +576,43 @@ export default function HomeworkDesktop({
           {error}
         </p>
       )}
+      {gradeAction.error != null && (
+        <p role="alert" className={d.error}>
+          {gradeAction.error instanceof Error &&
+          gradeAction.error.message !== "save_failed"
+            ? gradeAction.error.message
+            : "Không lưu được kết quả chấm."}
+        </p>
+      )}
       {message && !error && (
         <p role="status" className={d.successNote}>
           {message}
         </p>
       )}
       {view === "previous" ? previousBody : todayBody}
+
+      {pendingEditor !== null && (
+        <UnsavedChangesDialog
+          open
+          title="Bài tập chưa lưu"
+          message="Bạn đang soạn dở phần bài tập. Lưu trước khi chuyển?"
+          saving={false}
+          onSave={async () => {
+            if (!pendingEditor) return;
+            const { apply } = pendingEditor;
+            if (await editorSubmit.current?.()) {
+              setPendingEditor(null);
+              apply();
+            }
+          }}
+          onDiscard={() => {
+            if (!pendingEditor) return;
+            pendingEditor.apply();
+            setPendingEditor(null);
+          }}
+          onStay={() => setPendingEditor(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmDelete !== null}
@@ -577,6 +663,8 @@ function SectionForm({
   gradingTotal,
   onDone,
   onCancel,
+  onStateChange,
+  submitRef,
 }: {
   sessionId: string;
   mode: "add" | "edit";
@@ -588,6 +676,9 @@ function SectionForm({
   gradingTotal: number;
   onDone: () => void;
   onCancel: () => void;
+  /** Báo trạng thái cho nút "Lưu bài tập" ở đầu tab (nằm ngoài form). */
+  onStateChange: (state: { dirty: boolean; canSave: boolean }) => void;
+  submitRef: MutableRefObject<(() => Promise<boolean>) | null>;
 }) {
   const save = useSaveStatus();
   const [kind, setKind] = useState<HomeworkKind | null>(
@@ -595,30 +686,58 @@ function SectionForm({
   );
   const [title, setTitle] = useState(section?.title ?? "");
   const [description, setDescription] = useState(section?.description ?? "");
-  const [error, setError] = useState("");
   const existing = new Set(existingKinds);
+
+  const action = useSaveAction({
+    baseline: {
+      kind: initialKind ?? section?.kind ?? missingKinds[0] ?? null,
+      title: section?.title ?? "",
+      description: section?.description ?? "",
+    },
+    value: { kind, title, description },
+    validate: (next) => next.kind !== null && next.title.trim() !== "",
+    save: (next) => {
+      if (!next.kind) return false;
+      save.markUnsaved();
+      try {
+        saveHomeworkSection({
+          id: section?.id,
+          sessionId: section?.sessionId ?? sessionId,
+          kind: next.kind,
+          title: next.title,
+          description: next.description,
+        });
+        save.clearStatus();
+      } catch (cause) {
+        save.setStatus("error");
+        throw cause;
+      }
+    },
+  });
+  const error =
+    action.error == null
+      ? ""
+      : action.error instanceof Error && action.error.message !== "save_failed"
+        ? action.error.message
+        : "Không lưu được phần bài tập.";
+
+  async function submitForm() {
+    const ok = await action.submit();
+    if (ok) onDone();
+    return ok;
+  }
+  submitRef.current = submitForm;
+  useEffect(() => {
+    onStateChange({ dirty: action.dirty, canSave: action.canSave });
+  }, [action.dirty, action.canSave, onStateChange]);
+  useEffect(
+    () => () => onStateChange({ dirty: false, canSave: false }),
+    [onStateChange],
+  );
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!kind) return;
-    setError("");
-    save.markUnsaved();
-    try {
-      saveHomeworkSection({
-        id: section?.id,
-        sessionId: section?.sessionId ?? sessionId,
-        kind,
-        title,
-        description,
-      });
-      save.clearStatus();
-      onDone();
-    } catch (cause) {
-      save.setStatus("error");
-      setError(
-        cause instanceof Error ? cause.message : "Không lưu được phần bài tập.",
-      );
-    }
+    void submitForm();
   }
 
   return (
@@ -700,7 +819,7 @@ function SectionForm({
         <Button variant="neutral" onClick={onCancel}>
           Hủy
         </Button>
-        <Button type="submit" className={s.flex14}>
+        <Button type="submit" className={s.flex14} disabled={!action.canSave}>
           Lưu phần
         </Button>
       </div>

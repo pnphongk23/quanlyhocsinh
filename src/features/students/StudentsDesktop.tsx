@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { getClass } from "../../data/repositories/classes";
 import {
   createStudent,
@@ -12,8 +12,8 @@ import { listAttendance } from "../../data/repositories/attendance";
 import { useAccess } from "../../data/repositories/access";
 import type { Attendance, Class, Session, Student } from "../../data/types";
 import { todayISO } from "../../shared/format";
-import { useSaveStatus } from "../../shared/SaveStatus";
-import { Button, Input, Modal } from "../../shared/ui";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { Button, Input, Modal, UnsavedChangesDialog } from "../../shared/ui";
 import { ClassOptionsMenu, type ClassOption } from "../classes/ClassOptionsMenu";
 import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
 import s from "./StudentsDesktop.module.css";
@@ -62,51 +62,10 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
     .flatMap((session) => listAttendance(session.id));
   const [menuStudentId, setMenuStudentId] = useState<string | null>(null);
   const [phoneFor, setPhoneFor] = useState<Student | null>(null);
-  const [phoneError, setPhoneError] = useState("");
   const [leavingStudent, setLeavingStudent] = useState<Student | null>(null);
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState("");
-  const save = useSaveStatus();
 
   if (!klass) return null;
-
-  async function addStudent(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    try {
-      await createStudent({
-        classId,
-        name: String(data.get("name") ?? "").trim(),
-        parentPhone: String(data.get("phone") ?? "").trim(),
-        enrolledAt: todayISO(),
-      });
-      setAdding(false);
-      setError("");
-      save.clearStatus();
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không thể lưu học sinh. Vui lòng thử lại.",
-      );
-      save.setStatus("error");
-    }
-  }
-
-  async function savePhone(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!phoneFor) return;
-    const data = new FormData(event.currentTarget);
-    try {
-      await updateStudentPhone(phoneFor.id, String(data.get("phone") ?? ""));
-      setPhoneFor(null);
-      setPhoneError("");
-    } catch (cause) {
-      setPhoneError(
-        cause instanceof Error ? cause.message : "Không lưu được số điện thoại.",
-      );
-    }
-  }
 
   const rowMenu = (student: Student): ClassOption[] => [
     {
@@ -114,7 +73,6 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
       icon: "edit",
       onSelect: () => {
         setMenuStudentId(null);
-        setPhoneError("");
         setPhoneFor(student);
       },
     },
@@ -146,12 +104,6 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
           ) : undefined
         }
       />
-
-      {error && (
-        <p role="alert" className={d.error}>
-          {error}
-        </p>
-      )}
 
         <div className={s.stats}>
           <div className={d.statCard}>
@@ -226,25 +178,93 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
         </p>
       </div>
 
+      {adding && (
+        <AddStudentModal classId={classId} onClose={() => setAdding(false)} />
+      )}
+      {phoneFor && (
+        <PhoneModal student={phoneFor} onClose={() => setPhoneFor(null)} />
+      )}
+      {leavingStudent && (
+        <LeaveStudentModal
+          student={leavingStudent}
+          onClose={() => setLeavingStudent(null)}
+        />
+      )}
+    </main>
+  );
+}
+
+function errorText(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message !== "save_failed"
+    ? error.message
+    : fallback;
+}
+
+/**
+ * Modal có form: đóng khi còn nhập dở thì hỏi (Lưu / Bỏ thay đổi / Ở lại).
+ * `Modal` chỉ báo đóng sau khi chạy xong animation ra, nên khi bị chặn hộp
+ * thoại hiện lại ngay sau nhịp đó.
+ */
+function useGuardedClose(dirty: boolean, onClose: () => void) {
+  const [asking, setAsking] = useState(false);
+  return {
+    asking,
+    request: () => (dirty ? setAsking(true) : onClose()),
+    stay: () => setAsking(false),
+  };
+}
+
+function AddStudentModal({
+  classId,
+  onClose,
+}: {
+  classId: string;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const action = useSaveAction({
+    baseline: { name: "", phone: "" },
+    value: { name, phone },
+    validate: (next) => next.name.trim() !== "",
+    save: (next) =>
+      createStudent({
+        classId,
+        name: next.name.trim(),
+        parentPhone: next.phone.trim(),
+        enrolledAt: todayISO(),
+      }),
+  });
+  const close = useGuardedClose(action.dirty, onClose);
+  async function submit(event?: FormEvent) {
+    event?.preventDefault();
+    if (await action.submit()) onClose();
+  }
+  return (
+    <>
       <Modal
         title="Thêm học sinh"
-        open={adding}
-        onClose={() => {
-          setAdding(false);
-          save.clearStatus();
-        }}
+        open
+        onClose={close.request}
         footer={
-          <Button size="lg" type="submit" form="add-student-form">
+          <Button
+            size="lg"
+            type="submit"
+            form="add-student-form"
+            loading={action.saving}
+            disabled={!action.canSave}
+          >
             Lưu học sinh
           </Button>
         }
       >
-        <form id="add-student-form" className={s.form} onSubmit={addStudent}>
+        <form id="add-student-form" className={s.form} onSubmit={submit}>
           <Input
             label="Họ và tên học sinh"
             name="name"
             autoComplete="name"
-            onChange={save.markUnsaved}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
             required
           />
           <Input
@@ -253,78 +273,162 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
             type="tel"
             inputMode="tel"
             autoComplete="tel"
-            onChange={save.markUnsaved}
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
           />
           <p className={d.muted13}>
             Phụ huynh dùng số này để đăng ký và đăng nhập.
           </p>
+          {action.error != null && (
+            <p role="alert" className={d.error}>
+              {errorText(action.error, "Không thể lưu học sinh. Vui lòng thử lại.")}
+            </p>
+          )}
         </form>
       </Modal>
+      {close.asking && (
+        <UnsavedChangesDialog
+          open
+          title="Học sinh chưa lưu"
+          message="Bạn đang nhập dở thông tin học sinh. Lưu trước khi đóng?"
+          saving={action.saving}
+          onSave={() => void submit()}
+          onDiscard={onClose}
+          onStay={close.stay}
+        />
+      )}
+    </>
+  );
+}
 
+const PHONE_PATTERN = /^[0-9+().\s-]{6,20}$/;
+
+function PhoneModal({
+  student,
+  onClose,
+}: {
+  student: Student;
+  onClose: () => void;
+}) {
+  const initial = student.parentPhone ?? "";
+  const [phone, setPhone] = useState(initial);
+  const trimmed = phone.trim();
+  const phoneInvalid = trimmed !== "" && !PHONE_PATTERN.test(trimmed);
+  const action = useSaveAction({
+    baseline: initial.trim(),
+    value: trimmed,
+    validate: () => !phoneInvalid,
+    save: (next) => updateStudentPhone(student.id, next),
+  });
+  const close = useGuardedClose(action.dirty, onClose);
+  async function submit(event?: FormEvent) {
+    event?.preventDefault();
+    if (await action.submit()) onClose();
+  }
+  return (
+    <>
       <Modal
         title="Sửa số điện thoại phụ huynh"
-        open={phoneFor !== null}
-        onClose={() => setPhoneFor(null)}
+        open
+        onClose={close.request}
         footer={
-          <Button size="lg" type="submit" form="edit-phone-form">
+          <Button
+            size="lg"
+            type="submit"
+            form="edit-phone-form"
+            loading={action.saving}
+            disabled={!action.canSave}
+          >
             Lưu số điện thoại
           </Button>
         }
       >
-        <form id="edit-phone-form" className={s.form} onSubmit={savePhone}>
+        <form id="edit-phone-form" className={s.form} onSubmit={submit}>
           <Input
             label="Số điện thoại phụ huynh"
             name="phone"
             type="tel"
             inputMode="tel"
-            defaultValue={phoneFor?.parentPhone ?? ""}
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
             autoFocus
           />
           <p className={d.muted13}>
-              Đổi số điện thoại sẽ gỡ liên kết phụ huynh cũ khỏi hồ sơ học sinh.
+            Đổi số điện thoại sẽ gỡ liên kết phụ huynh cũ khỏi hồ sơ học sinh.
           </p>
-          {phoneError && (
+          {phoneInvalid && <p className={d.error}>Số điện thoại không hợp lệ.</p>}
+          {action.error != null && (
             <p role="alert" className={d.error}>
-              {phoneError}
+              {errorText(action.error, "Không lưu được số điện thoại.")}
             </p>
           )}
         </form>
       </Modal>
+      <UnsavedChangesDialog
+        open={close.asking}
+        title="Số điện thoại chưa lưu"
+        message="Bạn đang sửa dở số điện thoại. Lưu trước khi đóng?"
+        saving={action.saving}
+        onSave={() => void submit()}
+        onDiscard={onClose}
+        onStay={close.stay}
+      />
+    </>
+  );
+}
 
-
-      <Modal
-        title="Đánh dấu học sinh đã nghỉ?"
-        open={leavingStudent !== null}
-        onClose={() => setLeavingStudent(null)}
-        footer={
-          <Button
-            variant="danger"
-            size="md"
-            onClick={async () => {
-              if (!leavingStudent) return;
-              try {
-                await markStudentLeft(leavingStudent.id, todayISO());
-                setLeavingStudent(null);
-              } catch (cause) {
-                setError(
-                  cause instanceof Error
-                    ? cause.message
-                    : "Không thể cập nhật trạng thái học sinh.",
-                );
-              }
-            }}
-          >
-            Xác nhận nghỉ học
-          </Button>
-        }
-      >
-        <div className={s.form}>
-          <p className={d.muted14}>
-            Ngày nghỉ là hôm nay. Điểm và điểm danh cũ vẫn được giữ trong lịch
-            sử lớp.
+function LeaveStudentModal({
+  student,
+  onClose,
+}: {
+  student: Student;
+  onClose: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const lock = useRef(false);
+  const [error, setError] = useState("");
+  async function confirm() {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    try {
+      await markStudentLeft(student.id, todayISO());
+      onClose();
+    } catch (cause) {
+      setError(errorText(cause, "Không thể cập nhật trạng thái học sinh."));
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal
+      title="Đánh dấu học sinh đã nghỉ?"
+      open
+      onClose={onClose}
+      footer={
+        <Button
+          variant="danger"
+          size="md"
+          loading={busy}
+          disabled={busy}
+          onClick={() => void confirm()}
+        >
+          Xác nhận nghỉ học
+        </Button>
+      }
+    >
+      <div className={s.form}>
+        <p className={d.muted14}>
+          Ngày nghỉ là hôm nay. Điểm và điểm danh cũ vẫn được giữ trong lịch
+          sử lớp.
+        </p>
+        {error && (
+          <p role="alert" className={d.error}>
+            {error}
           </p>
-        </div>
-      </Modal>
-    </main>
+        )}
+      </div>
+    </Modal>
   );
 }
