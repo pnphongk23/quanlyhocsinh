@@ -17,6 +17,7 @@ import type { Class, Student, Test } from "../../data/types";
 import { todayISO } from "../../shared/format";
 import {
   Button,
+  EmptyState,
   Input,
   Modal,
   Pill,
@@ -234,10 +235,24 @@ export default function TestsDesktop({ classId }: { classId: string }) {
             ) : (
               <tr>
                 <td colSpan={5}>
-                  <p className={d.muted14}>
-                    Chưa có bài kiểm tra. Tạo bài đầu tiên để nhập điểm cho cả
-                    lớp.
-                  </p>
+                  <EmptyState
+                    size="compact"
+                    title="Chưa có bài kiểm tra"
+                    description="Tạo bài đầu tiên để nhập điểm cho cả lớp."
+                    action={
+                      canWrite ? (
+                        <Button
+                          size="md"
+                          onClick={() => {
+                            setError("");
+                            setDialog({ mode: "create" });
+                          }}
+                        >
+                          Tạo bài kiểm tra
+                        </Button>
+                      ) : undefined
+                    }
+                  />
                 </td>
               </tr>
             )}
