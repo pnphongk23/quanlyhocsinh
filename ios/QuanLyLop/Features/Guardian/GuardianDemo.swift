@@ -97,7 +97,7 @@ enum GuardianDemo {
         let publications = [
             ReportPublication(id: "publication-1", reportId: "demo-report-bao", classId: classA,
                               studentId: bao.id, month: "2026-10", publicationNo: 2,
-                              publishedAt: "2026-10-21T02:00:00.000Z", hasPdf: true, snapshot: snapshot)
+                              publishedAt: "2026-10-21T02:00:00.000Z", snapshot: snapshot)
         ]
 
         let baoData = GuardianChildData(

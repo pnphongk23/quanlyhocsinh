@@ -123,7 +123,6 @@
       "month": "2026-10",
       "publication_no": 1,
       "published_at": "2026-10-21T11:15:00.000Z",
-      "has_pdf": false,
       "snapshot": {
         "student_id": "fixture-student",
         "month": "2026-10",

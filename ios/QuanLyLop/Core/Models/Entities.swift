@@ -187,7 +187,6 @@ struct ReportPublication: Codable, Sendable, Equatable {
     let month: String
     let publicationNo: Int
     let publishedAt: String
-    let hasPdf: Bool
     let snapshot: ReportSnapshot
 }
 

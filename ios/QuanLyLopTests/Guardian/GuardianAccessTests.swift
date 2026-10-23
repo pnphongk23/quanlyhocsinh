@@ -71,9 +71,9 @@ final class GuardianAccessTests: XCTestCase {
             attendance: AttendanceSummary(present: 1, late: 0, excused: 0, absent: 0, heldSessions: 1),
             tests: [], stars: StarsSummary(three: 0, two: 0, one: 0), homework: [], generalComment: "", ready: true)
         let old = ReportPublication(id: "old", reportId: "report", classId: "class", studentId: childID,
-            month: "2026-10", publicationNo: 1, publishedAt: "2026-10-15T00:00:00.000Z", hasPdf: false, snapshot: snapshot)
+            month: "2026-10", publicationNo: 1, publishedAt: "2026-10-15T00:00:00.000Z", snapshot: snapshot)
         let current = ReportPublication(id: "current", reportId: "report", classId: "class", studentId: childID,
-            month: "2026-10", publicationNo: 2, publishedAt: "2026-10-21T00:00:00.000Z", hasPdf: true, snapshot: snapshot)
+            month: "2026-10", publicationNo: 2, publishedAt: "2026-10-21T00:00:00.000Z", snapshot: snapshot)
         let withReports = GuardianChildData(student: child.student, className: child.className, sessions: child.sessions,
             attendances: child.attendances, tests: child.tests, scores: child.scores, slips: child.slips,
             homeworkSections: child.homeworkSections, homeworkGrades: child.homeworkGrades, publications: [old, current])
@@ -146,7 +146,7 @@ final class GuardianAccessTests: XCTestCase {
             tests: [], stars: StarsSummary(three: 0, two: 0, one: 0), homework: [],
             generalComment: comment, ready: true)
         return ReportPublication(id: id, reportId: "report", classId: "class", studentId: childID,
-            month: month, publicationNo: 1, publishedAt: at, hasPdf: false, snapshot: snapshot)
+            month: month, publicationNo: 1, publishedAt: at, snapshot: snapshot)
     }
 
     private func published(_ child: GuardianChildData, _ publications: [ReportPublication]) -> GuardianChildData {

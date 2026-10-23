@@ -16,7 +16,6 @@ final class GuardianPublicationDecodeTests: XCTestCase {
             "id": .string("publication-\(student)-\(number)"), "report_id": .string("report-\(student)"),
             "class_id": .string("class"), "student_id": .string(student), "month": .string("2026-10"),
             "publication_no": .number(Double(number)), "published_at": .string("2026-10-2\(number)T00:00:00.000Z"),
-            "has_pdf": .bool(false),
             "snapshot": .object([
                 "student_id": .string(student), "month": .string("2026-10"),
                 "attendance": .object(["present": .number(1), "late": .number(0), "excused": .number(0), "absent": .number(0), "held_sessions": .number(1)]),
