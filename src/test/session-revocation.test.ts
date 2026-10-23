@@ -80,7 +80,7 @@ describe("membership revocation", () => {
     expect(getStore().classes).toEqual([]);
   });
 
-  it("does not hydrate a fallback when the initial GET /me is rejected", async () => {
+  it("hides the cache once the background GET /me is rejected and shows the fallback only after confirmation", async () => {
     const { api } = await import("../data/sync");
     const { activateSession, getSession, initializeSession } = await import("../data/auth/session");
     const a = membership("membership-a", "workspace-a");
@@ -104,7 +104,10 @@ describe("membership revocation", () => {
       throw new Error(`Unexpected fake endpoint: ${endpoint}`);
     }) as never);
 
-    const initializing = initializeSession();
+    await initializeSession();
+    expect(getStore().classes.map((item) => item.name)).toEqual(["A private"]);
+    const { checkSessionInBackground } = await import("../data/auth/session");
+    const initializing = checkSessionInBackground();
     await vi.waitFor(() => expect(getStore().classes).toEqual([]));
     expect(getSession()?.activeMembershipId).toBeNull();
     confirm(me("membership-b", [b]));

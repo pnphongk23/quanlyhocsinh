@@ -7,7 +7,7 @@ import { setSaveStatus } from "./saveStatus";
 import { logoutLockKey } from "./outbox";
 import { classFromApi } from "./api/mapping";
 const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
-export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_BASE_URL || defaultBase, getToken });
+export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_BASE_URL || defaultBase, getToken: () => getToken() });
 let running: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | undefined;
 const entities: Array<EntityName> = ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"];
@@ -52,12 +52,12 @@ function updateStoreView(entity: EntityName, item: Record<string, any>): void {
   if (index >= 0) list[index] = view; else list.push(view);
 }
 declare global { interface Window { __QLH_STATE__?: import("./types").StoreState } }
-async function applyPull(page: any, identity: string): Promise<void> {
+async function applyPull(page: PullResponse, identity: string): Promise<boolean> {
   await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
     for (const entity of entities) for (const item of page.upserts?.[entity] ?? []) {
-      const parts = keyParts(entity, item as Record<string, unknown>), key = `${identity}|${entity}|${parts.join("|")}`;
+      const parts = keyParts(entity, item as unknown as Record<string, unknown>), key = `${identity}|${entity}|${parts.join("|")}`;
       const table = tableFor(entity); const existing = await table.get(key) as any;
-      if (!existing || Number((item as any).version ?? 0) >= Number(existing.version ?? 0)) await table.put(stored(entity, key, item as object) as any);
+      if (!existing || Number((item as any).version ?? 0) >= Number(existing.version ?? 0)) await table.put(stored(entity, key, item as object, identity) as any);
     }
     for (const deleted of page.deleted ?? []) {
       const entity = deleted.entity as EntityName; if (!entities.includes(entity)) continue;
@@ -65,42 +65,58 @@ async function applyPull(page: any, identity: string): Promise<void> {
     }
     await db.meta.put({ key: identity, identity, cursor: page.cursor, epoch: page.epoch });
   });
+  return Object.values(page.upserts ?? {}).some((items) => items?.length) || Boolean(page.deleted?.length);
+}
+const snapshotConcurrency = 4;
+const firstPaintEntities: ReadonlyArray<EntityName> = ["class", "student", "class_session"];
+async function snapshotEntity(identity: string, membershipId: string, entity: EntityName, isCancelled: () => boolean): Promise<void> {
+  const table = tableFor(entity);
+  let after: string | undefined;
+  do {
+    if (isCancelled()) return;
+    const page = await api.request(`GET /sync/snapshot/${entity}` as any, { query: { membership_id: membershipId, after, limit: 300 } }) as { items: unknown[]; next_after: string | null };
+    await table.bulkPut((page.items as unknown as Array<Record<string, unknown>>).map((item) => stored(entity, `${identity}|${entity}|${keyParts(entity, item).join("|")}`, item, identity) as any));
+    after = page.next_after ?? undefined;
+  } while (after);
+  if (firstPaintEntities.includes(entity) && identityKey() === identity) await hydrateStore();
 }
 async function snapshot(identity: string, membershipId: string): Promise<void> {
   const header = await api.request("GET /sync/snapshot", { query: { membership_id: membershipId } });
-  for (const entity of header.entities) {
-    if (!entities.includes(entity as EntityName)) continue;
-    let after: string | undefined;
-    do {
-      const page: {items: unknown[]; next_after: string | null} = await api.request(`GET /sync/snapshot/${entity}` as any, { query: { membership_id: membershipId, after, limit: 300 } }) as {items: unknown[]; next_after: string | null};
-      const table = tableFor(entity as EntityName);
-      await db.transaction("rw", [table, db.meta], async () => {
-        for (const item of page.items as any[]) { const key = `${identity}|${entity}|${keyParts(entity as EntityName, item).join("|")}`; await table.put(stored(entity as EntityName, key, item) as any); }
-        await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
-      });
-      after = page.next_after ?? undefined;
-    } while (after);
-  }
+  await clearIdentityCache(identity);
+  const queue = (header.entities as string[]).filter((entity): entity is EntityName => entities.includes(entity as EntityName))
+    .sort((x, y) => Number(firstPaintEntities.includes(y)) - Number(firstPaintEntities.includes(x)));
+  let failure: { error: unknown } | null = null;
+  const worker = async () => {
+    for (let entity = queue.shift(); entity && !failure; entity = queue.shift()) {
+      try { await snapshotEntity(identity, membershipId, entity, () => failure !== null); } catch (error) { failure ??= { error }; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(snapshotConcurrency, queue.length) }, worker));
+  if (failure) throw (failure as { error: unknown }).error;
+  await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
   await pull(identity, membershipId);
 }
-async function pull(identity: string, membershipId: string): Promise<void> {
-  let meta = await db.meta.get(identity); if (!meta) { await snapshot(identity, membershipId); return; }
+/** Returns whether the local cache changed. */
+async function pull(identity: string, membershipId: string): Promise<boolean> {
+  let meta = await db.meta.get(identity); if (!meta) { await snapshot(identity, membershipId); return true; }
+  let changed = false;
   do {
     try {
       const page: PullResponse = await api.request("GET /sync/pull", { query: { membership_id: membershipId, cursor: meta.cursor, epoch: meta.epoch, limit: 200 } }) as PullResponse;
-      await applyPull(page, identity); meta = { ...meta, cursor: page.cursor, epoch: page.epoch };
+      changed = await applyPull(page, identity) || changed; meta = { ...meta, cursor: page.cursor, epoch: page.epoch };
       if (!page.has_more) break;
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 409 && ["resync_required", "snapshot_required"].includes(error.error.code)) {
-          await clearIdentityCache(identity); await snapshot(identity, membershipId); break;
-        }
-        if (error instanceof ApiError && error.status === 401) { await clearIdentityCache(identity); await clearSession(); break; }
-        if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
-          await clearIdentityCache(identity); await invalidateActiveMembership(); break;
-        }
-        throw error;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409 && ["resync_required", "snapshot_required"].includes(error.error.code)) {
+        await snapshot(identity, membershipId); return true;
+      }
+      if (error instanceof ApiError && error.status === 401) { await clearIdentityCache(identity); await clearSession(); return true; }
+      if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+        await clearIdentityCache(identity); await invalidateActiveMembership(); return true;
+      }
+      throw error;
     }
   } while (true);
+  return changed;
 }
 async function clearIdentityCache(identity: string): Promise<void> {
   await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
@@ -125,52 +141,68 @@ export async function clearUserCache(userId: string): Promise<boolean> {
   });
 }
 export const clearMembershipCache = clearIdentityCache;
-export async function syncNow(): Promise<void> {
+let again = false;
+export function syncNow(): Promise<void> {
   if (timer) { clearTimeout(timer); timer = undefined; }
-  if (running) return running;
-  const cache = getCacheIdentity(); if (!cache || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) return;
-    const identity = identityKey();
-    running = (async () => {
-      try {
-        await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
-        while (true) {
-          const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").sortBy("created_at");
-          if (!rows.length) break;
-          const batch = [] as typeof rows;
-          for (const row of rows) {
-            if (batch.length >= 50) break;
-            if (row.depends_on) {
-              const dependency = await db.outbox.get(row.depends_on);
-              if (dependency && dependency.status !== "rejected") continue;
-            }
-            batch.push(row);
-          }
-          if (!batch.length) break;
-        const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({ id, type, payload, base_version, created_at })) as SyncCommand[];
-        await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "sending" as const })));
-        let response;
-          try { response = await api.request("POST /sync/push", { body: { membership_id: cache.membershipId, device_id: getDeviceId(), commands } }); }
-          catch (e) {
-            if (e instanceof ApiError && e.status === 401) {
-              await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "pending" as const })));
-              await clearIdentityCache(identity); await clearSession();
-            } else if (e instanceof ApiError && (e.status === 403 || e.status === 404)) {
-              await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "rejected" as const, error: e.error.code })));
-              await clearIdentityCache(identity); await invalidateActiveMembership();
-            } else await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "pending" as const })));
-            throw e;
-          }
-          const returned = new Set<string>();
-          for (const result of response.results) { returned.add(result.id); await applyCommandResult(result, identity); }
-          for (const row of batch) if (!returned.has(row.id)) await db.outbox.update(row.id, { status: "pending" });
-          if (batch.some((row) => !returned.has(row.id))) break;
-      }
-      await pull(identity, cache.membershipId); await hydrateStore();
-      const remaining = await db.outbox.where("identity").equals(identity).toArray();
-      setSaveStatus(remaining.some((x) => x.status === "rejected") ? "error" : remaining.length ? "local" : "synced");
-    } catch { setSaveStatus("error"); }
-  })().finally(() => { running = null; });
+  if (running) { again = true; return running; }
+  if (!getCacheIdentity() || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) return Promise.resolve();
+  running = (async () => {
+    await Promise.resolve();
+    try {
+      do {
+        again = false;
+        const cache = getCacheIdentity(); if (!cache || !getToken()) break;
+        await syncRound(cache.membershipId, identityKey());
+      } while (again);
+    } finally { running = null; }
+  })();
   return running;
+}
+async function syncRound(membershipId: string, identity: string): Promise<void> {
+  let outboxChanged = false;
+  try {
+    await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
+    while (true) {
+      const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").sortBy("created_at");
+      if (!rows.length) break;
+      const batch = [] as typeof rows;
+      for (const row of rows) {
+        if (batch.length >= 50) break;
+        if (row.depends_on) {
+          const dependency = await db.outbox.get(row.depends_on);
+          if (dependency && dependency.status !== "rejected") continue;
+        }
+        batch.push(row);
+      }
+      if (!batch.length) break;
+      const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({ id, type, payload, base_version, created_at })) as SyncCommand[];
+      await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "sending" as const })));
+      outboxChanged = true;
+      let response;
+      try { response = await api.request("POST /sync/push", { body: { membership_id: membershipId, device_id: getDeviceId(), commands } }); }
+      catch (e) {
+        if (e instanceof ApiError && e.status === 401) {
+          await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "pending" as const })));
+          await clearIdentityCache(identity); await clearSession();
+        } else if (e instanceof ApiError && (e.status === 403 || e.status === 404)) {
+          await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "rejected" as const, error: e.error.code })));
+          await clearIdentityCache(identity); await invalidateActiveMembership();
+        } else await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "pending" as const })));
+        throw e;
+      }
+      const returned = new Set<string>();
+      for (const result of response.results) { returned.add(result.id); await applyCommandResult(result, identity); }
+      for (const row of batch) if (!returned.has(row.id)) await db.outbox.update(row.id, { status: "pending" });
+      if (batch.some((row) => !returned.has(row.id))) break;
+    }
+    const changed = await pull(identity, membershipId);
+    if (changed || outboxChanged) await hydrateStore();
+    const remaining = await db.outbox.where("identity").equals(identity).toArray();
+    setSaveStatus(remaining.some((x) => x.status === "rejected") ? "error" : remaining.length ? "local" : "synced");
+  } catch {
+    if (outboxChanged) await hydrateStore();
+    if (await db.outbox.where("identity").equals(identity).count()) setSaveStatus("error");
+  }
 }
 async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {
   const row = await db.outbox.get(result.id); if (!row) return;
@@ -184,7 +216,19 @@ function getDeviceId(): string {
   const key = "qlh.device.v1"; let id = localStorage.getItem(key); if (!id) { id = crypto.randomUUID(); localStorage.setItem(key, id); } return id;
 }
 export function scheduleSync(delay = 2_000): void { if (timer) clearTimeout(timer); timer = setTimeout(() => { timer = undefined; void syncNow(); }, delay); }
+const pollInterval = 60_000;
 if (typeof window !== "undefined") {
-  window.addEventListener("online", () => void syncNow()); window.addEventListener("focus", () => void syncNow());
-  window.setInterval(() => void syncNow(), 120_000);
+  let poll: ReturnType<typeof setInterval> | undefined;
+  const visible = () => typeof document === "undefined" || document.visibilityState === "visible";
+  const startPoll = () => { if (!poll && visible()) poll = setInterval(() => void syncNow(), pollInterval); };
+  const stopPoll = () => { if (poll) { clearInterval(poll); poll = undefined; } };
+  // Several foreground events fire together on iOS; one already-running round pulls after them all.
+  const onForeground = () => { if (!running) void syncNow(); };
+  window.addEventListener("online", onForeground);
+  window.addEventListener("focus", onForeground);
+  window.addEventListener("pageshow", onForeground);
+  if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => {
+    if (visible()) { startPoll(); onForeground(); } else stopPoll();
+  });
+  startPoll();
 }

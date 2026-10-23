@@ -59,6 +59,6 @@ export type EntityName = keyof typeof tables;
 export function tableFor(entity: EntityName): Table<Stored<EntityMap[EntityName]>, string> {
   return tables[entity] as Table<Stored<EntityMap[EntityName]>, string>;
 }
-export function stored<T extends object>(entity: EntityName, key: string, value: T): T & { identity: string; key: string; entity: string } {
-  return { ...value, identity: identityKey(), key, entity };
+export function stored<T extends object>(entity: EntityName, key: string, value: T, identity = identityKey()): T & { identity: string; key: string; entity: string } {
+  return { ...value, identity, key, entity };
 }

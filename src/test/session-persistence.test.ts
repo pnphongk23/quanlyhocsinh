@@ -43,6 +43,7 @@ describe("web session persistence", () => {
     server.request.mockRejectedValue(new ApiError(401, { code: "unauthorized", message: "Expired", request_id: "fixture" }));
     const session = await import("../data/auth/session");
     await session.initializeSession();
+    await session.checkSessionInBackground();
     expect(session.getSession()).toBeNull();
     expect(localStorage.getItem("qlh.session.v1")).toBeNull();
   });
@@ -52,6 +53,7 @@ describe("web session persistence", () => {
     server.request.mockRejectedValueOnce(new TypeError("offline"));
     const offline = await import("../data/auth/session");
     await offline.initializeSession();
+    await offline.checkSessionInBackground();
     expect(offline.getToken()).toBe(saved.token);
 
     vi.resetModules();
@@ -59,6 +61,7 @@ describe("web session persistence", () => {
     server.request.mockResolvedValueOnce({ ...me, memberships: [{ ...membership, status: "disabled" }], active_membership_id: membership.id });
     const inactive = await import("../data/auth/session");
     await inactive.initializeSession();
+    await inactive.checkSessionInBackground();
     expect(inactive.getSession()?.activeMembershipId).toBeNull();
     expect(store.setCacheIdentity).toHaveBeenCalledWith(null);
   });
