@@ -1,13 +1,13 @@
 import { db, getCacheIdentity, identityKey, rowKey, tableFor, stored, type EntityName } from "../db";
 import { ApiError } from "../api/client";
 import { setSaveStatus } from "../saveStatus";
-import { scheduleSync } from "../sync";
+import { scheduleSync, syncNow } from "../sync";
 
 type Wire = Record<string, unknown> & { id: string; version?: number };
 
 /** Ghi bản ghi máy chủ vừa trả về vào Dexie đúng khoá và hình dạng như pull; bản có version thấp hơn bản đang lưu bị bỏ qua. */
-async function cacheRemote(entity: EntityName, item: Wire, base?: Record<string, unknown>): Promise<void> {
-  if (!getCacheIdentity()) return;
+async function cacheRemote(entity: EntityName, item: Wire, base?: Record<string, unknown>): Promise<boolean> {
+  if (!getCacheIdentity()) return true;
   const key = rowKey(entity, [item.id]), table = tableFor(entity);
   try {
     await db.transaction("rw", table, async () => {
@@ -16,19 +16,24 @@ async function cacheRemote(entity: EntityName, item: Wire, base?: Record<string,
       const { identity: _identity, key: _key, entity: _entity, ...current } = existing ?? {};
       await table.put(stored(entity, key, { ...(existing ? current : base), ...item }) as never);
     });
-  } catch { setSaveStatus("error"); }
+    return true;
+  } catch { return false; }
 }
 
 /**
  * Sau một ghi REST thành công: ghi cache bền, rồi bộ nhớ, rồi kéo đồng bộ ngay.
+ * Nếu ghi cache lỗi thì vẫn cập nhật bộ nhớ, đặt trạng thái lỗi và kéo lại làm đường khôi phục.
  * Bỏ qua nếu người dùng đã đổi vai trò trong lúc chờ máy chủ (lần kéo của vai đó sẽ lấy bản ghi).
  */
 export async function commitRemote(identity: string, entity: EntityName, remote: Wire | undefined, base: Record<string, unknown> | undefined, apply: () => void): Promise<void> {
   if (identityKey() !== identity) return;
-  if (remote && typeof remote.id === "string") await cacheRemote(entity, remote, base);
+  const cached = remote && typeof remote.id === "string" ? await cacheRemote(entity, remote, base) : true;
   if (identityKey() !== identity) return;
   apply();
-  if (getCacheIdentity()) scheduleSync(0);
+  if (cached) { if (getCacheIdentity()) scheduleSync(0); return; }
+  // Máy chủ đã nhận nhưng cache máy lỗi: báo lỗi lưu và kéo lại để bản ghi về cache.
+  setSaveStatus("error");
+  await syncNow();
 }
 
 const pendingIds = new Map<string, string>();

@@ -2,6 +2,7 @@ import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db, identityKey, setCacheIdentity } from "../data/db";
 import { ApiError } from "../data/api/client";
+import { getSaveStatus, setSaveStatus } from "../data/saveStatus";
 import { createSeed } from "../data/seed";
 
 vi.mock("../data/auth/session", () => ({ getToken: () => "fake-token", getSession: () => ({ user: { id: "u" }, me: { memberships: [] } }), updateMe: vi.fn(), clearSession: vi.fn(), invalidateActiveMembership: vi.fn() }));
@@ -49,6 +50,28 @@ describe("REST writes persist to the device cache", () => {
     expect(getStore().students.filter((s) => s.id === ids[0])).toHaveLength(1);
     expect(await db.students.get(`${identityKey()}|student|${ids[0]}`)).toBeTruthy();
     spy.mockRestore();
+  });
+
+  it("shows an error and recovers the record by pulling when the cache write fails", async () => {
+    const { api } = await import("../data/sync");
+    const { hydrateStore, getStore } = await import("../data/store");
+    const { createStudent } = await import("../data/repositories/students");
+    setSaveStatus("synced");
+    vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => student(options.body.id)) as never);
+    vi.spyOn(db.students, "put").mockRejectedValueOnce(new Error("quota"));
+    let statusAtSync = "";
+    sync.syncNow.mockImplementationOnce(async () => {
+      statusAtSync = getSaveStatus();
+      const { stored } = await import("../data/db");
+      const id = getStore().students[0].id;
+      await db.students.put(stored("student", `${identityKey()}|student|${id}`, student(id)) as never);
+      await hydrateStore();
+    });
+    const created = await createStudent({ classId: "c1", name: "Dũng", parentPhone: "", enrolledAt: "2026-10-01" });
+    expect(statusAtSync).toBe("error");
+    expect(getStore().students.map((s) => s.id)).toEqual([created.id]);
+    await hydrateStore();
+    expect(getStore().students.map((s) => s.id)).toEqual([created.id]);
   });
 
   it("treats 200 on a repeated create as success without duplicating", async () => {
