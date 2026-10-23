@@ -15,9 +15,6 @@
   .form {
     flex: 1;
   }
-  .actions {
-    margin-top: auto;
-  }
 }
 .form {
   display: flex;
@@ -37,10 +34,6 @@
   font-size: var(--text-md);
   color: var(--color-muted);
   line-height: 1.5;
-}
-.actions {
-  display: grid;
-  gap: var(--space-8);
 }
 .cancelButton {
   min-height: 48px;
@@ -604,8 +597,7 @@
     border-radius: var(--radius-card);
     background: var(--color-surface);
   }
-  .actions {
-    display: flex;
+  .formPage .actions {
     flex-direction: row-reverse;
     justify-content: flex-start;
     align-items: center;

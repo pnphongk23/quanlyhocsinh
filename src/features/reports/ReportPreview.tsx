@@ -17,6 +17,10 @@ export interface ReportPreviewProps {
   /** Dữ liệu cho phép phát hành (nháp mới, chưa có bản ghi, hoặc có cờ phát hành lại). */
   publishable?: boolean;
   onPublish?: () => void;
+  /** Đang phát hành báo cáo này (loading). */
+  publishing?: boolean;
+  /** Đang có một lần phát hành bất kỳ: khoá nút. */
+  publishBusy?: boolean;
   onBack?: () => void;
 }
 
@@ -32,6 +36,8 @@ export default function ReportPreview({
   canPublish = false,
   publishable = true,
   onPublish,
+  publishing = false,
+  publishBusy = false,
   onBack,
 }: ReportPreviewProps) {
   const starMax = Math.max(1, ...starOrder.map((level) => report.stars.byStars[level]));
@@ -198,7 +204,8 @@ export default function ReportPreview({
               size="lg"
               className={styles.publishButton}
               onClick={onPublish}
-              disabled={!report.ready || !publishable}
+              disabled={!report.ready || !publishable || publishBusy}
+              loading={publishing}
               title={
                 !report.ready
                   ? "Hoàn tất dữ liệu còn thiếu để phát hành."

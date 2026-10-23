@@ -21,6 +21,7 @@ import {
   Pill,
 } from "../../shared/ui";
 import { ConfirmDialog } from "../classes/ConfirmDialog";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import AddSessionModal from "./AddSessionModal";
 import s from "./sessions.module.css";
 
@@ -68,6 +69,13 @@ export default function SessionsTab() {
       setConfirmSession(null);
     }
   }
+
+  const cancelling = useSaveAction<string | null>({
+    baseline: null,
+    value: confirmSession?.id ?? null,
+    validate: (value) => value !== null,
+    save: () => confirmSession && cancel(confirmSession),
+  });
 
   const renderSessionRow = (session: Session) => {
     const missed = session.status === "planned" && session.date <= today;
@@ -267,7 +275,8 @@ export default function SessionsTab() {
           {
             label: "Huỷ buổi học",
             variant: "danger",
-            onClick: () => confirmSession && cancel(confirmSession),
+            busy: !cancelling.canSave,
+            onClick: () => void cancelling.submit(),
           },
           {
             label: "Giữ buổi học",

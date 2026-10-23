@@ -15,7 +15,8 @@ import type {
 } from "../../data/types";
 import { formatDayMonth } from "../../shared/format";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
-import { Button, Modal, Pill, Sheet } from "../../shared/ui";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { Button, Modal, Pill, Sheet, UnsavedChangesDialog } from "../../shared/ui";
 import { Mascot, starPose } from "../../shared/ui/Mascot";
 import {
   homeworkLine,
@@ -24,6 +25,7 @@ import {
   type TicketBadge,
 } from "./commentsModel";
 import { clearDraft, readDraft, writeDraft } from "./draftStore";
+import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./CommentsPanel.module.css";
 
 export interface SheetHomeworkSection {
@@ -159,7 +161,30 @@ export default function CommentTicketSheet({
   });
   const [stars, setStars] = useState<StarLevel | null>(draft.current.stars);
   const [note, setNote] = useState(draft.current.note);
-  const [error, setError] = useState("");
+  const action = useSaveAction({
+    baseline: { stars: row.stars, note: row.comment?.note ?? "" },
+    value: { stars, note },
+    save: (value) => {
+      saveSessionComment({
+        sessionId: session.id,
+        studentId: row.student.id,
+        stars: value.stars,
+        note: value.note,
+      });
+      clearDraft(session.id, row.student.id);
+    },
+  });
+  const closeNow = () => {
+    clearDraft(session.id, row.student.id);
+    onClose();
+  };
+  const guard = useUnsavedCloseGuard(action, { onClose: closeNow });
+  const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
+  const error = action.error
+    ? action.error instanceof Error && action.error.message !== "save_failed"
+      ? action.error.message
+      : "Không lưu được phiếu nhận xét."
+    : "";
   const badge = ticketBadge(row);
   const template = starTemplate(stars);
   const previousLine = homeworkLine(
@@ -183,38 +208,22 @@ export default function CommentTicketSheet({
   function pick(next: StarLevel) {
     if (readOnly) return;
     setStars(next);
-    setError("");
     keepDraft({ stars: next });
   }
 
   function changeNote(value: string) {
     setNote(value);
-    setError("");
     keepDraft({ note: value });
   }
 
-  function save() {
-    try {
-      saveSessionComment({
-        sessionId: session.id,
-        studentId: row.student.id,
-        stars: draft.current.stars,
-        note: draft.current.note,
-      });
-      clearDraft(session.id, row.student.id);
-      setError("");
-      onClose();
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Không lưu được phiếu nhận xét.",
-      );
-    }
+  async function save() {
+    if (await action.submit()) onClose();
   }
 
   const pendingLine =
     row.status === "queued"
-      ? "Sẽ gửi khi có mạng. Sao và ghi chú được giữ khi bạn đóng sheet."
-      : "Sao và ghi chú được giữ khi bạn đóng sheet.";
+      ? "Sẽ gửi khi có mạng. Bấm Lưu để giữ sao và ghi chú."
+      : "Bấm Lưu để giữ sao và ghi chú.";
 
   const body = (
     <div className={s.sheetBody}>
@@ -332,7 +341,7 @@ export default function CommentTicketSheet({
   );
 
   const footer = readOnly ? undefined : (
-    <Button size="lg" onClick={save}>
+    <Button size="lg" onClick={save} disabled={!action.canSave}>
       Lưu
     </Button>
   );
@@ -357,25 +366,33 @@ export default function CommentTicketSheet({
 
   if (desktop)
     return (
-      <Modal
-        open
-        onClose={onClose}
-        title={`Nhận xét · ${row.student.name}`}
-        footer={footer}
-      >
-        {body}
-      </Modal>
+      <>
+        <Modal
+          open
+          onClose={closeNow}
+        beforeClose={guard.beforeClose}
+          title={`Nhận xét · ${row.student.name}`}
+          footer={footer}
+        >
+          {body}
+        </Modal>
+        {confirmDialog}
+      </>
     );
 
   return (
-    <Sheet
-      open
-      onClose={onClose}
-      title={`Nhận xét ${row.student.name}`}
-      header={header}
-      footer={footer}
-    >
-      {body}
-    </Sheet>
+    <>
+      <Sheet
+        open
+        onClose={closeNow}
+        beforeClose={guard.beforeClose}
+        title={`Nhận xét ${row.student.name}`}
+        header={header}
+        footer={footer}
+      >
+        {body}
+      </Sheet>
+      {confirmDialog}
+    </>
   );
 }

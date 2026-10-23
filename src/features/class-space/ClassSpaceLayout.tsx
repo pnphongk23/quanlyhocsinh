@@ -8,7 +8,6 @@ import {
   useParams,
 } from "react-router-dom";
 import {
-  archiveClass,
   getClass,
   getCurrentClassId,
   hasClass,
@@ -22,6 +21,7 @@ import { EmptyState, Icon, LinkButton, NoAccess } from "../../shared/ui";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useSlideIndicator } from "../../shared/motion";
 import { ClassOptionsMenu, type ClassOption } from "../classes/ClassOptionsMenu";
+import { ArchiveClassDialog } from "../classes/ArchiveClassDialog";
 import { EditClassModal } from "../classes/EditClassModal";
 import { EditClassSchedule } from "../classes/EditClassSchedule";
 import s from "./classSpace.module.css";
@@ -53,6 +53,7 @@ export default function ClassSpaceLayout() {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [error, setError] = useState("");
   const klass = getClass(classId);
   // Ngoại lệ hẹp: đúng buổi mình dạy thay thì mở màn chi tiết buổi (không mở cả lớp).
@@ -123,16 +124,9 @@ export default function ClassSpaceLayout() {
       label: "Lưu trữ lớp",
       icon: "archive",
       danger: true,
-      onSelect: async () => {
-        try {
-          await archiveClass(classId);
-          setError("");
-          setOptionsOpen(false);
-        } catch (cause) {
-          setError(
-            cause instanceof Error ? cause.message : "Không lưu trữ được lớp.",
-          );
-        }
+      onSelect: () => {
+        setOptionsOpen(false);
+        setArchiveOpen(true);
       },
     },
   ];
@@ -201,6 +195,12 @@ export default function ClassSpaceLayout() {
           onEditSchedule={() => setScheduleOpen(true)}
         />
       )}
+      <ArchiveClassDialog
+        open={archiveOpen}
+        classId={classId}
+        className={klass.name}
+        onClose={() => setArchiveOpen(false)}
+      />
       {scheduleOpen && (
         <EditClassSchedule
           classId={classId}

@@ -21,6 +21,7 @@ import { formatDayMonth } from "../../shared/format";
 import { useOnline } from "../../shared/hooks/useOnline";
 import { Button, EmptyState, NoAccess, Pill } from "../../shared/ui";
 import CommentTicketSheet, { type SheetHomework } from "./CommentTicketSheet";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import SendTicketsDialog from "./SendTicketsDialog";
 import {
   filterTicketRows,
@@ -259,6 +260,13 @@ export default function CommentsPanel({
     }
   }
 
+  const sending = useSaveAction({
+    baseline: "",
+    value: sendable.map((row) => row.student.id).join(","),
+    validate: (value) => value !== "",
+    save: confirmSend,
+  });
+
   if (!access.can("comments_reports", "read"))
     return <NoAccess what="nhận xét" />;
 
@@ -459,7 +467,8 @@ export default function CommentsPanel({
         ungraded={ungraded}
         previousSessionNumber={previousNumber}
         error={dialogError}
-        onConfirm={confirmSend}
+        busy={sending.saving}
+        onConfirm={() => void sending.submit()}
         onClose={() => {
           setConfirmOpen(false);
           setDialogError("");

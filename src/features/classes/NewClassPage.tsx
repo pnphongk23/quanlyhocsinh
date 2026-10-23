@@ -1,42 +1,67 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { createClass } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
-import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
-import { ActionFooter, Button, Input, LinkButton, NoAccess, PageHeader } from "../../shared/ui";
+import { useSaveStatus } from "../../shared/SaveStatus";
+import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import {
+  ActionFooter,
+  Button,
+  Input,
+  LinkButton,
+  NoAccess,
+  PageHeader,
+  UnsavedChangesDialog,
+} from "../../shared/ui";
 import { WeekdayPicker } from "./WeekdayPicker";
 import s from "./classesForm.module.css";
+
+const EMPTY = { name: "", days: [] as number[], time: "18:30" };
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export default function NewClassPage() {
   const navigate = useNavigate();
   const save = useSaveStatus();
   const access = useAccess();
-  const [name, setName] = useState("");
-  const [days, setDays] = useState<number[]>([]);
-  const [time, setTime] = useState("18:30");
-  const [error, setError] = useState("");
+  const [form, setForm] = useState(EMPTY);
+  const [done, setDone] = useState(false);
+  const action = useSaveAction({
+    baseline: EMPTY,
+    value: form,
+    validate: (value) =>
+      value.name.trim() !== "" &&
+      value.days.length > 0 &&
+      TIME_PATTERN.test(value.time),
+    save: (value) =>
+      createClass({ name: value.name, weekdays: value.days, time: value.time }),
+  });
+  const guard = useLeaveGuard(action.dirty && !done);
+  // Điều hướng sau khi state "đã lưu" được render để không bị chặn bởi chính màn này.
+  useEffect(() => {
+    if (done) navigate("/lop", { replace: true });
+  }, [done, navigate]);
   if (!access.can("classes", "write")) return <NoAccess what="mục tạo lớp" />;
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (
-      !name.trim() ||
-      days.length === 0 ||
-      !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)
-    ) {
-      setError("Nhập tên lớp, chọn ít nhất một ngày và kiểm tra giờ học.");
-      save.setStatus("unsaved");
-      return;
-    }
-    try {
-      await createClass({ name, weekdays: days, time });
+    if (await action.submit()) {
       save.clearStatus();
-      setError("");
-      navigate("/lop", { replace: true });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không tạo được lớp.");
+      setDone(true);
+    } else {
       save.setStatus("error");
     }
   }
+  const error = action.error
+    ? action.error instanceof Error && action.error.message !== "save_failed"
+      ? action.error.message
+      : "Không tạo được lớp."
+    : "";
+  const name = form.name;
+  const days = form.days;
+  const time = form.time;
+  const setName = (next: string) => setForm((current) => ({ ...current, name: next }));
+  const setDays = (next: number[]) => setForm((current) => ({ ...current, days: next }));
+  const setTime = (next: string) => setForm((current) => ({ ...current, time: next }));
   return (
     <section className={s.page}>
       <PageHeader compact backTo="/lop" title="Tạo lớp mới" />
@@ -45,27 +70,18 @@ export default function NewClassPage() {
           label="Tên lớp"
           value={name}
           placeholder="Ví dụ: IELTS Foundation"
-          onChange={(event) => {
-            setName(event.target.value);
-            save.markUnsaved();
-          }}
+          onChange={(event) => setName(event.target.value)}
           required
         />
         <WeekdayPicker
           value={days}
-          onChange={(next) => {
-            setDays(next);
-            save.markUnsaved();
-          }}
+          onChange={setDays}
         />
         <Input
           label="Giờ bắt đầu"
           type="time"
           value={time}
-          onChange={(event) => {
-            setTime(event.target.value);
-            save.markUnsaved();
-          }}
+          onChange={(event) => setTime(event.target.value)}
           required
         />
         {/* 10-gv-tao-lop-moi: chỉ còn dòng ghi chú thang điểm, không còn segmented */}
@@ -84,8 +100,13 @@ export default function NewClassPage() {
             {error}
           </p>
         )}
-          <SaveStatus status={save.status} />
-          <ActionFooter>
+          <ActionFooter
+            hint={
+              !action.valid
+                ? "Nhập tên lớp và chọn ngày học để tạo lớp"
+                : undefined
+            }
+          >
             <LinkButton
               to="/lop"
               variant="surface"
@@ -94,11 +115,23 @@ export default function NewClassPage() {
             >
               Huỷ
             </LinkButton>
-            <Button type="submit" size="lg">
+            <Button type="submit" size="lg" disabled={!action.canSave} loading={action.saving}>
               Tạo lớp
             </Button>
           </ActionFooter>
       </form>
+      <UnsavedChangesDialog
+        open={guard.blocked}
+        saving={action.saving}
+        onSave={async () => {
+          if (await action.submit()) {
+            save.clearStatus();
+            guard.proceed();
+          }
+        }}
+        onDiscard={guard.proceed}
+        onStay={guard.stay}
+      />
     </section>
   );
 }

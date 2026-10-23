@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Mascot } from "../../shared/ui/Mascot";
 import { getClass } from "../../data/repositories/classes";
@@ -21,6 +21,7 @@ import type { Report, Student } from "../../data/types";
 import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
 import { Collapse } from "../../shared/motion";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
+import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import {
   Button,
   Card,
@@ -28,6 +29,7 @@ import {
   NoAccess,
   PageHeader,
   Pill,
+  UnsavedChangesDialog,
 } from "../../shared/ui";
 import ReportPreview from "./ReportPreview";
 import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
@@ -134,6 +136,19 @@ export default function ReportsPage() {
     });
   }, [source, month]);
 
+  // Nhận xét gõ dở chưa rời ô (blur tự lưu): hỏi khi rời màn hoặc tải lại.
+  const draftStudentId = commentDraft ? commentDraft.key.slice(commentDraft.key.indexOf(":") + 1) : "";
+  const draftRow = rows.find((row) => row.report.student.id === draftStudentId);
+  const commentDirty = Boolean(
+    commentDraft &&
+      draftRow &&
+      commentDraft.value.trim() !== (draftRow.record?.generalComment ?? ""),
+  );
+  const guard = useLeaveGuard(commentDirty);
+  const [publishing, setPublishing] = useState<"row" | "all" | null>(null);
+  const publishLock = useRef(false);
+  const commentSaving = useRef<string | null>(null);
+
   if (!access.can("comments_reports", "read"))
     return <NoAccess what="báo cáo" />;
   const canWrite = access.can("comments_reports", "write");
@@ -200,13 +215,14 @@ export default function ReportsPage() {
   async function persistComment(value: string) {
     if (!selected || !canWrite) return;
     if (value.trim() === (selected.record?.generalComment ?? "")) return;
-    save.markUnsaved();
+    const lockKey = `${selected.report.student.id}:${value}`;
+    if (commentSaving.current === lockKey) return;
+    commentSaving.current = lockKey;
     try {
       const record = ensureReport(selected.report.student);
       await saveReportComment(record.id, value);
       save.clearStatus();
       resetNotices();
-      setMessage("Đã lưu nhận xét chung.");
     } catch (cause) {
       save.setStatus("error");
       resetNotices();
@@ -215,6 +231,8 @@ export default function ReportsPage() {
           ? cause.message
           : "Không thể lưu nhận xét chung.",
       );
+    } finally {
+      if (commentSaving.current === lockKey) commentSaving.current = null;
     }
   }
 
@@ -224,7 +242,23 @@ export default function ReportsPage() {
     persistComment(suggestion);
   }
 
-  async function publishRow(row: ReviewRow) {
+  /** Khoá bấm lặp: một lần phát hành tại một thời điểm (gửi tới phụ huynh). */
+  async function guardedPublish(kind: "row" | "all", run: () => Promise<void>) {
+    if (publishLock.current) return;
+    publishLock.current = true;
+    setPublishing(kind);
+    try {
+      await run();
+    } finally {
+      publishLock.current = false;
+      setPublishing(null);
+    }
+  }
+
+  const publishRow = (row: ReviewRow) => guardedPublish("row", () => doPublishRow(row));
+  const publishAll = () => guardedPublish("all", doPublishAll);
+
+  async function doPublishRow(row: ReviewRow) {
     if (!row.slot.publishable) return;
     save.markUnsaved();
     try {
@@ -245,7 +279,7 @@ export default function ReportsPage() {
     }
   }
 
-  async function publishAll() {
+  async function doPublishAll() {
     const waiting = rows.filter((row) => row.slot.publishable);
     if (!waiting.length) return;
     save.markUnsaved();
@@ -286,6 +320,20 @@ export default function ReportsPage() {
   const notices = (
     <div className={styles.notices}>
       <SaveStatus status={save.status} />
+      <UnsavedChangesDialog
+        open={guard.blocked}
+        title="Nhận xét chung chưa lưu"
+        message="Bạn đang sửa dở nhận xét chung. Lưu trước khi rời màn này?"
+        onSave={async () => {
+          if (commentDraft) await persistComment(commentDraft.value);
+          guard.proceed();
+        }}
+        onDiscard={() => {
+          setCommentDraft(null);
+          guard.proceed();
+        }}
+        onStay={guard.stay}
+      />
       {message && (
         <span role="status" className={styles.successMessage}>
           <Mascot pose="vui" size={32} className={styles.successMascot} />
@@ -354,6 +402,8 @@ export default function ReportsPage() {
       canPublish={canWrite}
       publishable={selected.slot.publishable}
       onPublish={() => publishRow(selected)}
+      publishing={publishing === "row"}
+      publishBusy={publishing !== null}
       onBack={() => setPreviewOpen(false)}
     />
   ) : null;
@@ -472,7 +522,8 @@ export default function ReportsPage() {
                     <Button
                       className={styles.publishButton}
                       onClick={publishAll}
-                      disabled={!summary.publishable}
+                      disabled={!summary.publishable || publishing !== null}
+                      loading={publishing === "all"}
                       title={
                         summary.publishable
                           ? undefined
@@ -569,7 +620,8 @@ export default function ReportsPage() {
                 <Button
                   size="lg"
                   onClick={publishAll}
-                  disabled={!summary.publishable}
+                  disabled={!summary.publishable || publishing !== null}
+                  loading={publishing === "all"}
                   aria-describedby={
                     summary.publishable ? undefined : "publish-disabled-reason"
                   }

@@ -59,6 +59,7 @@ describe("AddSessionModal sửa buổi lẻ", () => {
   function submitForm() {
     const form = screen.getByRole("dialog").querySelector("form");
     if (!form) throw new Error("Missing edit form");
+    fireEvent.change(screen.getByLabelText(/Ghi chú/), { target: { value: "Ghi chú mới" } });
     fireEvent.submit(form);
   }
 
@@ -69,7 +70,9 @@ describe("AddSessionModal sửa buổi lẻ", () => {
 
     submitForm();
 
-    expect(await screen.findByRole("button", { name: "Đang lưu…" })).toBeDisabled();
+    const saveButton = await screen.findByRole("button", { name: "Lưu thay đổi" });
+    await waitFor(() => expect(saveButton).toBeDisabled());
+    expect(saveButton).toHaveAttribute("aria-busy", "true");
     fireEvent.click(screen.getAllByRole("button", { name: "Đóng" })[0]);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();

@@ -5,6 +5,8 @@ import s from "./dialogs.module.css";
 export interface ConfirmAction {
   label: string;
   variant?: ButtonVariant;
+  /** Đang xử lý: khoá nút để không bấm lần hai. */
+  busy?: boolean;
   onClick: () => void;
 }
 
@@ -47,6 +49,7 @@ export function ConfirmDialog({
               size="lg"
               variant={action.variant ?? "primary"}
               autoFocus={index === 0}
+              disabled={action.busy}
               onClick={action.onClick}
             >
               {action.label}

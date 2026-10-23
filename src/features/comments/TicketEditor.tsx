@@ -102,7 +102,6 @@ export default function TicketEditor({
   const [stars, setStars] = useState<StarLevel | null>(draft.current.stars);
   const [note, setNote] = useState(draft.current.note);
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
   const attendance = listAttendance(session.id).find(
     (record) => record.studentId === row.student.id,
   );
@@ -118,7 +117,6 @@ export default function TicketEditor({
         note: next.note,
       });
       setError("");
-      setSaved(true);
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Không lưu được phiếu nhận xét.",
@@ -140,7 +138,6 @@ export default function TicketEditor({
     writeDraft(session.id, row.student.id, draft.current);
     setNote(value);
     setError("");
-    setSaved(false);
   }
 
   return (
@@ -247,11 +244,6 @@ export default function TicketEditor({
       {error && (
         <p role="alert" className={s.error}>
           {error}
-        </p>
-      )}
-      {saved && !error && (
-        <p role="status" className={s.savedNote}>
-          Đã lưu phiếu · phụ huynh thấy thay đổi ngay
         </p>
       )}
       {row.status === "sent" && (
