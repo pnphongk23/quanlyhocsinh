@@ -22,9 +22,13 @@ export function lookupFailureMessage(error: unknown): string {
 /** Lỗi bước gửi link: `field` hiện tại ô email, `banner` hiện đầu thẻ. */
 export function requestFailure(error: unknown): { field: string; banner: string } {
   if (!(error instanceof ApiError)) return { field: "", banner: OFFLINE };
-  const code = error.error.code;
-  if (error.status === 422 && code === "email_mismatch") return { field: "Email không khớp email đã lưu.", banner: "" };
-  if (error.status === 422 && code === "invalid_email") return { field: "Email chưa đúng định dạng.", banner: "" };
+  const emailError = error.error.details?.fields;
+  const fieldCode =
+    emailError && typeof emailError === "object" && "email" in emailError
+      ? emailError.email
+      : null;
+  if (error.status === 422 && fieldCode === "email_mismatch") return { field: "Email không khớp email đã lưu.", banner: "" };
+  if (error.status === 422 && fieldCode === "invalid_email") return { field: "Email chưa đúng định dạng.", banner: "" };
   if (error.status === 429) return { field: "", banner: RATE_LIMITED };
   if (error.status === 503) return { field: "", banner: "Chưa gửi được email lúc này. Hãy thử lại sau ít phút." };
   if (error.status === 404) return { field: "", banner: "Không có tài khoản dùng số điện thoại này." };

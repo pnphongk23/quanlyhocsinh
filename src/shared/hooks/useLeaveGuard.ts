@@ -18,7 +18,10 @@ export interface LeaveGuard {
 export function useLeaveGuard(dirty: boolean): LeaveGuard {
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      dirty && currentLocation.pathname !== nextLocation.pathname,
+      dirty &&
+      (currentLocation.pathname !== nextLocation.pathname ||
+        currentLocation.search !== nextLocation.search ||
+        currentLocation.hash !== nextLocation.hash),
   );
   useEffect(() => {
     if (!dirty) return;

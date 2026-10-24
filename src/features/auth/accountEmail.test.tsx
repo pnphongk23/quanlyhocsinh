@@ -206,11 +206,22 @@ describe("forgot password", () => {
   it("shows email_mismatch at the email field and keeps the typed value", async () => {
     lookup({ account: true, has_email: true, email_masked: "c***@example.com" }); page(); await next();
     await screen.findByLabelText("Nhập email đã lưu", {}, slow);
-    request.mockImplementation(async (endpoint: string) => { if (endpoint === "POST /auth/password-reset/request") throw apiError(422, "email_mismatch"); return defaults(endpoint); });
-    type("Nhập email đã lưu", "khac@example.com"); click("Gửi link");
-    expect(await screen.findByText("Email không khớp email đã lưu.", {}, slow)).toBeInTheDocument();
-    expect(screen.getByLabelText("Nhập email đã lưu")).toHaveValue("khac@example.com");
-  });
+      request.mockImplementation(async (endpoint: string) => { if (endpoint === "POST /auth/password-reset/request") throw apiError(422, "validation_error", { fields: { email: "email_mismatch" } }); return defaults(endpoint); });
+      type("Nhập email đã lưu", "khac@example.com"); click("Gửi link");
+      expect(await screen.findByText("Email không khớp email đã lưu.", {}, slow)).toBeInTheDocument();
+      expect(screen.getByLabelText("Nhập email đã lưu")).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByLabelText("Nhập email đã lưu")).toHaveValue("khac@example.com");
+    });
+
+    it("shows invalid_email from the email field details", async () => {
+      lookup({ account: true, has_email: true, email_masked: "c***@example.com" }); page(); await next();
+      await screen.findByLabelText("Nhập email đã lưu", {}, slow);
+      request.mockImplementation(async (endpoint: string) => { if (endpoint === "POST /auth/password-reset/request") throw apiError(422, "validation_error", { fields: { email: "invalid_email" } }); return defaults(endpoint); });
+      type("Nhập email đã lưu", "valid@example.com"); click("Gửi link");
+      expect(await screen.findByText("Email chưa đúng định dạng.", {}, slow)).toBeInTheDocument();
+      expect(screen.getByLabelText("Nhập email đã lưu")).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByLabelText("Nhập email đã lưu")).toHaveValue("valid@example.com");
+    });
 
   it.each([[429, "rate_limited", "Bạn thử quá nhiều lần. Hãy chờ ít phút rồi thử lại."], [503, "mail_unavailable", "Chưa gửi được email lúc này. Hãy thử lại sau ít phút."]])("shows %i when sending the link", async (status, code, message) => {
     lookup({ account: true, has_email: true, email_masked: "c***@example.com" }); page(); await next();

@@ -41,10 +41,12 @@ describe("useLeaveGuard", () => {
     expect(await screen.findByText("trang khác")).toBeInTheDocument();
   });
 
-  it("dirty: đổi query cùng đường dẫn không hỏi", async () => {
+  it("dirty: chặn đổi query cùng đường dẫn", async () => {
     const router = mount(true);
     await act(async () => { fireEvent.click(screen.getByText("cùng trang")); });
-    expect(screen.queryByText("bị chặn")).toBeNull();
+    expect(await screen.findByText("bị chặn")).toBeInTheDocument();
+    expect(router.state.location.search).toBe("");
+    fireEvent.click(screen.getByText("đi tiếp"));
     expect(router.state.location.search).toBe("?x=1");
   });
 

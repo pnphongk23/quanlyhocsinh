@@ -88,7 +88,7 @@ export default function ReportBatchDetail({
   const publishLock = useRef(false);
   const commentSaving = useRef<string | null>(null);
   /** Lần lưu nhận xét đang chạy; xem trước và phát hành chờ nó xong để lấy đúng nội dung. */
-  const pendingSave = useRef<Promise<void> | null>(null);
+  const pendingSave = useRef<Promise<boolean> | null>(null);
 
   const canWrite = access.can("comments_reports", "write");
   const summary = reviewSummary(rows.map((row) => row.slot));
@@ -111,11 +111,11 @@ export default function ReportBatchDetail({
   }
 
   /** Lưu nhận xét chung của đợt lên máy chủ (cần mạng). */
-  function persistComment(value: string): Promise<void> {
-    if (!selected || !canWrite) return Promise.resolve();
-    if (value.trim() === selected.record.generalComment) return Promise.resolve();
+  function persistComment(value: string): Promise<boolean> {
+    if (!selected || !canWrite) return Promise.resolve(true);
+    if (value.trim() === selected.record.generalComment) return Promise.resolve(true);
     const lockKey = `${selected.record.id}:${value}`;
-    if (commentSaving.current === lockKey) return pendingSave.current ?? Promise.resolve();
+    if (commentSaving.current === lockKey) return pendingSave.current ?? Promise.resolve(true);
     commentSaving.current = lockKey;
     const run = (async () => {
       try {
@@ -130,12 +130,14 @@ export default function ReportBatchDetail({
             ? cause.message
             : "Không thể lưu nhận xét chung.",
         );
+        return false;
       } finally {
         if (commentSaving.current === lockKey) {
           commentSaving.current = null;
           pendingSave.current = null;
         }
       }
+      return true;
     })();
     pendingSave.current = run;
     return run;
@@ -235,8 +237,7 @@ export default function ReportBatchDetail({
         done={leave.done}
         onSave={() =>
           leave.run(async () => {
-            if (commentDraft) await persistComment(commentDraft.value);
-            return true;
+            return commentDraft ? persistComment(commentDraft.value) : true;
           }, guard.proceed)
         }
         onDiscard={() => {

@@ -308,6 +308,26 @@ describe("chi tiết một đợt", () => {
     expect(html).toContain("Gợi ý theo số buổi 3/2/1 sao của đợt: Trong đợt này con có 2 buổi 3 sao, 1 buổi 2 sao, 1 buổi 1 sao.");
   });
 
+  it("không tính sao hoặc BTVN gắn với buổi đã hủy", () => {
+    const state = createSeed();
+    const student = state.students.find((item) => item.id === "6a-student-1")!;
+    const batch = state.reportBatches.find((item) => item.id === "6a-batch")!;
+    const cancelled = state.sessions.find((item) => item.id === "6a-extra-cancelled")!;
+    cancelled.date = "2026-10-13";
+    const build = () => buildRangeStudentReport(student, resolveRange(state.sessions, batch), {
+      ...state,
+      generalComment: "Nhận xét kiểm thử.",
+    })!;
+    const baseline = build();
+    state.comments.push({ ...state.comments.find((item) => item.studentId === student.id)!, id: "cancelled-comment", sessionId: cancelled.id, stars: 3 });
+    state.homeworkSections.push({ id: "cancelled-homework", sessionId: cancelled.id, kind: "vocabulary", title: "Bài bị hủy", description: "" });
+    state.homeworkGrades.push({ sectionId: "cancelled-homework", studentId: student.id, level: "done" });
+
+    const result = build();
+    expect(result.stars).toEqual(baseline.stars);
+    expect(result.homework).toEqual(baseline.homework);
+  });
+
   it("chỉ vai có quyền Sửa mới thấy nút phát hành và nút dùng gợi ý", () => {
     const state = createSeed();
     state.activeMemberId = MEMBER_IDS.lanTeacher;
@@ -345,6 +365,23 @@ describe("chi tiết một đợt", () => {
     expect(await screen.findByText("Lưu nhận xét cần kết nối mạng.")).toBeVisible();
     expect(calls).toHaveLength(0);
   });
+
+  it("lưu thất bại khi rời màn giữ nguyên nội dung và không điều hướng", async () => {
+    await mockApi(() => {
+      throw new ApiError(503, { code: "unavailable", message: "Không thể lưu lúc này.", request_id: "r" });
+    });
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: /Nguyễn Minh Anh/ }));
+    const box = await screen.findByLabelText("Nhận xét chung của đợt");
+    fireEvent.change(box, { target: { value: "Nhận xét cần giữ lại." } });
+    fireEvent.click(screen.getByRole("link", { name: "Tất cả báo cáo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Nhận xét chung chưa lưu" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Lưu" }));
+    expect(await screen.findByRole("alert")).toBeVisible();
+    expect(screen.getByTestId("where")).toHaveTextContent("/lop/6a/bao-cao?dot=6a-batch");
+    expect(screen.getByLabelText("Nhận xét chung của đợt")).toHaveValue("Nhận xét cần giữ lại.");
+    expect(dialog).toBeInTheDocument();
+  });
 });
 
 describe("xem trước trong popup", () => {
@@ -358,9 +395,9 @@ describe("xem trước trong popup", () => {
   it("mobile: mở thành sheet toàn màn, tải bản của máy chủ và không nối bên dưới danh sách", async () => {
     await mockApi((endpoint) => (endpoint === "GET /reports/6a-student-1-report/preview" ? previewBody("6a-student-1") : undefined));
     const dialog = await openPreview();
-    // Đầu popup và đầu bản in cùng ghi khoảng buổi, tên em và lớp.
-    expect(within(dialog).getAllByText("21/09–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A")).toHaveLength(2);
+    // Chờ nội dung từ máy chủ rồi xác nhận tiêu đề của bản in.
     expect(await within(dialog).findByText("Con tiến bộ rõ.")).toBeVisible();
+    expect(await within(dialog).findAllByText("21/09–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A")).toHaveLength(2);
     expect(calls.map((call) => call.endpoint)).toEqual(["GET /reports/6a-student-1-report/preview"]);
     expect(within(dialog).getByText("Điểm từng bài")).toBeVisible();
     expect(within(dialog).getByText("Chưa có điểm")).toBeVisible();

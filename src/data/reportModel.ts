@@ -229,7 +229,7 @@ function buildPeriodReport(
   for (const comment of sentComments) {
     const session = sessionById.get(comment.sessionId);
     if (!session) continue;
-    if (session.date < start || session.date > end) continue;
+    if (!sessionIds.has(session.id)) continue;
     if (comment.stars === null) continue;
     byStars[comment.stars] += 1;
     ticketCount += 1;
@@ -244,8 +244,7 @@ function buildPeriodReport(
   for (const section of data.homeworkSections) {
     const giving = sessionById.get(section.sessionId);
     if (!giving || giving.classId !== student.classId) continue;
-    if (giving.date < start || giving.date > end) continue;
-    if (!inStudentRange(giving.date)) continue;
+    if (!sessionIds.has(giving.id)) continue;
     // Chỉ hiện kết quả chấm khi phiếu của buổi chấm đã gửi cho em.
     const grading = gradingSessionFor(data.sessions, section.sessionId);
     if (!grading || !sentSessionIds.has(grading.id)) continue;
