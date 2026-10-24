@@ -71,6 +71,7 @@ export default function TestScoresPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [leaveAfterDelete, setLeaveAfterDelete] = useState(false);
   const listPath = `/lop/${classId}/bai-kiem-tra`;
   const currentTestIds = new Set([testId]);
@@ -217,12 +218,12 @@ export default function TestScoresPage() {
   const remove = async () => {
     if (removeLock.current) return;
     removeLock.current = true;
+    setDeleteError("");
     try {
       await deleteTestDurable(testId);
     } catch (cause) {
       removeLock.current = false;
-      setConfirmDelete(false);
-      setError(cause instanceof Error ? cause.message : "Không xoá được bài kiểm tra.");
+      setDeleteError(cause instanceof Error ? cause.message : "Không xoá được bài kiểm tra.");
       return;
     }
     setConfirmDelete(false);
@@ -403,9 +404,12 @@ export default function TestScoresPage() {
         open={confirmDelete}
         title={hasScores ? "Lưu trữ bài kiểm tra?" : "Xoá bài kiểm tra?"}
         message={
-          hasScores
-            ? "Bài đã có điểm nên sẽ được lưu trữ; điểm đã nhập vẫn giữ, bài ẩn khỏi bảng điểm và báo cáo."
-            : "Bài chưa có điểm nào nên sẽ bị xoá hẳn."
+          <>
+            {hasScores
+              ? "Bài đã có điểm nên sẽ được lưu trữ; điểm đã nhập vẫn giữ, bài ẩn khỏi bảng điểm và báo cáo."
+              : "Bài chưa có điểm nào nên sẽ bị xoá hẳn."}
+            {deleteError && <span role="alert" className={s.deleteError}> {deleteError}</span>}
+          </>
         }
         actions={[
           hasScores
@@ -414,10 +418,16 @@ export default function TestScoresPage() {
           {
             label: "Giữ bài",
             variant: "neutral",
-            onClick: () => setConfirmDelete(false),
+            onClick: () => {
+              setDeleteError("");
+              setConfirmDelete(false);
+            },
           },
         ]}
-        onDismiss={() => setConfirmDelete(false)}
+        onDismiss={() => {
+          setDeleteError("");
+          setConfirmDelete(false);
+        }}
       />
     </section>
   );

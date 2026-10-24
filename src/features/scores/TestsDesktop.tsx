@@ -116,7 +116,6 @@ export default function TestsDesktop({ classId }: { classId: string }) {
       setDialog(null);
       setError("");
     } catch (cause) {
-      setDialog(null);
       setError(
         cause instanceof Error ? cause.message : "Không xoá được bài kiểm tra.",
       );
@@ -145,7 +144,7 @@ export default function TestsDesktop({ classId }: { classId: string }) {
         }
       />
 
-      {error && (
+      {error && !(dialog && dialog.mode === "delete") && (
         <p role="alert" className={d.error}>
           {error}
         </p>

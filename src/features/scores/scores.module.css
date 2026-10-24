@@ -588,3 +588,8 @@
     gap: var(--space-12);
   }
 }
+
+.deleteError {
+  color: var(--color-error);
+  font-weight: 600;
+}

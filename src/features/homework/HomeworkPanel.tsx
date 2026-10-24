@@ -174,16 +174,51 @@ export default function HomeworkPanel({
     setView("previous");
   }, [partFromUrl]);
 
-  async function act(action: () => Promise<unknown>, fallback: string) {
+  /** Mức vừa bấm nhưng ghi bền lỗi: vẫn hiển thị (đánh dấu chưa lưu) để bấm lại ghi lại. */
+  const [failedGrades, setFailedGrades] = useState<Record<string, HomeworkLevel | null>>({});
+  const gradeKey = (sectionId: string, studentId: string) => `${sectionId}:${studentId}`;
+
+  async function act(action: () => Promise<unknown>, fallback: string): Promise<boolean> {
     setError("");
     save.markUnsaved();
     try {
       await action();
       save.clearStatus();
+      return true;
     } catch (cause) {
       save.setStatus("error");
       setError(cause instanceof Error ? cause.message : fallback);
+      return false;
     }
+  }
+
+  async function gradeOne(sectionId: string, studentId: string, target: HomeworkLevel | null) {
+    const key = gradeKey(sectionId, studentId);
+    const ok = await act(
+      () => setHomeworkGradeDurable(sectionId, studentId, target),
+      "Không lưu được kết quả chấm.",
+    );
+    setFailedGrades((current) => {
+      const next = { ...current };
+      if (ok) delete next[key];
+      else next[key] = target;
+      return next;
+    });
+  }
+
+  async function gradeAll(sectionId: string, studentIds: string[]) {
+    const ok = await act(
+      () => setHomeworkGradeForAllDurable(sectionId, "done"),
+      "Không đánh dấu được cả lớp.",
+    );
+    setFailedGrades((current) => {
+      const next = { ...current };
+      for (const id of studentIds) {
+        if (ok) delete next[gradeKey(sectionId, id)];
+        else next[gradeKey(sectionId, id)] = "done";
+      }
+      return next;
+    });
   }
 
   const backBar =
@@ -343,18 +378,22 @@ export default function HomeworkPanel({
             className={styles.softButton}
             disabled={!canWrite}
             onClick={() =>
-              act(
-                () => setHomeworkGradeForAllDurable(activeSection.id, "done"),
-                "Không đánh dấu được cả lớp.",
+              void gradeAll(
+                activeSection.id,
+                previous.rows.map((row) => row.student.id),
               )
             }
           >
-            Đánh dấu cả lớp: Hoàn thành
+            {previous.rows.some((row) => gradeKey(activeSection.id, row.student.id) in failedGrades)
+              ? "Thử lại: cả lớp Hoàn thành"
+              : "Đánh dấu cả lớp: Hoàn thành"}
           </button>
         </div>
 
         {previous.rows.map((row) => {
-          const level = row.grades[activeSection.id] ?? null;
+          const key = gradeKey(activeSection.id, row.student.id);
+          const unsaved = key in failedGrades;
+          const level = unsaved ? failedGrades[key] : (row.grades[activeSection.id] ?? null);
           return (
             <article className={styles.studentCard} key={row.student.id}>
               <div className={styles.studentHead}>
@@ -368,7 +407,11 @@ export default function HomeworkPanel({
                       Vắng buổi giao bài
                     </span>
                   )}
-                  {!level && <span className={styles.pendingChip}>Chưa chấm</span>}
+                  {unsaved ? (
+                    <span className={styles.pendingChip}>Chưa lưu</span>
+                  ) : (
+                    !level && <span className={styles.pendingChip}>Chưa chấm</span>
+                  )}
                 </span>
               </div>
               <div
@@ -389,14 +432,11 @@ export default function HomeworkPanel({
                         : "")
                     }
                     onClick={() =>
-                      act(
-                        () =>
-                          setHomeworkGradeDurable(
-                            activeSection.id,
-                            row.student.id,
-                            nextGrade(level, option),
-                          ),
-                        "Không lưu được kết quả chấm.",
+                      void gradeOne(
+                        activeSection.id,
+                        row.student.id,
+                        // Mức chưa lưu: bấm lại đúng mức đó là thử ghi lại, không phải bỏ chọn.
+                        unsaved && level === option ? option : nextGrade(level, option),
                       )
                     }
                   >

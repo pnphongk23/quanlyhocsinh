@@ -107,6 +107,7 @@ export default function HomeworkDesktop({
   const [confirmDelete, setConfirmDelete] = useState<HomeworkSection | null>(
     null,
   );
+  const [deleteError, setDeleteError] = useState("");
 
   // Giá trị đã chấm của mọi ô; bản nháp chỉ ghi đè ô người dùng đã bấm.
   const baselineGrades: Record<string, HomeworkLevel | null> = {};
@@ -637,21 +638,26 @@ export default function HomeworkDesktop({
       <ConfirmDialog
         open={confirmDelete !== null}
         title={`Xoá phần “${confirmDelete?.title ?? ""}”?`}
-        message="Phụ huynh sẽ không thấy phần này nữa. Không thể hoàn tác."
+        message={
+          <>
+            Phụ huynh sẽ không thấy phần này nữa. Không thể hoàn tác.
+            {deleteError && <span role="alert"> {deleteError}</span>}
+          </>
+        }
         actions={[
           {
             label: "Xoá phần",
             variant: "danger",
             onClick: async () => {
               if (!confirmDelete) return;
+              setDeleteError("");
               try {
                 await deleteHomeworkSectionDurable(confirmDelete.id);
                 setConfirmDelete(null);
                 setMessage("Đã xoá phần bài tập.");
                 setError("");
               } catch (cause) {
-                setConfirmDelete(null);
-                setError(
+                setDeleteError(
                   cause instanceof Error
                     ? cause.message
                     : "Không xoá được phần bài tập.",
@@ -662,10 +668,16 @@ export default function HomeworkDesktop({
           {
             label: "Huỷ",
             variant: "neutral",
-            onClick: () => setConfirmDelete(null),
+            onClick: () => {
+              setDeleteError("");
+              setConfirmDelete(null);
+            },
           },
         ]}
-        onDismiss={() => setConfirmDelete(null)}
+        onDismiss={() => {
+          setDeleteError("");
+          setConfirmDelete(null);
+        }}
       />
     </div>
   );
