@@ -28,15 +28,28 @@ struct ScoreGridTabView: View {
     private var activeCount: Int { students.filter { $0.status == .active }.count }
     private var leftCount: Int { students.count - activeCount }
 
+    private enum Grid {
+        static let headerHeight: CGFloat = 64
+        static let rowHeight: CGFloat = 52
+        static let nameWidth: CGFloat = 128
+        static let testWidth: CGFloat = 112
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-              if tests.isEmpty {
-                emptyState
-            } else {
-                if data.canWriteScores { newButton }
-                tableCard
+        TeacherScroll {
+            VStack(alignment: .leading, spacing: 8) {
+                if tests.isEmpty {
+                    emptyState
+                } else {
+                    if data.canWriteScores { newButton }
+                    tableCard
+                }
             }
+            .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+            .padding(.top, TeacherMetrics.screenPaddingTop)
+            .padding(.bottom, TeacherMetrics.contentGap * 2)
         }
+        .background(AppColors.background.ignoresSafeArea())
         .navigationDestination(isPresented: $showingCreate) {
             TestEditorView(data: data, classID: classID)
         }
@@ -50,6 +63,7 @@ struct ScoreGridTabView: View {
         }
     }
 
+    /// Both columns size every row from `Grid`, so a name and its scores share one baseline.
     private var tableCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 0) {
@@ -58,6 +72,7 @@ struct ScoreGridTabView: View {
                     HStack(alignment: .top, spacing: 0) {
                         ForEach(tests) { test in testColumn(test) }
                     }
+                    .padding(.trailing, 8)
                 }
             }
             Text(String.localizedStringWithFormat(String(localized: "feature.scores.hien.thi.hoc.sinh.ang.hoc.va.hoc.sinh.a.nghi.nha"), String(describing: (activeCount)), String(describing: (leftCount))))
@@ -65,7 +80,7 @@ struct ScoreGridTabView: View {
                 .foregroundStyle(AppColors.muted)
                 .padding(.top, 12)
         }
-        .padding(.horizontal, 16)
+        .padding(.leading, 16)
         .padding(.vertical, 14)
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
@@ -75,15 +90,15 @@ struct ScoreGridTabView: View {
             Text(String(localized: "feature.scores.hoc.sinh"))
                 .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                 .foregroundStyle(AppColors.muted)
-                .padding(8)
-                .frame(height: 60, alignment: .topLeading)
+                .padding(.horizontal, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: Grid.headerHeight)
                 .overlay(alignment: .bottom) { AppColors.border.frame(height: 1) }
             ForEach(students, id: \.id) { student in
                 studentCell(student)
             }
         }
-        .frame(width: 136)
+        .frame(width: Grid.nameWidth)
     }
 
     private func studentCell(_ student: Student) -> some View {
@@ -102,8 +117,7 @@ struct ScoreGridTabView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .frame(height: 56)
+        .frame(height: Grid.rowHeight)
         .overlay(alignment: .bottom) { AppColors.divider.frame(height: 1) }
     }
 
@@ -116,19 +130,21 @@ struct ScoreGridTabView: View {
                     Text(test.name)
                         .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                         .foregroundStyle(AppColors.text)
-                        .lineLimit(1)
-                      Text(String.localizedStringWithFormat(
-                          String(localized: "feature.scores.ngay.thang.iem"),
-                          String(describing: I4Format.dayMonth(test.date)),
-                          String(describing: test.maxScore)
-                      ))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                    Text(String.localizedStringWithFormat(
+                        String(localized: "feature.scores.ngay.thang.iem"),
+                        String(describing: I4Format.dayMonth(test.date)),
+                        String(describing: test.maxScore)
+                    ))
                         .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                         .foregroundStyle(AppColors.muted)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
+                .padding(.horizontal, 6)
                 .frame(maxWidth: .infinity)
-                .frame(height: 60, alignment: .top)
-                .padding(8)
+                .frame(height: Grid.headerHeight)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -137,7 +153,7 @@ struct ScoreGridTabView: View {
                 scoreCell(test, student)
             }
         }
-        .frame(width: 148)
+        .frame(width: Grid.testWidth)
     }
 
     private func scoreCell(_ test: TestDefinition, _ student: Student) -> some View {
@@ -145,22 +161,20 @@ struct ScoreGridTabView: View {
         return NavigationLink {
             TestScoresView(classID: classID, testID: test.id, data: data, focusStudentID: student.id)
         } label: {
-            VStack(spacing: 2) {
+            Group {
                 if let value {
                     Text(I4Format.score(value))
                         .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                         .foregroundStyle(AppColors.text)
                 } else {
-                      Text(I4Format.score(nil))
-                          .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
-                          .foregroundStyle(AppColors.placeholder)
+                    Text(I4Format.score(nil))
+                        .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
+                        .foregroundStyle(AppColors.placeholder)
                 }
             }
+            .monospacedDigit()
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 44)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(height: 56)
+            .frame(height: Grid.rowHeight)
             .contentShape(Rectangle())
             .overlay(alignment: .bottom) { AppColors.divider.frame(height: 1) }
         }
