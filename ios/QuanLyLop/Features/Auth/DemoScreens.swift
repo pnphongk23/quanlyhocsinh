@@ -217,6 +217,7 @@ private struct DemoAuthFlow: View {
     var body: some View {
         switch model.screen {
         case .register: AuthRegisterView(model: model)
+        case .guardianRegister: AuthGuardianRegisterView(model: model)
         case .forgot: AuthForgotPasswordView(model: model)
         case .forcedPassword: AuthForcedPasswordView(model: model)
         case .chooseRole: AuthRolePickerView(model: model)
