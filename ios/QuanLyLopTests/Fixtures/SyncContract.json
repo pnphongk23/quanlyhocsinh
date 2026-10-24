@@ -11,12 +11,13 @@
   "slip": [{"session_id":"session-1","student_id":"student-1","stars":3,"note":"Tốt","status":"sent","sent_at":"2026-10-02T12:00:00.000Z","version":2,"updated_at":"2026-10-02T12:00:00.000Z"}],
   "homework_section": [{"id":"section-1","class_id":"class-1","session_id":"session-1","kind":"vocabulary","title":"Từ vựng","description":"","version":1}],
   "homework_grade": [{"section_id":"section-1","student_id":"student-1","level":"excellent","version":1,"updated_at":"2026-10-09T11:00:00.000Z"}],
-  "report": [{"id":"report-1","class_id":"class-1","student_id":"student-1","month":"2026-10","status":"published","general_comment":"","needs_republish":false,"publication_count":1,"published_at":"2026-10-20T00:00:00.000Z","version":2}],
+  "report_batch": [{"id":"batch-1","class_id":"class-1","from_session_id":"session-1","to_session_id":"session-1","from_key":"2026-10-02 18:00","to_key":"2026-10-02 18:00","version":1}],
+  "report": [{"id":"report-1","class_id":"class-1","student_id":"student-1","batch_id":"batch-1","status":"published","general_comment":"","needs_republish":false,"publication_count":1,"published_at":"2026-10-20T00:00:00.000Z","version":2}],
   "report_publication": [{
-    "id":"publication-1","report_id":"report-1","class_id":"class-1","student_id":"student-1","month":"2026-10","publication_no":1,
+    "id":"publication-1","report_id":"report-1","class_id":"class-1","student_id":"student-1","batch_id":"batch-1","from_key":"2026-10-02 18:00","to_key":"2026-10-02 18:00","publication_no":1,
     "published_at":"2026-10-20T00:00:00.000Z",
     "snapshot":{
-      "student_id":"student-1","month":"2026-10","ready":true,"general_comment":"Nhận xét giả",
+      "student_id":"student-1","batch_id":"batch-1","range":{"from_key":"2026-10-02 18:00","to_key":"2026-10-02 18:00","from_number":1,"to_number":1,"label":"Buổi 1 · 02/10"},"ready":true,"general_comment":"Nhận xét giả",
       "attendance":{"absent":0,"excused":0,"held_sessions":1,"late":1,"present":0},
       "stars":{"one":0,"three":1,"two":0},
       "homework":[{"done":0,"excellent":1,"kind":"vocabulary","not_done":0}],

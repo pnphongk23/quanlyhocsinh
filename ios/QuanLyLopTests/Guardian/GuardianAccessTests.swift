@@ -88,8 +88,7 @@ final class GuardianAccessTests: XCTestCase {
             attendances: child.attendances, tests: child.tests, scores: child.scores, slips: child.slips,
             homeworkSections: child.homeworkSections, homeworkGrades: child.homeworkGrades, publications: [old, current])
 
-        XCTAssertEqual(withReports.latestReport(in: "2026-10")?.id, "current")
-        XCTAssertEqual(withReports.latestReportMonth, "2026-10")
+        XCTAssertEqual(withReports.publishedReports.map(\.id), ["current"])
     }
 
     func testGuardianDateFormattingMatchesPrototype() {
@@ -156,7 +155,7 @@ final class GuardianAccessTests: XCTestCase {
             attendance: AttendanceSummary(present: 0, late: 0, excused: 0, absent: 0, heldSessions: 0),
             tests: [], stars: StarsSummary(three: 0, two: 0, one: 0), homework: [],
             generalComment: comment, ready: true)
-        return ReportPublication(id: id, reportId: "report", classId: "class", studentId: childID,
+        return ReportPublication(id: id, reportId: "report-\(id)", classId: "class", studentId: childID,
             month: month, publicationNo: 1, publishedAt: at, snapshot: snapshot)
     }
 

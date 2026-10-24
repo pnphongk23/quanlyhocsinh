@@ -26,7 +26,10 @@ final class SyncContractFixtureTests: XCTestCase {
         XCTAssertEqual(try decoded(SessionSlip.self, "slip").first?.stars, .three)
         XCTAssertEqual(try decoded(HomeworkSection.self, "homework_section").first?.kind, .vocabulary)
         XCTAssertEqual(try decoded(HomeworkGrade.self, "homework_grade").first?.level, .excellent)
-        XCTAssertEqual(try decoded(MonthlyReport.self, "report").first?.publicationCount, 1)
+        XCTAssertEqual(try decoded(StudentReport.self, "report").first?.publicationCount, 1)
+        XCTAssertEqual(try decoded(StudentReport.self, "report").first?.batchId, "batch-1")
+        let batch = try XCTUnwrap(decoded(ReportBatch.self, "report_batch").first)
+        XCTAssertEqual([batch.fromSessionId, batch.toSessionId, batch.fromKey, batch.toKey], ["session-1", "session-1", "2026-10-02 18:00", "2026-10-02 18:00"])
     }
 
     func testReportPublicationDecodesWithoutHasPdf() throws {
@@ -76,11 +79,10 @@ final class SyncContractFixtureTests: XCTestCase {
         let dashboard = try await GuardianRepository.dashboard(from: store)
         let child = try XCTUnwrap(dashboard.children.first)
         XCTAssertEqual(child.publications.map(\.publicationNo).sorted(), [2, 3, 4])
-        XCTAssertEqual(child.reportMonths, ["2026-10"])
-        XCTAssertEqual(child.latestReport(in: "2026-10")?.publicationNo, 4)
+        XCTAssertEqual(child.publishedReports.map(\.publicationNo), [4])
 
         let teacher = I4FeatureStore(store: store)
         await teacher.refresh()
-        XCTAssertEqual(teacher.publication(studentID: "student-1", month: "2026-10")?.publicationNo, 4)
+        XCTAssertEqual(teacher.publications.map(\.publicationNo).sorted(), [2, 3, 4])
     }
 }

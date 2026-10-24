@@ -39,6 +39,5 @@ final class ScoresPublicationDecodeTests: XCTestCase {
         XCTAssertEqual(data.publications.map(\.publicationNo).sorted(), [2, 3])
         XCTAssertEqual(data.classes.count, 1)
         XCTAssertEqual(data.students.count, 1)
-        XCTAssertEqual(data.publication(studentID: "child", month: "2026-10")?.publicationNo, 3)
     }
 }

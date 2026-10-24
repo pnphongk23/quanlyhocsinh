@@ -210,7 +210,7 @@ final class CoreTests: XCTestCase {
         let slips = try await store.records(SessionSlip.self, entity: "slip")
         let sections = try await store.records(HomeworkSection.self, entity: "homework_section")
         let grades = try await store.records(HomeworkGrade.self, entity: "homework_grade")
-        let reports = try await store.records(MonthlyReport.self, entity: "report")
+        let reports = try await store.records(StudentReport.self, entity: "report")
         let publications = try await store.records(ReportPublication.self, entity: "report_publication")
         XCTAssertEqual([classes.count,students.count,sessions.count,attendance.count,tests.count,scores.count,
                         slips.count,sections.count,grades.count,reports.count,publications.count], Array(repeating: 1, count: 11))
