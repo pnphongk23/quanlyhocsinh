@@ -137,7 +137,7 @@ enum TeacherDemoScreen: String, CaseIterable {
             TeacherClassDetailView(classID: TeacherDemoData.classID, data: data, i4Data: I4FeatureStore())
         case .classDetailMenu:
             TeacherClassDetailView(classID: TeacherDemoData.classID, data: data,
-                                   i4Data: I4FeatureStore(), menuOpen: true)
+                                   i4Data: I4FeatureStore())
         case .sessions:
             TeacherSessionsView(classID: TeacherDemoData.classID, data: data, i4Data: I4FeatureStore())
         case .attendance:

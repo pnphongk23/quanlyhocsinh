@@ -31,10 +31,11 @@ struct TeacherNewClassView: View {
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, TeacherMetrics.screenPaddingTop)
-            .padding(.bottom, 96)
+            .padding(.bottom, 16)
         }
         .background(AppColors.background.ignoresSafeArea())
-        .overlay(alignment: .bottom) { stickyBar }
+        .safeAreaInset(edge: .bottom, spacing: 0) { stickyBar }
+        .toolbar(.hidden, for: .tabBar)
         .navigationTitle(String(localized: "feature.classes.tao.lop.moi"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { syncTimeSelection() }
@@ -168,16 +169,14 @@ struct TeacherClassDetailView: View {
     @Bindable var data: TeacherFeatureData
     @ObservedObject var i4Data: I4FeatureStore
     @State private var selected = "buoi-hoc"
-    @State private var showingMenu = false
     @State private var showingEdit = false
     @State private var showingSchedule = false
     @State private var error: String?
 
-    init(classID: String, data: TeacherFeatureData, i4Data: I4FeatureStore, menuOpen: Bool = false) {
+    init(classID: String, data: TeacherFeatureData, i4Data: I4FeatureStore) {
         self.classID = classID
         _data = Bindable(data)
         self.i4Data = i4Data
-        _showingMenu = State(initialValue: menuOpen)
     }
 
     private var klass: Classroom? { data.classroom(id: classID) }
@@ -209,18 +208,12 @@ struct TeacherClassDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(AppColors.background.ignoresSafeArea())
-        .overlay(alignment: .topTrailing) {
-            if showingMenu, let klass {
-                menuOverlay(klass)
-            }
-        }
         .navigationTitle(klass?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if klass != nil, data.canWriteClasses {
+            if let klass, data.canWriteClasses {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingMenu = true } label: { Image(systemName: "ellipsis") }
-                        .accessibilityLabel(String(localized: "feature.classes.tuy.chon.lop"))
+                    classMenu(klass)
                 }
             }
         }
@@ -255,33 +248,25 @@ struct TeacherClassDetailView: View {
         }
     }
 
-    private func menuOverlay(_ klass: Classroom) -> some View {
-        ZStack(alignment: .topTrailing) {
-            AppColors.scrim.ignoresSafeArea().onTapGesture { showingMenu = false }
-            TeacherOptionsMenu(items: menuItems(klass),
-                               note: klass.status == .archived ? String(localized: "feature.classes.lop.nay.a.luu.tru") : nil) {
-                showingMenu = false
+    private func classMenu(_ klass: Classroom) -> some View {
+        Menu {
+            if klass.status == .archived {
+                Text(String(localized: "feature.classes.lop.nay.a.luu.tru"))
+            } else {
+                Button { showingEdit = true } label: {
+                    Label(String(localized: "feature.classes.sua.lop"), systemImage: "pencil")
+                }
+                Button { showingSchedule = true } label: {
+                    Label(String(localized: "feature.classes.sua.lich.hoc"), systemImage: "calendar")
+                }
+                Button(role: .destructive) { Task { await archive(klass) } } label: {
+                    Label(String(localized: "feature.classes.luu.tru.lop"), systemImage: "archivebox")
+                }
             }
-            .padding(.top, 8)
-            .padding(.trailing, 12)
+        } label: {
+            Image(systemName: "ellipsis")
         }
-    }
-
-    private func menuItems(_ klass: Classroom) -> [TeacherMenuItem] {
-        [
-            TeacherMenuItem(label: String(localized: "feature.classes.sua.lop"), systemImage: "pencil") {
-                showingMenu = false
-                showingEdit = true
-            },
-            TeacherMenuItem(label: String(localized: "feature.classes.sua.lich.hoc"), systemImage: "calendar") {
-                showingMenu = false
-                showingSchedule = true
-            },
-            TeacherMenuItem(label: String(localized: "feature.classes.luu.tru.lop"), systemImage: "archivebox", danger: true) {
-                showingMenu = false
-                Task { await archive(klass) }
-            },
-        ]
+        .accessibilityLabel(String(localized: "feature.classes.tuy.chon.lop"))
     }
 
     private func archive(_ klass: Classroom) async {

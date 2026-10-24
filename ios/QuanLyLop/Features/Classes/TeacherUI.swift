@@ -466,63 +466,6 @@ extension View {
     }
 }
 
-// MARK: - Options menu (`dialogs.module.css .menu`: 220 wide, rows 48 high, 15/600)
-
-struct TeacherMenuItem: Identifiable {
-    let id = UUID()
-    let label: String
-    let systemImage: String
-    var danger = false
-    let action: () -> Void
-}
-
-struct TeacherOptionsMenu: View {
-    let items: [TeacherMenuItem]
-    var note: String?
-    let dismiss: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let note {
-                Text(note)
-                    .appText(AppText.muted)
-                    .foregroundStyle(AppColors.muted)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                ForEach(items) { item in row(item) }
-            }
-        }
-        .padding(4)
-        .frame(width: 220, alignment: .leading)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.button)
-                .strokeBorder(AppColors.border, lineWidth: 1))
-        .shadow(color: Color(.sRGB, red: 20 / 255, green: 24 / 255, blue: 31 / 255, opacity: 0.16),
-                radius: 16, x: 0, y: 12)
-    }
-
-    private func row(_ item: TeacherMenuItem) -> some View {
-        Button(action: item.action) {
-            HStack(spacing: 12) {
-                Image(systemName: item.systemImage)
-                    .font(.system(size: 16, weight: .regular))
-                    .frame(width: 18)
-                    .foregroundStyle(item.danger ? AppColors.error : AppColors.muted)
-                Text(item.label)
-                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22))
-                    .foregroundStyle(item.danger ? AppColors.error : AppColors.text)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 12)
-            .frame(minHeight: 48)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 // MARK: - Bottom sheet (`ui.module.css .dialog` + `.sheet`)
 
 struct TeacherSheet<Content: View, Footer: View>: View {

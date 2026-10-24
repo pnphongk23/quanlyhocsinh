@@ -9,7 +9,6 @@ struct TeacherSessionDetailView: View {
     @Bindable var data: TeacherFeatureData
     @ObservedObject var i4Data: I4FeatureStore
     @State private var tab = "diem-danh"
-    @State private var showingMenu = false
     @State private var confirmingCancel = false
     @State private var error: String?
 
@@ -40,19 +39,15 @@ struct TeacherSessionDetailView: View {
         .toolbar {
             if let session, !cancelled, session.status == .planned, data.canWriteAttendance {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingMenu = true } label: { Image(systemName: "ellipsis") }
-                        .accessibilityLabel(String(localized: "feature.classes.tuy.chon.buoi.hoc"))
+                    Menu {
+                        Button(role: .destructive) { confirmingCancel = true } label: {
+                            Label(String(localized: "feature.classes.huy.buoi"), systemImage: "xmark.circle")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                    .accessibilityLabel(String(localized: "feature.classes.tuy.chon.buoi.hoc"))
                 }
-            }
-        }
-        .sheet(isPresented: $showingMenu) {
-            TeacherSheet(title: String(localized: "feature.classes.tuy.chon.buoi.hoc")) {
-                AppButton(title: String(localized: "feature.classes.huy.buoi"), variant: .danger, size: .medium) {
-                    showingMenu = false
-                    confirmingCancel = true
-                }
-            } close: {
-                showingMenu = false
             }
         }
         .teacherConfirmDialog(
