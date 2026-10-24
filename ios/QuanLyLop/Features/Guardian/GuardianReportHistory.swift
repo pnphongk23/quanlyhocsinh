@@ -72,12 +72,12 @@ enum GuardianReportHistory {
 enum GuardianFreshness {
     private static func key(_ scope: CacheScope) -> String { "guardian.refreshedAt." + scope.storageKey }
 
-    static func record(_ scope: CacheScope, at date: Date = .now) {
-        UserDefaults.standard.set(date.timeIntervalSince1970, forKey: key(scope))
+    static func record(_ scope: CacheScope, at date: Date = .now, defaults: UserDefaults = .standard) {
+        defaults.set(date.timeIntervalSince1970, forKey: key(scope))
     }
 
-    static func last(_ scope: CacheScope) -> Date? {
-        let value = UserDefaults.standard.double(forKey: key(scope))
+    static func last(_ scope: CacheScope, defaults: UserDefaults = .standard) -> Date? {
+        let value = defaults.double(forKey: key(scope))
         return value > 0 ? Date(timeIntervalSince1970: value) : nil
     }
 }

@@ -437,13 +437,6 @@ extension HomeworkLevel {
 
 // MARK: - Nạp dữ liệu
 
-private struct GuardianMeResponse: Decodable, Sendable {
-    struct User: Decodable, Sendable { let id: String }
-    let user: User
-    let activeMembershipId: String?
-    let memberships: [Membership]
-}
-
 enum GuardianRepository {
     /// The server only accepts a UUID as `device_id`, so the guardian syncs with the stored install id too.
     static func syncCoordinator(api: any APIClient, store: any LocalStore,
@@ -454,17 +447,32 @@ enum GuardianRepository {
     static func load() async throws -> GuardianDashboard {
         let result = AppConfiguration.load()
         guard case .success(let configuration) = result else { throw APIFailure.invalidURL }
-        let tokenStore = KeychainTokenStore(service: "vn.quanlylop.\(configuration.environment.rawValue)")
+        let service = "vn.quanlylop.\(configuration.environment.rawValue)"
+        let tokenStore = KeychainTokenStore(service: service)
         guard try await tokenStore.token() != nil else { throw APIFailure.missingToken }
-        let api = URLSessionAPIClient(configuration: configuration, tokenStore: tokenStore)
-        let identity = try await api.send(.init(method: .get, path: "me"), as: GuardianMeResponse.self)
+        return try await load(api: URLSessionAPIClient(configuration: configuration, tokenStore: tokenStore),
+                              identityStore: KeychainCachedIdentityStore(service: service))
+    }
+
+    /// `/me` failing for a network or server reason falls back to the identity the app last confirmed,
+    /// so a guardian who opens the app offline still reads the cached data with its "updated at" time.
+    static func load(api: any APIClient, identityStore: any CachedIdentityStore,
+                     storeFactory: (CacheScope) throws -> SQLiteStore = { try SQLiteStore.open(scope: $0) },
+                     defaults: UserDefaults = .standard) async throws -> GuardianDashboard {
+        let identity: CurrentIdentity
+        do {
+            identity = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
+        } catch {
+            guard AuthModel.isRecoverable(error), let cached = try? await identityStore.load() else { throw error }
+            identity = cached
+        }
         guard let membershipID = identity.activeMembershipId,
               let membership = identity.memberships.first(where: { $0.id == membershipID }),
               membership.role.scopeKind == .linkedStudents else { throw APIFailure.badStatus(code: 403) }
 
         let scope = CacheScope(userId: identity.user.id, workspaceId: membership.workspace.id, membershipId: membership.id)
-        let store = try SQLiteStore.open(scope: scope)
-        let sync = syncCoordinator(api: api, store: store)
+        let store = try storeFactory(scope)
+        let sync = syncCoordinator(api: api, store: store, defaults: defaults)
         var refreshed = true
         do { try await sync.synchronize() } catch {
             guard try await store.position() != nil else { throw error }
@@ -476,10 +484,10 @@ enum GuardianRepository {
         }
         let base = try await dashboard(from: store)
         if refreshed {
-            GuardianFreshness.record(scope)
+            GuardianFreshness.record(scope, defaults: defaults)
             return GuardianDashboard(children: base.children)
         }
-        return GuardianDashboard(children: base.children, updatedAt: GuardianFreshness.last(scope), isOffline: true)
+        return GuardianDashboard(children: base.children, updatedAt: GuardianFreshness.last(scope, defaults: defaults), isOffline: true)
     }
 
     /// Every published version of a report stays on the server (`api-spec.md` 6.6), including old ones whose

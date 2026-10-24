@@ -459,14 +459,14 @@ final class AuthModel {
         activeStore = nil; activeSync = nil
     }
 
-    private static func statusCode(_ error: Error) -> Int? {
+    nonisolated static func statusCode(_ error: Error) -> Int? {
         guard let failure = error as? APIFailure else { return nil }
         if case .server(let status, _, _) = failure { return status }
         if case .badStatus(let status) = failure { return status }
         return nil
     }
 
-    private static func isRecoverable(_ error: Error) -> Bool {
+    nonisolated static func isRecoverable(_ error: Error) -> Bool {
         guard let failure = error as? APIFailure else { return false }
         switch failure {
         case .offline, .invalidURL: return true
