@@ -233,37 +233,41 @@ struct GuardianStars: View {
 
 // MARK: - PageHeader (`.pageHeader`, `.eyebrow`, `.pageTitle`, `.backButton`)
 
+/// Dòng phụ (lớp · tháng, tên con) dưới thanh điều hướng hệ thống; tiêu đề do `navigationTitle` đảm nhiệm.
 struct GuardianPageHeader: View {
     let eyebrow: String?
-    var title: String
-    var backAction: (() -> Void)? = nil
-    var trailing: AnyView? = nil
+    var title: String? = nil
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 12) {
-            if let backAction {
-                Button(action: backAction) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(AppColors.text)
-                        .frame(width: 44, height: 44)
-                        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
-                }
-                .accessibilityLabel(String(localized: "feature.guardian.quay.lai"))
+        VStack(alignment: .leading, spacing: 2) {
+            if let eyebrow, !eyebrow.isEmpty {
+                Text(eyebrow)
+                    .appDynamicText(AppText.muted)
+                    .foregroundStyle(AppColors.muted)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                if let eyebrow, !eyebrow.isEmpty {
-                    Text(eyebrow)
-                        .appDynamicText(AppText.muted)
-                        .foregroundStyle(AppColors.muted)
-                }
+            if let title {
                 Text(title)
                     .appDynamicText(AppText.title)
                     .foregroundStyle(AppColors.text)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if let trailing { trailing }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Khung cuộn của mọi trang phụ huynh: nằm dưới thanh điều hướng và trên tab bar hệ thống.
+struct GuardianScroll<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) { content }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
+        }
+        .scrollIndicators(.hidden)
+        .background(AppColors.background.ignoresSafeArea())
     }
 }
 

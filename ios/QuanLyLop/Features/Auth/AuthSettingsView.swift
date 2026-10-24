@@ -217,6 +217,20 @@ private struct RootTabTitle: ViewModifier {
     }
 }
 
+private struct PushedTitle: ViewModifier {
+    let isPushed: Bool
+
+    func body(content: Content) -> some View {
+        if isPushed {
+            content
+                .navigationTitle(String(localized: "feature.auth.oi.mat.khau"))
+                .navigationBarTitleDisplayMode(.inline)
+        } else {
+            content
+        }
+    }
+}
+
 extension LogoutBlock: Identifiable {
     var id: String { "\(pending)-\(online)" }
 }
@@ -303,6 +317,8 @@ struct SettingsDialogButton: View {
 
 struct AuthChangePasswordView: View {
     let model: AuthModel
+    /// Pushed inside a tab's NavigationStack: the system bar owns the title and back control.
+    var isPushed = false
     var onBack: () -> Void
     @State private var current = ""
     @State private var newPassword = ""
@@ -313,17 +329,19 @@ struct AuthChangePasswordView: View {
 
     var body: some View {
         AuthPage(horizontalPadding: AuthSettingsView.shellPadding,
-                 topPadding: AuthSettingsView.shellTopPadding) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(AppColors.text)
-                    .frame(width: 48, height: 48)
-                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: 14))
+                 topPadding: isPushed ? 0 : AuthSettingsView.shellTopPadding) {
+            if !isPushed {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(AppColors.text)
+                        .frame(width: 48, height: 48)
+                        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: 14))
+                }
+                .accessibilityLabel(String(localized: "feature.auth.quay.lai"))
+                .padding(.bottom, 8)
+                Text(String(localized: "feature.auth.oi.mat.khau")).appText(AuthText.settingsTitle).foregroundStyle(AppColors.text)
             }
-            .accessibilityLabel(String(localized: "feature.auth.quay.lai"))
-            .padding(.bottom, 8)
-            Text(String(localized: "feature.auth.oi.mat.khau")).appText(AuthText.settingsTitle).foregroundStyle(AppColors.text)
             VStack(spacing: 20) {
                 AuthPasswordField(label: String(localized: "feature.auth.mat.khau.hien.tai"), value: $current,
                                   identifier: "change.current")
@@ -344,8 +362,9 @@ struct AuthChangePasswordView: View {
                                                      confirmation: confirmation)
                   }
             }
-            .padding(.top, 24)
+            .padding(.top, isPushed ? 8 : 24)
         }
+        .modifier(PushedTitle(isPushed: isPushed))
         .onChange(of: saveController.phase) { _, phase in
             if phase == .saved { model.completePasswordChange() }
         }

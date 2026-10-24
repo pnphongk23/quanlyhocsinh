@@ -5,25 +5,18 @@ import SwiftUI
 struct GuardianTicketView: View {
     let child: GuardianChildData
     let session: ClassSession
-    let back: () -> Void
 
     private var ticket: GuardianTicketDetail { child.ticket(for: session) }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                GuardianPageHeader(eyebrow: "\(child.student.name) · \(child.className)",
-                                   title: "\(GuardianFormat.sessionPrefix(session)) · \(GuardianFormat.weekdayDayMonth(session.date))",
-                                   backAction: back)
-                commentCard
-                previousHomeworkCard
-                assignedHomeworkCard
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 16)
+        GuardianScroll {
+            GuardianPageHeader(eyebrow: "\(child.student.name) · \(child.className)")
+            commentCard
+            previousHomeworkCard
+            assignedHomeworkCard
         }
-        .scrollIndicators(.hidden)
+        .navigationTitle("\(GuardianFormat.sessionPrefix(session)) · \(GuardianFormat.weekdayDayMonth(session.date))")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     @ViewBuilder private var commentCard: some View {

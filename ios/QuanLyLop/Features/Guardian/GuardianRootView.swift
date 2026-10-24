@@ -1,18 +1,25 @@
 import SwiftUI
 
 enum GuardianTab: String, CaseIterable, Identifiable {
-    case classes, comments
+    case classes, comments, settings
     var id: String { rawValue }
     var label: String {
         switch self {
         case .classes: String(localized: "guardian.tab.classes", table: "Guardian")
         case .comments: String(localized: "guardian.tab.comments", table: "Guardian")
+        case .settings: String(localized: "feature.auth.cai.at")
         }
     }
-    var glyph: GuardianGlyphName { self == .classes ? .home : .comments }
+    var systemImage: String {
+        switch self {
+        case .classes: "house"
+        case .comments: "text.bubble"
+        case .settings: "slider.horizontal.3"
+        }
+    }
 }
 
-enum GuardianDetail: Equatable {
+enum GuardianDetail: Hashable {
     case ticket(String)
     case scores
     case report
@@ -24,7 +31,8 @@ struct GuardianRootView: View {
     @State private var dashboard: GuardianDashboard?
     @State private var selectedChildID: String?
     @State private var tab: GuardianTab = .classes
-    @State private var detail: GuardianDetail?
+    @State private var classesPath: [GuardianDetail] = []
+    @State private var commentsPath: [GuardianDetail] = []
     @State private var months: [String: String] = [:]
     @State private var errorMessage: String?
     @State private var isLoading = true
@@ -37,13 +45,40 @@ struct GuardianRootView: View {
     }
     private var screen: AuthModel.Screen { model?.screen ?? .main }
 
+    /// Settings and change-password are model screens; both live inside the Cài đặt tab.
+    private var tabSelection: Binding<GuardianTab> {
+        Binding(get: { screen == .main ? tab : .settings },
+                set: { item in
+                    tab = item
+                    if screen != .main { model?.show(.main) }
+                })
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            content.frame(maxWidth: .infinity, maxHeight: .infinity)
+        TabView(selection: tabSelection) {
+            NavigationStack(path: $classesPath) {
+                classesPage
+                    .navigationDestination(for: GuardianDetail.self) { detailPage($0) }
+            }
+            .tabItem { Label(GuardianTab.classes.label, systemImage: GuardianTab.classes.systemImage) }
+            .tag(GuardianTab.classes)
+
+            NavigationStack(path: $commentsPath) {
+                commentsPage
+                    .navigationDestination(for: GuardianDetail.self) { detailPage($0) }
+            }
+            .tabItem { Label(GuardianTab.comments.label, systemImage: GuardianTab.comments.systemImage) }
+            .tag(GuardianTab.comments)
+
+            NavigationStack {
+                settingsPage
+            }
+            .tabItem { Label(GuardianTab.settings.label, systemImage: GuardianTab.settings.systemImage) }
+            .tag(GuardianTab.settings)
         }
+        .tint(AppState.selectedFg)
         .background(AppColors.background.ignoresSafeArea())
         .preferredColorScheme(.light)
-        .safeAreaInset(edge: .bottom, spacing: 0) { if screen == .main { tabBar } }
         .sheet(isPresented: $showingChildPicker) { childPicker }
         .task { await load() }
         .onChange(of: scenePhase) { _, phase in
@@ -51,31 +86,44 @@ struct GuardianRootView: View {
         }
     }
 
-    @ViewBuilder private var content: some View {
-        if let model, screen == .settings {
-            AuthSettingsView(model: model, guardianMeta: settingsMeta, onClose: { model.show(.main) })
-        } else if let model, screen == .changePassword {
-            AuthChangePasswordView(model: model) { model.show(.settings) }
-        } else if isLoading && dashboard == nil {
-            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if let detail {
-            detailPage(detail)
-        } else if let child {
-            rootPage(child)
-        } else {
-            ScrollView {
-                VStack(spacing: 16) {
-                    rootHeader
-                    if let errorMessage { GuardianErrorText(text: errorMessage) }
-                    else {
-                        AppEmptyState(title: String(localized: "feature.guardian.chua.co.con.nao.uoc.lien.ket"),
-                                      description: String(localized: "feature.guardian.lien.he.giao.vien.neu.ban.can.xem.du.lieu.cua.co"),
-                                      mascot: .cho)
-                    }
-                }
-                .padding(.horizontal, 20).padding(.top, 16)
+    // MARK: Tabs
+
+    private var classesPage: some View {
+        rootPage(title: GuardianTab.classes.label) { child in
+            GuardianPageHeader(eyebrow: "\(child.className) · \(GuardianFormat.monthLabel(month(for: child)))",
+                               title: nil)
+            GuardianOverviewPage(child: child, month: month(for: child),
+                                 openScores: { classesPath.append(.scores) },
+                                 openTicket: { classesPath.append(.ticket($0.id)) })
+            HStack(spacing: 10) {
+                shortcut(String(localized: "guardian.scores", table: "Guardian"), icon: "chart.bar", action: { classesPath.append(.scores) })
+                shortcut(String(localized: "feature.guardian.bao.cao"), icon: "doc.text", action: { classesPath.append(.report) })
             }
+            GuardianCardHead(title: String(localized: "guardian.sessionList", table: "Guardian"))
+            GuardianSessionListPage(child: child) { row in classesPath.append(row.destination) }
         }
+    }
+
+    private var commentsPage: some View {
+        rootPage(title: GuardianTab.comments.label) { child in
+            GuardianCommentsPage(child: child) { commentsPath.append(.ticket($0.id)) }
+        }
+    }
+
+    @ViewBuilder private var settingsPage: some View {
+        if let model {
+            AuthSettingsView(model: model, guardianMeta: settingsMeta, isRootTab: true)
+                .navigationDestination(isPresented: changePasswordPresented) {
+                    AuthChangePasswordView(model: model, isPushed: true) { model.show(.settings) }
+                }
+        } else {
+            Color.clear.navigationTitle(GuardianTab.settings.label)
+        }
+    }
+
+    private var changePasswordPresented: Binding<Bool> {
+        Binding(get: { screen == .changePassword },
+                set: { if !$0 && screen == .changePassword { model?.show(.settings) } })
     }
 
     private var settingsMeta: String {
@@ -83,32 +131,26 @@ struct GuardianRootView: View {
         return dashboard.children.map(\.childrenMeta).joined(separator: ", ")
     }
 
-    private func rootPage(_ child: GuardianChildData) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                rootHeader
-                if tab == .classes {
-                    GuardianPageHeader(eyebrow: "\(child.className) · \(GuardianFormat.monthLabel(month(for: child)))",
-                                       title: String(localized: "guardian.tab.classes", table: "Guardian"))
-                    GuardianOverviewPage(child: child, month: month(for: child),
-                                         openScores: { detail = .scores },
-                                         openTicket: { detail = .ticket($0.id) })
-                    HStack(spacing: 10) {
-                        shortcut(String(localized: "guardian.scores", table: "Guardian"), icon: "chart.bar", action: { detail = .scores })
-                        shortcut(String(localized: "feature.guardian.bao.cao"), icon: "doc.text", action: { detail = .report })
-                    }
-                    GuardianCardHead(title: String(localized: "guardian.sessionList", table: "Guardian"))
-                      GuardianSessionListPage(child: child) { row in detail = row.destination }
-                } else {
-                    GuardianPageHeader(eyebrow: child.student.name,
-                                       title: String(localized: "guardian.tab.comments", table: "Guardian"))
-                    GuardianCommentsPage(child: child) { detail = .ticket($0.id) }
-                }
-                if let errorMessage { GuardianErrorText(text: errorMessage) }
+    private func rootPage<Content: View>(title: String,
+                                         @ViewBuilder content: @escaping (GuardianChildData) -> Content) -> some View {
+        GuardianScroll {
+            updatedLine
+            if isLoading && dashboard == nil {
+                ProgressView().frame(maxWidth: .infinity, minHeight: 160)
+            } else if let child {
+                content(child)
+            } else if let errorMessage {
+                GuardianErrorText(text: errorMessage)
+            } else {
+                AppEmptyState(title: String(localized: "feature.guardian.chua.co.con.nao.uoc.lien.ket"),
+                              description: String(localized: "feature.guardian.lien.he.giao.vien.neu.ban.can.xem.du.lieu.cua.co"),
+                              mascot: .cho)
             }
-            .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 16)
+            if child != nil, let errorMessage { GuardianErrorText(text: errorMessage) }
         }
-        .scrollIndicators(.hidden)
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { childSwitcher } }
         .refreshable { await load() }
     }
 
@@ -126,77 +168,58 @@ struct GuardianRootView: View {
     @ViewBuilder private func detailPage(_ detail: GuardianDetail) -> some View {
         if let child {
             switch detail {
-              case .ticket(let id):
-                  if let session = child.session(id: id) {
-                      GuardianTicketView(child: child, session: session, back: { self.detail = nil })
-                  } else { missingTicket }
+            case .ticket(let id):
+                if let session = child.session(id: id) {
+                    GuardianTicketView(child: child, session: session)
+                } else { missingTicket }
             case .scores:
-                ScrollView { VStack(alignment: .leading, spacing: 12) {
-                    detailHeader(String(localized: "guardian.scores", table: "Guardian"))
+                GuardianScroll {
+                    GuardianPageHeader(eyebrow: child.student.name, title: nil)
                     GuardianScoresPage(child: child, month: month(for: child)) { months[child.student.id] = $0 }
-                }.padding(.horizontal, 20).padding(.top, 12) }
+                }
+                .navigationTitle(String(localized: "guardian.scores", table: "Guardian"))
+                .navigationBarTitleDisplayMode(.inline)
             case .report:
-                ScrollView { VStack(alignment: .leading, spacing: 12) {
-                    detailHeader(String(localized: "feature.guardian.bao.cao"))
+                GuardianScroll {
+                    GuardianPageHeader(eyebrow: child.student.name, title: nil)
                     GuardianReportView(child: child)
-                }.padding(.horizontal, 20).padding(.top, 12) }
+                }
+                .navigationTitle(String(localized: "feature.guardian.bao.cao"))
+                .navigationBarTitleDisplayMode(.inline)
             }
         } else { missingTicket }
     }
 
-    private func detailHeader(_ title: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            rootHeader
-            GuardianPageHeader(eyebrow: child?.student.name, title: title, backAction: { detail = nil })
+    private var missingTicket: some View {
+        GuardianScroll {
+            AppEmptyState(title: String(localized: "feature.guardian.khong.tim.thay.buoi.hoc.nay"),
+                          description: String(localized: "feature.guardian.buoi.hoc.khong.thuoc.lop.cua.con.hoac.a.bi.huy"))
+        }
+        .navigationTitle(String(localized: "feature.guardian.phieu.buoi.hoc"))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder private var updatedLine: some View {
+        if let updatedAt = dashboard?.updatedAt {
+            let formatted = updatedAt.formatted(Date.FormatStyle(date: .numeric, time: .shortened)
+                .locale(Locale(identifier: "vi_VN")))
+            Text(String.localizedStringWithFormat(String(localized: "guardian.updatedAt", table: "Guardian"), formatted))
+                .appDynamicText(AppTextStyle(size: 12, weight: .regular, lineHeight: 18))
+                .foregroundStyle(AppColors.muted)
         }
     }
 
-    private var missingTicket: some View {
-        ScrollView { VStack(alignment: .leading, spacing: 12) {
-            rootHeader
-            GuardianPageHeader(eyebrow: child?.student.name, title: String(localized: "feature.guardian.phieu.buoi.hoc"), backAction: { detail = nil })
-            AppEmptyState(title: String(localized: "feature.guardian.khong.tim.thay.buoi.hoc.nay"),
-                          description: String(localized: "feature.guardian.buoi.hoc.khong.thuoc.lop.cua.con.hoac.a.bi.huy"))
-        }.padding(.horizontal, 20).padding(.top, 12) }
-    }
-
-    private var rootHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-          HStack(spacing: 10) {
+    @ViewBuilder private var childSwitcher: some View {
+        if let child {
             Button { if children.count > 1 { showingChildPicker = true } } label: {
-                HStack(spacing: 8) {
-                    Text(child.map { AppInitials.of($0.student.name) } ?? "–")
-                        .appDynamicText(AppTextStyle(size: 13, weight: .bold, lineHeight: 18))
-                        .foregroundStyle(AppColors.primaryInk)
-                        .frame(width: 36, height: 36)
-                        .background(AppColors.primarySoft, in: Circle())
-                    Text(child?.student.name ?? String(localized: "feature.guardian.chua.co.con.nao.uoc.lien.ket"))
-                        .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 21))
-                        .foregroundStyle(AppColors.text).lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(child.student.name).lineLimit(1)
                     if children.count > 1 { Image(systemName: "chevron.down").font(.caption.weight(.semibold)) }
                 }
-                .frame(minHeight: 44)
+                .foregroundStyle(AppColors.text)
             }
-            .buttonStyle(.plain)
             .disabled(children.count < 2)
-            Spacer(minLength: 0)
-            Button { model?.show(.settings) } label: {
-                Text(model?.currentUser.flatMap { AppInitials.of($0.displayName ?? "") } ?? "PH")
-                    .appDynamicText(AppTextStyle(size: 13, weight: .bold, lineHeight: 18))
-                    .foregroundStyle(AppColors.primaryInk)
-                    .frame(width: 44, height: 44)
-                    .background(AppColors.primarySoft, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "feature.auth.cai.at.tai.khoan"))
-          }
-          if let updatedAt = dashboard?.updatedAt {
-              let formatted = updatedAt.formatted(Date.FormatStyle(date: .numeric, time: .shortened)
-                  .locale(Locale(identifier: "vi_VN")))
-              Text(String.localizedStringWithFormat(String(localized: "guardian.updatedAt", table: "Guardian"), formatted))
-                  .appDynamicText(AppTextStyle(size: 12, weight: .regular, lineHeight: 18))
-                  .foregroundStyle(AppColors.muted)
-          }
+            .accessibilityIdentifier("guardian.childSwitcher")
         }
     }
 
@@ -232,30 +255,6 @@ struct GuardianRootView: View {
         .presentationDetents([.medium, .large])
     }
 
-    private var tabBar: some View {
-        HStack(spacing: 8) {
-            ForEach(GuardianTab.allCases) { item in
-                Button { select(item) } label: {
-                    Label(item.label, systemImage: item == .classes ? "house.fill" : "text.bubble")
-                        .appDynamicText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 18))
-                        .foregroundStyle(tab == item ? AppColors.primaryInk : AppColors.muted)
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(tab == item ? AppColors.primarySoft : Color.clear, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("guardian.tab.\(item.rawValue)")
-                .accessibilityAddTraits(tab == item ? [.isSelected] : [])
-            }
-        }
-        .padding(.horizontal, 12).padding(.vertical, 6).background(AppColors.surface)
-        .overlay(alignment: .top) { AppColors.border.frame(height: 1) }
-    }
-
-    private func select(_ item: GuardianTab) {
-        if screen != .main { model?.show(.main) }
-        detail = nil
-        tab = item
-    }
     private func month(for child: GuardianChildData) -> String {
         if let stored = months[child.student.id], child.months.contains(stored) { return stored }
         return child.defaultMonth
