@@ -137,7 +137,8 @@ private final class SlipPushAPI: APIClient, @unchecked Sendable {
         case "sync/push":
             let body = try JSONSerialization.jsonObject(with: endpoint.body ?? Data()) as? [String: Any]
             let commands = body?["commands"] as? [[String: Any]] ?? []
-            lock.lock(); types.append(contentsOf: commands.compactMap { $0["type"] as? String }); lock.unlock()
+            let sentTypes = commands.compactMap { $0["type"] as? String }
+            lock.withLock { types.append(contentsOf: sentTypes) }
             if mode == .pushFails { throw APIFailure.offline }
             let id = commands.compactMap { $0["id"] as? String }.first ?? ""
             let sent = mode == .sentAll ? "[\"a\",\"b\"]" : "[\"a\"]"
