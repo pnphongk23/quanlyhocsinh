@@ -130,7 +130,7 @@ struct ReportContentView: View {
                         Text(test.value.map { "\(I4Format.score($0))/\(test.max)" } ?? String(localized: "feature.reports.noScore"))
                             .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5)).foregroundStyle(AppColors.text)
                     }
-                    .frame(minHeight: 44)
+                    .frame(minHeight: AppMetrics.tap)
                     .padding(.vertical, 5)
                     .overlay(alignment: .bottom) { AppColors.divider.frame(height: AppMetrics.hairline) }
                 }

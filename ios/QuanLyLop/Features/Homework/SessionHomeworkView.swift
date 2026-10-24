@@ -244,7 +244,7 @@ struct SessionHomeworkView: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
@@ -291,7 +291,7 @@ struct SessionHomeworkView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
@@ -334,7 +334,7 @@ struct SessionHomeworkView: View {
                 .font(.system(size: 17, weight: .regular))
                 .foregroundStyle(AppColors.primaryInk)
                 .frame(width: 36, height: 36)
-                .background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: AppRadius.chip))
             VStack(alignment: .leading, spacing: 0) {
                 Text(section.kind.label.uppercased())
                     .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18, tracking: 0.24))
@@ -363,7 +363,7 @@ struct SessionHomeworkView: View {
         }
         .padding(.vertical, 8)
         .overlay(alignment: .bottom) {
-            if section.id != todaySections.last?.id { AppColors.divider.frame(height: 1) }
+            if section.id != todaySections.last?.id { AppColors.divider.frame(height: AppMetrics.hairline) }
         }
     }
 
@@ -386,7 +386,7 @@ struct SessionHomeworkView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
@@ -511,7 +511,7 @@ struct HomeworkSectionEditor: View {
                     if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                     if let section = editingSection { deleteRow(section) }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
                 .padding(.top, 12)
                 .padding(.bottom, 20)
             }
@@ -625,7 +625,7 @@ struct HomeworkSectionEditor: View {
                 .font(.system(size: 17, weight: .regular))
                 .foregroundStyle(AppColors.primaryInk)
                 .frame(width: 36, height: 36)
-                .background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: 10))
+                .background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: AppRadius.chip))
             Text(editingSection?.kind.label ?? String(localized: "feature.homework.exercise"))
                 .appText(AppTextStyle(size: 18, weight: .bold, lineHeight: 23.4))
                 .foregroundStyle(AppColors.text)
@@ -677,7 +677,7 @@ struct HomeworkSectionEditor: View {
                     Text(String(localized: "feature.homework.xoa.phan")).appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                 }
                 .foregroundStyle(deletable ? AppColors.error : AppColors.placeholder)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
                 .frame(minHeight: AppMetrics.tap)
                 .background(deletable ? AppColors.errorSoft : AppColors.neutralSoft,
                             in: RoundedRectangle(cornerRadius: AppRadius.button))

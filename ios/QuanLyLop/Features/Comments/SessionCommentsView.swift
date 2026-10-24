@@ -158,7 +158,7 @@ struct SessionCommentsView: View {
                     .appText(AppTextStyle(size: 13, weight: line.warning ? .semiBold : .regular, lineHeight: 19.5))
                     .foregroundStyle(line.warning ? AppColors.warning : AppColors.muted)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
@@ -411,7 +411,7 @@ struct I4TicketSheet: View {
                     }
                     if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
                 .padding(.bottom, 12)
                 .contentShape(Rectangle())
                 .onTapGesture { noteFocused = false }
@@ -421,14 +421,11 @@ struct I4TicketSheet: View {
           .background(AppColors.surface)
           .safeAreaInset(edge: .bottom, spacing: 0) {
               if canWrite {
-                  AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController) {
-                      try await save()
+                  TeacherPinnedBar {
+                      AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController) {
+                          try await save()
+                      }
                   }
-                  .padding(.horizontal, 20)
-                  .padding(.top, 12)
-                  .padding(.bottom, 20)
-                  .background(AppColors.surface)
-                  .overlay(alignment: .top) { AppColors.border.frame(height: 1) }
               }
           }
           .presentationDetents([.large])
@@ -472,7 +469,7 @@ struct I4TicketSheet: View {
                     Text(String(repeating: "★", count: option.rawValue))
                           .font(.system(size: 16))
                           .foregroundStyle(I4Style.star)
-                          .frame(maxWidth: .infinity, minHeight: 56)
+                          .frame(maxWidth: .infinity, minHeight: TeacherMetrics.rowMinHeight)
                           .background(stars == option ? AppState.selectedBg : AppColors.background,
                                       in: RoundedRectangle(cornerRadius: AppRadius.button))
                 }
@@ -492,7 +489,7 @@ struct I4TicketSheet: View {
                 .foregroundStyle(AppColors.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
@@ -513,7 +510,7 @@ struct I4TicketSheet: View {
                 .font(.system(size: 15))
                 .foregroundStyle(AppColors.text)
                 .padding(12)
-                .frame(maxWidth: .infinity, minHeight: 56, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: TeacherMetrics.rowMinHeight, alignment: .topLeading)
                 .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
                 .focused($noteFocused)
                 .disabled(!canWrite)
@@ -555,7 +552,7 @@ struct I4TicketSheet: View {
             }
         }
         .padding(.top, 12)
-        .overlay(alignment: .top) { AppColors.divider.frame(height: 1) }
+        .overlay(alignment: .top) { AppColors.divider.frame(height: AppMetrics.hairline) }
     }
 
     private func homeworkRow(_ section: HomeworkSection) -> some View {
