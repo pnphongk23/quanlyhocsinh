@@ -409,11 +409,16 @@ export default function CommentsPanel({
 
       {canWrite && (
         <div className={s.footerGroup}>
-          {!online && <p className={s.networkHint}>Cần có mạng để gửi phiếu</p>}
+          {!online && (
+            <p id="comments-send-offline-hint" className={s.networkHint}>
+              Cần có mạng để gửi phiếu
+            </p>
+          )}
           <div className={s.footer}>
             <Button
               size="lg"
               disabled={sendButtonDisabled(count, !online)}
+              aria-describedby={!online ? "comments-send-offline-hint" : undefined}
               onClick={() => {
                 setDialogError("");
                 setConfirmOpen(true);

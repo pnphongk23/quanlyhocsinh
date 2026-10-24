@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { UngradedHomeworkNotice } from "../../data/homework";
 import type { Student } from "../../data/types";
+import { useOnline } from "../../shared/hooks/useOnline";
 import { Button } from "../../shared/ui";
 import s from "./CommentsPanel.module.css";
 
@@ -33,6 +34,7 @@ export default function SendTicketsDialog({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const online = useOnline();
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -93,20 +95,32 @@ export default function SendTicketsDialog({
           </p>
         )}
 
-        {error && (
-          <p role="alert" className={s.error}>
-            {error}
-          </p>
-        )}
+          {error && (
+            <p role="alert" className={s.error}>
+              {error}
+            </p>
+          )}
 
-        <div className={s.confirmActions}>
-          <Button size="lg" onClick={onConfirm} disabled={busy} loading={busy}>
-            Gửi {sendCount} phiếu
-          </Button>
-          <Button size="lg" variant="neutral" onClick={onClose}>
-            Quay lại
-          </Button>
-        </div>
+          {!online && (
+            <p id="send-tickets-offline-hint" className={s.networkHint}>
+              Cần có mạng để gửi phiếu.
+            </p>
+          )}
+
+          <div className={s.confirmActions}>
+            <Button
+              size="lg"
+              onClick={onConfirm}
+              disabled={busy || !online}
+              loading={busy}
+              aria-describedby={!online ? "send-tickets-offline-hint" : undefined}
+            >
+              Gửi {sendCount} phiếu
+            </Button>
+            <Button size="lg" variant="neutral" onClick={onClose}>
+              Quay lại
+            </Button>
+          </div>
       </div>
     </div>
   );

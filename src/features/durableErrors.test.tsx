@@ -207,6 +207,32 @@ describe("phiếu nhận xét: ghi bền lỗi", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /^Gửi \d+ phiếu$/ })).toBeEnabled());
   });
 
+  it("dialog gửi: đang mở thì khoá khi mất mạng và bật lại khi có mạng", async () => {
+    const sessionId = "6a-session-6";
+    const actual = await vi.importActual<typeof import("../data/repositories/comments")>("../data/repositories/comments");
+    await actual.saveSessionCommentDurable({ sessionId, studentId: "6a-student-0", stars: 3 });
+    inRouter(
+      <CommentsPanel classId="6a" sessionId={sessionId} />,
+      "/lop/:classId/buoi-hoc/:sessionId",
+      `/lop/6a/buoi-hoc/${sessionId}?tab=nhan-xet`,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Gửi phiếu cả lớp/ }));
+    const send = await screen.findByRole("button", { name: /^Gửi \d+ phiếu$/ });
+    expect(send).toBeEnabled();
+
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    fireEvent(window, new Event("offline"));
+    await waitFor(() => expect(send).toBeDisabled());
+    expect(screen.getByText("Cần có mạng để gửi phiếu.")).toBeInTheDocument();
+    expect(send).toHaveAttribute("aria-describedby", "send-tickets-offline-hint");
+
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    fireEvent(window, new Event("online"));
+    await waitFor(() => expect(send).toBeEnabled());
+    expect(screen.queryByText("Cần có mạng để gửi phiếu.")).toBeNull();
+    expect(send).not.toHaveAttribute("aria-describedby");
+  });
+
   it("offline: khoá nút gửi phiếu cả lớp và giải thích cần mạng", () => {
     Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
     inRouter(

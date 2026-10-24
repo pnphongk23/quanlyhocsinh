@@ -168,6 +168,7 @@ export default function CommentsDesktop({
             <Button
               size="md"
               disabled={sendButtonDisabled(count, !online)}
+              aria-describedby={!online ? "comments-desktop-send-offline-hint" : undefined}
               onClick={() => {
                 setDialogError("");
                 setConfirmOpen(true);
@@ -175,7 +176,11 @@ export default function CommentsDesktop({
             >
               {sendButtonLabel(count, !online)}
             </Button>
-            {!online && <p className={s.networkHint}>Cần có mạng để gửi phiếu</p>}
+            {!online && (
+              <p id="comments-desktop-send-offline-hint" className={s.networkHint}>
+                Cần có mạng để gửi phiếu
+              </p>
+            )}
           </>
         ) : undefined,
       )}

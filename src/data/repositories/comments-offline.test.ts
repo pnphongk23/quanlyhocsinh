@@ -40,12 +40,17 @@ describe("phiếu nhận xét khi mất mạng", () => {
       base_version: 0, membership_id: "member", created_at: "2026-10-13T00:00:00.000Z", status: "pending" as const,
     };
     await db.outbox.put(oldCommand);
+    const { getStore } = await import("../store");
+    const stateBefore = structuredClone(getStore());
+    const slipsBefore = await db.slips.toArray();
     Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
 
     const { sendSessionTicketsDurable } = await import("./comments");
     await expect(sendSessionTicketsDurable("6a-session-7", ["6a-student-0"]))
       .rejects.toThrow("Cần có mạng để gửi phiếu.");
+    expect(getStore()).toEqual(stateBefore);
     expect(await db.outbox.toArray()).toEqual([oldCommand]);
+    expect(await db.slips.toArray()).toEqual(slipsBefore);
   });
 
   it("cho phép slip.set offline và xếp hàng slip.send khi online", async () => {
