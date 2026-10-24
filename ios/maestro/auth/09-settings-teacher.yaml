@@ -9,4 +9,5 @@ name: auth-settings-teacher
     timeout: 20000
 - assertVisible: "Tên hiển thị"
 - assertVisible: "Đổi vai trò"
+- assertNotVisible: "Quay lại"
 - takeScreenshot: docs/screens/auth/cai-dat-giao-vien-ios

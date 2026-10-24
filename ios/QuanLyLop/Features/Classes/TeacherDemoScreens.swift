@@ -97,6 +97,8 @@ enum TeacherDemoData {
     }
 }
 
+/// The class "…" menu is a system `Menu` that cannot be pre-opened here; it is captured from the real app
+/// by the interactive flow in `ui-verification-gate.md`.
 /// One row per comparison screen; `frame` keeps the 390×844 prototype viewport.
 @MainActor
 enum TeacherDemoScreen: String, CaseIterable {
@@ -104,7 +106,6 @@ enum TeacherDemoScreen: String, CaseIterable {
     case classListEmpty = "class-list-empty"
     case newClass = "new-class"
     case classDetail = "class-detail"
-    case classDetailMenu = "class-detail-menu"
     case sessions = "sessions"
     case attendance = "attendance"
     case attendanceLocked = "attendance-locked"
@@ -135,9 +136,6 @@ enum TeacherDemoScreen: String, CaseIterable {
             TeacherNewClassView(data: data)
         case .classDetail:
             TeacherClassDetailView(classID: TeacherDemoData.classID, data: data, i4Data: I4FeatureStore())
-        case .classDetailMenu:
-            TeacherClassDetailView(classID: TeacherDemoData.classID, data: data,
-                                   i4Data: I4FeatureStore())
         case .sessions:
             TeacherSessionsView(classID: TeacherDemoData.classID, data: data, i4Data: I4FeatureStore())
         case .attendance:

@@ -226,7 +226,7 @@ private struct DemoAuthFlow: View {
                 AuthSettingsView(model: model)
             } else {
                 TeacherRootView(initialTab: .settings) {
-                    AnyView(AuthSettingsView(model: model, onClose: { model.show(.main) }))
+                    AnyView(AuthSettingsView(model: model, isRootTab: true))
                 }
             }
         case .changePassword: AuthChangePasswordView(model: model) { model.show(.settings) }
