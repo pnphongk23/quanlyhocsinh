@@ -15,6 +15,12 @@
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    transform 100ms var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+.button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 .md {
   min-height: 48px;
@@ -27,6 +33,20 @@
   width: 100%;
   border-radius: var(--radius-control);
   font-size: 16px;
+}
+.block {
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  .button {
+    min-width: 96px;
+  }
+  .lg {
+    width: auto;
+  }
+  .block {
+    width: 100%;
+  }
 }
 .secondary {
   background: var(--color-primary-soft);
@@ -56,7 +76,8 @@
   padding: 14px 16px;
 }
 .cardSelected {
-  outline: 2px solid var(--color-primary);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 @media (min-width: 1024px) {
   .card {
@@ -82,6 +103,10 @@
   border-radius: var(--radius-chip);
   background: var(--color-bg);
   font-size: 14px;
+}
+.chipOn {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 /* Pill trạng thái */
@@ -149,12 +174,15 @@
 
 /* Segmented */
 .segmented {
+  position: relative;
   display: flex;
   padding: 3px;
   border-radius: 12px;
   background: var(--color-border);
 }
 .segment {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-height: var(--tap);
   border: 0;
@@ -163,10 +191,20 @@
   color: var(--color-muted);
   font-size: 15px;
   font-weight: 600;
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+.segment:hover:not(.segmentOn):not([aria-disabled="true"]) {
+  background: var(--state-hover-bg);
+}
+.segment[aria-disabled="true"] {
+  opacity: var(--state-disabled-opacity);
 }
 .segmentOn {
-  background: var(--color-surface);
-  color: var(--color-text);
+  color: var(--state-selected-fg);
+}
+.segmentThumb {
+  border-radius: 10px;
+  background: var(--state-selected-bg);
 }
 
 /* Đầu trang */
@@ -180,7 +218,7 @@
 }
 .pageHeaderMain {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
   min-width: 0;
   flex: 1;
@@ -235,10 +273,34 @@
   color: var(--color-muted);
   text-align: center;
 }
+.mascot {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  user-select: none;
+}
 .emptyTitle {
   font-size: 16px;
   font-weight: 700;
   color: var(--color-text);
+}
+.emptyDescription {
+  max-width: var(--form-max);
+  font-size: var(--text-md);
+}
+.emptyAction {
+  margin-top: var(--space-8);
+}
+.emptyCompact {
+  gap: var(--space-4);
+  padding: var(--space-16);
+}
+.emptyCompact .emptyTitle {
+  font-size: var(--text-md);
+}
+.emptyCompact .emptyDescription {
+  font-size: var(--text-sm);
 }
 
 /* Biểu tượng */
@@ -266,6 +328,50 @@
 }
 .dialog::backdrop {
   background: var(--color-scrim);
+}
+.dialog[open] {
+  animation: dialogIn var(--dur-slow) var(--ease-out) both;
+}
+.dialog[open]::backdrop {
+  animation: backdropIn var(--dur-slow) var(--ease-out) both;
+}
+.dialog[open][data-closing] {
+  animation: dialogOut var(--dur-base) var(--ease-in) both;
+}
+.dialog[open][data-closing]::backdrop {
+  animation: backdropOut var(--dur-base) var(--ease-in) both;
+}
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes dialogOut {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes sheetIn {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheetOut {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes backdropIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes backdropOut {
+  to {
+    opacity: 0;
+  }
 }
 .dialogBody {
   flex: 1 1 auto;
@@ -297,6 +403,12 @@
   .sheet .dialogFooter {
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
+  .sheet[open] {
+    animation-name: sheetIn;
+  }
+  .sheet[open][data-closing] {
+    animation-name: sheetOut;
+  }
 }
 .dialogHeader {
   display: flex;
@@ -320,4 +432,153 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Disabled: nền trung tính + chữ muted, không dùng opacity nên vẫn đọc được. */
+.button:disabled { background: var(--color-neutral-soft); color: var(--color-muted); opacity: 1; cursor: not-allowed; }
+.ghost:disabled { background: transparent; }
+
+/* Footer hành động đáy trang form */
+.actionFooter {
+  position: sticky;
+  bottom: var(--sticky-bottom);
+  z-index: var(--z-sticky);
+  display: grid;
+  gap: var(--space-8);
+  margin-top: auto;
+  padding: var(--space-8) 0;
+  background: var(--color-bg);
+}
+@media (min-width: 1024px) {
+  .actionFooter {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0;
+    background: transparent;
+  }
+  /* Banner/thông báo dài chiếm một dòng riêng phía trên hàng nút */
+  .actionFooter > [role="alert"] {
+    flex: 1 0 100%;
+  }
+}
+
+/* Nút đang xử lý: giữ màu và bề rộng; nhãn ẩn (vẫn có trong DOM cho đọc màn hình), vòng quay ở giữa. */
+.button.loading:disabled {
+  background: var(--color-primary);
+  color: transparent;
+  cursor: progress;
+  --spinner: var(--color-on-primary);
+}
+.button.loading.secondary:disabled {
+  background: var(--color-primary-soft);
+  --spinner: var(--color-primary-ink);
+}
+.button.loading {
+  position: relative;
+}
+.button.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid var(--spinner, currentColor);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Dòng lý do nút lưu đang disabled */
+.actionHint {
+  margin: 0;
+  font-size: var(--text-md);
+  text-align: center;
+  color: var(--color-muted);
+}
+.actionHintError {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+/* Hộp thoại chưa lưu (design/reference/80-trang-thai-chua-luu-hoi-khi-roi-man.html) */
+.confirmDialog {
+  width: min(520px, calc(100% - 32px));
+  padding: var(--space-24);
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+/* Chỉ đổi cách xếp khi mở; đặt ngoài [open] sẽ ghi đè `dialog:not([open]) { display: none }`. */
+.confirmDialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+.confirmDialog::backdrop {
+  background: var(--color-scrim);
+}
+.confirmTitle {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.confirmBody {
+  font-size: var(--text-base);
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.confirmActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.confirmButton {
+  width: 100%;
+  min-height: var(--button-h-lg);
+  border: 0;
+  border-radius: var(--radius-button);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.confirmButton:disabled {
+  cursor: progress;
+}
+.confirmPrimary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.confirmDiscard {
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+.confirmStay {
+  background: var(--color-neutral-soft);
+  color: var(--color-text);
+}
+
+/* Vừa lưu xong: nhãn thật ẩn nhưng vẫn chiếm chỗ để nút giữ bề rộng. */
+.button.done,
+.button.done:disabled {
+  position: relative;
+  background: var(--state-success-bg);
+  color: var(--state-success-fg);
+  cursor: default;
+}
+.doneLabelHidden {
+  visibility: hidden;
+}
+.doneLabel {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
 }

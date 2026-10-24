@@ -10,6 +10,8 @@ export interface Student {
   classId: string;
   name: string;
   parentPhone: string;
+  /** Người nhận phiếu: "Mẹ", "Bố"… (chỉ để hiển thị ở prototype web). */
+  guardianRelation?: string;
   enrolledAt: string;
   leftAt: string | null;
   status: "active" | "left";
@@ -92,14 +94,29 @@ export interface HomeworkGrade {
   studentId: string;
   level: HomeworkLevel;
 }
+/**
+ * Một đợt báo cáo của lớp: khoảng buổi từ `fromSessionId` đến `toSessionId`
+ * (spec mục 4 "Nhận xét và báo cáo"). Số buổi tính động theo thứ tự buổi chưa
+ * hủy của lớp nên chỉ lưu mã buổi. Các đợt được phép trùng khoảng.
+ */
+export interface ReportBatch {
+  id: string;
+  classId: string;
+  fromSessionId: string;
+  toSessionId: string;
+  createdAt: string;
+}
 export interface Report {
   id: string;
   classId: string;
   studentId: string;
+  /** Đợt báo cáo chứa bản này (mỗi đợt có tối đa một bản cho mỗi học sinh). */
+  batchId: string;
+  /** Tháng của buổi kết thúc đợt (dạng YYYY-MM), để nhóm và sắp xếp. */
   month: string;
   status: "draft" | "published";
   needsRepublish: boolean;
-  /** Nhận xét chung của tháng do giáo viên soạn (nội dung báo cáo, spec mục 4). */
+  /** Nhận xét chung của đợt do giáo viên soạn (nội dung báo cáo, spec mục 4). */
   generalComment: string;
   /** Thời điểm phát hành gần nhất; null = chưa phát hành. */
   publishedAt: string | null;
@@ -114,7 +131,8 @@ export interface ChangeLog {
   actor: string;
 }
 export interface AuthSession {
-  email: string;
+  /** SĐT đăng nhập, dạng nội bộ 9 số không có tiền tố +84 (vd. 900000001). */
+  phone: string;
   /** Memberships (role in this workspace) belonging to the signed-in person. */
   memberIds: string[];
 }
@@ -144,8 +162,7 @@ export interface Member {
   classIds: string[];
   /** Con được liên kết (chỉ role phụ huynh dùng). */
   studentIds?: string[];
-  status: "active" | "invited" | "disabled";
-  invitedAt: string | null;
+  status: "active" | "disabled";
 }
 export interface LectureFile {
   id: string;
@@ -305,6 +322,7 @@ export interface StoreState {
   homeworkSections: HomeworkSection[];
   /** Kết quả chấm BTVN; thiếu dòng = "Chưa chấm". */
   homeworkGrades: HomeworkGrade[];
+  reportBatches: ReportBatch[];
   reports: Report[];
   changeLogs: ChangeLog[];
   pending: PendingChange[];

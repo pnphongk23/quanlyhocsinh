@@ -30,7 +30,7 @@ const storage = {
 /** Đặt membership đang dùng (thêm vào phiên để switchRole hợp lệ). */
 function actAs(memberId: string): void {
   const state = createSeed();
-  state.auth = { email: "test@example.test", memberIds: [memberId] };
+  state.auth = { phone: "900000001", memberIds: [memberId] };
   state.activeMemberId = memberId;
   replaceStore(state);
 }

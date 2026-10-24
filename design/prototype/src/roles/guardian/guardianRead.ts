@@ -1,13 +1,15 @@
 import { getStore } from "../../data/store";
-import { requirePermission } from "../../data/repositories/access";
+import { can, requirePermission } from "../../data/repositories/access";
 import {
   STUDENT_ACCESS_ERROR,
+  getChildHomework,
+  listChildTickets,
   listMyChildren,
   type GuardianChild,
 } from "../../data/repositories/guardian";
 import { sessionNumber } from "../../data/repositories/sessions";
 import { compareSessions } from "../../data/homework";
-import type { Session, Student, Test } from "../../data/types";
+import type { Session, StarLevel, Student, Test } from "../../data/types";
 import type { AttendanceStatus } from "./guardianFormat";
 
 /**
@@ -187,3 +189,154 @@ export function publishedReportMonths(studentId: string): string[] {
 }
 
 export type { GuardianChild, Student };
+
+/* ------------------------------------------------ khung lớp học của con */
+
+export interface ChildClassInfo {
+  name: string;
+  weekdays: number[];
+  time: string;
+  teacher: string | null;
+}
+
+/** Tên lớp, lịch học và giáo viên chính của lớp con (đầu tab Lớp học của con). */
+export function childClassInfo(studentId: string): ChildClassInfo {
+  const child = childOf(studentId);
+  const klass = getStore().classes.find(
+    (item) => item.id === child.student.classId,
+  );
+  return {
+    name: child.className,
+    weekdays: klass?.weekdays ?? [],
+    time: klass?.time ?? "",
+    teacher: childTeacherName(studentId),
+  };
+}
+
+/** Buổi thuộc lớp con trong khoảng ngày vào lớp..rời lớp (mọi trạng thái). */
+function inClassWindow(child: GuardianChild, session: Session): boolean {
+  return (
+    session.classId === child.student.classId &&
+    session.date >= child.student.enrolledAt &&
+    (!child.student.leftAt || session.date <= child.student.leftAt)
+  );
+}
+
+/** Một buổi của con trong danh sách tab 1; `number` null = buổi đã huỷ. */
+export interface ChildSessionItem {
+  session: Session;
+  number: number | null;
+  cancelled: boolean;
+  /** Buổi chưa diễn ra nhưng cô đã giao BTVN hoặc đã gửi phiếu nên phụ huynh xem được. */
+  upcoming: boolean;
+  /** null = chưa điểm danh, hoặc nhóm Buổi học và điểm danh bị tắt. */
+  attendance: AttendanceStatus | null;
+  /** null = chưa gửi phiếu, hoặc nhóm Nhận xét và báo cáo bị tắt. */
+  stars: StarLevel | null;
+}
+
+/**
+ * Buổi đã diễn ra, đã huỷ và buổi sắp tới đã có BTVN hoặc phiếu của con, mới
+ * nhất trước, kèm nhãn điểm danh và sao.
+ */
+export function childSessionFeed(studentId: string): ChildSessionItem[] {
+  const child = childOf(studentId);
+  const state = getStore();
+  const canAttendance = can("sessions_attendance", "read");
+  const stars = new Map<string, StarLevel>();
+  const withHomework = new Set<string>();
+  if (can("comments_reports", "read")) {
+    for (const ticket of listChildTickets(studentId))
+      stars.set(ticket.session.id, ticket.stars);
+    for (const item of getChildHomework(studentId))
+      withHomework.add(item.session.id);
+  }
+  return state.sessions
+    .filter(
+      (session) =>
+        inClassWindow(child, session) &&
+        (session.status !== "planned" ||
+          stars.has(session.id) ||
+          withHomework.has(session.id)),
+    )
+    .sort((a, b) => compareSessions(b, a))
+    .map((session) => {
+      const cancelled = session.status === "cancelled";
+      const record =
+        canAttendance && !cancelled
+          ? state.attendance.find(
+              (item) =>
+                item.sessionId === session.id && item.studentId === studentId,
+            )
+          : undefined;
+      return {
+        session,
+        number: sessionNumber(session),
+        cancelled,
+        upcoming: session.status === "planned",
+        attendance: record?.status ?? null,
+        stars: stars.get(session.id) ?? null,
+      };
+    });
+}
+
+/** Một buổi của con theo id (kể cả đã huỷ hoặc sắp tới); buổi của lớp khác → null. */
+export function childSessionById(
+  studentId: string,
+  sessionId: string,
+): Session | null {
+  const child = childOf(studentId);
+  return (
+    getStore().sessions.find(
+      (session) => session.id === sessionId && inClassWindow(child, session),
+    ) ?? null
+  );
+}
+
+export interface ChildSessionAttendance {
+  status: AttendanceStatus;
+  note: string;
+  lateAt: string | null;
+}
+
+/** Điểm danh của con ở một buổi; null = chưa điểm danh hoặc nhóm quyền bị tắt. */
+export function childAttendanceOf(
+  studentId: string,
+  sessionId: string,
+): ChildSessionAttendance | null {
+  childOf(studentId);
+  if (!can("sessions_attendance", "read")) return null;
+  const record = getStore().attendance.find(
+    (item) => item.sessionId === sessionId && item.studentId === studentId,
+  );
+  return record
+    ? { status: record.status, note: record.note, lateAt: record.lateAt }
+    : null;
+}
+
+export interface ChildTeacherWord {
+  month: string;
+  /** Ngày phát hành "2026-10-12". */
+  date: string;
+  text: string;
+}
+
+/** "Lời cô" của các báo cáo tháng đã phát hành (có nhận xét chung), mới nhất trước. */
+export function childTeacherWords(studentId: string): ChildTeacherWord[] {
+  childOf(studentId);
+  requirePermission("comments_reports", "read");
+  return getStore()
+    .reports.filter(
+      (report) =>
+        report.studentId === studentId &&
+        report.status === "published" &&
+        report.publishedAt !== null &&
+        report.generalComment.trim() !== "",
+    )
+    .map((report) => ({
+      month: report.month,
+      date: (report.publishedAt ?? "").slice(0, 10),
+      text: report.generalComment.trim(),
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}

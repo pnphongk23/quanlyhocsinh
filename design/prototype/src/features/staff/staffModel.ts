@@ -3,7 +3,6 @@ import type {
   PermissionGroup,
   PermissionLevel,
 } from "../../data/types";
-import { formatDate } from "../../shared/format";
 import type { SegmentedOption } from "../../shared/ui/Segmented";
 import type { PillTone } from "../../shared/ui";
 
@@ -20,19 +19,15 @@ export const LEVEL_LABELS: Record<PermissionLevel, string> = {
 export const STAFF_LEVELS: PermissionLevel[] = ["none", "read", "write"];
 export const GUARDIAN_LEVELS: PermissionLevel[] = ["none", "read"];
 
-/** Link mời dùng một lần, hết hạn sau 7 ngày (spec mục 4, Tài khoản). */
-export const INVITE_DAYS = 7;
 export const ROLE_NAME_MAX = 40;
 
 const STATUS_LABELS: Record<Member["status"], string> = {
   active: "Hoạt động",
-  invited: "Đã mời",
   disabled: "Vô hiệu hoá",
 };
 
 const STATUS_TONES: Record<Member["status"], PillTone> = {
   active: "success",
-  invited: "warning",
   disabled: "neutral",
 };
 
@@ -145,23 +140,6 @@ export function validatePhone(phone: string): string {
   if (!/^0\d{9}$/.test(digits))
     return "Số điện thoại gồm 10 số và bắt đầu bằng 0.";
   return "";
-}
-
-export function inviteExpiry(
-  invitedAt: string,
-  now: Date,
-): { expiresAtLabel: string; daysLeft: number } {
-  const start = new Date(invitedAt);
-  const expires = new Date(start.getTime() + INVITE_DAYS * 24 * 60 * 60 * 1000);
-  const daysLeft = Math.max(
-    0,
-    Math.ceil((expires.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)),
-  );
-  return { expiresAtLabel: formatDate(expires), daysLeft };
-}
-
-export function inviteLink(memberId: string, origin: string): string {
-  return `${origin.replace(/\/+$/, "")}/kich-hoat?loi-moi=${encodeURIComponent(memberId)}`;
 }
 
 export function classAssignmentLabel(count: number, seesAllClasses: boolean): string {

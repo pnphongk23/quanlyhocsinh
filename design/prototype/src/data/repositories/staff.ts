@@ -7,7 +7,6 @@ import type {
 } from "../types";
 import { getStore } from "../store";
 import { commit } from "../outbox";
-import { requireOnline } from "./helpers";
 import { isAdmin } from "./access";
 import {
   emptyPermissions,
@@ -75,59 +74,6 @@ export function listMembers(): Member[] {
 
 export function getMember(id: string): Member | undefined {
   return getStore().members.find((item) => item.id === id);
-}
-
-export function inviteMember(input: {
-  name: string;
-  phone: string;
-  roleId: string;
-  classIds: string[];
-}): Member {
-  requireAdmin();
-  requireOnline();
-  const name = input.name.trim();
-  if (!name) throw new Error("Nhập tên thành viên.");
-  if (!input.phone.trim()) throw new Error("Nhập số điện thoại.");
-  requireRole(input.roleId);
-  const state = getStore();
-  for (const classId of input.classIds)
-    if (!state.classes.some((item) => item.id === classId))
-      throw new Error("Không tìm thấy lớp.");
-  const item: Member = {
-    id: crypto.randomUUID(),
-    name,
-    phone: input.phone.trim(),
-    roleId: input.roleId,
-    classIds: [...input.classIds],
-    status: "invited",
-    invitedAt: new Date().toISOString(),
-  };
-  commit("members", item.id, (draft) => {
-    draft.members.push(item);
-  });
-  return item;
-}
-
-export function resendInvite(memberId: string): void {
-  requireAdmin();
-  requireOnline();
-  const member = requireMember(memberId);
-  if (member.status !== "invited")
-    throw new Error("Chỉ gửi lại được lời mời đang chờ.");
-  commit("members", memberId, (draft) => {
-    const target = draft.members.find((item) => item.id === memberId);
-    if (target) target.invitedAt = new Date().toISOString();
-  });
-}
-
-export function cancelInvite(memberId: string): void {
-  requireAdmin();
-  const member = requireMember(memberId);
-  if (member.status !== "invited")
-    throw new Error("Chỉ huỷ được lời mời đang chờ.");
-  commit("members", memberId, (draft) => {
-    draft.members = draft.members.filter((item) => item.id !== memberId);
-  });
 }
 
 export function setMemberClasses(memberId: string, classIds: string[]): void {

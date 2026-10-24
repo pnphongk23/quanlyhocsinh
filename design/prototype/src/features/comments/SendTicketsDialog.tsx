@@ -17,6 +17,7 @@ export default function SendTicketsDialog({
   ungraded,
   previousSessionNumber,
   error,
+  busy = false,
   onConfirm,
   onClose,
 }: {
@@ -27,6 +28,8 @@ export default function SendTicketsDialog({
   ungraded: UngradedHomeworkNotice;
   previousSessionNumber: number | null;
   error?: string;
+  /** Đang gửi: khoá nút xác nhận để không gửi hai lần. */
+  busy?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -97,7 +100,7 @@ export default function SendTicketsDialog({
         )}
 
         <div className={s.confirmActions}>
-          <Button size="lg" onClick={onConfirm}>
+          <Button size="lg" onClick={onConfirm} disabled={busy} loading={busy}>
             Gửi {sendCount} phiếu
           </Button>
           <Button size="lg" variant="neutral" onClick={onClose}>

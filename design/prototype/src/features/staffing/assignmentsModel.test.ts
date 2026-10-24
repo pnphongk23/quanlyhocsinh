@@ -15,14 +15,13 @@ const klass = (id: string, weekdays: number[], time: string): Class => ({
   status: "active",
 });
 
-const member = (id: string, name: string, roleId: string, status: Member["status"] = "active"): Member => ({
+const member = (id: string, name: string, roleId: string): Member => ({
   id,
   name,
   phone: "",
   roleId,
   classIds: [],
-  status,
-  invitedAt: null,
+  status: "active",
 });
 
 const student = (id: string, classId: string, status: Student["status"]): Student => ({
@@ -81,11 +80,10 @@ describe("chỉ nhân sự đang hoạt động", () => {
     { id: "role-guardian", name: "Phụ huynh", kind: "guardian", system: false, permissions: {} as Role["permissions"] },
   ];
 
-  it("bỏ lời mời và phụ huynh, sắp theo tên", () => {
+  it("bỏ phụ huynh, sắp theo tên", () => {
     const members = [
       member("m-b", "Cô B", "role-teacher"),
       member("m-a", "Cô A", "role-teacher"),
-      member("m-invited", "Cô C", "role-teacher", "invited"),
       member("m-guardian", "Phụ huynh", "role-guardian"),
     ];
     expect(activeStaff(members, roles).map((item) => item.id)).toEqual(["m-a", "m-b"]);

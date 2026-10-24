@@ -8,7 +8,6 @@ import {
   useParams,
 } from "react-router-dom";
 import {
-  archiveClass,
   getClass,
   getCurrentClassId,
   hasClass,
@@ -19,9 +18,12 @@ import { useAccess } from "../../data/repositories/access";
 import { useStore } from "../../data/store";
 import type { PermissionGroup } from "../../data/types";
 import { EmptyState, Icon, LinkButton, NoAccess } from "../../shared/ui";
+import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { ClassOptionsMenu, type ClassOption } from "../classes/ClassOptionsMenu";
+import { ArchiveClassDialog } from "../classes/ArchiveClassDialog";
 import { EditClassModal } from "../classes/EditClassModal";
 import { EditClassSchedule } from "../classes/EditClassSchedule";
+import { motionClass, useSlideIndicator } from "../../shared/motion";
 import s from "./classSpace.module.css";
 
 const tabs: Array<{ to: string; label: string; group: PermissionGroup }> = [
@@ -42,6 +44,7 @@ function sessionIdFromPath(pathname: string): string | null {
 
 export default function ClassSpaceLayout() {
   useStore();
+  const desktop = useIsDesktop();
   const { classId = "" } = useParams();
   const { pathname } = useLocation();
   const matches = useMatches();
@@ -50,6 +53,7 @@ export default function ClassSpaceLayout() {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [error, setError] = useState("");
   const klass = getClass(classId);
   // Ngoại lệ hẹp: đúng buổi mình dạy thay thì mở màn chi tiết buổi (không mở cả lớp).
@@ -82,6 +86,10 @@ export default function ClassSpaceLayout() {
       behavior: "auto",
     });
   }, [pathname]);
+  const indicatorReady = useSlideIndicator(
+    subTabsRef,
+    pathname + (klass ? ":1" : ":0"),
+  );
   if (!klass && !substituteSession)
     return hasClass(classId) ? (
       <NoAccess what="lớp này" />
@@ -90,6 +98,9 @@ export default function ClassSpaceLayout() {
         <LinkButton to="/lop">Về danh sách lớp</LinkButton>
       </EmptyState>
     );
+  // Web desktop: mỗi trang tự dựng khung đầu lớp (breadcrumb, tiêu đề, nút
+  // chính của tab) bằng ClassDesktopHeader; layout chỉ giữ phần kiểm quyền.
+  if (desktop) return <Outlet />;
   // Buổi dạy thay chỉ mở nội dung buổi, không hiện tab của lớp và không đặt
   // lớp ngoài phạm vi làm lớp đang mở.
   if (detail || substituteSession) return <Outlet />;
@@ -116,15 +127,8 @@ export default function ClassSpaceLayout() {
       icon: "archive",
       danger: true,
       onSelect: () => {
-        try {
-          archiveClass(classId);
-          setError("");
-          setOptionsOpen(false);
-        } catch (cause) {
-          setError(
-            cause instanceof Error ? cause.message : "Không lưu trữ được lớp.",
-          );
-        }
+        setOptionsOpen(false);
+        setArchiveOpen(true);
       },
     },
   ];
@@ -175,6 +179,15 @@ export default function ClassSpaceLayout() {
               {tab.label}
             </NavLink>
           ))}
+          <span
+            aria-hidden="true"
+            className={
+              motionClass.indicator +
+              (indicatorReady ? " " + motionClass.indicatorReady : "") +
+              " " +
+              s.slideBar
+            }
+          />
         </nav>
       </header>
       <div className={s.body}>
@@ -192,6 +205,12 @@ export default function ClassSpaceLayout() {
           onEditSchedule={() => setScheduleOpen(true)}
         />
       )}
+      <ArchiveClassDialog
+        open={archiveOpen}
+        classId={classId}
+        className={klass.name}
+        onClose={() => setArchiveOpen(false)}
+      />
       {scheduleOpen && (
         <EditClassSchedule
           classId={classId}

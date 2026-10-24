@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { motionClass, useSlideIndicator } from "../motion";
 import s from "./ui.module.css";
 export interface SegmentedOption {
   value: string;
@@ -18,6 +19,8 @@ export function Segmented({
   label,
   disabled = false,
 }: SegmentedProps) {
+  const root = useRef<HTMLDivElement>(null);
+  const ready = useSlideIndicator(root, value);
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const go = (index: number) => {
     if (disabled || !options[index]) return;
@@ -31,6 +34,7 @@ export function Segmented({
   };
   return (
     <div
+      ref={root}
       role="tablist"
       aria-label={label}
       className={s.segmented}
@@ -51,6 +55,15 @@ export function Segmented({
         }
       }}
     >
+      <span
+        aria-hidden="true"
+        className={
+          s.segmentThumb +
+          " " +
+          motionClass.indicator +
+          (ready ? " " + motionClass.indicatorReady : "")
+        }
+      />
       {options.map((option, index) => {
         const active = option.value === value;
         return (

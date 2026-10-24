@@ -84,7 +84,7 @@ export default function AssignmentsPage() {
       />
 
       {views.length === 0 ? (
-        <EmptyState title="Chưa có lớp">
+        <EmptyState title="Chưa có lớp" mascot="cho">
           <p>Tạo lớp trước khi phân công giảng dạy.</p>
           <LinkButton to="/lop/moi">Tạo lớp</LinkButton>
         </EmptyState>
@@ -307,10 +307,10 @@ function AssignmentModal({
         <div className={s.staffEmpty}>
           <h3 className={s.staffEmptyTitle}>Chưa có nhân sự đang hoạt động</h3>
           <p className={s.staffEmptyText}>
-            Mời nhân sự trước, sau đó quay lại để phân công.
+            Thêm nhân sự trước, sau đó quay lại để phân công.
           </p>
           <LinkButton to="/nhan-su" variant="secondary" size="lg">
-            Mời nhân sự
+            Xem nhân sự
           </LinkButton>
         </div>
       ) : view ? (

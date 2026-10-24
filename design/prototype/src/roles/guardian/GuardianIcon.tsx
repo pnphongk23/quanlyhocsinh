@@ -2,20 +2,19 @@ import type { ReactNode } from "react";
 import type { HomeworkKind } from "../../data/types";
 
 /**
- * Biểu tượng riêng của màn phụ huynh (5 mục thanh tab dưới và biểu tượng loại
+ * Biểu tượng riêng của màn phụ huynh (2 mục thanh tab, chip con, tài khoản và biểu tượng loại
  * BTVN ở ảnh 08/09). Không sửa `src/shared` nên khai báo bản riêng ở đây.
  */
 const paths = {
   home: <path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
-  attendance: <path d="M20 6 9 17l-5-5" />,
-  scores: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
   comments: (
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   ),
-  reports: (
-    <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6" />
-  ),
   "chevron-left": <path d="m15 18-6-6 6-6" />,
+  "chevron-down": <path d="m6 9 6 6 6-6" />,
+  user: (
+    <path d="M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+  ),
   "chevron-right": <path d="m9 18 6-6-6-6" />,
   vocabulary: <path d="M4 7V4h16v3M9 20h6M12 4v16" />,
   reading: (

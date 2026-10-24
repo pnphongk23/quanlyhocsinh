@@ -7,7 +7,10 @@ import {
   useLocation,
 } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
-import { getAuthSession } from "../data/repositories/auth";
+import {
+  enterDemoSession,
+  getAuthSession,
+} from "../data/repositories/auth";
 import { useStore } from "../data/store";
 import TeacherShell from "./TeacherShell";
 import { Spinner } from "../shared/ui";
@@ -18,7 +21,17 @@ import {
   roleLandingPath,
 } from "../roles/guardian/roleLanding";
 const LoginPage = lazy(() => import("../features/auth/LoginPage"));
+const RegisterPage = lazy(() => import("../features/auth/RegisterPage"));
+const ResetPasswordPage = lazy(
+  () => import("../features/auth/ResetPasswordPage"),
+);
+const ForgotPasswordPage = lazy(
+  () => import("../features/auth/ForgotPasswordPage"),
+);
 const RolePickerPage = lazy(() => import("../features/auth/RolePickerPage"));
+const ChangePasswordPage = lazy(
+  () => import("../features/settings/ChangePasswordPage"),
+);
 const ClassListPage = lazy(() => import("../features/classes/ClassListPage"));
 const NewClassPage = lazy(() => import("../features/classes/NewClassPage"));
 const ClassSpaceLayout = lazy(
@@ -50,7 +63,6 @@ const LectureDetailPage = lazy(
   () => import("../features/lectures/LectureDetailPage"),
 );
 const MembersPage = lazy(() => import("../features/staff/MembersPage"));
-const InvitePage = lazy(() => import("../features/staff/InvitePage"));
 const MemberDetailPage = lazy(
   () => import("../features/staff/MemberDetailPage"),
 );
@@ -83,11 +95,8 @@ const StudentScoreReportPage = lazy(
 const GuardianShell = lazy(
   () => import("../roles/guardian/GuardianShell"),
 );
-const GuardianOverviewPage = lazy(
-  () => import("../roles/guardian/GuardianOverviewPage"),
-);
-const GuardianAttendancePage = lazy(
-  () => import("../roles/guardian/GuardianAttendancePage"),
+const GuardianClassPage = lazy(
+  () => import("../roles/guardian/GuardianClassPage"),
 );
 const GuardianScoresPage = lazy(
   () => import("../roles/guardian/GuardianScoresPage"),
@@ -95,11 +104,8 @@ const GuardianScoresPage = lazy(
 const GuardianCommentsPage = lazy(
   () => import("../roles/guardian/GuardianCommentsPage"),
 );
-const GuardianTicketPage = lazy(
-  () => import("../roles/guardian/GuardianTicketPage"),
-);
-const GuardianHomeworkPage = lazy(
-  () => import("../roles/guardian/GuardianHomeworkPage"),
+const GuardianSessionPage = lazy(
+  () => import("../roles/guardian/GuardianSessionPage"),
 );
 const GuardianReportPage = lazy(
   () => import("../roles/guardian/GuardianReportPage"),
@@ -131,9 +137,80 @@ const payrollRoutes: RouteObject[] = features.payroll
       { path: "/luong/*", loader: () => redirect("/lop") },
     ];
 
+const lectureRoutes: RouteObject[] = features.lectures
+  ? [
+      { path: "/bai-giang", element: <LibraryPage /> },
+      { path: "/bai-giang/moi", element: <LectureEditorPage /> },
+      { path: "/bai-giang/:lectureId", element: <LectureDetailPage /> },
+      { path: "/bai-giang/:lectureId/sua", element: <LectureEditorPage /> },
+    ]
+  : [
+      { path: "/bai-giang", loader: () => redirect("/lop") },
+      { path: "/bai-giang/*", loader: () => redirect("/lop") },
+    ];
+
+/** Trang đầu theo vai trò, dùng cho các đường dẫn đã bị tắt bằng cờ. */
+const roleHome = () =>
+  redirect(getAuthSession() ? roleLandingPath() : "/dang-nhap");
+
+/** Nhân sự, phân công, lịch dạy, vai trò: ngoài Bản đầu (spec mục 8). */
+const staffingRoutes: RouteObject[] = features.staffing
+  ? [
+      { path: "/nhan-su", element: <MembersPage /> },
+      { path: "/nhan-su/:memberId", element: <MemberDetailPage /> },
+      { path: "/phan-cong", element: <AssignmentsPage /> },
+      { path: "/lich-day", element: <TeachingSchedulePage /> },
+      { path: "/vai-tro", element: <RolesPage /> },
+      { path: "/vai-tro/moi", element: <RoleEditorPage /> },
+      { path: "/vai-tro/:roleId", element: <RoleEditorPage /> },
+    ]
+  : [
+      { path: "/nhan-su", loader: roleHome },
+      { path: "/nhan-su/*", loader: roleHome },
+      { path: "/phan-cong", loader: roleHome },
+      { path: "/lich-day", loader: roleHome },
+      { path: "/vai-tro", loader: roleHome },
+      { path: "/vai-tro/*", loader: roleHome },
+    ];
+
+/** Học phí: ngoài Bản đầu (spec mục 8). */
+const tuitionRoutes: RouteObject[] = features.tuition
+  ? [
+      { path: "/hoc-phi", element: <TuitionPage /> },
+      { path: "/hoc-phi/:studentId", element: <TuitionDetailPage /> },
+    ]
+  : [
+      { path: "/hoc-phi", loader: roleHome },
+      { path: "/hoc-phi/*", loader: roleHome },
+    ];
+
+/** Báo cáo điểm tổng hợp/từng học sinh: ngoài Bản đầu. */
+const scoreReportRoutes: RouteObject[] = features.scoreReports
+  ? [
+      {
+        path: "bao-cao-diem",
+        element: <ScoreReportPage />,
+        handle: { detail: true },
+      },
+      {
+        path: "bao-cao-diem/:studentId",
+        element: <StudentScoreReportPage />,
+        handle: { detail: true },
+      },
+    ]
+  : [
+      { path: "bao-cao-diem", loader: () => redirect("/lop") },
+      { path: "bao-cao-diem/*", loader: () => redirect("/lop") },
+    ];
+
 function Guard() {
   useStore();
   return getAuthSession() ? <Outlet /> : <Navigate to="/dang-nhap" replace />;
+}
+
+/** Cài đặt dùng chung cho cả hai vai trò: khung nhân sự hoặc khung phụ huynh. */
+function SettingsShell() {
+  return activeRoleIsGuardian() ? <GuardianShell /> : <TeacherShell />;
 }
 
 /**
@@ -156,21 +233,22 @@ function Loading() {
   const { pathname } = useLocation();
   useEffect(() => {
     const titles: Array<[RegExp, string]> = [
-      [/^\/ph\/nhan-xet\/[^/]+$/, "Phiếu buổi học"],
-      [/^\/ph\/nhan-xet$/, "Nhận xét"],
-      [/^\/ph\/btvn\/[^/]+$/, "Bài tập về nhà"],
-      [/^\/ph\/btvn$/, "Bài tập về nhà"],
-      [/^\/ph\/diem-danh$/, "Điểm danh"],
-      [/^\/ph\/diem-so$/, "Điểm số"],
-      [/^\/ph\/bao-cao$/, "Báo cáo tháng"],
-      [/^\/ph$/, "Tổng quan"],
+      [/^\/ph\/buoi\/[^/]+$/, "Buổi học"],
+      [/^\/ph\/nhan-xet$/, "Nhận xét của cô"],
+      [/^\/ph\/diem$/, "Điểm số"],
+      [/^\/ph\/bao-cao\/[^/]+$/, "Báo cáo"],
+      [/^\/ph\/bao-cao$/, "Báo cáo"],
+      [/^\/ph$/, "Lớp học của con"],
+      [/^\/doi-mat-khau-bat-buoc$/, "Đổi mật khẩu"],
       [/^\/dang-nhap$/, "Đăng nhập"],
+      [/^\/dang-ky$/, "Tạo không gian làm việc"],
+      [/^\/quen-mat-khau$/, "Quên mật khẩu"],
+      [/^\/dat-lai-mat-khau$/, "Đặt mật khẩu mới"],
       [/^\/chon-vai-tro$/, "Chọn vai trò"],
       [/^\/bai-giang\/moi$/, "Soạn bài giảng"],
       [/^\/bai-giang\/[^/]+\/sua$/, "Sửa bài giảng"],
       [/^\/bai-giang\/[^/]+$/, "Chi tiết bài giảng"],
       [/^\/bai-giang$/, "Bài giảng"],
-      [/^\/nhan-su\/moi$/, "Mời nhân sự"],
       [/^\/nhan-su\/[^/]+$/, "Chi tiết nhân sự"],
       [/^\/nhan-su$/, "Nhân sự"],
       [/^\/phan-cong$/, "Phân công giảng dạy"],
@@ -195,6 +273,7 @@ function Loading() {
       [/^\/lop$/, "Lớp của tôi"],
       [/^\/lich-day$/, "Lịch dạy"],
       [/^\/lich$/, "Lịch"],
+      [/^\/cai-dat\/doi-mat-khau$/, "Đổi mật khẩu"],
       [/^\/cai-dat$/, "Cài đặt"],
     ];
     document.title =
@@ -221,129 +300,140 @@ export const routes: RouteObject[] = [
     element: <Loading />,
     errorElement: <RouteError />,
     children: [
-      { path: "/dang-nhap", element: <LoginPage /> },
+      {
+        path: "/dang-nhap",
+        element: <LoginPage />,
+        loader: () => {
+          if (!features.skipLogin) return null;
+          if (!getAuthSession()) enterDemoSession();
+          return redirect("/chon-vai-tro");
+        },
+      },
+      { path: "/dang-ky", element: <RegisterPage /> },
+      { path: "/quen-mat-khau", element: <ForgotPasswordPage /> },
+      { path: "/dat-lai-mat-khau", element: <ResetPasswordPage /> },
       {
         element: <Guard />,
         children: [
-          { path: "/chon-vai-tro", element: <RolePickerPage /> },
-          {
-            element: <RoleGuard />,
+            { path: "/chon-vai-tro", element: <RolePickerPage /> },
+            {
+              element: <Outlet />,
             children: [
               {
-                loader: staffOnlyLoader,
-                element: <TeacherShell />,
+                path: "/cai-dat",
+                element: <SettingsShell />,
                 children: [
-                  { path: "/lop", element: <ClassListPage /> },
-                  { path: "/lop/moi", element: <NewClassPage /> },
+                  { index: true, element: <SettingsPage /> },
+                  { path: "doi-mat-khau", element: <ChangePasswordPage /> },
+                ],
+              },
+              {
+                element: <RoleGuard />,
+                children: [
                   {
-                    path: "/lop/:classId",
-                    element: <ClassSpaceLayout />,
+                    loader: staffOnlyLoader,
+                    element: <TeacherShell />,
                     children: [
+                      { path: "/lop", element: <ClassListPage /> },
+                      { path: "/lop/moi", element: <NewClassPage /> },
                       {
-                        index: true,
-                        element: <Navigate to="buoi-hoc" replace />,
+                        path: "/lop/:classId",
+                        element: <ClassSpaceLayout />,
+                        children: [
+                          {
+                            index: true,
+                            element: <Navigate to="buoi-hoc" replace />,
+                          },
+                          { path: "buoi-hoc", element: <SessionsTab /> },
+                          {
+                            path: "buoi-hoc/:sessionId",
+                            element: <SessionDetailPage />,
+                            handle: { detail: true },
+                          },
+                          { path: "bai-kiem-tra", element: <TestsTab /> },
+                          {
+                            path: "bai-kiem-tra/moi",
+                            element: <NewTestPage />,
+                            handle: { detail: true },
+                          },
+                          {
+                            path: "bai-kiem-tra/:testId",
+                            element: <TestScoresPage />,
+                            handle: { detail: true },
+                          },
+                          { path: "diem", element: <ScoreGridTab /> },
+                          { path: "hoc-sinh", element: <StudentsPage /> },
+                          { path: "bao-cao", element: <ReportsPage /> },
+                          ...scoreReportRoutes,
+                        ],
                       },
-                      { path: "buoi-hoc", element: <SessionsTab /> },
                       {
-                        path: "buoi-hoc/:sessionId",
-                        element: <SessionDetailPage />,
+                        path: "/lop/:classId/diem-danh",
+                        element: (
+                          <RedirectTo
+                            to={(params) => `/lop/${params.classId}/buoi-hoc`}
+                          />
+                        ),
+                      },
+                      {
+                        path: "/lop/:classId/nhan-xet",
+                        element: (
+                          <RedirectTo
+                            to={(params) => `/lop/${params.classId}/buoi-hoc`}
+                          />
+                        ),
+                      },
+                      {
+                        path: "/lop/:classId/diem/bai-moi",
+                        element: (
+                          <RedirectTo
+                            to={(params) =>
+                              `/lop/${params.classId}/bai-kiem-tra/moi`
+                            }
+                          />
+                        ),
+                      },
+                      ...lectureRoutes,
+                      ...staffingRoutes,
+                      ...payrollRoutes,
+                      ...tuitionRoutes,
+                      { path: "/lich", element: <SchedulePage /> },
+                    ],
+                  },
+                  {
+                    path: "/ph",
+                    loader: guardianOnlyLoader,
+                    element: <GuardianShell />,
+                    children: [
+                      { index: true, element: <GuardianClassPage /> },
+                      { path: "nhan-xet", element: <GuardianCommentsPage /> },
+                      {
+                        path: "buoi/:sessionId",
+                        element: <GuardianSessionPage />,
                         handle: { detail: true },
                       },
-                      { path: "bai-kiem-tra", element: <TestsTab /> },
+                      { path: "diem", element: <GuardianScoresPage /> },
+                      { path: "diem-danh", loader: () => redirect("/ph") },
+                      { path: "diem-so", loader: () => redirect("/ph/diem") },
+                      { path: "btvn", loader: () => redirect("/ph") },
                       {
-                        path: "bai-kiem-tra/moi",
-                        element: <NewTestPage />,
-                        handle: { detail: true },
+                        path: "nhan-xet/:sessionId",
+                        loader: ({ params }) =>
+                          redirect(`/ph/buoi/${params.sessionId}`),
                       },
                       {
-                        path: "bai-kiem-tra/:testId",
-                        element: <TestScoresPage />,
-                        handle: { detail: true },
+                        path: "btvn/:sessionId",
+                        loader: ({ params }) =>
+                          redirect(`/ph/buoi/${params.sessionId}`),
                       },
-                      { path: "diem", element: <ScoreGridTab /> },
-                      { path: "hoc-sinh", element: <StudentsPage /> },
-                      { path: "bao-cao", element: <ReportsPage /> },
-                      { path: "bao-cao-diem", element: <ScoreReportPage />, handle: { detail: true } },
+                      { path: "bao-cao", element: <GuardianReportPage /> },
                       {
-                        path: "bao-cao-diem/:studentId",
-                        element: <StudentScoreReportPage />,
+                        path: "bao-cao/:reportId",
+                        element: <GuardianReportPage />,
                         handle: { detail: true },
                       },
                     ],
                   },
-                  {
-                    path: "/lop/:classId/diem-danh",
-                    element: (
-                      <RedirectTo
-                        to={(params) => `/lop/${params.classId}/buoi-hoc`}
-                      />
-                    ),
-                  },
-                  {
-                    path: "/lop/:classId/nhan-xet",
-                    element: (
-                      <RedirectTo
-                        to={(params) => `/lop/${params.classId}/buoi-hoc`}
-                      />
-                    ),
-                  },
-                  {
-                    path: "/lop/:classId/diem/bai-moi",
-                    element: (
-                      <RedirectTo
-                        to={(params) => `/lop/${params.classId}/bai-kiem-tra/moi`}
-                      />
-                    ),
-                  },
-                  { path: "/bai-giang", element: <LibraryPage /> },
-                  { path: "/bai-giang/moi", element: <LectureEditorPage /> },
-                  {
-                    path: "/bai-giang/:lectureId",
-                    element: <LectureDetailPage />,
-                  },
-                  {
-                    path: "/bai-giang/:lectureId/sua",
-                    element: <LectureEditorPage />,
-                  },
-                  { path: "/nhan-su", element: <MembersPage /> },
-                  { path: "/nhan-su/moi", element: <InvitePage /> },
-                  { path: "/nhan-su/:memberId", element: <MemberDetailPage /> },
-                  { path: "/phan-cong", element: <AssignmentsPage /> },
-                  { path: "/lich-day", element: <TeachingSchedulePage /> },
-                  ...payrollRoutes,
-                  { path: "/hoc-phi", element: <TuitionPage /> },
-                  { path: "/hoc-phi/:studentId", element: <TuitionDetailPage /> },
-                  { path: "/vai-tro", element: <RolesPage /> },
-                  { path: "/vai-tro/moi", element: <RoleEditorPage /> },
-                  { path: "/vai-tro/:roleId", element: <RoleEditorPage /> },
-                  { path: "/lich", element: <SchedulePage /> },
-                  { path: "/cai-dat", element: <SettingsPage /> },
-                ],
-              },
-              {
-                path: "/ph",
-                loader: guardianOnlyLoader,
-                element: <GuardianShell />,
-                children: [
-                  { index: true, element: <GuardianOverviewPage /> },
-                  {
-                    path: "diem-danh",
-                    element: <GuardianAttendancePage />,
-                  },
-                  { path: "diem-so", element: <GuardianScoresPage /> },
-                  { path: "nhan-xet", element: <GuardianCommentsPage /> },
-                  {
-                    path: "nhan-xet/:sessionId",
-                    element: <GuardianTicketPage />,
-                    handle: { detail: true },
-                  },
-                  { path: "btvn", element: <GuardianHomeworkPage /> },
-                  {
-                    path: "btvn/:sessionId",
-                    element: <GuardianHomeworkPage />,
-                    handle: { detail: true },
-                  },
-                  { path: "bao-cao", element: <GuardianReportPage /> },
                 ],
               },
             ],

@@ -58,8 +58,8 @@
   white-space: nowrap;
 }
 .filterSelected {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 /* Thông báo: dùng dáng banner của design 79 */
@@ -251,39 +251,10 @@
   font-weight: 600;
 }
 
-/* Trạng thái rỗng: dáng màn rỗng chung của design (74, 76) */
+/* Khung nền quanh EmptyState của ngày không có buổi */
 .empty {
-  display: grid;
-  justify-items: center;
-  gap: 16px;
-  padding: 28px 24px;
   border-radius: var(--radius-card);
   background: var(--color-surface);
-  text-align: center;
-}
-.emptyIcon {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: var(--radius-pill);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
-}
-.emptyText {
-  display: grid;
-  gap: 8px;
-  justify-items: center;
-}
-.emptyTitle {
-  font-size: 20px;
-  font-weight: 700;
-}
-.emptyBody {
-  max-width: 30ch;
-  color: var(--color-muted);
-  font-size: 16px;
-  line-height: 1.5;
 }
 
 /* Lịch tháng */
@@ -351,8 +322,8 @@
   outline-offset: -1.5px;
 }
 .monthDaySelected {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
   font-weight: 700;
 }
 .dot,
@@ -366,7 +337,7 @@
   background: var(--color-primary);
 }
 .monthDaySelected .dot {
-  background: var(--color-on-primary);
+  background: var(--state-selected-fg);
 }
 
 .navButton:focus-visible,

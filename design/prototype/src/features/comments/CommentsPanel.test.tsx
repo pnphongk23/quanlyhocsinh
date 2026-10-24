@@ -102,7 +102,7 @@ describe("Danh sách phiếu buổi 14/10 của lớp 6A (ảnh 40, 44, 47)", ()
     expect(html).toContain("Lê Khánh Chi");
     expect(html).toContain("Nhận xét buổi 8 · 14/10");
     expect(html).toContain("Nháp, chưa lưu");
-    expect(html).toContain("Sao và ghi chú được giữ khi bạn đóng sheet.");
+    expect(html).toContain("Bấm Lưu để giữ sao và ghi chú.");
     expect(html).toContain("Câu mẫu cố định theo mức sao");
     expect(html).toContain("Con hoàn thành 2 sao");
     expect(html).toContain("Ghi chú");

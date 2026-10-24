@@ -1,0 +1,134 @@
+/* Tab Bài kiểm tra trên web desktop (ảnh 08…12). */
+.card {
+  padding: 18px var(--space-12) var(--space-8);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Cột tên lấy phần dư; cột ngày/điểm/trạng thái theo nội dung */
+.colFit {
+  width: 1%;
+}
+
+.table th,
+.table td {
+  white-space: nowrap;
+}
+
+.table th:not(:first-child),
+.table td:not(:first-child) {
+  padding-right: 4px;
+  padding-left: 32px;
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-left: 12px;
+}
+
+.table th {
+  padding: 0 var(--space-4) var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  height: 56px;
+  padding: 0 var(--space-4) 0 var(--space-12);
+  border-top: 1px solid var(--color-divider);
+  font-size: 15px;
+  vertical-align: middle;
+}
+
+.testName {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.menuWrap {
+  position: relative;
+  display: flex;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  z-index: 9;
+  width: 200px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  box-shadow:
+    0 2px 6px rgb(20 24 31 / 0.08),
+    0 12px 32px rgb(20 24 31 / 0.16);
+}
+
+.menuItem,
+.menuItemDanger {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-12);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem {
+  color: var(--color-text);
+}
+
+.menuItemDanger {
+  color: var(--color-error);
+}
+
+.menuItem:hover,
+.menuItemDanger:hover {
+  background: var(--color-bg);
+}
+
+.badge {
+  justify-self: start;
+  font-size: var(--text-md);
+  padding: 6px var(--space-12);
+}
+
+.solidDanger {
+  background: var(--color-error);
+  color: var(--color-on-primary);
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  margin-top: 8px;
+}
+
+.confirmText {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}

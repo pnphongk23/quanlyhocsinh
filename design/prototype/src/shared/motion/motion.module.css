@@ -1,0 +1,89 @@
+/* Chuyển trang: nội dung mới vào, không animate trang cũ ra. */
+.page,
+.pageDetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-gap, 12px);
+  min-width: 0;
+}
+.page {
+  animation: pageIn var(--dur-base) var(--ease-out) backwards;
+}
+.pageDetail {
+  animation: pageInDetail var(--dur-base) var(--ease-out) backwards;
+}
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes pageInDetail {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+/* Trang đi sâu trượt ngang chỉ có nghĩa trên mobile. */
+@media (min-width: 1024px) {
+  .pageDetail {
+    animation-name: pageIn;
+  }
+}
+
+/* Expand/collapse */
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--dur-base) var(--ease-standard),
+    opacity var(--dur-base) var(--ease-standard);
+}
+.collapseOpen {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.collapseInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Lớp dùng lại */
+.pressable {
+  transition: transform 100ms var(--ease-standard);
+}
+.pressable:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.chevron {
+  transition: transform var(--dur-base) var(--ease-standard);
+}
+.chevron[aria-expanded="true"],
+[aria-expanded="true"] > .chevron {
+  transform: rotate(180deg);
+}
+.fadeIn {
+  animation: fadeIn var(--dur-fast) var(--ease-out) both;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Chỉ báo trượt: đặt trong container `position: relative`, đo bằng useSlideIndicator. */
+.indicator {
+  position: absolute;
+  top: var(--ind-top, 0);
+  left: 0;
+  width: var(--ind-w, 0);
+  height: var(--ind-h, 0);
+  transform: translateX(var(--ind-x, 0));
+  pointer-events: none;
+}
+.indicatorReady {
+  transition:
+    transform var(--dur-base) var(--ease-standard),
+    width var(--dur-base) var(--ease-standard);
+}

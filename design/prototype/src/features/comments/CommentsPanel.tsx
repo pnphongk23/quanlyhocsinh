@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   buildTicketRows,
@@ -21,6 +21,7 @@ import { formatDayMonth } from "../../shared/format";
 import { useOnline } from "../../shared/hooks/useOnline";
 import { Button, EmptyState, NoAccess, Pill } from "../../shared/ui";
 import CommentTicketSheet, { type SheetHomework } from "./CommentTicketSheet";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import SendTicketsDialog from "./SendTicketsDialog";
 import {
   filterTicketRows,
@@ -71,26 +72,6 @@ function ChevronRight() {
       focusable="false"
     >
       <path d="m9 18 6-6-6-6" />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg
-      width={18}
-      height={18}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
     </svg>
   );
 }
@@ -178,7 +159,6 @@ export default function CommentsPanel({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [dialogError, setDialogError] = useState("");
   const [error, setError] = useState("");
-  const [toast, setToast] = useState(false);
 
   const session = getSession(sessionId);
   const canWrite = access.can("comments_reports", "write") && !readOnly;
@@ -207,16 +187,9 @@ export default function CommentsPanel({
     : null;
 
   useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(false), 4000);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
-  useEffect(() => {
     setError("");
     setDialogError("");
     setConfirmOpen(false);
-    setToast(false);
   }, [sessionId]);
 
   // Có mạng trở lại: gửi các phiếu đang "Chờ mạng" (ảnh 44).
@@ -244,19 +217,37 @@ export default function CommentsPanel({
 
   function confirmSend() {
     try {
-      const result = sendSessionTickets(
+      sendSessionTickets(
         sessionId,
         sendable.map((row) => row.student.id),
       );
-      setConfirmOpen(false);
       setDialogError("");
       setError("");
-      setToast(result.queued);
     } catch (cause) {
       setDialogError(
         cause instanceof Error ? cause.message : "Không gửi được phiếu.",
       );
+      throw cause;
     }
+  }
+
+  const sending = useSaveAction({
+    baseline: "",
+    value: sendable.map((row) => row.student.id).join(","),
+    validate: (value) => value !== "",
+    save: confirmSend,
+  });
+  // Gửi xong phiếu đổi sang "sent" ngay; giữ số liệu hộp xác nhận cho tới khi hộp đóng.
+  const dialogInfo = useRef({ sendCount: 0, skipped: [] as Student[], ungraded });
+  if (!sending.saving) {
+    dialogInfo.current = {
+      sendCount: sendable.length,
+      skipped: skipped.map((row) => row.student),
+      ungraded,
+    };
+  }
+  async function confirmAndClose() {
+    if (await sending.submit()) setConfirmOpen(false);
   }
 
   if (!access.can("comments_reports", "read"))
@@ -409,7 +400,7 @@ export default function CommentsPanel({
           visibleRows.map(ticketRow)
         ) : (
           <li className={s.emptyFilter}>
-            <EmptyState title="Không có học sinh trong mục này" />
+            <EmptyState size="compact" title="Không có học sinh trong mục này" />
           </li>
         )}
         {filter === "all" && leftStudents.map(leftCard)}
@@ -431,13 +422,6 @@ export default function CommentsPanel({
         </div>
       )}
 
-      {toast && (
-        <p role="status" className={s.toast}>
-          <ClockIcon />
-          Sẽ gửi khi có mạng
-        </p>
-      )}
-
       {openRow && sheetHomework && (
         <CommentTicketSheet
           key={`${sessionId}:${openRow.student.id}`}
@@ -454,12 +438,13 @@ export default function CommentsPanel({
       <SendTicketsDialog
         open={confirmOpen}
         sessionNumber={sessionNo}
-        sendCount={sendable.length}
-        skipped={skipped.map((row) => row.student)}
-        ungraded={ungraded}
+        sendCount={dialogInfo.current.sendCount}
+        skipped={dialogInfo.current.skipped}
+        ungraded={dialogInfo.current.ungraded}
         previousSessionNumber={previousNumber}
         error={dialogError}
-        onConfirm={confirmSend}
+        busy={sending.saving}
+        onConfirm={() => void confirmAndClose()}
         onClose={() => {
           setConfirmOpen(false);
           setDialogError("");

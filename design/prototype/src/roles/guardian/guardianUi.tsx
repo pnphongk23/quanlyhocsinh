@@ -1,14 +1,9 @@
 import type { ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import type { StarLevel } from "../../data/types";
 import { EmptyState, Pill } from "../../shared/ui";
 import GuardianIcon from "./GuardianIcon";
-import { useGuardianContext } from "./guardianContext";
-import {
-  initialsOf,
-  monthLabel,
-  shortNameOf,
-  type GuardianTone,
-} from "./guardianFormat";
+import { monthLabel, type GuardianTone } from "./guardianFormat";
 import g from "./guardian.module.css";
 
 /** Một mức sao 1/2/3 như ảnh 14/15 (sao vàng đầy). */
@@ -59,34 +54,21 @@ export function GuardianPill({
   return <Pill tone={tone}>{children}</Pill>;
 }
 
-/** Chip chuyển giữa các con ở ảnh 15; chỉ hiện khi có từ hai con. */
-export function ChildChips() {
-  const { children, child, selectChild } = useGuardianContext();
-  if (children.length < 2) return null;
-  return (
-    <div className={g.chips} role="group" aria-label="Chọn con">
-      {children.map((item) => {
-        const active = item.student.id === child?.student.id;
-        return (
-          <button
-            key={item.student.id}
-            type="button"
-            aria-pressed={active}
-            className={g.chip + (active ? " " + g.chipActive : "")}
-            onClick={() => selectChild(item.student.id)}
-          >
-            <span
-              className={g.avatar + (active ? " " + g.avatarActive : "")}
-              aria-hidden="true"
-            >
-              {initialsOf(item.student.name)}
-            </span>
-            {shortNameOf(item.student.name)}
-          </button>
-        );
-      })}
-    </div>
-  );
+/** Tab đang sáng khi mở một màn con: mục "Nhận xét của cô" truyền `from` qua state của Link. */
+export type GuardianTabKey = "lop" | "nhan-xet";
+
+export const FROM_COMMENTS = { from: "nhan-xet" } as const;
+
+export function tabFromState(state: unknown): GuardianTabKey {
+  return (state as { from?: string } | null)?.from === "nhan-xet"
+    ? "nhan-xet"
+    : "lop";
+}
+
+/** Nút quay lại của màn con: về tab đã đi vào (Lớp học của con hoặc Nhận xét của cô). */
+export function useBackTarget(): string {
+  const { state } = useLocation();
+  return tabFromState(state) === "nhan-xet" ? "/ph/nhan-xet" : "/ph";
 }
 
 /** Chọn tháng bằng hai nút mũi tên như màn Điểm danh của bản thiết kế cũ. */

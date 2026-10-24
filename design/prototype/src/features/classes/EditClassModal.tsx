@@ -1,8 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { getClass, updateClass } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
-import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
-import { Button, Input, Modal } from "../../shared/ui";
+import { useSaveStatus } from "../../shared/SaveStatus";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { Button, Input, Modal, UnsavedChangesDialog } from "../../shared/ui";
+import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 import s from "./classesForm.module.css";
 
 export function EditClassModal({
@@ -18,52 +21,85 @@ export function EditClassModal({
   const save = useSaveStatus();
   const access = useAccess();
   const [name, setName] = useState(klass?.name ?? "");
-  const [error, setError] = useState("");
+  const action = useSaveAction({
+    baseline: klass?.name ?? "",
+    value: name,
+    validate: (value) => value.trim() !== "",
+    save: (value) => updateClass(classId, { name: value }),
+  });
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
+  const guard = useUnsavedCloseGuard(action, { onClose: closeNow });
+  const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
   if (!access.can("classes", "write")) return null;
   if (!klass) return null;
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    try {
-        updateClass(classId, { name });
+    if (await action.submit()) {
       save.clearStatus();
-      setError("");
-      onClose();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không lưu được lớp.");
+      if (await saved.peek()) onClose();
+    } else {
       save.setStatus("error");
     }
   }
+  const failure = action.error;
+  const error = failure
+    ? failure instanceof Error && failure.message !== "save_failed"
+      ? failure.message
+      : "Không lưu được lớp."
+    : "";
   return (
-    <Modal title="Sửa lớp" open onClose={onClose}>
-      <form className={s.form} onSubmit={submit}>
-        <Input
-          label="Tên lớp"
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            save.markUnsaved();
-          }}
-          required
-        />
+    <>
+      <Modal title="Sửa lớp" open onClose={closeNow}
+        beforeClose={guard.beforeClose}>
+        <form className={s.form} onSubmit={submit}>
+          <Input
+            label="Tên lớp"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            required
+          />
           <Button
             type="button"
+            disabled={action.saving}
             variant="secondary"
             onClick={() => {
-              onClose();
-              onEditSchedule();
+              if (guard.beforeClose()) {
+                closeNow();
+                onEditSchedule();
+              }
             }}
           >
             Sửa lịch học
           </Button>
-        {error && (
-          <p role="alert" className={s.error}>
-            {error}
-          </p>
-        )}
-        <SaveStatus status={save.status} />
-        <Button type="submit">Lưu thay đổi</Button>
-      </form>
-    </Modal>
+          {error && (
+            <p role="alert" className={s.error}>
+              {error}
+            </p>
+          )}
+          <div className={s.modalActions}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={action.saving}
+              onClick={() => {
+                // Sạch thì đóng ngay (không chạy animation ra); dở thì hỏi.
+                if (guard.beforeClose()) closeNow();
+              }}
+            >
+              Huỷ
+            </Button>
+            <Button type="submit" disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
+              Lưu thay đổi
+            </Button>
+          </div>
+        </form>
+      </Modal>
+      {confirmDialog}
+    </>
   );
 }
 export default EditClassModal;

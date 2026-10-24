@@ -1,90 +1,139 @@
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { useState, type FormEvent } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
-import { login, getAuthSession } from "../../data/repositories/auth";
-import { useStore } from "../../data/store";
-import { Icon } from "../../shared/ui";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import {
+  LOGIN_INVALID,
+  LOGIN_LOCKED,
+  getAuthSession,
+  isPhoneLocked,
+  login,
+} from "../../data/repositories/auth";
+import { normalizePhone, rememberPhone } from "../../data/authAccounts";
+import { roleLandingPath } from "../../roles/guardian/roleLanding";
+import { Button } from "../../shared/ui";
+import { Mascot } from "../../shared/ui/Mascot";
+import { PasswordField, PhoneField } from "./authUi";
 import s from "./auth.module.css";
 
+
+/**
+ * Đăng nhập dùng chung cho giáo viên và phụ huynh bằng SĐT + mật khẩu (spec
+ * mục 4 "Tài khoản"). Không SMS, không OTP: sai 5 lần liên tiếp thì khoá tạm
+ * 15 phút, thông báo lỗi không nói rõ SĐT hay mật khẩu sai.
+ */
 export default function LoginPage() {
   const navigate = useNavigate();
-  useStore();
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  // Nhiều vai trò thì chọn vai trò trước, một vai trò thì vào thẳng lớp.
-  const landingPath = () =>
-    (getAuthSession()?.memberIds.length ?? 0) > 1 ? "/chon-vai-tro" : "/lop";
-  if (getAuthSession()) return <Navigate to={landingPath()} replace />;
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    try {
-      login(
-        String(data.get("email") ?? ""),
-        String(data.get("password") ?? ""),
-      );
-      navigate(landingPath(), { replace: true });
-    } catch {
-      setError(
-        "Không thể đăng nhập. Kiểm tra thông tin hoặc dung lượng lưu trữ.",
-      );
-    }
+  const [locked, setLocked] = useState(false);
+  const session = getAuthSession();
+  const action = useSaveAction({
+    baseline: { phone: "", password: "" },
+    value: { phone, password },
+    validate: (value) => value.phone.trim() !== "" && value.password !== "",
+    save: (value) => {
+      rememberPhone(normalizePhone(value.phone));
+      try {
+        login(value.phone, value.password);
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : LOGIN_INVALID;
+        if (message === LOGIN_LOCKED) {
+          setLocked(true);
+          setError("");
+        } else {
+          setError(message);
+          setLocked(isPhoneLocked(value.phone));
+        }
+        return false;
+      }
+    },
+  });
+
+  /** Trang đầu sau đăng nhập: chọn vai trò hoặc vào ứng dụng. */
+  function landingPath(): string {
+    return (getAuthSession()?.memberIds.length ?? 0) > 1
+      ? "/chon-vai-tro"
+      : roleLandingPath();
   }
+
+  if (session) return <Navigate to={landingPath()} replace />;
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (await action.submit()) navigate(landingPath(), { replace: true });
+  }
+
   return (
     <main className={s.page}>
       <div className={s.card}>
         <div className={s.brand}>
-          <span className={s.logo}>L</span>
-          <p className={s.brandName}>Lớp của cô Lan</p>
-          <h1 className={s.title}>Chào mừng trở lại</h1>
-          <p className={s.description}>
-            Đăng nhập để quản lý lớp, điểm danh và điểm số.
-          </p>
+          <span className={s.logo} aria-hidden="true">
+            L
+          </span>
+          <p className={s.brandName}>Quản lý lớp tiếng Anh</p>
+          <Mascot pose="chao" size={72} className={s.brandMascot} />
         </div>
-        <form className={s.form} onSubmit={submit}>
-          <div className={s.field}>
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              className={s.input}
-              name="email"
-              type="email"
-              autoComplete="username"
-              required
-            />
-          </div>
-          <div className={s.field}>
-            <label htmlFor="password">Mật khẩu</label>
-            <div className={s.passwordWrap}>
-              <input
-                id="password"
-                className={s.input + " " + s.passwordInput}
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                required
-              />
-              <button
-                type="button"
-                className={s.eye}
-                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                onClick={() => setShowPassword((value) => !value)}
-              >
-                <Icon name="eye" />
-              </button>
-            </div>
-          </div>
-          {error && (
-            <p role="alert" className={s.error}>
+        <h1 className={s.title}>Đăng nhập</h1>
+        <p className={s.description}>Dành cho giáo viên và phụ huynh.</p>
+
+        {locked ? (
+          <p className={s.banner + " " + s.bannerWarn + " " + s.bannerTop} role="alert">
+            {LOGIN_LOCKED}
+          </p>
+        ) : (
+          error && (
+            <p
+              className={s.banner + " " + s.bannerError + " " + s.bannerTop}
+              role="alert"
+            >
               {error}
             </p>
-          )}
-          <button type="submit" className={s.submit}>
+          )
+        )}
+
+        <form className={s.form} onSubmit={submit} noValidate>
+          <PhoneField
+            value={phone}
+            onChange={setPhone}
+            disabled={locked}
+            error={Boolean(error) && !locked}
+            id="login-phone"
+          />
+          <PasswordField
+            label="Mật khẩu"
+            value={password}
+            onChange={setPassword}
+            disabled={locked}
+            error={Boolean(error) && !locked}
+            autoComplete="current-password"
+            id="login-password"
+          />
+          <div className={s.forgotRow}>
+            <Link
+              to={
+                normalizePhone(phone)
+                  ? `/quen-mat-khau?sdt=${normalizePhone(phone)}`
+                  : "/quen-mat-khau"
+              }
+              className={s.forgotLink}
+            >
+              Quên mật khẩu?
+            </Link>
+          </div>
+          <Button type="submit" size="lg" block className={s.submitAction} disabled={locked || !action.canSave} loading={action.saving} done={action.justSaved}>
             Đăng nhập
-          </button>
+          </Button>
         </form>
-        <p className={s.footer}>
-          Prototype: dùng email và mật khẩu bất kỳ. Dữ liệu chỉ lưu trên máy này.
-        </p>
+
+        <div className={s.footerBlock}>
+          <p className={s.registerRow}>
+            Chưa có tài khoản?{" "}
+            <Link to="/dang-ky" className={s.registerLink}>
+              Tạo tài khoản
+            </Link>
+          </p>
+        </div>
       </div>
     </main>
   );

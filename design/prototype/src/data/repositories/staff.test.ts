@@ -3,12 +3,9 @@ import { createSeed } from "../seed";
 import { replaceStore } from "../store";
 import { MEMBER_IDS, ROLE_IDS } from "../defaults";
 import {
-  cancelInvite,
   createRole,
   getMember,
-  inviteMember,
   listMembers,
-  resendInvite,
   roleDisplayKind,
   roleMemberCount,
   setMemberClasses,
@@ -31,7 +28,7 @@ const storage = {
 /** Đặt vai trò đang dùng thành một membership không phải Admin. */
 function actAs(memberId: string): void {
   const state = createSeed();
-  state.auth = { email: "test@example.test", memberIds: [memberId] };
+  state.auth = { phone: "900000001", memberIds: [memberId] };
   state.activeMemberId = memberId;
   replaceStore(state);
 }
@@ -123,14 +120,6 @@ describe("Admin cuối cùng", () => {
 describe("Mọi hàm ghi cần Admin", () => {
   it("từ chối khi vai trò đang dùng không phải Admin", () => {
     actAs(MEMBER_IDS.trang);
-    expect(() =>
-      inviteMember({
-        name: "Cô Hoa",
-        phone: "0900000005",
-        roleId: ROLE_IDS.teacher,
-        classIds: ["ielts"],
-      }),
-    ).toThrow("Bạn không có quyền thực hiện thao tác này.");
     expect(() => setMemberClasses(MEMBER_IDS.minh, ["6a"])).toThrow(
       "Bạn không có quyền thực hiện thao tác này.",
     );
@@ -140,39 +129,7 @@ describe("Mọi hàm ghi cần Admin", () => {
   });
 });
 
-describe("Lời mời nhân sự", () => {
-  it("mời, gửi lại và huỷ lời mời", () => {
-    const before = listMembers().length;
-    const member = inviteMember({
-      name: "  Cô Hoa  ",
-      phone: "0900000005",
-      roleId: ROLE_IDS.teacher,
-      classIds: ["6a"],
-    });
-    expect(member).toMatchObject({
-      name: "Cô Hoa",
-      roleId: ROLE_IDS.teacher,
-      classIds: ["6a"],
-      status: "invited",
-    });
-    expect(listMembers()).toHaveLength(before + 1);
-    expect(getMember(member.id)?.invitedAt).toBeTruthy();
-
-    const firstInvite = getMember(member.id)!.invitedAt;
-    vi.setSystemTime(new Date("2026-10-20T10:00:00.000Z"));
-    resendInvite(member.id);
-    expect(getMember(member.id)!.invitedAt).not.toBe(firstInvite);
-
-    cancelInvite(member.id);
-    expect(getMember(member.id)).toBeUndefined();
-  });
-
-  it("chỉ huỷ được lời mời đang chờ", () => {
-    expect(() => cancelInvite(MEMBER_IDS.minh)).toThrow(
-      "Chỉ huỷ được lời mời đang chờ.",
-    );
-  });
-
+describe("Thành viên nhân sự", () => {
   it("gán lớp và đổi vai trò thành viên", () => {
     setMemberClasses(MEMBER_IDS.minh, ["ielts"]);
     expect(getMember(MEMBER_IDS.minh)?.classIds).toEqual(["ielts"]);
@@ -194,7 +151,6 @@ describe("Danh sách thành viên nhân sự", () => {
         MEMBER_IDS.lanTeacher,
         MEMBER_IDS.minh,
         MEMBER_IDS.trang,
-        MEMBER_IDS.mai,
       ]),
     );
     // Membership phụ huynh vẫn còn trong workspace (màn chọn vai trò dùng).
@@ -202,7 +158,7 @@ describe("Danh sách thành viên nhân sự", () => {
       "6a-student-1",
       "6a-student-8",
     ]);
-    expect(roleMemberCount(ROLE_IDS.guardian)).toBe(1);
+    expect(roleMemberCount(ROLE_IDS.guardian)).toBe(2);
   });
 });
 

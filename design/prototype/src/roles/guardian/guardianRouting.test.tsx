@@ -44,16 +44,27 @@ describe("chuyển hướng theo vai trò đang dùng", () => {
     expect(await finalPath("/lop/6a/buoi-hoc/6a-session-7", "/ph")).toBe("/ph");
     expect(await finalPath("/lich", "/ph")).toBe("/ph");
     expect(await finalPath("/nhan-su", "/ph")).toBe("/ph");
-    expect(await finalPath("/ph/diem-danh", "/ph/diem-danh")).toBe(
-      "/ph/diem-danh",
-    );
+    expect(await finalPath("/ph/diem", "/ph/diem")).toBe("/ph/diem");
   });
 
   it("nhân sự vào /ph thì về /lop", async () => {
     seedAdmin();
     expect(await finalPath("/ph", "/lop")).toBe("/lop");
-    expect(await finalPath("/ph/btvn/6a-session-7", "/lop")).toBe("/lop");
+    expect(await finalPath("/ph/buoi/6a-session-7", "/lop")).toBe("/lop");
     expect(await finalPath("/ph/bao-cao", "/lop")).toBe("/lop");
+  });
+
+  it("đường dẫn phụ huynh cũ chuyển sang khung 2 tab", async () => {
+    seedGuardian();
+    expect(await finalPath("/ph/diem-danh", "/ph")).toBe("/ph");
+    expect(await finalPath("/ph/btvn", "/ph")).toBe("/ph");
+    expect(await finalPath("/ph/diem-so", "/ph/diem")).toBe("/ph/diem");
+    expect(await finalPath("/ph/nhan-xet/6a-session-7", "/ph/buoi/6a-session-7")).toBe(
+      "/ph/buoi/6a-session-7",
+    );
+    expect(await finalPath("/ph/btvn/6a-session-7", "/ph/buoi/6a-session-7")).toBe(
+      "/ph/buoi/6a-session-7",
+    );
   });
 
   it("đường dẫn không tồn tại về trang đầu của vai trò", async () => {
@@ -65,18 +76,23 @@ describe("chuyển hướng theo vai trò đang dùng", () => {
 });
 
 describe("màn chọn vai trò", () => {
-  it("hiện đủ nhãn ba vai trò của Cô Lan và tên con của vai trò phụ huynh", () => {
-    seedAdmin();
+  it("chỉ hiện hai vai trò trong tài khoản mẫu và tên con của vai trò phụ huynh", () => {
+    const state = createSeed();
+    state.auth = {
+      phone: "900000001",
+      memberIds: [MEMBER_IDS.lanTeacher, MEMBER_IDS.lanGuardian],
+    };
+    state.activeMemberId = null;
+    replaceStore(state);
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <RolePickerPage />
       </MemoryRouter>,
     );
     expect(html).toContain("Chọn vai trò");
-    expect(html).toContain(">Admin<");
     expect(html).toContain(">Giáo viên<");
     expect(html).toContain(">Phụ huynh<");
-    expect(html).toContain("Con: Trần Gia Bảo, Ngô Bảo Ngọc");
-    expect(html).toContain("Đang dùng");
+    expect(html).toContain("Bé Gia Bảo");
+    expect(html).not.toContain(">Admin<");
   });
 });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   GUARDIAN_GROUPS,
   PERMISSION_GROUPS,
@@ -7,10 +7,8 @@ import {
 } from "../../data/repositories/access";
 import { listClasses } from "../../data/repositories/classes";
 import {
-  cancelInvite,
   getMember,
   listRoles,
-  resendInvite,
   roleDisplayKind,
   setMemberClasses,
   setMemberDisabled,
@@ -18,7 +16,6 @@ import {
 } from "../../data/repositories/staff";
 import { useStore } from "../../data/store";
 import { formatClassSchedule } from "../../shared/format";
-import { useOnline } from "../../shared/hooks/useOnline";
 import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
 import {
   Button,
@@ -33,7 +30,6 @@ import {
 import {
   classAssignmentLabel,
   initials,
-  inviteExpiry,
   maskPhone,
   memberStatusLabel,
   memberStatusTone,
@@ -45,11 +41,8 @@ export default function MemberDetailPage() {
   useStore();
   const access = useAccess();
   const { memberId = "" } = useParams();
-  const navigate = useNavigate();
-  const online = useOnline();
   const save = useSaveStatus();
   const [disableOpen, setDisableOpen] = useState(false);
-  const [cancelOpen, setCancelOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -86,16 +79,13 @@ export default function MemberDetailPage() {
       <section className={s.pageNarrow}>
         <PageHeader compact backTo="/nhan-su" title="Thành viên" />
         <EmptyState title="Không tìm thấy thành viên">
-          <p>Thành viên có thể đã bị huỷ lời mời hoặc không còn trong workspace.</p>
+          <p>Thành viên có thể không còn trong workspace.</p>
           <LinkButton to="/nhan-su">Về danh sách nhân sự</LinkButton>
         </EmptyState>
       </section>
     );
   }
 
-  const expiry = member.invitedAt
-    ? inviteExpiry(member.invitedAt, new Date())
-    : null;
   const assignedClasses = classes.filter((item) => member.classIds.includes(item.id));
 
   return (
@@ -136,49 +126,6 @@ export default function MemberDetailPage() {
         </p>
       )}
       <SaveStatus status={save.status} />
-
-      {member.status === "invited" && (
-        <Card className={s.roleCard}>
-          <h2 className={s.sectionTitle}>Lời mời đang chờ</h2>
-          <p className={s.note}>
-            {expiry
-              ? `Link mời hết hạn ngày ${expiry.expiresAtLabel} · còn ${expiry.daysLeft} ngày`
-              : "Link mời có hạn 7 ngày kể từ khi gửi"}
-          </p>
-          <p className={s.note}>
-            Link dùng một lần, OTP phải khớp số điện thoại {maskPhone(member.phone)}.
-            Gửi lại sẽ tạo hạn mới.
-          </p>
-          <div className={s.actions}>
-            <Button
-              variant="secondary"
-              size="md"
-              disabled={!online}
-              aria-describedby={!online ? "member-resend-offline" : undefined}
-              onClick={() =>
-                run(() => resendInvite(member.id), "Đã gửi lại lời mời nhân sự.")
-              }
-            >
-              Gửi lại lời mời
-            </Button>
-            <Button
-              variant="danger"
-              size="md"
-              onClick={() => {
-                setCancelOpen(true);
-                setError("");
-              }}
-            >
-              Huỷ lời mời
-            </Button>
-          </div>
-          {!online && (
-            <p className={s.notice} id="member-resend-offline">
-              Gửi lại lời mời cần có mạng.
-            </p>
-          )}
-        </Card>
-      )}
 
       <Card className={s.roleCard}>
         <h2 className={s.sectionTitle}>Vai trò</h2>
@@ -347,30 +294,6 @@ export default function MemberDetailPage() {
           </Button>
           <Button variant="ghost" size="md" onClick={() => setDisableOpen(false)}>
             Giữ nguyên
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal
-        title="Huỷ lời mời?"
-        open={cancelOpen}
-        onClose={() => setCancelOpen(false)}
-      >
-        <div className={s.form}>
-          <p className={s.note}>
-            Link mời của {member.name} sẽ không dùng được nữa và người này không còn
-            trong danh sách nhân sự. Bạn có thể mời lại sau.
-          </p>
-          <Button
-            variant="danger"
-            onClick={() =>
-              run(() => {
-                cancelInvite(member.id);
-                navigate("/nhan-su", { replace: true });
-              }, "Đã huỷ lời mời.")
-            }
-          >
-            Huỷ lời mời
           </Button>
         </div>
       </Modal>

@@ -6,8 +6,10 @@ import {
   updateClassSchedule,
 } from "../../data/repositories/sessions";
 import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
-import { Button, Input } from "../../shared/ui";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { Button, Input, UnsavedChangesDialog } from "../../shared/ui";
 import { WeekdayPicker } from "./WeekdayPicker";
+import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./editClassSchedule.module.css";
 
 function localToday(): string {
@@ -52,7 +54,6 @@ export function EditClassSchedule({
   const access = useAccess();
   const [days, setDays] = useState<number[]>(klass?.weekdays ?? []);
   const [time, setTime] = useState(klass?.time ?? "18:00");
-  const [error, setError] = useState("");
   const [result, setResult] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
@@ -85,50 +86,59 @@ export function EditClassSchedule({
     }
   }, [classId, days, klass, time]);
 
-  if (!access.can("classes", "write")) return null;
-  if (!klass) return null;
-
-  const archived = klass.status === "archived";
-  const unchanged = sameSchedule(days, time, klass.weekdays, klass.time);
+  const archived = klass?.status === "archived";
   const hasPreviewChanges = Boolean(
     preview &&
       (preview.toRemove.length || preview.toAdd.length || preview.retimed.length),
   );
-  const cannotSave = archived || !preview || (unchanged && !hasPreviewChanges);
-
-  function close() {
-    if (!unchanged && !window.confirm("Bạn có thay đổi chưa lưu. Vẫn quay lại?")) return;
-    const dialog = dialogRef.current;
-    if (dialog?.open) dialog.close();
-    onClose();
-  }
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    if (!days.length) {
-      setError("Chọn ít nhất một ngày học trong tuần.");
-      return;
-    }
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
-      setError("Nhập giờ bắt đầu hợp lệ, từ 00:00 đến 23:59.");
-      return;
-    }
-    try {
-      const updated = updateClassSchedule(classId, { weekdays: days, time }, localToday());
+  const action = useSaveAction({
+    baseline: { days: klass?.weekdays ?? [], time: klass?.time ?? "18:00" },
+    value: { days, time },
+    // Lịch giống bản gốc nhưng còn buổi cần sinh/xoá (hasPreviewChanges) vẫn lưu được.
+    isEqual: (a, b) => sameSchedule(a.days, a.time, b.days, b.time) && !hasPreviewChanges,
+    validate: () => !archived && preview !== null,
+    save: async (value) => {
+      const updated = await updateClassSchedule(
+        classId,
+        { weekdays: value.days, time: value.time },
+        localToday(),
+      );
       setResult(
         `Đã cập nhật lịch: bỏ ${updated.removed}, thêm ${updated.added}${
           updated.retimed ? `, đổi giờ ${updated.retimed}` : ""
         } buổi.`,
       );
-      save.clearStatus();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không cập nhật được lịch học.");
-      save.setStatus("error");
-    }
+    },
+  });
+  const unchanged = klass ? sameSchedule(days, time, klass.weekdays, klass.time) : true;
+  const closeNow = () => {
+    const dialog = dialogRef.current;
+    if (dialog?.open) dialog.close();
+    onClose();
+  };
+  const guard = useUnsavedCloseGuard({ dirty: !unchanged, saving: action.saving, submit: action.submit }, { onClose: closeNow });
+  const close = () => {
+    if (guard.beforeClose()) closeNow();
+  };
+  const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
+
+  if (!access.can("classes", "write")) return null;
+  if (!klass) return null;
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (await action.submit()) save.clearStatus();
+    else save.setStatus("error");
   }
+  const failure = action.error;
+  const error = failure
+    ? failure instanceof Error && failure.message !== "save_failed"
+      ? failure.message
+      : "Không cập nhật được lịch học."
+    : "";
 
   return (
+    <>
     <dialog
       ref={dialogRef}
       id="edit-class-schedule"
@@ -163,12 +173,6 @@ export function EditClassSchedule({
             onChange={(next) => {
               setDays(next);
               setResult("");
-              setError("");
-              if (sameSchedule(next, time, klass.weekdays, klass.time)) {
-                save.clearStatus();
-              } else {
-                save.markUnsaved();
-              }
             }}
             label="Ngày học lặp lại"
           />
@@ -185,12 +189,6 @@ export function EditClassSchedule({
               const nextTime = event.target.value;
               setTime(nextTime);
               setResult("");
-              setError("");
-              if (sameSchedule(days, nextTime, klass.weekdays, klass.time)) {
-                save.clearStatus();
-              } else {
-                save.markUnsaved();
-              }
             }}
             required
             aria-invalid={!!error && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)}
@@ -237,7 +235,7 @@ export function EditClassSchedule({
               </>
             )}
           </section>
-          {unchanged && !hasPreviewChanges && !archived && (
+          {!action.dirty && !archived && (
             <p className={s.reason}>Chưa có thay đổi để lưu.</p>
           )}
           {error && (
@@ -252,13 +250,15 @@ export function EditClassSchedule({
           )}
           <footer className={s.stickyBar}>
             <SaveStatus status={save.status} />
-            <Button type="submit" size="lg" disabled={cannotSave || archived}>
+            <Button type="submit" size="lg" disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
               Lưu lịch
             </Button>
           </footer>
         </form>
       </div>
     </dialog>
+    {confirmDialog}
+    </>
   );
 }
 
