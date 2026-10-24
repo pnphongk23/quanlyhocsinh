@@ -212,7 +212,7 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
       .prepare(
         `SELECT t.id AS test_id,t.name,t.date,t.max,s.value FROM tests t JOIN students st ON st.id=? LEFT JOIN scores s
         ON s.test_id=t.id AND s.student_id=st.id WHERE t.workspace_id=? AND t.class_id=? AND t.archived=0
-        AND t.date>=? AND t.date<=? AND t.date>=st.enrolled_at AND (st.left_at IS NULL OR t.date<=st.left_at) ORDER BY t.date,t.id`,
+        AND t.date>=? AND t.date<=? AND (t.date>=st.enrolled_at OR s.value IS NOT NULL) AND (st.left_at IS NULL OR t.date<=st.left_at) ORDER BY t.date,t.id`,
       )
       .bind(studentId, workspaceId, report.class_id, fromKey.slice(0, 10), toKey.slice(0, 10)),
     db

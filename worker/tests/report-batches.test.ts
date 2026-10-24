@@ -212,6 +212,10 @@ describe('report batches by session range', () => {
     expect(leftPreview.body).toMatchObject({ range: { session_count: 1 }, attendance: { present: 1, held_sessions: 1 }, tests: [expect.objectContaining({ test_id: t1, value: 8 })] });
     expect(joinedPreview.body.tests.map((t: any) => t.test_id)).not.toContain(t1);
     expect(leftPreview.body.tests.map((t: any) => t.test_id)).not.toContain(t3);
+    // A test dated before enrollment counts once the student has a score for it.
+    await score(joined, t1);
+    const joinedAgain = await call(`/v1/reports/${joinedReport.report_id}/preview`, {}, f.ws.token);
+    expect(joinedAgain.body.tests.map((t: any) => t.test_id)).toEqual([t1, t3]);
   });
 
   it('saves comments, publishes with a labelled snapshot and republishes after a score change', async () => {
