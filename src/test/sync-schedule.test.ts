@@ -31,9 +31,9 @@ describe("scheduleSync", () => {
   it("pushes once after the trailing quiet period, restarted by each change", async () => {
     const { scores } = await boot();
     const base = pushes();
-    scores.saveScore({ testId: "t1", studentId: "s1", value: 5 });
+    await scores.saveScoreDurable({ testId: "t1", studentId: "s1", value: 5 });
     await sleep(250);
-    scores.saveScore({ testId: "t1", studentId: "s2", value: 6 });
+    await scores.saveScoreDurable({ testId: "t1", studentId: "s2", value: 6 });
     await sleep(300);
     expect(pushes()).toBe(base);
     await vi.waitFor(() => expect(pushes()).toBe(base + 1));
@@ -45,7 +45,7 @@ describe("scheduleSync", () => {
     const { scores } = await boot();
     const base = pushes();
     const first = performance.now();
-    for (let i = 0; i < 12; i++) { scores.saveScore({ testId: "t1", studentId: `s${(i % 4) + 1}`, value: i % 10 }); await sleep(150); }
+    for (let i = 0; i < 12; i++) { await scores.saveScoreDurable({ testId: "t1", studentId: `s${(i % 4) + 1}`, value: i % 10 }); await sleep(150); }
     expect(pushes()).toBeGreaterThan(base);
     expect(server.hooks.pushDoneAt[0] - first).toBeLessThanOrEqual(1_000 + SLACK_MS);
     expect(server.hooks.pushDoneAt[0] - first).toBeGreaterThan(600);
@@ -58,10 +58,10 @@ describe("scheduleSync", () => {
     let held = true;
     server.hooks.hold = (req) => (held && req.path === "/sync/push" ? gate : undefined);
     const base = pushes();
-    scores.saveScore({ testId: "t1", studentId: "s1", value: 5 });
+    await scores.saveScoreDurable({ testId: "t1", studentId: "s1", value: 5 });
     await vi.waitFor(() => expect(pushes()).toBe(base + 1));
 
-    scores.saveScore({ testId: "t1", studentId: "s2", value: 6 });
+    await scores.saveScoreDurable({ testId: "t1", studentId: "s2", value: 6 });
     await sleep(1_300);
     expect(pushes()).toBe(base + 1);
 
@@ -75,7 +75,7 @@ describe("scheduleSync", () => {
   it("merges repeated edits of the same cell into one command", async () => {
     const { d, scores } = await boot();
     const base = pushes();
-    for (const value of [3, 4, 9]) { scores.saveScore({ testId: "t1", studentId: "s1", value }); await sleep(100); }
+    for (const value of [3, 4, 9]) { await scores.saveScoreDurable({ testId: "t1", studentId: "s1", value }); await sleep(100); }
     expect(await d.db.outbox.count()).toBe(1);
     await vi.waitFor(() => expect(pushes()).toBe(base + 1));
     await sleep(200);

@@ -41,16 +41,16 @@ async function measure(name: string, act: (repos: { scores: typeof import("../da
 
 describe.skipIf(!process.env.MEASURE_SYNC)("sync latency", () => {
   it("one score", async () => {
-    await measure("single save", async ({ scores }) => { scores.saveScore({ testId: "t1", studentId: "s1", value: 8 }); });
+    await measure("single save", async ({ scores }) => { await scores.saveScoreDurable({ testId: "t1", studentId: "s1", value: 8 }); });
   }, 30_000);
   it("8 scores 150 ms apart", async () => {
     await measure("8 scores, 150 ms apart", async ({ scores }) => {
-      for (let i = 1; i <= 8; i++) { scores.saveScore({ testId: "t1", studentId: `s${i}`, value: 5 + (i % 5) }); if (i < 8) await sleep(150); }
+      for (let i = 1; i <= 8; i++) { await scores.saveScoreDurable({ testId: "t1", studentId: `s${i}`, value: 5 + (i % 5) }); if (i < 8) await sleep(150); }
     });
   }, 30_000);
   it("attendance of 30 students", async () => {
     await measure("attendance 30 students", async ({ attendance }) => {
-      attendance.saveAttendanceBatch(Array.from({ length: 30 }, (_, i) => ({ sessionId: "x1", studentId: `s${i + 1}`, status: "present", note: "", lateAt: null }) as never));
+      await attendance.saveAttendanceBatchDurable(Array.from({ length: 30 }, (_, i) => ({ sessionId: "x1", studentId: `s${i + 1}`, status: "present", note: "", lateAt: null }) as never));
     });
   }, 30_000);
 });

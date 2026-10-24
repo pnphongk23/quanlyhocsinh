@@ -3,7 +3,7 @@ import { getStore } from "../store";
 import { commitState, persistCommand } from "../outbox";
 import { requirePermission, requireClassAccess } from "./access";
 import type { SyncCommand } from "../api/types";
-import { runDurably, runInBackground, type WritePlan } from "./durable";
+import { runDurably, type WritePlan } from "./durable";
 export const listScores = (testId:string):Score[] => getStore().scores.filter(s=>s.testId===testId);
 function planScore(input:Omit<Score,"id">):WritePlan<Score> {
   requirePermission("scores","write"); const test=getStore().tests.find(t=>t.id===input.testId), student=getStore().students.find(s=>s.id===input.studentId);
@@ -21,6 +21,5 @@ function planScore(input:Omit<Score,"id">):WritePlan<Score> {
     persist: ()=>persistCommand("score",[item.testId,item.studentId],{...payload,version:(old as any)?.version??0,updated_at:new Date().toISOString()},cmd),
   };
 }
-export const saveScore = (input:Omit<Score,"id">):Score => runInBackground(planScore(input));
 /** Chờ ghi bền; ghi lỗi ⇒ ném lỗi gốc và bộ nhớ về như trước. */
 export const saveScoreDurable = (input:Omit<Score,"id">):Promise<Score> => runDurably(planScore(input));

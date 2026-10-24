@@ -51,7 +51,7 @@ describe("two devices, device A writing through the real repositories", () => {
     await Promise.all([A.syncNow(), B.syncNow()]);
     await A.hydrateStore();
 
-    attendance.saveAttendance({ sessionId: "x1", studentId: "s1", status: "absent", note: "ốm", lateAt: null } as never);
+    await attendance.saveAttendanceDurable({ sessionId: "x1", studentId: "s1", status: "absent", note: "ốm", lateAt: null } as never);
     await vi.waitFor(async () => expect(await A.db.outbox.count()).toBe(1));
     await A.syncNow();
     expect(await A.db.outbox.count()).toBe(0);

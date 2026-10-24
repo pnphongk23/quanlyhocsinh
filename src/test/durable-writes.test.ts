@@ -118,12 +118,6 @@ describe("…Durable repository writes reject and roll back when persisting fail
     expect(saved).toHaveLength(1);
     expect(getStore().attendance).toHaveLength(1);
   });
-  it("sync variants still return without waiting and keep the in-memory change", async () => {
-    const { getStore } = await store();
-    const { saveScore } = await import("../data/repositories/scores");
-    expect(saveScore({ testId: "t1", studentId: "st1", value: 8 }).value).toBe(8);
-    expect(getStore().scores).toHaveLength(1);
-  });
   it("durable variants keep the change and return the value once persisting succeeds", async () => {
     outbox.persistCommand.mockReset().mockResolvedValue(undefined);
     const { getStore } = await store();

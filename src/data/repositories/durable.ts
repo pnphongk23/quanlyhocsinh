@@ -1,14 +1,7 @@
 /** Một thao tác ghi cục bộ: kiểm tra đã xong, còn lại áp vào bộ nhớ, ghi bền, và hoàn lại bộ nhớ khi ghi bền lỗi. */
 export interface WritePlan<T> { result: T; apply: () => void; undo: () => void; persist: () => Promise<unknown> }
 
-/** Hàm đồng bộ cũ: áp vào bộ nhớ, ghi bền ở nền, lỗi ghi bị bỏ qua (trạng thái lưu báo lỗi). */
-export function runInBackground<T>(plan: WritePlan<T>): T {
-  plan.apply();
-  void plan.persist().catch(() => {});
-  return plan.result;
-}
-
-/** Biến thể `…Durable`: chờ ghi bền; lỗi ⇒ hoàn bộ nhớ về như trước rồi ném lỗi gốc. */
+/** Chờ ghi bền; lỗi ⇒ hoàn bộ nhớ về như trước rồi ném lỗi gốc. */
 export async function runDurably<T>(plan: WritePlan<T>): Promise<T> {
   plan.apply();
   try { await plan.persist(); } catch (error) { plan.undo(); throw error; }

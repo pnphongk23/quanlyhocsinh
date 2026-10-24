@@ -3,7 +3,7 @@ import type { Test } from "../types";
 import { commitState, persistCommand } from "../outbox";
 import { requirePermission, requireClassAccess } from "./access";
 import type { SyncCommand } from "../api/types";
-import { runDurably, runInBackground, type WritePlan } from "./durable";
+import { runDurably, type WritePlan } from "./durable";
 export const DEFAULT_TEST_MAX=15, TEST_MAX_MIN=1, TEST_MAX_MAX=1000;
 export function validateTestMax(max:number):number { if(!Number.isInteger(max)||max<TEST_MAX_MIN||max>TEST_MAX_MAX) throw new Error("Thang điểm phải là số nguyên từ 1 đến 1000."); return max; }
 export const listTests=(classId:string):Test[]=>getStore().tests.filter(t=>t.classId===classId&&!t.archived);
@@ -15,9 +15,6 @@ function planDeleteTest(id:string):WritePlan<"deleted"|"archived"> { requirePerm
   if(hasScore){const next={...current,archived:true};return { result:"archived", apply:()=>commitState("tests",id,d=>{d.tests=d.tests.map(t=>t.id===id?next:t);}), undo:()=>commitState("tests",id,d=>{d.tests=d.tests.map(t=>t.id===id?current:t);}), persist:testCommand(next,"test.delete",{id},base) };}
   const scores=getStore().scores.filter(s=>s.testId===id);
   return { result:"deleted", apply:()=>commitState("tests",id,d=>{d.tests=d.tests.filter(t=>t.id!==id);d.scores=d.scores.filter(s=>s.testId!==id);}), undo:()=>commitState("tests",id,d=>{d.tests=d.tests.filter(t=>t.id!==id).concat(current);d.scores=d.scores.filter(s=>s.testId!==id).concat(scores);}), persist:testCommand(current,"test.delete",{id},base) }; }
-export const createTest=(input:TestInput):Test=>runInBackground(planCreateTest(input));
-export const updateTest=(id:string,patch:Partial<Pick<Test,"name"|"date"|"max">>):Test=>runInBackground(planUpdateTest(id,patch));
-export const deleteTest=(id:string):"deleted"|"archived"=>runInBackground(planDeleteTest(id));
 /** Biến thể chờ ghi bền: ghi lỗi ⇒ ném lỗi gốc và bộ nhớ về như trước. */
 export const createTestDurable=(input:TestInput):Promise<Test>=>runDurably(planCreateTest(input));
 export const updateTestDurable=(id:string,patch:Partial<Pick<Test,"name"|"date"|"max">>):Promise<Test>=>runDurably(planUpdateTest(id,patch));

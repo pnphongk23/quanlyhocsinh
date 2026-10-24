@@ -59,7 +59,7 @@ it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
       });
     Object.defineProperty(navigator, "onLine", { value: true, configurable: true });
 
-      const [{ login, switchMembership }, { getSession }, { syncNow }, { db }, { getStore }, { saveAttendance }, { persistCommand }] = await Promise.all([
+      const [{ login, switchMembership }, { getSession }, { syncNow }, { db }, { getStore }, { saveAttendanceDurable }, { persistCommand }] = await Promise.all([
         import("../data/auth"), import("../data/auth/session"), import("../data/sync"),
         import("../data/db"), import("../data/store"), import("../data/repositories/attendance"), import("../data/outbox"),
       ]);
@@ -118,7 +118,7 @@ it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
         };
         db.outbox.hook("creating").subscribe(handler);
       });
-      saveAttendance({ sessionId: target.sessionId, studentId: target.studentId, status: desired, note: "Staging smoke", lateAt: desired === "late" ? "18:10" : null });
+      await saveAttendanceDurable({ sessionId: target.sessionId, studentId: target.studentId, status: desired, note: "Staging smoke", lateAt: desired === "late" ? "18:10" : null });
       commandId = await outboxCreated;
     } else {
       commandId = crypto.randomUUID();
