@@ -85,6 +85,23 @@ describe("rejected commands", () => {
     expect(serverScore("new")).toMatchObject({ value: 7 });
   });
 
+  it("retrying a rejected create and its dependent score repoints the dependency", async () => {
+    const { d, status } = await boot();
+    const base = { identity: d.identityKey(), membership_id: "m-staff", base_version: 0 };
+    await d.db.outbox.bulkPut([
+      { ...base, id: "create-1", type: "test.create", payload: {} as never, created_at: "2026-10-24T00:00:01.000Z", status: "rejected", error: "forbidden" },
+      { ...base, id: "score-1", type: "score.set", payload: {} as never, created_at: "2026-10-24T00:00:02.000Z", status: "rejected", error: "forbidden", depends_on: "create-1" },
+    ]);
+    server.hooks.rejectCommand = () => "forbidden";
+    await d.retryRejectedCommands(["create-1", "score-1"]);
+    const rows = await d.db.outbox.toArray();
+    const create = rows.find((r: any) => r.type === "test.create")!;
+    const score = rows.find((r: any) => r.type === "score.set")!;
+    expect(create.id).not.toBe("create-1");
+    expect(score.depends_on).toBe(create.id);
+    expect(status.getRejectedCommands()).toHaveLength(2);
+  });
+
   it("discard drops the command and restores the server value", async () => {
     const { d, scores, status } = await boot();
     server.hooks.rejectCommand = () => "score_above_max";

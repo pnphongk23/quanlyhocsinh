@@ -239,12 +239,12 @@ export async function retryRejectedCommands(ids: string[]): Promise<void> {
   // Máy chủ trả lại kết quả đã lưu cho cùng id, nên lệnh thử lại phải mang id mới mới được xét lại.
   await db.transaction("rw", db.outbox, async () => {
     const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
+    const renamed = new Map(rows.map((row) => [row.id, crypto.randomUUID()]));
     for (const row of rows) {
-      const id = crypto.randomUUID();
       await db.outbox.delete(row.id);
-      await db.outbox.put({ ...row, id, status: "pending", error: undefined });
-      await db.outbox.where("identity").equals(identity).and((other) => other.depends_on === row.id).modify({ depends_on: id });
+      await db.outbox.put({ ...row, id: renamed.get(row.id)!, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
     }
+    await db.outbox.where("identity").equals(identity).and((other) => !!other.depends_on && renamed.has(other.depends_on)).modify((other) => { other.depends_on = renamed.get(other.depends_on!); });
   });
   publishRejected(await db.outbox.where("identity").equals(identity).toArray());
   setSaveStatus("local");
