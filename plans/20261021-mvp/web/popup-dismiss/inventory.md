@@ -10,4 +10,9 @@
 | Guardian child picker | roles/guardian/GuardianShell.tsx | dialog, đã có bấm nền | không đổi |
 
 Gốc: mỗi chỗ tự làm menu; menu tự dựng trong TestsDesktop và listbox StaffShell thiếu listener ngoài. Sửa: `shared/hooks/useDismiss.ts`.
-Prototype `design/prototype/`: chưa kiểm, không sửa.
+## Prototype
+
+| Popup | File:dòng | Có lỗi đóng ngoài/Esc? | Ghi chú |
+|---|---|---|---|
+| Menu tuỳ chọn lớp (⋯) | `design/prototype/src/features/classes/ClassOptionsMenu.tsx:43-55` | Không | Escape gọi `onClose`; scrim phủ nền có `onClick={onClose}` nên bấm ngoài menu đóng được. Mã tĩnh cho thấy xử lý này. |
+| Bộ chọn lớp / dropdown / listbox | — | Không thấy trong mã đã rà | Không tìm thấy popup chọn lớp dùng `role="listbox"`/`combobox`; kết luận giới hạn trong mã prototype đã rà. |
