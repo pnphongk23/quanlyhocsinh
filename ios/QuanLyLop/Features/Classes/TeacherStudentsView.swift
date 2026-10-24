@@ -6,16 +6,14 @@ struct TeacherStudentsView: View {
     let classID: String
     @Bindable var data: TeacherFeatureData
     @State private var showingAdd = false
-    @State private var selectedStudent: Student?
     @State private var leaving: Student?
     @State private var editingPhone: Student?
     @State private var error: String?
 
-    init(classID: String, data: TeacherFeatureData, showsAdd: Bool = false, optionStudent: Student? = nil) {
+    init(classID: String, data: TeacherFeatureData, showsAdd: Bool = false) {
         self.classID = classID
         _data = Bindable(data)
         _showingAdd = State(initialValue: showsAdd)
-        _selectedStudent = State(initialValue: optionStudent)
     }
 
     private var students: [Student] { data.students(in: classID) }
@@ -55,9 +53,14 @@ struct TeacherStudentsView: View {
             }
         }
         .sheet(isPresented: $showingAdd) { addSheet }
-        .sheet(item: $selectedStudent) { student in optionsSheet(student) }
         .sheet(item: $editingPhone) { student in phoneSheet(student) }
-        .sheet(item: $leaving) { student in leaveSheet(student) }
+        .confirmationDialog(String(localized: "feature.classes.anh.dau.hoc.sinh.a.nghi"),
+                            isPresented: leavingBinding, titleVisibility: .visible, presenting: leaving) { student in
+            Button(String(localized: "feature.classes.xac.nhan.nghi.hoc"), role: .destructive) { markLeft(student) }
+            Button(String(localized: "students.leave.cancel", table: "Teacher"), role: .cancel) {}
+        } message: { _ in
+            Text(String(localized: "feature.classes.ngay.nghi.la.hom.nay.iem.va.iem.danh.cu.van.uoc"))
+        }
     }
 
     private var statsLine: String {
@@ -82,9 +85,18 @@ struct TeacherStudentsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if student.status == .left { TeacherStatusPill(text: String(localized: "feature.classes.a.nghi"), tone: .neutral) }
-            if data.canWriteStudents {
-                TeacherIconButton(systemImage: "ellipsis", label: String.localizedStringWithFormat(String(localized: "feature.classes.tuy.chon"), String(describing: (student.name))),
-                                  tint: AppColors.muted) { selectedStudent = student }
+            if data.canWriteStudents, student.status == .active {
+                Menu {
+                    Button(String(localized: "feature.classes.sua.so.ien.thoai"), systemImage: "phone") { editingPhone = student }
+                    Button(String(localized: "feature.classes.anh.dau.nghi"), systemImage: "person.fill.xmark", role: .destructive) { leaving = student }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(AppColors.muted)
+                        .frame(width: AppMetrics.tap, height: AppMetrics.tap)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.classes.tuy.chon"), String(describing: (student.name))))
             }
         }
         .padding(.horizontal, 12)
@@ -110,35 +122,12 @@ struct TeacherStudentsView: View {
         TeacherAddStudentSheet(classID: classID, data: data)
     }
 
-    private func optionsSheet(_ student: Student) -> some View {
-        TeacherStudentOptionsSheet(
-            student: student,
-            editPhone: {
-                selectedStudent = nil
-                editingPhone = student
-            },
-            markLeft: {
-                selectedStudent = nil
-                leaving = student
-            },
-            close: { selectedStudent = nil })
-    }
-
     private func phoneSheet(_ student: Student) -> some View {
         TeacherParentPhoneSheet(student: student, data: data) { error = $0 }
     }
 
-    private func leaveSheet(_ student: Student) -> some View {
-        TeacherSheet(title: String(localized: "feature.classes.anh.dau.hoc.sinh.a.nghi")) {
-            Text(String(localized: "feature.classes.ngay.nghi.la.hom.nay.iem.va.iem.danh.cu.van.uoc"))
-                .appText(AppText.muted)
-                .foregroundStyle(AppColors.muted)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } footer: {
-            AppButton(title: String(localized: "feature.classes.xac.nhan.nghi.hoc"), variant: .danger, size: .large) { markLeft(student) }
-        } close: {
-            leaving = nil
-        }
+    private var leavingBinding: Binding<Bool> {
+        Binding(get: { leaving != nil }, set: { if !$0 { leaving = nil } })
     }
 
     private func markLeft(_ student: Student) {
@@ -274,28 +263,3 @@ struct TeacherParentPhoneSheet: View {
     }
 }
 
-/// “Tuỳ chọn học sinh” sheet; phone editing and marking a student as left stay available.
-struct TeacherStudentOptionsSheet: View {
-    let student: Student
-    var editPhone: () -> Void
-    var markLeft: () -> Void
-    var close: () -> Void
-
-    var body: some View {
-        TeacherSheet(title: String(localized: "feature.classes.tuy.chon.hoc.sinh")) {
-            VStack(spacing: 10) {
-                if student.status == .active {
-                    AppButton(title: String(localized: "feature.classes.sua.so.ien.thoai"), variant: .secondary, size: .large, action: editPhone)
-                    AppButton(title: String(localized: "feature.classes.anh.dau.nghi"), variant: .danger, size: .large, action: markLeft)
-                } else {
-                    Text(String(localized: "feature.classes.hoc.sinh.a.nghi.iem.va.iem.danh.cu.van.uoc.giu.t"))
-                        .appText(AppText.muted)
-                        .foregroundStyle(AppColors.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-        } close: {
-            close()
-        }
-    }
-}

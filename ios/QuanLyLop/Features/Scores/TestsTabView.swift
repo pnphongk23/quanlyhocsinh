@@ -124,7 +124,6 @@ struct TestScoresView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var drafts: [String: String] = [:]
     @State private var error: String?
-    @State private var showingOptions = false
     @State private var showingEdit = false
     @State private var deletion: TestDeletion?
     @State private var focusStudentID: String?
@@ -186,7 +185,12 @@ struct TestScoresView: View {
         .toolbar {
             if data.canWriteScores {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingOptions = true } label: { Image(systemName: "ellipsis") }
+                    Menu {
+                        Button(String(localized: "feature.scores.sua.bai"), systemImage: "pencil") { showingEdit = true }
+                        Button(String(localized: "feature.scores.xoa.bai"), systemImage: "trash", role: .destructive) {
+                            if let open = self.test { deletion = ScoreRules.deletionMode(hasScores: hasScores(open)) }
+                        }
+                    } label: { Image(systemName: "ellipsis") }
                         .accessibilityLabel(String(localized: "feature.scores.tuy.chon.bai.kiem.tra"))
                 }
             }
@@ -224,15 +228,26 @@ struct TestScoresView: View {
             }
             saveBar(test)
         }
-        .sheet(isPresented: $showingOptions) { optionsSheet }
         .sheet(isPresented: $showingEdit) {
             TestFormSheet(data: data, classID: classID, existing: test)
         }
-        .overlay {
-            if let deletion {
-                deleteDialog(test, deletion)
+        .confirmationDialog(deletion?.title ?? "", isPresented: deletionBinding,
+                            titleVisibility: .visible, presenting: deletion) { mode in
+            Button(mode.actionLabel, role: .destructive) {
+                Task {
+                    let message = await data.deleteTest(test)
+                    if let message { error = message }
+                    if !data.tests(in: classID).contains(where: { $0.id == test.id }) { dismiss() }
+                }
             }
+            Button(String(localized: "feature.scores.giu.bai"), role: .cancel) {}
+        } message: { mode in
+            Text(mode.message)
         }
+    }
+
+    private var deletionBinding: Binding<Bool> {
+        Binding(get: { deletion != nil }, set: { if !$0 { deletion = nil } })
     }
 
     private func testCard(_ test: TestDefinition) -> some View {
@@ -410,50 +425,8 @@ struct TestScoresView: View {
         await saveStatusSource?.refresh()
     }
 
-    private var optionsSheet: some View {
-        AppSheet(title: String(localized: "feature.scores.tuy.chon.bai.kiem.tra")) {
-            VStack(spacing: 10) {
-                AppButton(title: String(localized: "feature.scores.sua.bai"), variant: .secondary, size: .medium) {
-                    showingOptions = false
-                    showingEdit = true
-                }
-                AppButton(title: String(localized: "feature.scores.xoa.bai"), variant: .danger, size: .medium) {
-                    showingOptions = false
-                    if let open = self.test {
-                        deletion = ScoreRules.deletionMode(hasScores: hasScores(open))
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-        } footer: {
-            EmptyView()
-        } close: {
-            showingOptions = false
-        }
-    }
-
     private func hasScores(_ test: TestDefinition) -> Bool {
         data.scores.contains { $0.testId == test.id && $0.value != nil }
-    }
-
-    private func deleteDialog(_ test: TestDefinition, _ mode: TestDeletion) -> some View {
-        I4Dialog(title: mode.title, content: {
-            Text(mode.message)
-                .appText(AppTextStyle(size: 16, weight: .regular, lineHeight: 24))
-                .foregroundStyle(AppColors.muted)
-        }, actions: {
-            VStack(spacing: 8) {
-                AppButton(title: mode.actionLabel, variant: .danger, size: .large) {
-                    deletion = nil
-                    Task {
-                        let message = await data.deleteTest(test)
-                        if let message { error = message }
-                        if !data.tests(in: classID).contains(where: { $0.id == test.id }) { dismiss() }
-                    }
-                }
-                AppButton(title: String(localized: "feature.scores.giu.bai"), variant: .neutral, size: .large) { deletion = nil }
-            }
-        }, dismiss: { deletion = nil })
     }
 }
 

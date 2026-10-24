@@ -112,7 +112,6 @@ enum TeacherDemoScreen: String, CaseIterable {
     case sessionCancelled = "session-cancelled"
     case students = "students"
     case studentsAdd = "students-add"
-    case studentsOptions = "students-options"
     case studentsEmpty = "students-empty"
     case scheduleDay = "schedule-day"
     case scheduleMonth = "schedule-month"
@@ -151,9 +150,6 @@ enum TeacherDemoScreen: String, CaseIterable {
             TeacherStudentsView(classID: TeacherDemoData.classID, data: data)
         case .studentsAdd:
             TeacherAddStudentSheet(classID: TeacherDemoData.classID, data: data)
-        case .studentsOptions:
-            TeacherStudentOptionsSheet(student: data.students(in: TeacherDemoData.classID)[0],
-                                       editPhone: {}, markLeft: {}, close: {})
         case .studentsEmpty:
             TeacherStudentsView(classID: "empty-class", data: TeacherDemoData.emptyData())
         case .scheduleDay:

@@ -67,15 +67,14 @@ struct TeacherSessionDetailView: View {
                 TeacherSessionInfoSheet(session: session, className: klass?.name)
             }
         }
-        .teacherConfirmDialog(
-            isPresented: $confirmingCancel,
-            title: String.localizedStringWithFormat(String(localized: "feature.classes.huy.buoi.hoc.a26a4ee4"), String(describing: (session.map { TeacherFormat.dayMonth($0.date) } ?? ""))),
-            message: String(localized: "feature.classes.buoi.hoc.se.uoc.anh.dau.la.a.huy.ban.co.the.khoi"),
-            actions: [
-                TeacherDialogAction(label: String(localized: "feature.classes.huy.buoi.hoc"), variant: .danger) { cancel() },
-                TeacherDialogAction(label: String(localized: "feature.classes.giu.buoi.hoc"), variant: .neutral) { confirmingCancel = false },
-            ],
-            dismiss: { confirmingCancel = false })
+        .confirmationDialog(
+            String.localizedStringWithFormat(String(localized: "feature.classes.huy.buoi.hoc.a26a4ee4"), String(describing: (session.map { TeacherFormat.dayMonth($0.date) } ?? ""))),
+            isPresented: $confirmingCancel, titleVisibility: .visible) {
+            Button(String(localized: "feature.classes.huy.buoi.hoc"), role: .destructive) { cancel() }
+            Button(String(localized: "feature.classes.giu.buoi.hoc"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "feature.classes.buoi.hoc.se.uoc.anh.dau.la.a.huy.ban.co.the.khoi"))
+        }
     }
 
     private var tabsBar: some View {
@@ -89,7 +88,14 @@ struct TeacherSessionDetailView: View {
         } else {
             switch tab {
             case "nhan-xet":
-                scrolled { SessionCommentsView(sessionID: session.id, data: i4Data) }
+                // Nhận xét tự cuộn và ghim nút Gửi phiếu cả lớp ở đáy màn.
+                VStack(spacing: 0) {
+                    if let error {
+                        TeacherErrorBanner(message: error)
+                            .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+                    }
+                    SessionCommentsView(sessionID: session.id, data: i4Data)
+                }
             case "btvn":
                 scrolled { SessionHomeworkView(sessionID: session.id, data: i4Data) }
             default:

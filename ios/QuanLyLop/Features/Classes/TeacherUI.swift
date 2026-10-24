@@ -15,7 +15,6 @@ enum TeacherMetrics {
     static let cardPadding: CGFloat = 16
     static let rowMinHeight: CGFloat = 56
     static let listGap: CGFloat = 8
-    static let sectionGap: CGFloat = 24
 }
 
 /// Prototype date labels (`src/shared/format/index.ts`) in the same `vi-VN` shapes.
@@ -228,17 +227,20 @@ struct TeacherFab: View {
     }
 }
 
-// MARK: - Group label (`.groupLabel`: 14/600 muted, padding 0 4)
+// MARK: - Pinned bottom bar (main action of a screen or sheet, `.stickyBar`)
 
-struct TeacherGroupLabel: View {
-    let text: String
+/// Main action pinned to the bottom edge with `safeAreaInset(edge: .bottom)`: it does not scroll with
+/// the list and the list keeps its last row above it.
+struct TeacherPinnedBar<Content: View>: View {
+    @ViewBuilder let content: Content
 
     var body: some View {
-        Text(text)
-            .appText(AppText.label)
-            .foregroundStyle(AppColors.muted)
-            .padding(.horizontal, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(spacing: TeacherMetrics.listGap) { content }
+            .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+            .padding(.vertical, TeacherMetrics.listGap)
+            .frame(maxWidth: .infinity)
+            .background(AppColors.surface)
+            .overlay(alignment: .top) { AppColors.border.frame(height: AppMetrics.hairline) }
     }
 }
 
@@ -425,60 +427,6 @@ struct TeacherField: View {
                 .appText(AppText.body)
                 .foregroundStyle(AppColors.text)
                 .keyboardType(keyboard)
-        }
-    }
-}
-
-// MARK: - Confirm dialog (`dialogs.module.css .dialog`: 342 max width, padding 24)
-
-struct TeacherDialogAction: Identifiable {
-    let id = UUID()
-    let label: String
-    var variant: AppButtonStyle.Variant = .primary
-    let action: () -> Void
-}
-
-private struct TeacherDialogCard: View {
-    let title: String
-    let message: String?
-    let actions: [TeacherDialogAction]
-    let dismiss: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(title)
-                .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 25, tracking: -0.2))
-                .foregroundStyle(AppColors.text)
-            if let message {
-                Text(message).appText(AppText.body).foregroundStyle(AppColors.muted)
-            }
-            VStack(spacing: 8) {
-                ForEach(actions) { action in
-                    AppButton(title: action.label, variant: action.variant, size: .large,
-                              action: action.action)
-                        .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
-                }
-            }
-        }
-        .padding(24)
-        .frame(maxWidth: 342)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-    }
-}
-
-extension View {
-    /// Prototype "danger dialog" / "unsaved changes" (`82`, `80`).
-    func teacherConfirmDialog(isPresented: Binding<Bool>, title: String, message: String?,
-                              actions: [TeacherDialogAction], dismiss: @escaping () -> Void) -> some View {
-        overlay {
-            if isPresented.wrappedValue {
-                ZStack {
-                    AppColors.scrim.ignoresSafeArea().onTapGesture(perform: dismiss)
-                    TeacherDialogCard(title: title, message: message, actions: actions, dismiss: dismiss)
-                        .padding(24)
-                }
-                .transition(.opacity)
-            }
         }
     }
 }

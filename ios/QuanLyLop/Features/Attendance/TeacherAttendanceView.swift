@@ -91,7 +91,7 @@ struct TeacherAttendanceView: View {
     /// Nút Lưu luôn ghim đáy màn (không cuộn theo danh sách). Image 17 giữ nút “Điểm danh” xám
     /// khi buổi chưa tới ngày; nhãn và màu nền xám theo `.stickyBar > button:disabled`.
     @ViewBuilder private var bottomBar: some View {
-        VStack(spacing: TeacherMetrics.listGap) {
+        TeacherPinnedBar {
             if readOnly {
                 Text(String(localized: "feature.attendance.iem.danh"))
                     .appText(AppText.buttonLarge)
@@ -118,12 +118,6 @@ struct TeacherAttendanceView: View {
                 }
             }
         }
-        .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
-        .padding(.top, TeacherMetrics.listGap)
-        .padding(.bottom, TeacherMetrics.listGap)
-        .frame(maxWidth: .infinity)
-        .background(AppColors.surface)
-        .overlay(alignment: .top) { AppColors.border.frame(height: AppMetrics.hairline) }
     }
 
     private var summaryRow: some View {
