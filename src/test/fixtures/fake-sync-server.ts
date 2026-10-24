@@ -19,7 +19,7 @@ export function createFakeServer() {
   const log: Array<{ seq: number; entity: string; item?: Row; gone?: { k1: string; k2: string } }> = [];
   const tokens = new Map<string, Scope>();
   const requests: TracedRequest[] = [];
-  const hooks = { failEntity: null as string | null, hold: null as ((req: TracedRequest) => Promise<void> | void) | null, afterPull: null as (() => void) | null, respond: null as ((req: TracedRequest) => { status: number; code: string } | undefined) | null, onSnapshotPage: null as ((entity: string) => void) | null };
+  const hooks = { failEntity: null as string | null, hold: null as ((req: TracedRequest) => Promise<void> | void) | null, latencyMs: 0, pushDoneAt: [] as number[], afterPull: null as (() => void) | null, respond: null as ((req: TracedRequest) => { status: number; code: string } | undefined) | null, onSnapshotPage: null as ((entity: string) => void) | null };
   const table = (entity: string) => { let t = rows.get(entity); if (!t) rows.set(entity, t = new Map()); return t; };
 
   const put = (entity: string, item: Row): Row => {
@@ -64,6 +64,7 @@ export function createFakeServer() {
     const request: TracedRequest = { token, method: init.method ?? "GET", path, query };
     requests.push(request);
     await hooks.hold?.(request);
+    if (hooks.latencyMs) await new Promise((resolve) => setTimeout(resolve, hooks.latencyMs));
     const forced = hooks.respond?.(request);
     if (forced) return apiError(forced.status, forced.code);
     const scope = tokens.get(token);
@@ -93,6 +94,7 @@ export function createFakeServer() {
     if (path === "/sync/push") {
       const body = JSON.parse(String(init.body));
       const results = body.commands.map(apply);
+      hooks.pushDoneAt.push(performance.now());
       return json({ epoch: 1, cursor: log.length, results });
     }
     const body = init.body ? JSON.parse(String(init.body)) : {};

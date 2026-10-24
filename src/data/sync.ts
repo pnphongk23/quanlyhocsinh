@@ -163,6 +163,7 @@ export const clearMembershipCache = clearIdentityCache;
 let again = false;
 export function syncNow(): Promise<void> {
   if (timer) { clearTimeout(timer); timer = undefined; }
+  firstScheduledAt = null;
   if (running) { again = true; return running; }
   if (!getCacheIdentity() || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) return Promise.resolve();
   running = (async () => {
@@ -234,7 +235,19 @@ async function applyCommandResult(result: CommandResult, identity: string): Prom
 function getDeviceId(): string {
   const key = "qlh.device.v1"; let id = localStorage.getItem(key); if (!id) { id = crypto.randomUUID(); localStorage.setItem(key, id); } return id;
 }
-export function scheduleSync(delay = 2_000): void { if (timer) clearTimeout(timer); timer = setTimeout(() => { timer = undefined; void syncNow(); }, delay); }
+/** Quiet time after the last change before pushing; each new change restarts it. */
+export const SYNC_TRAILING_MS = 400;
+/** Upper bound from the first change not yet pushed, so continuous typing still pushes within about a second. */
+export const SYNC_MAX_WAIT_MS = 1_000;
+let firstScheduledAt: number | null = null;
+/** No argument: debounce (trailing + max wait). With a delay: push that long from now, no debounce. */
+export function scheduleSync(delay?: number): void {
+  if (timer) clearTimeout(timer);
+  const now = Date.now();
+  if (delay === undefined) firstScheduledAt ??= now; else firstScheduledAt = null;
+  const wait = delay ?? Math.min(SYNC_TRAILING_MS, Math.max(0, firstScheduledAt! + SYNC_MAX_WAIT_MS - now));
+  timer = setTimeout(() => { timer = undefined; void syncNow(); }, wait);
+}
 const pollInterval = 60_000;
 if (typeof window !== "undefined") {
   let poll: ReturnType<typeof setInterval> | undefined;
