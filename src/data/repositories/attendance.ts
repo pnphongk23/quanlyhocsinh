@@ -3,7 +3,7 @@ import { getStore } from "../store";
 import { commitState, persistCommand } from "../outbox";
 import { requirePermission, requireSessionAccess } from "./access";
 import type { SyncCommand } from "../api/types";
-import { runDurably, runInBackground, type WritePlan } from "./durable";
+import { composePlans, runDurably, runInBackground, type WritePlan } from "./durable";
 const make = (input: Omit<Attendance,"id">): Attendance => ({...input,id:`${input.sessionId}:${input.studentId}`});
 export const listAttendance = (sessionId: string): Attendance[] => getStore().attendance.filter((a)=>a.sessionId===sessionId);
 function planAttendance(input: Omit<Attendance,"id">): WritePlan<Attendance> {
@@ -25,3 +25,8 @@ export const saveAttendance = (input: Omit<Attendance,"id">): Attendance => runI
 /** Chờ ghi bền; ghi lỗi ⇒ ném lỗi gốc và bộ nhớ về như trước. */
 export const saveAttendanceDurable = (input: Omit<Attendance,"id">): Promise<Attendance> => runDurably(planAttendance(input));
 export function saveAttendanceBatch(inputs: Omit<Attendance,"id">[]): Attendance[] { return inputs.map(saveAttendance); }
+/** Chờ ghi bền cả lô; một lệnh lỗi ⇒ ném lỗi gốc và bộ nhớ của cả lô về như trước. Kiểm tra cả lô trước khi áp. */
+export function saveAttendanceBatchDurable(inputs: Omit<Attendance,"id">[]): Promise<Attendance[]> {
+  const plans = inputs.map(planAttendance);
+  return runDurably(composePlans(plans, plans.map((plan) => plan.result)));
+}

@@ -14,3 +14,13 @@ export async function runDurably<T>(plan: WritePlan<T>): Promise<T> {
   try { await plan.persist(); } catch (error) { plan.undo(); throw error; }
   return plan.result;
 }
+
+/** Gộp nhiều thao tác thành một lô: áp tất cả, ghi bền lần lượt; một lệnh lỗi ⇒ hoàn bộ nhớ của cả lô. */
+export function composePlans<T, R>(plans: WritePlan<T>[], result: R): WritePlan<R> {
+  return {
+    result,
+    apply: () => plans.forEach((plan) => plan.apply()),
+    undo: () => [...plans].reverse().forEach((plan) => plan.undo()),
+    persist: async () => { for (const plan of plans) await plan.persist(); },
+  };
+}

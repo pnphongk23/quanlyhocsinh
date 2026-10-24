@@ -91,6 +91,33 @@ describe("…Durable repository writes reject and roll back when persisting fail
     await expectRejectedUnchanged(() => setHomeworkGradeDurable("h1", "st1", null));
   });
 
+  it("saveAttendanceBatchDurable rolls back the whole batch when a later command fails", async () => {
+    const { saveAttendanceBatchDurable } = await import("../data/repositories/attendance");
+    await seed((s) => { s.students.push({ id: "st2", classId: "c1", name: "Bình", parentPhone: "", enrolledAt: "2026-09-01", leftAt: null, status: "active" } as never); });
+    outbox.persistCommand.mockReset().mockResolvedValueOnce(undefined).mockRejectedValue(fail);
+    await expectRejectedUnchanged(() => saveAttendanceBatchDurable([
+      { sessionId: "s1", studentId: "st1", status: "present", note: "", lateAt: null },
+      { sessionId: "s1", studentId: "st2", status: "absent", note: "", lateAt: null },
+    ] as never));
+  });
+  it("setHomeworkGradeForAllDurable rolls back the whole batch when a later command fails", async () => {
+    const { setHomeworkGradeForAllDurable } = await import("../data/repositories/homework");
+    await seed((s) => {
+      s.students.push({ id: "st2", classId: "c1", name: "Bình", parentPhone: "", enrolledAt: "2026-09-01", leftAt: null, status: "active" } as never);
+      s.homeworkSections = [{ id: "h1", sessionId: "s1", kind: "reading", title: "Đọc", description: "" } as never];
+      s.homeworkGrades = [{ sectionId: "h1", studentId: "st1", level: "not_done" } as never];
+    });
+    outbox.persistCommand.mockReset().mockResolvedValueOnce(undefined).mockRejectedValue(fail);
+    await expectRejectedUnchanged(() => setHomeworkGradeForAllDurable("h1", "done" as never));
+  });
+  it("batch durable variants return results when every command persists", async () => {
+    outbox.persistCommand.mockReset().mockResolvedValue(undefined);
+    const { getStore } = await store();
+    const { saveAttendanceBatchDurable } = await import("../data/repositories/attendance");
+    const saved = await saveAttendanceBatchDurable([{ sessionId: "s1", studentId: "st1", status: "present", note: "", lateAt: null }] as never);
+    expect(saved).toHaveLength(1);
+    expect(getStore().attendance).toHaveLength(1);
+  });
   it("sync variants still return without waiting and keep the in-memory change", async () => {
     const { getStore } = await store();
     const { saveScore } = await import("../data/repositories/scores");
