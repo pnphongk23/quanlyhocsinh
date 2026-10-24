@@ -29,10 +29,10 @@ struct ScoreGridTabView: View {
     private var leftCount: Int { students.count - activeCount }
 
     private enum Grid {
-        static let headerHeight: CGFloat = 64
-        static let rowHeight: CGFloat = 52
-        static let nameWidth: CGFloat = 128
-        static let testWidth: CGFloat = 112
+        static let headerHeight: CGFloat = 84
+        static let rowHeight: CGFloat = 60
+        static let nameWidth: CGFloat = 136
+        static let testWidth: CGFloat = 132
     }
 
     var body: some View {
@@ -102,21 +102,21 @@ struct ScoreGridTabView: View {
     }
 
     private func studentCell(_ student: Student) -> some View {
-        HStack(spacing: 0) {
+        let active = student.status == .active
+        return VStack(alignment: .leading, spacing: 0) {
             Text(student.name)
-                .appText(AppTextStyle(size: 15, weight: .medium, lineHeight: 22.5))
+                .appText(AppTextStyle(size: 14, weight: .medium, lineHeight: 20))
                 .foregroundStyle(AppColors.text)
-                .lineLimit(1)
-                .opacity(student.status == .active ? 1 : 0.62)
-            if student.status != .active {
+                .lineLimit(2)
+                .opacity(active ? 1 : 0.62)
+            if !active {
                 Text(String(localized: "feature.scores.a.nghi"))
-                    .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
+                    .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 16))
                     .foregroundStyle(AppColors.muted)
-                    .padding(.leading, 8)
             }
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: Grid.rowHeight)
         .overlay(alignment: .bottom) { AppColors.divider.frame(height: 1) }
     }
@@ -137,10 +137,10 @@ struct ScoreGridTabView: View {
                         String(describing: I4Format.dayMonth(test.date)),
                         String(describing: test.maxScore)
                     ))
-                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                        .appText(AppTextStyle(size: 12, weight: .regular, lineHeight: 18))
                         .foregroundStyle(AppColors.muted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                 }
                 .padding(.horizontal, 6)
                 .frame(maxWidth: .infinity)
