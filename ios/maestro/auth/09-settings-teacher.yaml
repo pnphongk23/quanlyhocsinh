@@ -1,5 +1,5 @@
 # demo: settings-teacher
-# Tài khoản · Cài đặt của giáo viên (ảnh 10 của P2): cùng khung, có nút quay lại của khung giáo viên.
+# Tài khoản · Cài đặt của giáo viên (ảnh 10 của P2): tab gốc của tab bar hệ thống, không có nút quay lại.
 # Chạy: ios/maestro/run.sh ios/maestro/auth/09-settings-teacher.yaml
 appId: vn.quanlylop.app
 name: auth-settings-teacher

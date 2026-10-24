@@ -8,13 +8,8 @@ appId: vn.quanlylop.app
 - assertVisible: "Tên hiển thị"
 - assertVisible: "Đổi mật khẩu"
 - assertVisible: "Đổi vai trò"
-- assertVisible: "Tổng quan"
-- assertVisible: "Điểm danh"
-- assertVisible: "Điểm số"
-- assertVisible: "Nhận xét"
-- assertVisible: "Báo cáo"
-- assertNotVisible:
-    id: guardian.tab.settings
+- assertVisible: "Lớp học của con"
+- assertVisible: "Nhận xét của cô"
 - takeScreenshot: auth-guardian-settings
 - tapOn: "Đăng xuất"
 - assertVisible: "Chưa thể đăng xuất"
