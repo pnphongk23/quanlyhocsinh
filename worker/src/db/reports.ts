@@ -240,8 +240,8 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
       .bind(studentId, workspaceId, report.class_id, fromKey, toKey),
     db
       .prepare(
-        `SELECT count(*) AS count FROM class_sessions s JOIN students st ON st.id=?
-          WHERE s.workspace_id=? AND s.class_id=? AND s.status='held' AND ${SESSION_IN_RANGE}
+          `SELECT count(*) AS count FROM class_sessions s JOIN students st ON st.id=?
+            WHERE s.workspace_id=? AND s.class_id=? AND s.status<>'cancelled' AND ${SESSION_IN_RANGE}
           AND s.date>=st.enrolled_at AND (st.left_at IS NULL OR s.date<=st.left_at)
           AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.workspace_id=s.workspace_id AND a.session_id=s.id AND a.student_id=st.id)`,
       )

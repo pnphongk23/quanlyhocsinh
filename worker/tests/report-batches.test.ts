@@ -303,7 +303,33 @@ describe('report batches by session range', () => {
       expect((await publish()).status).toBe(201);
     });
 
-    it('publishes the whole batch, skipping reports that are already current', async () => {
+    it('requires attendance for planned, non-cancelled sessions in the report range', async () => {
+      const studentId = await insertStudent(f.ws.workspaceId, f.classId, 'Planned session student', null, f.ws.userId);
+      await db.prepare(`UPDATE students SET enrolled_at='2026-10-09' WHERE id=?`).bind(studentId).run();
+      const batch = await create('s4', 's5');
+      const report = batch.body.reports.find((r: any) => r.student_id === studentId);
+      const testId = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-09');
+      const now = new Date().toISOString();
+      await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
+        VALUES(?,?,?,?,8,1,?,?)`).bind(f.ws.workspaceId, f.classId, testId, studentId, now, now).run();
+      await call(`/v1/reports/${report.report_id}`, put({ general_comment: 'Đạt yêu cầu' }), f.ws.token);
+
+      const preview = await call(`/v1/reports/${report.report_id}/preview`, {}, f.ws.token);
+      expect(preview.body).toMatchObject({ ready: false, missing: ['attendance'] });
+      const blocked = await call(`/v1/reports/${report.report_id}/publish`, post({}), f.ws.token);
+      expect(blocked.status).toBe(409);
+      expect(blocked.body.error.details).toMatchObject({ reason: 'report_not_ready', missing: ['attendance'] });
+      const batchPublish = await call(`/v1/report-batches/${batch.body.batch.id}/publish`, post({}), f.ws.token);
+      expect(batchPublish.body.skipped).toContainEqual({ report_id: report.report_id, missing: ['attendance'] });
+      expect(batchPublish.body.published.map((p: any) => p.report_id)).not.toContain(report.report_id);
+
+      await db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
+        VALUES(?,?,?,?,'present','',1,?,?)`).bind(f.ws.workspaceId, f.classId, f.sessions.s5, studentId, now, now).run();
+      expect((await call(`/v1/reports/${report.report_id}/preview`, {}, f.ws.token)).body).toMatchObject({ ready: true, missing: [] });
+      expect((await call(`/v1/reports/${report.report_id}/publish`, post({}), f.ws.token)).status).toBe(201);
+    });
+
+      it('publishes the whole batch, skipping reports that are already current', async () => {
       const batch = (await batchesOf()).find((b) => b.from_session_id === f.sessions.s1 && b.to_session_id === f.sessions.s4);
       const before = (await call(`/v1/report-batches/${batch.id}/reports`, {}, f.ws.token)).body.items;
       const flagged = before.find((r: any) => r.needs_republish === 1);
