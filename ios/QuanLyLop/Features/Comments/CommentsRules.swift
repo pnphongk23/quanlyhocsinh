@@ -57,6 +57,18 @@ enum CommentsRules {
         rows.filter { $0.stars != nil && !$0.isSent }
     }
 
+    enum SendAvailability: Equatable {
+        case ready
+        case nothingToSend
+        case needsNetwork
+    }
+
+    /// Sending is never queued: without a connection the button locks and says why.
+    static func sendAvailability(sendableCount: Int, isOnline: Bool) -> SendAvailability {
+        if !isOnline { return .needsNetwork }
+        return sendableCount > 0 ? .ready : .nothingToSend
+    }
+
     static func badge(_ row: I4TicketRow) -> (label: String, tone: AppPill.Tone) {
         if row.isSent {
             if let time = I4Format.time(row.slip?.sentAt) {

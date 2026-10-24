@@ -90,4 +90,11 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertEqual(Stars.one.template,
                        "Con chỉ đạt 1 sao 🌟. Chưa tập trung, nói chuyện làm việc riêng. Đã ghi chép bài đầy đủ.")
     }
+
+    func testSendAvailabilityLocksOfflineAndNeverQueues() {
+        XCTAssertEqual(CommentsRules.sendAvailability(sendableCount: 3, isOnline: true), .ready)
+        XCTAssertEqual(CommentsRules.sendAvailability(sendableCount: 0, isOnline: true), .nothingToSend)
+        XCTAssertEqual(CommentsRules.sendAvailability(sendableCount: 3, isOnline: false), .needsNetwork)
+        XCTAssertEqual(CommentsRules.sendAvailability(sendableCount: 0, isOnline: false), .needsNetwork)
+    }
 }

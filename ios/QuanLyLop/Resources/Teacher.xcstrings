@@ -1,6 +1,13 @@
 {
   "sourceLanguage" : "vi",
   "strings" : {
+    "comments.send.needs_network" : {
+      "comment" : "Giải thích dưới nút Gửi phiếu cả lớp khi mất mạng; gửi phiếu không xếp hàng.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cần có mạng để gửi phiếu. Phiếu đã soạn vẫn lưu trên máy." } }
+      }
+    },
     "reports.demo.error.long" : {
       "comment" : "Thông điệp lỗi dài chỉ dùng cho màn chụp ảnh Debug của tab Báo cáo.",
       "extractionState" : "manual",

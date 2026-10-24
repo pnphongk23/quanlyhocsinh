@@ -189,15 +189,27 @@ struct SessionCommentsView: View {
     }
 
     /// Gửi phiếu cả lớp luôn ghim đáy màn, không cuộn theo danh sách.
+    private var sendAvailability: CommentsRules.SendAvailability {
+        CommentsRules.sendAvailability(sendableCount: sendableRows.count,
+                                       isOnline: ConnectivityMonitor.shared.isOnline)
+    }
+
     private var footer: some View {
         TeacherPinnedBar {
             if let toast { I4Toast(text: toast) }
+            if sendAvailability == .needsNetwork {
+                Text(String(localized: "comments.send.needs_network", table: "Teacher"))
+                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                    .foregroundStyle(AppColors.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("comments.send.needsNetwork")
+            }
             AppButton(
                 title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),
                 systemImage: "paperplane",
                 size: .large
             ) { showingSend = true }
-                .disabled(sendableRows.isEmpty)
+                .disabled(sendAvailability != .ready)
         }
     }
 
@@ -272,6 +284,11 @@ struct SessionCommentsView: View {
     }
 
     private func send() async throws {
+        guard sendAvailability == .ready else {
+            let message = String(localized: "comments.send.needs_network", table: "Teacher")
+            sendError = message
+            throw I4SaveFailure(message: message)
+        }
         let ids = sendableRows.map(\.student.id)
         let outcome = await data.sendSlips(sessionID: sessionID, studentIDs: ids)
         switch outcome {
