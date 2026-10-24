@@ -230,21 +230,44 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
 function publishRejected(rows: OutboxRow[]): void {
   setRejectedCommands(rows.filter((x) => x.status === "rejected").map((x) => ({ id: x.id, type: x.type, error: x.error ?? "rejected" })));
 }
-/** Đưa lại các lệnh bị từ chối vào hàng đợi và đẩy ngay; còn bị từ chối thì trạng thái lỗi quay lại kèm mã mới. */
-export async function retryRejectedCommands(): Promise<void> {
-  const identity = identityKey();
-  await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected").modify({ status: "pending", error: undefined });
-  setRejectedCommands([]); setSaveStatus("local");
+/** Lệnh ghi một ô (điểm, điểm danh, phiếu, chấm BTVN): có thể bỏ vì ô đó lấy lại được từ máy chủ. */
+const cellEntity: Record<string, EntityName> = { "score.set": "score", "attendance.set": "attendance", "slip.set": "slip", "homework.grade.set": "homework_grade" };
+export const canDiscardRejected = (type: string): boolean => type in cellEntity;
+/** Đưa lại các lệnh bị từ chối (theo id) vào hàng đợi và đẩy ngay; còn bị từ chối thì mã lỗi mới hiện lại. */
+export async function retryRejectedCommands(ids: string[]): Promise<void> {
+  const identity = identityKey(), wanted = new Set(ids);
+  await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).modify({ status: "pending", error: undefined });
+  publishRejected(await db.outbox.where("identity").equals(identity).toArray());
+  setSaveStatus("local");
   await syncNow();
 }
-/** Bỏ các lệnh bị từ chối và tải lại bản của máy chủ để ô điểm quay về giá trị đã lưu. */
-export async function discardRejectedCommands(): Promise<void> {
-  const identity = identityKey();
-  await db.transaction("rw", [db.outbox, db.meta], async () => {
-    await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected").delete();
-    await db.meta.delete(identity);
+/** Bỏ các lệnh ghi ô bị từ chối (theo id) rồi lấy lại giá trị hiện tại của từng ô từ máy chủ, không động tới lệnh khác. */
+export async function discardRejectedCommands(ids: string[]): Promise<void> {
+  const cache = getCacheIdentity(); if (!cache) return;
+  const identity = identityKey(), wanted = new Set(ids);
+  const rows = (await db.outbox.where("identity").equals(identity).toArray()).filter((row) => row.status === "rejected" && wanted.has(row.id) && canDiscardRejected(row.type));
+  if (!rows.length) return;
+  const restore = new Map<EntityName, Set<string>>();
+  for (const row of rows) {
+    const entity = cellEntity[row.type];
+    const superseded = (await db.outbox.where("identity").equals(identity).toArray()).some((other) => other.cell_key && other.cell_key === row.cell_key && other.status !== "rejected");
+    if (superseded) continue;
+    const key = `${identity}|${entity}|${keyParts(entity, row.payload as unknown as Record<string, unknown>).join("|")}`;
+    restore.set(entity, (restore.get(entity) ?? new Set()).add(key));
+  }
+  // Lấy bản máy chủ trước khi xoá lệnh: lỗi mạng thì giữ nguyên, người dùng thử lại được.
+  const fresh = new Map<string, ReturnType<typeof stored>>();
+  for (const entity of restore.keys()) await fetchEntity(identity, cache.membershipId, entity, () => false, async (page) => { for (const item of page) fresh.set(item.key, item); });
+  await db.transaction("rw", [db.outbox, ...[...restore.keys()].map((entity) => tableFor(entity))], async () => {
+    await db.outbox.bulkDelete(rows.map((row) => row.id));
+    for (const [entity, keys] of restore) for (const key of keys) {
+      const item = fresh.get(key);
+      if (item) await tableFor(entity).put(item as any); else await tableFor(entity).delete(key);
+    }
   });
-  setRejectedCommands([]); setSaveStatus("synced");
+  await hydrateStore();
+  publishRejected(await db.outbox.where("identity").equals(identity).toArray());
+  setSaveStatus((await db.outbox.where("identity").equals(identity).count()) ? "local" : "synced");
   await syncNow();
 }
 async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {

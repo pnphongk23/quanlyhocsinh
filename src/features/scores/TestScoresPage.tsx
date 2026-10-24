@@ -14,9 +14,8 @@ import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import { useSaveAction, type SaveAction } from "../../shared/hooks/useSaveAction";
 import { useSavedPeek, useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import { useAccess } from "../../data/repositories/access";
-import { useRejectedCommands, useSaveStatus } from "../../shared/SaveStatus";
-import { rejectionMessage } from "../../data/rejectionMessages";
-import { discardRejectedCommands, retryRejectedCommands } from "../../data/sync";
+import { useSaveStatus } from "../../shared/SaveStatus";
+import { syncNow } from "../../data/sync";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { formatDayMonthLong } from "../../shared/format";
 import type { SaveState, Test } from "../../data/types";
@@ -73,7 +72,6 @@ export default function TestScoresPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [leaveAfterDelete, setLeaveAfterDelete] = useState(false);
   const listPath = `/lop/${classId}/bai-kiem-tra`;
@@ -372,7 +370,6 @@ export default function TestScoresPage() {
               error={error}
               invalidCount={invalidCount}
               action={action}
-              onDiscard={() => setConfirmDiscard(true)}
             />
           </div>
         ) : (
@@ -382,7 +379,6 @@ export default function TestScoresPage() {
               error={error}
               invalidCount={invalidCount}
               action={action}
-              onDiscard={() => setConfirmDiscard(true)}
             />
           </ActionFooter>
         ))}
@@ -405,27 +401,6 @@ export default function TestScoresPage() {
       {editing && (
         <EditTestModal test={test} onClose={() => setEditing(false)} />
       )}
-      <ConfirmDialog
-        open={confirmDiscard}
-        title="Bỏ thay đổi bị lỗi?"
-        message="Điểm chưa lưu được lên máy chủ sẽ bị bỏ, ô điểm quay về giá trị đã lưu trên máy chủ."
-        actions={[
-          {
-            label: "Bỏ thay đổi",
-            variant: "danger",
-            onClick: () => {
-              setConfirmDiscard(false);
-              void discardRejectedCommands();
-            },
-          },
-          {
-            label: "Giữ lại",
-            variant: "neutral",
-            onClick: () => setConfirmDiscard(false),
-          },
-        ]}
-        onDismiss={() => setConfirmDiscard(false)}
-      />
       <ConfirmDialog
         open={confirmDelete}
         title={hasScores ? "Lưu trữ bài kiểm tra?" : "Xoá bài kiểm tra?"}
@@ -567,54 +542,27 @@ function SaveBarContent({
   error,
   invalidCount,
   action,
-  onDiscard,
 }: {
   status: SaveState;
   error: string;
   invalidCount: number;
   action: SaveAction;
-  onDiscard: () => void;
 }) {
   const { canSave } = action;
-  const rejected = useRejectedCommands();
-  const [retrying, setRetrying] = useState(false);
-  // Còn nội dung chưa lưu thì "Thử lại" lưu lại nó; không thì đẩy lại các lệnh máy chủ đã từ chối.
-  const retryRejected = !action.dirty && rejected.length > 0;
+  // Còn nội dung chưa lưu thì "Thử lại" lưu lại nó; không thì đẩy lại hàng đợi để luôn có phản hồi.
   const onSave = () => void action.submit();
-  const onRetry = async () => {
-    if (!retryRejected) return onSave();
-    setRetrying(true);
-    try {
-      await retryRejectedCommands();
-    } finally {
-      setRetrying(false);
-    }
-  };
-  const rejectedText = rejected.length
-    ? rejectionMessage(rejected[0].error) +
-      (rejected.length > 1 ? ` (còn ${rejected.length - 1} thay đổi lỗi khác)` : "")
-    : "";
+  const onRetry = () => (action.dirty ? onSave() : void syncNow());
   return (
     <>
       {status === "error" && (
         <div className={s.errorBanner} role="alert">
           <AlertTriangleIcon size={18} />
           <span className={s.errorBannerText}>
-            {error || rejectedText || "Lỗi lưu, vui lòng thử lại"}
+            {error || "Lỗi lưu, vui lòng thử lại"}
           </span>
-          <button
-            type="button"
-            className={s.retryButton}
-            disabled={retrying}
-            onClick={() => void onRetry()}
-          >
-            {retrying ? "Đang thử lại" : "Thử lại"}
+          <button type="button" className={s.retryButton} onClick={onRetry}>
+            Thử lại
           </button>
-          {retryRejected && (
-            <button type="button" className={s.retryButton} onClick={onDiscard}>
-              Bỏ thay đổi
-            </button>
-          )}
         </div>
       )}
       {invalidCount > 0 ? (

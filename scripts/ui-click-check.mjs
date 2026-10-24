@@ -80,6 +80,22 @@ async function topAtCenter(locator) {
     }
     el.scrollIntoView({ block: "center", inline: "nearest" });
   });
+  // Sheet/dialog trượt vào: chờ vị trí đứng yên (3 khung hình liền) rồi mới đo.
+  await locator.evaluate((el) => new Promise((resolve) => {
+    let last = "";
+    let still = 0;
+    const deadline = performance.now() + 3000;
+    const tick = () => {
+      const r = el.getBoundingClientRect();
+      const now = [r.x, r.y, r.width, r.height].map((n) => n.toFixed(1)).join(",");
+      still = now === last ? still + 1 : 0;
+      last = now;
+      if (still >= 3 || performance.now() > deadline) resolve(undefined);
+      else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }));
+  await locator.evaluate((el) => el.scrollIntoView({ block: "center", inline: "nearest" }));
   const box = await locator.boundingBox();
   if (!box) throw new Error("target has no bounding box");
   const pt = { x: box.x + box.width / 2, y: box.y + box.height / 2 };

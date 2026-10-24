@@ -5,6 +5,7 @@ import { setCurrentClass } from "../../data/repositories/classes";
 import { useStore } from "../../data/store";
 import { useDismiss } from "../../shared/hooks/useDismiss";
 import SaveStatus from "../../shared/SaveStatus";
+import { RejectedBanner } from "../../shared/SaveStatus/RejectedBanner";
 import { Icon } from "../../shared/ui";
 import { PageTransition } from "../../shared/motion";
 import styles from "../../app/shell.module.css";
@@ -152,6 +153,7 @@ export function Component() {
         <SaveStatus className={styles.staffDesktopSaveStatus} />
       </aside>
         <main id="staff-content" className={styles.staffContent}>
+          <RejectedBanner />
           <PageTransition detail={isDetailPath(pathname)} />
       </main>
       <nav className={styles.staffTabbar} aria-label="Điều hướng chính">

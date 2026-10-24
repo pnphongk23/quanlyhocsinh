@@ -66,7 +66,7 @@ describe("rejected commands", () => {
     await d.syncNow();
     expect(status.getRejectedCommands()).toHaveLength(1);
     server.hooks.rejectCommand = null;
-    await d.retryRejectedCommands();
+    await d.retryRejectedCommands(status.getRejectedCommands().map((r: any) => r.id));
     expect(serverScore("new")).toMatchObject({ value: 7 });
     expect(status.getRejectedCommands()).toHaveLength(0);
     expect(status.getSaveStatus()).toBe("synced");
@@ -77,11 +77,25 @@ describe("rejected commands", () => {
     server.hooks.rejectCommand = () => "score_above_max";
     await scores.saveScoreDurable({ testId: "t1", studentId: "new", value: 7 });
     await d.syncNow();
-    await d.discardRejectedCommands();
+    await d.discardRejectedCommands(status.getRejectedCommands().map((r: any) => r.id));
     expect(await d.db.outbox.count()).toBe(0);
     expect(status.getRejectedCommands()).toHaveLength(0);
     expect(status.getSaveStatus()).toBe("synced");
     expect(d.getStore().scores.find((s: any) => s.studentId === "new")).toBeUndefined();
+  });
+
+  it("discard touches only the given commands and leaves other rejected ones", async () => {
+    const { d, scores, status } = await boot();
+    server.hooks.rejectCommand = () => "invalid_score";
+    await scores.saveScoreDurable({ testId: "t1", studentId: "new", value: 7 });
+    await scores.saveScoreDurable({ testId: "t1", studentId: "old", value: 9 });
+    await d.syncNow();
+    const rows = status.getRejectedCommands();
+    expect(rows).toHaveLength(2);
+    await d.discardRejectedCommands([rows[0].id]);
+    expect(status.getRejectedCommands().map((r: any) => r.id)).toEqual([rows[1].id]);
+    expect(await d.db.outbox.count()).toBe(1);
+    expect(status.getSaveStatus()).toBe("error");
   });
 
   it("a new write to the same cell replaces the rejected one", async () => {

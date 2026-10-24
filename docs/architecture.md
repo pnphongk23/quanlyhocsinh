@@ -97,7 +97,7 @@ Quy ước:
 - **Lưu trên máy** (theo tài khoản): lớp, học sinh, buổi sắp tới và vài tháng gần nhất, bài kiểm tra, điểm danh, điểm, nhận xét nháp, BTVN và kết quả chấm. Phụ huynh có bản cache chỉ đọc kèm thời gian cập nhật.
 - **Ghi:** thay đổi và dòng hàng đợi cùng một transaction IndexedDB. Trạng thái nội bộ (chưa lưu, đã lưu trên máy, đã đồng bộ, lỗi) vẫn theo dõi nhưng giao diện chỉ hiện lỗi (đã chốt 2026-10-18).
 - **Lệnh trong hàng đợi:** UUID, khoá bản ghi, `base_version`, nội dung. Gửi tuần tự, retry có backoff. Máy chủ kiểm quyền, bỏ qua UUID trùng (bảng các lệnh đã áp dụng), cập nhật và ghi lịch sử trong cùng một `batch` D1. Chỉ xoá lệnh khi máy chủ xác nhận.
-- **Lệnh bị từ chối:** nằm lại trong hàng đợi, không chặn lệnh khác. Màn nhập điểm hiện lý do cụ thể (theo mã máy chủ) với "Thử lại" (đẩy lại lệnh) và "Bỏ thay đổi" (có xác nhận, tải lại bản máy chủ). Ghi mới vào cùng ô thay thế lệnh đã bị từ chối.
+- **Lệnh bị từ chối:** nằm lại trong hàng đợi, không chặn lệnh khác. `RejectedBanner` (gắn một lần trong `StaffShell`, dùng chung cho điểm, điểm danh, nhận xét, BTVN) hiện lý do cụ thể (theo mã máy chủ) với "Thử lại" (đẩy lại đúng các lệnh đó) và "Bỏ thay đổi" (có xác nhận, chỉ các lệnh đó, tải lại bản máy chủ của ô; chỉ với lệnh ghi một ô). Ghi mới vào cùng ô thay thế lệnh đã bị từ chối.
 - **Khi nào đồng bộ:** lúc mở app, khi có mạng trở lại, khi app lấy lại focus, định kỳ lúc đang mở. iOS không đồng bộ được khi app đã đóng.
 - **Xung đột:** hai thiết bị sửa cùng một ô điểm danh hoặc điểm. Thiết bị tới trước lên phiên bản mới. Thiết bị tới sau nhận xung đột, hai giá trị đều được giữ, giáo viên chọn. Không ghi đè theo giờ của thiết bị.
 - **Offline được:** điểm danh, nhập điểm, tạo bài kiểm tra, soạn nhận xét, giao và chấm BTVN.
