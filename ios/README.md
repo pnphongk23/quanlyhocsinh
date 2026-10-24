@@ -81,7 +81,7 @@ ios/
     Features/            Auth, Classes, Attendance, Scores, Homework, Comments, Reports, Guardian (trống)
     Resources/           Info.plist, QuanLyLop.entitlements, Assets.xcassets, Localizable.xcstrings, InfoPlist.xcstrings
   QuanLyLopTests/        test Core, đồng bộ, mạng, design system (XCTest)
-  docs/                  core-api.md, report-i1.md, storage-proposal.md, screens/ (ảnh đối chiếu prototype)
+  docs/                  ui-verification-gate.md (cổng kiểm UI mobile), core-api.md, report-i1.md, storage-proposal.md, screens/ (ảnh đối chiếu prototype)
 ```
 
 Localization: `developmentRegion` là `vi`; mọi chuỗi trong app đi qua `Localizable.xcstrings`,
