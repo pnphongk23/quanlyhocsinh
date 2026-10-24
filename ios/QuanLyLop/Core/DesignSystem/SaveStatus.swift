@@ -3,7 +3,8 @@ import SwiftUI
 
 /// What the save line of a screen says (rules.md mục 6, "Chờ đồng bộ").
 enum SaveStatusKind: Equatable, Sendable {
-    /// "Đã lưu trên máy": written locally and (nearly) nothing left to push.
+    /// Written locally and (nearly) nothing left to push: nothing is drawn. The temporary "Đã lưu"
+    /// belongs to `AppSaveButton`.
     case savedLocal
     /// Pill "Chờ đồng bộ": the push queue has been non-empty for more than `AppDuration.pendingAfter`.
     case pending
@@ -85,16 +86,20 @@ final class AppSaveStatusSource {
     }
 }
 
-/// One line for the save state of a screen; nothing else should draw these texts.
+/// One line for the save state of a screen; nothing else should draw these texts. `.savedLocal`
+/// draws nothing: spec mục 5.3 shows only pending, offline and error.
 struct AppSaveStatus: View {
     let kind: SaveStatusKind
 
     var body: some View {
+        if kind != .savedLocal { line }
+    }
+
+    private var line: some View {
         Group {
             switch kind {
             case .savedLocal:
-                label(String(localized: "ds.status.local", table: "DesignSystem"), systemImage: "checkmark",
-                      color: AppColors.muted)
+                EmptyView()
             case .pending:
                 AppPill(title: String(localized: "ds.status.pending", table: "DesignSystem"), tone: .warning)
             case .offline:

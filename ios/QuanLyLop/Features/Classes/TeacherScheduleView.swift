@@ -122,20 +122,26 @@ struct TeacherScheduleView: View {
 
     // MARK: Ngày
 
-    @ViewBuilder private var dayView: some View {
-        dayBar
-        if dateEntries.isEmpty {
-            dayEmpty
-        } else {
-            cardList(dateEntries) { entry in entry.session.startTime }
-        }
-        if !missedEntries.isEmpty {
-            TeacherGroupLabel(text: String(localized: "feature.classes.chua.iem.danh"))
-            cardList(missedEntries) { entry in TeacherFormat.dayMonth(entry.session.date) }
-        }
-        if !upcomingEntries.isEmpty {
-            TeacherGroupLabel(text: String(localized: "feature.classes.sap.toi"))
-            cardList(upcomingEntries) { entry in TeacherFormat.weekdayName(entry.session.date) }
+    private var dayView: some View {
+        VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
+            VStack(spacing: TeacherMetrics.contentGap) {
+                dayBar
+                if dateEntries.isEmpty {
+                    dayEmpty
+                } else {
+                    cardList(dateEntries) { entry in entry.session.startTime }
+                }
+            }
+            if !missedEntries.isEmpty {
+                AppSection(title: String(localized: "feature.classes.chua.iem.danh")) {
+                    cardList(missedEntries) { entry in TeacherFormat.dayMonth(entry.session.date) }
+                }
+            }
+            if !upcomingEntries.isEmpty {
+                AppSection(title: String(localized: "feature.classes.sap.toi")) {
+                    cardList(upcomingEntries) { entry in TeacherFormat.weekdayName(entry.session.date) }
+                }
+            }
         }
     }
 
@@ -186,13 +192,16 @@ struct TeacherScheduleView: View {
 
     // MARK: Tháng
 
-    @ViewBuilder private var monthView: some View {
-        monthCard
-        TeacherGroupLabel(text: TeacherFormat.weekdayDate(selectedDate))
-        if dateEntries.isEmpty {
-            dayEmpty
-        } else {
-            cardList(dateEntries) { entry in entry.session.startTime }
+    private var monthView: some View {
+        VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
+            monthCard
+            AppSection(title: TeacherFormat.weekdayDate(selectedDate)) {
+                if dateEntries.isEmpty {
+                    dayEmpty
+                } else {
+                    cardList(dateEntries) { entry in entry.session.startTime }
+                }
+            }
         }
     }
 
@@ -286,7 +295,7 @@ struct TeacherScheduleView: View {
     // MARK: Thẻ buổi học
 
     private func cardList(_ items: [Entry], lead: @escaping (Entry) -> String) -> some View {
-        VStack(spacing: TeacherMetrics.contentGap) {
+        VStack(spacing: TeacherMetrics.listGap) {
             ForEach(items) { entry in card(entry, lead: lead(entry)) }
         }
     }

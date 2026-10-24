@@ -362,7 +362,7 @@ struct AuthChangePasswordView: View {
                                                      confirmation: confirmation)
                   }
             }
-            .padding(.top, isPushed ? TeacherMetrics.listGap : TeacherMetrics.sectionGap)
+            .padding(.top, isPushed ? TeacherMetrics.listGap : AppMetrics.sectionGap)
         }
         .modifier(PushedTitle(isPushed: isPushed))
         .onChange(of: saveController.phase) { _, phase in

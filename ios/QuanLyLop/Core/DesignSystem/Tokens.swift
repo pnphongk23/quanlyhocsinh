@@ -73,6 +73,10 @@ enum AppMetrics {
     static let hairline: CGFloat = 1
     /// Small chevron inside a menu-style status pill.
     static let pillChevronSize: CGFloat = 10
+    /// `--section-gap`: between two sections of one screen; clearly larger than the gap between cards.
+    static let sectionGap: CGFloat = 24
+    /// Section header → first card of that section.
+    static let sectionHeaderGap: CGFloat = 12
 }
 
 /// The prototype ships one variable font (`Plus Jakarta Sans`); weights are `wght` axis values.
@@ -138,6 +142,8 @@ enum AppText {
     static let titleCompact = AppTextStyle(size: 22, weight: .bold, lineHeight: 25.3, tracking: -0.22)
     /// `h2`: 18px / 700 (dialog headers and card headings).
     static let heading = AppTextStyle(size: 18, weight: .bold, lineHeight: 27)
+    /// Section header of every screen: 20px / 700, above the 18px card headings.
+    static let sectionHeader = AppTextStyle(size: 20, weight: .bold, lineHeight: 26, tracking: -0.2)
     /// `h3`: 16px / 700.
     static let subheading = AppTextStyle(size: 16, weight: .bold, lineHeight: 24)
     /// `.pageTitle .eyebrow` and `.field > label` (14 / 600).

@@ -25,18 +25,6 @@
         }
       }
     },
-    "ds.status.local": {
-      "comment": "SaveStatus: dữ liệu đã ghi trên máy.",
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đã lưu trên máy"
-          }
-        }
-      }
-    },
     "ds.preview.empty.students.title": {
       "comment": "DesignSystem gallery: empty state title for a class without students.",
       "extractionState": "manual",

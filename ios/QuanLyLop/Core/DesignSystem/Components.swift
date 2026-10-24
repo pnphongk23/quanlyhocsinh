@@ -194,6 +194,35 @@ struct AppListRow<Content: View>: View {
     }
 }
 
+// MARK: - Section (one header style and one spacing for every section of every screen)
+
+/// The only section header: `AppText.sectionHeader`, text colour, aligned with the cards.
+struct AppSectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .appText(AppText.sectionHeader)
+            .foregroundStyle(AppColors.text)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// Header + content. Stack sections with `spacing: AppMetrics.sectionGap`; the header sits
+/// `AppMetrics.sectionHeaderGap` above its content.
+struct AppSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppMetrics.sectionHeaderGap) {
+            AppSectionHeader(title: title)
+            content
+        }
+    }
+}
+
 // MARK: - Chip and Pill (`.chip` statistics, `.pill` statuses)
 
 /// `.chip`: inline-block, `8px 10px`, 10 radius, `--color-bg`, 14px.

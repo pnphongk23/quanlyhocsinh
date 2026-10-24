@@ -125,7 +125,6 @@ struct DesignSystemStatesGallery: View {
             AppEmptyState(title: String(localized: "ds.preview.empty.results.title", table: "DesignSystem"), mascot: .main, size: .compact)
             AppSaveButton(title: "Lưu", controller: controller) {}
             VStack(alignment: .leading, spacing: 8) {
-                AppSaveStatus(kind: .savedLocal)
                 AppSaveStatus(kind: .pending)
                 AppSaveStatus(kind: .offline)
                 AppSaveStatus(kind: .error)

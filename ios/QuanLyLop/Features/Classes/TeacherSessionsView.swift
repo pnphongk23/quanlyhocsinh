@@ -20,7 +20,7 @@ struct TeacherSessionsView: View {
 
     var body: some View {
         TeacherScroll {
-            VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
+            VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
                 if let error { TeacherErrorBanner(message: error) }
                 if !data.canReadAttendance {
                     AppEmptyState(title: String(localized: "feature.classes.ban.khong.co.quyen.xem.buoi.hoc"))
@@ -50,15 +50,15 @@ struct TeacherSessionsView: View {
         .sheet(isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } })) {
             TeacherExtraSessionSheet(classID: classID, data: data, session: editing)
         }
-        .teacherConfirmDialog(
+        .confirmationDialog(
+            String.localizedStringWithFormat(String(localized: "feature.classes.huy.buoi.hoc.a26a4ee4"), String(describing: (cancelling.map { TeacherFormat.dayMonth($0.date) } ?? ""))),
             isPresented: Binding(get: { cancelling != nil }, set: { if !$0 { cancelling = nil } }),
-            title: String.localizedStringWithFormat(String(localized: "feature.classes.huy.buoi.hoc.a26a4ee4"), String(describing: (cancelling.map { TeacherFormat.dayMonth($0.date) } ?? ""))),
-            message: String(localized: "feature.classes.buoi.hoc.se.uoc.anh.dau.la.a.huy.ban.co.the.khoi"),
-            actions: [
-                TeacherDialogAction(label: String(localized: "feature.classes.huy.buoi.hoc"), variant: .danger) { cancel() },
-                TeacherDialogAction(label: String(localized: "feature.classes.giu.buoi.hoc"), variant: .neutral) { cancelling = nil },
-            ],
-            dismiss: { cancelling = nil })
+            titleVisibility: .visible) {
+            Button(String(localized: "feature.classes.huy.buoi.hoc"), role: .destructive) { cancel() }
+            Button(String(localized: "feature.classes.giu.buoi.hoc"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "feature.classes.buoi.hoc.se.uoc.anh.dau.la.a.huy.ban.co.the.khoi"))
+        }
     }
 
     @ViewBuilder private var sections: some View {
@@ -68,8 +68,7 @@ struct TeacherSessionsView: View {
     }
 
     private func currentSection(_ session: ClassSession) -> some View {
-        VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-            TeacherGroupLabel(text: String(localized: "feature.classes.buoi.hien.tai"))
+        AppSection(title: String(localized: "feature.classes.buoi.hien.tai")) {
             currentCard(session)
         }
     }
@@ -118,10 +117,16 @@ struct TeacherSessionsView: View {
     }
 
     private var upcomingSection: some View {
+        AppSection(title: String(localized: "feature.classes.sap.toi")) {
+            upcomingCard
+        }
+    }
+
+    private var upcomingCard: some View {
         VStack(spacing: 0) {
             Button { upcomingOpen.toggle() } label: {
                 HStack(spacing: 12) {
-                    Text(String.localizedStringWithFormat(String(localized: "feature.classes.sap.toi.buoi"), String(describing: (groups.upcoming.count))))
+                    Text(String.localizedStringWithFormat(String(localized: "sessions.upcoming.count", table: "Teacher"), String(describing: (groups.upcoming.count))))
                         .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22))
                         .foregroundStyle(AppColors.text)
                     Spacer(minLength: 0)
@@ -149,8 +154,7 @@ struct TeacherSessionsView: View {
     }
 
     private var pastSection: some View {
-        VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-            TeacherGroupLabel(text: String(localized: "feature.classes.cac.buoi.a.qua"))
+        AppSection(title: String(localized: "feature.classes.cac.buoi.a.qua")) {
               if groups.past.isEmpty {
                   AppEmptyState(title: String(localized: "feature.classes.chua.co.buoi.hoc.nao.a.qua"), size: .compact)
             } else {

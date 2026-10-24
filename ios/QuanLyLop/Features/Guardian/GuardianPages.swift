@@ -91,14 +91,12 @@ struct GuardianSessionListPage: View {
             AppEmptyState(title: String(localized: "feature.guardian.chua.co.buoi.hoc.nao.trong.thang.nay"),
                           size: .compact)
         } else {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
                 ForEach(rowsByMonth, id: \.month) { group in
-                    Text(GuardianFormat.monthLabel(group.month))
-                        .appDynamicText(AppText.label)
-                        .foregroundStyle(AppColors.muted)
-                        .padding(.top, 4)
-                    VStack(spacing: 8) {
-                        ForEach(group.rows) { row in sessionRow(row) }
+                    AppSection(title: GuardianFormat.monthLabel(group.month)) {
+                        VStack(spacing: 8) {
+                            ForEach(group.rows) { row in sessionRow(row) }
+                        }
                     }
                 }
             }
