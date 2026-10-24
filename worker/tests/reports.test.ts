@@ -88,20 +88,25 @@ describe("reports routes and publication snapshots", () => {
         other.roles.teacher!,
         [otherClass],
       );
+    const firstSession = await insertSession(ws.workspaceId, classId, "2026-10-20", ws.userId, "held"),
+      lastSession = await insertSession(ws.workspaceId, classId, "2026-10-22", ws.userId, "held");
+    const batch = await call(
+      `/v1/classes/${classId}/report-batches`,
+      post({ from_session_id: firstSession, to_session_id: lastSession }),
+      ws.token,
+    );
+    expect(batch.status).toBe(201);
+    const reportId = batch.body.reports[0].report_id;
     expect(
       (
         await call(
-          `/v1/students/${studentId}/reports/2026-10`,
+          `/v1/reports/${reportId}`,
           put({ general_comment: "Fake report note" }),
           ws.token,
         )
       ).status,
     ).toBe(200);
-    const published = await call(
-      `/v1/students/${studentId}/reports/2026-10/publish`,
-      post({}),
-      ws.token,
-    );
+    const published = await call(`/v1/reports/${reportId}/publish`, post({}), ws.token);
     expect(published.status).toBe(201);
     const teacherOtherUser = await insertUser(fakePhone()),
       teacherOtherMembership = await insertMembership(
@@ -282,7 +287,7 @@ describe("reports routes and publication snapshots", () => {
       expect(
         (
           await call(
-            `/v1/students/${f.studentId}/reports/2026-10`,
+            `/v1/reports/${f.reportId}`,
             put({ general_comment: "Updated fake" }),
             token,
           )
@@ -292,7 +297,7 @@ describe("reports routes and publication snapshots", () => {
       expect(
         (
           await call(
-            `/v1/students/${f.studentId}/reports/2026-10`,
+            `/v1/reports/${f.reportId}`,
             put({ general_comment: "Denied fake" }),
             token,
           )
@@ -301,7 +306,7 @@ describe("reports routes and publication snapshots", () => {
     expect(
       (
         await call(
-          `/v1/students/${f.studentId}/reports/2026-10`,
+          `/v1/reports/${f.reportId}`,
           put({ general_comment: "Denied fake" }),
         )
       ).status,
@@ -309,7 +314,7 @@ describe("reports routes and publication snapshots", () => {
     expect(
       (
         await call(
-          `/v1/students/${f.studentId}/reports/2026-10/publish`,
+          `/v1/reports/${f.reportId}/publish`,
           post({}),
           f.teacher,
         )
@@ -318,7 +323,7 @@ describe("reports routes and publication snapshots", () => {
     expect(
       (
         await call(
-          `/v1/students/${f.studentId}/reports/2026-10/publish`,
+          `/v1/reports/${f.reportId}/publish`,
           post({}),
           f.assistant,
         )
@@ -327,7 +332,7 @@ describe("reports routes and publication snapshots", () => {
     expect(
       (
         await call(
-          `/v1/students/${f.studentId}/reports/2026-10/publish`,
+          `/v1/reports/${f.reportId}/publish`,
           post({}),
           f.guardian,
         )
@@ -336,7 +341,7 @@ describe("reports routes and publication snapshots", () => {
     expect(
       (
         await call(
-          `/v1/students/${f.studentId}/reports/2026-10/publish`,
+          `/v1/reports/${f.reportId}/publish`,
           post({}),
         )
       ).status,
@@ -344,7 +349,7 @@ describe("reports routes and publication snapshots", () => {
     expect(
       (
         await call(
-          `/v1/students/${f.studentId}/reports/2026-10/publish`,
+          `/v1/reports/${f.reportId}/publish`,
           post({}),
           f.wrongGuardian,
         )
@@ -353,7 +358,7 @@ describe("reports routes and publication snapshots", () => {
     expect(
       (
         await call(
-          `/v1/students/${f.studentId}/reports/2026-10/publish`,
+          `/v1/reports/${f.reportId}/publish`,
           post({}),
           f.teacherOther,
         )
@@ -362,7 +367,7 @@ describe("reports routes and publication snapshots", () => {
     expect(
       (
         await call(
-          `/v1/students/${f.studentId}/reports/2026-10/publish`,
+          `/v1/reports/${f.reportId}/publish`,
           post({}),
           f.otherWorkspace,
         )
@@ -371,7 +376,7 @@ describe("reports routes and publication snapshots", () => {
     expect(
       (
         await call(
-          `/v1/students/${f.studentId}/reports/2026-10`,
+          `/v1/reports/${f.reportId}`,
           put({ general_comment: "Outside" }),
           f.otherWorkspace,
         )
@@ -379,17 +384,20 @@ describe("reports routes and publication snapshots", () => {
     ).toBe(404);
   });
   it("saves drafts, publishes snapshots and reads them without PDF metadata", async () => {
-    const month = "2026-09";
+    const from = await insertSession(f.workspaceId, f.classId, "2026-10-24", f.userId, "held"),
+      to = await insertSession(f.workspaceId, f.classId, "2026-10-25", f.userId, "held");
+    const batch = await call(
+      `/v1/classes/${f.classId}/report-batches`,
+      post({ from_session_id: from, to_session_id: to }),
+      f.token,
+    );
+    const reportId = batch.body.reports[0].report_id;
     expect((await call(
-      `/v1/students/${f.studentId}/reports/${month}`,
+      `/v1/reports/${reportId}`,
       put({ general_comment: "Snapshot fake" }),
       f.token,
     )).status).toBe(200);
-    const response = await call(
-      `/v1/students/${f.studentId}/reports/${month}/publish`,
-      post({}),
-      f.token,
-    );
+    const response = await call(`/v1/reports/${reportId}/publish`, post({}), f.token);
     expect(response.status).toBe(201);
     const snapshot = await call(
       `/v1/reports/${response.body.report_id}/publications/1`,
@@ -428,6 +436,7 @@ describe("reports routes and publication snapshots", () => {
       base_version: 0,
       created_at: new Date().toISOString(),
     });
+    const sessionIds: string[] = [];
     for (const [index, level] of grades.entries()) {
       const sessionId = await insertSession(
         f.workspaceId,
@@ -436,6 +445,7 @@ describe("reports routes and publication snapshots", () => {
         f.userId,
         "held",
       );
+      sessionIds.push(sessionId);
       const sectionId = crypto.randomUUID();
       const kind = index === grades.length - 1 ? "reading" : "vocabulary";
       commands.push(
@@ -481,11 +491,16 @@ describe("reports routes and publication snapshots", () => {
       );
     }
 
-    const published = await call(
-      `/v1/students/${f.studentId}/reports/2026-10/publish`,
-      post({}),
+    const batch = await call(
+      `/v1/classes/${f.classId}/report-batches`,
+      post({ from_session_id: sessionIds[0], to_session_id: sessionIds.at(-1) }),
       f.token,
     );
+    expect(batch.status).toBe(201);
+    const rangeReportId = batch.body.reports[0].report_id;
+    const rangePreview = await call(`/v1/reports/${rangeReportId}/preview`, {}, f.token);
+    expect(rangePreview.body.homework).toEqual(expectedHomework);
+    const published = await call(`/v1/reports/${rangeReportId}/publish`, post({}), f.token);
     expect(published.body.snapshot.homework).toEqual(expectedHomework);
     for (const item of published.body.snapshot.homework) {
       expect(Object.keys(item).sort()).toEqual(

@@ -61,15 +61,24 @@ async function insertReport(
   month = '2026-10',
 ): Promise<string> {
   const id = crypto.randomUUID();
+  const batchId = crypto.randomUUID();
   const now = nowIso();
   await db
     .prepare(
-      `INSERT INTO reports
-        (id, workspace_id, class_id, student_id, month, status, general_comment,
-         needs_republish, publication_count, published_at, version, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'published', '', 0, 1, ?, 1, ?, ?)`,
+      `INSERT INTO report_batches
+        (id, workspace_id, class_id, from_key, to_key, created_by, created_at)
+       VALUES (?, ?, ?, ?, ?, (SELECT created_by FROM classes WHERE id = ?), ?)`,
     )
-    .bind(id, workspaceId, classId, studentId, month, now, now, now)
+    .bind(batchId, workspaceId, classId, `${month}-01 00:00`, `${month}-31 23:59`, classId, now)
+    .run();
+  await db
+    .prepare(
+      `INSERT INTO reports
+        (id, workspace_id, class_id, student_id, batch_id, month, status, general_comment,
+         needs_republish, publication_count, published_at, version, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'published', '', 0, 1, ?, 1, ?, ?)`,
+    )
+    .bind(id, workspaceId, classId, studentId, batchId, month, now, now, now)
     .run();
   return id;
 }

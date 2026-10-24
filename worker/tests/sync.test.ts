@@ -218,7 +218,7 @@ describe('sync scope and read protocol',()=>{
       if (actor==='p1'||actor==='p2') {
         expect(students.body.items[0]).not.toHaveProperty('parent_phone');
         expect((await f.page('class_session',actor)).body.items[0]).not.toHaveProperty('note');
-        expect(snap.body.entities).not.toContain('report');expect(snap.body.entities).not.toContain('conflict');
+        expect(snap.body.entities).not.toContain('report');expect(snap.body.entities).not.toContain('report_batch');expect(snap.body.entities).not.toContain('conflict');
         expect(pulled.body.upserts.score).toHaveLength(1);
         expect(pulled.body.upserts.class[0]).toMatchObject({weekdays:expect.any(Array),start_time:expect.any(String)});
         expect(pulled.body.upserts.class[0]).not.toHaveProperty('workspace_id');
@@ -249,14 +249,21 @@ describe('sync scope and read protocol',()=>{
     });
   it('omits legacy PDF metadata from report publication snapshot pages and pulls',async()=>{
     const f=await setup(),reportId=uid(),publicationId=uid(),month=today().slice(0,7),now=new Date().toISOString();
-    await db.prepare(`INSERT INTO reports(id,workspace_id,class_id,student_id,month,status,general_comment,needs_republish,publication_count,published_at,version,created_at,updated_at,updated_by)
-      VALUES(?,?,?,?,?,'published','',0,1,?,1,?,?,?)`).bind(reportId,f.a.workspaceId,f.cls,f.s1,month,now,now,now,f.a.userId).run();
-    await db.prepare(`INSERT INTO report_publications(id,workspace_id,class_id,student_id,report_id,month,publication_no,snapshot,pdf_key,pdf_bytes,published_by,published_at)
-      VALUES(?,?,?,?,?,?,1,?,'legacy/reports.pdf',1234,?,?)`).bind(publicationId,f.a.workspaceId,f.cls,f.s1,reportId,month,JSON.stringify({student_id:f.s1,month}),f.a.userId,now).run();
+    const batchId=uid();
+    await db.prepare(`INSERT INTO report_batches(id,workspace_id,class_id,from_session_id,to_session_id,from_key,to_key,created_by,created_at,version)
+      VALUES(?,?,?,NULL,NULL,?,?,?,?,1)`).bind(batchId,f.a.workspaceId,f.cls,`${month}-01 00:00`,`${month}-31 23:59`,f.a.userId,now).run();
+    await db.prepare(`INSERT INTO reports(id,workspace_id,class_id,student_id,batch_id,month,status,general_comment,needs_republish,publication_count,published_at,version,created_at,updated_at,updated_by)
+      VALUES(?,?,?,?,?,?,'published','',0,1,?,1,?,?,?)`).bind(reportId,f.a.workspaceId,f.cls,f.s1,batchId,month,now,now,now,f.a.userId).run();
+    await db.prepare(`INSERT INTO report_publications(id,workspace_id,class_id,student_id,report_id,batch_id,month,publication_no,snapshot,pdf_key,pdf_bytes,published_by,published_at)
+      VALUES(?,?,?,?,?,?,?,1,?,'legacy/reports.pdf',1234,?,?)`).bind(publicationId,f.a.workspaceId,f.cls,f.s1,reportId,batchId,month,JSON.stringify({student_id:f.s1,month}),f.a.userId,now).run();
     const page=await f.page('report_publication');
     expect(page.body.items).toContainEqual(expect.objectContaining({id:publicationId,snapshot:{student_id:f.s1,month}}));
     const pulled=await f.pull();
-    expect(pulled.body.upserts.report_publication).toContainEqual(expect.objectContaining({id:publicationId,snapshot:{student_id:f.s1,month}}));
+    expect(pulled.body.upserts.report_publication).toContainEqual(expect.objectContaining({id:publicationId,batch_id:batchId,snapshot:{student_id:f.s1,month}}));
+    const batches=await f.page('report_batch');
+    expect(batches.body.items).toContainEqual({id:batchId,class_id:f.cls,from_session_id:null,to_session_id:null,from_key:`${month}-01 00:00`,to_key:`${month}-31 23:59`,version:1});
+    expect(pulled.body.upserts.report_batch).toContainEqual(expect.objectContaining({id:batchId}));
+    expect((await f.page('report')).body.items).toContainEqual(expect.objectContaining({id:reportId,batch_id:batchId,month}));
     for (const item of [...page.body.items,...pulled.body.upserts.report_publication]) {
       expect(item).not.toHaveProperty('pdf_key');
       expect(item).not.toHaveProperty('pdf_bytes');

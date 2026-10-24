@@ -15,13 +15,14 @@ const entities:Record<string,Entity>={
   slip:{table:'session_comments',keys:['session_id','student_id'],fields:['session_id','student_id','stars','note','status','sent_at','version','updated_at'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   homework_section:{table:'homework_sections',keys:['id'],fields:['id','class_id','session_id','kind','title','description','version'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   homework_grade:{table:'homework_grades',keys:['section_id','student_id'],fields:['section_id','student_id','level','version','updated_at'],group:'comments_reports',join:'JOIN homework_sections hs ON hs.id=e.section_id JOIN class_sessions parent ON parent.id=hs.session_id',day:'parent.date'},
-  report:{table:'reports',keys:['id'],fields:['id','class_id','student_id','month','status','general_comment','needs_republish','publication_count','published_at','version'],group:'comments_reports',day:"e.month||'-01'"},
-  report_publication:{table:'report_publications',keys:['id'],fields:['id','report_id','class_id','student_id','month','publication_no','published_at','snapshot'],group:'comments_reports',day:"e.month||'-01'"},
+  report_batch:{table:'report_batches',keys:['id'],fields:['id','class_id','from_session_id','to_session_id','from_key','to_key','version'],group:'comments_reports',day:'substr(e.to_key,1,10)'},
+  report:{table:'reports',keys:['id'],fields:['id','class_id','student_id','batch_id','month','status','general_comment','needs_republish','publication_count','published_at','version'],group:'comments_reports',day:"e.month||'-01'"},
+  report_publication:{table:'report_publications',keys:['id'],fields:['id','report_id','class_id','student_id','batch_id','month','publication_no','published_at','snapshot'],group:'comments_reports',day:"e.month||'-01'"},
 };
 const literal=(v:string)=>`'${v.replaceAll("'","''")}'`;
 function allowed(i:Identity,name:string):boolean {
   const e=entities[name];if (!e) return false;
-  if (i.scopeKind==='linked_students' && name==='report') return false;
+  if (i.scopeKind==='linked_students' && (name==='report'||name==='report_batch')) return false;
   try {requireAccess(i,e.group,'read');return true;} catch {return false;}
 }
 function scope(i:Identity,alias:string,isClass=false,studentColumn?:string):string {
