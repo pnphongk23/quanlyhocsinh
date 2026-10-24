@@ -108,13 +108,13 @@ struct TeacherScheduleView: View {
         return Button { selectedClass = value } label: {
             Text(label)
                 .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                .foregroundStyle(active ? AppColors.primaryInk : AppColors.muted)
+                  .foregroundStyle(active ? AppState.selectedFg : AppColors.muted)
                 .lineLimit(1)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .frame(minHeight: 36)
-                .background(active ? AppColors.primarySoft : AppColors.surface,
-                            in: RoundedRectangle(cornerRadius: 8))
+                  .background(active ? AppState.selectedBg : AppColors.surface,
+                              in: RoundedRectangle(cornerRadius: AppRadius.segment))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? [.isSelected] : [])

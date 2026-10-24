@@ -11,7 +11,7 @@ struct TeacherNewClassView: View {
     @State private var showingTime = false
     @State private var timeSelection = Date.now
     @State private var error: String?
-    @State private var saving = false
+    @State private var saveController = AppSaveController()
     @State private var operationID: ClientGeneratedID?
 
     var body: some View {
@@ -67,10 +67,10 @@ struct TeacherNewClassView: View {
         } label: {
             Text(day.label)
                 .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                .foregroundStyle(active ? AppColors.onPrimary : AppColors.text)
-                .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
-                .background(active ? AppColors.primary : AppColors.surface,
-                            in: RoundedRectangle(cornerRadius: AppRadius.button))
+                  .foregroundStyle(active ? AppState.selectedFg : AppColors.text)
+                  .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
+                  .background(active ? AppState.selectedBg : AppColors.surface,
+                              in: RoundedRectangle(cornerRadius: AppRadius.button))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? [.isSelected] : [])
@@ -123,8 +123,13 @@ struct TeacherNewClassView: View {
     }
 
     private var stickyBar: some View {
-        AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.tao.lop"), size: .large) { Task { await save() } }
-            .disabled(saving)
+        VStack(spacing: 8) {
+            AppSaveButton(title: String(localized: "feature.classes.tao.lop"), controller: saveController) {
+                try await save()
+            }
+            .frame(maxWidth: .infinity)
+            saveStatus
+        }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.vertical, 8)
             .background(AppColors.background)
@@ -138,20 +143,34 @@ struct TeacherNewClassView: View {
         timeSelection = Calendar.current.date(from: components) ?? .now
     }
 
-    private func save() async {
+    private func save() async throws {
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !weekdays.isEmpty else {
             error = String(localized: "feature.classes.nhap.ten.lop.chon.it.nhat.mot.ngay.va.kiem.tra.g")
-            return
+            throw TeacherDataFailure.unavailable
         }
-        saving = true
-        defer { saving = false }
         if operationID == nil { operationID = ClientGeneratedID() }
         do {
-              try await data.createClass(id: operationID!.rawValue, name: name, weekdays: weekdays.sorted(), time: time)
-            dismiss()
+            try await data.createClass(id: operationID!.rawValue, name: name, weekdays: weekdays.sorted(), time: time)
+            error = nil
+            dismissAfterSave()
         } catch {
             self.error = String(localized: "feature.classes.khong.tao.uoc.lop.vui.long.thu.lai")
+            throw error
+        }
+    }
+
+    private var saveStatus: some View {
+        Group {
+            if saveController.error != nil { AppSaveStatus(kind: .error) }
+            else if let source = data.saveStatusSource { AppSaveStatus(kind: source.kind) }
+        }
+    }
+
+    private func dismissAfterSave() {
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
+            dismiss()
         }
     }
 
@@ -310,7 +329,7 @@ struct TeacherEditClassView: View {
     var editSchedule: () -> Void
     @State private var name = ""
     @State private var error: String?
-    @State private var saving = false
+    @State private var saveController = AppSaveController()
 
     var body: some View {
         NavigationStack {
@@ -321,8 +340,12 @@ struct TeacherEditClassView: View {
                     editSchedule()
                 }
                 if let error { Text(error).appText(AppText.muted).foregroundStyle(AppColors.error) }
-                AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.luu.thay.oi"), size: .large) { Task { await save() } }
-                    .disabled(saving)
+                AppSaveButton(title: String(localized: "feature.classes.luu.thay.oi"), controller: saveController) {
+                    try await save()
+                }
+                .frame(maxWidth: .infinity)
+                if saveController.error != nil { AppSaveStatus(kind: .error) }
+                else if let source = data.saveStatusSource { AppSaveStatus(kind: source.kind) }
                 Spacer(minLength: 0)
             }
             .padding(24)
@@ -336,17 +359,20 @@ struct TeacherEditClassView: View {
         .onAppear { name = data.classroom(id: classID)?.name ?? "" }
     }
 
-    private func save() async {
-        guard let klass = data.classroom(id: classID) else { return }
-        saving = true
-        defer { saving = false }
+    private func save() async throws {
+        guard let klass = data.classroom(id: classID) else { throw TeacherDataFailure.unavailable }
         do {
             try await data.updateClass(klass, name: name,
                                        weekdays: klass.weekdays ?? [],
                                        time: klass.startTime ?? "18:00")
-            dismiss()
+            error = nil
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
+                dismiss()
+            }
         } catch {
             self.error = String(localized: "feature.classes.khong.luu.uoc.lop")
+            throw error
         }
     }
 }
@@ -360,7 +386,7 @@ struct TeacherEditScheduleView: View {
     @State private var weekdays: Set<Int> = []
     @State private var time = "18:00"
     @State private var error: String?
-    @State private var saving = false
+    @State private var saveController = AppSaveController()
 
     var body: some View {
         NavigationStack {
@@ -371,8 +397,12 @@ struct TeacherEditScheduleView: View {
                 }
                 TeacherField(label: String(localized: "feature.classes.gio.bat.au"), text: $time, placeholder: "18:00")
                 if let error { Text(error).appText(AppText.muted).foregroundStyle(AppColors.error) }
-                AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.luu.lich.hoc"), size: .large) { Task { await save() } }
-                    .disabled(saving)
+                AppSaveButton(title: String(localized: "feature.classes.luu.lich.hoc"), controller: saveController) {
+                    try await save()
+                }
+                .frame(maxWidth: .infinity)
+                if saveController.error != nil { AppSaveStatus(kind: .error) }
+                else if let source = data.saveStatusSource { AppSaveStatus(kind: source.kind) }
                 Spacer(minLength: 0)
             }
             .padding(24)
@@ -396,26 +426,29 @@ struct TeacherEditScheduleView: View {
         } label: {
             Text(day.label)
                 .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                .foregroundStyle(active ? AppColors.onPrimary : AppColors.text)
-                .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
-                .background(active ? AppColors.primary : AppColors.surface,
-                            in: RoundedRectangle(cornerRadius: AppRadius.button))
+                  .foregroundStyle(active ? AppState.selectedFg : AppColors.text)
+                  .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
+                  .background(active ? AppState.selectedBg : AppColors.surface,
+                              in: RoundedRectangle(cornerRadius: AppRadius.button))
         }
         .buttonStyle(.plain)
     }
 
-    private func save() async {
+    private func save() async throws {
         guard !weekdays.isEmpty else {
             error = String(localized: "feature.classes.chon.it.nhat.mot.ngay.hoc.trong.tuan")
-            return
+            throw TeacherDataFailure.unavailable
         }
-        saving = true
-        defer { saving = false }
         do {
             try await data.updateClass(klass, name: klass.name, weekdays: weekdays.sorted(), time: time)
-            dismiss()
+            error = nil
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
+                dismiss()
+            }
         } catch {
             self.error = String(localized: "feature.classes.khong.luu.uoc.lich.hoc")
+            throw error
         }
     }
 }

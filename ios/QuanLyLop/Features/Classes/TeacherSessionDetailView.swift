@@ -59,7 +59,7 @@ struct TeacherSessionDetailView: View {
 
     private func header(_ session: ClassSession) -> some View {
         VStack(spacing: 0) {
-            HStack(spacing: 4) {
+              HStack(spacing: 4) {
                 TeacherIconButton(systemImage: "chevron.backward", label: String(localized: "feature.classes.quay.lai")) { dismiss() }
                 VStack(alignment: .leading, spacing: 0) {
                     Text(klass?.name ?? String(localized: "feature.classes.lop.hoc"))
@@ -79,10 +79,21 @@ struct TeacherSessionDetailView: View {
                     TeacherIconButton(systemImage: "ellipsis", label: String(localized: "feature.classes.tuy.chon.buoi.hoc"),
                                       tint: AppColors.muted) { showingMenu = true }
                 }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
-            if !cancelled {
+              }
+              .padding(.horizontal, 12)
+              .padding(.top, 12)
+              HStack(spacing: 4) {
+                  Color.clear.frame(width: AppMetrics.tap, height: 1)
+                  Text(TeacherFormat.sessionDateLine(date: session.date, start: session.startTime, end: nil))
+                      .appText(AppText.muted)
+                      .foregroundStyle(AppColors.muted)
+                      .frame(maxWidth: .infinity, alignment: .leading)
+                      .fixedSize(horizontal: false, vertical: true)
+              }
+              .padding(.horizontal, 12)
+              .padding(.top, 2)
+              .padding(.bottom, 8)
+              if !cancelled {
                 TeacherTextTabs(items: tabs, selection: tab, fontSize: 14, fillsWidth: true) { tab = $0 }
             }
         }

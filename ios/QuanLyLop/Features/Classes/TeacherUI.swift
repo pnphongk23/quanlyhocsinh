@@ -36,6 +36,17 @@ enum TeacherFormat {
         return String.localizedStringWithFormat(String(localized: "feature.classes.thang.bfb6f23e"), String(describing: (capitalizedWeekdayName(iso))), String(describing: (calendar.component(.day, from: date))), String(describing: (calendar.component(.month, from: date))))
     }
 
+    /// Compact teaching-date context used under every session title.
+    static func sessionDateLine(date: String, start: String?, end: String?) -> String {
+        let time = end.map { "\(start ?? "")–\($0)" } ?? (start ?? "")
+        return String.localizedStringWithFormat(
+            String(localized: "session.date.line", table: "Teacher"),
+            String(describing: capitalizedWeekdayName(date)),
+            String(describing: dayMonth(date)),
+            String(describing: time)
+        )
+    }
+
     /// Same list as `Intl.DateTimeFormat(weekday: "long")`: “Chủ Nhật”.
     static func capitalizedWeekdayName(_ iso: String) -> String {
         guard let date = parser.date(from: iso) else { return iso }
@@ -141,13 +152,9 @@ struct TeacherAvatar: View {
 }
 
 extension TeacherAvatar {
-    /// `initialsOf`: first letters of the last two words, upper-cased.
     init(name: String, size: CGFloat = 40) {
-        let words = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            .split(separator: " ")
-            .suffix(2)
-        self.init(initials: words.compactMap(\.first).map(String.init).joined().uppercased(),
-                  size: size)
+        let initials = AppInitials.of(name)
+        self.init(initials: initials.isEmpty ? "–" : initials, size: size)
     }
 }
 
@@ -299,7 +306,7 @@ struct TeacherStatusPill: View {
     }
 }
 
-// MARK: - Text tabs (`.subTabs` 13/600 · `.tabs` 14/600, 48 high, 3px underline)
+// MARK: - Text tabs (`.subTabs` 13/600 · `.tabs` 14/600, 48 high)
 
 struct TeacherTextTabs: View {
     struct Item: Identifiable, Sendable {
@@ -324,24 +331,23 @@ struct TeacherTextTabs: View {
     private func tabButton(_ item: Item) -> some View {
         let active = item.id == selection
         return Button { select(item.id) } label: {
-            Text(item.label)
-                .appText(AppTextStyle(size: fontSize, weight: .semiBold, lineHeight: fontSize * 1.5))
-                .foregroundStyle(active ? AppColors.primary : AppColors.muted)
-                .lineLimit(1)
-                .frame(maxWidth: fillsWidth ? .infinity : nil)
-                .padding(.horizontal, fillsWidth ? 4 : 8)
-                .frame(height: 48)
-                .contentShape(Rectangle())
-                .overlay(alignment: .bottom) {
-                    (active ? AppColors.primary : .clear).frame(height: 3)
-                }
+              Text(item.label)
+                  .appText(AppTextStyle(size: fontSize, weight: .semiBold, lineHeight: fontSize * 1.5))
+                  .foregroundStyle(active ? AppState.selectedFg : AppColors.muted)
+                  .lineLimit(1)
+                  .frame(maxWidth: fillsWidth ? .infinity : nil)
+                  .padding(.horizontal, fillsWidth ? 4 : 8)
+                  .frame(height: 48)
+                  .contentShape(Rectangle())
+                  .background(active ? AppState.selectedBg : .clear,
+                              in: RoundedRectangle(cornerRadius: AppRadius.segment))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? [.isSelected] : [])
     }
 }
 
-// MARK: - Segmented (`.viewSwitch` of the schedule screen: 14/600, radius 8)
+// MARK: - Segmented (shared fill-selected component)
 
 struct TeacherSegmented: View {
     let options: [TeacherTextTabs.Item]
@@ -349,31 +355,11 @@ struct TeacherSegmented: View {
     let select: (String) -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(options) { option in segment(option) }
-        }
-        .padding(3)
-        .background(AppColors.border, in: RoundedRectangle(cornerRadius: AppRadius.segmentTrack))
-    }
-
-    private func segment(_ option: TeacherTextTabs.Item) -> some View {
-        let active = option.id == value
-        return Button { select(option.id) } label: {
-            Text(option.label)
-                .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                .foregroundStyle(active ? AppColors.text : AppColors.muted)
-                .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
-                .background(active ? AppColors.surface : .clear,
-                            in: RoundedRectangle(cornerRadius: 8))
-                .shadow(color: active ? Color(.sRGB, red: 20 / 255, green: 24 / 255, blue: 31 / 255, opacity: 0.12) : .clear,
-                        radius: 1, x: 0, y: 1)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(active ? [.isSelected] : [])
+        AppSegmented(options: options.map { .init(value: $0.id, label: $0.label) }, value: value, select: select)
     }
 }
 
-// MARK: - Empty state (`schedule.module.css .empty`: 72px icon, 20/700 title)
+// MARK: - Empty state compatibility wrapper
 
 struct TeacherEmptyState: View {
     let systemImage: String
@@ -381,27 +367,7 @@ struct TeacherEmptyState: View {
     let message: String
 
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: systemImage)
-                .font(.system(size: 28, weight: .regular))
-                .foregroundStyle(AppColors.primaryInk)
-                .frame(width: 72, height: 72)
-                .background(AppColors.primarySoft, in: Circle())
-            VStack(spacing: 8) {
-                Text(title)
-                    .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 28))
-                    .foregroundStyle(AppColors.text)
-                Text(message)
-                    .appText(AppText.body)
-                    .foregroundStyle(AppColors.muted)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 28)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        AppEmptyState(title: title, description: message, mascot: .cho, size: .regular)
     }
 }
 

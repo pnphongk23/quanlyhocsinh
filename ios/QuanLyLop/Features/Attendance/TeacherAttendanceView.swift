@@ -9,8 +9,7 @@ struct TeacherAttendanceView: View {
     let session: ClassSession
     @Bindable var data: TeacherFeatureData
     @State private var drafts: [String: TeacherAttendanceDraft] = [:]
-    @State private var saving = false
-    @State private var localError: String?
+    @State private var saveController = AppSaveController()
 
     private let cycleOrder: [AttendanceStatus] = [.present, .absent, .late, .excused]
 
@@ -37,9 +36,8 @@ struct TeacherAttendanceView: View {
 
     private func update(_ student: Student, _ change: (inout TeacherAttendanceDraft) -> Void) {
         var value = draft(for: student)
-        change(&value)
-        drafts[student.id] = value
-        localError = nil
+          change(&value)
+          drafts[student.id] = value
     }
 
     private func cycle(_ student: Student) {
@@ -50,6 +48,17 @@ struct TeacherAttendanceView: View {
 
     private var absentCount: Int {
         roster.filter { draft(for: $0).status == .absent }.count
+    }
+
+    private var hasChanges: Bool {
+        drafts.contains { studentID, draft in
+            guard let student = roster.first(where: { $0.id == studentID }) else { return false }
+            let stored = data.attendanceFor(sessionID: session.id, studentID: student.id)
+            let original = TeacherAttendanceDraft(status: stored?.status ?? .present,
+                                                  lateAt: stored?.lateAt,
+                                                  note: stored?.note ?? "")
+            return draft != original
+        }
     }
 
     private var warnings: [Student] {
@@ -66,13 +75,13 @@ struct TeacherAttendanceView: View {
                 if !viewOnly { summaryRow }
                 if readOnly { readOnlyNotice }
                 if !readOnly && !canEdit { permissionNotice }
-                if !viewOnly {
+          if !viewOnly {
                     Text(String(localized: "feature.attendance.vuot.phai.vang.vuot.trai.muon"))
                         .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                         .foregroundStyle(AppColors.muted)
                 }
-                if let localError {
-                    TeacherErrorBanner(message: localError) { save() }
+                  if saveController.error != nil {
+                      TeacherErrorBanner(message: String(localized: "feature.attendance.khong.luu.uoc.iem.danh"))
                 }
                 VStack(spacing: 8) {
                     ForEach(roster) { student in row(student) }
@@ -89,10 +98,25 @@ struct TeacherAttendanceView: View {
     /// grey fill come from `.stickyBar > button:disabled`.
     @ViewBuilder private var bottomButton: some View {
         if !viewOnly && !readOnly {
-            AppButton(title: saving ? String(localized: "feature.attendance.ang.luu") : String(localized: "feature.attendance.luu.iem.danh"), size: .large) { save() }
-                .disabled(saving)
-                .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
-                .padding(.top, 8)
+          VStack(spacing: 8) {
+              AppSaveButton(title: String(localized: "feature.attendance.luu.iem.danh"),
+                            controller: saveController, isEnabled: hasChanges) {
+                  try await data.saveAttendance(session: session, drafts: drafts)
+                  drafts.removeAll()
+                  await data.saveStatusSource?.refresh()
+              }
+              .frame(maxWidth: .infinity)
+              if !hasChanges && saveController.error == nil && saveController.phase == .idle {
+                  Text(String(localized: "attendance.save.no_changes", table: "Teacher"))
+                      .appText(AppText.caption)
+                      .foregroundStyle(AppColors.muted)
+              } else if let source = data.saveStatusSource {
+                  AppSaveStatus(kind: saveController.error == nil ? source.kind : .error)
+              } else {
+                  AppSaveStatus(kind: saveController.error == nil ? .savedLocal : .error)
+              }
+          }
+          .padding(.top, 8)
         } else if readOnly {
             Text(String(localized: "feature.attendance.iem.danh"))
                 .appText(AppText.buttonLarge)
@@ -291,18 +315,4 @@ struct TeacherAttendanceView: View {
                 set: { newValue in update(student) { $0.note = newValue } })
     }
 
-    private func save() {
-        guard !viewOnly else { return }
-        saving = true
-        Task {
-            defer { saving = false }
-            do {
-                try await data.saveAttendance(session: session, drafts: drafts)
-                drafts.removeAll()
-                localError = nil
-            } catch {
-                localError = String(localized: "feature.attendance.khong.luu.uoc.iem.danh")
-            }
-        }
-    }
 }

@@ -1,0 +1,76 @@
+{
+  "sourceLanguage" : "vi",
+  "strings" : {
+    "attendance.save.no_changes" : {
+      "comment" : "Trạng thái điểm danh khi không có thay đổi cần lưu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có thay đổi để lưu" } }
+      }
+    },
+    "session.date.line" : {
+      "comment" : "Dòng ngày và giờ dạy dưới tiêu đề buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%1$@, %2$@ · %3$@" } }
+      }
+    },
+    "classes.today.title" : {
+      "comment" : "Tiêu đề nhóm buổi học hôm nay trên trang Lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hôm nay" } }
+      }
+    },
+    "classes.today.empty" : {
+      "comment" : "Empty state khi hôm nay không có buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hôm nay không có buổi học" } }
+      }
+    },
+    "classes.next.title" : {
+      "comment" : "Tiêu đề buổi học kế tiếp có thứ và ngày.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Buổi kế tiếp · %@" } }
+      }
+    },
+    "classes.next.not_yet" : {
+      "comment" : "Pill báo buổi học kế tiếp chưa tới ngày học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa tới" } }
+      }
+    },
+    "classes.tasks.title" : {
+      "comment" : "Tiêu đề nhóm việc còn dở trên trang Lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Việc còn dở" } }
+      }
+    },
+    "classes.tasks.empty" : {
+      "comment" : "Trạng thái khi không có việc giáo viên còn cần xử lý.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có việc còn dở" } }
+      }
+    },
+    "classes.tasks.attendance" : {
+      "comment" : "Nhãn cho việc điểm danh còn thiếu trên trang Lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm danh chưa xong" } }
+      }
+    },
+    "classes.card.next" : {
+      "comment" : "Ngày buổi tiếp theo của lớp trong thẻ lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Buổi tới: %@ %@ · %@" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

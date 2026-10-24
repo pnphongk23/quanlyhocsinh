@@ -53,6 +53,7 @@ final class TeacherFeatureData {
     private(set) var canReadReports = false
     private(set) var roleName = String(localized: "feature.classes.giao.vien")
     private(set) var displayName = ""
+    private(set) var saveStatusSource: AppSaveStatusSource?
 
     private var store: SQLiteStore?
     private var api: (any APIClient)?
@@ -87,6 +88,7 @@ final class TeacherFeatureData {
               let store = auth.activeStoreForLogout as? SQLiteStore,
               case .success(let configuration) = AppConfiguration.load() else { return }
         self.store = store
+        saveStatusSource = AppSaveStatusSource(store: store)
         api = URLSessionAPIClient(configuration: configuration,
                                   tokenStore: KeychainTokenStore(service: "vn.quanlylop.\(configuration.environment.rawValue)"))
         sync = auth.activeSync
@@ -105,9 +107,10 @@ final class TeacherFeatureData {
             observer = Task { [weak self, store] in
                 let updates = await store.changes()
                 for await _ in updates {
-                    guard !Task.isCancelled else { return }
-                    await self?.reload()
-                }
+                      guard !Task.isCancelled else { return }
+                      await self?.reload()
+                      await self?.saveStatusSource?.refresh()
+                  }
             }
         }
         await refresh()
@@ -119,6 +122,7 @@ final class TeacherFeatureData {
             catch { errorMessage = String(localized: "feature.classes.khong.the.ong.bo.du.lieu.vui.long.thu.lai") }
         }
         await reload()
+        await saveStatusSource?.refresh()
     }
 
     func reload() async {
@@ -211,6 +215,7 @@ final class TeacherFeatureData {
             do { try await sync.synchronize(); errorMessage = nil }
             catch { errorMessage = String(localized: "feature.classes.khong.the.luu.hoac.ong.bo.iem.danh.hay.thu.lai") }
         }
+        await saveStatusSource?.refresh()
     }
 
     private func enqueueAttendance(session: ClassSession, student: Student, draft: TeacherAttendanceDraft, store: SQLiteStore) async throws {
@@ -298,6 +303,34 @@ final class TeacherFeatureData {
     static func sessionOrder(_ first: ClassSession, _ second: ClassSession) -> Bool {
         (first.date, first.startTime) < (second.date, second.startTime)
     }
+
+    static func nextPlannedSessions(_ sessions: [ClassSession], today: String) -> [ClassSession] {
+        sessions.filter { $0.status == .planned && $0.date >= today }.sorted(by: sessionOrder)
+    }
+
+    /// Number of non-cancelled sessions on or before today that still have an unmarked student.
+    static func unfinishedAttendanceCount(sessions: [ClassSession], students: [Student], attendance: [Attendance], today: String) -> Int {
+        unfinishedAttendanceSessions(sessions: sessions, students: students, attendance: attendance, today: today).count
+    }
+
+    static func unfinishedAttendanceSessions(sessions: [ClassSession], students: [Student], attendance: [Attendance], today: String) -> [ClassSession] {
+        sessions.filter { $0.status != .cancelled && $0.date <= today }.filter { session in
+            let roster = students.filter { $0.classId == session.classId && student($0, isEnrolledOn: session.date) }
+            guard !roster.isEmpty else { return false }
+            return roster.contains { student in
+                !attendance.contains { $0.sessionId == session.id && $0.studentId == student.id }
+            }
+        }.sorted(by: sessionOrder)
+    }
+
+    func unfinishedAttendanceCount(today: String) -> Int {
+        Self.unfinishedAttendanceCount(sessions: sessions, students: students, attendance: attendance, today: today)
+    }
+
+    func unfinishedAttendanceSessions(today: String) -> [ClassSession] {
+        Self.unfinishedAttendanceSessions(sessions: sessions, students: students, attendance: attendance, today: today)
+    }
+
     func tests(in classID: String) -> [TestDefinition] { tests.filter { $0.classId == classID } }
     private func send<Response: Decodable & Sendable, Body: Encodable>(_ method: APIEndpoint.Method, path: String, body: Body, as type: Response.Type) async throws -> Response {
         guard let api else { throw TeacherDataFailure.unavailable }

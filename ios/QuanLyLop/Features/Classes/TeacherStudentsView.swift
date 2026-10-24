@@ -125,10 +125,7 @@ struct TeacherStudentsView: View {
     }
 
     private func phoneSheet(_ student: Student) -> some View {
-        TeacherParentPhoneSheet(student: student, data: data) { message in
-            editingPhone = nil
-            error = message
-        }
+        TeacherParentPhoneSheet(student: student, data: data) { error = $0 }
     }
 
     private func leaveSheet(_ student: Student) -> some View {
@@ -165,8 +162,8 @@ struct TeacherAddStudentSheet: View {
     @State private var name = ""
     @State private var phone = ""
     @State private var error: String?
-    @State private var saving = false
     @State private var operationID: ClientGeneratedID?
+    @State private var saveController = AppSaveController()
 
     var body: some View {
         TeacherSheet(title: String(localized: "feature.classes.them.hoc.sinh")) {
@@ -182,27 +179,44 @@ struct TeacherAddStudentSheet: View {
                 }
             }
         } footer: {
-            AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.luu.hoc.sinh"), size: .large) { Task { await save() } }
-                .disabled(saving)
+            VStack(spacing: 8) {
+                AppSaveButton(title: String(localized: "feature.classes.luu.hoc.sinh"), controller: saveController,
+                              isEnabled: !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                      try await save()
+                }
+                .frame(maxWidth: .infinity)
+                saveStatus
+            }
         } close: {
             dismiss()
         }
     }
 
-    private func save() async {
+    private func save() async throws {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             error = String(localized: "feature.classes.nhap.ho.va.ten.hoc.sinh")
-            return
+            throw TeacherDataFailure.unavailable
         }
-        saving = true
-        defer { saving = false }
         if operationID == nil { operationID = ClientGeneratedID() }
         do {
-              try await data.addStudent(id: operationID!.rawValue, to: classID, name: trimmed, parentPhone: phone)
-            dismiss()
+            try await data.addStudent(id: operationID!.rawValue, to: classID, name: trimmed, parentPhone: phone)
+            error = nil
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
+                dismiss()
+            }
         } catch {
             self.error = String(localized: "feature.classes.khong.the.luu.hoc.sinh.vui.long.thu.lai")
+            throw error
+        }
+    }
+
+    @ViewBuilder private var saveStatus: some View {
+        if saveController.error != nil {
+            AppSaveStatus(kind: .error)
+        } else if let source = data.saveStatusSource {
+            AppSaveStatus(kind: source.kind)
         }
     }
 }
@@ -214,7 +228,7 @@ struct TeacherParentPhoneSheet: View {
     var onError: (String) -> Void
     @State private var phone: String
     @State private var error: String?
-    @State private var saving = false
+    @State private var saveController = AppSaveController()
 
     init(student: Student, data: TeacherFeatureData, onError: @escaping (String) -> Void) {
         self.student = student
@@ -233,23 +247,36 @@ struct TeacherParentPhoneSheet: View {
                 }
             }
         } footer: {
-            AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : String(localized: "feature.classes.luu.so.ien.thoai"), size: .large) { Task { await save() } }
-                .disabled(saving)
+            VStack(spacing: 8) {
+                AppSaveButton(title: String(localized: "feature.classes.luu.so.ien.thoai"), controller: saveController,
+                              isEnabled: phone != (student.parentPhone ?? "")) {
+                      try await save()
+                }
+                .frame(maxWidth: .infinity)
+                if saveController.error != nil {
+                    AppSaveStatus(kind: .error)
+                } else if let source = data.saveStatusSource {
+                    AppSaveStatus(kind: source.kind)
+                }
+            }
         } close: {
             dismiss()
         }
     }
 
-    private func save() async {
-        saving = true
-        defer { saving = false }
+    private func save() async throws {
         do {
             try await data.updateStudent(student, parentPhone: phone)
-            dismiss()
+            error = nil
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
+                dismiss()
+            }
         } catch {
             let message = String(localized: "feature.classes.khong.cap.nhat.uoc.so.ien.thoai")
             self.error = message
             onError(message)
+            throw error
         }
     }
 }

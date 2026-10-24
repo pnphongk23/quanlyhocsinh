@@ -16,7 +16,7 @@ struct TeacherRootView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+      VStack(spacing: 0) {
             content
             TeacherTabBar(selection: $tab)
         }
@@ -76,8 +76,7 @@ extension View {
     }
 }
 
-/// Mobile tab bar (`.tabbar` of `shell.module.css`): 3 items, 12/600 labels and a 3px
-/// top border on the active tab.
+/// Mobile tab bar (`.tabbar` of `shell.module.css`): 3 items with a fill on the selected tab.
 struct TeacherTabBar: View {
     @Binding var selection: TeacherTab
 
@@ -112,12 +111,12 @@ struct TeacherTabBar: View {
                 Text(item.label)
                     .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
             }
-            .foregroundStyle(active ? AppColors.primary : AppColors.muted)
-            .frame(maxWidth: .infinity, minHeight: 56)
-            .padding(.top, 8)
-            .overlay(alignment: .top) {
-                (active ? AppColors.primary : .clear).frame(height: 3)
-            }
+              .foregroundStyle(active ? AppState.selectedFg : AppColors.muted)
+              .frame(maxWidth: .infinity, minHeight: 56)
+              .padding(.horizontal, 8)
+              .padding(.top, 8)
+              .background(active ? AppState.selectedBg : .clear,
+                          in: RoundedRectangle(cornerRadius: AppRadius.segment))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -134,8 +133,13 @@ struct TeacherClassListView: View {
 
     private var classes: [Classroom] { data.classes }
     private var todaySession: ClassSession? {
-        data.sessions.first { $0.date == TeacherFormat.todayISO() && $0.status == .planned }
+        data.sessions.first { $0.date == today && $0.status == .planned }
     }
+    private var nextSession: ClassSession? {
+        TeacherFeatureData.nextPlannedSessions(data.sessions, today: today).first { $0.date > today }
+    }
+    private var unfinishedSessions: [ClassSession] { data.unfinishedAttendanceSessions(today: today) }
+    private var today: String { TeacherFormat.todayISO() }
 
     var body: some View {
         TeacherScroll {
@@ -146,14 +150,16 @@ struct TeacherClassListView: View {
                     AppEmptyState(title: String(localized: "feature.classes.ban.khong.co.quyen.xem.lop.hoc"))
                 } else if !data.isReady {
                     loadingState
-                } else if classes.isEmpty {
-                    emptyState
-                } else {
-                    if let session = todaySession, let klass = data.classroom(id: session.classId) {
-                        todayCard(session: session, classroom: klass)
-                    }
-                    ForEach(classes, id: \.id) { klass in classCard(klass) }
-                }
+        } else if classes.isEmpty {
+            emptyState
+        } else {
+            todaySection
+            if let session = nextSession, let klass = data.classroom(id: session.classId) {
+                nextSessionSection(session: session, classroom: klass)
+            }
+            unfinishedSection
+            ForEach(classes, id: \.id) { klass in classCard(klass) }
+        }
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, TeacherMetrics.screenPaddingTop)
@@ -192,9 +198,8 @@ struct TeacherClassListView: View {
     }
 
     private var settingsInitials: String {
-        let words = data.displayName.split(separator: " ").suffix(2)
-        let letters = words.compactMap(\.first).map(String.init).joined().uppercased()
-        return letters.isEmpty ? "GV" : letters
+        let initials = AppInitials.of(data.displayName)
+        return initials.isEmpty ? "GV" : initials
     }
 
     private var loadingState: some View {
@@ -218,6 +223,15 @@ struct TeacherClassListView: View {
                         .background(AppColors.primary, in: RoundedRectangle(cornerRadius: AppRadius.button))
                 }
             }
+        }
+    }
+
+    @ViewBuilder private var todaySection: some View {
+        TeacherGroupLabel(text: String(localized: "classes.today.title", table: "Teacher"))
+        if let session = todaySession, let klass = data.classroom(id: session.classId) {
+            todayCard(session: session, classroom: klass)
+        } else {
+            AppEmptyState(title: String(localized: "classes.today.empty", table: "Teacher"), size: .compact)
         }
     }
 
@@ -246,17 +260,87 @@ struct TeacherClassListView: View {
         .background(AppColors.primary, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 
+    private func nextSessionSection(session: ClassSession, classroom: Classroom) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TeacherGroupLabel(text: String.localizedStringWithFormat(
+                String(localized: "classes.next.title", table: "Teacher"),
+                String(describing: TeacherFormat.weekdayDate(session.date))))
+            TeacherLink(route: .session(classID: classroom.id, sessionID: session.id)) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(session.startTime).appText(AppText.heading).foregroundStyle(AppColors.text)
+                        Text("\(classroom.name) · \(TeacherFeatureData.sessionPrefix(session))")
+                            .appText(AppText.muted).foregroundStyle(AppColors.muted)
+                    }
+                    Spacer(minLength: 0)
+                    VStack(alignment: .trailing, spacing: 8) {
+                        AppChip(title: String(localized: "classes.next.not_yet", table: "Teacher"))
+                        Image(systemName: "chevron.right").foregroundStyle(AppColors.muted)
+                    }
+                }
+                .padding(TeacherMetrics.cardPadding)
+                .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+            }
+        }
+    }
+
+    private var unfinishedSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TeacherGroupLabel(text: String(localized: "classes.tasks.title", table: "Teacher"))
+            if unfinishedSessions.isEmpty {
+                AppEmptyState(title: String(localized: "classes.tasks.empty", table: "Teacher"), size: .compact)
+            } else {
+                VStack(spacing: TeacherMetrics.listGap) {
+                    ForEach(unfinishedSessions) { session in
+                        if let klass = data.classroom(id: session.classId) {
+                            unfinishedCard(session: session, classroom: klass)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func unfinishedCard(session: ClassSession, classroom: Classroom) -> some View {
+        TeacherLink(route: .session(classID: classroom.id, sessionID: session.id)) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(localized: "classes.tasks.attendance", table: "Teacher"))
+                        .appText(AppText.heading).foregroundStyle(AppState.pendingFg)
+                    Text("\(classroom.name) · \(TeacherFeatureData.sessionPrefix(session)) · \(TeacherFormat.dayMonth(session.date))")
+                        .appText(AppText.muted).foregroundStyle(AppColors.muted)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").foregroundStyle(AppColors.muted)
+            }
+            .padding(TeacherMetrics.cardPadding)
+            .background(AppState.pendingBg, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        }
+    }
+
     private func classCard(_ klass: Classroom) -> some View {
         TeacherLink(route: .classDetail(klass.id)) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(klass.name)
+                  Text(klass.name)
                     .appText(AppText.heading)
                     .foregroundStyle(AppColors.text)
                     .lineLimit(1)
-                HStack(spacing: 8) {
-                    TeacherCountChip(count: "\(data.activeStudents(in: klass.id).count)", after: String(localized: "feature.classes.students.suffix"))
-                    TeacherCountChip(before: String(localized: "feature.classes.chuyen.can"), count: attendanceText(klass))
-                }
+                  HStack(spacing: 8) {
+                      TeacherCountChip(count: "\(data.activeStudents(in: klass.id).count)", after: String(localized: "feature.classes.students.suffix"))
+                      TeacherCountChip(before: String(localized: "feature.classes.chuyen.can"), count: attendanceText(klass))
+                  }
+                  if let weekdays = klass.weekdays, !weekdays.isEmpty {
+                      Text(classScheduleLine(klass))
+                          .appText(AppText.muted).foregroundStyle(AppColors.muted)
+                  }
+                  if let next = TeacherFeatureData.nextPlannedSessions(data.sessions.filter { $0.classId == klass.id }, today: today).first {
+                      Text(String.localizedStringWithFormat(
+                          String(localized: "classes.card.next", table: "Teacher"),
+                          String(describing: TeacherFormat.capitalizedWeekdayName(next.date)),
+                          String(describing: TeacherFormat.dayMonth(next.date)),
+                          String(describing: next.startTime)))
+                          .appText(AppText.caption).foregroundStyle(AppColors.primaryInk)
+                  }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(TeacherMetrics.cardPadding)
@@ -265,10 +349,17 @@ struct TeacherClassListView: View {
     }
 
     /// The prototype chip reads “Chuyên cần <b>97%</b>”; the number is the bold part.
-    private func attendanceText(_ klass: Classroom) -> String {
+      private func attendanceText(_ klass: Classroom) -> String {
         guard let rate = data.attendanceRate(in: klass.id) else { return "—" }
         return "\(rate)%"
-    }
+      }
+
+      private func classScheduleLine(_ klass: Classroom) -> String {
+          let days = (klass.weekdays ?? []).sorted().compactMap { day in
+              TeacherNewClassView.weekdayLabels.first(where: { $0.value == day })?.label
+          }.joined(separator: " · ")
+        return [days, klass.startTime ?? ""].filter { !$0.isEmpty }.joined(separator: " · ")
+      }
 }
 
 // MARK: - Cài đặt (tab hiện có, ngoài phạm vi I-8B)

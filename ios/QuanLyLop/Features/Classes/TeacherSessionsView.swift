@@ -151,10 +151,8 @@ struct TeacherSessionsView: View {
     private var pastSection: some View {
         VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
             TeacherGroupLabel(text: String(localized: "feature.classes.cac.buoi.a.qua"))
-            if groups.past.isEmpty {
-                Text(String(localized: "feature.classes.chua.co.buoi.hoc.nao.a.qua"))
-                    .appText(AppText.muted)
-                    .foregroundStyle(AppColors.muted)
+              if groups.past.isEmpty {
+                  AppEmptyState(title: String(localized: "feature.classes.chua.co.buoi.hoc.nao.a.qua"), size: .compact)
             } else {
                 VStack(spacing: TeacherMetrics.listGap) {
                     ForEach(groups.past) { session in sessionRow(session, surfaceOnBackground: false) }
@@ -213,30 +211,14 @@ struct TeacherSessionsView: View {
         return parts.joined(separator: " · ")
     }
 
-    private var emptyBlock: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "calendar")
-                .font(.system(size: 28, weight: .regular))
-                .foregroundStyle(AppColors.primaryInk)
-                .frame(width: 72, height: 72)
-                .background(AppColors.primarySoft, in: Circle())
-            VStack(spacing: 8) {
-                Text(String(localized: "feature.classes.lop.chua.co.buoi.hoc"))
-                    .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 28))
-                    .foregroundStyle(AppColors.text)
-                Text(String(localized: "feature.classes.buoi.hoc.tu.sinh.theo.lich.lap.cua.lop.ban.co.th"))
-                    .appText(AppText.body)
-                    .foregroundStyle(AppColors.muted)
-                    .multilineTextAlignment(.center)
-            }
-            if data.canWriteAttendance {
-                AppButton(title: String(localized: "feature.classes.them.buoi.le"), size: .large) { showingAdd = true }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 32)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+      private var emptyBlock: some View {
+          AppEmptyState(title: String(localized: "feature.classes.lop.chua.co.buoi.hoc"),
+                        description: String(localized: "feature.classes.buoi.hoc.tu.sinh.theo.lich.lap.cua.lop.ban.co.th"),
+                        size: .regular) {
+              if data.canWriteAttendance {
+                  AppButton(title: String(localized: "feature.classes.them.buoi.le"), size: .large) { showingAdd = true }
+              }
+          }
     }
 
     private func cancel() {
@@ -264,7 +246,7 @@ struct TeacherExtraSessionSheet: View {
     @State private var time = Date.now
     @State private var note = ""
     @State private var error: String?
-    @State private var saving = false
+    @State private var saveController = AppSaveController()
     @State private var operationID: ClientGeneratedID?
 
     var body: some View {
@@ -303,9 +285,15 @@ struct TeacherExtraSessionSheet: View {
                 }
             }
         } footer: {
-            AppButton(title: saving ? String(localized: "feature.classes.ang.luu") : session == nil ? String(localized: "feature.classes.luu.buoi.hoc") : String(localized: "feature.classes.luu.thay.oi"),
-                      size: .large) { Task { await save() } }
-                .disabled(saving)
+            VStack(spacing: 8) {
+                  AppSaveButton(title: session == nil ? String(localized: "feature.classes.luu.buoi.hoc") : String(localized: "feature.classes.luu.thay.oi"),
+                                controller: saveController) {
+                      try await save()
+                  }
+                  .frame(maxWidth: .infinity)
+                if saveController.error != nil { AppSaveStatus(kind: .error) }
+                else if let source = data.saveStatusSource { AppSaveStatus(kind: source.kind) }
+            }
             AppButton(title: String(localized: "feature.classes.ong"), variant: .secondary, size: .large) { dismiss() }
         } close: {
             dismiss()
@@ -360,18 +348,21 @@ struct TeacherExtraSessionSheet: View {
         return Calendar.current.date(from: components)
     }
 
-    private func save() async {
-        saving = true
-        defer { saving = false }
+    private func save() async throws {
         if operationID == nil { operationID = ClientGeneratedID() }
         let day = date.formatted(.iso8601.year().month().day().dateSeparator(.dash))
         let timeText = time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
         do {
-              try await data.addOneOffSession(id: operationID!.rawValue, classID: classID, date: day, time: timeText,
+            try await data.addOneOffSession(id: operationID!.rawValue, classID: classID, date: day, time: timeText,
                                             makeup: false, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
-            dismiss()
+            error = nil
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
+                dismiss()
+            }
         } catch {
             self.error = String(localized: "feature.classes.khong.luu.uoc.buoi.hoc.hay.kiem.tra.thong.tin.va")
+            throw error
         }
     }
 }
