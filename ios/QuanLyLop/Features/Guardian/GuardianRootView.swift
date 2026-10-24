@@ -94,10 +94,10 @@ struct GuardianRootView: View {
                                          openScores: { detail = .scores },
                                          openTicket: { detail = .ticket($0.id) })
                     HStack(spacing: 10) {
-                        shortcut(String(localized: "feature.guardian.iem"), icon: "chart.bar", action: { detail = .scores })
+                        shortcut(String(localized: "guardian.scores", table: "Guardian"), icon: "chart.bar", action: { detail = .scores })
                         shortcut(String(localized: "feature.guardian.bao.cao"), icon: "doc.text", action: { detail = .report })
                     }
-                    GuardianCardHead(title: String(localized: "feature.guardian.danh.sach.buoi.hoc"))
+                    GuardianCardHead(title: String(localized: "guardian.sessionList", table: "Guardian"))
                     GuardianAttendancePage(child: child, month: month(for: child)) { months[child.student.id] = $0 }
                 } else {
                     GuardianPageHeader(eyebrow: child.student.name,
@@ -132,7 +132,7 @@ struct GuardianRootView: View {
                   } else { missingTicket }
             case .scores:
                 ScrollView { VStack(alignment: .leading, spacing: 12) {
-                    detailHeader(String(localized: "feature.guardian.iem"))
+                    detailHeader(String(localized: "guardian.scores", table: "Guardian"))
                     GuardianScoresPage(child: child, month: month(for: child)) { months[child.student.id] = $0 }
                 }.padding(.horizontal, 20).padding(.top, 12) }
             case .report:

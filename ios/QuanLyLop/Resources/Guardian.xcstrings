@@ -3,44 +3,104 @@
   "strings" : {
     "auth.guardian.createAccount" : {
       "localizations" : {
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tạo tài khoản phụ huynh" } }
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo tài khoản phụ huynh"
+          }
+        }
       }
     },
     "auth.guardian.registerDescription" : {
       "localizations" : {
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Dùng số điện thoại đã đăng ký với giáo viên để liên kết tài khoản với con." } }
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dùng số điện thoại đã đăng ký với giáo viên để liên kết tài khoản với con."
+          }
+        }
       }
     },
     "auth.guardian.registerLink" : {
       "localizations" : {
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tạo tài khoản phụ huynh" } }
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo tài khoản phụ huynh"
+          }
+        }
       }
     },
     "auth.guardian.registerTitle" : {
       "localizations" : {
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đăng ký phụ huynh" } }
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đăng ký phụ huynh"
+          }
+        }
       }
     },
     "guardian.childPicker.title" : {
       "localizations" : {
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chọn con" } }
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn con"
+          }
+        }
+      }
+    },
+    "guardian.scores" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Điểm"
+          }
+        }
+      }
+    },
+    "guardian.sessionList" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danh sách buổi học"
+          }
+        }
       }
     },
     "guardian.tab.classes" : {
       "localizations" : {
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lớp học của con" } }
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lớp học của con"
+          }
+        }
       }
     },
     "guardian.tab.comments" : {
       "localizations" : {
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Nhận xét của cô" } }
-      }
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhận xét của cô"
+          }
+        }
       }
     },
     "guardian.updatedAt" : {
       "localizations" : {
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cập nhật dữ liệu: %@" } }
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cập nhật dữ liệu: %@"
+          }
+        }
       }
-    },
+    }
+  },
   "version" : "1.1"
 }
