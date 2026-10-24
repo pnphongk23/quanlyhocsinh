@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /** Trùng token `--dur-loading-min`: `saving` hiện tối thiểu từng này ms dù ghi cục bộ xong ngay. */
 export const SAVE_MIN_VISIBLE_MS = 400;
 /** Trùng token `--dur-success-hold`: `justSaved` giữ từng này ms sau khi lưu thành công. */
 export const SAVE_SUCCESS_HOLD_MS = 1600;
+
+/** Chờ khung hình đầu tiên có trạng thái đang lưu tối đa từng này ms, quá thì tính từ lúc bấm. */
+const SHOWN_FALLBACK_MS = SAVE_MIN_VISIBLE_MS / 2;
 
 export function deepEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
@@ -65,6 +68,20 @@ export function useSaveAction<T>({
   const lock = useRef(false);
   const mounted = useRef(true);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Hàm báo "khung hình có trạng thái đang lưu đã được dựng": mốc để tính thời gian hiện tối thiểu.
+  const markShown = useRef<(() => void) | null>(null);
+
+  useLayoutEffect(() => {
+    if (!saving || !markShown.current) return;
+    const mark = markShown.current;
+    markShown.current = null;
+    if (typeof requestAnimationFrame !== "function") {
+      mark();
+      return;
+    }
+    const frame = requestAnimationFrame(mark);
+    return () => cancelAnimationFrame(frame);
+  }, [saving]);
 
   useEffect(() => {
     mounted.current = true;
@@ -100,9 +117,17 @@ export function useSaveAction<T>({
     lock.current = true;
     clearTimeout(holdTimer.current);
     setJustSaved(false);
+    const startedAt = Date.now();
+    const shown = new Promise<number>((resolve) => {
+      // Không có khung hình (tab ẩn, unmount): tính từ lúc bấm.
+      const fallback = setTimeout(() => resolve(startedAt), SHOWN_FALLBACK_MS);
+      markShown.current = () => {
+        clearTimeout(fallback);
+        resolve(Date.now());
+      };
+    });
     setSaving(true);
     setError(null);
-    const startedAt = Date.now();
     const baselineAtStart = lastBaseline.current;
     let ok = false;
     let failure: unknown = null;
@@ -113,8 +138,9 @@ export function useSaveAction<T>({
     } catch (cause) {
       failure = cause ?? new Error("save_failed");
     }
-    // Ghi đã xong; chỉ giữ trạng thái đang lưu đủ lâu để người dùng thấy.
-    const remaining = SAVE_MIN_VISIBLE_MS - (Date.now() - startedAt);
+    // Ghi đã xong; chỉ giữ trạng thái đang lưu đủ lâu, tính từ lúc nó thật sự được dựng lên màn hình.
+    const shownAt = await shown;
+    const remaining = SAVE_MIN_VISIBLE_MS - (Date.now() - shownAt);
     if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
     lock.current = false;
     if (mounted.current) {

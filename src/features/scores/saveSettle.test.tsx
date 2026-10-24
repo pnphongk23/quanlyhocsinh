@@ -60,7 +60,8 @@ describe("nút Lưu điểm sau khi lưu xong", () => {
       const save = screen.getByRole("button", { name: "Lưu điểm" });
       expect(save).toBeEnabled();
       fireEvent.click(save);
-      await advance(400);
+      // 400 ms loading tối thiểu tính từ khung hình đầu (+16 ms rAF giả), rồi giữ "Đã lưu" 1600 ms.
+      await advance(450);
       await advance(1600);
       expect(screen.queryByText("Đã lưu")).toBeNull();
       expect(screen.getByRole("button", { name: "Lưu điểm" })).toBeDisabled();
@@ -82,7 +83,7 @@ describe("nút Lưu điểm sau khi lưu xong", () => {
       fireEvent.click(screen.getByRole("button", { name: "Lưu điểm" }));
       await advance(100);
       expect(screen.queryByText("Chưa có thay đổi để lưu")).toBeNull();
-      await advance(300);
+      await advance(350);
       expect(screen.queryByText("Chưa có thay đổi để lưu")).toBeNull();
       await advance(1600);
       expect(screen.getByRole("button", { name: "Lưu điểm" })).toBeDisabled();

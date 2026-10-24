@@ -86,7 +86,8 @@ describe("useSaveAction thời gian hiển thị", () => {
       await act(async () => { await vi.advanceTimersByTimeAsync(399); });
       expect(result.current.saving).toBe(true);
       expect(result.current.justSaved).toBe(false);
-      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      // Mốc 400 ms tính từ khung hình đầu tiên có trạng thái đang lưu (rAF giả = 16 ms).
+      await act(async () => { await vi.advanceTimersByTimeAsync(1 + 16); });
       await expect(pending).resolves.toBe(true);
       expect(result.current.saving).toBe(false);
       expect(result.current.justSaved).toBe(true);
@@ -105,7 +106,7 @@ describe("useSaveAction thời gian hiển thị", () => {
       const { result } = setup({ ...props, save: vi.fn(() => { throw new Error("x"); }) });
       let pending!: Promise<boolean>;
       act(() => { pending = result.current.submit(); });
-      await act(async () => { await vi.advanceTimersByTimeAsync(400); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(400 + 16); });
       await expect(pending).resolves.toBe(false);
       expect(result.current).toMatchObject({ saving: false, justSaved: false, dirty: true, canSave: true });
       expect(result.current.error).toBeInstanceOf(Error);
@@ -121,7 +122,7 @@ describe("useSaveAction thời gian hiển thị", () => {
       let pending!: Promise<boolean>;
       act(() => { pending = result.current.submit(); });
       unmount();
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(400 + 16);
       await expect(pending).resolves.toBe(true);
       await vi.advanceTimersByTimeAsync(2000);
     } finally {

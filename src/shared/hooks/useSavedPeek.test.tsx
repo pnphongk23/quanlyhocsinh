@@ -36,6 +36,8 @@ function Form({ onClose, save = () => true }: { onClose: () => void; save?: () =
   );
 }
 
+/** Một khung hình (rAF giả): mốc "đang lưu đã hiện" trễ hơn lúc bấm đúng chừng này. */
+const FRAME = 16;
 const advance = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
 
 describe("useSavedPeek", () => {
@@ -76,7 +78,7 @@ describe("đóng sau khi lưu", () => {
     const onClose = vi.fn();
     const { unmount } = render(<Form onClose={onClose} />);
     fireEvent.click(screen.getByText("Lưu"));
-    await advance(400);
+    await advance(400 + FRAME);
     await advance(SAVED_PEEK_MS / 2);
     fireEvent.click(screen.getByText("Đóng tay"));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -90,7 +92,7 @@ describe("đóng sau khi lưu", () => {
     const onClose = vi.fn();
     render(<Form onClose={onClose} />);
     fireEvent.click(screen.getByText("Lưu"));
-    await advance(400 + SAVED_PEEK_MS - 1);
+    await advance(400 + FRAME + SAVED_PEEK_MS - 1);
     expect(onClose).not.toHaveBeenCalled();
     await advance(1);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -126,7 +128,7 @@ describe("Lưu trong hộp thoại rời màn", () => {
     render(<Guarded save={() => true} onClose={onClose} />);
     fireEvent.click(screen.getByText("Thử đóng"));
     fireEvent.click(screen.getByText("Lưu", { selector: "button" }));
-    await advance(400);
+    await advance(400 + FRAME);
     expect(screen.getByText("Đã lưu")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     await advance(SAVED_PEEK_MS);
@@ -138,7 +140,7 @@ describe("Lưu trong hộp thoại rời màn", () => {
     render(<Guarded save={() => true} onClose={onClose} />);
     fireEvent.click(screen.getByText("Thử đóng"));
     fireEvent.click(screen.getByText("Lưu", { selector: "button" }));
-    await advance(400);
+    await advance(400 + FRAME);
     expect(screen.getByText("Ở lại")).toBeDisabled();
     await advance(SAVED_PEEK_MS);
     expect(onClose).toHaveBeenCalledTimes(1);

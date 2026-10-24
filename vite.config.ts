@@ -36,5 +36,11 @@ function appShellServiceWorker(): Plugin {
 export default defineConfig({
   plugins: [react(), appShellServiceWorker()],
   build: { manifest: true },
-  test: { environment: "jsdom", setupFiles: ["./src/test/setup.ts"], include: ["src/**/*.test.{ts,tsx}"] },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
+    // Nhiều test chờ hold thật (loading 400 ms, "Đã lưu" 800/1600 ms) và route lazy; máy tải cao thì 5 s mặc định không đủ.
+    testTimeout: 20000,
+  },
 });

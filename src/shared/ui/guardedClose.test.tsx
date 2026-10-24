@@ -121,7 +121,7 @@ describe("useUnsavedCloseGuard", () => {
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     expect(screen.getByText("mở")).toBeInTheDocument();
     // Lần lưu thất bại giữ trạng thái đang lưu tối thiểu rồi mới cho thử lại.
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, SAVE_MIN_VISIBLE_MS)); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, SAVE_MIN_VISIBLE_MS + 100)); });
     fireEvent.click(screen.getByText("Lưu", { selector: "button" }));
     expect(await screen.findByText("đã đóng", {}, { timeout: 3000 })).toBeInTheDocument();
     expect(save).toHaveBeenCalledTimes(2);
