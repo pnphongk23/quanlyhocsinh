@@ -13,6 +13,10 @@ enum SaveStatusKind: Equatable, Sendable {
     /// The server rejected a command.
     case error
 
+    /// Screens that follow spec mục 5.3 draw only a save or sync failure: the pending and offline
+    /// states collapse to `.savedLocal`, which draws nothing.
+    var errorOnly: SaveStatusKind { self == .error ? .error : .savedLocal }
+
     /// `unsyncedSince` is when the push queue last went from empty to non-empty.
     static func resolve(hasRejectedCommands: Bool, unsyncedSince: Date?, isOnline: Bool, now: Date) -> SaveStatusKind {
         if hasRejectedCommands { return .error }

@@ -227,4 +227,6 @@ extension AppMetrics {
     /// `--empty-mascot` / `--empty-mascot-compact`.
     static let emptyMascot: CGFloat = 96
     static let emptyMascotCompact: CGFloat = 56
+    /// Mít next to the template sentence of the comment sheet (web `CommentTicketSheet`, 72 px).
+    static let ticketMascot: CGFloat = 72
 }

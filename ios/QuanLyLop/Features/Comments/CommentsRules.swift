@@ -28,6 +28,9 @@ struct I4TicketRow: Identifiable {
 }
 
 enum CommentsRules {
+    /// Buttons of the star picker, left to right: best level first.
+    static let starPickerOrder: [Stars] = [.three, .two, .one]
+
     static func matches(_ row: I4TicketRow, _ filter: TicketFilter) -> Bool {
         switch filter {
         case .all: true

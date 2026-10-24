@@ -1,11 +1,22 @@
 import SwiftUI
 import UIKit
 
-/// Poses of Mít that ship with the app (`design/prototype/public/mascot`). Mít only appears in
-/// empty and waiting states; screens never draw it directly, they go through `AppEmptyState`.
+/// Poses of Mít that ship with the app (`design/prototype/public/mascot`). Mít appears in empty and
+/// waiting states through `AppEmptyState`, and in the comment sheet as the pose of the chosen star level.
 enum MascotPose: String, CaseIterable, Sendable {
     case main, cho, chao, khen
     case dangTai = "dang-tai"
+    case sao1 = "sao-1", sao2 = "sao-2", sao3 = "sao-3"
+
+    /// Pose for a star level; no level yet means Mít is waiting (`starPose` of the web).
+    static func forStars(_ stars: Stars?) -> MascotPose {
+        switch stars {
+        case .one: .sao1
+        case .two: .sao2
+        case .three: .sao3
+        case nil: .cho
+        }
+    }
 
     var fileName: String { "mit-\(rawValue)" }
 
@@ -17,6 +28,9 @@ enum MascotPose: String, CaseIterable, Sendable {
         case .chao: 204 / 256
         case .khen: 235 / 256
         case .dangTai: 199 / 256
+        case .sao1: 193 / 256
+        case .sao2: 227 / 256
+        case .sao3: 190 / 256
         }
     }
 }

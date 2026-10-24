@@ -82,7 +82,7 @@ struct SessionCommentsView: View {
         }
         .onChange(of: sendController.phase) { oldPhase, newPhase in
             if oldPhase == .saved, newPhase == .idle, dismissSendAfterSuccess {
-                showingSend = false
+                closeSend()
                 dismissSendAfterSuccess = false
             }
         }
@@ -103,12 +103,8 @@ struct SessionCommentsView: View {
             } else if rows.isEmpty {
                 AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.e.nhan.xet"))
             } else {
-                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
+                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
                 filters
-                if let sendError {
-                    I4Banner(text: sendError, tone: .error, systemImage: "exclamationmark.triangle",
-                             horizontal: 16, vertical: 12)
-                }
                 list
             }
         } else {
@@ -249,9 +245,16 @@ struct SessionCommentsView: View {
                         : String(localized: "comments.send.retry", table: "Teacher"),
                     controller: sendController
                 ) { try await send() }
-                AppButton(title: String(localized: "feature.comments.quay.lai"), variant: .neutral, size: .large) { showingSend = false }
+                AppButton(title: String(localized: "feature.comments.quay.lai"), variant: .neutral, size: .large) { closeSend() }
             }
-        }, dismiss: { showingSend = false })
+        }, dismiss: { closeSend() })
+    }
+
+    /// A send failure is explained inside the dialog only; it is dropped with the dialog so it can
+    /// never outlive the attempt it belongs to.
+    private func closeSend() {
+        showingSend = false
+        sendError = nil
     }
 
     private func statCard(value: String, label: String, foreground: Color, background: Color) -> some View {
@@ -359,6 +362,7 @@ struct I4TicketSheet: View {
     @State private var note: String = ""
     @State private var error: String?
     @State private var saveController = AppSaveController()
+    @FocusState private var noteFocused: Bool
 
     init(session: ClassSession, student: Student, slip: SessionSlip?,
          previousSessionNumber: Int?, sections: [HomeworkSection], grades: [HomeworkGrade],
@@ -395,8 +399,6 @@ struct I4TicketSheet: View {
                             .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                             .foregroundStyle(AppColors.success)
                             .frame(maxWidth: .infinity)
-                    } else if canWrite {
-                        draftHint
                     }
                     starPicker
                     templateBox
@@ -407,23 +409,29 @@ struct I4TicketSheet: View {
                             .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                             .foregroundStyle(AppColors.error)
                     }
-                    if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
+                    if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
+                .contentShape(Rectangle())
+                .onTapGesture { noteFocused = false }
             }
-            if canWrite {
-                AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController) {
-                    try await save()
-                }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
-                    .padding(.bottom, 20)
-                    .overlay(alignment: .top) { AppColors.border.frame(height: 1) }
-            }
+            .scrollDismissesKeyboard(.interactively)
         }
           .background(AppColors.surface)
-          .presentationDetents([.medium, .large])
+          .safeAreaInset(edge: .bottom, spacing: 0) {
+              if canWrite {
+                  AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController) {
+                      try await save()
+                  }
+                  .padding(.horizontal, 20)
+                  .padding(.top, 12)
+                  .padding(.bottom, 20)
+                  .background(AppColors.surface)
+                  .overlay(alignment: .top) { AppColors.border.frame(height: 1) }
+              }
+          }
+          .presentationDetents([.large])
           .presentationDragIndicator(.hidden)
           .onChange(of: saveController.phase) { oldPhase, newPhase in
               if oldPhase == .saved, newPhase == .idle { onClose() }
@@ -457,24 +465,9 @@ struct I4TicketSheet: View {
         }
     }
 
-    private var draftHint: some View {
-        HStack(alignment: .center, spacing: 8) {
-            Text(String(localized: "feature.comments.nhap.chua.luu"))
-                .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
-                .foregroundStyle(AppColors.warning)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(AppColors.warningSoft, in: Capsule())
-            Text(String(localized: "feature.comments.sao.va.ghi.chu.uoc.giu.khi.ban.ong.sheet"))
-                .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.2))
-                .foregroundStyle(AppColors.muted)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
     private var starPicker: some View {
         HStack(spacing: 8) {
-            ForEach(Stars.allCases, id: \.self) { option in
+            ForEach(CommentsRules.starPickerOrder, id: \.self) { option in
                 Button { if canWrite { stars = option; error = nil } } label: {
                     Text(String(repeating: "★", count: option.rawValue))
                           .font(.system(size: 16))
@@ -492,17 +485,12 @@ struct I4TicketSheet: View {
     }
 
     private var templateBox: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 12) {
+            AppMascot(pose: .forStars(stars), height: AppMetrics.ticketMascot)
             Text(stars?.template ?? String(localized: "feature.comments.chon.muc.sao.e.xem.cau.mau.gui.phu.huynh"))
                 .appText(AppTextStyle(size: 16, weight: .regular, lineHeight: 24.8))
                 .foregroundStyle(AppColors.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 6) {
-                Image(systemName: "lock").font(.system(size: 12, weight: .regular))
-                Text(String(localized: "feature.comments.cau.mau.co.inh.theo.muc.sao"))
-                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
-            }
-            .foregroundStyle(AppColors.muted)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -527,6 +515,7 @@ struct I4TicketSheet: View {
                 .padding(12)
                 .frame(maxWidth: .infinity, minHeight: 56, alignment: .topLeading)
                 .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
+                .focused($noteFocused)
                 .disabled(!canWrite)
         }
     }
