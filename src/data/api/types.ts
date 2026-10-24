@@ -5,7 +5,7 @@ export interface ApiErrorBody {
   error: { code: string; message: string; details?: Record<string, unknown>; request_id: string };
 }
 export interface Page<T> { items: T[]; next_cursor: string | null }
-export interface ApiUser { id: string; phone: string; display_name: string | null; must_change_password: boolean }
+export interface ApiUser { id: string; phone: string; display_name: string | null; must_change_password: boolean; email?: string | null }
 export interface ApiMembership {
   id: string;
   workspace: { id: string; name: string };
