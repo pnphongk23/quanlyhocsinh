@@ -73,9 +73,7 @@ struct AuthFlowView: View {
         case .forgot: AuthForgotPasswordView(model: model)
         case .forcedPassword: AuthForcedPasswordView(model: model)
         case .chooseRole: AuthRolePickerView(model: model)
-        case .main: mainRoot
-        case .settings: settingsRoot
-        case .changePassword: changePasswordRoot
+        case .main, .settings, .changePassword: mainRoot
         }
     }
 
@@ -100,26 +98,18 @@ struct AuthFlowView: View {
 
     private var teacherShell: some View {
         TeacherRootView(auth: model) {
-            AnyView(AuthSettingsView(model: model, isRootTab: true))
+            AnyView(
+                AuthSettingsView(model: model, isRootTab: true)
+                    .navigationDestination(isPresented: changePasswordPresented) {
+                        AuthChangePasswordView(model: model, isPushed: true) { model.show(.settings) }
+                    }
+            )
         }
     }
 
-    @ViewBuilder private var settingsRoot: some View {
-        if isGuardian {
-            GuardianRootView(model: model)
-        } else {
-            TeacherRootView(auth: model, initialTab: .settings) {
-                AnyView(AuthSettingsView(model: model, isRootTab: true))
-            }
-        }
-    }
-
-    @ViewBuilder private var changePasswordRoot: some View {
-        if isGuardian {
-            GuardianRootView(model: model)
-        } else {
-            AuthChangePasswordView(model: model) { model.show(.settings) }
-        }
+    private var changePasswordPresented: Binding<Bool> {
+        Binding(get: { model.screen == .changePassword },
+                set: { if !$0 && model.screen == .changePassword { model.show(.settings) } })
     }
 
     private var isGuardian: Bool {

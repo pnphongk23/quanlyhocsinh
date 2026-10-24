@@ -15,8 +15,17 @@ struct TeacherRootView: View {
         self.accountSettings = accountSettings
     }
 
+    /// Cài đặt và Đổi mật khẩu là các màn của mô hình đăng nhập; cả hai nằm trong tab Cài đặt.
+    private var tabSelection: Binding<TeacherTab> {
+        Binding(get: { auth.screen == .settings || auth.screen == .changePassword ? .settings : tab },
+                set: { item in
+                    tab = item
+                    if auth.screen != .main { auth.show(.main) }
+                })
+    }
+
     var body: some View {
-        TabView(selection: $tab) {
+        TabView(selection: tabSelection) {
             NavigationStack(path: $classesPath) {
                 TeacherClassListView(data: data, i4Data: i4Data)
                     .teacherRoutes(data: data, i4Data: i4Data)

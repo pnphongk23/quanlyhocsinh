@@ -25,7 +25,7 @@ struct AuthSettingsView: View {
               if let user = model.currentUser {
                   let membership = model.activeMembership
                   profileCard(user: user, membership: membership)
-                      .padding(.top, isRootTab ? 8 : 16)
+                      .padding(.top, isRootTab ? TeacherMetrics.listGap : TeacherMetrics.cardPadding)
                   menuCard(user: user, membership: membership)
                     .padding(.top, 16)
                 if let message = model.message {
@@ -362,7 +362,7 @@ struct AuthChangePasswordView: View {
                                                      confirmation: confirmation)
                   }
             }
-            .padding(.top, isPushed ? 8 : 24)
+            .padding(.top, isPushed ? TeacherMetrics.listGap : TeacherMetrics.sectionGap)
         }
         .modifier(PushedTitle(isPushed: isPushed))
         .onChange(of: saveController.phase) { _, phase in
