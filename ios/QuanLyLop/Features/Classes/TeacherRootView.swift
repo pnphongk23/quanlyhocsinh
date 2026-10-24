@@ -16,30 +16,21 @@ struct TeacherRootView: View {
     }
 
     var body: some View {
-      VStack(spacing: 0) {
-            content
-            TeacherTabBar(selection: $tab)
-        }
-        .background(AppColors.background.ignoresSafeArea())
-        .task {
-            await data.configure(auth: auth)
-            await i4Data.configure(auth: auth)
-        }
-    }
-
-    @ViewBuilder private var content: some View {
-        switch tab {
-        case .classes:
+        TabView(selection: $tab) {
             NavigationStack(path: $classesPath) {
-                TeacherClassListView(data: data, i4Data: i4Data, selectTab: { tab = $0 })
+                TeacherClassListView(data: data, i4Data: i4Data)
                     .teacherRoutes(data: data, i4Data: i4Data)
             }
-        case .calendar:
+            .tabItem { Label(String(localized: "feature.classes.lop"), systemImage: "book") }
+            .tag(TeacherTab.classes)
+
             NavigationStack(path: $calendarPath) {
                 TeacherScheduleView(data: data, i4Data: i4Data)
                     .teacherRoutes(data: data, i4Data: i4Data)
             }
-        case .settings:
+            .tabItem { Label(String(localized: "feature.classes.lich"), systemImage: "calendar") }
+            .tag(TeacherTab.calendar)
+
             NavigationStack {
                 if let accountSettings {
                     accountSettings()
@@ -47,6 +38,13 @@ struct TeacherRootView: View {
                     TeacherSettingsView(data: data)
                 }
             }
+            .tabItem { Label(String(localized: "feature.classes.cai.at"), systemImage: "slider.horizontal.3") }
+            .tag(TeacherTab.settings)
+        }
+        .tint(AppState.selectedFg)
+        .task {
+            await data.configure(auth: auth)
+            await i4Data.configure(auth: auth)
         }
     }
 }
@@ -129,7 +127,6 @@ struct TeacherTabBar: View {
 struct TeacherClassListView: View {
     @Bindable var data: TeacherFeatureData
     @ObservedObject var i4Data: I4FeatureStore
-    var selectTab: (TeacherTab) -> Void = { _ in }
 
     private var classes: [Classroom] { data.classes }
     private var todaySession: ClassSession? {
@@ -144,7 +141,7 @@ struct TeacherClassListView: View {
     var body: some View {
         TeacherScroll {
             VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-                header
+                greeting
                 if let error = data.errorMessage { TeacherErrorBanner(message: error) { Task { await data.refresh() } } }
                 if !data.canReadClasses {
                     AppEmptyState(title: String(localized: "feature.classes.ban.khong.co.quyen.xem.lop.hoc"))
@@ -174,32 +171,15 @@ struct TeacherClassListView: View {
                 .padding(.bottom, 16)
             }
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(String(localized: "feature.classes.lop.cua.toi"))
+        .navigationBarTitleDisplayMode(.large)
         .refreshable { await data.refresh() }
     }
 
-    private var header: some View {
-        HStack(alignment: .bottom, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(String.localizedStringWithFormat(String(localized: "feature.classes.xin.chao"), String(describing: (data.displayName))))
-                    .appText(AppText.muted)
-                    .foregroundStyle(AppColors.muted)
-                Text(String(localized: "feature.classes.lop.cua.toi"))
-                    .appText(AppText.title)
-                    .foregroundStyle(AppColors.text)
-            }
-            Spacer(minLength: 0)
-            Button { selectTab(.settings) } label: {
-                TeacherAvatar(initials: settingsInitials, size: AppMetrics.tap)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "feature.classes.cai.at"))
-        }
-    }
-
-    private var settingsInitials: String {
-        let initials = AppInitials.of(data.displayName)
-        return initials.isEmpty ? "GV" : initials
+    private var greeting: some View {
+        Text(String.localizedStringWithFormat(String(localized: "feature.classes.xin.chao"), String(describing: (data.displayName))))
+            .appText(AppText.muted)
+            .foregroundStyle(AppColors.muted)
     }
 
     private var loadingState: some View {
@@ -370,7 +350,6 @@ struct TeacherSettingsView: View {
     var body: some View {
         TeacherScroll {
             VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-                Text(String(localized: "feature.classes.cai.at")).appText(AppText.title).foregroundStyle(AppColors.text)
                 AppCard {
                     HStack {
                         Text(String(localized: "feature.classes.vai.tro")).appText(AppText.label)
@@ -390,6 +369,7 @@ struct TeacherSettingsView: View {
             .padding(.top, TeacherMetrics.screenPaddingTop)
         }
         .background(AppColors.background.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(String(localized: "feature.classes.cai.at"))
+        .navigationBarTitleDisplayMode(.large)
     }
 }

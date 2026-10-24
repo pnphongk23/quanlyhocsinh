@@ -65,7 +65,6 @@ struct TeacherScheduleView: View {
     var body: some View {
         TeacherScroll {
             VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-                Text(String(localized: "feature.classes.lich")).appText(AppText.title).foregroundStyle(AppColors.text)
                 TeacherSegmented(options: [.init(id: "day", label: String(localized: "feature.classes.ngay")), .init(id: "month", label: String(localized: "feature.classes.thang"))],
                                  value: view) { changeView($0) }
                 filterChips
@@ -76,7 +75,8 @@ struct TeacherScheduleView: View {
             .padding(.bottom, 24)
         }
         .background(AppColors.background.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(String(localized: "feature.classes.lich"))
+        .navigationBarTitleDisplayMode(.large)
     }
 
     // MARK: Ngày | Tháng

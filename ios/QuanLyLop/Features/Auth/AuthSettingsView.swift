@@ -13,16 +13,19 @@ struct AuthSettingsView: View {
     var guardianMeta: String? = nil
     /// Teacher chrome is owned by the teacher shell; this back control is its exit.
     var onClose: (() -> Void)? = nil
+    /// Root of the teacher Cài đặt tab: the system navigation bar owns the large title, so the
+    /// page draws no title, no back control and no extra top padding.
+    var isRootTab = false
 
     var body: some View {
-        AuthPage(title: onClose == nil ? String(localized: "feature.auth.cai.at") : nil,
+        AuthPage(title: onClose == nil && !isRootTab ? String(localized: "feature.auth.cai.at") : nil,
                  horizontalPadding: AuthSettingsView.shellPadding,
-                 topPadding: AuthSettingsView.shellTopPadding) {
+                 topPadding: isRootTab ? 0 : AuthSettingsView.shellTopPadding) {
             if let onClose { backRow(onClose) }
               if let user = model.currentUser {
                   let membership = model.activeMembership
                   profileCard(user: user, membership: membership)
-                      .padding(.top, 16)
+                      .padding(.top, isRootTab ? 8 : 16)
                   menuCard(user: user, membership: membership)
                     .padding(.top, 16)
                 if let message = model.message {
@@ -42,6 +45,7 @@ struct AuthSettingsView: View {
         .sheet(item: logoutBlockBinding) { block in
             logoutSheet(block)
         }
+        .modifier(RootTabTitle(isRootTab: isRootTab))
     }
 
     private func backRow(_ close: @escaping () -> Void) -> some View {
@@ -196,6 +200,20 @@ struct AuthSettingsView: View {
             return "\(badge) · \(guardianMeta)"
         }
         return "\(badge) · \(membership.workspace.name)"
+    }
+}
+
+private struct RootTabTitle: ViewModifier {
+    let isRootTab: Bool
+
+    func body(content: Content) -> some View {
+        if isRootTab {
+            content
+                .navigationTitle(String(localized: "feature.auth.cai.at"))
+                .navigationBarTitleDisplayMode(.large)
+        } else {
+            content
+        }
     }
 }
 

@@ -17,7 +17,6 @@ struct TeacherNewClassView: View {
     var body: some View {
         TeacherScroll {
             VStack(alignment: .leading, spacing: 16) {
-                header
                 TeacherField(label: String(localized: "feature.classes.ten.lop"), text: $name, placeholder: String(localized: "feature.classes.vi.du.ielts.foundation"),
                              identifier: "class.name")
                 weekdayField
@@ -36,19 +35,9 @@ struct TeacherNewClassView: View {
         }
         .background(AppColors.background.ignoresSafeArea())
         .overlay(alignment: .bottom) { stickyBar }
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(String(localized: "feature.classes.tao.lop.moi"))
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear { syncTimeSelection() }
-    }
-
-    private var header: some View {
-        HStack(spacing: 4) {
-            TeacherIconButton(systemImage: "chevron.backward", label: String(localized: "feature.classes.quay.lai")) { dismiss() }
-            Text(String(localized: "feature.classes.tao.lop.moi"))
-                .appText(AppText.titleCompact)
-                .foregroundStyle(AppColors.text)
-            Spacer(minLength: 0)
-        }
-        .padding(.bottom, 4)
     }
 
     private var weekdayField: some View {
@@ -175,7 +164,6 @@ struct TeacherNewClassView: View {
 // MARK: - Chi tiết lớp (`ClassSpaceLayout.tsx`)
 
 struct TeacherClassDetailView: View {
-    @Environment(\.dismiss) private var dismiss
     let classID: String
     @Bindable var data: TeacherFeatureData
     @ObservedObject var i4Data: I4FeatureStore
@@ -211,8 +199,8 @@ struct TeacherClassDetailView: View {
             if !data.canReadClasses {
                 AppEmptyState(title: String(localized: "feature.classes.ban.khong.co.quyen.xem.lop.nay"))
                     .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
-            } else if let klass {
-                header(klass)
+            } else if klass != nil {
+                contentTabs
                 tabBody
             } else {
                 AppEmptyState(title: String(localized: "feature.classes.khong.tim.thay.lop"))
@@ -220,14 +208,22 @@ struct TeacherClassDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .safeAreaPadding(.top)
         .background(AppColors.background.ignoresSafeArea())
         .overlay(alignment: .topTrailing) {
             if showingMenu, let klass {
                 menuOverlay(klass)
             }
         }
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(klass?.name ?? "")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if klass != nil, data.canWriteClasses {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingMenu = true } label: { Image(systemName: "ellipsis") }
+                        .accessibilityLabel(String(localized: "feature.classes.tuy.chon.lop"))
+                }
+            }
+        }
         .sheet(isPresented: $showingEdit) {
             if let klass {
                 TeacherEditClassView(classID: klass.id, data: data) { showingSchedule = true }
@@ -238,26 +234,9 @@ struct TeacherClassDetailView: View {
         }
     }
 
-    private func header(_ klass: Classroom) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 4) {
-                TeacherIconButton(systemImage: "chevron.backward", label: String(localized: "feature.classes.quay.lai")) { dismiss() }
-                Text(klass.name)
-                    .appText(AppText.titleCompact)
-                    .foregroundStyle(AppColors.text)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if data.canWriteClasses {
-                    TeacherIconButton(systemImage: "ellipsis", label: String(localized: "feature.classes.tuy.chon.lop"),
-                                      tint: AppColors.muted) { showingMenu = true }
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
-            .padding(.bottom, 4)
-            TeacherTextTabs(items: tabs, selection: selected, fontSize: 13, fillsWidth: false) { selected = $0 }
-        }
-        .background(AppColors.surface)
+    private var contentTabs: some View {
+        TeacherTextTabs(items: tabs, selection: selected, fontSize: 13, fillsWidth: false) { selected = $0 }
+            .background(AppColors.surface)
     }
 
     @ViewBuilder private var tabBody: some View {
@@ -283,7 +262,7 @@ struct TeacherClassDetailView: View {
                                note: klass.status == .archived ? String(localized: "feature.classes.lop.nay.a.luu.tru") : nil) {
                 showingMenu = false
             }
-            .padding(.top, 104)
+            .padding(.top, 8)
             .padding(.trailing, 12)
         }
     }

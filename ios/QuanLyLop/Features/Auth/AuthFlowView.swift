@@ -99,18 +99,8 @@ struct AuthFlowView: View {
     }
 
     private var teacherShell: some View {
-        NavigationStack {
-            TeacherRootView(auth: model) {
-                AnyView(AuthSettingsView(model: model, onClose: { model.show(.main) }))
-            }
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { model.show(.settings) } label: {
-                            Image(systemName: "person.crop.circle")
-                        }
-                        .accessibilityLabel(String(localized: "feature.auth.cai.at.tai.khoan"))
-                    }
-                }
+        TeacherRootView(auth: model) {
+            AnyView(AuthSettingsView(model: model, isRootTab: true))
         }
     }
 
@@ -119,7 +109,7 @@ struct AuthFlowView: View {
             GuardianRootView(model: model)
         } else {
             TeacherRootView(auth: model, initialTab: .settings) {
-                AnyView(AuthSettingsView(model: model, onClose: { model.show(.main) }))
+                AnyView(AuthSettingsView(model: model, isRootTab: true))
             }
         }
     }

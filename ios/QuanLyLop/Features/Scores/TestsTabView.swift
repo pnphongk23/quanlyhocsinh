@@ -18,14 +18,20 @@ struct TestsTabView: View {
     private var klass: Classroom? { data.classes.first { $0.id == classID } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if tests.isEmpty {
-                emptyState
-            } else {
-                if data.canWriteScores { newButton }
-                list
+        TeacherScroll {
+            VStack(alignment: .leading, spacing: 8) {
+                if tests.isEmpty {
+                    emptyState
+                } else {
+                    if data.canWriteScores { newButton }
+                    list
+                }
             }
+            .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+            .padding(.top, TeacherMetrics.screenPaddingTop)
+            .padding(.bottom, TeacherMetrics.contentGap * 2)
         }
+        .background(AppColors.background.ignoresSafeArea())
         .navigationDestination(isPresented: $showingCreate) {
             TestEditorView(data: data, classID: classID)
         }
@@ -175,7 +181,16 @@ struct TestScoresView: View {
             }
         }
         .background(AppColors.background.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(String(localized: "feature.scores.iem.so"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if data.canWriteScores {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingOptions = true } label: { Image(systemName: "ellipsis") }
+                        .accessibilityLabel(String(localized: "feature.scores.tuy.chon.bai.kiem.tra"))
+                }
+            }
+        }
         .task {
             await data.configure(auth: auth)
             if let store = data.store {
@@ -191,7 +206,6 @@ struct TestScoresView: View {
 
     private func page(_ test: TestDefinition) -> some View {
         VStack(spacing: 0) {
-            header(test)
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     testCard(test)
@@ -219,46 +233,6 @@ struct TestScoresView: View {
                 deleteDialog(test, deletion)
             }
         }
-    }
-
-    private func header(_ test: TestDefinition) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.backward")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(AppColors.text)
-                    .frame(width: AppMetrics.tap, height: AppMetrics.tap)
-                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "feature.scores.quay.lai"))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(klass?.name ?? String(localized: "feature.scores.lop.hoc"))
-                    .appText(AppText.muted)
-                    .foregroundStyle(AppColors.muted)
-                    .lineLimit(1)
-                Text(String(localized: "feature.scores.iem.so"))
-                    .appText(AppText.title)
-                    .foregroundStyle(AppColors.text)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if data.canWriteScores {
-                Button { showingOptions = true } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(AppColors.muted)
-                        .frame(width: AppMetrics.tap, height: AppMetrics.tap)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "feature.scores.tuy.chon.bai.kiem.tra"))
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-        .background(AppColors.background)
     }
 
     private func testCard(_ test: TestDefinition) -> some View {
@@ -498,7 +472,6 @@ struct TestEditorView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, placeholder: String(localized: "feature.scores.vi.du.unit.6.test"))
@@ -540,7 +513,8 @@ struct TestEditorView: View {
             .background(AppColors.background)
         }
           .background(AppColors.background.ignoresSafeArea())
-          .toolbar(.hidden, for: .navigationBar)
+          .navigationTitle(String(localized: "feature.scores.tao.bai.kiem.tra"))
+          .navigationBarTitleDisplayMode(.inline)
           .task {
               await data.configure(auth: auth)
               if let store = data.store {
@@ -555,27 +529,6 @@ struct TestEditorView: View {
           .onChange(of: SyncStatusCenter.shared.state) { _, _ in
               Task { await saveStatusSource?.refresh() }
           }
-    }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.backward")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(AppColors.text)
-                    .frame(width: AppMetrics.tap, height: AppMetrics.tap)
-                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "feature.scores.quay.lai"))
-            Text(String(localized: "feature.scores.tao.bai.kiem.tra"))
-                .appText(AppText.title)
-                .foregroundStyle(AppColors.text)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 12)
     }
 
     private var dateField: some View {

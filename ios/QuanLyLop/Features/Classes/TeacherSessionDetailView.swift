@@ -35,7 +35,16 @@ struct TeacherSessionDetailView: View {
             }
         }
         .background(AppColors.background.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(session.map { "\(TeacherFeatureData.sessionPrefix($0)) · \(TeacherFormat.dayMonth($0.date))" } ?? "")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let session, !cancelled, session.status == .planned, data.canWriteAttendance {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingMenu = true } label: { Image(systemName: "ellipsis") }
+                        .accessibilityLabel(String(localized: "feature.classes.tuy.chon.buoi.hoc"))
+                }
+            }
+        }
         .sheet(isPresented: $showingMenu) {
             TeacherSheet(title: String(localized: "feature.classes.tuy.chon.buoi.hoc")) {
                 AppButton(title: String(localized: "feature.classes.huy.buoi"), variant: .danger, size: .medium) {
@@ -59,41 +68,18 @@ struct TeacherSessionDetailView: View {
 
     private func header(_ session: ClassSession) -> some View {
         VStack(spacing: 0) {
-              HStack(spacing: 4) {
-                TeacherIconButton(systemImage: "chevron.backward", label: String(localized: "feature.classes.quay.lai")) { dismiss() }
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(klass?.name ?? String(localized: "feature.classes.lop.hoc"))
-                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
-                        .foregroundStyle(AppColors.muted)
-                        .lineLimit(1)
-                    HStack(spacing: 8) {
-                        Text("\(TeacherFeatureData.sessionPrefix(session)) · \(TeacherFormat.dayMonth(session.date))")
-                            .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 25))
-                            .foregroundStyle(AppColors.text)
-                            .lineLimit(1)
-                        if cancelled { TeacherStatusPill(text: String(localized: "feature.classes.a.huy"), tone: .warning) }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if !cancelled && session.status == .planned && data.canWriteAttendance {
-                    TeacherIconButton(systemImage: "ellipsis", label: String(localized: "feature.classes.tuy.chon.buoi.hoc"),
-                                      tint: AppColors.muted) { showingMenu = true }
-                }
-              }
-              .padding(.horizontal, 12)
-              .padding(.top, 12)
-              HStack(spacing: 4) {
-                  Color.clear.frame(width: AppMetrics.tap, height: 1)
-                  Text(TeacherFormat.sessionDateLine(date: session.date, start: session.startTime, end: nil))
-                      .appText(AppText.muted)
-                      .foregroundStyle(AppColors.muted)
-                      .frame(maxWidth: .infinity, alignment: .leading)
-                      .fixedSize(horizontal: false, vertical: true)
-              }
-              .padding(.horizontal, 12)
-              .padding(.top, 2)
-              .padding(.bottom, 8)
-              if !cancelled {
+            HStack(spacing: 8) {
+                Text("\(klass?.name ?? String(localized: "feature.classes.lop.hoc")) · \(TeacherFormat.sessionDateLine(date: session.date, start: session.startTime, end: nil))")
+                    .appText(AppText.muted)
+                    .foregroundStyle(AppColors.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                if cancelled { TeacherStatusPill(text: String(localized: "feature.classes.a.huy"), tone: .warning) }
+            }
+            .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+            .padding(.top, 2)
+            .padding(.bottom, 8)
+            if !cancelled {
                 TeacherTextTabs(items: tabs, selection: tab, fontSize: 14, fillsWidth: true) { tab = $0 }
             }
         }

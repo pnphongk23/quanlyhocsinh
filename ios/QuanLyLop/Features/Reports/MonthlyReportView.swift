@@ -61,6 +61,28 @@ struct MonthlyReportView: View {
     private var monthLabel: String { I4Format.monthOption(month) }
 
     var body: some View {
+        TeacherScroll { framedContent }
+            .background(AppColors.background.ignoresSafeArea())
+            .task {
+                await data.configure(auth: auth)
+                if month == I4Format.currentMonth(), let latest = latestMonth() { month = latest }
+                if studentID.isEmpty { studentID = rows.first?.student.id ?? "" }
+            }
+            .onChange(of: studentID) { _, _ in
+                previewOpen = false
+                message = nil
+                error = nil
+                commentDraft = nil
+            }
+            .sheet(item: $shareItem, onDismiss: {
+                I4ReportPDFFile.remove(temporaryPDFURL)
+                temporaryPDFURL = nil
+            }) { item in
+                I4ReportPDFShareSheet(url: item.url)
+            }
+    }
+
+    private var framedContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             if !data.canReadCommentsReports {
                 AppEmptyState(title: String(localized: "feature.reports.ban.khong.co.quyen.xem.bao.cao")) {
@@ -88,23 +110,9 @@ struct MonthlyReportView: View {
                 }
             }
         }
-        .task {
-            await data.configure(auth: auth)
-            if month == I4Format.currentMonth(), let latest = latestMonth() { month = latest }
-            if studentID.isEmpty { studentID = rows.first?.student.id ?? "" }
-        }
-        .onChange(of: studentID) { _, _ in
-            previewOpen = false
-            message = nil
-            error = nil
-            commentDraft = nil
-        }
-        .sheet(item: $shareItem, onDismiss: {
-            I4ReportPDFFile.remove(temporaryPDFURL)
-            temporaryPDFURL = nil
-        }) { item in
-            I4ReportPDFShareSheet(url: item.url)
-        }
+        .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+        .padding(.top, TeacherMetrics.screenPaddingTop)
+        .padding(.bottom, TeacherMetrics.contentGap * 2)
     }
 
     private func latestMonth() -> String? {
