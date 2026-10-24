@@ -123,7 +123,7 @@ describe("REST writes persist to the device cache", () => {
     const { createClass } = await import("../data/repositories/classes");
     const bodies: any[] = [];
     vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => { bodies.push(options.body); return { ...classRow, id: options.body.id, weekdays: options.body.weekdays }; }) as never);
-    await createClass({ name: "Lớp thứ Hai và Chủ nhật", weekdays: [1, 7], time: "09:00" });
+    await createClass({ name: "Lớp thứ Hai và Chủ nhật", weekdays: [0, 7, 1, 0], time: "09:00" });
     expect(bodies[0].weekdays).toEqual([1, 7]);
   });
 
@@ -151,7 +151,7 @@ describe("REST writes persist to the device cache", () => {
     const { updateClassSchedule } = await import("../data/repositories/sessions");
     const bodies: any[] = [];
     vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => { bodies.push(options.body); return { ...classRow, weekdays: options.body.weekdays, start_time: options.body.start_time, version: 2 }; }) as never);
-    await updateClassSchedule("c1", { weekdays: [7], time: "09:00" }, "2026-10-26");
+    await updateClassSchedule("c1", { weekdays: [0, 7, 0], time: "09:00" }, "2026-10-26");
     expect(bodies[0].weekdays).toEqual([7]);
   });
 
