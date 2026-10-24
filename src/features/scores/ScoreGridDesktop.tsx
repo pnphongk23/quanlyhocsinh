@@ -3,7 +3,7 @@ import { useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import { Link } from "react-router-dom";
 import { getClass } from "../../data/repositories/classes";
 import { listTests } from "../../data/repositories/tests";
-import { listScores, saveScore } from "../../data/repositories/scores";
+import { listScores, saveScoreDurable } from "../../data/repositories/scores";
 import { listStudents } from "../../data/repositories/students";
 import { useAccess } from "../../data/repositories/access";
 import { useStore } from "../../data/store";
@@ -94,13 +94,13 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
     baseline,
     value,
     validate: () => invalidCount === 0,
-    save: (next) => {
+    save: async (next) => {
       for (const key of Object.keys(next)) {
         if (next[key] === baseline[key]) continue;
         const [testId, studentId] = key.split(":");
         const parsed = parseScoreInput(next[key]);
         if (!parsed.ok) throw new Error("Điểm phải theo bước 0,5. Ví dụ 7,5 hoặc 7.5.");
-        saveScore({ testId, studentId, value: parsed.value });
+        await saveScoreDurable({ testId, studentId, value: parsed.value });
       }
       setDrafts({});
     },

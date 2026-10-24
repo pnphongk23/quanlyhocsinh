@@ -9,6 +9,11 @@ import TestScoresPage from "./TestScoresPage";
 import NewTestPage from "./NewTestPage";
 import TestsDesktop from "./TestsDesktop";
 
+vi.mock("../../data/outbox", async (original) => ({
+  ...(await original<typeof import("../../data/outbox")>()),
+  persistCommand: vi.fn().mockResolvedValue(undefined),
+}));
+
 function inRouter(node: ReactNode, path: string, url: string) {
   const router = createMemoryRouter([{ path, element: node }], {
     initialEntries: [url],

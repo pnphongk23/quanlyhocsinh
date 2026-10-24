@@ -35,19 +35,6 @@ export function Component() {
   const activeClass = store.classes.find(
     (item) => item.id === store.currentClassId,
   );
-  // `hydrateStore` dựng lại store sau mỗi lần đồng bộ và không giữ lớp đang chọn:
-  // nhớ lớp đã chọn và đặt lại để picker, mục con và thẻ lớp không về "Chưa chọn lớp".
-  const lastClassId = useRef<string | null>(null);
-  if (store.currentClassId) lastClassId.current = store.currentClassId;
-  const restorable =
-    !store.currentClassId &&
-    lastClassId.current !== null &&
-    store.classes.some((item) => item.id === lastClassId.current)
-      ? lastClassId.current
-      : null;
-  useEffect(() => {
-    if (restorable) setCurrentClass(restorable);
-  }, [restorable]);
   const activeMember = store.members.find(
     (member) => member.id === store.activeMemberId,
   );

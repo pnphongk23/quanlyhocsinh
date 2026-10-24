@@ -16,6 +16,11 @@ import CommentsDesktop from "../comments/CommentsDesktop";
 import SessionDetailDesktop from "./SessionDetailDesktop";
 import type { SessionTab } from "./SessionDetailPage";
 
+
+vi.mock("../../data/outbox", async (original) => ({
+  ...(await original<typeof import("../../data/outbox")>()),
+  persistCommand: vi.fn().mockResolvedValue(undefined),
+}));
 const mocks = vi.hoisted(() => ({
   createStudent: vi.fn(),
   saveAttendanceBatch: vi.fn(),
@@ -28,12 +33,12 @@ vi.mock("../../data/repositories/students", async (original) => ({
 }));
 vi.mock("../../data/repositories/attendance", async (original) => {
   const real = await original<typeof import("../../data/repositories/attendance")>();
-  mocks.saveAttendanceBatch.mockImplementation(real.saveAttendanceBatch);
-  return { ...real, saveAttendanceBatch: mocks.saveAttendanceBatch };
+  mocks.saveAttendanceBatch.mockImplementation(real.saveAttendanceBatchDurable);
+  return { ...real, saveAttendanceBatchDurable: mocks.saveAttendanceBatch };
 });
 vi.mock("../../data/repositories/comments", async (original) => ({
   ...(await original<typeof import("../../data/repositories/comments")>()),
-  sendSessionTickets: mocks.sendSessionTickets,
+  sendSessionTicketsDurable: mocks.sendSessionTickets,
 }));
 
 function inRouter(node: ReactNode, url = "/lop/6a/diem") {
@@ -203,7 +208,7 @@ describe("Thêm học sinh: chặn tạo trùng", () => {
 
 describe("Gửi phiếu: không gửi lại phiếu đang chờ gửi", () => {
   it("chỉ chọn phiếu nháp, bỏ phiếu queued", async () => {
-    mocks.sendSessionTickets.mockReturnValue({
+    mocks.sendSessionTickets.mockResolvedValue({
       sent: [],
       skipped: [],
       queued: false,

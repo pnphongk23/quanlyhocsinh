@@ -5,7 +5,7 @@ import {
   type HomeworkPreviousState,
   type TicketRow,
 } from "../../data/homework";
-import { saveSessionComment } from "../../data/repositories/comments";
+import { saveSessionCommentDurable } from "../../data/repositories/comments";
 import { STAR_LEVELS, starTemplate } from "../../data/logic";
 import type {
   HomeworkKind,
@@ -165,8 +165,8 @@ export default function CommentTicketSheet({
   const action = useSaveAction({
     baseline: { stars: row.stars, note: row.comment?.note ?? "" },
     value: { stars, note },
-    save: (value) => {
-      saveSessionComment({
+    save: async (value) => {
+      await saveSessionCommentDurable({
         sessionId: session.id,
         studentId: row.student.id,
         stars: value.stars,

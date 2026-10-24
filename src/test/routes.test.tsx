@@ -1,9 +1,11 @@
+import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider, matchRoutes } from "react-router-dom";
 import type { WebSession } from "../data/auth/session";
 import { defaultRoles } from "../data/defaults";
-import { getStore, replaceStore } from "../data/store";
+import { db, rowKey, setCacheIdentity, stored } from "../data/db";
+import { getStore, hydrateStore, replaceStore } from "../data/store";
 import { createSeed } from "./fixtures/seed";
 
 const authState = vi.hoisted(() => ({
@@ -245,9 +247,13 @@ describe("foundation route integration", () => {
 
   it("picks a class from the sidebar picker and keeps it after the store is rebuilt", async () => {
     authState.session = activeSession("staff");
-    const fixture = createSeed();
-    fixture.currentClassId = null;
-    replaceStore(fixture);
+    setCacheIdentity({ userId: "u", workspaceId: "w", membershipId: "m" });
+    await db.delete();
+    await db.open();
+    const wire = { id: "6a", name: "Lớp 6A", status: "active", weekdays: [1], start_time: "18:00", version: 1 };
+    await db.classes.put(stored("class", rowKey("class", ["6a"]), wire) as never);
+    await hydrateStore();
+    expect(getStore().classes.map((item) => item.id)).toEqual(["6a"]);
     const router = open("/lop");
     const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
     expect(navigation.querySelectorAll("a")).toHaveLength(2);
@@ -257,11 +263,16 @@ describe("foundation route integration", () => {
     await waitFor(() => expect(navigation.querySelectorAll("a")).toHaveLength(6));
     expect(screen.getByRole("button", { name: /Đang xem lớp/ })).toHaveTextContent("6A");
 
-    // Đồng bộ xong thì store dựng lại và quên lớp đã chọn.
-    act(() => replaceStore({ ...getStore(), currentClassId: null }));
-    await waitFor(() => expect(getStore().currentClassId).toBe("6a"));
+    // Đồng bộ xong thì store dựng lại từ Dexie; lớp đã chọn phải còn.
+    await act(async () => {
+      await hydrateStore();
+    });
+    expect(getStore().currentClassId).toBe("6a");
     expect(navigation.querySelectorAll("a")).toHaveLength(6);
+    expect(screen.getByRole("button", { name: /Đang xem lớp/ })).toHaveTextContent("6A");
     router.dispose();
+    setCacheIdentity(null);
+    await db.delete();
   });
 
   it("redirects unauthenticated staff and guardian routes to sign in", async () => {
@@ -366,16 +377,16 @@ describe("foundation route integration", () => {
     expect(matchRoutes(routes, "/doi-mat-khau-bat-buoc")?.at(-1)?.route.path).not.toBe("/doi-mat-khau-bat-buoc");
   });
 
-  it("opens staff and guardian shells from the foundation landing", async () => {
-    const router = open("/");
+  it("opens staff and guardian shells directly", async () => {
     authState.session = activeSession("staff");
-    fireEvent.click(screen.getByRole("link", { name: "Khung nhân sự" }));
+    const router = open("/lop");
     expect(await screen.findByRole("navigation", { name: "Điều hướng nhân sự" })).toBeVisible();
-    authState.session = activeSession("guardian");
-    await router.navigate("/");
-    fireEvent.click(await screen.findByRole("link", { name: "Khung phụ huynh" }));
-    expect(await screen.findByRole("heading", { name: "Tiếng Anh giao tiếp 6A" })).toBeVisible();
     router.dispose();
+    cleanup();
+    authState.session = activeSession("guardian");
+    const guardianRouter = open("/ph");
+    expect(await screen.findByRole("heading", { name: "Tiếng Anh giao tiếp 6A" })).toBeVisible();
+    guardianRouter.dispose();
   });
 
   it.each(["/luong", "/hoc-phi", "/nhan-su", "/bai-giang", "/moi", "/lop/class-a/bao-cao-diem"])("does not register non-MVP route %s", (path) => {

@@ -8,8 +8,8 @@ import {
 import { useStore } from "../../data/store";
 import { getClass, listClasses } from "../../data/repositories/classes";
 import { listStudents } from "../../data/repositories/students";
-import { deleteTest, listTests, updateTest } from "../../data/repositories/tests";
-import { listScores, saveScore } from "../../data/repositories/scores";
+import { deleteTestDurable, listTests, updateTestDurable } from "../../data/repositories/tests";
+import { listScores, saveScoreDurable } from "../../data/repositories/scores";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import { useSaveAction, type SaveAction } from "../../shared/hooks/useSaveAction";
 import { useSavedPeek, useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
@@ -150,7 +150,7 @@ export default function TestScoresPage() {
     });
   };
   /** Trả về true khi đã lưu xong, false khi còn lỗi. */
-  const save = (): boolean => {
+  const save = async (): Promise<boolean> => {
     try {
       for (const [key, draft] of currentDraftEntries) {
         const [entryTestId, studentId] = key.split(":");
@@ -164,11 +164,11 @@ export default function TestScoresPage() {
         if (!old && parsed === null) continue;
         // `absent` đã bỏ khỏi Score (đã chốt 2026-10-19); ép kiểu để file này
         // chạy được cả trước và sau khi kiểu dữ liệu bỏ hẳn trường đó.
-        saveScore({
+        await saveScoreDurable({
           testId: entryTestId,
           studentId,
           value: parsed,
-        } as Parameters<typeof saveScore>[0]);
+        } as Parameters<typeof saveScoreDurable>[0]);
       }
       setDrafts((current) => clearClassTestDrafts(current, classId, currentTestIds));
       setError("");
@@ -214,11 +214,11 @@ export default function TestScoresPage() {
   const hasScores = listScores(testId).some(
     (score) => score.value !== null && score.value !== undefined,
   );
-  const remove = () => {
+  const remove = async () => {
     if (removeLock.current) return;
     removeLock.current = true;
     try {
-      deleteTest(testId);
+      await deleteTestDurable(testId);
     } catch (cause) {
       removeLock.current = false;
       setConfirmDelete(false);
@@ -450,7 +450,7 @@ function EditTestModal({
       );
     },
     save: (value) =>
-      updateTest(test.id, {
+      updateTestDurable(test.id, {
         name: value.name,
         date: value.date,
         max: Number(value.max.trim()),

@@ -4,7 +4,7 @@ import {
   HOMEWORK_LEVEL_LABELS,
   type TicketRow,
 } from "../../data/homework";
-import { saveSessionComment } from "../../data/repositories/comments";
+import { saveSessionCommentDurable } from "../../data/repositories/comments";
 import { listAttendance } from "../../data/repositories/attendance";
 import { starTemplate } from "../../data/logic";
 import type {
@@ -108,9 +108,9 @@ export default function TicketEditor({
   const template = starTemplate(stars);
   const statusLabel = row.status === "sent" ? "Đã gửi" : stars === null ? "Chưa chọn sao" : "Nháp";
 
-  function persist(next: { stars: StarLevel | null; note: string }) {
+  async function persist(next: { stars: StarLevel | null; note: string }) {
     try {
-      saveSessionComment({
+      await saveSessionCommentDurable({
         sessionId: session.id,
         studentId: row.student.id,
         stars: next.stars,
@@ -130,7 +130,7 @@ export default function TicketEditor({
     writeDraft(session.id, row.student.id, draft.current);
     setStars(next);
     setError("");
-    persist(draft.current);
+    void persist(draft.current);
   }
 
   function changeNote(value: string) {
@@ -198,7 +198,7 @@ export default function TicketEditor({
           placeholder="Thêm lời nhắn riêng cho phụ huynh…"
           onChange={(event) => changeNote(event.target.value)}
           onBlur={() => {
-            if (canWrite && draft.current.stars !== null) persist(draft.current);
+            if (canWrite && draft.current.stars !== null) void persist(draft.current);
           }}
         />
       </label>

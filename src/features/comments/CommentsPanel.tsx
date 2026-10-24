@@ -12,7 +12,7 @@ import {
 import { useAccess } from "../../data/repositories/access";
 import {
   flushQueuedTickets,
-  sendSessionTickets,
+  sendSessionTicketsDurable,
 } from "../../data/repositories/comments";
 import { getSession, sessionNumber } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
@@ -215,9 +215,9 @@ export default function CommentsPanel({
     );
   }
 
-  function confirmSend() {
+  async function confirmSend() {
     try {
-      sendSessionTickets(
+      await sendSessionTicketsDurable(
         sessionId,
         sendable.map((row) => row.student.id),
       );

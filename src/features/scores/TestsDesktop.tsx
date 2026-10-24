@@ -3,11 +3,11 @@ import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Link } from "react-router-dom";
 import { getClass } from "../../data/repositories/classes";
 import {
-  createTest,
+  createTestDurable,
   DEFAULT_TEST_MAX,
-  deleteTest,
+  deleteTestDurable,
   listTests,
-  updateTest,
+  updateTestDurable,
 } from "../../data/repositories/tests";
 import { listScores } from "../../data/repositories/scores";
 import { listStudents } from "../../data/repositories/students";
@@ -104,12 +104,15 @@ export default function TestsDesktop({ classId }: { classId: string }) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const [menuTestId, setMenuTestId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   if (!klass) return null;
 
-  function confirmDelete(test: Test) {
+  async function confirmDelete(test: Test) {
+    if (deleting) return;
+    setDeleting(true);
     try {
-      deleteTest(test.id);
+      await deleteTestDurable(test.id);
       setDialog(null);
       setError("");
     } catch (cause) {
@@ -117,6 +120,8 @@ export default function TestsDesktop({ classId }: { classId: string }) {
       setError(
         cause instanceof Error ? cause.message : "Không xoá được bài kiểm tra.",
       );
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -297,6 +302,7 @@ export default function TestsDesktop({ classId }: { classId: string }) {
                 </Button>
                 <Button
                   className={s.solidDanger}
+                  loading={deleting}
                   onClick={() => confirmDelete(dialog.test)}
                 >
                   {copy.action}
@@ -343,10 +349,10 @@ function TestFormModal({
     isEqual: (a, b) =>
       a.name.trim() === b.name.trim() && a.date === b.date && a.max === b.max,
     validate: (next) => next.name !== "" && next.date !== "" && !maxInvalid,
-    save: (next) => {
+    save: async (next) => {
       const input = { name: next.name, date: next.date, max: Number(next.max) };
-      if (test) updateTest(test.id, input);
-      else createTest({ classId, ...input });
+      if (test) await updateTestDurable(test.id, input);
+      else await createTestDurable({ classId, ...input });
     },
   });
   const saved = useSavedPeek();

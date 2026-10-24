@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useStore } from "../../data/store";
-import { createTest, DEFAULT_TEST_MAX } from "../../data/repositories/tests";
+import { createTestDurable, DEFAULT_TEST_MAX } from "../../data/repositories/tests";
 import { getClass } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
 import { useSaveStatus } from "../../shared/SaveStatus";
@@ -48,9 +48,9 @@ export default function NewTestPage() {
         max <= 1000
       );
     },
-    save: (value) => {
+    save: async (value) => {
       if (!classItem) throw new Error("Không tìm thấy lớp học.");
-      const test = createTest({
+      const test = await createTestDurable({
         classId,
         name: value.name,
         date: value.date,

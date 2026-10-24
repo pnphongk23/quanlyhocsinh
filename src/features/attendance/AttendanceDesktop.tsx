@@ -9,7 +9,7 @@ import {
 import { getSession, sessionPrefix } from "../../data/repositories/sessions";
 import {
   listAttendance,
-  saveAttendanceBatch,
+  saveAttendanceBatchDurable,
 } from "../../data/repositories/attendance";
 import { useAccess } from "../../data/repositories/access";
 import type { Attendance as AttendanceRecord } from "../../data/types";
@@ -97,9 +97,9 @@ export default function AttendanceDesktop({
   const action = useSaveAction<Record<string, Draft | null>>({
     baseline,
     value,
-    save: () => {
+    save: async () => {
       try {
-        saveAttendanceBatch(
+        await saveAttendanceBatchDurable(
           rows.map((row) => ({
             sessionId,
             studentId: row.student.id,

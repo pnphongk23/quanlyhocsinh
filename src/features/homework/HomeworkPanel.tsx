@@ -10,11 +10,11 @@ import {
   type HomeworkGradingPlan,
 } from "../../data/homework";
 import {
-  deleteHomeworkSection,
+  deleteHomeworkSectionDurable,
   listHomeworkGrades,
-  saveHomeworkSection,
-  setHomeworkGrade,
-  setHomeworkGradeForAll,
+  saveHomeworkSectionDurable,
+  setHomeworkGradeDurable,
+  setHomeworkGradeForAllDurable,
 } from "../../data/repositories/homework";
 import { useAccess } from "../../data/repositories/access";
 import { getStudent } from "../../data/repositories/students";
@@ -174,11 +174,11 @@ export default function HomeworkPanel({
     setView("previous");
   }, [partFromUrl]);
 
-  function act(action: () => void, fallback: string) {
+  async function act(action: () => Promise<unknown>, fallback: string) {
     setError("");
     save.markUnsaved();
     try {
-      action();
+      await action();
       save.clearStatus();
     } catch (cause) {
       save.setStatus("error");
@@ -344,9 +344,7 @@ export default function HomeworkPanel({
             disabled={!canWrite}
             onClick={() =>
               act(
-                () => {
-                  setHomeworkGradeForAll(activeSection.id, "done");
-                },
+                () => setHomeworkGradeForAllDurable(activeSection.id, "done"),
                 "Không đánh dấu được cả lớp.",
               )
             }
@@ -393,7 +391,7 @@ export default function HomeworkPanel({
                     onClick={() =>
                       act(
                         () =>
-                          setHomeworkGrade(
+                          setHomeworkGradeDurable(
                             activeSection.id,
                             row.student.id,
                             nextGrade(level, option),
@@ -619,9 +617,9 @@ function SectionEditor({
     },
     value: { ...form, kind: mode === "edit" ? (section?.kind ?? null) : form.kind },
     validate: (value) => value.kind !== null && value.title.trim() !== "",
-    save: (value) => {
+    save: async (value) => {
       if (!value.kind) return false;
-      saveHomeworkSection({
+      await saveHomeworkSectionDurable({
         id: section?.id,
         sessionId: section?.sessionId ?? sessionId,
         kind: value.kind,
@@ -673,11 +671,11 @@ function SectionEditor({
     }
   }
 
-  function remove() {
+  async function remove() {
     if (!section) return;
     setRemoveError("");
     try {
-      deleteHomeworkSection(section.id);
+      await deleteHomeworkSectionDurable(section.id);
       save.clearStatus();
       onClose();
     } catch (cause) {

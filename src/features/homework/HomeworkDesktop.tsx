@@ -14,10 +14,10 @@ import {
   homeworkContext,
 } from "../../data/homework";
 import {
-  deleteHomeworkSection,
+  deleteHomeworkSectionDurable,
   listHomeworkGrades,
-  saveHomeworkSection,
-  setHomeworkGrade,
+  saveHomeworkSectionDurable,
+  setHomeworkGradeDurable,
 } from "../../data/repositories/homework";
 import { useAccess } from "../../data/repositories/access";
 import { sessionNumber, sessionPrefix } from "../../data/repositories/sessions";
@@ -118,12 +118,12 @@ export default function HomeworkDesktop({
   const gradeAction = useSaveAction<Record<string, HomeworkLevel | null>>({
     baseline: baselineGrades,
     value: valueGrades,
-    save: (next) => {
+    save: async (next) => {
       try {
         for (const [key, level] of Object.entries(next)) {
           if ((level ?? null) === (baselineGrades[key] ?? null)) continue;
           const [sectionId, studentId] = key.split(":");
-          setHomeworkGrade(sectionId, studentId, level ?? null);
+          await setHomeworkGradeDurable(sectionId, studentId, level ?? null);
         }
       } catch (cause) {
         save.setStatus("error");
@@ -642,10 +642,10 @@ export default function HomeworkDesktop({
           {
             label: "Xoá phần",
             variant: "danger",
-            onClick: () => {
+            onClick: async () => {
               if (!confirmDelete) return;
               try {
-                deleteHomeworkSection(confirmDelete.id);
+                await deleteHomeworkSectionDurable(confirmDelete.id);
                 setConfirmDelete(null);
                 setMessage("Đã xoá phần bài tập.");
                 setError("");
@@ -716,11 +716,11 @@ function SectionForm({
     },
     value: { kind, title, description },
     validate: (next) => next.kind !== null && next.title.trim() !== "",
-    save: (next) => {
+    save: async (next) => {
       if (!next.kind) return false;
       save.markUnsaved();
       try {
-        saveHomeworkSection({
+        await saveHomeworkSectionDurable({
           id: section?.id,
           sessionId: section?.sessionId ?? sessionId,
           kind: next.kind,

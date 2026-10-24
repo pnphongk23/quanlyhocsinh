@@ -7,7 +7,7 @@ import { listStudentsForSession, studentAbsenceWarning } from "../../data/reposi
 import { getSession, sessionPrefix } from "../../data/repositories/sessions";
 import {
   listAttendance,
-  saveAttendanceBatch,
+  saveAttendanceBatchDurable,
 } from "../../data/repositories/attendance";
 import { useAccess } from "../../data/repositories/access";
 import type { Attendance as AttendanceRecord } from "../../data/types";
@@ -223,10 +223,10 @@ export default function AttendancePanel({
     );
   };
   /** Trả `false` khi lưu lỗi (useSaveAction giữ dirty để thử lại). */
-  const persist = (): boolean => {
+  const persist = async (): Promise<boolean> => {
     if (!session) return false;
     try {
-      saveAttendanceBatch(
+      await saveAttendanceBatchDurable(
         rows.map((row) => ({
           sessionId: session.id,
           studentId: row.student.id,
