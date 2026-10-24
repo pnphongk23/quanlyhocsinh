@@ -59,4 +59,32 @@ final class LocalizationCatalogTests: XCTestCase {
             "Vietnamese literals must use localization keys:\n\(untranslatedLiterals.joined(separator: "\n"))"
         )
     }
+
+    func testDesignSystemKeysExistInDesignSystemCatalog() throws {
+        let iosRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let root = iosRoot.appendingPathComponent("QuanLyLop/Core/DesignSystem", isDirectory: true)
+        let catalogURL = iosRoot.appendingPathComponent("QuanLyLop/Resources/DesignSystem.xcstrings")
+        let catalog = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: catalogURL)) as? [String: Any])
+        let strings = try XCTUnwrap(catalog["strings"] as? [String: Any])
+        let pattern = try NSRegularExpression(pattern: #"String\(localized:\s*"([^"]+)",\s*table:\s*"DesignSystem""#)
+
+        var used = Set<String>()
+        for path in try FileManager.default.subpathsOfDirectory(atPath: root.path) where path.hasSuffix(".swift") {
+            let source = try String(contentsOf: root.appendingPathComponent(path), encoding: .utf8)
+            let range = NSRange(source.startIndex..<source.endIndex, in: source)
+            for match in pattern.matches(in: source, range: range) {
+                if let keyRange = Range(match.range(at: 1), in: source) { used.insert(String(source[keyRange])) }
+            }
+        }
+        XCTAssertFalse(used.isEmpty)
+        for key in used {
+            let entry = try XCTUnwrap(strings[key] as? [String: Any], "missing \(key)")
+            let vi = try XCTUnwrap((entry["localizations"] as? [String: Any])?["vi"] as? [String: Any], key)
+            let unit = try XCTUnwrap(vi["stringUnit"] as? [String: Any], key)
+            XCTAssertEqual(unit["state"] as? String, "translated", key)
+        }
+        XCTAssertEqual(Set(strings.keys), used, "catalog keys and code keys must match")
+    }
 }

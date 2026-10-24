@@ -180,3 +180,37 @@ private struct AppTextModifier: ViewModifier {
             .tracking(style.tracking)
     }
 }
+
+/// `--state-*` in tokens.css (state contract: `design/ux-v2/rules.md` mục 6).
+enum AppState {
+    static let selectedBg = AppColors.primarySoft
+    static let selectedFg = AppColors.primaryInk
+    static let hoverBg = AppColors.neutralSoft
+    static let pressedBg = AppColors.border
+    static let disabledOpacity: Double = 0.5
+    static let successBg = AppColors.successSoft
+    static let successFg = AppColors.success
+    static let errorBg = AppColors.errorSoft
+    static let errorFg = AppColors.error
+    /// Saved on the device, not on the server yet.
+    static let pendingBg = AppColors.warningSoft
+    static let pendingFg = AppColors.warning
+    /// `scale(0.98)` while a button or card is pressed.
+    static let pressedScale: CGFloat = 0.98
+}
+
+/// `--dur-loading-min`, `--dur-success-hold` (seconds) and the "Chờ đồng bộ" delay.
+enum AppDuration {
+    static let loadingMin: TimeInterval = 0.4
+    static let successHold: TimeInterval = 1.6
+    /// SaveStatus shows "Chờ đồng bộ" only once the push queue has been non-empty this long.
+    static let pendingAfter: TimeInterval = 1.0
+    /// `--dur-press`.
+    static let press: TimeInterval = 0.1
+}
+
+extension AppMetrics {
+    /// `--empty-mascot` / `--empty-mascot-compact`.
+    static let emptyMascot: CGFloat = 96
+    static let emptyMascotCompact: CGFloat = 56
+}

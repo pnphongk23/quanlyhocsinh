@@ -12,6 +12,8 @@ struct AppButtonStyle: ButtonStyle {
 
     var variant: Variant = .primary
     var size: Size = .small
+    /// Save phase of `AppSaveButton`; `.saved` shows the success colours, `.saving` keeps the fill.
+    var phase: AppSaveController.Phase = .idle
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
@@ -21,27 +23,39 @@ struct AppButtonStyle: ButtonStyle {
             .frame(maxWidth: size == .large ? .infinity : nil)
             .frame(minHeight: size.height)
             .padding(.horizontal, size.padding)
-            .background(background, in: RoundedRectangle(cornerRadius: size.radius))
-            .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.6)
+            .background(background(pressed: configuration.isPressed),
+                        in: RoundedRectangle(cornerRadius: size.radius))
+            .scaleEffect(configuration.isPressed && !dimmed ? AppState.pressedScale : 1)
+            .opacity(dimmed && !hasOwnFill ? AppState.disabledOpacity : 1)
+            .animation(.easeOut(duration: AppDuration.press), value: configuration.isPressed)
     }
 
+    /// Disabled primary/secondary/danger use `--color-neutral-soft` + `--color-muted`; the ghost has
+    /// no fill of its own, so it fades by `--state-disabled-opacity`.
+    private var dimmed: Bool { !isEnabled && phase == .idle }
+    private var hasOwnFill: Bool { variant != .ghost }
+
     private var foreground: Color {
+        if phase == .saved { return AppState.successFg }
+        if dimmed && hasOwnFill { return AppColors.muted }
         switch variant {
-        case .primary: AppColors.onPrimary
-        case .secondary: AppColors.primaryInk
-        case .surface, .neutral: AppColors.text
-        case .danger: AppColors.error
-        case .ghost: AppColors.muted
+        case .primary: return AppColors.onPrimary
+        case .secondary: return AppColors.primaryInk
+        case .surface, .neutral: return AppColors.text
+        case .danger: return AppState.errorFg
+        case .ghost: return AppColors.muted
         }
     }
-    private var background: Color {
+    private func background(pressed: Bool) -> Color {
+        if phase == .saved { return AppState.successBg }
+        if dimmed && hasOwnFill { return AppColors.neutralSoft }
         switch variant {
-        case .primary: AppColors.primary
-        case .secondary: AppColors.primarySoft
-        case .surface: AppColors.surface
-        case .neutral: AppColors.background
-        case .danger: AppColors.errorSoft
-        case .ghost: .clear
+        case .primary: return AppColors.primary
+        case .secondary: return pressed ? AppState.pressedBg : AppColors.primarySoft
+        case .surface: return AppColors.surface
+        case .neutral: return AppColors.background
+        case .danger: return pressed ? AppState.pressedBg : AppState.errorBg
+        case .ghost: return .clear
         }
     }
 }
@@ -150,7 +164,7 @@ struct AppTextField: View {
     }
 }
 
-// MARK: - Card (ui.module.css `.card`, `.cardSelected`)
+// MARK: - Card (ui.module.css `.card`; selected is a fill, never a border)
 
 struct AppCard<Content: View>: View {
     var selected = false
@@ -161,10 +175,8 @@ struct AppCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
             .padding(.vertical, AppMetrics.cardPaddingVertical)
-            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppRadius.card)
-                    .strokeBorder(selected ? AppColors.primary : .clear, lineWidth: 2))
+            .background(selected ? AppState.selectedBg : AppColors.surface,
+                        in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 }
 
@@ -187,14 +199,18 @@ struct AppListRow<Content: View>: View {
 /// `.chip`: inline-block, `8px 10px`, 10 radius, `--color-bg`, 14px.
 struct AppChip: View {
     let title: String
+    /// Selected = `--state-selected-bg` fill with `--state-selected-fg` text, no border.
+    var selected = false
 
     var body: some View {
         Text(title)
             .appText(AppText.chip)
-            .foregroundStyle(AppColors.text)
+            .foregroundStyle(selected ? AppState.selectedFg : AppColors.text)
             .padding(.horizontal, AppMetrics.chipPaddingHorizontal)
             .padding(.vertical, AppMetrics.chipPaddingVertical)
-            .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.chip))
+            .background(selected ? AppState.selectedBg : AppColors.background,
+                        in: RoundedRectangle(cornerRadius: AppRadius.chip))
+            .accessibilityAddTraits(selected ? [.isSelected] : [])
             .fixedSize(horizontal: true, vertical: false)
     }
 }
@@ -350,9 +366,9 @@ struct AppSegmented: View {
                 Button { select(option.value) } label: {
                     Text(option.label)
                         .appText(AppText.segment)
-                        .foregroundStyle(active ? AppColors.text : AppColors.muted)
+                        .foregroundStyle(active ? AppState.selectedFg : AppColors.muted)
                         .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
-                        .background(active ? AppColors.surface : .clear,
+                        .background(active ? AppState.selectedBg : .clear,
                                     in: RoundedRectangle(cornerRadius: AppRadius.segment))
                 }
                 .buttonStyle(.plain)
@@ -360,6 +376,7 @@ struct AppSegmented: View {
                 .disabled(!isEnabled)
             }
         }
+        .opacity(isEnabled ? 1 : AppState.disabledOpacity)
         .padding(3)
         .background(AppColors.border, in: RoundedRectangle(cornerRadius: AppRadius.segmentTrack))
     }
@@ -401,24 +418,49 @@ struct AppSheet<Content: View, Footer: View>: View {
 
 // MARK: - Empty / error / loading (`.empty`, `.emptyTitle`, `.spinner`)
 
+/// The only empty state: Mít + title + optional description + optional action. `.compact` is for
+/// small panes and filtered-out lists. Existing `AppEmptyState(title:) { extra }` calls keep working.
 struct AppEmptyState<Extra: View>: View {
+    enum Size: Sendable { case regular, compact }
+
     var title: String = String(localized: "design.empty.title")
+    var description: String? = nil
+    var mascot: MascotPose = .cho
+    var size: Size = .regular
     @ViewBuilder var detail: Extra
 
     var body: some View {
         VStack(spacing: 8) {
+            AppMascot(pose: mascot, height: size == .compact ? AppMetrics.emptyMascotCompact : AppMetrics.emptyMascot)
+                .padding(.bottom, 4)
             Text(title).appText(AppText.emptyTitle).foregroundStyle(AppColors.text)
+            if let description {
+                Text(description).appText(AppText.muted).foregroundStyle(AppColors.muted)
+            }
             detail.foregroundStyle(AppColors.muted)
         }
         .frame(maxWidth: .infinity)
         .multilineTextAlignment(.center)
-        .padding(.horizontal, 16).padding(.vertical, 24)
+        .padding(.horizontal, 16).padding(.vertical, size == .compact ? 16 : 24)
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        .accessibilityElement(children: .contain)
     }
 }
 
 extension AppEmptyState where Extra == EmptyView {
-    init(title: String = String(localized: "design.empty.title")) { self.init(title: title) { EmptyView() } }
+    init(title: String = String(localized: "design.empty.title"), description: String? = nil,
+         mascot: MascotPose = .cho, size: Size = .regular) {
+        self.init(title: title, description: description, mascot: mascot, size: size) { EmptyView() }
+    }
+}
+
+extension AppEmptyState where Extra == AppButton {
+    init(title: String = String(localized: "design.empty.title"), description: String? = nil,
+         mascot: MascotPose = .cho, size: Size = .regular, actionTitle: String, action: @escaping () -> Void) {
+        self.init(title: title, description: description, mascot: mascot, size: size) {
+            AppButton(title: actionTitle, variant: .secondary, action: action)
+        }
+    }
 }
 
 /// The prototype has no dedicated error component; this keeps the empty-state shell so an
@@ -437,19 +479,24 @@ struct AppErrorState: View {
     }
 }
 
-/// `.spinner`: 24×24, 3px ring in `--color-border` with a `--color-primary` arc.
+/// `.spinner`: 24×24, 3px ring in `--color-border` with a `--color-primary` arc. With Reduce Motion
+/// the arc stays still instead of turning.
 struct AppSpinner: View {
+    var tint: Color = AppColors.primary
+    var ring: Color = AppColors.border
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var spinning = false
+    private var animated: Bool { !reduceMotion }
 
     var body: some View {
         Circle()
             .trim(from: 0, to: 0.25)
-            .stroke(AppColors.primary, style: StrokeStyle(lineWidth: 3, lineCap: .butt))
-            .overlay(Circle().stroke(AppColors.border, lineWidth: 3))
+            .stroke(tint, style: StrokeStyle(lineWidth: 3, lineCap: .butt))
+            .overlay(Circle().stroke(ring, lineWidth: 3))
             .frame(width: 24, height: 24)
             .rotationEffect(.degrees(spinning ? 360 : 0))
-            .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: spinning)
-            .onAppear { spinning = true }
+            .animation(animated ? .linear(duration: 1).repeatForever(autoreverses: false) : nil, value: spinning)
+            .onAppear { spinning = animated }
             .accessibilityLabel(Text("design.loading"))
     }
 }

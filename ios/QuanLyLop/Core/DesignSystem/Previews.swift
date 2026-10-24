@@ -112,3 +112,33 @@ struct DesignSystemGalleryContent: View {
         }, close: {})
     }
 }
+
+/// Empty states with Mít, the four save-button states and the save status lines.
+struct DesignSystemStatesGallery: View {
+    @State private var controller = AppSaveController()
+
+    var body: some View {
+        VStack(spacing: 16) {
+            AppEmptyState(title: "Chưa có học sinh", description: "Thêm học sinh đầu tiên vào lớp.",
+                          actionTitle: "Thêm học sinh", action: {})
+            AppEmptyState(title: "Không có kết quả", mascot: .main, size: .compact)
+            AppSaveButton(title: "Lưu", controller: controller) {}
+            VStack(alignment: .leading, spacing: 8) {
+                AppSaveStatus(kind: .savedLocal)
+                AppSaveStatus(kind: .pending)
+                AppSaveStatus(kind: .offline)
+                AppSaveStatus(kind: .error)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 8) {
+                AppChip(title: "Tất cả", selected: true)
+                AppChip(title: "Hôm nay")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(20)
+        .background(AppColors.background)
+    }
+}
+
+#Preview("Trạng thái") { DesignSystemStatesGallery() }
