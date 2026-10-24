@@ -62,9 +62,10 @@ async function open(vp, route) {
   else {
     await page.goto(base + "/lop", { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: "Chọn vai trò" }).waitFor({ state: "visible", timeout: 10000 });
-    const teacher = page.getByRole("button").filter({ hasText: "Giáo viên" });
-    if (await teacher.count()) await teacher.first().click();
-    await page.waitForFunction(() => !location.pathname.includes("chon-vai-tro") && !location.pathname.includes("dang-nhap"), null, { timeout: 10000 });
+      const teacher = page.getByRole("button").filter({ hasText: "Giáo viên" });
+      if (await teacher.count()) await teacher.first().click();
+      await page.getByRole("heading", { name: "Chọn vai trò" }).waitFor({ state: "hidden", timeout: 10000 });
+      await page.waitForFunction(() => !location.pathname.includes("chon-vai-tro") && !location.pathname.includes("dang-nhap"), null, { timeout: 10000 });
     if (route !== "/lop") await page.evaluate((next) => { history.pushState({}, "", next); window.dispatchEvent(new PopStateEvent("popstate")); }, route);
     await page.waitForTimeout(120);
   }
@@ -73,10 +74,113 @@ async function open(vp, route) {
   return { page, context };
 }
 
-async function firstVisible(locator) {
-  for (const element of await locator.all()) if (await element.isVisible().catch(() => false)) return element;
-  return null;
-}
+  async function firstVisible(locator) {
+    for (const element of await locator.all()) if (await element.isVisible().catch(() => false)) return element;
+    return null;
+  }
+
+  async function installStorageFailure(page) {
+    await page.addInitScript(() => {
+      window.__failIdb = false;
+      const store = IDBObjectStore.prototype;
+      for (const method of ["put", "add"]) {
+        const original = store[method];
+        store[method] = function (...args) {
+          if (window.__failIdb) throw new DOMException("State check simulated storage failure", "QuotaExceededError");
+          return original.apply(this, args);
+        };
+      }
+    });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => document.body.innerText.trim().length > 10, null, { timeout: 12000 });
+  }
+
+  async function checkStorageFailure(vp, name, route, prepare, retain) {
+    const { page, context } = await open(vp, route);
+    const out = path.join(planDir, "shots", "after");
+    try {
+      await installStorageFailure(page);
+      const state = await prepare(page);
+      await page.evaluate(() => { window.__failIdb = true; });
+      await state.trigger();
+      await page.waitForTimeout(450);
+      const error = await firstVisible(page.locator('[role="status"],[role="alert"]').filter({ hasText: /Lỗi|Không lưu/i }));
+      const retained = await retain(page, state);
+      const editor = await state.editor.isVisible().catch(() => false);
+      const passed = Boolean(error) && retained && editor;
+      await page.screenshot({ path: path.join(out, `F8-save-error-${name}-${vp.width}.png`), fullPage: false }).catch(() => {});
+      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: passed ? "PASS" : "FAIL", evidence: `visible error=${Boolean(error)}; editor=${editor}; value retained=${retained}; screenshot=F8-save-error-${name}-${vp.width}.png` });
+    } catch (error) {
+      await page.screenshot({ path: path.join(out, `F8-save-error-${name}-${vp.width}.png`), fullPage: false }).catch(() => {});
+      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: "FAIL", evidence: `${String(error).split("\n")[0]}; screenshot=F8-save-error-${name}-${vp.width}.png` });
+    } finally { await context.close(); }
+  }
+
+  async function checkStorageErrorSuite(vp) {
+    if (target !== "web" || ![390, 1280].includes(vp.width)) return;
+    if (vp.width === 390) {
+      await checkStorageFailure(vp, "homework-section", "/lop/demo-6a/buoi-hoc/demo-past?tab=btvn", async (page) => {
+        await page.getByRole("tab", { name: "Bài tập về nhà", exact: true }).click();
+        await page.getByRole("tab", { name: "Bài tập hôm nay", exact: true }).click();
+        await page.getByRole("button", { name: /Thêm phần/ }).click();
+        const editor = page.getByRole("dialog", { name: "Thêm phần BTVN" });
+        const title = editor.getByRole("textbox", { name: "Tiêu đề" });
+        await title.fill("Bài tập lỗi lưu kiểm tra");
+        return { editor, title, trigger: () => editor.getByRole("button", { name: "Lưu phần", exact: true }).click() };
+      }, async (_page, s) => await s.title.inputValue().catch(() => "") === "Bài tập lỗi lưu kiểm tra");
+      await checkStorageFailure(vp, "ticket", "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet", async (page) => {
+        await page.getByRole("tab", { name: "Nhận xét", exact: true }).click();
+        await page.locator("button").filter({ hasText: "Học sinh 1" }).first().click();
+        const editor = page.getByRole("dialog", { name: /Nhận xét/ });
+        const note = editor.locator("textarea#ticket-note");
+        await note.fill("Lỗi lưu phiếu kiểm tra.");
+        return { editor, note, trigger: () => editor.getByRole("button", { name: "Lưu", exact: true }).click() };
+      }, async (_page, s) => await s.note.inputValue().catch(() => "") === "Lỗi lưu phiếu kiểm tra.");
+    }
+    if (vp.width === 1280) {
+      await checkStorageFailure(vp, "attendance", "/lop/demo-6a/buoi-hoc/demo-past?tab=diem-danh", async (page) => {
+        await page.getByRole("tab", { name: "Điểm danh", exact: true }).click();
+        const group = page.getByRole("group", { name: "Trạng thái của Học sinh 1" });
+        const selected = group.getByRole("button", { name: "Vắng", exact: true });
+        await selected.click();
+        const save = page.getByRole("button", { name: "Lưu điểm danh", exact: true });
+        return { editor: group, selected, trigger: () => save.click() };
+      }, async (_page, s) => await s.selected.getAttribute("aria-pressed") === "true");
+      await checkStorageFailure(vp, "score-entry", "/lop/demo-6a/bai-kiem-tra/demo-test", async (page) => {
+        const input = page.getByRole("textbox", { name: "Điểm Học sinh 1" });
+        await input.fill("11");
+        return { editor: input, input, trigger: () => page.getByRole("button", { name: "Lưu điểm", exact: true }).click() };
+      }, async (_page, s) => await s.input.inputValue().catch(() => "") === "11");
+      await checkStorageFailure(vp, "score-grid", "/lop/demo-6a/diem", async (page) => {
+        const input = page.getByRole("textbox", { name: "Điểm Kiểm tra giữa kỳ của Học sinh 1" });
+        await input.fill("11");
+        return { editor: input, input, trigger: () => page.getByRole("button", { name: "Lưu điểm", exact: true }).click() };
+      }, async (_page, s) => await s.input.inputValue().catch(() => "") === "11");
+      await checkStorageFailure(vp, "homework-grading", "/lop/demo-6a/buoi-hoc/demo-today?tab=btvn", async (page) => {
+        await page.getByRole("tab", { name: "Bài tập về nhà", exact: true }).click();
+        await page.getByRole("tab", { name: "Bài tập buổi trước", exact: true }).click();
+        const editor = page.getByRole("button", { name: "Lưu kết quả chấm", exact: true });
+        const gradeButtons = page.getByRole("button", { name: "Hoàn thành tốt", exact: true });
+        let button = null;
+        for (const [index, candidate] of (await gradeButtons.all()).entries()) {
+          if (await candidate.getAttribute("aria-pressed") === "false") { button = gradeButtons.nth(index); break; }
+        }
+        if (!button) throw new Error("no unpressed 'Hoàn thành tốt' level available for homework-grading storage-error check");
+        await button.click();
+        const save = page.getByRole("button", { name: "Lưu kết quả chấm", exact: true });
+        return { editor, button, trigger: () => save.click() };
+      }, async (_page, s) => await s.button.getAttribute("aria-pressed") === "true");
+      await checkStorageFailure(vp, "ticket", "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet", async (page) => {
+        await page.getByRole("tab", { name: "Nhận xét", exact: true }).click();
+        const editor = page.locator("#desktop-ticket-note");
+        const star = page.getByRole("group", { name: "Chọn mức sao" }).getByRole("button").first();
+        await star.click();
+        const note = page.locator("#desktop-ticket-note");
+        await note.fill("Lỗi lưu phiếu desktop.");
+        return { editor, note, trigger: () => page.getByRole("group", { name: "Chọn mức sao" }).getByRole("button", { name: "2 sao", exact: true }).click() };
+      }, async (_page, s) => await s.note.inputValue().catch(() => "") === "Lỗi lưu phiếu desktop.");
+    }
+  }
 
 async function checkSidebarSelected(vp, route, label) {
   const { page, context } = await open(vp, route);
@@ -289,29 +393,39 @@ async function captureF8(vp) {
   } finally { await context.close(); }
 }
 
-async function checkF9(vp) {
+  async function checkF9(vp) {
   if (vp.width <= 430) {
     results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F9 score keyboard", result: "SKIP", evidence: "contract covers desktop score-grid keyboard navigation" });
     return;
   }
   const route = target === "web" ? "/lop/demo-6a/diem" : "/lop/6a/diem";
-  const { page, context } = await open(vp, route);
-  try {
-    const cells = page.getByRole("textbox", { name: /Điểm/ });
-    await cells.nth(1).waitFor({ state: "visible", timeout: 8000 });
-    // Snapshot đầu tiên có thể làm bảng điểm dựng lại một lần (lỗi tầng dữ liệu đã chuyển lane Data):
-    // đợi bảng ổn định rồi mới đặt focus.
-    await page.waitForTimeout(400);
-    await cells.nth(1).waitFor({ state: "visible", timeout: 8000 });
-    await cells.first().focus();
-    const activeName = () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.getAttribute("name") ?? document.activeElement?.textContent?.trim() ?? "");
-    const before = await activeName();
-      await page.keyboard.press("ArrowDown"); const down = await activeName();
-      await page.keyboard.press("ArrowUp"); const up = await activeName();
-      await page.keyboard.press("Enter"); const enter = await activeName();
-      const passed = Boolean(before && down !== before && up === before && enter !== before);
+    const { page, context } = await open(vp, route);
+    try {
+      const cells = page.getByRole("textbox", { name: /Điểm/ });
+      await cells.nth(1).waitFor({ state: "visible", timeout: 8000 });
+      const activeName = () => page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.getAttribute("name") ?? document.activeElement?.textContent?.trim() ?? "");
+      await page.evaluate(() => {
+        window.__f9NoTestFlash = 0;
+        const scan = () => { if (document.body?.innerText.includes("Chưa có bài kiểm tra")) window.__f9NoTestFlash++; };
+        new MutationObserver(scan).observe(document.body, { childList: true, subtree: true, characterData: true });
+        scan();
+      });
+      let focusLoss = 0, badDown = 0, badUp = 0, badEnter = 0;
+      for (let cycle = 0; cycle < 20; cycle++) {
+        await cells.first().focus();
+        const before = await activeName();
+        await page.keyboard.press("ArrowDown"); const down = await activeName();
+        await page.keyboard.press("ArrowUp"); const up = await activeName();
+        await page.keyboard.press("Enter"); const enter = await activeName();
+        if (!down || !up || !enter || !await page.evaluate(() => document.activeElement instanceof HTMLInputElement)) focusLoss++;
+        if (!before || down === before) badDown++;
+        if (up !== before) badUp++;
+        if (!enter || enter === before) badEnter++;
+      }
+      const flashCount = await page.evaluate(() => window.__f9NoTestFlash);
+      const passed = badDown === 0 && badUp === 0 && badEnter === 0 && focusLoss === 0 && flashCount === 0;
       if (!passed) await page.screenshot({ path: path.join(planDir, "shots", "after", `F9-score-keyboard-failure-${vp.width}.png`), fullPage: false }).catch(() => {});
-      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F9 Enter/↓/↑ moves score cell", result: passed ? "PASS" : "FAIL", evidence: `ArrowDown changed=${down!==before}; ArrowUp returned=${up===before}; Enter moved=${enter!==before}` });
+      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F9 Enter/↓/↑ moves score cell ×20", result: passed ? "PASS" : "FAIL", evidence: `cycles=20; focusLoss=${focusLoss}; ArrowDown unchanged=${badDown}; ArrowUp failedToReturn=${badUp}; Enter failedToMove=${badEnter}; Chưa có bài kiểm tra flashes=${flashCount}` });
   } catch (error) { results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F9 Enter/↓/↑ moves score cell", result: "FAIL", evidence: String(error).split("\n")[0] }); }
   finally { await context.close(); }
 }
@@ -339,8 +453,9 @@ try {
       await inspect(vp,"F4-bang-diem","/lop/6a/diem");
       await inspect(vp,"F9-man-nhap-diem-mobile","/lop/6a/bai-kiem-tra/6a-test-0");
     }
-    await checkF9(vp);
-    await captureF8(vp);
+      await checkF9(vp);
+      await captureF8(vp);
+      await checkStorageErrorSuite(vp);
     if (vp.width > 430) {
       const attendanceRoute=proto?"/lop/6a/buoi-hoc/6a-session-0?tab=diem-danh":"/lop/demo-6a/buoi-hoc/demo-past?tab=diem-danh";
       const sessionRoute=proto?"/lop/6a/buoi-hoc/6a-session-0":"/lop/demo-6a/buoi-hoc/demo-past";
