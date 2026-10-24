@@ -64,7 +64,7 @@ struct TeacherSessionDetailView: View {
         }
         .sheet(isPresented: $showingInfo) {
             if let session {
-                TeacherSessionInfoSheet(session: session, className: klass?.name, teacherName: data.displayName)
+                TeacherSessionInfoSheet(session: session, className: klass?.name)
             }
         }
         .teacherConfirmDialog(
@@ -177,7 +177,6 @@ struct TeacherSessionInfoSheet: View {
     @Environment(\.dismiss) private var dismiss
     let session: ClassSession
     let className: String?
-    let teacherName: String
 
     var body: some View {
         NavigationStack {
@@ -189,13 +188,6 @@ struct TeacherSessionInfoSheet: View {
                         infoRow(String(localized: "session.info.date", table: "Teacher"),
                                 TeacherFormat.weekdayDate(session.date))
                         infoRow(String(localized: "session.info.time", table: "Teacher"), session.startTime)
-                    }
-                    card {
-                        Text(String(localized: "feature.classes.nguoi.day"))
-                            .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
-                            .foregroundStyle(AppColors.text)
-                        teacherRow(position: String(localized: "feature.classes.giao.vien.chinh"), name: teacherName)
-                        teacherRow(position: String(localized: "feature.classes.tro.giang"), name: nil)
                     }
                 }
                 .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
@@ -234,24 +226,5 @@ struct TeacherSessionInfoSheet: View {
                 .multilineTextAlignment(.trailing)
         }
         .accessibilityElement(children: .combine)
-    }
-
-    private func teacherRow(position: String, name: String?) -> some View {
-        HStack(spacing: 12) {
-            if let name {
-                TeacherAvatar(name: name, size: 40)
-            } else {
-                TeacherAvatar(initials: "", size: 40, isEmpty: true)
-            }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(position)
-                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 17.6))
-                    .foregroundStyle(AppColors.muted)
-                Text(name ?? String(localized: "feature.classes.khong.co"))
-                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 21))
-                    .foregroundStyle(AppColors.text)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
     }
 }
