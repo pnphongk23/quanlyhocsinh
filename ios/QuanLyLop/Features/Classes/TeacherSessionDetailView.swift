@@ -217,8 +217,8 @@ struct TeacherSessionInfoSheet: View {
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) { content() }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+            .padding(.vertical, AppMetrics.cardPaddingVertical)
             .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 

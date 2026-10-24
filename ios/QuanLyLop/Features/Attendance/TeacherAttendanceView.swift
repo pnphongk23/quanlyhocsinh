@@ -60,7 +60,7 @@ struct TeacherAttendanceView: View {
 
     var body: some View {
         TeacherScroll {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: TeacherMetrics.listGap) {
                 if !data.canReadAttendance {
                     AppEmptyState(title: String(localized: "feature.attendance.ban.khong.co.quyen.xem.iem.danh"))
                 } else if roster.isEmpty {
@@ -72,7 +72,7 @@ struct TeacherAttendanceView: View {
                     if saveController.error != nil {
                         TeacherErrorBanner(message: String(localized: "feature.attendance.khong.luu.uoc.iem.danh"))
                     }
-                    VStack(spacing: 8) {
+                    VStack(spacing: TeacherMetrics.listGap) {
                         ForEach(roster) { student in row(student) }
                     }
                     if !warnings.isEmpty && !viewOnly { attentionCard }
@@ -91,7 +91,7 @@ struct TeacherAttendanceView: View {
     /// Nút Lưu luôn ghim đáy màn (không cuộn theo danh sách). Image 17 giữ nút “Điểm danh” xám
     /// khi buổi chưa tới ngày; nhãn và màu nền xám theo `.stickyBar > button:disabled`.
     @ViewBuilder private var bottomBar: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: TeacherMetrics.listGap) {
             if readOnly {
                 Text(String(localized: "feature.attendance.iem.danh"))
                     .appText(AppText.buttonLarge)
@@ -119,11 +119,11 @@ struct TeacherAttendanceView: View {
             }
         }
         .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
+        .padding(.top, TeacherMetrics.listGap)
+        .padding(.bottom, TeacherMetrics.listGap)
         .frame(maxWidth: .infinity)
         .background(AppColors.surface)
-        .overlay(alignment: .top) { AppColors.border.frame(height: 1) }
+        .overlay(alignment: .top) { AppColors.border.frame(height: AppMetrics.hairline) }
     }
 
     private var summaryRow: some View {
@@ -265,7 +265,7 @@ struct TeacherAttendanceView: View {
         HStack(spacing: 4) {
             Text(displayed?.label ?? "–").appText(AppText.pill)
             if showsChevron {
-                Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold))
+                Image(systemName: "chevron.down").font(.system(size: AppMetrics.pillChevronSize, weight: .semibold))
             }
         }
         .foregroundStyle(pillTone(displayed))

@@ -69,6 +69,10 @@ enum AppMetrics {
     static let pillPaddingVertical: CGFloat = 5
     static let focusRing: CGFloat = 3
     static let borderWidth: CGFloat = 1.5
+    /// Divider line above sticky bars.
+    static let hairline: CGFloat = 1
+    /// Small chevron inside a menu-style status pill.
+    static let pillChevronSize: CGFloat = 10
 }
 
 /// The prototype ships one variable font (`Plus Jakarta Sans`); weights are `wght` axis values.
