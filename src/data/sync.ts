@@ -236,7 +236,16 @@ export const canDiscardRejected = (type: string): boolean => type in cellEntity;
 /** Đưa lại các lệnh bị từ chối (theo id) vào hàng đợi và đẩy ngay; còn bị từ chối thì mã lỗi mới hiện lại. */
 export async function retryRejectedCommands(ids: string[]): Promise<void> {
   const identity = identityKey(), wanted = new Set(ids);
-  await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).modify({ status: "pending", error: undefined });
+  // Máy chủ trả lại kết quả đã lưu cho cùng id, nên lệnh thử lại phải mang id mới mới được xét lại.
+  await db.transaction("rw", db.outbox, async () => {
+    const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
+    for (const row of rows) {
+      const id = crypto.randomUUID();
+      await db.outbox.delete(row.id);
+      await db.outbox.put({ ...row, id, status: "pending", error: undefined });
+      await db.outbox.where("identity").equals(identity).and((other) => other.depends_on === row.id).modify({ depends_on: id });
+    }
+  });
   publishRejected(await db.outbox.where("identity").equals(identity).toArray());
   setSaveStatus("local");
   await syncNow();
@@ -259,10 +268,13 @@ export async function discardRejectedCommands(ids: string[]): Promise<void> {
   await db.transaction("rw", [db.outbox, ...[...restore.keys()].map((entity) => tableFor(entity))], async () => {
     // Kiểm lại trong giao dịch: ô vừa được ghi lại trong lúc tải bản máy chủ thì giữ giá trị mới.
     const live = await db.outbox.where("identity").equals(identity).toArray();
-    const current = new Set(live.filter((row) => row.status !== "rejected" && row.cell_key).map((row) => row.cell_key));
-    await db.outbox.bulkDelete(rows.filter((row) => live.some((x) => x.id === row.id && x.status === "rejected")).map((row) => row.id));
+    const stillRejected = rows.filter((row) => live.some((x) => x.id === row.id && x.status === "rejected"));
+    const touched = new Set(live.filter((row) => !stillRejected.some((old) => old.id === row.id) && row.cell_key).map((row) => row.cell_key));
+    await db.outbox.bulkDelete(stillRejected.map((row) => row.id));
+    const restorable = new Set(stillRejected.map((row) => row.cell_key));
     for (const [entity, keys] of restore) for (const [key, cell] of keys) {
-      if (cell && current.has(cell)) continue;
+      // Ô đã có lệnh khác (kể cả bị từ chối) hoặc lệnh bị bỏ đã bị thay thế thì giữ giá trị hiện có.
+      if (!restorable.has(cell) || (cell && touched.has(cell))) continue;
       const item = fresh.get(key);
       if (item) await tableFor(entity).put(item as any); else await tableFor(entity).delete(key);
     }

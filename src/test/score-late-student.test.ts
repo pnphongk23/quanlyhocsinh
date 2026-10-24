@@ -72,6 +72,19 @@ describe("rejected commands", () => {
     expect(status.getSaveStatus()).toBe("synced");
   });
 
+  it("retry sends the command under a new id so the server evaluates it again", async () => {
+    const { d, scores, status } = await boot();
+    const seen: string[] = [];
+    server.hooks.rejectCommand = (c) => { seen.push(c.id); return "score_above_max"; };
+    await scores.saveScoreDurable({ testId: "t1", studentId: "new", value: 7 });
+    await d.syncNow();
+    server.hooks.rejectCommand = (c) => { seen.push(c.id); return undefined; };
+    await d.retryRejectedCommands(status.getRejectedCommands().map((r: any) => r.id));
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).not.toBe(seen[0]);
+    expect(serverScore("new")).toMatchObject({ value: 7 });
+  });
+
   it("discard drops the command and restores the server value", async () => {
     const { d, scores, status } = await boot();
     server.hooks.rejectCommand = () => "score_above_max";
