@@ -95,7 +95,7 @@ async function open(vp, route) {
     await page.waitForFunction(() => document.body.innerText.trim().length > 10, null, { timeout: 12000 });
   }
 
-  async function checkStorageFailure(vp, name, route, prepare, retain) {
+  async function checkStorageFailure(vp, name, route, prepare, retain, extraCheck = async () => true) {
     const { page, context } = await open(vp, route);
     const out = path.join(planDir, "shots", "after");
     try {
@@ -104,12 +104,13 @@ async function open(vp, route) {
       await page.evaluate(() => { window.__failIdb = true; });
       await state.trigger();
       await page.waitForTimeout(450);
-      const error = await firstVisible(page.locator('[role="status"],[role="alert"]').filter({ hasText: /Lỗi|Không lưu/i }));
-      const retained = await retain(page, state);
-      const editor = await state.editor.isVisible().catch(() => false);
-      const passed = Boolean(error) && retained && editor;
-      await page.screenshot({ path: path.join(out, `F8-save-error-${name}-${vp.width}.png`), fullPage: false }).catch(() => {});
-      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: passed ? "PASS" : "FAIL", evidence: `visible error=${Boolean(error)}; editor=${editor}; value retained=${retained}; screenshot=F8-save-error-${name}-${vp.width}.png` });
+        const error = await firstVisible(page.locator('[role="status"],[role="alert"]').filter({ hasText: /Lỗi|Không lưu/i }));
+        const retained = await retain(page, state);
+        const extra = await extraCheck(page, state);
+        const editor = await state.editor.isVisible().catch(() => false);
+        const passed = Boolean(error) && retained && editor && extra;
+        await page.screenshot({ path: path.join(out, `F8-save-error-${name}-${vp.width}.png`), fullPage: false }).catch(() => {});
+        results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: passed ? "PASS" : "FAIL", evidence: `visible error=${Boolean(error)}; editor=${editor}; value retained=${retained}; extra check=${extra}; screenshot=F8-save-error-${name}-${vp.width}.png` });
     } catch (error) {
       await page.screenshot({ path: path.join(out, `F8-save-error-${name}-${vp.width}.png`), fullPage: false }).catch(() => {});
       results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: "FAIL", evidence: `${String(error).split("\n")[0]}; screenshot=F8-save-error-${name}-${vp.width}.png` });
@@ -135,7 +136,19 @@ async function open(vp, route) {
         const note = editor.locator("textarea#ticket-note");
         await note.fill("Lỗi lưu phiếu kiểm tra.");
         return { editor, note, trigger: () => editor.getByRole("button", { name: "Lưu", exact: true }).click() };
-      }, async (_page, s) => await s.note.inputValue().catch(() => "") === "Lỗi lưu phiếu kiểm tra.");
+        }, async (_page, s) => await s.note.inputValue().catch(() => "") === "Lỗi lưu phiếu kiểm tra.");
+      await checkStorageFailure(vp, "homework-grading-mobile", "/lop/demo-6a/buoi-hoc/demo-today?tab=btvn", async (page) => {
+        await page.getByRole("tab", { name: "Bài tập về nhà", exact: true }).click();
+        await page.getByRole("tab", { name: "Bài tập buổi trước", exact: true }).click();
+        const editor = page.getByRole("group", { name: "Chấm bài của Học sinh 1" });
+        const levels = editor.getByRole("button");
+        let button = null;
+        for (const [index, candidate] of (await levels.all()).entries()) {
+          if (await candidate.getAttribute("aria-pressed") === "false") { button = levels.nth(index); break; }
+        }
+        if (!button) throw new Error("no unpressed level available for mobile homework-grading storage-error check");
+        return { editor, button, trigger: () => button.click() };
+      }, async (_page, s) => await s.button.getAttribute("aria-pressed") === "true", async (page) => await page.getByText("Chưa lưu", { exact: true }).isVisible().catch(() => false));
     }
     if (vp.width === 1280) {
       await checkStorageFailure(vp, "attendance", "/lop/demo-6a/buoi-hoc/demo-past?tab=diem-danh", async (page) => {
