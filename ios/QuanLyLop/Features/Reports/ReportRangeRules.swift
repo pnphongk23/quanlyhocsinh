@@ -290,6 +290,20 @@ enum ReportRules {
                                     missing: missing, suggestion: suggestion(three: three, two: two, one: one))
     }
 
+    /// Content of one student's report as the server computed it (`GET /reports/{id}/preview`): the
+    /// readiness and the missing reasons are the server's, not a guess from a windowed cache.
+    static func content(student: Student, serverSnapshot snapshot: ReportSnapshot) -> StudentReportContent {
+        var reasons: [String] = []
+        if !snapshot.ready {
+            reasons = missingReasons(snapshot.missing ?? [])
+            if reasons.isEmpty { reasons = [String(localized: "reports.preview.notReady", table: "Reports")] }
+        }
+        let stars = snapshot.stars
+        return StudentReportContent(student: student, snapshot: snapshot,
+                                    ticketCount: stars.three + stars.two + stars.one, missing: reasons,
+                                    suggestion: suggestion(three: stars.three, two: stars.two, one: stars.one))
+    }
+
     static func suggestion(three: Int, two: Int, one: Int) -> String? {
         guard three + two + one > 0 else { return nil }
         return String.localizedStringWithFormat(String(localized: "reports.suggestion", table: "Reports"), three, two, one)

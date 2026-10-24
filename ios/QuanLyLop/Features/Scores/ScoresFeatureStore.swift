@@ -18,6 +18,10 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var reports: [StudentReport] = []
     @Published private(set) var batches: [ReportBatch] = []
     @Published private(set) var hiddenSectionIDs: Set<String> = []
+    /// Complete session list per class from the server; the sync cache only holds a window around today.
+    @Published var fullSessions: [String: [ClassSession]] = [:]
+    /// Server previews of reports (`missing` and `ready` as the server computes them), by report id.
+    @Published var previews: [String: ReportSnapshot] = [:]
     @Published private(set) var canReadScores = false
     @Published private(set) var canWriteScores = false
     @Published private(set) var canReadCommentsReports = false
@@ -162,6 +166,8 @@ final class I4FeatureStore: ObservableObject {
     func batches(in classID: String) -> [ReportBatch] {
         ReportRangeRules.sorted(batches.filter { $0.classId == classID })
     }
+
+    func batch(id: String) -> ReportBatch? { batches.first { $0.id == id } }
 
     func reports(batchID: String) -> [StudentReport] {
         reports.filter { $0.batchId == batchID }

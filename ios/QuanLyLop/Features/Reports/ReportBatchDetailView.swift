@@ -10,6 +10,7 @@ struct ReportBatchDetailView: View {
     @State private var preview: ReportPreviewTarget?
     @State private var message: String?
     @State private var error: String?
+    @State private var loadError: String?
     @State private var skippedCount = 0
     @State private var publishing = false
     @State private var commentController = AppSaveController()
@@ -19,7 +20,7 @@ struct ReportBatchDetailView: View {
     private var klass: Classroom? { data.classes.first { $0.id == classID } }
 
     private var range: ResolvedReportRange? {
-        batch.map { ReportRangeRules.resolve($0, sessions: data.sessions) }
+        batch.map { ReportRangeRules.resolve($0, sessions: data.reportSessions(in: $0.classId)) }
     }
 
     private struct Row: Identifiable {
@@ -31,11 +32,15 @@ struct ReportBatchDetailView: View {
 
     private var rows: [Row] {
         guard let range else { return [] }
-        let sessions = data.sessions(in: classID)
+        let sessions = data.reportSessions(in: classID)
         let tests = data.tests(in: classID)
         return data.reports(batchID: batchID).compactMap { record in
-            guard let student = data.students.first(where: { $0.id == record.studentId }),
-                  let content = ReportRules.build(
+            guard let student = data.students.first(where: { $0.id == record.studentId }) else { return nil }
+            if let snapshot = data.previews[record.id] {
+                let content = ReportRules.content(student: student, serverSnapshot: snapshot)
+                return Row(record: record, content: content, slot: ReportRules.slot(content, record: record))
+            }
+            guard let content = ReportRules.build(
                     student: student, range: range, batchID: batchID, sessions: sessions,
                     attendance: data.attendance, tests: tests, scores: data.scores, slips: data.slips,
                     sections: data.sections, grades: data.grades, generalComment: record.generalComment)
@@ -76,6 +81,7 @@ struct ReportBatchDetailView: View {
         .navigationTitle(range?.label ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) { publishBar(summary) }
+        .task { loadError = await data.loadBatchDetail(batchID: batchID)?.message }
         .fullScreenCover(item: $preview) { target in
             ReportPreviewScreen(target: target, data: data, className: klass?.name ?? "") { number in
                 message = String(localized: "feature.reports.a.phat.hanh.bao.cao")
@@ -107,6 +113,7 @@ struct ReportBatchDetailView: View {
             I4Banner(text: String.localizedStringWithFormat(String(localized: "reports.detail.skipped", table: "Reports"), skippedCount),
                      tone: .warning, systemImage: "exclamationmark.triangle")
         }
+        if let loadError { TeacherErrorBanner(message: loadError) }
         if let error { TeacherErrorBanner(message: error) }
     }
 

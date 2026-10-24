@@ -17,7 +17,7 @@ struct ClassReportsView: View {
         _error = State(initialValue: seedError)
     }
 
-    private var sessions: [ClassSession] { data.sessions(in: classID) }
+    private var sessions: [ClassSession] { data.reportSessions(in: classID) }
     private var batches: [ReportBatch] { data.batches(in: classID) }
     private var hasHeldSession: Bool { ReportRangeRules.defaultRange(sessions, classID: classID) != nil }
 
@@ -25,7 +25,10 @@ struct ClassReportsView: View {
         TeacherScroll { content }
             .background(AppColors.background.ignoresSafeArea())
             .safeAreaInset(edge: .bottom) { addBar }
-            .task { await data.configure(auth: auth) }
+            .task {
+                await data.configure(auth: auth)
+                if error == nil { error = await data.loadClassReports(classID: classID)?.message }
+            }
             .sheet(isPresented: $adding) {
                 AddReportBatchSheet(classID: classID, data: data) { batchID in
                     adding = false
@@ -119,7 +122,7 @@ struct ClassReportsView: View {
                 AppButton(title: String(localized: "reports.list.add", table: "Reports"), size: .large) {
                     adding = true
                 }
-                .disabled(!hasHeldSession)
+                .disabled(!hasHeldSession || !data.hasFullSessions(classID))
                 .accessibilityIdentifier("reports.add")
             }
         }
@@ -138,12 +141,12 @@ struct AddReportBatchSheet: View {
     @State private var controller = AppSaveController()
 
     private var choices: [ReportSessionChoice] {
-        ReportRangeRules.choices(data.sessions, classID: classID)
+        ReportRangeRules.choices(data.reportSessions(in: classID), classID: classID)
     }
 
     private var problem: ReportRangeProblem? {
         guard !fromID.isEmpty, !toID.isEmpty else { return .notInClass }
-        return ReportRangeRules.problem(data.sessions, classID: classID, from: fromID, to: toID)
+        return ReportRangeRules.problem(data.reportSessions(in: classID), classID: classID, from: fromID, to: toID)
     }
 
     var body: some View {
@@ -180,7 +183,7 @@ struct AddReportBatchSheet: View {
     }
 
     private func applyDefault() {
-        guard fromID.isEmpty, let range = ReportRangeRules.defaultRange(data.sessions, classID: classID) else { return }
+        guard fromID.isEmpty, let range = ReportRangeRules.defaultRange(data.reportSessions(in: classID), classID: classID) else { return }
         fromID = range.from.id
         toID = range.to.id
     }

@@ -12,25 +12,15 @@ extension I4FeatureStore {
     func createBatch(classID: String, fromSessionID: String, toSessionID: String,
                      requestID: String) async -> Result<String, ReportFailure> {
         let fallback = String(localized: "reports.error.create", table: "Reports")
-        guard let api, let store else { return .failure(ReportFailure(message: fallback)) }
+        guard let api else { return .failure(ReportFailure(message: fallback)) }
         do {
             let body = ["id": requestID, "from_session_id": fromSessionID, "to_session_id": toSessionID]
             let endpoint = try APIEndpoint.json(method: .post, path: "classes/\(classID)/report-batches", body: body)
             let response = try await api.send(endpoint, as: CreateReportBatchResponse.self)
-            let batch = ReportBatch(id: response.batch.id, classId: classID,
-                                    fromSessionId: response.batch.fromSessionId, toSessionId: response.batch.toSessionId,
-                                    fromKey: response.batch.fromKey, toKey: response.batch.toKey, version: 1)
-            try await store.write(batch, forKey: key("report_batch", batch.id), enqueueing: nil)
-            for row in response.reports {
-                let report = StudentReport(id: row.reportId, classId: classID, studentId: row.studentId,
-                                           batchId: row.batchId, month: row.month, status: row.status,
-                                           generalComment: row.generalComment ?? "", needsRepublish: row.needsRepublish,
-                                           publicationCount: row.publicationCount, publishedAt: row.publishedAt,
-                                           version: row.version)
-                try await store.write(report, forKey: key("report", report.id), enqueueing: nil)
-            }
+            try await cacheBatch(response.batch, classID: classID)
+            for row in response.reports { try await cacheReport(row, classID: classID) }
             await refresh()
-            return .success(batch.id)
+            return .success(response.batch.id)
         } catch {
             return .failure(ReportFailure.from(error, fallback: fallback))
         }
@@ -51,6 +41,7 @@ extension I4FeatureStore {
                                      version: max(current.version, response.version ?? current.version))
             try await store.write(next, forKey: key("report", next.id), enqueueing: nil)
             await refresh()
+            if previews[reportID] != nil { _ = await reloadPreviews(reportIDs: [reportID]) }
             return nil
         } catch {
             return ReportFailure.from(error, fallback: fallback).message
