@@ -192,10 +192,15 @@ describe("account and auth screens", () => {
     expect(clearUserCache).toHaveBeenCalledWith(user.id);
   });
 
-  it("ships a Vietnamese standalone manifest with both maskable icon sizes", () => {
+  it("ships a Vietnamese standalone manifest with the primary and maskable icons", () => {
     const manifest = JSON.parse(readFileSync(`${process.cwd()}/public/manifest.webmanifest`, "utf8"));
     expect(manifest.name).toBe("Quản lý lớp tiếng Anh");
-    expect(manifest.lang).toBe("vi"); expect(manifest.theme_color).toBe("#2F5BEA"); expect(manifest.display).toBe("standalone");
-    expect(manifest.icons.map((icon: { sizes: string; purpose: string }) => [icon.sizes, icon.purpose])).toEqual([["192x192", "any maskable"], ["512x512", "any maskable"]]);
+    expect(manifest.lang).toBe("vi");
+    expect(manifest.theme_color).toBe("#2f5bea");
+    expect(manifest.background_color).toBe("#2f5bea");
+    expect(manifest.display).toBe("standalone");
+    expect(
+      manifest.icons.map((icon: { sizes: string; purpose: string }) => [icon.sizes, icon.purpose]),
+    ).toEqual([["192x192", "any"], ["512x512", "any"], ["512x512", "maskable"]]);
   });
 });
