@@ -225,10 +225,7 @@ export default function CommentTicketSheet({
     if ((await action.submit()) && (await saved.peek())) onClose();
   }
 
-  const pendingLine =
-    row.status === "queued"
-      ? "Sẽ gửi khi có mạng. Bấm Lưu để giữ sao và ghi chú."
-      : "Bấm Lưu để giữ sao và ghi chú.";
+  const pendingLine = "Bấm Lưu để giữ sao và ghi chú.";
 
   const body = (
     <div className={s.sheetBody}>

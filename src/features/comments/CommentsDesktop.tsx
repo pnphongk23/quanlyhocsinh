@@ -24,6 +24,7 @@ import TicketEditor, { StarRow, desktopTicketLabel } from "./TicketEditor";
 import {
   filterTicketRows,
   sendButtonLabel,
+  sendButtonDisabled,
   TICKET_FILTER_LABELS,
   TICKET_FILTERS,
   type TicketFilter,
@@ -163,16 +164,19 @@ export default function CommentsDesktop({
     <div className={d.page}>
       {tabBar(
         canWrite ? (
-          <Button
-            size="md"
-            disabled={count === 0}
-            onClick={() => {
-              setDialogError("");
-              setConfirmOpen(true);
-            }}
-          >
-            {sendButtonLabel(count, !online)}
-          </Button>
+          <>
+            <Button
+              size="md"
+              disabled={sendButtonDisabled(count, !online)}
+              onClick={() => {
+                setDialogError("");
+                setConfirmOpen(true);
+              }}
+            >
+              {sendButtonLabel(count, !online)}
+            </Button>
+            {!online && <p className={s.networkHint}>Cần có mạng để gửi phiếu</p>}
+          </>
         ) : undefined,
       )}
 

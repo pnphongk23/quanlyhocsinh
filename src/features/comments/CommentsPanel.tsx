@@ -29,6 +29,7 @@ import {
   initialsOf,
   sendableCount,
   sendButtonLabel,
+  sendButtonDisabled,
   ticketBadge,
   ticketCounts,
   ticketFilterLabel,
@@ -407,18 +408,21 @@ export default function CommentsPanel({
       </ul>
 
       {canWrite && (
-        <div className={s.footer}>
-          <Button
-            size="lg"
-            disabled={count === 0}
-            onClick={() => {
-              setDialogError("");
-              setConfirmOpen(true);
-            }}
-          >
-            <SendIcon />
-            {sendButtonLabel(count, !online)}
-          </Button>
+        <div className={s.footerGroup}>
+          {!online && <p className={s.networkHint}>Cần có mạng để gửi phiếu</p>}
+          <div className={s.footer}>
+            <Button
+              size="lg"
+              disabled={sendButtonDisabled(count, !online)}
+              onClick={() => {
+                setDialogError("");
+                setConfirmOpen(true);
+              }}
+            >
+              <SendIcon />
+              {sendButtonLabel(count, !online)}
+            </Button>
+          </div>
         </div>
       )}
 

@@ -64,12 +64,14 @@ export function sendableCount(rows: TicketRow[]): number {
     .length;
 }
 
-/** Nhãn nút gửi cả lớp; mất mạng thì báo "sẽ gửi khi có mạng" (ảnh 44). */
+/** Nhãn nút gửi cả lớp; trạng thái mạng giải thích riêng cạnh nút. */
 export function sendButtonLabel(count: number, offline: boolean): string {
-  if (count === 0) return "Gửi phiếu cả lớp (0)";
-  return offline
-    ? `Sẽ gửi khi có mạng (${count})`
-    : `Gửi phiếu cả lớp (${count})`;
+  void offline;
+  return `Gửi phiếu cả lớp (${count})`;
+}
+
+export function sendButtonDisabled(count: number, offline: boolean): boolean {
+  return count === 0 || offline;
 }
 
 export type TicketBadgeTone = "neutral" | "success" | "warning";

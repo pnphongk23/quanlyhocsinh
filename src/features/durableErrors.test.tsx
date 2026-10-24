@@ -68,6 +68,7 @@ beforeEach(() => {
   const seed = createSeed();
   seed.scores = seed.scores.map((score) => ({ ...score, id: `${score.testId}:${score.studentId}` }));
   replaceStore(seed);
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   for (const mock of Object.values(mocks)) mock.mockReset().mockRejectedValue(new Error(FAIL));
   vi.stubGlobal("matchMedia", (query: string) => ({
     matches: false,
@@ -204,6 +205,17 @@ describe("phiếu nhận xét: ghi bền lỗi", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^Gửi \d+ phiếu$/ }));
     expect(await screen.findByText(FAIL)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("button", { name: /^Gửi \d+ phiếu$/ })).toBeEnabled());
+  });
+
+  it("offline: khoá nút gửi phiếu cả lớp và giải thích cần mạng", () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    inRouter(
+      <CommentsPanel classId="6a" sessionId="6a-session-6" />,
+      "/lop/:classId/buoi-hoc/:sessionId",
+      "/lop/6a/buoi-hoc/6a-session-6?tab=nhan-xet",
+    );
+    expect(screen.getByRole("button", { name: /Gửi phiếu cả lớp/ })).toBeDisabled();
+    expect(screen.getByText("Cần có mạng để gửi phiếu")).toBeInTheDocument();
   });
 });
 

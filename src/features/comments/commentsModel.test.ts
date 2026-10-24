@@ -6,6 +6,7 @@ import {
   homeworkLine,
   initialsOf,
   sendButtonLabel,
+  sendButtonDisabled,
   sendableCount,
   ticketBadge,
   ticketCounts,
@@ -82,10 +83,13 @@ describe("bộ lọc danh sách phiếu (ảnh 40)", () => {
     expect(sendableCount([row("A"), row("B")])).toBe(0);
   });
 
-  it("nhãn nút gửi đổi khi mất mạng (ảnh 44)", () => {
+  it("giữ nhãn nút và khoá gửi khi mất mạng", () => {
     expect(sendButtonLabel(5, false)).toBe("Gửi phiếu cả lớp (5)");
-    expect(sendButtonLabel(5, true)).toBe("Sẽ gửi khi có mạng (5)");
+    expect(sendButtonLabel(5, true)).toBe("Gửi phiếu cả lớp (5)");
     expect(sendButtonLabel(0, true)).toBe("Gửi phiếu cả lớp (0)");
+    expect(sendButtonDisabled(5, false)).toBe(false);
+    expect(sendButtonDisabled(5, true)).toBe(true);
+    expect(sendButtonDisabled(0, false)).toBe(true);
   });
 });
 
