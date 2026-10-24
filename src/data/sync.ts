@@ -196,6 +196,7 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
         batch.push(row);
       }
       if (!batch.length) break;
+      for (let i = 0; i < batch.length; i++) batch[i] = await withTestUpdateId(batch[i], identity);
       const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({ id, type, payload, base_version, created_at })) as SyncCommand[];
       await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "sending" as const })));
       outboxChanged = true;
@@ -233,6 +234,22 @@ function publishRejected(rows: OutboxRow[]): void {
 /** Lệnh ghi một ô (điểm, điểm danh, phiếu, chấm BTVN): có thể bỏ vì ô đó lấy lại được từ máy chủ. */
 const cellEntity: Record<string, EntityName> = { "score.set": "score", "attendance.set": "attendance", "slip.set": "slip", "homework.grade.set": "homework_grade" };
 export const canDiscardRejected = (type: string): boolean => type in cellEntity;
+/** Lệnh test.update cũ thiếu `id`: lấy id từ khoá thực thể của dòng; dòng cũ chưa có khoá thì chỉ nhận khi đúng một bài trong bộ nhớ đệm khớp phần sửa. */
+async function withTestUpdateId(row: OutboxRow, identity: string): Promise<OutboxRow> {
+  if (row.type !== "test.update" || (row.payload as { id?: string }).id) return row;
+  const prefix = `${identity}|test|`;
+  const patch = row.payload as { name?: string; date?: string; max?: number };
+  let id = row.entity_key?.startsWith(prefix) ? row.entity_key.slice(prefix.length) : undefined;
+  if (!id) {
+    const matches = await db.tests.where("identity").equals(identity).and((test) =>
+      (patch.name === undefined || test.name === patch.name) &&
+      (patch.date === undefined || test.date === patch.date) &&
+      (patch.max === undefined || test.max === patch.max),
+    ).toArray();
+    if (matches.length === 1) id = matches[0].id;
+  }
+  return id ? { ...row, payload: { id, ...patch } as typeof row.payload } : row;
+}
 /** Đưa lại các lệnh bị từ chối (theo id) vào hàng đợi và đẩy ngay; còn bị từ chối thì mã lỗi mới hiện lại. */
 export async function retryRejectedCommands(ids: string[]): Promise<void> {
   const identity = identityKey(), wanted = new Set(ids);
@@ -241,20 +258,9 @@ export async function retryRejectedCommands(ids: string[]): Promise<void> {
     const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
     const renamed = new Map(rows.map((row) => [row.id, crypto.randomUUID()]));
     for (const row of rows) {
-      let payload = row.payload;
-      if (row.type === "test.update" && !(payload as { id?: string }).id) {
-        const entityKeyId = row.entity_key?.startsWith(`${identity}|test|`) ? row.entity_key.slice(`${identity}|test|`.length) : undefined;
-        const patch = payload as { name?: string; date?: string; max?: number };
-        const cached = entityKeyId ? undefined : await db.tests.where("identity").equals(identity).and((test) =>
-          (patch.name === undefined || test.name === patch.name) &&
-          (patch.date === undefined || test.date === patch.date) &&
-          (patch.max === undefined || test.max === patch.max),
-        ).toArray();
-        const id = entityKeyId ?? (cached?.length === 1 ? cached[0].id : undefined);
-        if (id) payload = { id, ...patch } as typeof payload;
-      }
+      const fixed = await withTestUpdateId(row, identity);
       await db.outbox.delete(row.id);
-      await db.outbox.put({ ...row, payload, cell_key: row.type === "test.update" && (payload as { id?: string }).id ? `test.update:${(payload as { id: string }).id}` : row.cell_key, id: renamed.get(row.id)!, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
+      await db.outbox.put({ ...fixed, id: renamed.get(row.id)!, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
     }
     await db.outbox.where("identity").equals(identity).and((other) => !!other.depends_on && renamed.has(other.depends_on)).modify((other) => { other.depends_on = renamed.get(other.depends_on!); });
   });

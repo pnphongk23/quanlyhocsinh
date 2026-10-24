@@ -41,4 +41,26 @@ describe("test.update payload repair", () => {
     expect(seen[0].payload).toEqual({ id: "t1", name: "Quiz sửa" });
     expect([...server.rows.get("test")!.values()][0]).toMatchObject({ id: "t1", name: "Quiz sửa" });
   });
+
+  it("repairs a legacy pending payload when syncing, without a retry", async () => {
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const id = d.identityKey();
+    await d.db.outbox.put({ id: "legacy-pending", identity: id, type: "test.update", payload: { name: "Quiz sửa" }, base_version: 1, membership_id: "m-staff", created_at: "2026-10-23T00:00:00Z", status: "pending" } as never);
+    await d.db.tests.put(d.stored("test", `${id}|test|t1`, { id: "t1", class_id: "c1", name: "Quiz sửa", date: "2026-10-20", max: 10, archived: false, version: 1 }) as never);
+    await d.syncNow();
+    expect([...server.rows.get("test")!.values()][0]).toMatchObject({ id: "t1", name: "Quiz sửa" });
+    expect(await d.db.outbox.count()).toBe(0);
+  });
+
+  it("takes the id from the entity key even when another cached test has the same name", async () => {
+    server.put("test", { id: "t2", class_id: "c1", name: "Quiz sửa", date: "2026-10-21", max: 10, archived: false });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const id = d.identityKey();
+    await d.db.outbox.put({ id: "keyed", identity: id, type: "test.update", payload: { name: "Quiz sửa" }, base_version: 1, membership_id: "m-staff", created_at: "2026-10-23T00:00:00Z", status: "rejected", error: "validation_error", entity_key: `${id}|test|t1` } as never);
+    await d.retryRejectedCommands(["keyed"]);
+    expect(server.rows.get("test")!.get("t1")).toMatchObject({ name: "Quiz sửa" });
+    expect(server.rows.get("test")!.get("t2")).toMatchObject({ date: "2026-10-21" });
+  });
 });
