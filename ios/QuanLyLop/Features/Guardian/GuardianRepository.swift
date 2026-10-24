@@ -445,6 +445,12 @@ private struct GuardianMeResponse: Decodable, Sendable {
 }
 
 enum GuardianRepository {
+    /// The server only accepts a UUID as `device_id`, so the guardian syncs with the stored install id too.
+    static func syncCoordinator(api: any APIClient, store: any LocalStore,
+                                defaults: UserDefaults = .standard) -> SyncCoordinator {
+        SyncCoordinator(api: api, store: store, deviceId: DeviceIdentity.current(defaults: defaults))
+    }
+
     static func load() async throws -> GuardianDashboard {
         let result = AppConfiguration.load()
         guard case .success(let configuration) = result else { throw APIFailure.invalidURL }
@@ -458,7 +464,7 @@ enum GuardianRepository {
 
         let scope = CacheScope(userId: identity.user.id, workspaceId: membership.workspace.id, membershipId: membership.id)
         let store = try SQLiteStore.open(scope: scope)
-        let sync = SyncCoordinator(api: api, store: store, deviceId: "ios-guardian")
+        let sync = syncCoordinator(api: api, store: store)
         var refreshed = true
         do { try await sync.synchronize() } catch {
             guard try await store.position() != nil else { throw error }

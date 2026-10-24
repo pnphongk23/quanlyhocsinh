@@ -83,7 +83,7 @@ enum SyncFailure: Error { case invalidResponse }
 actor SyncCoordinator {
     private let api: any APIClient
     private let store: any LocalStore
-    private let deviceId: String
+    nonisolated let deviceId: String
     private let status: SyncStatusCenter
     init(api: any APIClient, store: any LocalStore, deviceId: String,
          status: SyncStatusCenter = .shared) {

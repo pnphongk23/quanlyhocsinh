@@ -24,4 +24,14 @@ final class DeviceIdentityTests: XCTestCase {
         XCTAssertNotNil(UUID(uuidString: id))
         XCTAssertEqual(store.string(forKey: DeviceIdentity.defaultsKey), id)
     }
+
+    func testGuardianSyncUsesTheStoredInstallID() throws {
+        let store = defaults()
+        let scope = CacheScope(userId: "u", workspaceId: "w", membershipId: "m")
+        let sync = GuardianRepository.syncCoordinator(api: StubAPIClient(baseURL: URL(string: "https://fixture.invalid/v1")!),
+                                                       store: try SQLiteStore(path: ":memory:", scope: scope),
+                                                       defaults: store)
+        XCTAssertEqual(sync.deviceId, DeviceIdentity.current(defaults: store))
+        XCTAssertNotNil(UUID(uuidString: sync.deviceId))
+    }
 }
