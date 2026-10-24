@@ -10,6 +10,19 @@ struct ReportBatchItem: Decodable, Sendable {
     let toKey: String
 }
 
+extension KeyedDecodingContainer {
+    /// REST answers carry SQLite flags as `0`/`1`; the sync feed carries booleans. Accepts both.
+    func decodeServerFlag(forKey key: Key) throws -> Bool {
+        if let flag = try? decode(Bool.self, forKey: key) { return flag }
+        return try decode(Int.self, forKey: key) != 0
+    }
+
+    func decodeServerFlagIfPresent(forKey key: Key) throws -> Bool? {
+        guard contains(key), try !decodeNil(forKey: key) else { return nil }
+        return try decodeServerFlag(forKey: key)
+    }
+}
+
 struct ReportBatchRow: Decodable, Sendable {
     let reportId: String
     let batchId: String
@@ -21,6 +34,25 @@ struct ReportBatchRow: Decodable, Sendable {
     let publicationCount: Int
     let publishedAt: String?
     let version: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case reportId, batchId, studentId, month, status, generalComment, needsRepublish
+        case publicationCount, publishedAt, version
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        reportId = try container.decode(String.self, forKey: .reportId)
+        batchId = try container.decode(String.self, forKey: .batchId)
+        studentId = try container.decode(String.self, forKey: .studentId)
+        month = try container.decodeIfPresent(String.self, forKey: .month)
+        status = try container.decode(ReportStatus.self, forKey: .status)
+        generalComment = try container.decodeIfPresent(String.self, forKey: .generalComment)
+        needsRepublish = try container.decodeServerFlag(forKey: .needsRepublish)
+        publicationCount = try container.decode(Int.self, forKey: .publicationCount)
+        publishedAt = try container.decodeIfPresent(String.self, forKey: .publishedAt)
+        version = try container.decode(Int.self, forKey: .version)
+    }
 }
 
 struct CreateReportBatchResponse: Decodable, Sendable {
@@ -32,6 +64,15 @@ struct ReportCommentResponse: Decodable, Sendable {
     let generalComment: String?
     let needsRepublish: Bool?
     let version: Int?
+
+    private enum CodingKeys: String, CodingKey { case generalComment, needsRepublish, version }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        generalComment = try container.decodeIfPresent(String.self, forKey: .generalComment)
+        needsRepublish = try container.decodeServerFlagIfPresent(forKey: .needsRepublish)
+        version = try container.decodeIfPresent(Int.self, forKey: .version)
+    }
 }
 
 struct ReportPublishResponse: Decodable, Sendable {

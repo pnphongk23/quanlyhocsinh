@@ -18,6 +18,37 @@ final class ReportAPIDecodingTests: XCTestCase {
         XCTAssertNil(response.reports.first?.month)
     }
 
+    /// Shapes copied from worker/tests/report-batches.test.ts: REST returns SQLite flags as 0/1.
+    func testServerRestFlagsAsZeroAndOneDecode() throws {
+        let created = try decode(CreateReportBatchResponse.self, """
+        {"batch":{"id":"b1","class_id":"c1","from_session_id":"s1","to_session_id":"s4","from_key":"2026-10-01 18:00",
+                  "to_key":"2026-10-07 18:00","from_number":1,"to_number":3,
+                  "counts":{"total":3,"draft":3,"published":0,"needs_republish":0},"created_at":"2026-10-24T10:00:00.000Z"},
+         "reports":[{"report_id":"r1","batch_id":"b1","student_id":"st1","student_name":"An","month":"2026-10","status":"draft",
+                     "general_comment":"","needs_republish":0,"publication_count":0,"published_at":null,"version":1},
+                    {"report_id":"r2","batch_id":"b1","student_id":"st2","student_name":"Bình","month":"2026-10","status":"published",
+                     "general_comment":"Tốt","needs_republish":1,"publication_count":1,"published_at":"2026-10-24T10:00:00.000Z","version":2}]}
+        """)
+        XCTAssertEqual(created.reports.map(\.needsRepublish), [false, true])
+
+        let saved = try decode(ReportCommentResponse.self, """
+        {"id":"r1","batch_id":"b1","student_id":"st1","month":"2026-10","status":"published","general_comment":"Cập nhật",
+         "needs_republish":1,"version":3}
+        """)
+        XCTAssertEqual(saved.needsRepublish, true)
+        XCTAssertEqual(saved.generalComment, "Cập nhật")
+
+        let draft = try decode(ReportCommentResponse.self, """
+        {"id":"r1","status":"draft","general_comment":"Tiến bộ tốt","needs_republish":0,"version":2}
+        """)
+        XCTAssertEqual(draft.needsRepublish, false)
+
+        let bool = try decode(ReportCommentResponse.self, #"{"general_comment":"x","needs_republish":true,"version":2}"#)
+        XCTAssertEqual(bool.needsRepublish, true)
+        let absent = try decode(ReportCommentResponse.self, #"{"general_comment":"x"}"#)
+        XCTAssertNil(absent.needsRepublish)
+    }
+
     func testBatchRowsFromTheSyncFeedDecodeWithAndWithoutLegacyMonth() throws {
         let current = try decode(StudentReport.self, """
         {"id":"r1","class_id":"c1","student_id":"st1","batch_id":"b1","status":"draft","general_comment":"",
