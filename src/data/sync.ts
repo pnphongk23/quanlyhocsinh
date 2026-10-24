@@ -237,12 +237,24 @@ export const canDiscardRejected = (type: string): boolean => type in cellEntity;
 export async function retryRejectedCommands(ids: string[]): Promise<void> {
   const identity = identityKey(), wanted = new Set(ids);
   // Máy chủ trả lại kết quả đã lưu cho cùng id, nên lệnh thử lại phải mang id mới mới được xét lại.
-  await db.transaction("rw", db.outbox, async () => {
+  await db.transaction("rw", [db.outbox, db.tests], async () => {
     const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
     const renamed = new Map(rows.map((row) => [row.id, crypto.randomUUID()]));
     for (const row of rows) {
+      let payload = row.payload;
+      if (row.type === "test.update" && !(payload as { id?: string }).id) {
+        const entityKeyId = row.entity_key?.startsWith(`${identity}|test|`) ? row.entity_key.slice(`${identity}|test|`.length) : undefined;
+        const patch = payload as { name?: string; date?: string; max?: number };
+        const cached = entityKeyId ? undefined : await db.tests.where("identity").equals(identity).and((test) =>
+          (patch.name === undefined || test.name === patch.name) &&
+          (patch.date === undefined || test.date === patch.date) &&
+          (patch.max === undefined || test.max === patch.max),
+        ).toArray();
+        const id = entityKeyId ?? (cached?.length === 1 ? cached[0].id : undefined);
+        if (id) payload = { id, ...patch } as typeof payload;
+      }
       await db.outbox.delete(row.id);
-      await db.outbox.put({ ...row, id: renamed.get(row.id)!, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
+      await db.outbox.put({ ...row, payload, cell_key: row.type === "test.update" && (payload as { id?: string }).id ? `test.update:${(payload as { id: string }).id}` : row.cell_key, id: renamed.get(row.id)!, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
     }
     await db.outbox.where("identity").equals(identity).and((other) => !!other.depends_on && renamed.has(other.depends_on)).modify((other) => { other.depends_on = renamed.get(other.depends_on!); });
   });

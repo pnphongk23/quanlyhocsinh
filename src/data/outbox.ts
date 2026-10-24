@@ -23,7 +23,7 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
   const identity = identityKey(); const cache = getCacheIdentity(); if (!cache) throw new Error("Đăng nhập để lưu thay đổi.");
   const key = rowKey(entity, parts), cellKey = keyForCommand(command);
   const recordTable = tableFor(entity);
-  const row: OutboxRow = { id: crypto.randomUUID(), identity, type: command.type, payload: command.payload, base_version: ("base_version" in command && command.base_version !== undefined ? command.base_version : 0), membership_id: cache.membershipId, created_at: command.created_at, status: "pending", cell_key: cellKey };
+  const row: OutboxRow = { id: crypto.randomUUID(), identity, type: command.type, payload: command.payload, base_version: ("base_version" in command && command.base_version !== undefined ? command.base_version : 0), membership_id: cache.membershipId, created_at: command.created_at, status: "pending", cell_key: cellKey, entity_key: key };
   try {
       await db.transaction("rw", [recordTable, db.outbox, db.meta], async () => {
         if (await db.meta.get(logoutLockKey(cache.userId))) throw new Error("Đang đăng xuất, thử lại sau.");

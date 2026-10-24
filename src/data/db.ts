@@ -6,7 +6,7 @@ export type OutboxStatus = "pending" | "sending" | "rejected";
 export interface OutboxRow {
   id: string; identity: string; type: SyncCommand["type"]; payload: SyncCommand["payload"];
   base_version: number; membership_id: string; created_at: string; status: OutboxStatus;
-  error?: string; depends_on?: string;
+  error?: string; depends_on?: string; entity_key?: string;
   cell_key?: string;
 }
 export interface MetaRow { key: string; identity: string; cursor: number; epoch: number; logoutState?: "pending" | "needs_login"; updatedAt?: number; }
