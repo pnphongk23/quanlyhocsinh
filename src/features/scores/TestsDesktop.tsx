@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
+import { useDismiss } from "../../shared/hooks/useDismiss";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Link } from "react-router-dom";
 import { getClass } from "../../data/repositories/classes";
@@ -103,6 +104,8 @@ export default function TestsDesktop({ classId }: { classId: string }) {
   const canWrite = access.can("scores", "write");
   const [dialog, setDialog] = useState<Dialog>(null);
   const [menuTestId, setMenuTestId] = useState<string | null>(null);
+  const menuWrapRef = useRef<HTMLDivElement>(null);
+  useDismiss(menuTestId !== null, () => setMenuTestId(null), menuWrapRef);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
 
@@ -189,7 +192,10 @@ export default function TestsDesktop({ classId }: { classId: string }) {
                       <Pill tone={pill.tone}>{pill.label}</Pill>
                     </td>
                     <td>
-                      <div className={s.menuWrap}>
+                      <div
+                        ref={menuTestId === test.id ? menuWrapRef : undefined}
+                        className={s.menuWrap}
+                      >
                         <button
                           type="button"
                           className={d.rowButton}

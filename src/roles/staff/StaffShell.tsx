@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { getSession } from "../../data/auth/session";
 import { setCurrentClass } from "../../data/repositories/classes";
 import { useStore } from "../../data/store";
+import { useDismiss } from "../../shared/hooks/useDismiss";
 import SaveStatus from "../../shared/SaveStatus";
 import { Icon } from "../../shared/ui";
 import { PageTransition } from "../../shared/motion";
@@ -28,6 +29,8 @@ export function Component() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [classMenuOpen, setClassMenuOpen] = useState(false);
+  const classPickerRef = useRef<HTMLDivElement>(null);
+  useDismiss(classMenuOpen, () => setClassMenuOpen(false), classPickerRef);
   const session = getSession();
   const membership = session?.me.memberships.find(
     (item) => item.id === session.activeMembershipId && item.status === "active",
@@ -73,7 +76,7 @@ export function Component() {
         <NavLink to="/lop" className={styles.staffBrand}>
           {workspaceLabel}
         </NavLink>
-        <div className={styles.staffClassPicker}>
+        <div ref={classPickerRef} className={styles.staffClassPicker}>
           <button
             type="button"
             className={styles.staffClassScope}

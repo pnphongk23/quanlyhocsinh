@@ -15,7 +15,7 @@ async function seed(page, role) {
   await page.addInitScript((value) => localStorage.setItem("qlh.session.v1", JSON.stringify(value)), session);
   await page.goto(base + "/dang-nhap", { waitUntil: "domcontentloaded" });
   await page.evaluate(async ({ role, identity, entities }) => {
-    const req = indexedDB.open("qlh-web", 10);
+    const req = indexedDB.open("qlh-web");
     const db = await new Promise((resolve, reject) => {
       req.onupgradeneeded = () => {
         const indexes = { classes: ["key", "identity", "id"], students: ["key", "identity", "class_id", "id"], sessions: ["key", "identity", "class_id", "date", "id"], attendance: ["key", "identity", "session_id", "student_id"], tests: ["key", "identity", "class_id", "date", "id"], scores: ["key", "identity", "test_id", "student_id"], slips: ["key", "identity", "session_id", "student_id"], homeworkSections: ["key", "identity", "session_id", "id"], homeworkGrades: ["key", "identity", "section_id", "student_id"], reports: ["key", "identity", "class_id", "student_id", "month"], reportPublications: ["key", "identity", "report_id", "publication_no"], outbox: ["id", "identity", "status", "created_at"], meta: ["key", "identity"] };
@@ -178,6 +178,39 @@ try {
     const hit = await click(page.getByRole("menuitem", { name: item, exact: true }), item);
     await page.getByRole("dialog").waitFor({ state: "visible" });
     return hit + "; edit/delete dialog opened";
+  });
+  await test("desktop test row menu / outside click and Esc", desktop, "staff", "/lop/demo-6a/bai-kiem-tra", async (page) => {
+    const trigger = page.locator('button[aria-label="Thêm tùy chọn Kiểm tra giữa kỳ"]');
+    await click(trigger, "open test row menu");
+    await page.getByRole("menu").waitFor({ state: "visible" });
+    await page.mouse.click(2, 2);
+    await page.getByRole("menu").waitFor({ state: "detached" });
+    await click(trigger, "reopen test row menu");
+    await page.keyboard.press("Escape");
+    await page.getByRole("menu").waitFor({ state: "detached" });
+    if (!(await trigger.evaluate((el) => el === document.activeElement))) throw new Error("focus not returned to trigger");
+    return "outside click and Esc close, focus returned";
+  });
+  for (const viewport of [mobile, desktop]) await test("class menu / outside click and Esc", viewport, "staff", "/lop/demo-6a/buoi-hoc", async (page) => {
+    const trigger = viewport.width <= 430 ? page.getByRole("button", { name: "Tuỳ chọn lớp" }) : page.getByRole("button", { name: "Thêm tùy chọn", exact: true });
+    await click(trigger, "open class menu");
+    await page.mouse.click(2, 2);
+    await page.getByRole("menu").waitFor({ state: "detached" });
+    await click(trigger, "reopen class menu");
+    await page.keyboard.press("Escape");
+    await page.getByRole("menu").waitFor({ state: "detached" });
+    return "outside click and Esc close";
+  });
+  await test("desktop class picker / outside click and Esc", desktop, "staff", "/lop/demo-6a/buoi-hoc", async (page) => {
+    const picker = page.getByRole("button", { name: /Đang xem lớp/ });
+    await click(picker, "open class picker");
+    await page.getByRole("listbox").waitFor({ state: "visible" });
+    await page.mouse.click(700, 500);
+    await page.getByRole("listbox").waitFor({ state: "detached" });
+    await click(picker, "reopen class picker");
+    await page.keyboard.press("Escape");
+    await page.getByRole("listbox").waitFor({ state: "detached" });
+    return "outside click and Esc close";
   });
   for (const viewport of [mobile, desktop]) {
     await test("class edit dialog / inner and backdrop", viewport, "staff", "/lop/demo-6a/buoi-hoc", async (page) => {

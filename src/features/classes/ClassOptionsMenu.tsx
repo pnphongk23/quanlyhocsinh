@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { useDismiss } from "../../shared/hooks/useDismiss";
 import s from "./dialogs.module.css";
 
 type MenuIcon = "edit" | "calendar" | "archive";
@@ -40,19 +41,13 @@ export function ClassOptionsMenu({
   items?: ClassOption[];
   note?: string;
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useDismiss(open, onClose, menuRef);
   if (!open) return null;
   return (
     <>
       <div className={s.scrim} onClick={onClose} aria-hidden="true" />
-      <div className={s.menu} role="menu">
+      <div ref={menuRef} className={s.menu} role="menu">
         {note ? (
           <p className={s.menuNote}>{note}</p>
         ) : (
