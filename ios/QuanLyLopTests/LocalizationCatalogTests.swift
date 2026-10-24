@@ -13,7 +13,8 @@ final class LocalizationCatalogTests: XCTestCase {
             JSONSerialization.jsonObject(with: catalogData) as? [String: Any]
         )
         let strings = try XCTUnwrap(catalog["strings"] as? [String: Any])
-        let keyPattern = try NSRegularExpression(pattern: #"String\(localized:\s*"([^"]+)""#)
+        // Keys with an explicit `table:` live in their own catalog and are checked below.
+        let keyPattern = try NSRegularExpression(pattern: #"String\(localized:\s*"([^"]+)"(?!\s*,\s*table:)"#)
         let literalPattern = try NSRegularExpression(pattern: #""((?:\\.|[^"\\])*)""#)
         let vietnamesePattern = try NSRegularExpression(pattern: #"[À-ỹ]"#)
         let sourceURLs = try FileManager.default.subpathsOfDirectory(atPath: featureRoot.path)
@@ -86,5 +87,35 @@ final class LocalizationCatalogTests: XCTestCase {
             XCTAssertEqual(unit["state"] as? String, "translated", key)
         }
         XCTAssertEqual(Set(strings.keys), used, "catalog keys and code keys must match")
+    }
+
+    func testFeatureTableKeysExistInTheirCatalogs() throws {
+        let iosRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let featureRoot = iosRoot.appendingPathComponent("QuanLyLop/Features", isDirectory: true)
+        let pattern = try NSRegularExpression(pattern: #"String\(localized:\s*"([^"]+)",\s*table:\s*"(\w+)""#)
+        var catalogs: [String: [String: Any]] = [:]
+        var missing: [String] = []
+        for path in try FileManager.default.subpathsOfDirectory(atPath: featureRoot.path) where path.hasSuffix(".swift") {
+            let source = try String(contentsOf: featureRoot.appendingPathComponent(path), encoding: .utf8)
+            let range = NSRange(source.startIndex..<source.endIndex, in: source)
+            for match in pattern.matches(in: source, range: range) {
+                guard let keyRange = Range(match.range(at: 1), in: source),
+                      let tableRange = Range(match.range(at: 2), in: source) else { continue }
+                let key = String(source[keyRange])
+                let table = String(source[tableRange])
+                if catalogs[table] == nil {
+                    let url = iosRoot.appendingPathComponent("QuanLyLop/Resources/\(table).xcstrings")
+                    let data = try XCTUnwrap(try? Data(contentsOf: url), "missing catalog \(table).xcstrings")
+                    let catalog = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+                    catalogs[table] = try XCTUnwrap(catalog["strings"] as? [String: Any])
+                }
+                let vi = ((catalogs[table]?[key] as? [String: Any])?["localizations"] as? [String: Any])?["vi"] as? [String: Any]
+                let state = (vi?["stringUnit"] as? [String: Any])?["state"] as? String
+                if state != "translated" { missing.append("\(path): \(table)/\(key)") }
+            }
+        }
+        XCTAssertTrue(missing.isEmpty, "Missing or untranslated table keys:\n\(missing.joined(separator: "\n"))")
     }
 }
