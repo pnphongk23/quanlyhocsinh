@@ -339,23 +339,14 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
 
           {manual && (
             <div className={s.card}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <p className={s.label13}>Buổi lẻ sắp tới</p>
-                <Pill tone="primary">Buổi lẻ</Pill>
-              </div>
+              <h2 className={s.sectionTitle}>Buổi lẻ sắp tới</h2>
               <p
                 style={{
                   margin: "6px 0 0",
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: 700,
                   lineHeight: 1.3,
+                  textWrap: "balance",
                 }}
               >
                 {cardTitle(manual)}
