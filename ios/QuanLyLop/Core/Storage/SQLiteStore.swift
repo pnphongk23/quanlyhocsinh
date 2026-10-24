@@ -240,6 +240,10 @@ actor SQLiteStore: LocalStore {
             try db.execute("DELETE FROM records WHERE scope=? AND key=? AND version=-1", [scope.storageKey,key])
         }
     }
+    /// Drops a command that was never confirmed, for sends that must not wait in the outbox.
+    func discardCommand(id: UUID) throws {
+        try db.execute("DELETE FROM commands WHERE scope=? AND id=?", [scope.storageKey, id.uuidString])
+    }
     func retry(_ ids: [UUID], now: Date, minimumDelay: TimeInterval = 0) throws {
         try transaction {
             for id in ids {

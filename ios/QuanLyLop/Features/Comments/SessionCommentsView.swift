@@ -9,7 +9,6 @@ struct SessionCommentsView: View {
     @State private var target: TicketTarget?
     @State private var showingSend = false
     @State private var sendError: String?
-    @State private var toast: String?
     @State private var sendController = AppSaveController()
     @State private var saveStatusSource: AppSaveStatusSource?
     @State private var dismissSendAfterSuccess = false
@@ -196,7 +195,6 @@ struct SessionCommentsView: View {
 
     private var footer: some View {
         TeacherPinnedBar {
-            if let toast { I4Toast(text: toast) }
             if sendAvailability == .needsNetwork {
                 Text(String(localized: "comments.send.needs_network", table: "Teacher"))
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
@@ -246,7 +244,9 @@ struct SessionCommentsView: View {
         }, actions: {
             VStack(spacing: 8) {
                 AppSaveButton(
-                    title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu"), String(describing: (sendableRows.count))),
+                    title: sendError == nil
+                        ? String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu"), String(describing: (sendableRows.count)))
+                        : String(localized: "comments.send.retry", table: "Teacher"),
                     controller: sendController
                 ) { try await send() }
                 AppButton(title: String(localized: "feature.comments.quay.lai"), variant: .neutral, size: .large) { showingSend = false }
@@ -295,12 +295,6 @@ struct SessionCommentsView: View {
         case .sent:
             dismissSendAfterSuccess = true
             sendError = nil
-            toast = nil
-            await saveStatusSource?.refresh()
-        case .queued:
-            dismissSendAfterSuccess = true
-            sendError = nil
-            toast = String(localized: "feature.comments.se.gui.khi.co.mang")
             await saveStatusSource?.refresh()
         case .failed(let message):
             sendError = message

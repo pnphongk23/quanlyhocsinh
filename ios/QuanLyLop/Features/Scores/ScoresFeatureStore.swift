@@ -312,11 +312,12 @@ final class I4FeatureStore: ObservableObject {
 
     enum SendOutcome: Equatable {
         case sent(Int)
-        case queued(Int)
         case failed(String)
     }
 
-    /// Sends every starred, not-yet-sent slip of the session in one command.
+    /// Sends every starred, not-yet-sent slip of the session in one command and waits for the server.
+    /// A send the server did not confirm is never left in the outbox: the command is removed and the
+    /// slips go back to their previous state (stars and notes kept), so the teacher can retry.
     func sendSlips(sessionID: String, studentIDs: [String]) async -> SendOutcome {
         guard let store else { return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu")) }
         let chosen = slips(sessionID: sessionID).filter {
@@ -340,10 +341,27 @@ final class I4FeatureStore: ObservableObject {
             for row in localRows.dropFirst() {
                 try await store.write(row, forKey: key("slip", sessionID, row.studentId), enqueueing: nil)
             }
-            let synced = await syncIfNeeded()
+        } catch {
+            await rollbackSend(command: command, slips: chosen, sessionID: sessionID)
+            return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu"))
+        }
+        await syncIfNeeded()
+        let pending = try? await store.pendingCommands()
+        if let pending, !pending.contains(where: { $0.id == command.id }) {
             await refresh()
-            return synced ? .sent(localRows.count) : .queued(localRows.count)
-        } catch { return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu")) }
+            return .sent(localRows.count)
+        }
+        await rollbackSend(command: command, slips: chosen, sessionID: sessionID)
+        return .failed(String(localized: "comments.send.failed", table: "Teacher"))
+    }
+
+    private func rollbackSend(command: PendingCommand, slips: [SessionSlip], sessionID: String) async {
+        guard let store else { return }
+        try? await store.discardCommand(id: command.id)
+        for slip in slips {
+            try? await store.write(slip, forKey: key("slip", sessionID, slip.studentId), enqueueing: nil)
+        }
+        await refresh()
     }
 
     // MARK: - Homework

@@ -1,6 +1,20 @@
 {
   "sourceLanguage" : "vi",
   "strings" : {
+    "comments.send.failed" : {
+      "comment" : "Lỗi khi gửi phiếu cả lớp không được máy chủ xác nhận.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa gửi được phiếu. Kiểm tra kết nối rồi thử lại. Phiếu đã soạn vẫn được giữ." } }
+      }
+    },
+    "comments.send.retry" : {
+      "comment" : "Nút gửi lại phiếu sau khi gửi lỗi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thử lại" } }
+      }
+    },
     "comments.send.needs_network" : {
       "comment" : "Giải thích dưới nút Gửi phiếu cả lớp khi mất mạng; gửi phiếu không xếp hàng.",
       "extractionState" : "manual",
