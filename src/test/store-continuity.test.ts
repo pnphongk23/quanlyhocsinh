@@ -56,4 +56,34 @@ describe("store continuity", () => {
     for (const state of seen) expect(state).toMatchObject({ tests: 1, scores: 1, students: 1, sessions: 1 });
     expect(seen.every((state) => state.classes >= 2)).toBe(true);
   });
+
+  it("ignores an older hydration that finishes after a newer one for the same identity", async () => {
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    expect(d.getStore().tests).toHaveLength(1);
+    await d.db.tests.clear();
+    await d.hydrateStore();
+    expect(d.getStore().tests).toHaveLength(0);
+
+    const original = d.db.transaction.bind(d.db);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let calls = 0;
+    vi.spyOn(d.db, "transaction").mockImplementation(((...args: unknown[]) => {
+      const first = ++calls === 1;
+      const result = (original as (...a: unknown[]) => Promise<unknown>)(...args);
+      return first ? result.then(async (value) => { await gate; return value; }) : result;
+    }) as never);
+
+    const older = d.hydrateStore();
+    await vi.waitFor(() => expect(calls).toBe(1));
+    const row = server.rows.get("test")!.get("t1")!;
+    await d.db.tests.put(d.stored("test", `${d.identity}|test|t1`, row as never, d.identity) as never);
+    await d.hydrateStore();
+    expect(d.getStore().tests).toHaveLength(1);
+
+    release();
+    await older;
+    expect(d.getStore().tests).toHaveLength(1);
+  });
 });

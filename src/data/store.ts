@@ -10,6 +10,7 @@ let state: StoreState = empty();
 if (typeof window !== "undefined") window.__QLH_STATE__ = state;
 let current = identityKey();
 let hydrated: string | null = null;
+let hydrateSeq = 0;
 let storageError = false;
 const listeners = new Set<() => void>();
 export const getStore = (): StoreState => state;
@@ -20,7 +21,7 @@ export function replaceStore(next: StoreState): void { state = next; if (typeof 
 export const useStore = (): StoreState => useSyncExternalStore(subscribe, getStore, getStore);
 
 export async function hydrateStore(): Promise<void> {
-  const id = identityKey(); current = id;
+  const id = identityKey(); current = id; const ticket = ++hydrateSeq;
   if (id === "anonymous") { hydrated = null; replaceStore(empty()); return; }
   try {
     const [classes, students, sessions, attendance, tests, scores, comments, homeworkSections, homeworkGrades, reports, reportPublications, outbox] = await db.transaction("r", [db.classes, db.students, db.sessions, db.attendance, db.tests, db.scores, db.slips, db.homeworkSections, db.homeworkGrades, db.reports, db.reportPublications, db.outbox], () => Promise.all([
@@ -29,7 +30,7 @@ export async function hydrateStore(): Promise<void> {
     db.slips.where("identity").equals(id).toArray(), db.homeworkSections.where("identity").equals(id).toArray(), db.homeworkGrades.where("identity").equals(id).toArray(),
       db.reports.where("identity").equals(id).toArray(), db.reportPublications.where("identity").equals(id).toArray(), db.outbox.where("identity").equals(id).toArray(),
   ]));
-  if (current !== id) return;
+  if (current !== id || ticket !== hydrateSeq) return;
   const values = <T extends { entity: string; key: string; identity: string }>(rows: T[]) => rows.map(({ entity: _e, key: _k, identity: _i, ...row }) => row);
     const raw={ classes:values(classes),students:values(students),sessions:values(sessions),attendance:values(attendance),tests:values(tests),scores:values(scores),comments:values(comments),homeworkSections:values(homeworkSections),homeworkGrades:values(homeworkGrades),reports:values(reports),reportPublications:values(reportPublications) } as any;
     const sessionClassIds=new Map<string,string>(raw.sessions.map((x:any)=>[x.id,x.class_id]));
