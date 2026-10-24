@@ -1,18 +1,15 @@
-import { Link, Outlet, redirect, useRouteError } from "react-router-dom";
+import { Outlet, redirect, useRouteError } from "react-router-dom";
 import type { RouteObject } from "react-router-dom";
 import { authRedirect } from "../data/auth";
-import { initializeSession } from "../data/auth/session";
+import { getSession, initializeSession } from "../data/auth/session";
+import { rootPathForSession } from "../features/auth/landingPath";
 import { staffRoutes } from "../roles/staff/routes";
 import { guardianRoutes } from "../roles/guardian/routes";
 import { accountRoutes } from "../roles/account/routes";
 import { PwaGuideGate } from "../features/pwa/PwaGuideGate";
-import styles from "./shell.module.css";
 import { StatusPage } from "./StatusPage";
 function RootLayout() {
   return <PwaGuideGate><Outlet /></PwaGuideGate>;
-}
-function FoundationHome() {
-  return <main className={styles.content}><h1>Quản lý lớp</h1><p>Khung ứng dụng · Đợt A</p><nav className={styles.nav} aria-label="Mở khung theo vai trò"><Link to="/lop">Khung nhân sự</Link><Link to="/ph">Khung phụ huynh</Link><Link to="/dang-nhap">Đăng nhập</Link></nav></main>;
 }
 function RouteError() {
   useRouteError();
@@ -21,7 +18,11 @@ function RouteError() {
 export const routes: RouteObject[] = [{
       element: <RootLayout />, errorElement: <RouteError />, HydrateFallback: () => null,
   children: [
-    { path: "/", element: <FoundationHome /> },
+    { path: "/", loader: async () => {
+      await initializeSession();
+      const session = getSession();
+      throw redirect(session ? rootPathForSession(session) : "/dang-nhap");
+    } },
       ...guardRoutes(staffRoutes, "staff"), ...guardRoutes(guardianRoutes, "guardian"), ...accountRoutes,
     { path: "*", element: <StatusPage title="Không tìm thấy màn hình" /> },
   ],
