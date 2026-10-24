@@ -124,7 +124,8 @@ struct TeacherNewClassView: View {
 
     private var stickyBar: some View {
         VStack(spacing: 8) {
-            AppSaveButton(title: String(localized: "feature.classes.tao.lop"), controller: saveController) {
+            AppSaveButton(title: String(localized: "feature.classes.tao.lop"), controller: saveController,
+                          onSuccess: { dismiss() }) {
                 try await save()
             }
             .frame(maxWidth: .infinity)
@@ -153,7 +154,6 @@ struct TeacherNewClassView: View {
         do {
             try await data.createClass(id: operationID!.rawValue, name: name, weekdays: weekdays.sorted(), time: time)
             error = nil
-            dismissAfterSave()
         } catch {
             self.error = String(localized: "feature.classes.khong.tao.uoc.lop.vui.long.thu.lai")
             throw error
@@ -164,13 +164,6 @@ struct TeacherNewClassView: View {
         Group {
             if saveController.error != nil { AppSaveStatus(kind: .error) }
             else if let source = data.saveStatusSource { AppSaveStatus(kind: source.kind) }
-        }
-    }
-
-    private func dismissAfterSave() {
-        Task {
-            try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
-            dismiss()
         }
     }
 
@@ -342,7 +335,8 @@ struct TeacherEditClassView: View {
                     editSchedule()
                 }
                 if let error { Text(error).appText(AppText.muted).foregroundStyle(AppColors.error) }
-                AppSaveButton(title: String(localized: "feature.classes.luu.thay.oi"), controller: saveController) {
+                AppSaveButton(title: String(localized: "feature.classes.luu.thay.oi"), controller: saveController,
+                              onSuccess: { dismiss() }) {
                     try await save()
                 }
                 .frame(maxWidth: .infinity)
@@ -368,10 +362,6 @@ struct TeacherEditClassView: View {
                                        weekdays: klass.weekdays ?? [],
                                        time: klass.startTime ?? "18:00")
             error = nil
-            Task {
-                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
-                dismiss()
-            }
         } catch {
             self.error = String(localized: "feature.classes.khong.luu.uoc.lop")
             throw error
@@ -399,7 +389,8 @@ struct TeacherEditScheduleView: View {
                 }
                 TeacherField(label: String(localized: "feature.classes.gio.bat.au"), text: $time, placeholder: "18:00")
                 if let error { Text(error).appText(AppText.muted).foregroundStyle(AppColors.error) }
-                AppSaveButton(title: String(localized: "feature.classes.luu.lich.hoc"), controller: saveController) {
+                AppSaveButton(title: String(localized: "feature.classes.luu.lich.hoc"), controller: saveController,
+                              onSuccess: { dismiss() }) {
                     try await save()
                 }
                 .frame(maxWidth: .infinity)
@@ -442,13 +433,9 @@ struct TeacherEditScheduleView: View {
             throw TeacherDataFailure.unavailable
         }
         do {
-            try await data.updateClass(klass, name: klass.name, weekdays: weekdays.sorted(), time: time)
-            error = nil
-            Task {
-                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
-                dismiss()
-            }
-        } catch {
+              try await data.updateClass(klass, name: klass.name, weekdays: weekdays.sorted(), time: time)
+              error = nil
+          } catch {
             self.error = String(localized: "feature.classes.khong.luu.uoc.lich.hoc")
             throw error
         }

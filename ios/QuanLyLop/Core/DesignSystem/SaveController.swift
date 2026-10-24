@@ -61,4 +61,9 @@ final class AppSaveController {
     }
 
     func clearError() { error = nil }
+
+    func waitForSuccessHold() async {
+        guard phase == .saved, let holdTask else { return }
+        await holdTask.value
+    }
 }

@@ -376,6 +376,12 @@ struct TeacherAttendanceDraft: Sendable, Equatable {
     var status: AttendanceStatus
     var lateAt: String?
     var note: String
+
+    static func hasChanges(draft: TeacherAttendanceDraft?, stored: Attendance?) -> Bool {
+        guard let stored else { return true }
+        guard let draft else { return false }
+        return draft != TeacherAttendanceDraft(status: stored.status, lateAt: stored.lateAt, note: stored.note)
+    }
 }
 
 private extension String {

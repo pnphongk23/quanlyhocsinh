@@ -9,12 +9,12 @@ enum SaveStatusKind: Equatable, Sendable {
     case pending
     /// "Đã lưu trên máy · sẽ đồng bộ khi có mạng".
     case offline
-    /// Sync failed or the server rejected a command.
+    /// The server rejected a command.
     case error
 
     /// `unsyncedSince` is when the push queue last went from empty to non-empty.
-    static func resolve(failed: Bool, unsyncedSince: Date?, isOnline: Bool, now: Date) -> SaveStatusKind {
-        if failed { return .error }
+    static func resolve(hasRejectedCommands: Bool, unsyncedSince: Date?, isOnline: Bool, now: Date) -> SaveStatusKind {
+        if hasRejectedCommands { return .error }
         guard let unsyncedSince else { return .savedLocal }
         if !isOnline { return .offline }
         return now.timeIntervalSince(unsyncedSince) > AppDuration.pendingAfter ? .pending : .savedLocal
@@ -22,7 +22,7 @@ enum SaveStatusKind: Equatable, Sendable {
 }
 
 /// Read-only view of the push queue (`LocalStore.pendingCommandCount`), connectivity
-/// (`ConnectivityMonitor`) and sync failures (`SyncStatusCenter`). A screen calls `refresh()` after
+/// (`ConnectivityMonitor`) and rejected commands (`SyncStatusCenter`). A screen calls `refresh()` after
 /// each save and when a sync ends; the "Chờ đồng bộ" switch after one second is scheduled here.
 @MainActor
 @Observable
@@ -31,7 +31,7 @@ final class AppSaveStatusSource {
 
     private let pendingCount: @MainActor () async -> Int
     private let isOnline: @MainActor () -> Bool
-    private let failed: @MainActor () -> Bool
+    private let hasRejectedCommands: @MainActor () -> Bool
     private let now: @MainActor () -> Date
     private let sleep: @MainActor (TimeInterval) async -> Void
     private var unsyncedSince: Date?
@@ -39,14 +39,14 @@ final class AppSaveStatusSource {
 
     init(pendingCount: @escaping @MainActor () async -> Int,
          isOnline: @escaping @MainActor () -> Bool = { ConnectivityMonitor.shared.isOnline },
-         failed: @escaping @MainActor () -> Bool = { SyncStatusCenter.shared.isFailed },
+         hasRejectedCommands: @escaping @MainActor () -> Bool = { SyncStatusCenter.shared.rejectedCommandCount > 0 },
          now: @escaping @MainActor () -> Date = { Date() },
          sleep: @escaping @MainActor (TimeInterval) async -> Void = { seconds in
              try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
          }) {
         self.pendingCount = pendingCount
         self.isOnline = isOnline
-        self.failed = failed
+        self.hasRejectedCommands = hasRejectedCommands
         self.now = now
         self.sleep = sleep
     }
@@ -67,7 +67,8 @@ final class AppSaveStatusSource {
     }
 
     private func recompute() {
-        kind = .resolve(failed: failed(), unsyncedSince: unsyncedSince, isOnline: isOnline(), now: now())
+        kind = .resolve(hasRejectedCommands: hasRejectedCommands(), unsyncedSince: unsyncedSince,
+                        isOnline: isOnline(), now: now())
     }
 
     private func scheduleRecheck() {
@@ -108,8 +109,8 @@ struct AppSaveStatus: View {
     }
 
     private func label(_ text: String, systemImage: String, color: Color) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage).font(.system(size: 12, weight: .semibold))
+        HStack(spacing: AppMetrics.saveFeedbackGap) {
+            Image(systemName: systemImage).font(AppText.caption.font)
             Text(text).appText(AppText.caption)
         }
         .foregroundStyle(color)

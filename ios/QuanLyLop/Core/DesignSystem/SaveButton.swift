@@ -12,16 +12,21 @@ struct AppSaveButton: View {
     var variant: AppButtonStyle.Variant = .primary
     var size: AppButtonStyle.Size = .large
     var isEnabled = true
+    var onSuccess: @MainActor () -> Void = {}
     let work: @MainActor () async throws -> Void
 
     var body: some View {
         Button {
-            Task { await controller.submit(work) }
+            Task {
+                guard await controller.submit(work) else { return }
+                await controller.waitForSuccessHold()
+                onSuccess()
+            }
         } label: {
             ZStack {
                 // Every state sits in the layout so the button never changes width.
                 Text(title).opacity(controller.phase == .idle ? 1 : 0)
-                HStack(spacing: 8) {
+                HStack(spacing: AppMetrics.saveFeedbackGap) {
                     Image(systemName: "checkmark")
                     Text(String(localized: "ds.save.saved", table: "DesignSystem"))
                 }

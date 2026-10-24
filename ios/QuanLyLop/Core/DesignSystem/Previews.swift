@@ -119,9 +119,10 @@ struct DesignSystemStatesGallery: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            AppEmptyState(title: "Chưa có học sinh", description: "Thêm học sinh đầu tiên vào lớp.",
-                          actionTitle: "Thêm học sinh", action: {})
-            AppEmptyState(title: "Không có kết quả", mascot: .main, size: .compact)
+            AppEmptyState(title: String(localized: "ds.preview.empty.students.title", table: "DesignSystem"),
+                          description: String(localized: "ds.preview.empty.students.description", table: "DesignSystem"),
+                          actionTitle: String(localized: "ds.preview.empty.students.action", table: "DesignSystem"), action: {})
+            AppEmptyState(title: String(localized: "ds.preview.empty.results.title", table: "DesignSystem"), mascot: .main, size: .compact)
             AppSaveButton(title: "Lưu", controller: controller) {}
             VStack(alignment: .leading, spacing: 8) {
                 AppSaveStatus(kind: .savedLocal)

@@ -38,6 +38,20 @@ final class TeacherFeatureTests: XCTestCase {
         XCTAssertEqual(AttendanceStatus.allCases.map(\.rawValue), ["present", "late", "excused", "absent"])
     }
 
+    func testAttendanceDraftTreatsMissingRecordAsUnsavedAndExistingPresentAsUnchanged() {
+        XCTAssertTrue(TeacherAttendanceDraft.hasChanges(draft: nil, stored: nil),
+                      "a session with no attendance record must be saved even though it displays Present")
+
+        let allPresent = TeacherAttendanceDraft(status: .present, lateAt: nil, note: "")
+        XCTAssertTrue(TeacherAttendanceDraft.hasChanges(draft: allPresent, stored: nil),
+                      "selecting All present must still create the missing attendance records")
+
+        let storedPresent = Attendance(sessionId: "s1", studentId: "st1", status: .present, note: "",
+                                       lateAt: nil, version: 1, updatedAt: "2026-10-21T10:00:00Z")
+        XCTAssertFalse(TeacherAttendanceDraft.hasChanges(draft: nil, stored: storedPresent),
+                       "a saved Present record with no edits is unchanged")
+    }
+
     private func session(date: String, status: SessionStatus) -> ClassSession {
         ClassSession(id: "session", classId: "class", date: date, startTime: "18:00",
                      origin: .recurring, status: status)

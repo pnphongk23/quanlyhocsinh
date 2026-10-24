@@ -286,9 +286,9 @@ struct TeacherExtraSessionSheet: View {
             }
         } footer: {
             VStack(spacing: 8) {
-                  AppSaveButton(title: session == nil ? String(localized: "feature.classes.luu.buoi.hoc") : String(localized: "feature.classes.luu.thay.oi"),
-                                controller: saveController) {
-                      try await save()
+                AppSaveButton(title: session == nil ? String(localized: "feature.classes.luu.buoi.hoc") : String(localized: "feature.classes.luu.thay.oi"),
+                              controller: saveController, onSuccess: { dismiss() }) {
+                    try await save()
                   }
                   .frame(maxWidth: .infinity)
                 if saveController.error != nil { AppSaveStatus(kind: .error) }
@@ -353,14 +353,10 @@ struct TeacherExtraSessionSheet: View {
         let day = date.formatted(.iso8601.year().month().day().dateSeparator(.dash))
         let timeText = time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
         do {
-            try await data.addOneOffSession(id: operationID!.rawValue, classID: classID, date: day, time: timeText,
-                                            makeup: false, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
-            error = nil
-            Task {
-                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
-                dismiss()
-            }
-        } catch {
+              try await data.addOneOffSession(id: operationID!.rawValue, classID: classID, date: day, time: timeText,
+                                              makeup: false, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
+              error = nil
+          } catch {
             self.error = String(localized: "feature.classes.khong.luu.uoc.buoi.hoc.hay.kiem.tra.thong.tin.va")
             throw error
         }

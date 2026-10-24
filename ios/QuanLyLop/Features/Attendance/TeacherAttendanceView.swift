@@ -51,13 +51,9 @@ struct TeacherAttendanceView: View {
     }
 
     private var hasChanges: Bool {
-        drafts.contains { studentID, draft in
-            guard let student = roster.first(where: { $0.id == studentID }) else { return false }
+        roster.contains { student in
             let stored = data.attendanceFor(sessionID: session.id, studentID: student.id)
-            let original = TeacherAttendanceDraft(status: stored?.status ?? .present,
-                                                  lateAt: stored?.lateAt,
-                                                  note: stored?.note ?? "")
-            return draft != original
+            return TeacherAttendanceDraft.hasChanges(draft: drafts[student.id], stored: stored)
         }
     }
 

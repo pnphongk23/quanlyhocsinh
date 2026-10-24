@@ -61,6 +61,8 @@ enum AppMetrics {
     static let cardPaddingHorizontal: CGFloat = 16
     static let cardPaddingVertical: CGFloat = 14
     static let fieldGap: CGFloat = 6
+    /// `--space-8`, used between save feedback icon and text.
+    static let saveFeedbackGap: CGFloat = 8
     static let chipPaddingHorizontal: CGFloat = 10
     static let chipPaddingVertical: CGFloat = 8
     static let pillPaddingHorizontal: CGFloat = 10
@@ -173,11 +175,13 @@ extension View {
 
 private struct AppTextModifier: ViewModifier {
     let style: AppTextStyle
+    @ScaledMetric(relativeTo: .body) private var dynamicTypeScale: CGFloat = 1
+
     func body(content: Content) -> some View {
         content
-            .font(style.font)
-            .lineSpacing(style.extraLineSpacing)
-            .tracking(style.tracking)
+            .font(AppFont.font(size: style.size * dynamicTypeScale, weight: style.weight))
+            .lineSpacing(style.extraLineSpacing * dynamicTypeScale)
+            .tracking(style.tracking * dynamicTypeScale)
     }
 }
 

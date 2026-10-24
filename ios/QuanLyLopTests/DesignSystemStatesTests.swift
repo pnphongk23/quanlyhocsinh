@@ -25,6 +25,12 @@ private final class ManualSleeper {
 }
 
 @MainActor
+private final class SyncStatusFixture {
+    let center = SyncStatusCenter()
+    var isOnline = false
+}
+
+@MainActor
 final class DesignSystemStatesTests: XCTestCase {
     private struct Failure: Error {}
 
@@ -57,6 +63,29 @@ final class DesignSystemStatesTests: XCTestCase {
         XCTAssertEqual(controller.phase, .saved, "saved is held until the 1.6 s are over")
         sleeper.releaseAll()
         for _ in 0..<2000 where controller.phase != .idle { await Task.yield() }
+        XCTAssertEqual(controller.phase, .idle)
+    }
+
+    func testWaitForSuccessHoldReturnsAfterSavedPhaseEnds() async {
+        let sleeper = ManualSleeper()
+        let controller = makeController(sleeper)
+        let save = Task { await controller.submit { } }
+        await sleeper.waitForRequest(count: 1)
+        sleeper.releaseAll()
+        let saved = await save.value
+        XCTAssertTrue(saved)
+
+        var completed = false
+        let waiting = Task {
+            await controller.waitForSuccessHold()
+            completed = true
+        }
+        await sleeper.waitForRequest(count: 2)
+        XCTAssertEqual(controller.phase, .saved)
+        XCTAssertFalse(completed, "navigation must wait for the saved phase")
+        sleeper.releaseAll()
+        await waiting.value
+        XCTAssertTrue(completed)
         XCTAssertEqual(controller.phase, .idle)
     }
 
@@ -123,8 +152,8 @@ final class DesignSystemStatesTests: XCTestCase {
 
     func testStatusKindTransitions() {
         let start = Date(timeIntervalSince1970: 5_000)
-        func kind(failed: Bool = false, since: Date? = start, online: Bool = true, after: TimeInterval) -> SaveStatusKind {
-            .resolve(failed: failed, unsyncedSince: since, isOnline: online, now: start.addingTimeInterval(after))
+        func kind(hasRejectedCommands: Bool = false, since: Date? = start, online: Bool = true, after: TimeInterval) -> SaveStatusKind {
+            .resolve(hasRejectedCommands: hasRejectedCommands, unsyncedSince: since, isOnline: online, now: start.addingTimeInterval(after))
         }
         XCTAssertEqual(kind(since: nil, after: 9), .savedLocal)
         XCTAssertEqual(kind(after: 0.5), .savedLocal, "pending shows only after 1 s")
@@ -132,14 +161,14 @@ final class DesignSystemStatesTests: XCTestCase {
         XCTAssertEqual(kind(after: 1.01), .pending)
         XCTAssertEqual(kind(online: false, after: 0.1), .offline)
         XCTAssertEqual(kind(since: nil, online: false, after: 9), .savedLocal, "nothing queued: offline is irrelevant")
-        XCTAssertEqual(kind(failed: true, online: false, after: 9), .error)
+        XCTAssertEqual(kind(hasRejectedCommands: true, online: false, after: 9), .error)
     }
 
     func testStatusSourceSwitchesToPendingAfterOneSecondAndClearsWhenQueueEmpties() async {
         var count = 1
         var clock = Date(timeIntervalSince1970: 100)
         let sleeper = ManualSleeper()
-        let source = AppSaveStatusSource(pendingCount: { count }, isOnline: { true }, failed: { false },
+        let source = AppSaveStatusSource(pendingCount: { count }, isOnline: { true }, hasRejectedCommands: { false },
                                          now: { clock }, sleep: { await sleeper.sleep($0) })
 
         await source.refresh()
@@ -160,13 +189,29 @@ final class DesignSystemStatesTests: XCTestCase {
     func testStatusSourceReportsOfflineAndError() async {
         var online = false
         var failed = false
-        let source = AppSaveStatusSource(pendingCount: { 2 }, isOnline: { online }, failed: { failed },
+        let source = AppSaveStatusSource(pendingCount: { 2 }, isOnline: { online }, hasRejectedCommands: { failed },
                                          now: { Date(timeIntervalSince1970: 1) }, sleep: { _ in })
         await source.refresh()
         XCTAssertEqual(source.kind, .offline)
         online = true; failed = true
         await source.refresh()
         XCTAssertEqual(source.kind, .error)
+    }
+
+    func testStatusSourceShowsNetworkFailureOfflineAndRejectedCommandAsError() async {
+        let fixture = SyncStatusFixture()
+        let source = AppSaveStatusSource(pendingCount: { 1 }, isOnline: { fixture.isOnline },
+                                         hasRejectedCommands: { fixture.center.rejectedCommandCount > 0 },
+                                         now: { Date(timeIntervalSince1970: 1) }, sleep: { _ in })
+
+        fixture.center.record(syncFailed: true, rejectedCommands: 0)
+        await source.refresh()
+        XCTAssertEqual(source.kind, .offline, "a failed network request must not replace the offline label with an error")
+
+        fixture.isOnline = true
+        fixture.center.record(syncFailed: false, rejectedCommands: 1)
+        await source.refresh()
+        XCTAssertEqual(source.kind, .error, "a server-rejected command remains an error")
     }
 
     // MARK: Initials

@@ -181,7 +181,8 @@ struct TeacherAddStudentSheet: View {
         } footer: {
             VStack(spacing: 8) {
                 AppSaveButton(title: String(localized: "feature.classes.luu.hoc.sinh"), controller: saveController,
-                              isEnabled: !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+                              isEnabled: !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                              onSuccess: { dismiss() }) {
                       try await save()
                 }
                 .frame(maxWidth: .infinity)
@@ -200,13 +201,9 @@ struct TeacherAddStudentSheet: View {
         }
         if operationID == nil { operationID = ClientGeneratedID() }
         do {
-            try await data.addStudent(id: operationID!.rawValue, to: classID, name: trimmed, parentPhone: phone)
-            error = nil
-            Task {
-                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
-                dismiss()
-            }
-        } catch {
+              try await data.addStudent(id: operationID!.rawValue, to: classID, name: trimmed, parentPhone: phone)
+              error = nil
+          } catch {
             self.error = String(localized: "feature.classes.khong.the.luu.hoc.sinh.vui.long.thu.lai")
             throw error
         }
@@ -249,7 +246,7 @@ struct TeacherParentPhoneSheet: View {
         } footer: {
             VStack(spacing: 8) {
                 AppSaveButton(title: String(localized: "feature.classes.luu.so.ien.thoai"), controller: saveController,
-                              isEnabled: phone != (student.parentPhone ?? "")) {
+                              isEnabled: phone != (student.parentPhone ?? ""), onSuccess: { dismiss() }) {
                       try await save()
                 }
                 .frame(maxWidth: .infinity)
@@ -266,13 +263,9 @@ struct TeacherParentPhoneSheet: View {
 
     private func save() async throws {
         do {
-            try await data.updateStudent(student, parentPhone: phone)
-            error = nil
-            Task {
-                try? await Task.sleep(nanoseconds: UInt64(AppDuration.successHold * 1_000_000_000))
-                dismiss()
-            }
-        } catch {
+              try await data.updateStudent(student, parentPhone: phone)
+              error = nil
+          } catch {
             let message = String(localized: "feature.classes.khong.cap.nhat.uoc.so.ien.thoai")
             self.error = message
             onError(message)
