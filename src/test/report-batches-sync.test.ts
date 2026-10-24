@@ -44,7 +44,7 @@ describe("report_batch qua đồng bộ", () => {
     expect(P.getStore().reportBatches).toEqual([]);
     expect(P.getStore().reports.map((report) => report.studentId)).toEqual(["s1"]);
 
-    expect(await reports.publishBatch(batch.id)).toBe(2);
+      expect(await reports.publishBatch(batch.id)).toEqual({ published: 2, skipped: [] });
     await B.syncNow(); await B.hydrateStore();
     expect(B.getStore().reports.filter((report) => report.batchId === batch.id).every((report) => report.status === "published")).toBe(true);
     expect(server.requests.filter((request) => /\/reports\/\d{4}-\d{2}|report-preview/.test(request.path))).toEqual([]);

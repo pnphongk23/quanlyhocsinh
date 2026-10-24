@@ -204,13 +204,19 @@ export default function ReportBatchDetail({
     save.markUnsaved();
     try {
       await pendingSave.current;
-      // Không có em thiếu dữ liệu: một lần gọi cho cả lớp. Còn em thiếu thì chỉ phát hành các em đã đủ.
-      let count = waiting.length;
-      if (rows.every((row) => row.slot.status !== "missing")) count = await publishBatch(batch.id);
-      else for (const row of waiting) await publishReport(row.record.id);
+      const result = await publishBatch(batch.id);
       save.clearStatus();
       resetNotices();
-      setMessage(`Đã phát hành ${count} báo cáo.`);
+      const skipped = result.skipped.map(({ reportId, missing }) => {
+        const student = rows.find((row) => row.record.id === reportId)?.report.student;
+        const labels: Record<string, string> = { attendance: "điểm danh", scores: "điểm", comment: "nhận xét chung" };
+        const reasons = missing.map((item) => labels[item]).filter(Boolean);
+        return `${student?.name ?? "Báo cáo"}: ${reasons.length ? `thiếu ${reasons.join(", ")}` : "còn thiếu dữ liệu"}`;
+      });
+      setMessage([
+        `Đã phát hành ${result.published} báo cáo.`,
+        ...(skipped.length ? [`Chưa phát hành: ${skipped.join("; ")}.`] : []),
+      ].join(" "));
     } catch (cause) {
       save.setStatus("error");
       resetNotices();

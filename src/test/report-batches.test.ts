@@ -142,11 +142,40 @@ describe("nhận xét, xem trước và phát hành theo đợt", () => {
     const { publishBatch } = await import("../data/repositories/reports");
     const { getStore } = await import("../data/store");
     await mockApi(() => ({ published: [{ report_id: "r1", publication_no: 1 }, { report_id: "r2", publication_no: 2 }], published_at: "2026-10-25T01:00:00Z" }));
-    expect(await publishBatch("b1")).toBe(2);
+    expect(await publishBatch("b1")).toEqual({ published: 2, skipped: [] });
     expect(calls).toEqual([{ endpoint: "POST /report-batches/b1/publish", body: undefined }]);
     expect(getStore().reports.map((r) => [r.status, r.needsRepublish, r.publishedAt])).toEqual([["published", false, "2026-10-25T01:00:00Z"], ["published", false, "2026-10-25T01:00:00Z"]]);
     expect(await db.reports.get(`${identityKey()}|report|r2`)).toMatchObject({ publication_count: 2, needs_republish: false });
   });
+
+    it("shows missing data for a refused publish and leaves the report unchanged", async () => {
+      await withBatch([draft("r1", "st1")]);
+      const { getStore } = await import("../data/store");
+      const { publishReport } = await import("../data/repositories/reports");
+      await mockApi(() => {
+        throw new ApiError(409, {
+          code: "conflict", message: "Report is not ready.",
+          details: { reason: "report_not_ready", missing: ["attendance", "scores", "comment"] },
+          request_id: "r",
+        });
+      });
+      await expect(publishReport("r1")).rejects.toThrow("Báo cáo còn thiếu dữ liệu: thiếu điểm danh, điểm, nhận xét chung.");
+      expect(getStore().reports[0]).toMatchObject({ status: "draft", needsRepublish: false, publishedAt: null });
+    });
+
+    it("returns skipped reports with missing-data reasons without marking them published", async () => {
+      await withBatch([draft("r1", "st1"), draft("r2", "st2")]);
+      const { getStore } = await import("../data/store");
+      const { publishBatch } = await import("../data/repositories/reports");
+      await mockApi(() => ({
+        published: [{ report_id: "r1", publication_no: 1 }],
+        skipped: [{ report_id: "r2", missing: ["attendance", "scores"] }],
+        published_at: "2026-10-25T01:00:00Z",
+      }));
+      const result = await publishBatch("b1");
+      expect(result).toEqual({ published: 1, skipped: [{ reportId: "r2", missing: ["attendance", "scores"] }] });
+      expect(getStore().reports.map((report) => report.status)).toEqual(["published", "draft"]);
+    });
 
   it("offline thì lưu, phát hành và xem trước báo cần mạng, không gọi máy chủ", async () => {
     await withBatch([draft("r1", "st1")]);

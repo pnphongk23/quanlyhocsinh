@@ -489,16 +489,23 @@ describe("phát hành cả lớp", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Phát hành báo cáo" })).toBeDisabled());
   });
 
-  it("còn em thiếu dữ liệu thì chỉ phát hành từng em đã đủ, không dùng lệnh cả đợt", async () => {
-    const state = createSeed();
-    state.reports = state.reports.map((report) => (report.id === "6a-student-4-report" ? { ...report, generalComment: "Đủ." } : report));
-    replaceStore(state);
-    await mockApi(() => ({ publication_no: 1, published_at: "2026-10-25T01:00:00Z" }));
-    renderLive("/lop/6a/bao-cao?dot=6a-batch");
-    fireEvent.click(await screen.findByRole("button", { name: "Phát hành 1 báo cáo" }));
-    expect(await screen.findByText("Đã phát hành 1 báo cáo.")).toBeVisible();
-    expect(calls.map((call) => call.endpoint)).toEqual(["POST /reports/6a-student-4-report/publish"]);
-  });
+    it("phát hành cả đợt và nêu tên cùng lý do của các báo cáo bị bỏ qua", async () => {
+      const state = createSeed();
+      state.reports = state.reports.map((report) => (report.id === "6a-student-4-report" ? { ...report, generalComment: "Đủ." } : report));
+      const skippedDraft = state.reports.find((report) => report.batchId === "6a-batch" && report.id !== "6a-student-4-report" && report.status === "draft")!;
+      replaceStore(state);
+      await mockApi(() => ({
+        published: [{ report_id: "6a-student-4-report", publication_no: 1 }],
+        skipped: state.reports.filter((report) => report.batchId === "6a-batch" && report.id !== "6a-student-4-report").map((report) => ({ report_id: report.id, missing: ["comment"] })),
+        published_at: "2026-10-25T01:00:00Z",
+      }));
+      renderLive("/lop/6a/bao-cao?dot=6a-batch");
+      fireEvent.click(await screen.findByRole("button", { name: "Phát hành 1 báo cáo" }));
+      expect(await screen.findByText(/Đã phát hành 1 báo cáo\. Chưa phát hành:/)).toBeVisible();
+      expect(screen.getByText(/Nguyễn Minh Anh: thiếu nhận xét chung/)).toBeVisible();
+      expect(calls.map((call) => call.endpoint)).toEqual(["POST /report-batches/6a-batch/publish"]);
+      expect(getStore().reports.find((report) => report.id === skippedDraft.id)?.status).toBe("draft");
+    });
 
   it("offline báo cần mạng và không gọi máy chủ", async () => {
     replaceStore(completeState());

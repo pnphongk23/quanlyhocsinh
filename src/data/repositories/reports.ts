@@ -41,6 +41,16 @@ export const listBatchReports = (batchId: string): Report[] => {
 export function reportErrorMessage(cause: unknown, fallback: string): string {
   if (cause instanceof ApiError) {
     const { code } = cause.error;
+    const details = cause.error.details;
+    if (cause.status === 409 && details?.reason === "report_not_ready") {
+      const labels: Record<string, string> = { attendance: "điểm danh", scores: "điểm", comment: "nhận xét chung" };
+      const missing = Array.isArray(details.missing)
+        ? details.missing.filter((value): value is string => typeof value === "string").map((value) => labels[value]).filter(Boolean)
+        : [];
+      return missing.length
+        ? `Báo cáo còn thiếu dữ liệu: thiếu ${missing.join(", ")}.`
+        : "Báo cáo còn thiếu dữ liệu.";
+    }
     if (cause.status === 422 && code === "invalid_range") return "Buổi bắt đầu phải trước hoặc cùng buổi kết thúc.";
     if (cause.status === 422 && code === "session_cancelled") return "Không chọn buổi đã hủy.";
     if (cause.status === 422) return "Khoảng buổi không hợp lệ. Kiểm tra lại buổi bắt đầu và kết thúc.";
@@ -193,8 +203,11 @@ export async function publishReport(id: string): Promise<void> {
   );
 }
 
-/** Phát hành cả lớp: mọi bản nháp và bản cần phát hành lại của đợt, trong một lần gọi. Trả số bản đã phát hành. */
-export async function publishBatch(batchId: string): Promise<number> {
+/** Phát hành cả lớp, kèm các báo cáo máy chủ bỏ qua vì còn thiếu dữ liệu. */
+export async function publishBatch(batchId: string): Promise<{
+  published: number;
+  skipped: { reportId: string; missing: string[] }[];
+}> {
   requirePermission("comments_reports", "write");
   const batch = getReportBatch(batchId);
   if (!batch) throw new Error("Không tìm thấy đợt báo cáo.");
@@ -202,7 +215,11 @@ export async function publishBatch(batchId: string): Promise<number> {
   requireOnline("Phát hành báo cáo");
   const identity = identityKey();
   const result = await remote("Không thể phát hành báo cáo.", () =>
-    call<{ published: { report_id: string; publication_no: number }[]; published_at: string }>(`POST /report-batches/${batchId}/publish`),
+    call<{
+      published: { report_id: string; publication_no: number }[];
+      skipped: { report_id: string; missing: string[] }[];
+      published_at: string;
+    }>(`POST /report-batches/${batchId}/publish`),
   );
   const published = new Map(result.published.map((item) => [item.report_id, item.publication_no]));
   const applyAll = () =>
@@ -221,5 +238,8 @@ export async function publishBatch(batchId: string): Promise<number> {
     );
   }
   if (!entries.length) applyAll();
-  return entries.length;
+  return {
+    published: entries.length,
+    skipped: (result.skipped ?? []).map((item) => ({ reportId: item.report_id, missing: item.missing })),
+  };
 }
