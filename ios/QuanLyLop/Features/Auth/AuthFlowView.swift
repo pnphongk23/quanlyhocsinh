@@ -68,7 +68,8 @@ struct AuthFlowView: View {
         switch model.screen {
         case .loading: loading
         case .login: AuthLoginView(model: model)
-        case .register: AuthRegisterView(model: model)
+          case .register: AuthRegisterView(model: model)
+          case .guardianRegister: AuthGuardianRegisterView(model: model)
         case .forgot: AuthForgotPasswordView(model: model)
         case .forcedPassword: AuthForcedPasswordView(model: model)
         case .chooseRole: AuthRolePickerView(model: model)
@@ -133,5 +134,6 @@ struct AuthFlowView: View {
 
     private var isGuardian: Bool {
         model.activeMembership?.role.scopeKind == .linkedStudents
+            || (model.currentUser != nil && model.memberships.isEmpty)
     }
 }

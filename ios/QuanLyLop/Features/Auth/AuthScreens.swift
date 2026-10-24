@@ -6,6 +6,7 @@ struct AuthLoginView: View {
     let model: AuthModel
     @State private var phone = ""
     @State private var password = ""
+    @State private var saveController = AppSaveController()
 
     var body: some View {
         AuthPage {
@@ -35,22 +36,30 @@ struct AuthLoginView: View {
                     .appText(AuthText.link)
                     .foregroundStyle(AppColors.primary)
                 }
-                AuthSubmitButton(title: String(localized: "feature.auth.ang.nhap"), disabled: model.isLocked) {
-                    Task { await model.login(phone: phone, password: password) }
-                }
+                  AppSaveButton(title: String(localized: "feature.auth.ang.nhap"), controller: saveController,
+                                isEnabled: !model.isLocked) {
+                      try await model.login(phone: phone, password: password)
+                  }
                 .accessibilityIdentifier("login.submit")
             }
             .padding(.top, 24)
 
             VStack(spacing: 16) {
-                Button { model.show(.register) } label: {
+              Button { model.show(.register) } label: {
                     (Text(String(localized: "feature.auth.chua.co.khong.gian.lam.viec")).foregroundStyle(AppColors.muted)
                      + Text(String(localized: "feature.auth.ang.ky.cho.giao.vien")).foregroundStyle(AppColors.primary))
                         .appText(AuthText.note)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .multilineTextAlignment(.center)
-                }
-                .buttonStyle(.plain)
+              }
+              .buttonStyle(.plain)
+              Button { model.show(.guardianRegister) } label: {
+                  Text(String(localized: "auth.guardian.registerLink", table: "Guardian"))
+                      .appText(AuthText.noteStrong)
+                      .foregroundStyle(AppColors.primary)
+                      .frame(maxWidth: .infinity, alignment: .center)
+              }
+              .buttonStyle(.plain)
                   AuthHintCard(lead: String(localized: "feature.auth.phu.huynh.c87f8d0d"), text: String(localized: "feature.auth.phu.huynh.dung.so.trong.ho.so.hoc.sinh"))
             }
             .padding(.top, 32)
@@ -68,8 +77,14 @@ struct AuthRegisterView: View {
     @State private var phone = ""
     @State private var password = ""
     @State private var confirmation = ""
+    @State private var saveController = AppSaveController()
 
     private var mismatch: Bool { !confirmation.isEmpty && confirmation != password }
+    private var blocked: Bool {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        workspace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || phone.isEmpty ||
+        password.count < 8 || confirmation.isEmpty || mismatch
+    }
 
     var body: some View {
         AuthPage {
@@ -93,12 +108,11 @@ struct AuthRegisterView: View {
                 Text(String(localized: "feature.auth.nguoi.tao.la.quan.tri.vien.au.tien.cua.khong.gia"))
                     .appText(AuthText.note)
                     .foregroundStyle(AppColors.muted)
-                AuthSubmitButton(title: String(localized: "feature.auth.tao.khong.gian.lam.viec")) {
-                    Task {
-                        await model.register(name: name, workspace: workspace, phone: phone,
-                                             password: password, confirmation: confirmation)
-                    }
-                }
+                  AppSaveButton(title: String(localized: "feature.auth.tao.khong.gian.lam.viec"),
+                                controller: saveController, isEnabled: !blocked) {
+                      try await model.register(name: name, workspace: workspace, phone: phone,
+                                               password: password, confirmation: confirmation)
+                  }
             }
             .padding(.top, 24)
         }
@@ -112,6 +126,7 @@ struct AuthForcedPasswordView: View {
     @State private var current = ""
     @State private var newPassword = ""
     @State private var confirmation = ""
+    @State private var saveController = AppSaveController()
 
     private var tooShort: Bool { !newPassword.isEmpty && newPassword.count < 8 }
     private var matchesCurrent: Bool { !newPassword.isEmpty && newPassword == current }
@@ -141,15 +156,14 @@ struct AuthForcedPasswordView: View {
                     AuthCheckRow(ok: newPassword.count >= 8, text: String(localized: "feature.auth.toi.thieu.8.ky.tu"))
                       AuthCheckRow(ok: !newPassword.isEmpty && !duplicateCurrent, text: String(localized: "feature.auth.khac.mat.khau.hien.tai"))
                 }
-                  if let message = model.message, !duplicateCurrent {
-                    Text(message).appText(AuthText.fieldError).foregroundStyle(AppColors.error)
-                }
-                AuthSubmitButton(title: String(localized: "feature.auth.oi.mat.khau.va.tiep.tuc"), disabled: blocked) {
-                    Task {
-                        await model.changePassword(current: current, newPassword: newPassword,
-                                                   confirmation: confirmation)
-                    }
-                }
+                    if let message = model.message, !duplicateCurrent {
+                      Text(message).appText(AuthText.fieldError).foregroundStyle(AppColors.error)
+                  }
+                  AppSaveButton(title: String(localized: "feature.auth.oi.mat.khau.va.tiep.tuc"),
+                                controller: saveController, isEnabled: !blocked) {
+                      try await model.changePassword(current: current, newPassword: newPassword,
+                                                     confirmation: confirmation)
+                  }
             }
             .padding(.top, 24)
         }
@@ -273,5 +287,54 @@ struct AuthRolePickerView: View {
         }
 #endif
         return model.subtitle(for: membership)
+    }
+}
+
+struct AuthGuardianRegisterView: View {
+    let model: AuthModel
+    @State private var name = ""
+    @State private var phone = ""
+    @State private var password = ""
+    @State private var confirmation = ""
+    @State private var saveController = AppSaveController()
+
+    private var mismatch: Bool { !confirmation.isEmpty && confirmation != password }
+    private var disabled: Bool {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || phone.isEmpty ||
+        password.count < 8 || confirmation.isEmpty || mismatch
+    }
+
+    var body: some View {
+        AuthPage {
+            AuthBackButton { model.show(.login) }
+            AuthTitle(text: String(localized: "auth.guardian.registerTitle", table: "Guardian"))
+            AuthDescription(text: String(localized: "auth.guardian.registerDescription", table: "Guardian"))
+            if let message = model.message {
+                AuthBanner(text: message, tone: .error)
+            } else if let error = saveController.error {
+                AuthBanner(text: String(describing: error), tone: .error)
+            }
+            VStack(spacing: 20) {
+                AuthTextField(label: String(localized: "feature.auth.ten.hien.thi"), text: $name,
+                              placeholder: String(localized: "feature.auth.co.lan"), identifier: "guardian.register.name")
+                AuthPhoneField(label: String(localized: "feature.auth.so.ien.thoai"), digits: $phone,
+                               identifier: "guardian.register.phone")
+                AuthPasswordField(label: String(localized: "feature.auth.mat.khau"), value: $password,
+                                  autoComplete: .newPassword, identifier: "guardian.register.password",
+                                  strengthPassword: password)
+                AuthCheckRow(ok: password.count >= 8, text: String(localized: "feature.auth.toi.thieu.8.ky.tu"))
+                AuthPasswordField(label: String(localized: "feature.auth.nhap.lai.mat.khau"), value: $confirmation,
+                                  autoComplete: .newPassword, hasError: mismatch,
+                                  errorText: mismatch ? AuthCopy.passwordMismatch : nil,
+                                  identifier: "guardian.register.confirm")
+                AppSaveButton(title: String(localized: "auth.guardian.createAccount", table: "Guardian"),
+                              controller: saveController, isEnabled: !disabled) {
+                    try await model.registerGuardian(name: name, phone: phone,
+                                                     password: password, confirmation: confirmation)
+                }
+                .accessibilityIdentifier("guardian.register.submit")
+            }
+            .padding(.top, 24)
+        }
     }
 }

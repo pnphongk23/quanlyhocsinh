@@ -19,10 +19,11 @@ struct AuthSettingsView: View {
                  horizontalPadding: AuthSettingsView.shellPadding,
                  topPadding: AuthSettingsView.shellTopPadding) {
             if let onClose { backRow(onClose) }
-            if let user = model.currentUser, let membership = model.activeMembership {
-                profileCard(user: user, membership: membership)
-                    .padding(.top, 16)
-                menuCard(user: user, membership: membership)
+              if let user = model.currentUser {
+                  let membership = model.activeMembership
+                  profileCard(user: user, membership: membership)
+                      .padding(.top, 16)
+                  menuCard(user: user, membership: membership)
                     .padding(.top, 16)
                 if let message = model.message {
                     Text(message)
@@ -61,11 +62,10 @@ struct AuthSettingsView: View {
         }
     }
 
-    private func profileCard(user: User, membership: Membership) -> some View {
+    private func profileCard(user: User, membership: Membership?) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 16) {
-                Text(AuthFormat.initials(displayName(user, membership)) .isEmpty
-                     ? "GV" : AuthFormat.initials(displayName(user, membership)))
+                  Text(AppInitials.of(displayName(user, membership)))
                     .font(AppFont.font(size: 20, weight: .bold))
                     .foregroundStyle(AppColors.primaryInk)
                     .frame(width: 64, height: 64)
@@ -111,7 +111,7 @@ struct AuthSettingsView: View {
         .overlay(alignment: .top) { AppColors.divider.frame(height: 1) }
     }
 
-    private func menuCard(user: User, membership: Membership) -> some View {
+    private func menuCard(user: User, membership: Membership?) -> some View {
         VStack(spacing: 0) {
             Button { model.show(.changePassword) } label: {
                 menuRow(String(localized: "feature.auth.oi.mat.khau")) {
@@ -121,7 +121,7 @@ struct AuthSettingsView: View {
                 }
             }
             .buttonStyle(.plain)
-            if model.memberships.count > 1 {
+              if model.memberships.count > 1, let membership {
                 Button { model.changeRoleFromSettings() } label: {
                     menuRow(String(localized: "feature.auth.oi.vai.tro")) {
                         HStack(spacing: 6) {
@@ -184,12 +184,13 @@ struct AuthSettingsView: View {
         }
     }
 
-    private func displayName(_ user: User, _ membership: Membership) -> String {
-        if let name = user.displayName, !name.isEmpty { return name }
-        return AuthRoleBadge.label(membership.role)
-    }
+    private func displayName(_ user: User, _ membership: Membership?) -> String {
+          if let name = user.displayName, !name.isEmpty { return name }
+          return membership.map { AuthRoleBadge.label($0.role) } ?? String(localized: "feature.auth.phu.huynh")
+      }
 
-    private func roleLine(_ membership: Membership) -> String {
+    private func roleLine(_ membership: Membership?) -> String {
+          guard let membership else { return String(localized: "feature.auth.phu.huynh") }
         let badge = AuthRoleBadge.label(membership.role)
         if membership.role.scopeKind == .linkedStudents, let guardianMeta, !guardianMeta.isEmpty {
             return "\(badge) · \(guardianMeta)"
@@ -288,6 +289,7 @@ struct AuthChangePasswordView: View {
     @State private var current = ""
     @State private var newPassword = ""
     @State private var confirmation = ""
+    @State private var saveController = AppSaveController()
 
     private var mismatch: Bool { !confirmation.isEmpty && confirmation != newPassword }
 
@@ -318,12 +320,11 @@ struct AuthChangePasswordView: View {
                                   errorText: mismatch ? AuthCopy.passwordMismatch : nil,
                                   identifier: "change.confirm")
                 AuthCheckRow(ok: newPassword.count >= 8, text: String(localized: "feature.auth.toi.thieu.8.ky.tu"))
-                AuthSubmitButton(title: String(localized: "feature.auth.luu.mat.khau.moi"), disabled: blocked) {
-                    Task {
-                        await model.changePassword(current: current, newPassword: newPassword,
-                                                   confirmation: confirmation)
-                    }
-                }
+                    AppSaveButton(title: String(localized: "feature.auth.luu.mat.khau.moi"),
+                                controller: saveController, isEnabled: !blocked) {
+                      try await model.changePassword(current: current, newPassword: newPassword,
+                                                     confirmation: confirmation)
+                  }
             }
             .padding(.top, 24)
         }

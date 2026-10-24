@@ -16,6 +16,39 @@ final class AuthValidationTests: XCTestCase {
         ))
     }
 
+    func testGuardianRegistrationRequiresNamePhoneAndMatchingPassword() throws {
+        XCTAssertNoThrow(try AuthValidation.validateGuardianRegistration(
+            name: "Chị Lan", phone: "900000001", password: "strong-pass-1", confirmation: "strong-pass-1"
+        ))
+        XCTAssertThrowsError(try AuthValidation.validateGuardianRegistration(
+            name: " ", phone: "900000001", password: "strong-pass-1", confirmation: "strong-pass-1"
+        )) { XCTAssertEqual($0 as? AuthValidationError, .missingField) }
+        XCTAssertThrowsError(try AuthValidation.validateGuardianRegistration(
+            name: "Chị Lan", phone: "900000001", password: "strong-pass-1", confirmation: "different-pass"
+        )) { XCTAssertEqual($0 as? AuthValidationError, .passwordMismatch) }
+    }
+
+    func testGuardianRegistrationRequestEncodesBackendContractWithoutEmail() throws {
+        let endpoint = try APIEndpoint.json(method: .post, path: "auth/register-guardian",
+                                            body: GuardianRegistrationRequest(
+                                                phone: "0900000001", password: "strong-pass-1", displayName: "Chị Lan"
+                                            ), requiresAuthentication: false)
+        let data = try XCTUnwrap(endpoint.body)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: String])
+        XCTAssertEqual(object["phone"], "0900000001")
+        XCTAssertEqual(object["password"], "strong-pass-1")
+        XCTAssertEqual(object["display_name"], "Chị Lan")
+        XCTAssertNil(object["email"])
+    }
+
+    func testGuardianRegistrationResponseDecodesUnlinkedAccount() throws {
+        let payload = Data(#"{"token":"fixture","expires_at":"2099-01-01T00:00:00.000Z","user":{"id":"u1","phone":"0900000001","display_name":"Chị Lan","must_change_password":false},"memberships":[],"active_membership_id":null}"#.utf8)
+        let response = try WireJSON.decoder().decode(AuthSession.self, from: payload)
+        XCTAssertEqual(response.user.displayName, "Chị Lan")
+        XCTAssertTrue(response.memberships.isEmpty)
+        XCTAssertNil(response.activeMembershipId)
+    }
+
     func testPasswordLengthAndConfirmationRules() {
         XCTAssertThrowsError(try AuthValidation.validatePassword("short", confirmation: "short", phone: "900000001")) {
             XCTAssertEqual($0 as? AuthValidationError, .passwordLength)

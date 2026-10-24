@@ -14,6 +14,12 @@ struct RegistrationRequest: Encodable, Sendable {
     let workspaceName: String
 }
 
+struct GuardianRegistrationRequest: Encodable, Sendable {
+    let phone: String
+    let password: String
+    let displayName: String
+}
+
 struct PasswordChangeRequest: Encodable, Sendable {
     let currentPassword: String
     let newPassword: String
@@ -41,6 +47,13 @@ enum AuthValidation {
         try validatePassword(password, confirmation: confirmation, phone: phone)
     }
 
+    static func validateGuardianRegistration(name: String, phone: String,
+                                             password: String, confirmation: String) throws {
+        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !phone.isEmpty,
+              !password.isEmpty, !confirmation.isEmpty else { throw AuthValidationError.missingField }
+        try validatePassword(password, confirmation: confirmation, phone: phone)
+    }
+
     static func validatePassword(_ password: String, confirmation: String, phone: String,
                                  currentPassword: String? = nil) throws {
         guard (8...128).contains(password.count) else { throw AuthValidationError.passwordLength }
@@ -62,7 +75,7 @@ extension AppConfiguration {
 @MainActor
 @Observable
 final class AuthModel {
-    enum Screen: Equatable { case loading, login, register, forgot, forcedPassword, chooseRole, main, settings, changePassword }
+      enum Screen: Equatable { case loading, login, register, guardianRegister, forgot, forcedPassword, chooseRole, main, settings, changePassword }
 
     private(set) var screen: Screen = .loading
     private(set) var session: AuthSession?
@@ -95,7 +108,8 @@ final class AuthModel {
             let current = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
             identity = current
             if current.user.mustChangePassword { screen = .forcedPassword }
-            else if current.activeMembershipId == nil { screen = .chooseRole }
+              else if current.activeMembershipId == nil && current.memberships.isEmpty { screen = .main }
+              else if current.activeMembershipId == nil { screen = .chooseRole }
             else { try await prepareStore(for: current.user, membershipId: current.activeMembershipId!); screen = .main }
         } catch {
             message = Self.userMessage(error)
@@ -119,7 +133,7 @@ final class AuthModel {
         membership.role.scopeKind == .linkedStudents ? String(localized: "feature.auth.phu.huynh") : membership.workspace.name
     }
 
-    func login(phone: String, password: String) async {
+    func login(phone: String, password: String) async throws {
         message = nil; isLocked = false
         do {
             let request = AuthCredentials(phone: domesticPhone(phone), password: password, deviceLabel: "iPhone")
@@ -128,7 +142,8 @@ final class AuthModel {
             try await tokenStore.setToken(result.token)
             session = result
             if result.user.mustChangePassword { screen = .forcedPassword }
-            else if result.activeMembershipId == nil { screen = .chooseRole }
+              else if result.activeMembershipId == nil && result.memberships.isEmpty { screen = .main }
+              else if result.activeMembershipId == nil { screen = .chooseRole }
             else {
                 try await prepareStore(for: result.user, membershipId: result.activeMembershipId!)
                 screen = .main
@@ -136,10 +151,11 @@ final class AuthModel {
         } catch {
             if let failure = error as? APIFailure, case .server(let status, _, _) = failure, status == 429 { isLocked = true }
             message = Self.userMessage(error)
+            throw error
         }
     }
 
-    func register(name: String, workspace: String, phone: String, password: String, confirmation: String) async {
+    func register(name: String, workspace: String, phone: String, password: String, confirmation: String) async throws {
         message = nil
         do {
             try AuthValidation.validateRegistration(name: name, workspace: workspace, phone: phone,
@@ -155,10 +171,35 @@ final class AuthModel {
                 try await prepareStore(for: result.user, membershipId: membership)
                 screen = .main
             } else { screen = .chooseRole }
-        } catch { message = Self.userMessage(error) }
+        } catch { message = Self.userMessage(error); throw error }
     }
 
-    func changePassword(current: String, newPassword: String, confirmation: String) async {
+    func registerGuardian(name: String, phone: String, password: String, confirmation: String) async throws {
+        message = nil
+        do {
+            try AuthValidation.validateGuardianRegistration(name: name, phone: phone,
+                                                            password: password, confirmation: confirmation)
+            let request = GuardianRegistrationRequest(phone: domesticPhone(phone), password: password,
+                                                       displayName: name.trimmingCharacters(in: .whitespacesAndNewlines))
+            let endpoint = try APIEndpoint.json(method: .post, path: "auth/register-guardian",
+                                                body: request, requiresAuthentication: false)
+            let result = try await api.send(endpoint, as: AuthSession.self)
+            try await tokenStore.setToken(result.token)
+            session = result
+            if result.user.mustChangePassword { screen = .forcedPassword }
+            else if result.activeMembershipId == nil && result.memberships.isEmpty { screen = .main }
+            else if result.activeMembershipId == nil { screen = .chooseRole }
+            else {
+                try await prepareStore(for: result.user, membershipId: result.activeMembershipId!)
+                screen = .main
+            }
+        } catch {
+            message = Self.userMessage(error)
+            throw error
+        }
+    }
+
+    func changePassword(current: String, newPassword: String, confirmation: String) async throws {
         message = nil
         let user = session?.user ?? identity?.user
         do {
@@ -180,11 +221,12 @@ final class AuthModel {
             screen = screen == .forcedPassword ? postPasswordScreen : .settings
         } catch {
             if let failure = error as? APIFailure, case .server(_, let detail, _) = failure,
-               detail.code == "invalid_credentials" {
-                message = AuthCopy.wrongCurrent
+                 detail.code == "invalid_credentials" {
+                 message = AuthCopy.wrongCurrent
             } else if let validation = error as? AuthValidationError, validation == .samePassword {
                 message = AuthCopy.sameAsCurrent
             } else { message = Self.userMessage(error) }
+            throw error
         }
     }
 

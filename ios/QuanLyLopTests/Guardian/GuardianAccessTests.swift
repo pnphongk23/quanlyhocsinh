@@ -92,7 +92,8 @@ final class GuardianAccessTests: XCTestCase {
         XCTAssertEqual(GuardianFormat.longDayMonth("2026-10-14"), "14 tháng 10")
         XCTAssertEqual(GuardianFormat.monthLabel("2026-10"), "Tháng 10")
         XCTAssertEqual(GuardianFormat.scoreText(nil), "Chưa có điểm")
-        XCTAssertEqual(GuardianFormat.scoreText(7.25), "7.2")
+        XCTAssertEqual(GuardianFormat.scoreText(7.25), "7,2")
+        XCTAssertEqual(GuardianFormat.scoreText(82), "82")
         XCTAssertEqual(GuardianFormat.initials("Trần Gia Bảo"), "GB")
         XCTAssertEqual(GuardianFormat.shortName("Trần Gia Bảo"), "Gia Bảo")
     }

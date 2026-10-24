@@ -5,6 +5,12 @@ import SwiftUI
 
 struct GuardianDashboard: Sendable {
     let children: [GuardianChildData]
+    let updatedAt: Date
+
+    init(children: [GuardianChildData], updatedAt: Date = .now) {
+        self.children = children
+        self.updatedAt = updatedAt
+    }
 }
 
 struct GuardianChildData: Sendable, Identifiable {
@@ -288,10 +294,15 @@ enum GuardianFormat {
 
     static func monthNumber(_ value: String) -> Int { Int(value.dropFirst(5)) ?? 0 }
 
-    /// Điểm theo dấu chấm như ảnh: "7.2"; nil = "Chưa có điểm".
+    /// Điểm theo cách viết tiếng Việt: số nguyên gọn, phần thập phân dùng dấu phẩy.
     static func scoreText(_ value: Double?) -> String {
         guard let value else { return String(localized: "feature.guardian.chua.co.iem") }
-        return String(format: "%.1f", value)
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "vi_VN")
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 1
+        return formatter.string(from: NSNumber(value: value)) ?? String(value)
     }
 
     /// Chữ cái đầu của hai từ cuối — chữ trên chip chọn con.

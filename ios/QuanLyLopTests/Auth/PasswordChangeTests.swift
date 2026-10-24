@@ -3,13 +3,13 @@ import XCTest
 
 @MainActor
 final class PasswordChangeTests: XCTestCase {
-    func testChangePasswordRemainsSuccessfulWithoutFollowupMeRequest() async {
+    func testChangePasswordRemainsSuccessfulWithoutFollowupMeRequest() async throws {
         let api = PasswordChangeAPI()
         let model = AuthModel(configuration: .fallback, apiClient: api)
         model.applyDemo(memberships: [], activeID: "", screen: .forcedPassword)
 
-        await model.changePassword(current: "old-password", newPassword: "new-password",
-                                   confirmation: "new-password")
+          try await model.changePassword(current: "old-password", newPassword: "new-password",
+                                         confirmation: "new-password")
 
         XCTAssertEqual(model.screen, .main)
         XCTAssertNil(model.message)

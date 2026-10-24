@@ -540,19 +540,7 @@ struct GuardianEmptyState: View {
     let detail: String
 
     var body: some View {
-        VStack(spacing: 8) {
-            Text(title)
-                .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 24))
-                .foregroundStyle(AppColors.text)
-            Text(detail)
-                .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
-                .foregroundStyle(AppColors.muted)
-        }
-        .frame(maxWidth: .infinity)
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 24)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        AppEmptyState(title: title, description: detail, mascot: .cho)
     }
 }
 
