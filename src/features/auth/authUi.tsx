@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
+import { ApiError } from "../../data/api/client";
 import { Icon } from "../../shared/ui";
 import s from "./auth.module.css";
 
@@ -175,5 +176,64 @@ export function CheckRow({
       </span>
       {children}
     </p>
+  );
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Định dạng sơ bộ để bật/tắt nút; máy chủ vẫn là nơi quyết định cuối. */
+export const looksLikeEmail = (value: string): boolean => EMAIL_PATTERN.test(value.trim());
+
+/** Lỗi `invalid_email` của máy chủ (422) để hiện ngay tại ô email; chuỗi rỗng nếu lỗi không thuộc ô này. */
+export function emailFieldError(error: unknown): string {
+  if (!(error instanceof ApiError) || error.status !== 422) return "";
+  const fields = error.error.details?.fields;
+  const onField = fields && typeof fields === "object" && "email" in fields;
+  return onField || error.error.code === "invalid_email" ? "Email chưa đúng định dạng." : "";
+}
+
+/** Ô email một dòng: lỗi hiện dưới ô, giữ giá trị đã nhập. */
+export function EmailField({
+  label = "Email",
+  value,
+  onChange,
+  id,
+  errorText,
+  disabled = false,
+  placeholder = "ten@gmail.com",
+  hint,
+}: {
+  label?: string;
+  value: string;
+  onChange: (value: string) => void;
+  id?: string;
+  errorText?: string;
+  disabled?: boolean;
+  placeholder?: string;
+  hint?: ReactNode;
+}) {
+  const generated = useId();
+  const inputId = id ?? generated;
+  return (
+    <div className={s.field}>
+      <label htmlFor={inputId}>{label}</label>
+      <div className={[s.textBox, disabled ? s.boxDisabled : "", errorText ? s.boxError : ""].filter(Boolean).join(" ")}>
+        <input
+          id={inputId}
+          className={s.textInput}
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          aria-invalid={errorText ? true : undefined}
+        />
+      </div>
+      {errorText && <p className={s.fieldError} role="alert">{errorText}</p>}
+      {hint}
+    </div>
   );
 }

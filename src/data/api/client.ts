@@ -1,11 +1,15 @@
 import type { ApiErrorBody, ApiClass, ApiStudent, ApiSession, ApiReport, LoginResponse, MeResponse, Page, PushRequest, PushResponse, PullResponse, SnapshotResponse, ReportPreview } from "./types";
 export interface ApiClientOptions { baseUrl: string; getToken: () => string | null; fetch?: typeof fetch }
-export interface RequestOptions<Body> { body?: Body; query?: Record<string, string | number | undefined>; signal?: AbortSignal; requestId?: string; authToken?: string }
+export interface RequestOptions<Body> { body?: Body; query?: Record<string, string | number | undefined>; signal?: AbortSignal; requestId?: string; authToken?: string; /** Public endpoint: never attach a stored Bearer token. */ anonymous?: boolean }
 type Endpoint<Response, Body = never> = { response: Response; body: Body };
 export type ApiEndpoints = {
   "POST /auth/login": Endpoint<LoginResponse, { phone: string; password: string; device_label?: string }>;
-  "POST /auth/register": Endpoint<LoginResponse, { phone: string; password: string; display_name: string; workspace_name: string }>;
-  "POST /auth/register-guardian": Endpoint<LoginResponse, { phone: string; password: string; display_name: string }>;
+  "POST /auth/register": Endpoint<LoginResponse, { phone: string; password: string; display_name: string; workspace_name: string; email?: string }>;
+  "POST /auth/register-guardian": Endpoint<LoginResponse, { phone: string; password: string; display_name: string; email?: string }>;
+  "PUT /me/email": Endpoint<{ email: string | null }, { email: string | null; current_password: string }>;
+  "POST /auth/password-reset/lookup": Endpoint<{ account: boolean; has_email: boolean; email_masked: string | null }, { phone: string }>;
+  "POST /auth/password-reset/request": Endpoint<{ sent: true }, { phone: string; email: string }>;
+  "POST /auth/password-reset/confirm": Endpoint<{ ok: true }, { token: string; new_password: string }>;
   "POST /auth/logout": Endpoint<void>;
   "POST /auth/change-password": Endpoint<{ must_change_password: false }, { current_password: string; new_password: string }>;
   "GET /me": Endpoint<MeResponse>;
@@ -48,7 +52,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(new DOMException("Request timed out", "TimeoutError")), 15_000);
     const signal = request.signal ? AbortSignal.any([request.signal, controller.signal]) : controller.signal;
-      const token = request.authToken ?? options.getToken();
+      const token = request.anonymous ? null : request.authToken ?? options.getToken();
     try {
         const response = await fetcher(absoluteBase ? url : `${url.pathname}${url.search}`, {
         method, signal, headers: {

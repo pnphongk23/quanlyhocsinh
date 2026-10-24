@@ -3,11 +3,13 @@ import { ApiError } from "../api/client";
 import { getCacheIdentity, identityKey } from "../db";
 import { hydrateStore, setCacheIdentity } from "../store";
 import { api, clearMembershipCache, syncNow } from "../sync";
+import { rememberEmail } from "./rememberedEmail";
 
 const KEY = "qlh.session.v1";
 const LEGACY_KEY = KEY;
 export interface WebSession { token: string; user: MeResponse["user"]; me: MeResponse; activeMembershipId: string | null; guardianAccount?: boolean; }
 const listeners = new Set<() => void>();
+const rememberUserEmail = (user: WebSession["user"]) => rememberEmail(user.phone, user.email);
 const ME_CHECK_INTERVAL = 60_000;
 /** Bumped on login, logout, role change and refresh so a late /me response can never overwrite a newer choice. */
 let generation = 0;
@@ -34,11 +36,13 @@ export const getToken = (): string | null => session?.token ?? null;
 export function subscribeSession(fn: () => void): () => void { listeners.add(fn); return () => listeners.delete(fn); }
 export async function activateSession(token: string, user: WebSession["user"], me: MeResponse, activeMembershipId: string | null, guardianAccount = false): Promise<void> {
   generation++;
+  rememberUserEmail(user);
   session = { token, user, me, activeMembershipId, guardianAccount: guardianAccount || me.memberships.length === 0 }; persist(); await activateMembershipCache(activeMembershipId);
 }
 export async function updateMe(me: MeResponse): Promise<void> {
   if (!session) return;
   generation++;
+  rememberUserEmail(me.user);
   const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
   session = { ...session, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null, guardianAccount: me.memberships.length === 0 || session.guardianAccount };
   persist(); await activateMembershipCache(active?.id ?? null);
@@ -55,6 +59,12 @@ export async function clearSession(): Promise<void> {
   generation++;
   session = null; persist(); setCacheIdentity(null); await hydrateStore();
 }
+/** Cập nhật email trong phiên sau khi máy chủ xác nhận PUT /me/email (không cần gọi lại /me). */
+export function setSessionUserEmail(email: string | null): void {
+  if (!session) return;
+  session = { ...session, user: { ...session.user, email }, me: { ...session.me, user: { ...session.me.user, email } } };
+  persist();
+}
 export function setActiveMembershipId(membershipId: string): void { if (!session) return; generation++; session = { ...session, activeMembershipId: membershipId, me: { ...session.me, active_membership_id: membershipId } }; persist(); }
 
 export async function invalidateActiveMembership(): Promise<void> {
@@ -70,6 +80,7 @@ export async function invalidateActiveMembership(): Promise<void> {
     if (!session || mine !== generation || session.user.id !== previous.user.id || session.token !== previous.token) return;
     if (me.memberships.length === 0) { await clearSession(); return; }
     const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
+    rememberUserEmail(me.user);
     session = { ...session, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null };
     persist();
     if (!active) return;
@@ -104,6 +115,7 @@ async function confirmSession(): Promise<void> {
       await clearMembershipCache(`${current.user.id}:${previousMembership.workspace.id}:${previousId}`);
       if (stale()) return;
     }
+    rememberUserEmail(me.user);
     session = { ...current, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null, guardianAccount: me.memberships.length === 0 || current.guardianAccount };
     persist();
     await activateMembershipCache(active?.id ?? null);

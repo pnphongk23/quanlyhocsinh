@@ -24,6 +24,7 @@ export const routes: RouteObject[] = [{
       throw redirect(session ? rootPathForSession(session) : "/dang-nhap");
     } },
       ...guardRoutes(staffRoutes, "staff"), ...guardRoutes(guardianRoutes, "guardian"), ...accountRoutes,
+    { path: "/dat-lai-mat-khau", lazy: async () => ({ Component: (await import("../features/auth/ResetPasswordPage")).default }) },
     { path: "*", element: <StatusPage title="Không tìm thấy màn hình" /> },
   ],
 }];

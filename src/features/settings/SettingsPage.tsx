@@ -16,6 +16,7 @@ import { useOnline } from "../../shared/hooks/useOnline";
 import { Button, Icon, Modal, PageHeader } from "../../shared/ui";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
+import { EmailSettings } from "./EmailSettings";
 import { EMPTY_PASSWORD_FORM, isPasswordFormValid } from "./ChangePasswordPage";
 import a from "../auth/auth.module.css";
 import { roleBadge } from "../auth/roleBadge";
@@ -198,6 +199,7 @@ function SettingsMobile() {
             {phoneLabel(phone)}
           </span>
         </div>
+        <EmailSettings idPrefix="settings-mobile" />
       </section>
 
       <section className={s.card} aria-label="Tài khoản">
@@ -371,6 +373,7 @@ function SettingsDesktop() {
                 </span>
               </span>
             </div>
+            <EmailSettings idPrefix="settings-desktop" />
           </section>
 
           {multipleRoles && (

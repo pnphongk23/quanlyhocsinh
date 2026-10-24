@@ -5,7 +5,7 @@ import { ApiError } from "../../data/api/client";
 import { getSession } from "../../data/auth/session";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, Icon, Segmented } from "../../shared/ui";
-import { CheckRow, PasswordField, PasswordStrength, PhoneField } from "./authUi";
+import { CheckRow, EmailField, PasswordField, PasswordStrength, PhoneField, emailFieldError, looksLikeEmail } from "./authUi";
 import s from "./auth.module.css";
 import r from "./registerGuardian.module.css";
 
@@ -23,13 +23,13 @@ const ROLE_OPTIONS = [
   { value: "guardian", label: "Phụ huynh" },
 ];
 
-const EMPTY_FORM = { name: "", workspaceName: "", phone: "", password: "", confirm: "" };
+const EMPTY_FORM = { name: "", workspaceName: "", phone: "", email: "", password: "", confirm: "" };
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [role, setRole] = useState<RegisterRole>("teacher");
-  const [form, setForm] = useState({ name: "", workspaceName: "", phone: "", password: "", confirm: "" });
-  const { name, workspaceName, phone, password, confirm } = form;
+  const [form, setForm] = useState(EMPTY_FORM);
+  const { name, workspaceName, phone, email, password, confirm } = form;
   const setField = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
   const registrationComplete = useRef(false);
   const guardian = role === "guardian";
@@ -40,17 +40,19 @@ export default function RegisterPage() {
       Boolean(v.name.trim()) &&
       (guardian || Boolean(v.workspaceName.trim())) &&
       v.phone.replace(/\D/g, "").length === 9 &&
+      (!v.email.trim() || looksLikeEmail(v.email)) &&
       v.password.length >= 8 &&
       v.password === v.confirm,
     save: async (v) => {
       const formattedPhone = `+84${v.phone.replace(/\D/g, "")}`;
-      if (guardian) await registerParent(formattedPhone, v.password, v.name.trim());
-      else await registerTeacher(formattedPhone, v.password, v.name.trim(), v.workspaceName.trim());
+      if (guardian) await registerParent(formattedPhone, v.password, v.name.trim(), v.email.trim() || undefined);
+      else await registerTeacher(formattedPhone, v.password, v.name.trim(), v.workspaceName.trim(), v.email.trim() || undefined);
       registrationComplete.current = true;
     },
   });
   const loading = action.saving;
-  const error = action.error ? registrationErrorMessage(action.error) : "";
+  const emailError = action.error ? emailFieldError(action.error) : "";
+  const error = action.error && !emailError ? registrationErrorMessage(action.error) : "";
   // Keep the form mounted while its own register request installs the new session;
   // the submit handler sends the user straight to the newly created workspace.
   if (getSession() && !loading && !registrationComplete.current) return <Navigate to="/chon-vai-tro" replace />;
@@ -96,6 +98,7 @@ export default function RegisterPage() {
             </div>
           </div>}
           <PhoneField value={phone} onChange={setField("phone")} id="register-phone" />
+          <EmailField label="Email (không bắt buộc)" value={email} onChange={setField("email")} id="register-email" errorText={emailError} hint={<p className={s.note}>Email chỉ dùng để lấy lại mật khẩu.</p>} />
           <PasswordField label="Mật khẩu" value={password} onChange={setField("password")} autoComplete="new-password" id="register-password" hint={<PasswordStrength password={password} />} />
           <div className={s.checks}><CheckRow ok={password.length >= 8}>Tối thiểu 8 ký tự</CheckRow></div>
           <PasswordField label="Nhập lại mật khẩu" value={confirm} onChange={setField("confirm")} autoComplete="new-password" id="register-confirm" error={mismatch} errorText={mismatch ? "Mật khẩu nhập lại không khớp." : undefined} />

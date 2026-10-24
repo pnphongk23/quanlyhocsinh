@@ -1,8 +1,9 @@
 import { api, clearUserCache } from "../sync";
-import { activateSession, activateMembershipCache, clearSession, getSession, setActiveMembershipId, updateMe } from "./session";
+import { activateSession, activateMembershipCache, clearSession, getSession, setActiveMembershipId, setSessionUserEmail, updateMe } from "./session";
 import { beginLogout, cancelLogout, clearLogoutLock } from "../outbox";
 import { getStore } from "../store";
 import { ApiError } from "../api/client";
+import { rememberEmail } from "./rememberedEmail";
 
 export async function login(phone: string, password: string): Promise<{ activeMembershipId: string | null; membershipCount: number }> {
   const result = await api.request("POST /auth/login", { body: { phone, password, device_label: typeof navigator === "undefined" ? "Web" : navigator.userAgent.slice(0, 80) } });
@@ -11,12 +12,12 @@ export async function login(phone: string, password: string): Promise<{ activeMe
     await activateSession(result.token, result.user, me, result.active_membership_id, me.memberships.length === 0);
   return { activeMembershipId: result.active_membership_id, membershipCount: result.memberships.length };
 }
-export async function registerTeacher(phone: string, password: string, displayName: string, workspaceName: string): Promise<void> {
-  const result = await api.request("POST /auth/register", { body: { phone, password, display_name: displayName, workspace_name: workspaceName } });
+export async function registerTeacher(phone: string, password: string, displayName: string, workspaceName: string, email?: string): Promise<void> {
+  const result = await api.request("POST /auth/register", { body: { phone, password, display_name: displayName, workspace_name: workspaceName, ...(email ? { email } : {}) } });
     const me = await api.request("GET /me", { authToken: result.token }); await clearLogoutLock(result.user.id); await activateSession(result.token, result.user, me, result.active_membership_id);
 }
-export async function registerParent(phone: string, password: string, displayName: string): Promise<void> {
-  const result = await api.request("POST /auth/register-guardian", { body: { phone, password, display_name: displayName } });
+export async function registerParent(phone: string, password: string, displayName: string, email?: string): Promise<void> {
+  const result = await api.request("POST /auth/register-guardian", { body: { phone, password, display_name: displayName, ...(email ? { email } : {}) } });
     const me = await api.request("GET /me", { authToken: result.token });
     await clearLogoutLock(result.user.id);
     await activateSession(result.token, result.user, me, result.active_membership_id, true);
@@ -24,6 +25,20 @@ export async function registerParent(phone: string, password: string, displayNam
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   await api.request("POST /auth/change-password", { body: { current_password: currentPassword, new_password: newPassword } });
   if (getSession()) void api.request("GET /me").then(updateMe).catch(() => undefined);
+}
+/** Lưu hoặc xoá email khôi phục; cần mật khẩu hiện tại. Thành công thì máy nhớ (hoặc quên) email theo SĐT. */
+export async function setAccountEmail(email: string | null, currentPassword: string): Promise<void> {
+  const result = await api.request("PUT /me/email", { body: { email, current_password: currentPassword } });
+  const phone = getSession()?.user.phone;
+  if (phone) rememberEmail(phone, result.email);
+  setSessionUserEmail(result.email);
+}
+export const lookupPasswordReset = (phone: string) => api.request("POST /auth/password-reset/lookup", { body: { phone }, anonymous: true });
+export const requestPasswordReset = (phone: string, email: string) => api.request("POST /auth/password-reset/request", { body: { phone, email }, anonymous: true });
+/** Đổi mật khẩu bằng token một lần; máy chủ thu hồi mọi phiên nên phiên cục bộ (nếu có) bị xoá. */
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  await api.request("POST /auth/password-reset/confirm", { body: { token, new_password: newPassword }, anonymous: true });
+  if (getSession()) await clearSession();
 }
 export async function logout(): Promise<void> {
   const userId = getSession()?.user.id;
