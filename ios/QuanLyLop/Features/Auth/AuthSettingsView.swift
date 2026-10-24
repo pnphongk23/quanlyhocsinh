@@ -328,6 +328,9 @@ struct AuthChangePasswordView: View {
             }
             .padding(.top, 24)
         }
+        .onChange(of: saveController.phase) { _, phase in
+            if phase == .saved { model.completePasswordChange() }
+        }
     }
 
     private var blocked: Bool {

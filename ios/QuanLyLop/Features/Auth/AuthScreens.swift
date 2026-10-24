@@ -314,7 +314,7 @@ struct AuthGuardianRegisterView: View {
             } else if let error = saveController.error {
                 AuthBanner(text: String(describing: error), tone: .error)
             }
-            VStack(spacing: 20) {
+            VStack(spacing: AppMetrics.buttonPaddingMedium) {
                 AuthTextField(label: String(localized: "feature.auth.ten.hien.thi"), text: $name,
                               placeholder: String(localized: "feature.auth.co.lan"), identifier: "guardian.register.name")
                 AuthPhoneField(label: String(localized: "feature.auth.so.ien.thoai"), digits: $phone,
@@ -334,7 +334,7 @@ struct AuthGuardianRegisterView: View {
                 }
                 .accessibilityIdentifier("guardian.register.submit")
             }
-            .padding(.top, 24)
+            .padding(.top, AppMetrics.buttonHeightMedium / 2)
         }
     }
 }

@@ -3,18 +3,33 @@ import XCTest
 
 @MainActor
 final class PasswordChangeTests: XCTestCase {
-    func testChangePasswordRemainsSuccessfulWithoutFollowupMeRequest() async throws {
+    func testForcedPasswordNavigationWaitsForSavedPhaseAndNeedsNoFollowupMeRequest() async throws {
         let api = PasswordChangeAPI()
         let model = AuthModel(configuration: .fallback, apiClient: api)
         model.applyDemo(memberships: [], activeID: "", screen: .forcedPassword)
 
-          try await model.changePassword(current: "old-password", newPassword: "new-password",
-                                         confirmation: "new-password")
+        try await model.changePassword(current: "old-password", newPassword: "new-password",
+                                       confirmation: "new-password")
 
-        XCTAssertEqual(model.screen, .main)
+        XCTAssertEqual(model.screen, .forcedPassword)
         XCTAssertNil(model.message)
         let paths = await api.paths
         XCTAssertEqual(paths, ["auth/change-password"])
+
+        model.completePasswordChange()
+        XCTAssertEqual(model.screen, .main)
+    }
+
+    func testSettingsPasswordChangeReturnsToSettingsOnlyAfterCompletion() async throws {
+        let model = AuthModel(configuration: .fallback, apiClient: PasswordChangeAPI())
+        model.applyDemo(memberships: [], activeID: "", screen: .changePassword)
+
+        try await model.changePassword(current: "old-password", newPassword: "new-password",
+                                       confirmation: "new-password")
+
+        XCTAssertEqual(model.screen, .changePassword)
+        model.completePasswordChange()
+        XCTAssertEqual(model.screen, .settings)
     }
 }
 

@@ -218,7 +218,6 @@ final class AuthModel {
                 identity = CurrentIdentity(user: User(id: old.user.id, phone: old.user.phone, displayName: old.user.displayName, mustChangePassword: false),
                                            activeMembershipId: old.activeMembershipId, memberships: old.memberships)
             }
-            screen = screen == .forcedPassword ? postPasswordScreen : .settings
         } catch {
             if let failure = error as? APIFailure, case .server(_, let detail, _) = failure,
                  detail.code == "invalid_credentials" {
@@ -228,6 +227,11 @@ final class AuthModel {
             } else { message = Self.userMessage(error) }
             throw error
         }
+    }
+
+    /// Password forms wait for AppSaveController's saved phase before leaving the editor.
+    func completePasswordChange() {
+        screen = screen == .forcedPassword ? postPasswordScreen : .settings
     }
 
     func selectMembership(_ membership: Membership) async {
