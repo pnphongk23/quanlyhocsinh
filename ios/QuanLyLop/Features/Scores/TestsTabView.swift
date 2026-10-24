@@ -199,8 +199,8 @@ struct TestScoresView: View {
                         I4Banner(text: String(localized: "feature.scores.ban.chi.co.quyen.xem.iem.cua.lop.nay"), horizontal: 12, vertical: 10)
                     }
                     if let failure = saveController.error {
-                          I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
-                      }
+                        I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
+                    }
                     columns
                     studentList(test)
                 }
@@ -389,11 +389,11 @@ struct TestScoresView: View {
         return missing ? AppColors.inputBorderStrong : .clear
     }
 
-      private func saveBar(_ test: TestDefinition) -> some View {
-          VStack(spacing: 8) {
-              if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
-              if let error {
-                HStack(spacing: 8) {
+    private func saveBar(_ test: TestDefinition) -> some View {
+        VStack(spacing: 8) {
+            if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
+            if let error {
+                  HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle").font(.system(size: 16))
                     Text(error)
                         .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
@@ -414,26 +414,26 @@ struct TestScoresView: View {
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                     .foregroundStyle(AppColors.muted)
             }
-              AppSaveButton(
-                  title: String(localized: "feature.scores.luu.iem"),
-                  controller: saveController,
-                  isEnabled: dirty && invalidCount == 0 && data.canWriteScores
-              ) { try await save(test) }
-          }
+            AppSaveButton(
+                title: String(localized: "feature.scores.luu.iem"),
+                controller: saveController,
+                isEnabled: dirty && invalidCount == 0 && data.canWriteScores
+            ) { try await save(test) }
+        }
         .padding(.horizontal, 20)
         .padding(.top, 8)
         .padding(.bottom, 8)
         .background(AppColors.background)
     }
 
-      private func save(_ test: TestDefinition) async throws {
-          if let failure = await data.saveScores(test: test, values: drafts) {
-              error = failure
-              throw I4SaveFailure(message: failure)
-          }
-          error = nil
-          drafts.removeAll()
-          await saveStatusSource?.refresh()
+    private func save(_ test: TestDefinition) async throws {
+        if let failure = await data.saveScores(test: test, values: drafts) {
+            error = failure
+            throw I4SaveFailure(message: failure)
+        }
+        error = nil
+        drafts.removeAll()
+        await saveStatusSource?.refresh()
     }
 
     private var optionsSheet: some View {
@@ -473,7 +473,7 @@ struct TestScoresView: View {
                     deletion = nil
                     Task {
                         let message = await data.deleteTest(test)
-                        if let message { savedNotice = message }
+                        if let message { error = message }
                         if !data.tests(in: classID).contains(where: { $0.id == test.id }) { dismiss() }
                     }
                 }
@@ -504,13 +504,13 @@ struct TestEditorView: View {
                     AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, placeholder: String(localized: "feature.scores.vi.du.unit.6.test"))
                     dateField
                     AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad)
-                      Text(String(localized: "feature.scores.moi.bai.co.thang.iem.rieng.mac.inh.15.sua.uoc.lu"))
-                          .appText(AppText.muted)
-                          .foregroundStyle(AppColors.muted)
-                      if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
-                      if let failure = saveController.error {
-                          I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
-                      }
+                    Text(String(localized: "feature.scores.moi.bai.co.thang.iem.rieng.mac.inh.15.sua.uoc.lu"))
+                        .appText(AppText.muted)
+                        .foregroundStyle(AppColors.muted)
+                    if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
+                    if let failure = saveController.error {
+                        I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
+                    }
                     if let error {
                         HStack(spacing: 8) {
                             Image(systemName: "exclamationmark.triangle").font(.system(size: 16))
@@ -529,9 +529,9 @@ struct TestEditorView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 8) {
-                  AppSaveButton(title: String(localized: "feature.scores.tao.bai.va.nhap.iem"), controller: saveController) {
-                      try await save()
-                  }
+              AppSaveButton(title: String(localized: "feature.scores.tao.bai.va.nhap.iem"), controller: saveController) {
+                  try await save()
+              }
                 AppButton(title: String(localized: "feature.scores.huy"), variant: .ghost, size: .medium) { dismiss() }
             }
             .padding(.horizontal, 20)
@@ -654,12 +654,12 @@ struct TestFormSheet: View {
         AppSheet(title: String(localized: "feature.scores.sua.bai.kiem.tra")) {
             VStack(spacing: 14) {
                 AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name)
-                  AppTextField(label: String(localized: "feature.scores.ngay.kiem.tra"), text: $date, placeholder: "YYYY-MM-DD")
-                  AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad)
-                  if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
-                  if let failure = saveController.error {
-                      I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
-                  }
+                AppTextField(label: String(localized: "feature.scores.ngay.kiem.tra"), text: $date, placeholder: "YYYY-MM-DD")
+                AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad)
+                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
+                if let failure = saveController.error {
+                    I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
+                }
                 if let error {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle").font(.system(size: 16))
@@ -673,9 +673,9 @@ struct TestFormSheet: View {
                 }
             }
         } footer: {
-                AppSaveButton(title: String(localized: "feature.scores.luu.thay.oi"), controller: saveController) {
-                    try await save()
-                }
+              AppSaveButton(title: String(localized: "feature.scores.luu.thay.oi"), controller: saveController) {
+                  try await save()
+              }
           } close: {
               dismiss()
           }
