@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   call,
   clubToken,
+  db,
   fakePhone,
   insertClass,
   insertGuardianMembership,
@@ -105,8 +106,13 @@ describe("reports routes and publication snapshots", () => {
           ws.token,
         )
       ).status,
-    ).toBe(200);
-    const published = await call(`/v1/reports/${reportId}/publish`, post({}), ws.token);
+      ).toBe(200);
+      const now = new Date().toISOString();
+      for (const sessionId of [firstSession, lastSession])
+        await db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
+          VALUES(?,?,?,?,'present','',1,?,?)`).bind(ws.workspaceId, classId, sessionId, studentId, now, now).run();
+      expect((await call(`/v1/reports/${reportId}/preview`, {}, ws.token)).body).toMatchObject({ ready: true, missing: [] });
+      const published = await call(`/v1/reports/${reportId}/publish`, post({}), ws.token);
     expect(published.status).toBe(201);
     const teacherOtherUser = await insertUser(fakePhone()),
       teacherOtherMembership = await insertMembership(
@@ -392,12 +398,16 @@ describe("reports routes and publication snapshots", () => {
       f.token,
     );
     const reportId = batch.body.reports[0].report_id;
-    expect((await call(
-      `/v1/reports/${reportId}`,
-      put({ general_comment: "Snapshot fake" }),
-      f.token,
-    )).status).toBe(200);
-    const response = await call(`/v1/reports/${reportId}/publish`, post({}), f.token);
+      expect((await call(
+        `/v1/reports/${reportId}`,
+        put({ general_comment: "Snapshot fake" }),
+        f.token,
+      )).status).toBe(200);
+      const now = new Date().toISOString();
+      for (const sessionId of [from, to])
+        await db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
+          VALUES(?,?,?,?,'present','',1,?,?)`).bind(f.workspaceId, f.classId, sessionId, f.studentId, now, now).run();
+      const response = await call(`/v1/reports/${reportId}/publish`, post({}), f.token);
     expect(response.status).toBe(201);
     const snapshot = await call(
       `/v1/reports/${response.body.report_id}/publications/1`,
@@ -493,12 +503,17 @@ describe("reports routes and publication snapshots", () => {
 
     const batch = await call(
       `/v1/classes/${f.classId}/report-batches`,
-      post({ from_session_id: sessionIds[0], to_session_id: sessionIds.at(-1) }),
-      f.token,
-    );
-    expect(batch.status).toBe(201);
-    const rangeReportId = batch.body.reports[0].report_id;
-    const rangePreview = await call(`/v1/reports/${rangeReportId}/preview`, {}, f.token);
+        post({ from_session_id: sessionIds[0], to_session_id: sessionIds.at(-1) }),
+        f.token,
+      );
+      expect(batch.status).toBe(201);
+      const rangeReportId = batch.body.reports[0].report_id;
+      await call(`/v1/reports/${rangeReportId}`, put({ general_comment: "Homework report" }), f.token);
+      const now = new Date().toISOString();
+      for (const sessionId of sessionIds)
+        await db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
+          VALUES(?,?,?,?,'present','',1,?,?)`).bind(f.workspaceId, f.classId, sessionId, f.studentId, now, now).run();
+      const rangePreview = await call(`/v1/reports/${rangeReportId}/preview`, {}, f.token);
     expect(rangePreview.body.homework).toEqual(expectedHomework);
     const published = await call(`/v1/reports/${rangeReportId}/publish`, post({}), f.token);
     expect(published.body.snapshot.homework).toEqual(expectedHomework);

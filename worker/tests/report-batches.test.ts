@@ -166,6 +166,9 @@ describe('report batches by session range', () => {
     const now = new Date().toISOString();
     await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at) VALUES(?,?,?,?,8,1,?,?)`)
       .bind(f.ws.workspaceId, f.classId, homework, f.students.a, now, now).run();
+    // The published report's full attendance coverage includes the final held session.
+    await db.prepare(`INSERT OR IGNORE INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
+      VALUES(?,?,?,?,'present','',1,?,?)`).bind(f.ws.workspaceId, f.classId, f.sessions.s4, f.students.a, now, now).run();
     for (const [key, status] of [['s1', 'present'], ['s2', 'late'], ['s3', 'present'], ['s5', 'present']] as const)
       await db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at) VALUES(?,?,?,?,?,'',1,?,?)`)
         .bind(f.ws.workspaceId, f.classId, f.sessions[key], f.students.a, status, now, now).run();
@@ -176,10 +179,39 @@ describe('report batches by session range', () => {
     expect(preview.body).toMatchObject({
       batch_id: batch.id, student_id: f.students.a, month: '2026-10',
       range: { from_key: '2026-10-01 18:00', to_key: '2026-10-07 18:00', from_number: 1, to_number: 3, session_count: 3 },
-      attendance: { present: 1, late: 1, excused: 0, absent: 0, held_sessions: 3 },
+        attendance: { present: 2, late: 1, excused: 0, absent: 0, held_sessions: 3 },
     });
     expect(preview.body.tests).toEqual([expect.objectContaining({ test_id: homework, value: 8 })]);
     expect(preview.body.tests.map((t: any) => t.test_id)).not.toContain(outside);
+  });
+
+  it('bounds range statistics to each student enrollment dates', async () => {
+    const joined = await insertStudent(f.ws.workspaceId, f.classId, 'Joined mid-range', null, f.ws.userId);
+    const left = await insertStudent(f.ws.workspaceId, f.classId, 'Left mid-range', null, f.ws.userId);
+    await db.prepare(`UPDATE students SET enrolled_at='2026-10-03' WHERE id=?`).bind(joined).run();
+    await db.prepare(`UPDATE students SET enrolled_at='2026-08-01',left_at='2026-10-01',status='left' WHERE id=?`).bind(left).run();
+    const batch = await create('s1', 's2');
+    const joinedReport = batch.body.reports.find((r: any) => r.student_id === joined);
+    const leftReport = batch.body.reports.find((r: any) => r.student_id === left);
+    const t1 = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-01');
+    const t3 = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-03');
+    const now = new Date().toISOString();
+    const attendance = (studentId: string, sessionId: string) => db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
+      VALUES(?,?,?,?, 'present','',1,?,?)`).bind(f.ws.workspaceId, f.classId, sessionId, studentId, now, now).run();
+    const score = (studentId: string, testId: string) => db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
+      VALUES(?,?,?,?,8,1,?,?)`).bind(f.ws.workspaceId, f.classId, testId, studentId, now, now).run();
+    await Promise.all([
+      attendance(joined, f.sessions.s2!), attendance(left, f.sessions.s1!),
+      score(joined, t3), score(left, t1), score(left, t3), score(f.students.a!, t1), score(f.students.a!, t3),
+    ]);
+    const [joinedPreview, leftPreview] = await Promise.all([
+      call(`/v1/reports/${joinedReport.report_id}/preview`, {}, f.ws.token),
+      call(`/v1/reports/${leftReport.report_id}/preview`, {}, f.ws.token),
+    ]);
+    expect(joinedPreview.body).toMatchObject({ range: { session_count: 1 }, attendance: { present: 1, held_sessions: 1 }, tests: [expect.objectContaining({ test_id: t3, value: 8 })] });
+    expect(leftPreview.body).toMatchObject({ range: { session_count: 1 }, attendance: { present: 1, held_sessions: 1 }, tests: [expect.objectContaining({ test_id: t1, value: 8 })] });
+    expect(joinedPreview.body.tests.map((t: any) => t.test_id)).not.toContain(t1);
+    expect(leftPreview.body.tests.map((t: any) => t.test_id)).not.toContain(t3);
   });
 
   it('saves comments, publishes with a labelled snapshot and republishes after a score change', async () => {
@@ -205,30 +237,98 @@ describe('report batches by session range', () => {
     const inRange = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-06');
     const outRange = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-20');
     const now = new Date().toISOString();
-    const score = (test: string) => db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at) VALUES(?,?,?,?,9,1,?,?)`)
-      .bind(f.ws.workspaceId, f.classId, test, f.students.a, now, now).run();
+    const score = (test: string, studentId = f.students.a) => db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at) VALUES(?,?,?,?,9,1,?,?)`)
+      .bind(f.ws.workspaceId, f.classId, test, studentId, now, now).run();
     await score(outRange);
     expect((await batchesOf()).find((b) => b.id === batch.id).counts.needs_republish).toBe(0);
     await score(inRange);
+    await score(inRange, f.students.joined);
     expect((await batchesOf()).find((b) => b.id === batch.id).counts).toMatchObject({ published: 1, needs_republish: 1 });
 
     const again = await call(`/v1/reports/${report.report_id}/publish`, post({}), f.ws.token);
     expect(again.body.publication_no).toBe(2);
     expect(again.body.snapshot.tests.map((t: any) => t.test_id)).toContain(inRange);
     expect((await batchesOf()).find((b) => b.id === batch.id).counts).toMatchObject({ published: 1, needs_republish: 0 });
+    await db.prepare(`UPDATE scores SET value=8 WHERE test_id=? AND student_id=?`).bind(inRange, f.students.a).run();
+    await call(`/v1/reports/${report.report_id}/publish`, post({}), f.ws.token);
+    await db.prepare(`UPDATE scores SET value=NULL WHERE test_id=? AND student_id=?`).bind(inRange, f.students.a).run();
+    expect((await batchesOf()).find((b) => b.id === batch.id).counts.needs_republish).toBe(1);
+    await db.prepare(`UPDATE scores SET value=9 WHERE test_id=? AND student_id=?`).bind(inRange, f.students.a).run();
+    expect((await batchesOf()).find((b) => b.id === batch.id).counts.needs_republish).toBe(1);
+    expect((await call(`/v1/reports/${report.report_id}/publish`, post({}), f.ws.token)).status).toBe(201);
     // Editing a published comment also asks for a republish.
     expect((await call(`/v1/reports/${report.report_id}`, put({ general_comment: 'Cập nhật' }), f.ws.token)).body.needs_republish).toBe(1);
     expect((await call(`/v1/reports/${report.report_id}/publications/1`, {}, f.ws.token)).body.snapshot.general_comment).toBe('Tiến bộ tốt');
   });
 
-  it('publishes the whole batch, skipping reports that are already current', async () => {
-    const batch = (await batchesOf()).find((b) => b.from_session_id === f.sessions.s1 && b.to_session_id === f.sessions.s4);
-    const before = (await call(`/v1/report-batches/${batch.id}/reports`, {}, f.ws.token)).body.items;
-    const flagged = before.find((r: any) => r.needs_republish === 1);
-    const result = await call(`/v1/report-batches/${batch.id}/publish`, post({}), f.teacher);
-    expect(result.status).toBe(200);
-    expect(result.body.published).toHaveLength(3);
-    expect(result.body.published.find((p: any) => p.report_id === flagged.report_id).publication_no).toBe(3);
+    it('blocks individual publishing until attendance, scores, and comment are complete', async () => {
+      const studentId = await insertStudent(f.ws.workspaceId, f.classId, 'Readiness student', null, f.ws.userId);
+        await db.prepare(`UPDATE students SET enrolled_at='2026-10-03',left_at='2026-10-03',status='left' WHERE id=?`).bind(studentId).run();
+      const batch = await create('s2', 's2');
+      const report = batch.body.reports.find((r: any) => r.student_id === studentId);
+      const testId = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-03');
+      const now = new Date().toISOString();
+      for (const studentId of [f.students.a, f.students.left])
+        await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
+          VALUES(?,?,?,?,8,1,?,?)`).bind(f.ws.workspaceId, f.classId, testId, studentId, now, now).run();
+      const sameDayTests = await db.prepare(`SELECT id FROM tests WHERE class_id=? AND date='2026-10-03' AND id<>?`)
+        .bind(f.classId, testId).all<{ id: string }>();
+      for (const row of sameDayTests.results)
+        await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
+          VALUES(?,?,?,?,8,1,?,?)`).bind(f.ws.workspaceId, f.classId, row.id, studentId, now, now).run();
+      const preview = () => call(`/v1/reports/${report.report_id}/preview`, {}, f.ws.token);
+      const publish = () => call(`/v1/reports/${report.report_id}/publish`, post({}), f.ws.token);
+      expect((await preview()).body).toMatchObject({ ready: false, missing: ['attendance', 'scores', 'comment'] });
+      const batchPublish = await call(`/v1/report-batches/${batch.body.batch.id}/publish`, post({}), f.ws.token);
+      expect(batchPublish.body.skipped).toContainEqual({ report_id: report.report_id, missing: ['attendance', 'scores', 'comment'] });
+      expect(batchPublish.body.published.map((p: any) => p.report_id)).not.toContain(report.report_id);
+      for (const expected of [['attendance', 'scores', 'comment'], ['scores', 'comment'], ['comment']] as string[][]) {
+        const blocked = await publish();
+        expect(blocked.status).toBe(409);
+        expect(blocked.body.error.details).toMatchObject({ reason: 'report_not_ready', missing: expected });
+        expect(await db.prepare('SELECT status,publication_count FROM reports WHERE id=?').bind(report.report_id).first())
+          .toEqual({ status: 'draft', publication_count: 0 });
+        if (expected[0] === 'attendance') {
+          const now = new Date().toISOString();
+          await db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
+            VALUES(?,?,? ,?,'present','',1,?,?)`).bind(f.ws.workspaceId, f.classId, f.sessions.s2, studentId, now, now).run();
+        } else if (expected[0] === 'scores') {
+          await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
+            VALUES(?,?,?,?,8,1,?,?)`).bind(f.ws.workspaceId, f.classId, testId, studentId, now, now).run();
+        } else {
+          await call(`/v1/reports/${report.report_id}`, put({ general_comment: 'Đạt yêu cầu' }), f.ws.token);
+        }
+      }
+      expect((await preview()).body).toMatchObject({ ready: true, missing: [] });
+      expect((await publish()).status).toBe(201);
+    });
+
+    it('publishes the whole batch, skipping reports that are already current', async () => {
+      const batch = (await batchesOf()).find((b) => b.from_session_id === f.sessions.s1 && b.to_session_id === f.sessions.s4);
+      const before = (await call(`/v1/report-batches/${batch.id}/reports`, {}, f.ws.token)).body.items;
+      const flagged = before.find((r: any) => r.needs_republish === 1);
+      const now = new Date().toISOString();
+      for (const [studentId, sessionKeys] of [[f.students.left, ['s1', 's2']], [f.students.joined, ['s4']]] as const) {
+        for (const key of sessionKeys)
+          await db.prepare(`INSERT OR IGNORE INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
+            VALUES(?,?,?,?,'present','',1,?,?)`).bind(f.ws.workspaceId, f.classId, f.sessions[key], studentId, now, now).run();
+        const item = before.find((r: any) => r.student_id === studentId);
+        await call(`/v1/reports/${item.report_id}`, put({ general_comment: 'Tiến bộ' }), f.ws.token);
+      }
+      const homework = await db.prepare(`SELECT id FROM tests WHERE class_id=? AND date='2026-10-02'`).bind(f.classId).first<{id:string}>();
+      await db.prepare(`INSERT OR IGNORE INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
+        VALUES(?,?,?,?,7,1,?,?)`).bind(f.ws.workspaceId, f.classId, homework!.id, f.students.left, now, now).run();
+      for (const item of before) {
+        const preview = await call(`/v1/reports/${item.report_id}/preview`, {}, f.ws.token);
+        for (const test of preview.body.tests.filter((t: any) => t.value === null))
+          await db.prepare(`INSERT OR IGNORE INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
+            VALUES(?,?,?,?,7,1,?,?)`).bind(f.ws.workspaceId, f.classId, test.test_id, item.student_id, now, now).run();
+      }
+      const result = await call(`/v1/report-batches/${batch.id}/publish`, post({}), f.teacher);
+      expect(result.status).toBe(200);
+      expect(result.body.skipped).toEqual([]);
+      expect(result.body.published).toHaveLength(3);
+    expect(result.body.published.find((p: any) => p.report_id === flagged.report_id).publication_no).toBe(flagged.publication_count + 1);
     expect(result.body.published.filter((p: any) => p.publication_no === 1)).toHaveLength(2);
     expect((await batchesOf()).find((b) => b.id === batch.id).counts).toEqual({ total: 3, draft: 0, published: 3, needs_republish: 0 });
     const idle = await call(`/v1/report-batches/${batch.id}/publish`, post({}), f.teacher);

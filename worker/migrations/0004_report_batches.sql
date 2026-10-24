@@ -161,7 +161,7 @@ END;
 
 CREATE TRIGGER scores_republish_au
 AFTER UPDATE ON scores
-WHEN NEW.value IS NOT NULL
+WHEN OLD.value IS NOT NEW.value
 BEGIN
   UPDATE reports SET needs_republish = 1
   WHERE student_id = NEW.student_id

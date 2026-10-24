@@ -200,39 +200,52 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
   const fromKey = batch.from_key as string,
     toKey = batch.to_key as string,
     studentId = report.student_id;
-  const [attendance, tests, stars, homework, sessions] = await db.batch<Row>([
+  const [attendance, tests, stars, homework, sessions, missingAttendance] = await db.batch<Row>([
     db
       .prepare(
         `SELECT a.status, count(*) AS count FROM attendance a JOIN class_sessions s ON s.id=a.session_id
-      WHERE a.workspace_id=? AND a.student_id=? AND s.status<>'cancelled' AND ${SESSION_IN_RANGE} GROUP BY a.status`,
+        JOIN students st ON st.id=a.student_id WHERE a.workspace_id=? AND a.student_id=? AND s.status<>'cancelled'
+        AND s.date>=st.enrolled_at AND (st.left_at IS NULL OR s.date<=st.left_at) AND ${SESSION_IN_RANGE} GROUP BY a.status`,
       )
       .bind(workspaceId, studentId, fromKey, toKey),
     db
       .prepare(
-        `SELECT t.id AS test_id,t.name,t.date,t.max,s.value FROM tests t LEFT JOIN scores s
-      ON s.test_id=t.id AND s.student_id=? WHERE t.workspace_id=? AND t.class_id=? AND t.archived=0
-      AND t.date>=? AND t.date<=? ORDER BY t.date,t.id`,
+        `SELECT t.id AS test_id,t.name,t.date,t.max,s.value FROM tests t JOIN students st ON st.id=? LEFT JOIN scores s
+        ON s.test_id=t.id AND s.student_id=st.id WHERE t.workspace_id=? AND t.class_id=? AND t.archived=0
+        AND t.date>=? AND t.date<=? AND t.date>=st.enrolled_at AND (st.left_at IS NULL OR t.date<=st.left_at) ORDER BY t.date,t.id`,
       )
       .bind(studentId, workspaceId, report.class_id, fromKey.slice(0, 10), toKey.slice(0, 10)),
     db
       .prepare(
         `SELECT stars,count(*) AS count FROM session_comments c JOIN class_sessions s ON s.id=c.session_id
-      WHERE c.workspace_id=? AND c.student_id=? AND c.status='sent' AND s.status<>'cancelled' AND ${SESSION_IN_RANGE} GROUP BY stars`,
+        JOIN students st ON st.id=c.student_id WHERE c.workspace_id=? AND c.student_id=? AND c.status='sent' AND s.status<>'cancelled'
+        AND s.date>=st.enrolled_at AND (st.left_at IS NULL OR s.date<=st.left_at) AND ${SESSION_IN_RANGE} GROUP BY stars`,
       )
       .bind(workspaceId, studentId, fromKey, toKey),
     db
       .prepare(
         `SELECT hs.kind, g.level, count(*) AS count FROM homework_grades g JOIN homework_sections hs
-      ON hs.id=g.section_id JOIN class_sessions s ON s.id=hs.session_id WHERE g.workspace_id=? AND g.student_id=?
-      AND g.level IS NOT NULL AND s.status<>'cancelled' AND ${SESSION_IN_RANGE} GROUP BY hs.kind,g.level`,
+        ON hs.id=g.section_id JOIN class_sessions s ON s.id=hs.session_id JOIN students st ON st.id=g.student_id
+        WHERE g.workspace_id=? AND g.student_id=?
+        AND g.level IS NOT NULL AND s.status<>'cancelled' AND s.date>=st.enrolled_at AND (st.left_at IS NULL OR s.date<=st.left_at)
+        AND ${SESSION_IN_RANGE} GROUP BY hs.kind,g.level`,
       )
       .bind(workspaceId, studentId, fromKey, toKey),
     db
       .prepare(
         `SELECT count(*) AS session_count,COALESCE(SUM(s.status='held'),0) AS held_sessions FROM class_sessions s
-      WHERE s.workspace_id=? AND s.class_id=? AND s.status<>'cancelled' AND ${SESSION_IN_RANGE}`,
+        JOIN students st ON st.id=? WHERE s.workspace_id=? AND s.class_id=? AND s.status<>'cancelled'
+        AND s.date>=st.enrolled_at AND (st.left_at IS NULL OR s.date<=st.left_at) AND ${SESSION_IN_RANGE}`,
       )
-      .bind(workspaceId, report.class_id, fromKey, toKey),
+      .bind(studentId, workspaceId, report.class_id, fromKey, toKey),
+    db
+      .prepare(
+        `SELECT count(*) AS count FROM class_sessions s JOIN students st ON st.id=?
+          WHERE s.workspace_id=? AND s.class_id=? AND s.status='held' AND ${SESSION_IN_RANGE}
+          AND s.date>=st.enrolled_at AND (st.left_at IS NULL OR s.date<=st.left_at)
+          AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.workspace_id=s.workspace_id AND a.session_id=s.id AND a.student_id=st.id)`,
+      )
+      .bind(studentId, workspaceId, report.class_id, fromKey, toKey),
   ]);
   const counts = Object.fromEntries(
     attendance!.results.map((x) => [x.status, x.count]),
@@ -270,6 +283,10 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
     batch.from_number !== null && batch.to_number !== null
       ? `Buổi ${batch.from_number}–${batch.to_number} · ${dates}`
       : dates;
+  const missing: string[] = [];
+  if (missingAttendance!.results[0]!.count > 0) missing.push("attendance");
+  if (tests!.results.some((test) => test.value === null)) missing.push("scores");
+  if (!report.general_comment.trim()) missing.push("comment");
   return {
     report_id: report.id,
     batch_id: report.batch_id,
@@ -298,7 +315,8 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
     },
     homework: homeworkSummary,
     general_comment: report.general_comment,
-    ready: true,
+    ready: missing.length === 0,
+    missing,
   };
 }
 
@@ -382,6 +400,8 @@ export async function publishReport(db: D1Database, i: Identity, reportId: strin
   const report = await loadReport(db, i, reportId, "write"),
     now = new Date().toISOString();
   const { snapshot, no, statements } = await publishStatements(db, i, report, now);
+  if (!snapshot.ready)
+    throw new ApiError(409, "conflict", "Report is not ready.", { reason: "report_not_ready", missing: snapshot.missing });
   try {
     await db.batch(statements);
   } catch (error) {
@@ -407,9 +427,14 @@ export async function publishBatch(db: D1Database, i: Identity, batchId: string)
     .all<ReportRow>();
   const now = new Date().toISOString(),
     statements: D1PreparedStatement[] = [],
-    published: { report_id: string; publication_no: number }[] = [];
+    published: { report_id: string; publication_no: number }[] = [],
+    skipped: { report_id: string; missing: string[] }[] = [];
   for (const report of results) {
     const built = await publishStatements(db, i, report, now);
+    if (!built.snapshot.ready) {
+      skipped.push({ report_id: report.id, missing: built.snapshot.missing });
+      continue;
+    }
     statements.push(...built.statements);
     published.push({ report_id: report.id, publication_no: built.no });
   }
@@ -420,7 +445,7 @@ export async function publishBatch(db: D1Database, i: Identity, batchId: string)
       if (isConstraintError(error)) throw concurrentPublish();
       throw error;
     }
-  return { published, published_at: now };
+  return { published, skipped, published_at: now };
 }
 
 export async function listClassReports(
