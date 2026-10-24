@@ -69,31 +69,50 @@ async function applyPull(page: PullResponse, identity: string): Promise<boolean>
 }
 const snapshotConcurrency = 4;
 const firstPaintEntities: ReadonlyArray<EntityName> = ["class", "student", "class_session"];
-async function snapshotEntity(identity: string, membershipId: string, entity: EntityName, isCancelled: () => boolean): Promise<void> {
-  const table = tableFor(entity);
+type EntityRows = Array<ReturnType<typeof stored>>;
+async function fetchEntity(identity: string, membershipId: string, entity: EntityName, isCancelled: () => boolean, sink: (rows: EntityRows) => Promise<void>): Promise<void> {
   let after: string | undefined;
   do {
     if (isCancelled()) return;
     const page = await api.request(`GET /sync/snapshot/${entity}` as any, { query: { membership_id: membershipId, after, limit: 300 } }) as { items: unknown[]; next_after: string | null };
-    await table.bulkPut((page.items as unknown as Array<Record<string, unknown>>).map((item) => stored(entity, `${identity}|${entity}|${keyParts(entity, item).join("|")}`, item, identity) as any));
+    await sink((page.items as unknown as Array<Record<string, unknown>>).map((item) => stored(entity, `${identity}|${entity}|${keyParts(entity, item).join("|")}`, item, identity)));
     after = page.next_after ?? undefined;
   } while (after);
-  if (firstPaintEntities.includes(entity) && identityKey() === identity) await hydrateStore();
+}
+async function hasLocalData(identity: string): Promise<boolean> {
+  if (await db.meta.get(identity)) return true;
+  for (const entity of entities) if (await tableFor(entity).where("identity").equals(identity).count()) return true;
+  return false;
 }
 async function snapshot(identity: string, membershipId: string): Promise<void> {
   const header = await api.request("GET /sync/snapshot", { query: { membership_id: membershipId } });
-  await clearIdentityCache(identity);
+  // With data already on screen, download everything first and swap it in one transaction so the store never shows a half-loaded cache.
+  const swap = await hasLocalData(identity);
+  const buffered = new Map<EntityName, EntityRows>();
+  if (!swap) await clearIdentityCache(identity);
   const queue = (header.entities as string[]).filter((entity): entity is EntityName => entities.includes(entity as EntityName))
     .sort((x, y) => Number(firstPaintEntities.includes(y)) - Number(firstPaintEntities.includes(x)));
   let failure: { error: unknown } | null = null;
   const worker = async () => {
     for (let entity = queue.shift(); entity && !failure; entity = queue.shift()) {
-      try { await snapshotEntity(identity, membershipId, entity, () => failure !== null); } catch (error) { failure ??= { error }; }
+      const current = entity;
+      try {
+        await fetchEntity(identity, membershipId, current, () => failure !== null, async (rows) => {
+          if (swap) buffered.set(current, [...(buffered.get(current) ?? []), ...rows]);
+          else await tableFor(current).bulkPut(rows as any);
+        });
+        if (!swap && firstPaintEntities.includes(current) && identityKey() === identity) await hydrateStore();
+      } catch (error) { failure ??= { error }; }
     }
   };
   await Promise.all(Array.from({ length: Math.min(snapshotConcurrency, queue.length) }, worker));
   if (failure) throw (failure as { error: unknown }).error;
-  await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
+  await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
+    if (swap) {
+      for (const entity of entities) { await tableFor(entity).where("identity").equals(identity).delete(); await tableFor(entity).bulkPut((buffered.get(entity) ?? []) as any); }
+    }
+    await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
+  });
   await pull(identity, membershipId);
 }
 /** Returns whether the local cache changed. */
