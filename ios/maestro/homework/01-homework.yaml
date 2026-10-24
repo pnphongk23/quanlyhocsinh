@@ -1,5 +1,5 @@
 # demo: homework
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: session-homework
 ---
 - assertVisible: "Bài tập buổi trước"

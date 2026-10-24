@@ -1,7 +1,7 @@
 # demo: register
 # Tài khoản · Đăng ký giáo viên (ảnh 04 của P2).
 # Chạy: ios/maestro/run.sh ios/maestro/auth/04-register.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: auth-register
 ---
 - extendedWaitUntil:

@@ -3,7 +3,7 @@
 # đúng câu của prototype `SettingsPage.tsx` (`LogoutBlocked`): tiêu đề "Chưa thể đăng xuất".
 # Hộp thoại phải giữ màn Cài đặt phía sau — không đăng xuất được.
 # Chạy: ios/maestro/run.sh ios/maestro/auth/10-settings-blocked.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: auth-settings-logout-blocked
 ---
 - extendedWaitUntil:

@@ -1,7 +1,7 @@
 # demo: guardian-empty
 # Phụ huynh · chưa có con nào được liên kết (trạng thái rỗng của `GuardianOverviewPage`).
 # Chạy: ios/maestro/run.sh ios/maestro/guardian/03-empty.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: guardian-empty
 ---
 - extendedWaitUntil:

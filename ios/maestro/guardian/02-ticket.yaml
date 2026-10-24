@@ -1,7 +1,7 @@
 # demo: guardian
 # Phụ huynh · mở phiếu buổi học mới nhất từ tab Nhận xét của cô rồi quay lại (vuốt cạnh trái) (ảnh 08 của P1).
 # Chạy: ios/maestro/run.sh ios/maestro/guardian/02-ticket.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: guardian-ticket
 ---
 - extendedWaitUntil:

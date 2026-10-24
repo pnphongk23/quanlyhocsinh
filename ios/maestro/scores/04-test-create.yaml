@@ -1,5 +1,5 @@
 # demo: scores
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: scores-test-create
 ---
 - tapOn: "+ Bài mới"

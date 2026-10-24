@@ -1,7 +1,7 @@
 # demo: login-error
 # Tài khoản · Đăng nhập sai thông tin (ảnh 02 của P2): băng lỗi đỏ, hai ô nhập viền đỏ.
 # Chạy: ios/maestro/run.sh ios/maestro/auth/02-login-error.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: auth-login-error
 ---
 - extendedWaitUntil:

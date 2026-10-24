@@ -1,7 +1,7 @@
 # demo: role-picker
 # Tài khoản · Chọn vai trò (ảnh 09 của P2).
 # Chạy: ios/maestro/run.sh ios/maestro/auth/07-role-picker.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: auth-role-picker
 ---
 - extendedWaitUntil:

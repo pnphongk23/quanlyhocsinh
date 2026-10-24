@@ -27,7 +27,7 @@ xcodebuild -project ios/QuanLyLop.xcodeproj -scheme QuanLyLop \
 
 # cài và chạy trên simulator đang bật
 xcrun simctl install booted ios/build/DerivedData/Build/Products/Staging-iphonesimulator/QuanLyLop.app
-xcrun simctl launch booted vn.quanlylop.app
+xcrun simctl launch booted com.study.teacherthu
 ```
 
 Build Staging ra `ios/build/DerivedData/Build/Products/Staging-iphonesimulator/`, build Production ra
@@ -53,7 +53,7 @@ app đọc bằng `AppConfiguration.load()` và hiện ở màn khởi động.
 
 ## Đổi bundle id, tên app
 
-- Bundle id **tạm** `vn.quanlylop.app`: sửa `PRODUCT_BUNDLE_IDENTIFIER` trong `Config/Base.xcconfig`,
+- Bundle id **tạm** `com.study.teacherthu`: sửa `PRODUCT_BUNDLE_IDENTIFIER` trong `Config/Base.xcconfig`,
   rồi chạy lại `xcodegen generate`.
 - Tên app **tạm** "Quản lý lớp": sửa `CFBundleDisplayName`/`CFBundleName` trong
   `QuanLyLop/Resources/InfoPlist.xcstrings` (bản dịch tiếng Việt) và `QuanLyLop/Resources/Info.plist`,
@@ -115,7 +115,7 @@ xcodebuild -scheme QuanLyLop -configuration Staging \
 Xem thư viện thành phần (design system) ngay trên simulator:
 
 ```sh
-SIMCTL_CHILD_QLH_DESIGN_GALLERY=1 xcrun simctl launch booted vn.quanlylop.app   # =sheet để mở sheet mẫu
+SIMCTL_CHILD_QLH_DESIGN_GALLERY=1 xcrun simctl launch booted com.study.teacherthu   # =sheet để mở sheet mẫu
 ```
 
 ## PDF báo cáo (iOS-19)

@@ -3,7 +3,7 @@
 # Điểm, Báo cáo (đẩy từ tab Lớp học của con). Tab bar hệ thống không có accessibilityIdentifier,
 # nên chọn tab theo nhãn. Quay lại bằng vuốt cạnh trái (nút back hệ thống mang tên tab trước).
 # Chạy: ios/maestro/run.sh ios/maestro/guardian/01-tabs.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: guardian-tabs
 ---
 - extendedWaitUntil:

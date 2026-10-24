@@ -1,5 +1,5 @@
 # demo: score-grid
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: scores-grid
 ---
 - assertVisible: "Điểm số"

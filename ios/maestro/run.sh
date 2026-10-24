@@ -19,7 +19,7 @@ FLOW_DIR=$(cd "$(dirname "$0")" && pwd)
 IOS_DIR=$(cd "$FLOW_DIR/.." && pwd)
 MAESTRO=${MAESTRO:-$HOME/.maestro/bin/maestro}
 MAESTRO_TEST_OUTPUT_DIR=${MAESTRO_TEST_OUTPUT_DIR:-/tmp/qlh-maestro-output}
-APP_ID=vn.quanlylop.app
+APP_ID=com.study.teacherthu
 
 DEVICE=${2:-${QLH_DEVICE:-}}
 if [ -z "$DEVICE" ]; then

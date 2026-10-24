@@ -1,7 +1,7 @@
 # demo: login
 # Tài khoản · Đăng nhập (ảnh 01 của P2) và Quên mật khẩu của phụ huynh (ảnh 07).
 # Chạy: ios/maestro/run.sh ios/maestro/auth/01-login.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: auth-login
 ---
 - extendedWaitUntil:

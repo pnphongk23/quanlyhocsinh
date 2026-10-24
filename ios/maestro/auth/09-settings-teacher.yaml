@@ -1,7 +1,7 @@
 # demo: settings-teacher
 # Tài khoản · Cài đặt của giáo viên (ảnh 10 của P2): tab gốc của tab bar hệ thống, không có nút quay lại.
 # Chạy: ios/maestro/run.sh ios/maestro/auth/09-settings-teacher.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: auth-settings-teacher
 ---
 - extendedWaitUntil:

@@ -1,4 +1,4 @@
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: login-and-open-class
 ---
 - launchApp:

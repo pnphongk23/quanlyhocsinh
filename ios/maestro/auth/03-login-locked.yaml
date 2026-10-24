@@ -1,7 +1,7 @@
 # demo: login-locked
 # Tài khoản · Đăng nhập bị khoá tạm (ảnh 03 của P2): băng cảnh báo, ô nhập và nút bị vô hiệu.
 # Chạy: ios/maestro/run.sh ios/maestro/auth/03-login-locked.yaml
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: auth-login-locked
 ---
 - extendedWaitUntil:

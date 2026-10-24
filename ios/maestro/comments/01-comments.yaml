@@ -1,5 +1,5 @@
 # demo: comments
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: session-comments
 ---
 - assertVisible: "Nhận xét"

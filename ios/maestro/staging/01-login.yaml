@@ -3,7 +3,7 @@
 #   maestro --device <udid> test -e STAGING_PHONE=... -e STAGING_PASSWORD=... ios/maestro/staging/01-login.yaml
 # `STAGING_PHONE` phải là 9 số nội địa; bỏ tiền tố 84/+84 của file demo trước khi truyền.
 # Không chụp ảnh để tránh lưu dữ liệu tài khoản ngoài ý muốn.
-appId: vn.quanlylop.app
+appId: com.study.teacherthu
 name: staging-login
 ---
 - launchApp
