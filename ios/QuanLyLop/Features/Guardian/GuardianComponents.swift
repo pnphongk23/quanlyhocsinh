@@ -261,10 +261,10 @@ struct GuardianScroll<Content: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) { content }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 16)
+            VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) { content }
+                .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+                .padding(.top, TeacherMetrics.listGap)
+                .padding(.bottom, TeacherMetrics.cardPadding)
         }
         .scrollIndicators(.hidden)
         .background(AppColors.background.ignoresSafeArea())

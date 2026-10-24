@@ -77,6 +77,10 @@ struct GuardianRootView: View {
             .tag(GuardianTab.settings)
         }
         .tint(AppState.selectedFg)
+        .onChange(of: selectedChildID) { _, _ in
+            classesPath = []
+            commentsPath = []
+        }
         .background(AppColors.background.ignoresSafeArea())
         .preferredColorScheme(.light)
         .sheet(isPresented: $showingChildPicker) { childPicker }
