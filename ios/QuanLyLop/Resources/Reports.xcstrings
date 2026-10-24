@@ -1,0 +1,578 @@
+{
+  "sourceLanguage": "vi",
+  "strings": {
+    "reports.add.create": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tạo báo cáo"
+          }
+        }
+      }
+    },
+    "reports.add.from": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi bắt đầu"
+          }
+        }
+      }
+    },
+    "reports.add.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo được tạo nháp cho mọi em có học trong khoảng này. Buổi đã hủy không tính."
+          }
+        }
+      }
+    },
+    "reports.add.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm báo cáo"
+          }
+        }
+      }
+    },
+    "reports.add.to": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi kết thúc"
+          }
+        }
+      }
+    },
+    "reports.choice": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi %lld · %@"
+          }
+        }
+      }
+    },
+    "reports.detail.comment.save": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lưu nhận xét"
+          }
+        }
+      }
+    },
+    "reports.detail.empty.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không có em nào học trong khoảng buổi này."
+          }
+        }
+      }
+    },
+    "reports.detail.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đợt này chưa có học sinh"
+          }
+        }
+      }
+    },
+    "reports.detail.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không tìm thấy đợt báo cáo"
+          }
+        }
+      }
+    },
+    "reports.detail.publishing": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang phát hành…"
+          }
+        }
+      }
+    },
+    "reports.detail.skipped": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld báo cáo chưa phát hành vì còn thiếu dữ liệu."
+          }
+        }
+      }
+    },
+    "reports.error.conflict": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo vừa thay đổi ở nơi khác. Tải lại rồi thử lại."
+          }
+        }
+      }
+    },
+    "reports.error.create": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể tạo báo cáo."
+          }
+        }
+      }
+    },
+    "reports.error.forbidden": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bạn không có quyền thực hiện thao tác này."
+          }
+        }
+      }
+    },
+    "reports.error.notFound": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không tìm thấy dữ liệu. Tải lại rồi thử lại."
+          }
+        }
+      }
+    },
+    "reports.error.notReady": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo còn thiếu dữ liệu."
+          }
+        }
+      }
+    },
+    "reports.error.notReadyMissing": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo còn thiếu dữ liệu: thiếu %@."
+          }
+        }
+      }
+    },
+    "reports.error.offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại."
+          }
+        }
+      }
+    },
+    "reports.error.preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không tải được bản xem trước."
+          }
+        }
+      }
+    },
+    "reports.error.publish": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không thể phát hành báo cáo."
+          }
+        }
+      }
+    },
+    "reports.error.range": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khoảng buổi không hợp lệ. Kiểm tra lại buổi bắt đầu và kết thúc."
+          }
+        }
+      }
+    },
+    "reports.error.tooFast": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thao tác quá nhanh. Đợi một chút rồi thử lại."
+          }
+        }
+      }
+    },
+    "reports.guardian.back": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quay lại danh sách báo cáo"
+          }
+        }
+      }
+    },
+    "reports.guardian.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cô chưa phát hành báo cáo nào"
+          }
+        }
+      }
+    },
+    "reports.guardian.publishedOn": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phát hành %@"
+          }
+        }
+      }
+    },
+    "reports.homework.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có kết quả bài tập nào được gửi trong khoảng này."
+          }
+        }
+      }
+    },
+    "reports.list.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm báo cáo"
+          }
+        }
+      }
+    },
+    "reports.list.counts": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld đã phát hành · %lld nháp"
+          }
+        }
+      }
+    },
+    "reports.list.countsRepublish": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · %lld cần phát hành lại"
+          }
+        }
+      }
+    },
+    "reports.list.empty.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm báo cáo để chọn khoảng buổi và tạo nháp cho cả lớp."
+          }
+        }
+      }
+    },
+    "reports.list.empty.noHeld": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo cần ít nhất một buổi đã diễn ra."
+          }
+        }
+      }
+    },
+    "reports.list.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có báo cáo nào"
+          }
+        }
+      }
+    },
+    "reports.list.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo"
+          }
+        }
+      }
+    },
+    "reports.missing.attendance": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "điểm danh"
+          }
+        }
+      }
+    },
+    "reports.missing.comment": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nhận xét chung"
+          }
+        }
+      }
+    },
+    "reports.missing.scores": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "điểm"
+          }
+        }
+      }
+    },
+    "reports.pdf.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo · %@"
+          }
+        }
+      }
+    },
+    "reports.preview.close": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đóng"
+          }
+        }
+      }
+    },
+    "reports.preview.loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang tải bản xem trước…"
+          }
+        }
+      }
+    },
+    "reports.preview.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Còn thiếu: %@."
+          }
+        }
+      }
+    },
+    "reports.preview.notReady": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo chưa đủ dữ liệu để phát hành."
+          }
+        }
+      }
+    },
+    "reports.preview.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xem trước báo cáo"
+          }
+        }
+      }
+    },
+    "reports.problem.cancelled": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không chọn buổi đã hủy."
+          }
+        }
+      }
+    },
+    "reports.problem.notInClass": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chọn buổi thuộc lớp này."
+          }
+        }
+      }
+    },
+    "reports.problem.order": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi bắt đầu phải trước hoặc cùng buổi kết thúc."
+          }
+        }
+      }
+    },
+    "reports.range.single": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi %lld"
+          }
+        }
+      }
+    },
+    "reports.range.span": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buổi %1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "reports.range.withDates": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "reports.stars.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có phiếu nào được gửi trong khoảng này."
+          }
+        }
+      }
+    },
+    "reports.suggestion": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gợi ý theo số buổi 3/2/1 sao của đợt: Trong đợt này con có %lld buổi 3 sao, %lld buổi 2 sao, %lld buổi 1 sao."
+          }
+        }
+      }
+    },
+    "reports.tests.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không có bài kiểm tra trong khoảng này."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,98 @@
+import Foundation
+
+/// Responses of the report-batch endpoints (`contract-changes.md`, report batches by session range).
+struct ReportBatchItem: Decodable, Sendable {
+    let id: String
+    let classId: String
+    let fromSessionId: String?
+    let toSessionId: String?
+    let fromKey: String
+    let toKey: String
+}
+
+struct ReportBatchRow: Decodable, Sendable {
+    let reportId: String
+    let batchId: String
+    let studentId: String
+    let month: String?
+    let status: ReportStatus
+    let generalComment: String?
+    let needsRepublish: Bool
+    let publicationCount: Int
+    let publishedAt: String?
+    let version: Int
+}
+
+struct CreateReportBatchResponse: Decodable, Sendable {
+    let batch: ReportBatchItem
+    let reports: [ReportBatchRow]
+}
+
+struct ReportCommentResponse: Decodable, Sendable {
+    let generalComment: String?
+    let needsRepublish: Bool?
+    let version: Int?
+}
+
+struct ReportPublishResponse: Decodable, Sendable {
+    let reportId: String
+    let batchId: String?
+    let publicationNo: Int
+    let publishedAt: String
+    let snapshot: ReportSnapshot
+}
+
+struct BatchPublishResponse: Decodable, Sendable {
+    struct Published: Decodable, Sendable, Equatable {
+        let reportId: String
+        let publicationNo: Int
+    }
+    struct Skipped: Decodable, Sendable, Equatable {
+        let reportId: String
+        let missing: [String]
+    }
+    let published: [Published]
+    let skipped: [Skipped]
+    let publishedAt: String
+}
+
+/// Why a report call failed, already worded for the teacher.
+struct ReportFailure: Error, Equatable {
+    let message: String
+
+    static func from(_ error: Error, fallback: String) -> ReportFailure {
+        if error is CancellationError { return ReportFailure(message: fallback) }
+        guard let failure = error as? APIFailure else { return ReportFailure(message: fallback) }
+        switch failure {
+        case .offline, .missingToken:
+            return ReportFailure(message: String(localized: "reports.error.offline", table: "Reports"))
+        case .server(let status, let error, _):
+            if status == 409, error.details?["reason"]?.string == "report_not_ready" {
+                return ReportFailure(message: notReady(error.details?["missing"]))
+            }
+            if status == 422, error.code == "invalid_range" {
+                return ReportFailure(message: ReportRangeProblem.order.message)
+            }
+            if status == 422, error.code == "session_cancelled" {
+                return ReportFailure(message: ReportRangeProblem.cancelled.message)
+            }
+            if status == 422 { return ReportFailure(message: String(localized: "reports.error.range", table: "Reports")) }
+            if status == 403 { return ReportFailure(message: String(localized: "reports.error.forbidden", table: "Reports")) }
+            if status == 404 { return ReportFailure(message: String(localized: "reports.error.notFound", table: "Reports")) }
+            if status == 409 { return ReportFailure(message: String(localized: "reports.error.conflict", table: "Reports")) }
+            if status == 429 { return ReportFailure(message: String(localized: "reports.error.tooFast", table: "Reports")) }
+            return ReportFailure(message: fallback)
+        default:
+            return ReportFailure(message: fallback)
+        }
+    }
+
+    private static func notReady(_ missing: JSONValue?) -> String {
+        var codes: [String] = []
+        if case .array(let items) = missing { codes = items.compactMap(\.string) }
+        let reasons = ReportRules.missingReasons(codes)
+        if reasons.isEmpty { return String(localized: "reports.error.notReady", table: "Reports") }
+        return String.localizedStringWithFormat(String(localized: "reports.error.notReadyMissing", table: "Reports"),
+                                                reasons.joined(separator: ", "))
+    }
+}

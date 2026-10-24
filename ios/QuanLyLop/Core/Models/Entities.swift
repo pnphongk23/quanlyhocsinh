@@ -166,16 +166,38 @@ struct HomeworkGrade: Codable, Sendable, Equatable {
     let updatedAt: String
 }
 
-struct MonthlyReport: Codable, Sendable, Equatable {
+/// One student's report inside a batch. `month` is only kept for rows that predate batches.
+struct StudentReport: Codable, Sendable, Equatable {
     let id: String
     let classId: String
     let studentId: String
-    let month: String
+    var batchId: String?
+    var month: String?
     let status: ReportStatus
     let generalComment: String
     let needsRepublish: Bool
     let publicationCount: Int
     let publishedAt: String?
+    let version: Int
+
+    init(id: String, classId: String, studentId: String, batchId: String? = nil, month: String? = nil,
+         status: ReportStatus, generalComment: String, needsRepublish: Bool, publicationCount: Int,
+         publishedAt: String?, version: Int) {
+        self.id = id; self.classId = classId; self.studentId = studentId; self.batchId = batchId
+        self.month = month; self.status = status; self.generalComment = generalComment
+        self.needsRepublish = needsRepublish; self.publicationCount = publicationCount
+        self.publishedAt = publishedAt; self.version = version
+    }
+}
+
+/// A report batch (đợt): one session range of one class. Session ids are nil for batches migrated from months.
+struct ReportBatch: Codable, Sendable, Equatable {
+    let id: String
+    let classId: String
+    let fromSessionId: String?
+    let toSessionId: String?
+    let fromKey: String
+    let toKey: String
     let version: Int
 }
 
@@ -184,21 +206,50 @@ struct ReportPublication: Codable, Sendable, Equatable {
     let reportId: String
     let classId: String
     let studentId: String
-    let month: String
+    var batchId: String?
+    var month: String?
     let publicationNo: Int
     let publishedAt: String
     let snapshot: ReportSnapshot
+
+    init(id: String, reportId: String, classId: String, studentId: String, batchId: String? = nil,
+         month: String? = nil, publicationNo: Int, publishedAt: String, snapshot: ReportSnapshot) {
+        self.id = id; self.reportId = reportId; self.classId = classId; self.studentId = studentId
+        self.batchId = batchId; self.month = month; self.publicationNo = publicationNo
+        self.publishedAt = publishedAt; self.snapshot = snapshot
+    }
+}
+
+/// Session range printed on a report; `label` is the server's text ("Buổi 1–8 · 01/10–24/10").
+struct ReportRange: Codable, Sendable, Equatable {
+    let fromKey: String
+    let toKey: String
+    var fromNumber: Int?
+    var toNumber: Int?
+    var label: String?
 }
 
 struct ReportSnapshot: Codable, Sendable, Equatable {
     let studentId: String
-    let month: String
+    var month: String?
+    var batchId: String?
+    var range: ReportRange?
     let attendance: AttendanceSummary
     let tests: [ReportTest]
     let stars: StarsSummary
     let homework: [HomeworkSummary]
     let generalComment: String
     let ready: Bool
+    /// Only in previews: which data is still missing (`attendance`, `scores`, `comment`).
+    var missing: [String]?
+
+    init(studentId: String, month: String? = nil, batchId: String? = nil, range: ReportRange? = nil,
+         attendance: AttendanceSummary, tests: [ReportTest], stars: StarsSummary,
+         homework: [HomeworkSummary], generalComment: String, ready: Bool, missing: [String]? = nil) {
+        self.studentId = studentId; self.month = month; self.batchId = batchId; self.range = range
+        self.attendance = attendance; self.tests = tests; self.stars = stars; self.homework = homework
+        self.generalComment = generalComment; self.ready = ready; self.missing = missing
+    }
 }
 
 struct AttendanceSummary: Codable, Sendable, Equatable {

@@ -180,7 +180,7 @@ private struct DemoI4Screen: View {
                             case "comments":
                                 SessionCommentsView(sessionID: data.defaultSession?.id ?? "fixture-session", data: data)
                             default:
-                                MonthlyReportView(classID: data.classID, data: data,
+                                ClassReportsView(classID: data.classID, data: data,
                                                   seedError: kind == "reports-error" ? Self.longReportError : nil)
                             }
                         }

@@ -15,7 +15,8 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var sections: [HomeworkSection] = []
     @Published private(set) var grades: [HomeworkGrade] = []
     @Published private(set) var publications: [ReportPublication] = []
-    @Published private(set) var reports: [MonthlyReport] = []
+    @Published private(set) var reports: [StudentReport] = []
+    @Published private(set) var batches: [ReportBatch] = []
     @Published private(set) var hiddenSectionIDs: Set<String> = []
     @Published private(set) var canReadScores = false
     @Published private(set) var canWriteScores = false
@@ -88,7 +89,8 @@ final class I4FeatureStore: ObservableObject {
             sections = try await store.records(HomeworkSection.self, entity: "homework_section")
             grades = try await store.records(HomeworkGrade.self, entity: "homework_grade")
             publications = try await store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication").values
-            reports = try await store.records(MonthlyReport.self, entity: "report")
+            reports = try await store.records(StudentReport.self, entity: "report")
+            batches = try await store.records(ReportBatch.self, entity: "report_batch")
             isReady = true
         } catch {
             errorMessage = String(localized: "feature.scores.khong.tai.uoc.du.lieu.a.luu")
@@ -157,13 +159,18 @@ final class I4FeatureStore: ObservableObject {
         attendance.first { $0.sessionId == sessionID && $0.studentId == studentID }
     }
 
-    func report(studentID: String, month: String) -> MonthlyReport? {
-        reports.first { $0.studentId == studentID && $0.month == month }
+    func batches(in classID: String) -> [ReportBatch] {
+        ReportRangeRules.sorted(batches.filter { $0.classId == classID })
     }
 
-    func publication(studentID: String, month: String) -> ReportPublication? {
-        publications.filter { $0.studentId == studentID && $0.month == month }
-            .max { $0.publicationNo < $1.publicationNo }
+    func reports(batchID: String) -> [StudentReport] {
+        reports.filter { $0.batchId == batchID }
+    }
+
+    func report(id: String) -> StudentReport? { reports.first { $0.id == id } }
+
+    func report(studentID: String, batchID: String) -> StudentReport? {
+        reports.first { $0.studentId == studentID && $0.batchId == batchID }
     }
 
     // MARK: - Scores
@@ -425,46 +432,9 @@ final class I4FeatureStore: ObservableObject {
         }
     }
 
-    // MARK: - Monthly reports
-
-    func saveReportComment(studentID: String, month: String, comment: String) async -> String? {
-        guard let api, let store else { return String(localized: "feature.scores.khong.the.luu.nhan.xet.chung") }
-        let existing = report(studentID: studentID, month: month)
-        do {
-            let path = "students/\(studentID)/reports/\(month)"
-            let endpoint = try APIEndpoint.json(method: .put, path: path, body: ["general_comment": comment])
-            let _: JSONValue = try await api.send(endpoint, as: JSONValue.self)
-            let row = MonthlyReport(id: existing?.id ?? UUID().uuidString.lowercased(), classId: classID,
-                                    studentId: studentID, month: month,
-                                    status: existing?.status ?? .draft, generalComment: comment,
-                                    needsRepublish: existing?.needsRepublish ?? false,
-                                    publicationCount: existing?.publicationCount ?? 0,
-                                    publishedAt: existing?.publishedAt, version: existing?.version ?? 1)
-            try await store.write(row, forKey: key("report", row.id), enqueueing: nil)
-            await refresh()
-            return nil
-        } catch { return String(localized: "feature.scores.khong.the.luu.nhan.xet.chung") }
-    }
-
-    enum PublishOutcome: Equatable {
-        case published(publicationNo: Int)
-        case failed(String)
-    }
-
-    /// Publishes the month through `POST …/publish`.
-    func publish(student: Student, month: String) async -> PublishOutcome {
-        guard let api else { return .failed(String(localized: "feature.scores.khong.the.phat.hanh.luc.nay.kiem.tra.ket.noi.roi")) }
-        let path = "students/\(student.id)/reports/\(month)/publish"
-        do {
-            let response = try await api.send(.init(method: .post, path: path), as: ReportPublishResponse.self)
-            await refresh()
-            return .published(publicationNo: response.publicationNo)
-        } catch { return .failed(String(localized: "feature.scores.khong.the.phat.hanh.luc.nay.kiem.tra.ket.noi.roi")) }
-    }
-
     // MARK: - Helpers
 
-    private func key(_ entity: String, _ a: String, _ b: String = "") -> String {
+    func key(_ entity: String, _ a: String, _ b: String = "") -> String {
         RecordKey(entity: entity, k1: a, k2: b).storageKey
     }
 
@@ -490,13 +460,6 @@ final class I4FeatureStore: ObservableObject {
         guard let level = membership.permissions?[group] else { return false }
         return level == .write || (!write && level == .read)
     }
-}
-
-struct ReportPublishResponse: Decodable, Sendable {
-    let reportId: String
-    let publicationNo: Int
-    let publishedAt: String
-    let snapshot: ReportSnapshot
 }
 
 extension HomeworkKind {

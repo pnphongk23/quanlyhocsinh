@@ -6,7 +6,7 @@ enum CommandStatus: String, Codable, Sendable { case applied, duplicate, rejecte
 enum SyncEntity {
     static let allowed: Set<String> = [
         "class", "student", "class_session", "test", "attendance", "score", "slip",
-        "homework_section", "homework_grade", "report", "report_publication"
+        "homework_section", "homework_grade", "report_batch", "report", "report_publication"
     ]
 }
 

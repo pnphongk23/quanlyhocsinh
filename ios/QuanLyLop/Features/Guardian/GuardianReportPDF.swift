@@ -4,7 +4,6 @@ import SwiftUI
 
 struct GuardianReportDownloadButton: View {
     let publication: ReportPublication
-    let month: String
     let studentName: String
     let className: String
 
@@ -55,8 +54,8 @@ struct GuardianReportDownloadButton: View {
             let pdf = I4PDFRenderer.render(snapshot: publication.snapshot,
                                            studentName: studentName,
                                            className: className)
-            let url = try I4ReportPDFFile.write(pdf, month: month,
-                                                publicationNo: publication.publicationNo)
+            let url = try I4ReportPDFFile.write(
+                pdf, name: I4ReportPDFFile.fileName(for: publication.snapshot, publicationNo: publication.publicationNo))
             temporaryPDFURL = url
             shareItem = I4ReportPDFShareItem(url: url)
         } catch _ {

@@ -100,18 +100,6 @@ enum I4Format {
         return score(value)
     }
 
-    static func monthOption(_ month: String) -> String {
-        String.localizedStringWithFormat(String(localized: "feature.scores.thang"), String(describing: (Int(month.dropFirst(5)) ?? 0)), String(describing: (month.prefix(4))))
-    }
-
-    static func monthPeriod(_ month: String) -> String {
-        String.localizedStringWithFormat(String(localized: "feature.scores.thang.6a38e3e2"), String(describing: (Int(month.dropFirst(5)) ?? 0)))
-    }
-
-    static func monthTitle(_ month: String) -> String {
-        String.localizedStringWithFormat(String(localized: "feature.scores.bao.cao.thang"), String(describing: (Int(month.dropFirst(5)) ?? 0)))
-    }
-
     static func time(_ timestamp: String?) -> String? {
         guard let timestamp, let date = timestampFormatter.date(from: timestamp) else { return nil }
         return timeFormatter.string(from: date)
@@ -121,8 +109,6 @@ enum I4Format {
         let components = Calendar(identifier: .gregorian).dateComponents(in: TimeZone.current, from: .now)
         return String(format: "%04d-%02d-%02d", components.year ?? 2026, components.month ?? 1, components.day ?? 1)
     }
-
-    static func currentMonth() -> String { String(todayISO().prefix(7)) }
 }
 
 enum I4Style {

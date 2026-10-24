@@ -78,6 +78,9 @@ enum GuardianDemo {
         ]
         let snapshot = ReportSnapshot(
             studentId: bao.id, month: "2026-10",
+            range: ReportRange(fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00", fromNumber: 1, toNumber: 8,
+                               label: ReportRangeRules.labels(fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00",
+                                                              fromNumber: 1, toNumber: 8).label),
             attendance: AttendanceSummary(present: 3, late: 0, excused: 1, absent: 0, heldSessions: 4),
             // Thứ tự bài kiểm tra trong báo cáo theo thứ tự giáo viên đã tạo (ảnh 10 của P1):
             // Ngữ pháp, Nghe, Nói — không sắp lại theo ngày như tab Điểm số.

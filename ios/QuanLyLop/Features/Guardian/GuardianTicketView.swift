@@ -80,51 +80,104 @@ struct GuardianTicketView: View {
     }
 }
 
-// MARK: - PH · Báo cáo tháng (ảnh 10)
+// MARK: - PH · Báo cáo theo khoảng buổi (ảnh 10)
 
 struct GuardianReportView: View {
     let child: GuardianChildData
+    @State private var openID: String?
 
-    private var month: String { child.latestReportMonth }
-    private var publication: ReportPublication? { child.latestReport(in: month) }
+    private var open: ReportPublication? {
+        child.publishedReports.first { $0.id == openID }
+    }
 
     var body: some View {
-        if let publication {
-            reportBody(publication)
-        } else {
-            GuardianEmptyState(title: String(localized: "feature.guardian.co.chua.phat.hanh.bao.cao.thang.nay"),
+        if let open {
+            reportBody(open)
+        } else if child.publishedReports.isEmpty {
+            GuardianEmptyState(title: String(localized: "reports.guardian.empty.title", table: "Reports"),
                                detail: String(localized: "feature.guardian.bao.cao.hien.o.ay.sau.khi.co.phat.hanh.cho.phu.h"))
+        } else {
+            reportList
+        }
+    }
+
+    private var reportList: some View {
+        VStack(spacing: 8) {
+            ForEach(child.publishedReports, id: \.id) { publication in
+                Button { openID = publication.id } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(publication.rangeLabel)
+                                .appDynamicText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
+                                .foregroundStyle(AppColors.text)
+                                .multilineTextAlignment(.leading)
+                            Text(String.localizedStringWithFormat(String(localized: "reports.guardian.publishedOn", table: "Reports"),
+                                                                  I4Format.dayMonth(timestamp: publication.publishedAt) ?? ""))
+                                .appDynamicText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                                .foregroundStyle(AppColors.muted)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppColors.muted)
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("guardian.report.row")
+            }
         }
     }
 
     private func reportBody(_ publication: ReportPublication) -> some View {
         let report = publication.snapshot
         return VStack(alignment: .leading, spacing: 12) {
-            reportSegmented
+            reportHeader(publication)
             statCards(report)
             starsCard(report)
             homeworkCard(report)
             testsCard(report)
-            GuardianReportDownloadButton(publication: publication, month: month,
+            commentCard(report)
+            GuardianReportDownloadButton(publication: publication,
                                          studentName: child.student.name, className: child.className)
         }
     }
 
-    private var reportSegmented: some View {
-        HStack(spacing: 4) {
-            Text(GuardianFormat.monthLabel(month))
-                .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+    private func reportHeader(_ publication: ReportPublication) -> some View {
+        HStack(spacing: 8) {
+            Button { openID = nil } label: {
+                Image(systemName: "chevron.backward")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(AppColors.text)
+                    .frame(width: AppMetrics.tap, height: AppMetrics.tap)
+            }
+            .accessibilityLabel(String(localized: "reports.guardian.back", table: "Reports"))
+            Text(publication.rangeLabel)
+                .appDynamicText(AppTextStyle(size: 17, weight: .semiBold, lineHeight: 25.5))
                 .foregroundStyle(AppColors.text)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .background(AppColors.surface, in: RoundedRectangle(cornerRadius: 10))
-            // Báo cáo 3 tháng thuộc mục "Làm sau" của spec 8 nên chưa mở.
-            Text(String(localized: "feature.guardian.3.thang.gan.nhat"))
-                .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
-                .foregroundStyle(AppColors.muted)
-                .frame(maxWidth: .infinity, minHeight: 44)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(4)
-        .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.control))
+    }
+
+    private func commentCard(_ report: ReportSnapshot) -> some View {
+        let comment = report.generalComment.trimmingCharacters(in: .whitespacesAndNewlines)
+        return VStack(alignment: .leading, spacing: 8) {
+            GuardianCardHead(title: String(localized: "feature.reports.nhan.xet.chung"))
+            if comment.isEmpty {
+                GuardianMutedText(text: String(localized: "feature.reports.chua.co.nhan.xet.chung"))
+            } else {
+                Text(comment)
+                    .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
+                    .foregroundStyle(AppColors.text)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 
     private func statCards(_ report: ReportSnapshot) -> some View {
@@ -193,7 +246,7 @@ struct GuardianReportView: View {
                 .appDynamicText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                 .foregroundStyle(AppColors.muted)
             if report.homework.isEmpty {
-                GuardianMutedText(text: String(localized: "feature.guardian.chua.co.ket.qua.bai.tap.a.gui.trong.thang.nay"))
+                GuardianMutedText(text: String(localized: "reports.homework.none", table: "Reports"))
             } else {
                 homeworkTable(report.homework)
             }
@@ -247,7 +300,7 @@ struct GuardianReportView: View {
         VStack(alignment: .leading, spacing: 8) {
             GuardianCardHead(title: String(localized: "feature.guardian.iem.tung.bai"))
             if report.tests.isEmpty {
-                GuardianMutedText(text: String(localized: "feature.guardian.khong.co.bai.kiem.tra.trong.thang.nay"))
+                GuardianMutedText(text: String(localized: "reports.tests.none", table: "Reports"))
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(report.tests.enumerated()), id: \.element.testId) { index, row in

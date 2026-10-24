@@ -36,7 +36,19 @@ struct GuardianChildData: Sendable, Identifiable {
     /// Tháng đang xem: tháng gần nhất còn buổi, chưa có buổi nào thì tháng hiện tại.
     var defaultMonth: String { months.first ?? GuardianFormat.currentMonth }
 
-    var reportMonths: [String] { Set(publications.map(\.month)).sorted(by: >) }
+    /// Published reports of the child: the latest publication of each report, newest range first.
+    /// Read from the snapshot the teacher published, never recomputed.
+    var publishedReports: [ReportPublication] {
+        var latest: [String: ReportPublication] = [:]
+        for publication in publications where publication.studentId == student.id {
+            if let known = latest[publication.reportId], known.publicationNo >= publication.publicationNo { continue }
+            latest[publication.reportId] = publication
+        }
+        return latest.values.sorted { lhs, rhs in
+            if lhs.rangeSortKey != rhs.rangeSortKey { return lhs.rangeSortKey > rhs.rangeSortKey }
+            return lhs.publishedAt > rhs.publishedAt
+        }
+    }
 
     /// Buổi của lớp con (cũ nhất trước); buổi đã huỷ vẫn giữ để tính buổi chấm.
     var orderedSessions: [ClassSession] {
@@ -101,15 +113,10 @@ struct GuardianChildData: Sendable, Identifiable {
     }
 
     /// `getChildOverview.teacherNote`: nhận xét chung của báo cáo ĐÃ PHÁT HÀNH mới nhất
-    /// (tháng mới nhất, rồi `publishedAt` mới nhất). Báo cáo mới nhất để trống nhận xét thì
-    /// ẩn khối, không lấy báo cáo cũ hơn — đúng `latestPublishedComment` của prototype.
+    /// (khoảng buổi mới nhất, rồi `publishedAt` mới nhất). Báo cáo mới nhất để trống nhận xét thì
+    /// ẩn khối, không lấy báo cáo cũ hơn.
     var teacherNote: String? {
-        let latest = publications.max { lhs, rhs in
-            lhs.month == rhs.month
-                ? lhs.publishedAt < rhs.publishedAt
-                : lhs.month < rhs.month
-        }
-        let note = latest?.snapshot.generalComment
+        let note = publishedReports.first?.snapshot.generalComment
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return note.isEmpty ? nil : note
     }
@@ -174,14 +181,6 @@ struct GuardianChildData: Sendable, Identifiable {
                                     previousSession: previous, previousParts: previousParts,
                                     assigned: assigned)
     }
-
-    func latestReport(in month: String) -> ReportPublication? {
-        publications.filter { $0.month == month && $0.studentId == student.id }
-            .max { $0.publicationNo < $1.publicationNo }
-    }
-
-    /// Tháng của báo cáo đã phát hành, mới nhất trước; fallback tháng đang xem.
-    var latestReportMonth: String { reportMonths.first ?? defaultMonth }
 
     /// Dòng phụ trong hồ sơ: "Bé Gia Bảo (6A), Bé Bảo Ngọc (6A)".
     var childrenMeta: String {
@@ -506,5 +505,19 @@ enum GuardianRepository {
             ))
         }
         return GuardianDashboard(children: childData.sorted { $0.student.name.localizedStandardCompare($1.student.name) == .orderedAscending })
+    }
+}
+
+extension ReportPublication {
+    /// Orders publications by the end of their session range; month-only reports sort by month end.
+    var rangeSortKey: String {
+        if let range = snapshot.range { return range.toKey }
+        return "\(month ?? snapshot.month ?? "") 99:99"
+    }
+
+    /// "Buổi 1–8 · 01/10–24/10", or "Tháng 10" for a report published before batches existed.
+    var rangeLabel: String {
+        if let range = snapshot.range { return ReportRangeRules.label(of: range) }
+        return GuardianFormat.monthLabel(month ?? snapshot.month ?? "")
     }
 }

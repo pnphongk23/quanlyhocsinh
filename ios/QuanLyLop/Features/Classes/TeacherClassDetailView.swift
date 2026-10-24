@@ -243,7 +243,7 @@ struct TeacherClassDetailView: View {
         case "diem":
             ScoreGridTabView(classID: classID, data: i4Data)
         case "bao-cao":
-            MonthlyReportView(classID: classID, data: i4Data)
+            ClassReportsView(classID: classID, data: i4Data)
         default:
             TeacherSessionsView(classID: classID, data: data, i4Data: i4Data)
         }
