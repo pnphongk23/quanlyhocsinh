@@ -23,9 +23,6 @@ struct SessionCommentsView: View {
     private var sessionInline: String {
         SessionLabel.inline(for: session)
     }
-    private var sessionInlineBefore: String {
-        session.map(SessionLabel.inlineBefore) ?? sessionInline
-    }
 
     private var previousSession: ClassSession? {
         guard let session else { return nil }
@@ -48,18 +45,27 @@ struct SessionCommentsView: View {
         }
     }
 
-    private var leftStudents: [Student] {
-        guard let session else { return [] }
-        return data.students(leftBefore: session)
-    }
-
     private var counts: (all: Int, none: Int, unsent: Int) { CommentsRules.counts(rows) }
     private var visibleRows: [I4TicketRow] { CommentsRules.filtered(rows, filter) }
     private var sendableRows: [I4TicketRow] { CommentsRules.sendable(rows) }
 
+    private var showsFooter: Bool {
+        guard let session else { return false }
+        return data.canReadCommentsReports && session.status != .cancelled && !rows.isEmpty
+            && data.canWriteCommentsReports
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            content
+        TeacherScroll {
+            VStack(alignment: .leading, spacing: 12) {
+                content
+            }
+            .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+            .padding(.top, 4)
+            .padding(.bottom, TeacherMetrics.cardPadding)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if showsFooter { footer }
         }
         .sheet(item: $target) { target in
             ticketSheet(target)
@@ -95,10 +101,9 @@ struct SessionCommentsView: View {
         } else if let session {
             if session.status == .cancelled {
                 AppEmptyState(title: String(localized: "feature.comments.buoi.hoc.a.huy.nen.khong.co.phieu.buoi.hoc"))
-            } else if rows.isEmpty && leftStudents.isEmpty {
+            } else if rows.isEmpty {
                 AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.e.nhan.xet"))
             } else {
-                if !leftStudents.isEmpty { infoBanner(session) }
                 if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                 filters
                 if let sendError {
@@ -106,15 +111,10 @@ struct SessionCommentsView: View {
                              horizontal: 16, vertical: 12)
                 }
                 list
-                if data.canWriteCommentsReports { footer }
             }
         } else {
             AppEmptyState(title: String(localized: "feature.comments.khong.tim.thay.buoi.hoc.e.nhan.xet"))
         }
-    }
-
-    private func infoBanner(_ session: ClassSession) -> some View {
-        I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.comments.phieu.cua.buoi.chi.gom.em.ang.hoc.vao.ngay.o.buo"), SessionLabel.title(for: session), String(describing: (rows.count))))
     }
 
     private var filters: some View {
@@ -137,11 +137,6 @@ struct SessionCommentsView: View {
             }
             ForEach(visibleRows) { row in
                 ticketCard(row)
-            }
-            if filter == .all {
-                ForEach(leftStudents, id: \.id) { student in
-                    leftCard(student)
-                }
             }
         }
     }
@@ -193,45 +188,9 @@ struct SessionCommentsView: View {
         }
     }
 
-    private func leftCard(_ student: Student) -> some View {
-        let oldSession = oldTicketSession(for: student)
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                I4Avatar(name: student.name)
-                Text(student.name)
-                    .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
-                    .foregroundStyle(AppColors.text)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                AppPill(title: String.localizedStringWithFormat(String(localized: "feature.comments.a.roi.lop"), String(describing: (I4Format.dayMonth(student.leftAt ?? session?.date ?? "")))),
-                        tone: .neutral)
-            }
-            Text(String.localizedStringWithFormat(String(localized: "feature.comments.khong.co.phieu.tu.buoi.phieu.buoi.tro.ve.truoc.v"), sessionInline, sessionInlineBefore))
-                .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
-                .foregroundStyle(AppColors.muted)
-            if let oldSession {
-                Button {
-                    target = TicketTarget(session: oldSession, student: student)
-                } label: {
-                    Text(String(localized: "feature.comments.xem.phieu.cu.cua.em"))
-                        .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
-                        .foregroundStyle(AppColors.primaryInk)
-                        .frame(minHeight: AppMetrics.tap)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.card)
-                .strokeBorder(AppColors.inputBorderStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
-    }
-
+    /// Gửi phiếu cả lớp luôn ghim đáy màn, không cuộn theo danh sách.
     private var footer: some View {
-        VStack(spacing: 8) {
+        TeacherPinnedBar {
             if let toast { I4Toast(text: toast) }
             AppButton(
                 title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),
@@ -240,7 +199,6 @@ struct SessionCommentsView: View {
             ) { showingSend = true }
                 .disabled(sendableRows.isEmpty)
         }
-        .padding(.top, 4)
     }
 
     private var sendDialog: some View {
@@ -311,15 +269,6 @@ struct SessionCommentsView: View {
     private func open(_ student: Student) {
         guard let session else { return }
         target = TicketTarget(session: session, student: student)
-    }
-
-    private func oldTicketSession(for student: Student) -> ClassSession? {
-        guard let session else { return nil }
-        let candidates = data.slips
-            .filter { $0.studentId == student.id && data.session(id: $0.sessionId)?.classId == session.classId }
-            .compactMap { data.session(id: $0.sessionId) }
-            .filter { ($0.date, $0.startTime) <= (session.date, session.startTime) }
-        return HomeworkRules.ordered(candidates).last
     }
 
     private func send() async throws {

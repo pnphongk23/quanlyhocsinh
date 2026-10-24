@@ -66,7 +66,7 @@ struct SessionHomeworkView: View {
                                   saveStatusSource: saveStatusSource,
                                   onClose: { self.editor = nil })
                 .presentationDetents([.large])
-                .presentationDragIndicator(.hidden)
+                .presentationDragIndicator(.visible)
         }
         .task {
             await data.configure(auth: auth)
@@ -410,7 +410,8 @@ enum HomeworkEditor: Identifiable {
     }
 }
 
-/// Bottom sheet "Thêm phần BTVN" / "Sửa phần" (`SectionEditor`).
+/// Sheet "Thêm phần BTVN" / "Sửa phần" (`SectionEditor`): close button in the navigation bar, the
+/// main action pinned to the bottom edge.
 struct HomeworkSectionEditor: View {
     @ObservedObject var data: I4FeatureStore
     let sessionID: String
@@ -423,10 +424,15 @@ struct HomeworkSectionEditor: View {
 
     @State private var kind: HomeworkKind?
     @State private var title: String
+    @State private var autoFilledTitle: String?
     @State private var description: String
     @State private var error: String?
     @State private var saveController = AppSaveController()
     @State private var confirmingDelete = false
+    @State private var confirmingDiscard = false
+    private let initialKind: HomeworkKind?
+    private let initialTitle: String
+    private let initialDescription: String
 
     init(data: I4FeatureStore, sessionID: String, editor: HomeworkEditor,
          existingKinds: [HomeworkKind], missingKinds: [HomeworkKind],
@@ -441,12 +447,21 @@ struct HomeworkSectionEditor: View {
         self.onClose = onClose
         switch editor {
         case .add(let kind):
+            let filled = HomeworkRules.titleAfterChoosing(kind, title: "", autoFilled: nil)
+            initialKind = kind
+            initialTitle = filled.title
+            initialDescription = ""
             _kind = State(initialValue: kind)
-            _title = State(initialValue: "")
+            _title = State(initialValue: filled.title)
+            _autoFilledTitle = State(initialValue: filled.autoFilled)
             _description = State(initialValue: "")
         case .edit(let section):
+            initialKind = section.kind
+            initialTitle = section.title
+            initialDescription = section.description
             _kind = State(initialValue: section.kind)
             _title = State(initialValue: section.title)
+            _autoFilledTitle = State(initialValue: nil)
             _description = State(initialValue: section.description)
         }
     }
@@ -463,23 +478,27 @@ struct HomeworkSectionEditor: View {
 
     private var deletable: Bool { HomeworkRules.canDelete(gradeCount: gradeCount) }
 
+    private var hasUnsavedChanges: Bool {
+        kind != initialKind || title != initialTitle || description != initialDescription
+    }
+
+    private var navigationTitle: String {
+        guard let section = editingSection else { return String(localized: "feature.homework.them.phan.btvn") }
+        return String.localizedStringWithFormat(String(localized: "feature.homework.sua.phan.e042540b"), String(describing: section.kind.label))
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Capsule()
-                        .fill(AppColors.inputBorder)
-                        .frame(width: 40, height: 5)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 8)
                     if editingSection == nil {
-                        addHeader
+                        kindPicker
                     } else {
                         editHeader
                     }
                     titleField
                     descriptionField
-                      if let error {
+                    if let error {
                         Text(error)
                             .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                             .foregroundStyle(AppColors.error)
@@ -487,39 +506,64 @@ struct HomeworkSectionEditor: View {
                             .padding(.vertical, 10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
-                      }
-                      if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
-                    if let section = editingSection {
-                        deleteRow(section)
-                        savedHint
-                          AppSaveButton(title: String(localized: "feature.homework.luu"), controller: saveController) {
-                              try await save()
-                          }
-                      } else {
-                          footHint
-                          AppSaveButton(title: String(localized: "feature.homework.luu.phan"), controller: saveController) {
-                              try await save()
-                          }
                     }
+                    if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
+                    if let section = editingSection { deleteRow(section) }
                 }
                 .padding(.horizontal, 20)
+                .padding(.top, 12)
                 .padding(.bottom, 20)
             }
-          }
-          .background(AppColors.surface)
-          .onChange(of: saveController.phase) { oldPhase, newPhase in
-              if oldPhase == .saved, newPhase == .idle { onClose() }
-          }
-          .onChange(of: SyncStatusCenter.shared.state) { _, _ in
-              Task { await saveStatusSource?.refresh() }
-          }
+            .background(AppColors.surface)
+            .navigationTitle(navigationTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: "feature.classes.ong")) { requestClose() }
+                        .accessibilityIdentifier("sheet.close")
+                }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                TeacherPinnedBar {
+                    AppSaveButton(title: editingSection == nil ? String(localized: "feature.homework.luu.phan")
+                                                               : String(localized: "feature.homework.luu"),
+                                  controller: saveController) {
+                        try await save()
+                    }
+                }
+            }
+        }
+        .interactiveDismissDisabled(hasUnsavedChanges)
+        .confirmationDialog(String(localized: "homework.editor.discard.title", table: "Teacher"),
+                            isPresented: $confirmingDiscard, titleVisibility: .visible) {
+            Button(String(localized: "homework.editor.discard.confirm", table: "Teacher"), role: .destructive) { onClose() }
+            Button(String(localized: "homework.editor.discard.keep", table: "Teacher"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "homework.editor.discard.message", table: "Teacher"))
+        }
+        .confirmationDialog(String.localizedStringWithFormat(String(localized: "feature.homework.xoa.phan.e8531efc"), String(describing: editingSection?.title ?? "")),
+                            isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button(String(localized: "feature.homework.xoa.phan"), role: .destructive) {
+                if let section = editingSection { remove(section) }
+            }
+            Button(String(localized: "feature.homework.huy"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "feature.homework.phu.huynh.se.khong.thay.phan.nay.nua.khong.the.h"))
+        }
+        .onChange(of: saveController.phase) { oldPhase, newPhase in
+            if oldPhase == .saved, newPhase == .idle { onClose() }
+        }
+        .onChange(of: SyncStatusCenter.shared.state) { _, _ in
+            Task { await saveStatusSource?.refresh() }
+        }
     }
 
-    private var addHeader: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(String(localized: "feature.homework.them.phan.btvn"))
-                .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 30))
-                .foregroundStyle(AppColors.text)
+    private func requestClose() {
+        if hasUnsavedChanges { confirmingDiscard = true } else { onClose() }
+    }
+
+    private var kindPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
             Text(String(localized: "feature.homework.loai"))
                 .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                 .foregroundStyle(AppColors.text)
@@ -535,26 +579,43 @@ struct HomeworkSectionEditor: View {
         }
     }
 
+    /// Resting state has a token stroke; the chosen state is the selected fill (no stroke), as in
+    /// rules.md mục 6.
     private func kindOption(_ option: HomeworkKind) -> some View {
         let taken = existingKinds.contains(option)
-          let chosen = kind == option
-          return Button { kind = option } label: {
-              AppCard(selected: chosen) {
-                  HStack(spacing: 8) {
-                      Image(systemName: option.systemImage).font(.system(size: 17, weight: .regular))
-                      Text(option.label)
-                          .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 18))
-                          .frame(maxWidth: .infinity, alignment: .leading)
-                      if taken {
-                          Text(String(localized: "feature.homework.a.co")).appText(AppTextStyle(size: 12, weight: .medium, lineHeight: 18))
-                      }
-                  }
-                  .foregroundStyle(taken ? AppColors.placeholder : (chosen ? AppState.selectedFg : AppColors.text))
-              }
-              .frame(height: 56)
-          }
+        let chosen = kind == option
+        return Button { choose(option) } label: {
+            HStack(spacing: 8) {
+                Image(systemName: option.systemImage).font(.system(size: 17, weight: .regular))
+                Text(option.label)
+                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 18))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if taken {
+                    Text(String(localized: "feature.homework.a.co")).appText(AppTextStyle(size: 12, weight: .medium, lineHeight: 18))
+                }
+            }
+            .foregroundStyle(taken ? AppColors.placeholder : (chosen ? AppState.selectedFg : AppColors.text))
+            .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(chosen ? AppState.selectedBg : AppColors.surface,
+                        in: RoundedRectangle(cornerRadius: AppRadius.card))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppRadius.card)
+                    .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth)
+                    .opacity(chosen ? 0 : 1))
+        }
         .buttonStyle(.plain)
         .disabled(taken)
+        .accessibilityAddTraits(chosen ? [.isSelected] : [])
+    }
+
+    private func choose(_ option: HomeworkKind) {
+        kind = option
+        error = nil
+        let next = HomeworkRules.titleAfterChoosing(option, title: title, autoFilled: autoFilledTitle)
+        title = next.title
+        autoFilledTitle = next.autoFilled
     }
 
     private var editHeader: some View {
@@ -564,7 +625,7 @@ struct HomeworkSectionEditor: View {
                 .foregroundStyle(AppColors.primaryInk)
                 .frame(width: 36, height: 36)
                 .background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: 10))
-            Text(String.localizedStringWithFormat(String(localized: "feature.homework.sua.phan.e042540b"), String(describing: (editingSection?.kind.label ?? String(localized: "feature.homework.exercise")))))
+            Text(editingSection?.kind.label ?? String(localized: "feature.homework.exercise"))
                 .appText(AppTextStyle(size: 18, weight: .bold, lineHeight: 23.4))
                 .foregroundStyle(AppColors.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -607,65 +668,26 @@ struct HomeworkSectionEditor: View {
         }
     }
 
-    private var footHint: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "info.circle").font(.system(size: 14))
-            Text(String(localized: "feature.homework.phu.huynh.thay.ngay.khi.luu.khong.inh.kem.tep"))
-                .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
-        }
-        .foregroundStyle(AppColors.muted)
-    }
-
-    private var savedHint: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "checkmark").font(.system(size: 13, weight: .semibold))
-            Text(String(localized: "feature.homework.phu.huynh.thay.ngay.khi.luu"))
-                .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
-        }
-        .foregroundStyle(AppColors.success)
-        .frame(maxWidth: .infinity)
-    }
-
     private func deleteRow(_ section: HomeworkSection) -> some View {
-        Group {
-            if confirmingDelete {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(String.localizedStringWithFormat(String(localized: "feature.homework.xoa.phan.e8531efc"), String(describing: (section.title))))
-                        .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
-                        .foregroundStyle(AppColors.error)
-                    Text(String(localized: "feature.homework.phu.huynh.se.khong.thay.phan.nay.nua.khong.the.h"))
-                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
-                        .foregroundStyle(AppColors.muted)
-                    HStack(spacing: 8) {
-                        Spacer(minLength: 0)
-                        AppButton(title: String(localized: "feature.homework.huy"), variant: .secondary, size: .medium) { confirmingDelete = false }
-                        AppButton(title: String(localized: "feature.homework.xoa.phan"), variant: .danger, size: .medium) { remove(section) }
-                    }
+        HStack(spacing: 10) {
+            Button { if deletable { confirmingDelete = true } } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: deletable ? "trash" : "lock").font(.system(size: 14))
+                    Text(String(localized: "feature.homework.xoa.phan")).appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                 }
-                .padding(12)
-                .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: 12))
-            } else {
-                HStack(spacing: 10) {
-                    Button { if deletable { confirmingDelete = true } } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: deletable ? "trash" : "lock").font(.system(size: 14))
-                            Text(String(localized: "feature.homework.xoa.phan")).appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                        }
-                        .foregroundStyle(deletable ? AppColors.error : AppColors.placeholder)
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: AppMetrics.tap)
-                        .background(deletable ? AppColors.errorSoft : AppColors.neutralSoft,
-                                    in: RoundedRectangle(cornerRadius: AppRadius.button))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!deletable)
-                    Text(deletable ? HomeworkRules.deleteAllowedMessage
-                         : HomeworkRules.deleteBlockedMessage(gradeCount: gradeCount))
-                        .appText(AppTextStyle(size: 12, weight: .regular, lineHeight: 16.8))
-                        .foregroundStyle(AppColors.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                .foregroundStyle(deletable ? AppColors.error : AppColors.placeholder)
+                .padding(.horizontal, 16)
+                .frame(minHeight: AppMetrics.tap)
+                .background(deletable ? AppColors.errorSoft : AppColors.neutralSoft,
+                            in: RoundedRectangle(cornerRadius: AppRadius.button))
             }
+            .buttonStyle(.plain)
+            .disabled(!deletable)
+            Text(deletable ? HomeworkRules.deleteAllowedMessage
+                 : HomeworkRules.deleteBlockedMessage(gradeCount: gradeCount))
+                .appText(AppTextStyle(size: 12, weight: .regular, lineHeight: 16.8))
+                .foregroundStyle(AppColors.muted)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -694,7 +716,6 @@ struct HomeworkSectionEditor: View {
         Task {
             if let failure = await data.deleteSection(section) {
                 error = failure
-                confirmingDelete = false
             } else {
                 onClose()
             }

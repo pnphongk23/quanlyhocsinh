@@ -74,6 +74,15 @@ enum HomeworkRules {
 
     static let deleteAllowedMessage = String(localized: "feature.homework.chua.cham.cho.em.nao.nen.xoa.uoc")
 
+    /// Choosing a kind writes its name into the title when the title is empty or still the name
+    /// written by the previous choice; a title the user typed is never overwritten.
+    static func titleAfterChoosing(_ kind: HomeworkKind, title: String,
+                                   autoFilled: String?) -> (title: String, autoFilled: String?) {
+        let untouched = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title == autoFilled
+        guard untouched else { return (title, autoFilled) }
+        return (kind.label, kind.label)
+    }
+
     static func addPartLabel(missing: [HomeworkKind]) -> String? {
         missing.isEmpty ? nil : String.localizedStringWithFormat(String(localized: "feature.homework.con.loai"), String(describing: (missing.count)))
     }

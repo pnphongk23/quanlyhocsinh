@@ -152,9 +152,6 @@ struct TeacherClassListView: View {
     private var todaySession: ClassSession? {
         data.sessions.first { $0.date == today && $0.status == .planned }
     }
-    private var nextSession: ClassSession? {
-        TeacherFeatureData.nextPlannedSessions(data.sessions, today: today).first { $0.date > today }
-    }
     private var unfinishedSessions: [ClassSession] { data.unfinishedAttendanceSessions(today: today) }
     private var today: String { TeacherFormat.todayISO() }
 
@@ -167,16 +164,15 @@ struct TeacherClassListView: View {
                     AppEmptyState(title: String(localized: "feature.classes.ban.khong.co.quyen.xem.lop.hoc"))
                 } else if !data.isReady {
                     loadingState
-        } else if classes.isEmpty {
-            emptyState
-        } else {
-            todaySection
-            if let session = nextSession, let klass = data.classroom(id: session.classId) {
-                nextSessionSection(session: session, classroom: klass)
-            }
-            unfinishedSection
-            ForEach(classes, id: \.id) { klass in classCard(klass) }
-        }
+                } else if classes.isEmpty {
+                    emptyState
+                } else {
+                    VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
+                        todaySection
+                        unfinishedSection
+                        classesSection
+                    }
+                }
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, TeacherMetrics.screenPaddingTop)
@@ -226,12 +222,21 @@ struct TeacherClassListView: View {
         }
     }
 
-    @ViewBuilder private var todaySection: some View {
-        TeacherGroupLabel(text: String(localized: "classes.today.title", table: "Teacher"))
-        if let session = todaySession, let klass = data.classroom(id: session.classId) {
-            todayCard(session: session, classroom: klass)
-        } else {
-            AppEmptyState(title: String(localized: "classes.today.empty", table: "Teacher"), size: .compact)
+    private var todaySection: some View {
+        AppSection(title: String(localized: "classes.today.title", table: "Teacher")) {
+            if let session = todaySession, let klass = data.classroom(id: session.classId) {
+                todayCard(session: session, classroom: klass)
+            } else {
+                AppEmptyState(title: String(localized: "classes.today.empty", table: "Teacher"), size: .compact)
+            }
+        }
+    }
+
+    private var classesSection: some View {
+        AppSection(title: String(localized: "classes.list.title", table: "Teacher")) {
+            VStack(spacing: TeacherMetrics.listGap) {
+                ForEach(classes, id: \.id) { klass in classCard(klass) }
+            }
         }
     }
 
@@ -260,33 +265,8 @@ struct TeacherClassListView: View {
         .background(AppColors.primary, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 
-    private func nextSessionSection(session: ClassSession, classroom: Classroom) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TeacherGroupLabel(text: String.localizedStringWithFormat(
-                String(localized: "classes.next.title", table: "Teacher"),
-                String(describing: TeacherFormat.weekdayDate(session.date))))
-            TeacherLink(route: .session(classID: classroom.id, sessionID: session.id)) {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(session.startTime).appText(AppText.heading).foregroundStyle(AppColors.text)
-                        Text("\(classroom.name) · \(TeacherFeatureData.sessionPrefix(session))")
-                            .appText(AppText.muted).foregroundStyle(AppColors.muted)
-                    }
-                    Spacer(minLength: 0)
-                    VStack(alignment: .trailing, spacing: 8) {
-                        AppChip(title: String(localized: "classes.next.not_yet", table: "Teacher"))
-                        Image(systemName: "chevron.right").foregroundStyle(AppColors.muted)
-                    }
-                }
-                .padding(TeacherMetrics.cardPadding)
-                .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-            }
-        }
-    }
-
     private var unfinishedSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TeacherGroupLabel(text: String(localized: "classes.tasks.title", table: "Teacher"))
+        AppSection(title: String(localized: "classes.tasks.title", table: "Teacher")) {
             if unfinishedSessions.isEmpty {
                 AppEmptyState(title: String(localized: "classes.tasks.empty", table: "Teacher"), size: .compact)
             } else {

@@ -103,4 +103,26 @@ final class HomeworkRulesTests: XCTestCase {
         XCTAssertEqual(HomeworkKind.speaking.label, "Luyện nói")
         XCTAssertEqual(HomeworkKind.exercise.label, "Bài tập")
     }
+
+    func testChoosingKindFillsEmptyTitle() {
+        let result = HomeworkRules.titleAfterChoosing(.reading, title: "", autoFilled: nil)
+        XCTAssertEqual(result.title, "Luyện đọc")
+        XCTAssertEqual(result.autoFilled, "Luyện đọc")
+        XCTAssertEqual(HomeworkRules.titleAfterChoosing(.reading, title: "  \n", autoFilled: nil).title, "Luyện đọc")
+    }
+
+    func testChoosingAnotherKindReplacesOnlyTheAutoFilledTitle() {
+        let result = HomeworkRules.titleAfterChoosing(.speaking, title: "Luyện đọc", autoFilled: "Luyện đọc")
+        XCTAssertEqual(result.title, "Luyện nói")
+        XCTAssertEqual(result.autoFilled, "Luyện nói")
+    }
+
+    func testChoosingKindNeverOverwritesTypedTitle() {
+        let typed = HomeworkRules.titleAfterChoosing(.speaking, title: "Unit 3 nói", autoFilled: nil)
+        XCTAssertEqual(typed.title, "Unit 3 nói")
+        XCTAssertNil(typed.autoFilled)
+        let edited = HomeworkRules.titleAfterChoosing(.exercise, title: "Luyện đọc thêm", autoFilled: "Luyện đọc")
+        XCTAssertEqual(edited.title, "Luyện đọc thêm")
+        XCTAssertEqual(edited.autoFilled, "Luyện đọc")
+    }
 }

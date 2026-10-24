@@ -119,6 +119,55 @@
       "localizations" : {
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Trạng thái điểm danh của %@" } }
       }
+    },
+    "classes.list.title" : {
+      "comment" : "Tiêu đề mục danh sách lớp ở trang chủ.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lớp" } }
+      }
+    },
+    "sessions.upcoming.count" : {
+      "comment" : "Số buổi sắp tới trong thẻ mục Sắp tới.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%@ buổi" } }
+      }
+    },
+    "homework.editor.discard.title" : {
+      "comment" : "Hỏi huỷ thay đổi khi đóng sheet phần BTVN.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bỏ thay đổi?" } }
+      }
+    },
+    "homework.editor.discard.message" : {
+      "comment" : "Nội dung phần BTVN chưa lưu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Phần bài tập chưa được lưu sẽ bị mất." } }
+      }
+    },
+    "homework.editor.discard.confirm" : {
+      "comment" : "Nút bỏ thay đổi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bỏ thay đổi" } }
+      }
+    },
+    "homework.editor.discard.keep" : {
+      "comment" : "Nút tiếp tục chỉnh sửa.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tiếp tục chỉnh sửa" } }
+      }
+    },
+    "students.leave.cancel" : {
+      "comment" : "Nút huỷ trong hộp xác nhận đánh dấu học sinh nghỉ.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Huỷ" } }
+      }
     }
   },
   "version" : "1.0"
