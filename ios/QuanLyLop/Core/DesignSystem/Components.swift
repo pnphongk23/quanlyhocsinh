@@ -199,13 +199,18 @@ struct AppListRow<Content: View>: View {
 /// The only section header: `AppText.sectionHeader`, text colour, aligned with the cards.
 struct AppSectionHeader: View {
     let title: String
+    /// Link or count at the trailing edge of the header row.
+    var trailing: AnyView? = nil
 
     var body: some View {
-        Text(title)
-            .appText(AppText.sectionHeader)
-            .foregroundStyle(AppColors.text)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityAddTraits(.isHeader)
+        HStack(spacing: AppMetrics.sectionHeaderGap) {
+            Text(title)
+                .appText(AppText.sectionHeader)
+                .foregroundStyle(AppColors.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+            if let trailing { trailing }
+        }
     }
 }
 
@@ -213,11 +218,12 @@ struct AppSectionHeader: View {
 /// `AppMetrics.sectionHeaderGap` above its content.
 struct AppSection<Content: View>: View {
     let title: String
+    var trailing: AnyView? = nil
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppMetrics.sectionHeaderGap) {
-            AppSectionHeader(title: title)
+            AppSectionHeader(title: title, trailing: trailing)
             content
         }
     }

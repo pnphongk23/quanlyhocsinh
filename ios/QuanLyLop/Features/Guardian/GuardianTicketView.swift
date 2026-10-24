@@ -12,8 +12,11 @@ struct GuardianTicketView: View {
         GuardianScroll {
             GuardianPageHeader(eyebrow: "\(child.student.name) · \(child.className)")
             commentCard
-            previousHomeworkCard
-            assignedHomeworkCard
+            VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
+                previousHomeworkSection
+                assignedHomeworkSection
+            }
+            .padding(.top, AppMetrics.sectionGap - TeacherMetrics.contentGap)
         }
         .navigationTitle("\(GuardianFormat.sessionPrefix(session)) · \(GuardianFormat.weekdayDayMonth(session.date))")
         .navigationBarTitleDisplayMode(.inline)
@@ -39,31 +42,33 @@ struct GuardianTicketView: View {
         }
     }
 
-    @ViewBuilder private var previousHomeworkCard: some View {
+    @ViewBuilder private var previousHomeworkSection: some View {
         if !ticket.previousParts.isEmpty, let previous = ticket.previousSession {
-            GuardianTicketCard {
-                GuardianCardHead(title: String.localizedStringWithFormat(String(localized: "feature.guardian.ket.qua.btvn.buoi.3b11636e"), SessionLabel.inline(for: previous), String(describing: (GuardianFormat.dayMonth(previous.date)))))
-                GuardianHomeworkParts(parts: ticket.previousParts)
+            AppSection(title: String.localizedStringWithFormat(String(localized: "feature.guardian.ket.qua.btvn.buoi.3b11636e"), SessionLabel.inline(for: previous), String(describing: (GuardianFormat.dayMonth(previous.date))))) {
+                GuardianTicketCard {
+                    GuardianHomeworkParts(parts: ticket.previousParts)
+                }
             }
         }
     }
 
-    private var assignedHomeworkCard: some View {
-        GuardianTicketCard {
-            GuardianCardHead(title: assignedTitle)
-            if let homework = ticket.assigned {
-                ForEach(homework.grading.cancelled) { cancelled in
-                    Text(String.localizedStringWithFormat(String(localized: "feature.guardian.a.huy"), String(describing: (GuardianFormat.sessionPrefix(cancelled))), String(describing: (GuardianFormat.dayMonth(cancelled.date)))))
-                        .appDynamicText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
-                        .foregroundStyle(AppColors.warning)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(AppColors.warningSoft, in: RoundedRectangle(cornerRadius: AppRadius.chip))
+    private var assignedHomeworkSection: some View {
+        AppSection(title: assignedTitle) {
+            GuardianTicketCard {
+                if let homework = ticket.assigned {
+                    ForEach(homework.grading.cancelled) { cancelled in
+                        Text(String.localizedStringWithFormat(String(localized: "feature.guardian.a.huy"), String(describing: (GuardianFormat.sessionPrefix(cancelled))), String(describing: (GuardianFormat.dayMonth(cancelled.date)))))
+                            .appDynamicText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
+                            .foregroundStyle(AppColors.warning)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(AppColors.warningSoft, in: RoundedRectangle(cornerRadius: AppRadius.chip))
+                    }
+                    GuardianHomeworkParts(parts: homework.parts, showDescriptions: true)
+                } else {
+                    AppEmptyState(title: String(localized: "feature.guardian.buoi.nay.khong.giao.bai.tap.ve.nha"),
+                                  size: .compact)
                 }
-                GuardianHomeworkParts(parts: homework.parts, showDescriptions: true)
-            } else {
-              AppEmptyState(title: String(localized: "feature.guardian.buoi.nay.khong.giao.bai.tap.ve.nha"),
-                            size: .compact)
             }
         }
     }

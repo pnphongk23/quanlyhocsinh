@@ -9,7 +9,7 @@ struct GuardianOverviewPage: View {
     let openTicket: (ClassSession) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
             HStack(spacing: 8) {
                 attendanceCard
                 Color.clear.frame(maxWidth: .infinity)
@@ -56,21 +56,23 @@ struct GuardianOverviewPage: View {
 
     private var recentScores: some View {
         let rows = Array(child.scoreRows(in: month).prefix(3))
-        return VStack(alignment: .leading, spacing: 8) {
-            GuardianCardHead(title: String(localized: "feature.guardian.iem.gan.ay"),
-                             trailing: AnyView(
-                                Button(String(localized: "feature.guardian.xem.tat.ca"), action: openScores)
-                                    .appDynamicText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                                    .foregroundStyle(AppColors.primaryInk)))
-            if rows.isEmpty {
-                  AppEmptyState(title: String(localized: "feature.guardian.chua.co.iem.trong.thang.nay"), size: .compact)
-            } else {
-                GuardianScoreRows(rows: rows)
+        return AppSection(title: String(localized: "feature.guardian.iem.gan.ay"),
+                          trailing: AnyView(
+                            Button(String(localized: "feature.guardian.xem.tat.ca"), action: openScores)
+                                .appDynamicText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                                .foregroundStyle(AppColors.primaryInk))) {
+            VStack(alignment: .leading, spacing: TeacherMetrics.listGap) {
+                if rows.isEmpty {
+                    AppEmptyState(title: String(localized: "feature.guardian.chua.co.iem.trong.thang.nay"), size: .compact)
+                } else {
+                    GuardianScoreRows(rows: rows)
+                }
             }
+            .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+            .padding(.vertical, AppMetrics.cardPaddingVertical)
+            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        .padding(.top, AppMetrics.sectionGap - TeacherMetrics.contentGap)
     }
 }
 
@@ -94,7 +96,7 @@ struct GuardianSessionListPage: View {
             VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
                 ForEach(rowsByMonth, id: \.month) { group in
                     AppSection(title: GuardianFormat.monthLabel(group.month)) {
-                        VStack(spacing: 8) {
+                        VStack(spacing: TeacherMetrics.listGap) {
                             ForEach(group.rows) { row in sessionRow(row) }
                         }
                     }
@@ -144,22 +146,22 @@ struct GuardianScoresPage: View {
 
     var body: some View {
         let rows = child.scoreRows(in: month)
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
             GuardianMonthSwitch(month: month, months: child.months, select: selectMonth)
             if rows.isEmpty {
                   AppEmptyState(title: String(localized: "feature.guardian.chua.co.bai.kiem.tra.nao.trong.thang.nay"), size: .compact)
             } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    GuardianCardHead(title: String(localized: "feature.guardian.iem.tung.bai"),
-                                     trailing: AnyView(
-                                        Text(String.localizedStringWithFormat(String(localized: "feature.guardian.bai.co.iem"), String(describing: (rows.filter { $0.value != nil }.count))))
-                                            .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
-                                            .foregroundStyle(AppColors.muted)))
+                AppSection(title: String(localized: "feature.guardian.iem.tung.bai"),
+                           trailing: AnyView(
+                            Text(String.localizedStringWithFormat(String(localized: "feature.guardian.bai.co.iem"), String(describing: (rows.filter { $0.value != nil }.count))))
+                                .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
+                                .foregroundStyle(AppColors.muted))) {
                     GuardianScoreRows(rows: rows)
+                        .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+                        .padding(.vertical, AppMetrics.cardPaddingVertical)
+                        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+                .padding(.top, AppMetrics.sectionGap - TeacherMetrics.contentGap)
             }
         }
     }
@@ -173,7 +175,7 @@ struct GuardianCommentsPage: View {
 
     var body: some View {
         let tickets = child.sentSlips
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
             Text(String(localized: "feature.guardian.phieu.buoi.hoc.theo.tung.buoi.sao.cau.mau.ghi.ch"))
                 .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                 .foregroundStyle(AppColors.muted)

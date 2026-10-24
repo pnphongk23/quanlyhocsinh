@@ -501,7 +501,7 @@ struct GuardianTicketCard<Content: View>: View {
     }
 }
 
-/// `.cardHead h2` / `.linkHint` / `.linkPrimary`.
+/// Title row inside a card (`.cardHead h2`). A header above a card is an `AppSection`.
 struct GuardianCardHead: View {
     let title: String
     var trailing: AnyView? = nil
