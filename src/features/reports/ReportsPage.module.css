@@ -24,69 +24,6 @@
 }
 
 /* Chọn tháng / chọn lớp */
-.headerActions {
-  display: flex;
-  align-items: end;
-  gap: var(--space-12);
-  flex-wrap: wrap;
-}
-.monthBar {
-  display: flex;
-}
-.monthPicker {
-  display: grid;
-  gap: var(--space-4);
-  color: var(--color-muted);
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-.monthSelect {
-  box-sizing: border-box;
-  width: 190px;
-  min-height: 44px;
-  border: 1.5px solid var(--color-input-border);
-  border-radius: var(--radius-control);
-  padding: 0 var(--space-12);
-  color: var(--color-text);
-  background: var(--color-surface);
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-}
-.monthSelect:focus-visible {
-  border-color: var(--color-primary);
-  outline: 3px solid var(--color-primary-soft);
-}
-.picker {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-8);
-  min-height: 44px;
-  padding: 0 var(--space-12);
-  border: 1.5px solid var(--color-input-border);
-  border-radius: var(--radius-control);
-  background: var(--color-surface);
-}
-.picker:focus-within {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-soft);
-}
-.pickerSelect {
-  min-width: 180px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  appearance: none;
-}
-.pickerSelect:focus {
-  outline: none;
-}
-.pickerChevron {
-  color: var(--color-muted);
-  font-size: var(--text-xs);
-}
 
 /* Dòng tóm tắt "7/10 sẵn sàng · 3 thiếu dữ liệu · 1 đã phát hành" */
 .summary {
@@ -399,45 +336,6 @@
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
-.previewHead {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-12);
-  min-width: 0;
-}
-.previewBack {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex: none;
-  border: 0;
-  border-radius: var(--radius-button);
-  background: var(--color-bg);
-  color: var(--color-text);
-  cursor: pointer;
-}
-.previewBack:focus-visible {
-  outline: 3px solid var(--color-primary);
-  outline-offset: 2px;
-}
-.previewHeadText {
-  min-width: 0;
-}
-.previewHeadText h2 {
-  margin: 0;
-  overflow-wrap: anywhere;
-  font-size: var(--text-xl);
-  line-height: 1.25;
-}
-.previewHeadText p {
-  margin: var(--space-2) 0 0;
-  color: var(--color-muted);
-  font-size: var(--text-md);
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
 .block {
   display: grid;
   gap: var(--space-8);
@@ -585,13 +483,6 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.previewActions {
-  display: grid;
-  gap: var(--space-8);
-}
-.previewActions > button {
-  width: 100%;
-}
 
 @media (min-width: 1024px) {
   .page {
@@ -625,31 +516,22 @@
   .previewCard {
     padding: var(--space-20);
   }
-  .previewActions {
-    grid-template-columns: 1fr auto;
-    align-items: center;
-  }
-  .previewActions > button {
-    width: auto;
-  }
-  .printButton {
-    justify-self: start;
-  }
 }
 
 @media (max-width: 560px) {
-  .monthSelect {
-    width: 100%;
-  }
-  .monthBar .monthPicker {
-    width: 100%;
-  }
   .badge {
     max-width: 48%;
   }
 }
 
+.printHead {
+  display: none;
+}
+
 @media print {
+  .printHead {
+    display: block;
+  }
   :global(body *) {
     visibility: hidden !important;
   }
@@ -671,10 +553,6 @@
   .previewCard {
     padding: 0 0 10px;
   }
-  .previewActions,
-  .previewBack {
-    display: none !important;
-  }
   .homeworkTable,
   .testList li {
     break-inside: avoid;
@@ -684,37 +562,141 @@
   }
 }
 
-/* Bộ chọn tháng một lựa chọn của web (ảnh 15): ‹ Tháng 10/2026 ›. */
-.monthStepper {
+/* Danh sách đợt báo cáo theo khoảng buổi */
+.batchList {
+  display: grid;
+  gap: var(--card-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 1024px) {
+  .batchList {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+.batchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  box-sizing: border-box;
+  min-height: var(--tap);
+  padding: var(--card-pad);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+a.batchRow:hover {
+  background: var(--state-hover-bg);
+}
+a.batchRow:active {
+  transform: scale(0.98);
+  background: var(--state-pressed-bg);
+}
+a.batchRow:focus-visible {
+  outline: none;
+  box-shadow: var(--state-focus-ring);
+}
+.batchRow[aria-disabled="true"] {
+  opacity: var(--state-disabled-opacity);
+}
+.batchText {
+  display: grid;
+  flex: 1;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.batchTitle {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+.batchMeta {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-base);
+}
+.batchMeta b {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.batchMeta .metaAlert {
+  color: var(--color-warning);
+}
+
+/* Đầu chi tiết một đợt */
+.batchHead {
+  display: grid;
+  gap: var(--space-4);
+}
+.backRow {
   display: inline-flex;
   align-items: center;
-  height: 44px;
-  border: 1.5px solid var(--color-input-border);
-  border-radius: var(--radius-button);
-  background: var(--color-surface);
-  flex: none;
+  gap: var(--space-4);
+  justify-self: start;
+  min-height: var(--tap);
+  color: var(--color-primary-ink);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
 }
-
-.monthArrow {
-  width: 44px;
-  height: 100%;
-  border: 0;
-  background: transparent;
-  color: var(--color-muted);
-  font-family: inherit;
+.backRow:focus-visible {
+  outline: none;
+  box-shadow: var(--state-focus-ring);
+}
+.batchHeading {
+  margin: 0;
   font-size: var(--text-xl);
-  line-height: 1;
-  cursor: pointer;
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
 }
 
-.monthArrow:disabled {
-  color: var(--color-input-border);
-  cursor: default;
+/* Form chọn khoảng buổi trong popup Thêm báo cáo */
+.rangeForm {
+  display: grid;
+  gap: var(--space-16);
+}
+.rangeField {
+  display: grid;
+  gap: var(--space-8);
+}
+.rangeField label {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+.rangeSelect {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--control-h);
+  padding: 0 var(--space-12);
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-base);
+}
+.rangeSelect:hover {
+  border-color: var(--color-input-border-strong);
+}
+.rangeSelect:focus-visible {
+  border-color: var(--color-primary);
+  outline: none;
+  box-shadow: var(--state-focus-ring);
+}
+.rangeSelect[aria-invalid="true"] {
+  border-color: var(--state-error-fg);
 }
 
-.monthValue {
-  padding: 0 var(--space-8);
-  font-size: 15px;
-  font-weight: 700;
-  white-space: nowrap;
+/* Trong popup nền thẻ là nền trang để các nhóm nội dung còn tách bạch. */
+.preview .previewCard {
+  background: var(--color-bg);
+}
+
+/* Trạng thái lỗi và offline trong popup xem trước. */
+.previewState {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-12);
 }

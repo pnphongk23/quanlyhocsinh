@@ -39,7 +39,7 @@ export function createFakeServer() {
     if (entity === "student") return scope.studentIds.has(item.id);
     if (["attendance", "score", "homework_grade", "report"].includes(entity)) return scope.studentIds.has(item.student_id);
     if (entity === "slip") return scope.studentIds.has(item.student_id) && item.status === "sent";
-    return !["report_publication"].includes(entity);
+    return !["report_publication", "report_batch"].includes(entity);
   };
 
   function apply(command: Row): Row {
@@ -71,7 +71,7 @@ export function createFakeServer() {
     if (!scope) return apiError(401, "unauthorized");
     if (path === "/me") return scope.me ? json(scope.me) : apiError(404, "not_found");
     const cursor = log.length;
-    if (path === "/sync/snapshot") return json({ cursor, epoch: 1, window: { from: "", to: "" }, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"] });
+    if (path === "/sync/snapshot") return json({ cursor, epoch: 1, window: { from: "", to: "" }, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report_batch", "report", "report_publication"] });
     const snap = path.match(/^\/sync\/snapshot\/(\w+)$/);
     if (snap) {
       if (hooks.failEntity === snap[1]) return apiError(500, "internal");
@@ -107,7 +107,86 @@ export function createFakeServer() {
       const current = table("class_session").get(cancel[1]);
       return current ? json(put("class_session", { ...current, status: "cancelled" })) : apiError(404, "not_found");
     }
+    const reportResponse = reportRoutes(path, request.method, query, body, scope);
+    if (reportResponse) return reportResponse;
     return apiError(404, "not_found");
+  }
+
+  /** Báo cáo theo đợt: tạo đợt (idempotent theo `id`), xem trước, lưu nhận xét, phát hành, danh sách và bản phát hành của phụ huynh. */
+  const publications = new Map<string, Row>();
+  const keyOfSession = (session: Row) => `${session.date} ${session.start_time}`;
+  function reportRoutes(path: string, method: string, query: Record<string, string>, body: Row, scope: Scope): Response | null {
+    const createBatch = path.match(/^\/classes\/([^/]+)\/report-batches$/);
+    if (createBatch && method === "POST") {
+      const from = table("class_session").get(body.from_session_id), to = table("class_session").get(body.to_session_id);
+      if (!from || !to) return apiError(404, "not_found");
+      if (from.status === "cancelled" || to.status === "cancelled") return json({ error: { code: "session_cancelled", message: "session_cancelled", request_id: "fake" } }, 422);
+      if (keyOfSession(from) > keyOfSession(to)) return json({ error: { code: "invalid_range", message: "invalid_range", request_id: "fake" } }, 422);
+      const existing = body.id ? table("report_batch").get(body.id) : undefined;
+      const batch = existing ?? put("report_batch", { id: body.id ?? crypto.randomUUID(), class_id: createBatch[1], from_session_id: from.id, to_session_id: to.id, from_key: keyOfSession(from), to_key: keyOfSession(to) });
+      const students = [...table("student").values()].filter((student) => student.class_id === createBatch[1] && student.enrolled_at <= to.date && (!student.left_at || student.left_at >= from.date));
+      const reports = existing
+        ? [...table("report").values()].filter((report) => report.batch_id === batch.id)
+        : students.map((student) => put("report", { id: crypto.randomUUID(), class_id: createBatch[1], student_id: student.id, batch_id: batch.id, month: to.date.slice(0, 7), status: "draft", general_comment: "", needs_republish: false, publication_count: 0, published_at: null }));
+      const item = (report: Row) => ({ report_id: report.id, batch_id: report.batch_id, student_id: report.student_id, student_name: table("student").get(report.student_id)?.name, month: report.month, status: report.status, general_comment: report.general_comment, needs_republish: report.needs_republish, publication_count: report.publication_count, published_at: report.published_at, version: report.version });
+      return json({ batch: { id: batch.id, class_id: batch.class_id, from_session_id: batch.from_session_id, to_session_id: batch.to_session_id, from_key: batch.from_key, to_key: batch.to_key, from_number: null, to_number: null, counts: { total: reports.length, draft: reports.length, published: 0, needs_republish: 0 }, created_at: "2026-10-24T00:00:00Z" }, reports: reports.map(item) }, existing ? 200 : 201);
+    }
+    const snapshotOf = (report: Row) => {
+      const batch = table("report_batch").get(report.batch_id)!;
+      return { report_id: report.id, batch_id: batch.id, student_id: report.student_id, month: report.month, range: { from_key: batch.from_key, to_key: batch.to_key, from_number: 1, to_number: 8, session_count: 8, label: "Buổi 1–8" }, attendance: { present: 7, late: 1, excused: 0, absent: 0, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-10-05", max: 10, value: 8 }], stars: { three: 2, two: 1, one: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 1, not_done: 0 }], general_comment: report.general_comment, ready: true };
+    };
+    const preview = path.match(/^\/reports\/([^/]+)\/preview$/);
+    if (preview && method === "GET") {
+      const report = table("report").get(preview[1]);
+      return report ? json(snapshotOf(report)) : apiError(404, "not_found");
+    }
+    const one = path.match(/^\/reports\/([^/]+)$/);
+    if (one && method === "PUT") {
+      const report = table("report").get(one[1]);
+      if (!report) return apiError(404, "not_found");
+      const next = put("report", { ...report, general_comment: body.general_comment, needs_republish: report.status === "published" ? true : report.needs_republish });
+      return json({ id: next.id, batch_id: next.batch_id, student_id: next.student_id, month: next.month, status: next.status, general_comment: next.general_comment, needs_republish: next.needs_republish, version: next.version });
+    }
+    const publish = (report: Row, at: string) => {
+      const no = report.publication_count + 1;
+      const next = put("report", { ...report, status: "published", needs_republish: false, publication_count: no, published_at: at });
+      publications.set(`${report.id}|${no}`, { id: `${report.id}-${no}`, report_id: report.id, batch_id: report.batch_id, class_id: report.class_id, student_id: report.student_id, month: report.month, publication_no: no, published_at: at, snapshot: snapshotOf(report) });
+      return { next, no };
+    };
+    const publishOne = path.match(/^\/reports\/([^/]+)\/publish$/);
+    if (publishOne && method === "POST") {
+      const report = table("report").get(publishOne[1]);
+      if (!report) return apiError(404, "not_found");
+      const { no } = publish(report, "2026-10-25T01:00:00Z");
+      return json({ report_id: report.id, batch_id: report.batch_id, publication_no: no, published_at: "2026-10-25T01:00:00Z", snapshot: snapshotOf(report) }, 201);
+    }
+    const publishAll = path.match(/^\/report-batches\/([^/]+)\/publish$/);
+    if (publishAll && method === "POST") {
+      const waiting = [...table("report").values()].filter((report) => report.batch_id === publishAll[1] && (report.status === "draft" || report.needs_republish));
+      const published = waiting.map((report) => ({ report_id: report.id, publication_no: publish(report, "2026-10-25T01:00:00Z").no }));
+      return json({ published, published_at: "2026-10-25T01:00:00Z" });
+    }
+    const studentReports = path.match(/^\/students\/([^/]+)\/reports$/);
+    if (studentReports && method === "GET") {
+      const guardian = Boolean(scope.studentIds);
+      const rowsFor = [...table("report").values()]
+        .filter((report) => report.student_id === studentReports[1] && (!guardian || report.status === "published"))
+        .map((report) => ({ report, batch: table("report_batch").get(report.batch_id)! }))
+        .sort((a, b) => b.batch.to_key.localeCompare(a.batch.to_key) || a.report.id.localeCompare(b.report.id));
+      const start = query.cursor ? rowsFor.findIndex(({ batch, report }) => JSON.stringify([batch.to_key, report.id]) === atob(query.cursor)) + 1 : 0;
+      const limit = Number(query.limit ?? 50), page = rowsFor.slice(start, start + limit);
+      const last = page.at(-1);
+      return json({
+        items: page.map(({ report, batch }) => ({ report_id: report.id, batch_id: report.batch_id, student_id: report.student_id, month: report.month, status: report.status, needs_republish: report.needs_republish, publication_count: report.publication_count, published_at: report.published_at, version: report.version, from_key: batch.from_key, to_key: batch.to_key, from_number: null, to_number: null })),
+        next_cursor: start + limit < rowsFor.length && last ? btoa(JSON.stringify([last.batch.to_key, last.report.id])) : null,
+      });
+    }
+    const publication = path.match(/^\/reports\/([^/]+)\/publications\/(\d+)$/);
+    if (publication && method === "GET") {
+      const row = publications.get(`${publication[1]}|${publication[2]}`);
+      return row ? json(row) : apiError(404, "not_found");
+    }
+    return null;
   }
   return { put, remove, fetch: fetchFake, tokens, requests, hooks, log, rows };
 }

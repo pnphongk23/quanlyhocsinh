@@ -11,6 +11,7 @@ export const guardianRoutes: RouteObject[] = [
       { path: "buoi/:sessionId", lazy: async () => ({ Component: (await import("./GuardianSessionPage")).default }), handle: { detail: true } },
       { path: "diem", lazy: async () => ({ Component: (await import("./GuardianScoresPage")).default }) },
       { path: "bao-cao", lazy: async () => ({ Component: (await import("./GuardianReportPage")).default }) },
+      { path: "bao-cao/:reportId/:publicationNo", lazy: async () => ({ Component: (await import("./GuardianReportPage")).default }) },
       { path: "diem-danh", Component: () => null, loader: () => redirect("/ph") },
       { path: "diem-so", Component: () => null, loader: () => redirect("/ph/diem") },
       { path: "btvn", Component: () => null, loader: () => redirect("/ph") },

@@ -1,16 +1,16 @@
 import { ApiError, createApiClient } from "./api/client";
-import type { ApiClass, CommandResult, EntityMap, PullResponse, SyncCommand } from "./api/types";
+import type { ApiClass, ApiReport, ApiReportBatch, CommandResult, EntityMap, PullResponse, SyncCommand } from "./api/types";
 import { db, getCacheIdentity, identityKey, rowKey, stored, tableFor, type EntityName, type OutboxRow } from "./db";
 import { clearSession, getToken, invalidateActiveMembership } from "./auth/session";
 import { hydrateStore } from "./store";
 import { setSaveStatus } from "./saveStatus";
 import { logoutLockKey } from "./outbox";
-import { classFromApi } from "./api/mapping";
+import { classFromApi, reportBatchFromApi, reportFromApi } from "./api/mapping";
 const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
 export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_BASE_URL || defaultBase, getToken: () => getToken() });
 let running: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | undefined;
-const entities: Array<EntityName> = ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"];
+const entities: Array<EntityName> = ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report_batch", "report", "report_publication"];
 function keyParts(entity: EntityName, item: Record<string, unknown>): Array<string | number | null> {
   switch (entity) {
     case "attendance": case "slip": return [item.session_id as string, item.student_id as string];
@@ -30,7 +30,8 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
     case "slip": return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, stars: item.stars, note: item.note, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at };
     case "homework_section": return { id: item.id, sessionId: item.session_id, kind: item.kind, title: item.title, description: item.description, version: item.version };
     case "homework_grade": return { sectionId: item.section_id, studentId: item.student_id, level: item.level ?? null, version: item.version };
-    case "report": return { id: item.id, classId: item.class_id, studentId: item.student_id, month: item.month, status: item.status, generalComment: item.general_comment, needsRepublish: item.needs_republish, publishedAt: item.published_at };
+    case "report_batch": return reportBatchFromApi(item as unknown as ApiReportBatch);
+    case "report": return reportFromApi(item as unknown as ApiReport);
     case "report_publication": return item;
   }
 }
@@ -41,12 +42,12 @@ function updateStoreView(entity: EntityName, item: Record<string, any>): void {
       const publications = state.reportPublications;
       const existing = publications.findIndex((entry) => entry.id === item.id);
       if (existing >= 0) publications[existing] = item as typeof publications[number]; else publications.push(item as typeof publications[number]);
-      const report = { id: item.report_id, classId: item.class_id, studentId: item.student_id, month: item.month, status: "published", generalComment: "", needsRepublish: false, publishedAt: item.published_at };
-      const reportIndex = state.reports.findIndex((entry) => entry.id === report.id && entry.studentId === report.studentId && entry.month === report.month);
-      if (reportIndex >= 0) state.reports[reportIndex] = report as typeof state.reports[number]; else state.reports.push(report as typeof state.reports[number]);
+      const known = state.reports.findIndex((entry) => entry.id === item.report_id);
+      if (known >= 0) state.reports[known] = { ...state.reports[known], status: "published", publishedAt: item.published_at };
+      else state.reports.push({ id: item.report_id, classId: item.class_id, studentId: item.student_id, batchId: item.batch_id ?? "", month: item.month, status: "published", generalComment: "", needsRepublish: false, publishedAt: item.published_at });
       return;
     }
-    const target = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "comments", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report: "reports" } as const)[entity];
+    const target = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "comments", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report_batch: "reportBatches", report: "reports" } as const)[entity];
   const list = state[target] as Array<Record<string, any>>; const k = entity === "attendance" ? `${item.session_id}:${item.student_id}` : entity === "score" ? `${item.test_id}:${item.student_id}` : entity === "slip" ? `${item.session_id}:${item.student_id}` : entity === "homework_grade" ? `${item.section_id}:${item.student_id}` : item.id;
   const index = list.findIndex((entry) => entry.id === k || entry.id === item.id || (entry.sectionId === item.section_id && entry.studentId === item.student_id));
   if (index >= 0) list[index] = view; else list.push(view);

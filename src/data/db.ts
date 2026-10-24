@@ -22,6 +22,7 @@ export class AppDatabase extends Dexie {
   slips!: Table<Stored<EntityMap["slip"]>, string>;
   homeworkSections!: Table<Stored<EntityMap["homework_section"]>, string>;
   homeworkGrades!: Table<Stored<EntityMap["homework_grade"]>, string>;
+  reportBatches!: Table<Stored<EntityMap["report_batch"]>, string>;
   reports!: Table<Stored<EntityMap["report"]>, string>;
   reportPublications!: Table<Stored<EntityMap["report_publication"]>, string>;
   outbox!: Table<OutboxRow, string>;
@@ -38,6 +39,11 @@ export class AppDatabase extends Dexie {
       reportPublications: "key, identity, report_id, publication_no", outbox: "id, identity, status, created_at",
       meta: "key, identity",
     });
+    // Báo cáo theo đợt: thêm bảng đợt và chỉ mục batch_id; xoá mốc đồng bộ để lần mở sau tải lại toàn bộ (bản đã lưu chưa có batch_id).
+    this.version(2).stores({
+      reportBatches: "key, identity, class_id, id",
+      reports: "key, identity, class_id, student_id, month, batch_id",
+    }).upgrade((tx) => tx.table("meta").filter((row: MetaRow) => !row.logoutState).delete());
   }
 }
 
@@ -53,7 +59,7 @@ export function rowKey(entity: string, parts: Array<string | number | null>): st
 const tables = {
   class: db.classes, student: db.students, class_session: db.sessions, attendance: db.attendance,
   test: db.tests, score: db.scores, slip: db.slips, homework_section: db.homeworkSections,
-  homework_grade: db.homeworkGrades, report: db.reports, report_publication: db.reportPublications,
+  homework_grade: db.homeworkGrades, report_batch: db.reportBatches, report: db.reports, report_publication: db.reportPublications,
 } as const;
 export type EntityName = keyof typeof tables;
 export function tableFor(entity: EntityName): Table<Stored<EntityMap[EntityName]>, string> {

@@ -4,7 +4,7 @@ import { ApiError } from "../data/api/client";
 import { activateSession, clearSession, getSession } from "../data/auth/session";
 import { authRedirect, changePassword, logout, registerParent } from "../data/auth";
 import { canAccessStudent, linkedStudentIds } from "../data/repositories/access";
-import { getChildMonthlyReport, listMyChildren } from "../data/repositories/guardian";
+import { getChildReport, listChildReports, listMyChildren } from "../data/repositories/guardian";
 import { getExtraSessionUpdateError, updateExtraSession } from "../data/repositories/sessions";
 import { getStore, replaceStore } from "../data/store";
 import { createSeed } from "./fixtures/seed";
@@ -103,19 +103,52 @@ describe("guardian membership data", () => {
     expect(api.request).toHaveBeenCalledWith("POST /auth/logout");
   });
 
-  it("reads the latest publication and isolates malformed snapshots to their month", async () => {
+  const listItem = (id: string, toKey: string, patch: object = {}) => ({
+    report_id: id, batch_id: `batch-${id}`, student_id: "6a-student-1", month: toKey.slice(0, 7), status: "published", needs_republish: false,
+    publication_count: 1, published_at: `${toKey.slice(0, 10)}T09:00:00Z`, version: 2, from_key: "2026-10-01 18:00", to_key: toKey, from_number: 1, to_number: 8, ...patch,
+  });
+  const snapshot = (patch: object = {}) => ({
+    month: "2026-10", range: { from_key: "2026-10-01 18:00", to_key: "2026-10-24 18:00", from_number: 1, to_number: 8, session_count: 8, label: "x" },
+    attendance: { present: 6, late: 1, excused: 0, absent: 1, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Bài 1", date: "2026-10-05", max: 15, value: 12 }],
+    stars: { three: 1, two: 1, one: 0 }, homework: [{ kind: "reading", excellent: 1, done: 2, not_done: 0 }], general_comment: "Nhận xét đợt", ready: true, ...patch,
+  });
+
+  it("lists only published reports by session range and pages with the server cursor", async () => {
     await startParentSession();
-    const studentId = "6a-student-1";
-    getStore().reportPublications = [
-      { id: "old-good", report_id: "rep-a", class_id: "6a", student_id: studentId, month: "2026-10", publication_no: 1, published_at: "2026-10-01T00:00:00Z", snapshot: { month: "2026-10", attendance: { present: 1, late: 0, excused: 0, absent: 0, held_sessions: 1 }, tests: [], stars: { three: 1, two: 0, one: 0 }, homework: [], general_comment: "Cũ", ready: true } },
-      { id: "new-bad", report_id: "rep-a", class_id: "6a", student_id: studentId, month: "2026-10", publication_no: 2, published_at: "2026-10-02T00:00:00Z", snapshot: { month: "2026-10", attendance: { kind: "old", level: 1, count: 1 } } },
-      { id: "nov-good", report_id: "rep-b", class_id: "6a", student_id: studentId, month: "2026-11", publication_no: 1, published_at: "2026-11-02T00:00:00Z", snapshot: { month: "2026-11", attendance: { present: 2, late: 1, excused: 0, absent: 0, held_sessions: 3 }, tests: [{ test_id: "test-a", name: "Bài 1", date: "2026-11-01", max: 15, value: 12 }], stars: { three: 1, two: 1, one: 0 }, homework: [{ kind: "reading", excellent: 1, done: 2, not_done: 0 }], general_comment: "Nhận xét tháng 11", ready: true } },
-    ];
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    expect(getChildMonthlyReport(studentId, "2026-10")).toBeNull();
-    expect(warn).toHaveBeenCalledWith("Unable to decode a published guardian report snapshot.");
-    expect(getChildMonthlyReport(studentId, "2026-11")?.body).toMatchObject({ attendanceCount: 3, sessions: [{ status: "held" }, { status: "held" }, { status: "held" }], gradedTestCount: 1, generalComment: "Nhận xét tháng 11", homework: [{ kind: "reading", excellent: 1, done: 2, not_done: 0 }] });
-    warn.mockRestore();
+    vi.mocked(api.request).mockImplementation((async (endpoint: string, options?: { query?: { cursor?: string } }) => {
+      expect(endpoint).toBe("GET /students/6a-student-1/reports");
+      return options?.query?.cursor
+        ? { items: [listItem("r-old", "2026-09-30 18:00", { from_number: null, to_number: null, from_key: "2026-09-01 00:00" })], next_cursor: null }
+        : { items: [listItem("r-new", "2026-10-24 18:00", { needs_republish: true, publication_count: 2 }), listItem("r-draft", "2026-10-30 18:00", { status: "draft", publication_count: 0, published_at: null })], next_cursor: "c-2" };
+    }) as never);
+    const first = await listChildReports("6a-student-1");
+    expect(first.nextCursor).toBe("c-2");
+    expect(first.items.map((item) => [item.id, item.range.label, item.publicationNo, item.needsRepublish])).toEqual([["r-new", "Buổi 1–8 · 01/10–24/10", 2, true]]);
+    const second = await listChildReports("6a-student-1", first.nextCursor!);
+    expect(vi.mocked(api.request).mock.calls[1][1]).toEqual({ query: { cursor: "c-2" } });
+    expect(second).toMatchObject({ nextCursor: null, items: [{ id: "r-old", range: { label: "01/09–30/09" } }] });
+  });
+
+  it("opens a published version from its snapshot and rejects other children and malformed snapshots", async () => {
+    await startParentSession();
+    const publication = (studentId: string, body: unknown) => ({ student_id: studentId, published_at: "2026-10-25T01:00:00Z", snapshot: body });
+    vi.mocked(api.request).mockResolvedValueOnce(publication("6a-student-1", snapshot()) as never);
+    const report = await getChildReport("6a-student-1", "r-new", 2);
+    expect(vi.mocked(api.request).mock.calls[0][0]).toBe("GET /reports/r-new/publications/2");
+    expect(report).toMatchObject({ publicationNo: 2, range: { label: "Buổi 1–8 · 01/10–24/10" }, body: { attendanceCount: 7, lateCount: 1, gradedTestCount: 1, generalComment: "Nhận xét đợt", homework: [{ kind: "reading", excellent: 1, done: 2 }] } });
+
+    vi.mocked(api.request).mockResolvedValueOnce(publication("6a-student-2", snapshot()) as never);
+    expect(await getChildReport("6a-student-1", "r-new", 1)).toBeNull();
+    vi.mocked(api.request).mockResolvedValueOnce(publication("6a-student-1", { month: "2026-10", attendance: { kind: "old" } }) as never);
+    await expect(getChildReport("6a-student-1", "r-new", 1)).rejects.toThrow("Báo cáo không đọc được");
+    vi.mocked(api.request).mockRejectedValueOnce(new ApiError(404, { code: "not_found", message: "x", request_id: "r" }));
+    expect(await getChildReport("6a-student-1", "r-new", 9)).toBeNull();
+  });
+
+  it("falls back to the month label for snapshots published before report batches", async () => {
+    await startParentSession();
+    vi.mocked(api.request).mockResolvedValueOnce({ student_id: "6a-student-1", published_at: "2026-10-25T01:00:00Z", snapshot: snapshot({ range: undefined }) } as never);
+    expect((await getChildReport("6a-student-1", "r-old", 1))?.range).toEqual({ label: "Tháng 10", sessionsLabel: "", datesLabel: "Tháng 10" });
   });
 });
 

@@ -4,7 +4,6 @@ import type {
   HomeworkLevel,
   HomeworkSection,
   PermissionGroup,
-  Report,
   Session,
   StarLevel,
   StoreState,
@@ -32,10 +31,14 @@ import {
 import { starTemplate } from "../logic";
 import {
   buildMonthlyStudentReport,
-  buildStarSuggestion,
-  type MonthlyStudentReport,
+  decodeServerReport,
   type MonthlyStudentReportData,
+  type PeriodStudentReport,
 } from "../reportModel";
+import { rangeLabels, type RangeLabels } from "../reportRange";
+import { ApiError } from "../api/client";
+import { api } from "../sync";
+import type { ApiStudentReportItem } from "../api/types";
 
 /**
  * Repository ĐỌC cho role phụ huynh (màn phụ huynh, spec mục 5.2).
@@ -444,86 +447,104 @@ export function getChildOverview(
   };
 }
 
-/** Báo cáo tháng đã phát hành của con. */
-export interface ChildMonthlyReport {
-  report: Report;
-  body: MonthlyStudentReport;
-  /** Điểm có cập nhật sau khi phát hành, cần phát hành lại (spec mục 4). */
+/** Một báo cáo đã phát hành trong danh sách của con. */
+export interface ChildReportItem {
+  id: string;
+  batchId: string;
+  month: string;
+  /** Số lần phát hành gần nhất; bản mới nhất mà phụ huynh mở. */
+  publicationNo: number;
+  publishedAt: string | null;
+  /** Điểm có cập nhật sau lần phát hành gần nhất. */
+  needsRepublish: boolean;
+  range: RangeLabels;
+}
+
+export interface ChildReportPage {
+  items: ChildReportItem[];
+  /** Con trỏ do máy chủ trả; null khi hết danh sách. */
+  nextCursor: string | null;
+}
+
+/** Báo cáo đã phát hành mà phụ huynh đang mở. */
+export interface ChildReport {
+  id: string;
+  publicationNo: number;
+  publishedAt: string | null;
+  range: RangeLabels;
+  body: PeriodStudentReport;
+  /** Điểm có cập nhật sau khi phát hành (spec mục 4), theo bản đồng bộ trên máy. */
   needsRepublish: boolean;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+function guardianErrorMessage(cause: unknown, fallback: string): string {
+  if (cause instanceof ApiError && (cause.status === 403 || cause.status === 404)) return GUARDIAN_PERMISSION_ERROR;
+  if (cause instanceof ApiError) return fallback;
+  if (cause instanceof TypeError || (typeof DOMException !== "undefined" && cause instanceof DOMException))
+    return "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.";
+  return cause instanceof Error && cause.message ? cause.message : fallback;
 }
 
-function decodeReportSnapshot(value: unknown, student: Student, month: string): MonthlyStudentReport | null {
-  if (!isRecord(value) || !isRecord(value.attendance) || !isRecord(value.stars) || !Array.isArray(value.tests) || !Array.isArray(value.homework)) return null;
-  const count = (object: Record<string, unknown>, key: string) => typeof object[key] === "number" && Number.isInteger(object[key]) && (object[key] as number) >= 0;
-  if (!["present", "late", "excused", "absent", "held_sessions"].every((key) => count(value.attendance as Record<string, unknown>, key))) return null;
-  if (!["three", "two", "one"].every((key) => count(value.stars as Record<string, unknown>, key))) return null;
-  if (typeof value.general_comment !== "string" || typeof value.ready !== "boolean") return null;
-  const tests = value.tests.map((item) => isRecord(item) && typeof item.test_id === "string" && typeof item.name === "string" && typeof item.date === "string" && typeof item.max === "number" && Number.isFinite(item.max) && (item.value === null || (typeof item.value === "number" && Number.isFinite(item.value))));
-  if (tests.some((valid) => !valid)) return null;
-  const validKinds = new Set<HomeworkKind>(["vocabulary", "reading", "speaking", "exercise"]);
-  const homework = value.homework.map((item) => isRecord(item) && validKinds.has(item.kind as HomeworkKind) && ["excellent", "done", "not_done"].every((key) => count(item, key)));
-  if (homework.some((valid) => !valid)) return null;
-
-  const attendance = value.attendance as Record<string, number>;
-  const stars = value.stars as Record<string, number>;
-  const sessions: Session[] = Array.from({ length: attendance.held_sessions }, (_, index) => ({ id: `published:${student.id}:${month}:${index}`, classId: student.classId, date: `${month}-01`, origin: "recurring", status: "held" }));
-  const attendanceRows: StoreState["attendance"] = [];
-  for (const [status, amount] of [["present", attendance.present], ["late", attendance.late], ["excused", attendance.excused], ["absent", attendance.absent]] as const) {
-    for (let index = 0; index < amount; index++) attendanceRows.push({ id: `published:${student.id}:${month}:${status}:${index}`, sessionId: sessions[index % Math.max(1, sessions.length)]?.id ?? "", studentId: student.id, status, note: "", lateAt: null });
+async function remote<T>(fallback: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (cause) {
+    throw new Error(guardianErrorMessage(cause, fallback));
   }
-  const testsWithScores = value.tests.map((item) => {
-    const test = item as { test_id: string; name: string; date: string; max: number; value: number | null };
-    const model: Test = { id: test.test_id, classId: student.classId, name: test.name, date: test.date, max: test.max, archived: false };
-    return { test: model, score: test.value === null ? undefined : { id: `${test.test_id}:${student.id}`, testId: test.test_id, studentId: student.id, value: test.value } };
-  });
-  const homeworkRows = (value.homework as Array<{ kind: HomeworkKind; excellent: number; done: number; not_done: number }>).map((item) => ({ ...item, label: HOMEWORK_KIND_LABELS[item.kind], total: item.excellent + item.done + item.not_done }));
-  const byStars = { 1: stars.one, 2: stars.two, 3: stars.three } as Record<StarLevel, number>;
-  const ready = value.ready;
-  return {
-    student, month, sessions, attendance: attendanceRows, tests: testsWithScores,
-    gradedTestCount: testsWithScores.filter(({ score }) => score?.value != null).length,
-    attendanceCount: attendance.present + attendance.late, lateCount: attendance.late, excusedCount: attendance.excused, absentCount: attendance.absent,
-    stars: { ticketCount: stars.one + stars.two + stars.three, byStars }, homework: homeworkRows,
-    generalComment: value.general_comment, suggestion: buildStarSuggestion(byStars), ready, missing: ready ? [] : ["Báo cáo chưa đủ dữ liệu"],
-  };
 }
 
 /**
- * Báo cáo tháng mà phụ huynh xem được: CHỈ khi giáo viên đã phát hành.
- * Chưa phát hành (hoặc không có báo cáo) → null. Nội dung dựng bằng
- * `buildMonthlyStudentReport` + nhận xét chung đã lưu ở `Report.generalComment`.
+ * Danh sách báo cáo ĐÃ phát hành của con theo khoảng buổi, đợt kết thúc muộn
+ * nhất trước (`GET /students/:id/reports`). Phân trang bằng `next_cursor` của máy
+ * chủ; bản nháp không bao giờ hiện cho phụ huynh.
  */
-export function getChildMonthlyReport(
-  studentId: string,
-  month: string,
-): ChildMonthlyReport | null {
+export async function listChildReports(studentId: string, cursor?: string): Promise<ChildReportPage> {
   requireGuardian("comments_reports");
   const student = requireChild(studentId);
-  const state = getStore();
-  const publications = state.reportPublications
-    .filter((item) => item.student_id === student.id && item.month === month)
-    .sort((a, b) => b.publication_no - a.publication_no);
-  if (publications.length) {
-    const publication = publications[0];
-    let body: MonthlyStudentReport | null;
-    try { body = decodeReportSnapshot(publication.snapshot, student, month); }
-    catch { body = null; }
-    if (!body) { console.warn("Unable to decode a published guardian report snapshot."); return null; }
-    const report: Report = { id: publication.report_id, classId: publication.class_id, studentId: publication.student_id, month: publication.month, status: "published", generalComment: body.generalComment, needsRepublish: false, publishedAt: publication.published_at };
-    return { report, body, needsRepublish: false };
-  }
-  // Compatibility for old local caches created before report_publication was cached.
-  const report = state.reports.find((item) => item.studentId === student.id && item.month === month && item.status === "published");
-  if (!report) return null;
-  const body = buildMonthlyStudentReport(
-    student,
-    month,
-    studentReportData(state, student, report.generalComment),
+  if (typeof navigator !== "undefined" && !navigator.onLine) throw new Error("Xem báo cáo cần kết nối mạng.");
+  const page = await remote("Không đọc được báo cáo của con.", () =>
+    api.request(`GET /students/${student.id}/reports` as never, { query: cursor ? { cursor } : undefined } as never) as Promise<{ items: ApiStudentReportItem[]; next_cursor: string | null }>,
   );
-  if (!body) return null;
-  return { report, body, needsRepublish: report.needsRepublish };
+  const items = page.items
+    .filter((item) => item.status === "published" && item.publication_count >= 1)
+    .map((item) => ({
+      id: item.report_id,
+      batchId: item.batch_id,
+      month: item.month,
+      publicationNo: item.publication_count,
+      publishedAt: item.published_at,
+      needsRepublish: item.needs_republish,
+      range: rangeLabels({ fromKey: item.from_key, toKey: item.to_key, fromNumber: item.from_number, toNumber: item.to_number }),
+    }));
+  return { items, nextCursor: page.next_cursor ?? null };
+}
+
+/**
+ * Bản phát hành của một báo cáo (`GET /reports/:id/publications/:no`). Chưa phát
+ * hành, không phải của con hoặc không đọc được → ném lỗi, không hiện bản nháp.
+ */
+export async function getChildReport(studentId: string, reportId: string, publicationNo: number): Promise<ChildReport | null> {
+  requireGuardian("comments_reports");
+  const student = requireChild(studentId);
+  if (typeof navigator !== "undefined" && !navigator.onLine) throw new Error("Xem báo cáo cần kết nối mạng.");
+  let row: { student_id: string; published_at: string | null; snapshot: unknown } | null;
+  try {
+    row = await remote("Không đọc được báo cáo của con.", () =>
+      api.request(`GET /reports/${reportId}/publications/${publicationNo}` as never) as Promise<{ student_id: string; published_at: string | null; snapshot: unknown }>,
+    );
+  } catch (cause) {
+    if (cause instanceof Error && cause.message === GUARDIAN_PERMISSION_ERROR) return null;
+    throw cause;
+  }
+  if (!row || row.student_id !== student.id) return null;
+  const decoded = decodeServerReport(row.snapshot, student, reportId);
+  if (!decoded) throw new Error("Báo cáo không đọc được. Thử lại sau.");
+  return {
+    id: reportId,
+    publicationNo,
+    publishedAt: row.published_at,
+    range: decoded.range,
+    body: decoded.report,
+    needsRepublish: getStore().reports.find((item) => item.id === reportId)?.needsRepublish ?? false,
+  };
 }

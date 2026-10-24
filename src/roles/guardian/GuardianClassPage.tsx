@@ -138,7 +138,7 @@ export default function GuardianClassPage() {
                   className={`${g.navRow} ${motionClass.pressable}`}
                 >
                   <span className={g.navRowText}>
-                    <strong>Báo cáo tháng</strong>
+                    <strong>Báo cáo</strong>
                     <span className={g.muted}>
                       {reportMonth
                         ? `${monthLabel(reportMonth)} đã phát hành`

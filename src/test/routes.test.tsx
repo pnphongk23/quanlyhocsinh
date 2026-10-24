@@ -136,7 +136,7 @@ describe("foundation route integration", () => {
     ["/ph/nhan-xet", "Nhận xét của cô"],
     ["/ph/buoi/session-a", "Buổi học"],
     ["/ph/diem", "Điểm số"],
-    ["/ph/bao-cao", "Báo cáo tháng"],
+    ["/ph/bao-cao", "Báo cáo"],
   ])("guardian %s renders inside its lazy shell", async (path, title) => {
     authState.session = activeSession("guardian");
     const router = open(path);

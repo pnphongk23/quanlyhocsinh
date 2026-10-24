@@ -3,6 +3,7 @@ import {
   HOMEWORK_KIND_LABELS,
   gradingSessionFor,
 } from "./homework";
+import { rangeLabels, type RangeLabels } from "./reportRange";
 import type {
   Attendance,
   Comment,
@@ -86,10 +87,14 @@ const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
  */
 export function buildStarSuggestion(
   byStars: Record<StarLevel, number>,
+  unit: "month" | "range" = "month",
 ): string | null {
   const total = byStars[1] + byStars[2] + byStars[3];
   if (!total) return null;
-  return `Gợi ý theo số buổi 3/2/1 sao của tháng: Tháng này con có ${byStars[3]} buổi 3 sao, ${byStars[2]} buổi 2 sao, ${byStars[1]} buổi 1 sao.`;
+  const counts = `${byStars[3]} buổi 3 sao, ${byStars[2]} buổi 2 sao, ${byStars[1]} buổi 1 sao`;
+  return unit === "range"
+    ? `Gợi ý theo số buổi 3/2/1 sao của đợt: Trong đợt này con có ${counts}.`
+    : `Gợi ý theo số buổi 3/2/1 sao của tháng: Tháng này con có ${counts}.`;
 }
 
 function monthBounds(month: string): { start: string; end: string } {
@@ -116,6 +121,62 @@ export function buildMonthlyStudentReport(
 ): MonthlyStudentReport | null {
   if (!MONTH_PATTERN.test(month)) return null;
   const { start, end } = monthBounds(month);
+  const core = buildPeriodReport(
+    student,
+    {
+      start,
+      end,
+      includeSession: (session) =>
+        session.status === "held" && session.date >= start && session.date <= end,
+      suggestionUnit: "month",
+    },
+    data,
+  );
+  return core && { ...core, month };
+}
+
+/** Phạm vi một báo cáo: khoảng ngày, buổi được tính và cách gọi trong câu gợi ý. */
+interface ReportPeriod {
+  start: string;
+  end: string;
+  includeSession: (session: Session) => boolean;
+  suggestionUnit: "month" | "range";
+}
+
+/** Nội dung báo cáo của một em trong một phạm vi (tháng hoặc khoảng buổi). */
+export type PeriodStudentReport = Omit<MonthlyStudentReport, "month">;
+
+/**
+ * Báo cáo theo khoảng buổi: tính trong các buổi chưa hủy từ mốc đầu đến mốc cuối
+ * (so theo ngày + giờ), điểm theo ngày của khoảng. Trả null khi em chưa vào lớp
+ * sau buổi cuối hoặc đã rời lớp trước buổi đầu.
+ */
+export function buildRangeStudentReport(
+  student: Student,
+  range: { fromKey: string; toKey: string },
+  data: MonthlyStudentReportData,
+): PeriodStudentReport | null {
+  return buildPeriodReport(
+    student,
+    {
+      start: range.fromKey.slice(0, 10),
+      end: range.toKey.slice(0, 10),
+      includeSession: (session) => {
+        const key = `${session.date} ${session.time ?? "00:00"}`;
+        return session.status !== "cancelled" && key >= range.fromKey && key <= range.toKey;
+      },
+      suggestionUnit: "range",
+    },
+    data,
+  );
+}
+
+function buildPeriodReport(
+  student: Student,
+  period: ReportPeriod,
+  data: MonthlyStudentReportData,
+): PeriodStudentReport | null {
+  const { start, end } = period;
   if (student.enrolledAt > end || (student.leftAt && student.leftAt < start))
     return null;
   const inStudentRange = (date: string) =>
@@ -125,9 +186,7 @@ export function buildMonthlyStudentReport(
     .filter(
       (session) =>
         session.classId === student.classId &&
-        session.status === "held" &&
-        session.date >= start &&
-        session.date <= end &&
+        period.includeSession(session) &&
         inStudentRange(session.date),
     )
     .sort((a, b) =>
@@ -226,7 +285,6 @@ export function buildMonthlyStudentReport(
 
   return {
     student,
-    month,
     sessions,
     attendance,
     tests,
@@ -238,8 +296,80 @@ export function buildMonthlyStudentReport(
     stars: { ticketCount, byStars },
     homework,
     generalComment,
-    suggestion: buildStarSuggestion(byStars),
+    suggestion: buildStarSuggestion(byStars, period.suggestionUnit),
     ready: missing.length === 0,
     missing,
+  };
+}
+
+/** Báo cáo dựng từ bản xem trước hoặc bản chụp đã phát hành của máy chủ, kèm nhãn khoảng. */
+export interface ServerReport {
+  report: PeriodStudentReport;
+  range: RangeLabels;
+  month: string;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+const isCount = (object: Record<string, unknown>, key: string) =>
+  typeof object[key] === "number" && Number.isInteger(object[key]) && (object[key] as number) >= 0;
+
+function rangeFromServer(value: unknown, month: string): RangeLabels {
+  if (
+    isRecord(value) &&
+    typeof value.from_key === "string" &&
+    typeof value.to_key === "string"
+  ) {
+    const number = (key: string) => (typeof value[key] === "number" ? (value[key] as number) : null);
+    return rangeLabels({ fromKey: value.from_key, toKey: value.to_key, fromNumber: number("from_number"), toNumber: number("to_number") });
+  }
+  // Bản chụp phát hành trước khi có đợt chỉ có tháng.
+  const label = `Tháng ${Number(month.slice(5, 7))}`;
+  return { label, sessionsLabel: "", datesLabel: label };
+}
+
+/**
+ * Giải mã bản xem trước / bản chụp của máy chủ thành nội dung báo cáo của một em.
+ * Trả null khi dữ liệu sai hình dạng (không đoán số liệu thiếu).
+ */
+export function decodeServerReport(value: unknown, student: Student, key: string): ServerReport | null {
+  if (!isRecord(value) || !isRecord(value.attendance) || !isRecord(value.stars) || !Array.isArray(value.tests) || !Array.isArray(value.homework)) return null;
+  const attendance = value.attendance, stars = value.stars;
+  if (!["present", "late", "excused", "absent", "held_sessions"].every((name) => isCount(attendance, name))) return null;
+  if (!["three", "two", "one"].every((name) => isCount(stars, name))) return null;
+  if (typeof value.general_comment !== "string" || typeof value.ready !== "boolean") return null;
+  const validTest = value.tests.every((item) => isRecord(item) && typeof item.test_id === "string" && typeof item.name === "string" && typeof item.date === "string" && typeof item.max === "number" && Number.isFinite(item.max) && (item.value === null || (typeof item.value === "number" && Number.isFinite(item.value))));
+  if (!validTest) return null;
+  const kinds = new Set<HomeworkKind>(HOMEWORK_KINDS);
+  const validHomework = value.homework.every((item) => isRecord(item) && kinds.has(item.kind as HomeworkKind) && ["excellent", "done", "not_done"].every((name) => isCount(item, name)));
+  if (!validHomework) return null;
+
+  const month = typeof value.month === "string" ? value.month : "";
+  const counts = attendance as Record<string, number>;
+  const starCounts = stars as Record<string, number>;
+  const sessions: Session[] = Array.from({ length: counts.held_sessions }, (_, index) => ({ id: `${key}:session:${index}`, classId: student.classId, date: month ? `${month}-01` : "", origin: "recurring", status: "held" }));
+  const attendanceRows: Attendance[] = [];
+  for (const [status, amount] of [["present", counts.present], ["late", counts.late], ["excused", counts.excused], ["absent", counts.absent]] as const) {
+    for (let index = 0; index < amount; index++) attendanceRows.push({ id: `${key}:${status}:${index}`, sessionId: sessions[index % Math.max(1, sessions.length)]?.id ?? "", studentId: student.id, status, note: "", lateAt: null });
+  }
+  const tests = (value.tests as Array<{ test_id: string; name: string; date: string; max: number; value: number | null }>).map((item) => ({
+    test: { id: item.test_id, classId: student.classId, name: item.name, date: item.date, max: item.max, archived: false } as Test,
+    score: item.value === null ? undefined : { id: `${item.test_id}:${student.id}`, testId: item.test_id, studentId: student.id, value: item.value } as Score,
+  }));
+  const homework = (value.homework as Array<{ kind: HomeworkKind; excellent: number; done: number; not_done: number }>)
+    .map((item) => ({ ...item, label: HOMEWORK_KIND_LABELS[item.kind], total: item.excellent + item.done + item.not_done }))
+    .sort((a, b) => HOMEWORK_KINDS.indexOf(a.kind) - HOMEWORK_KINDS.indexOf(b.kind));
+  const byStars = { 1: starCounts.one, 2: starCounts.two, 3: starCounts.three } as Record<StarLevel, number>;
+  const ready = value.ready;
+  return {
+    month,
+    range: rangeFromServer(value.range, month),
+    report: {
+      student, sessions, attendance: attendanceRows, tests,
+      gradedTestCount: tests.filter(({ score }) => score?.value != null).length,
+      attendanceCount: counts.present + counts.late, lateCount: counts.late, excusedCount: counts.excused, absentCount: counts.absent,
+      stars: { ticketCount: starCounts.one + starCounts.two + starCounts.three, byStars }, homework,
+      generalComment: value.general_comment.trim(), suggestion: buildStarSuggestion(byStars, "range"), ready, missing: ready ? [] : ["Báo cáo chưa đủ dữ liệu"],
+    },
   };
 }

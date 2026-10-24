@@ -1,231 +1,476 @@
-import { describe, expect, it, vi } from "vitest";
+import "fake-indexeddb/auto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createMemoryRouter, RouterProvider, useLocation } from "react-router-dom";
 import { MEMBER_IDS, ROLE_IDS } from "../../data/defaults";
-import { publishReport, saveReportComment } from "../../data/repositories/reports";
 import { createSeed } from "../../test/fixtures/seed";
 import { getStore, replaceStore } from "../../data/store";
+import { ApiError } from "../../data/api/client";
+import { db, setCacheIdentity } from "../../data/db";
 import type { StoreState } from "../../data/types";
+import { buildRangeStudentReport } from "../../data/reportModel";
+import { resolveRange } from "../../data/reportRange";
 import ReportPreview from "./ReportPreview";
 import ReportsPage from "./ReportsPage";
-import { buildMonthlyStudentReport, type MonthlyStudentReport } from "../../data/reportModel";
 
-const reportApi = vi.hoisted(() => ({ request: vi.fn(async (_endpoint: string, options?: { body?: { general_comment?: string } }) => ({ general_comment: options?.body?.general_comment })) }));
-vi.mock("../../data/sync", () => ({ api: { request: reportApi.request } }));
+vi.mock("../../data/repositories/access", async (original) => {
+  const actual = await original<typeof import("../../data/repositories/access")>();
+  return { ...actual, requirePermission: () => undefined, requireClassAccess: () => undefined };
+});
+const sync = vi.hoisted(() => ({ scheduleSync: vi.fn(), syncNow: vi.fn(async (): Promise<void> => undefined) }));
+vi.mock("../../data/sync", async (original) => ({ ...(await original<object>()), ...sync }));
 
 /** Bỏ các comment phân cách React chèn giữa hai text node khi render tĩnh. */
 const text = (html: string) => html.replace(/<!-- -->/g, "");
 
-function renderMarkup(node: React.ReactElement): string {
-  const router = createMemoryRouter([{ path: "*", element: node }], {
-    initialEntries: ["/lop/6a/bao-cao"],
-  });
+function renderStatic(path = "/lop/6a/bao-cao"): string {
+  const router = createMemoryRouter([{ path: "/lop/:classId/bao-cao", element: <ReportsPage /> }], { initialEntries: [path] });
   return text(renderToStaticMarkup(<RouterProvider router={router} />));
 }
 
-function renderPage(): string {
+function renderLive(path = "/lop/6a/bao-cao") {
+  function Where() {
+    const location = useLocation();
+    return <output data-testid="where">{location.pathname + location.search}</output>;
+  }
   const router = createMemoryRouter(
-    [{ path: "/lop/:classId/bao-cao", element: <ReportsPage /> }],
-    { initialEntries: ["/lop/6a/bao-cao"] },
+    [{ path: "/lop/:classId/bao-cao", element: <><ReportsPage /><Where /></> }],
+    { initialEntries: [path] },
   );
-  return text(renderToStaticMarkup(<RouterProvider router={router} />));
+  return render(<RouterProvider router={router} />);
 }
 
-/** Báo cáo tháng 10 của một em dựng đúng bằng dữ liệu seed hiện tại. */
-function monthlyReport(state: StoreState, studentId: string): MonthlyStudentReport {
-  const student = state.students.find((item) => item.id === studentId);
-  if (!student) throw new Error("Thiếu học sinh seed");
-  const record = state.reports.find(
-    (item) => item.studentId === studentId && item.month === "2026-10",
-  );
-  const report = buildMonthlyStudentReport(student, "2026-10", {
-    sessions: state.sessions,
-    attendance: state.attendance,
-    tests: state.tests,
-    scores: state.scores,
-    comments: state.comments,
-    homeworkSections: state.homeworkSections,
-    homeworkGrades: state.homeworkGrades,
-    generalComment: record?.generalComment ?? "",
+let calls: Array<{ endpoint: string; body?: any }>;
+async function mockApi(handler: (endpoint: string, options?: { body?: any }) => unknown) {
+  const { api } = await import("../../data/sync");
+  calls = [];
+  return vi.spyOn(api, "request").mockImplementation((async (endpoint: string, options?: { body?: any }) => {
+    calls.push({ endpoint, body: options?.body });
+    return handler(endpoint, options);
+  }) as never);
+}
+
+function desktop(on: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: (media: string) => ({ matches: on && media.includes("min-width: 1024px"), media, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent: () => false }),
   });
-  if (!report) throw new Error("Không dựng được báo cáo tháng");
-  return report;
 }
 
-function seedStore(): StoreState {
+const nativeShowModal = HTMLDialogElement.prototype.showModal;
+const nativeClose = HTMLDialogElement.prototype.close;
+beforeEach(async () => {
+  setCacheIdentity({ userId: "u", workspaceId: "w", membershipId: "m" });
+  await db.delete(); await db.open();
+  desktop(false);
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value() { this.setAttribute("open", ""); } });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value() { this.removeAttribute("open"); } });
+  replaceStore(createSeed());
+});
+afterEach(async () => {
+  sync.scheduleSync.mockClear(); sync.syncNow.mockClear(); setCacheIdentity(null); await db.delete(); vi.restoreAllMocks();
+  if (nativeShowModal) Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: nativeShowModal });
+  else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+  if (nativeClose) Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value: nativeClose });
+  else Reflect.deleteProperty(HTMLDialogElement.prototype, "close");
+});
+
+const previewBody = (studentId: string, patch: object = {}) => ({
+  report_id: "r", batch_id: "6a-batch", student_id: studentId, month: "2026-10",
+  range: { from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, session_count: 8, label: "Buổi 1–8 · 21/09–14/10" },
+  attendance: { present: 6, late: 1, excused: 1, absent: 0, held_sessions: 8 },
+  tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-09-30", max: 10, value: 8 }, { test_id: "t2", name: "Nói", date: "2026-10-12", max: 10, value: null }],
+  stars: { three: 2, two: 1, one: 1 }, homework: [{ kind: "vocabulary", excellent: 1, done: 2, not_done: 0 }],
+  general_comment: "Con tiến bộ rõ.", ready: true, ...patch,
+});
+
+/** Mọi em đủ dữ liệu: có nhận xét chung và đủ điểm. */
+function completeState(): StoreState {
   const state = createSeed();
-  replaceStore(state);
+  state.scores = state.scores.map((score) => ({ ...score, value: score.value ?? 7 }));
+  state.reports = state.reports.map((report) => ({ ...report, generalComment: report.generalComment || "Nhận xét." }));
   return state;
 }
 
-describe("bản xem trước báo cáo tháng (ảnh 07)", () => {
-  it("có khối sao, bảng BTVN theo phần, điểm từng bài và nhận xét chung", () => {
-    const state = seedStore();
-    const html = renderMarkup(
-      <ReportPreview
-        report={monthlyReport(state, "6a-student-1")}
-        className="Tiếng Anh giao tiếp 6A"
-        published
-        canPublish
-        onPublish={() => {}}
-        onBack={() => {}}
-      />,
-    );
-    // Tiêu đề + chuyên cần + số bài đã có điểm (không có trung bình).
-    expect(html).toContain("Báo cáo tháng 10");
-    expect(html).toContain("Xem trước · Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
+describe("nội dung xem trước báo cáo theo khoảng (ảnh 07)", () => {
+  it("có khối sao, bảng BTVN theo phần, điểm từng bài, nhận xét chung và nhãn khoảng buổi để in", () => {
+    const state = createSeed();
+    const student = state.students.find((item) => item.id === "6a-student-1")!;
+    const range = resolveRange(state.sessions, state.reportBatches.find((item) => item.id === "6a-batch")!);
+    const report = buildRangeStudentReport(student, range, { ...state, generalComment: "Nhận xét kiểm thử tổng hợp." })!;
+    const html = text(renderToStaticMarkup(<ReportPreview report={report} range={range} className="Tiếng Anh giao tiếp 6A" />));
+
+    expect(html).toContain("Báo cáo Buổi 1–8");
+    expect(html).toContain("21/09–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
     expect(html).toContain("Chuyên cần");
     expect(html).toContain("Bài kiểm tra");
-    expect(html).toContain("3/3 bài");
     expect(html).not.toContain("trung bình");
-    expect(html).not.toContain("TB");
-    // Khối sao 3/2/1 theo số buổi có phiếu.
     expect(html).toContain("Nhận xét theo sao");
-    expect(html).toContain("4 buổi có phiếu");
     expect(html).toContain("Tính trên các phiếu đã gửi.");
-    expect(html).toContain("2 buổi");
-    expect(html).toContain("1 buổi");
     expect(html).toContain('aria-label="3 sao"');
-    expect(html).toContain('aria-label="1 sao"');
-    // Bảng BTVN theo từng phần + chú thích không quy ra điểm.
     expect(html).toContain("Bài tập về nhà");
-    expect(html).toContain("Tốt = Hoàn thành tốt · Chưa = Chưa hoàn thành");
-    expect(html).toContain(">Phần<");
-    expect(html).toContain(">Hoàn thành<");
     expect(html).toContain("Luyện từ vựng");
-    expect(html).toContain("Bài tập");
-    expect(html).toContain(
-      "Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.",
-    );
-    // Điểm từng bài dạng value/max + nhận xét chung.
+    expect(html).toContain("Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.");
     expect(html).toContain("Điểm từng bài");
     expect(html).toContain("8/10");
-    expect(html).toContain("10/10");
     expect(html).not.toContain("10.0");
     expect(html).toContain("Bài chưa có điểm cần chấm trước khi phát hành.");
-    expect(html).toContain("Nhận xét chung");
-      expect(html).toContain("Nhận xét kiểm thử tổng hợp.");
-      expect(html).toContain("Tải PDF / ảnh");
-    expect(html).toContain("Phát hành lại");
+    expect(html).toContain("Nhận xét kiểm thử tổng hợp.");
     expect(html).not.toMatch(/vắng thi/i);
-    expect(html).not.toContain("chưa nhập");
+    expect(html).not.toContain("tháng này");
   });
 
   it("bài chưa có điểm hiện Chưa có điểm, không có Vắng thi", () => {
-    const state = seedStore();
-    // Em 3 (Phạm Đức Dũng) chưa có điểm bài "Nói" trong tháng 10.
-    const html = renderMarkup(
-      <ReportPreview
-        report={monthlyReport(state, "6a-student-3")}
-        className="Tiếng Anh giao tiếp 6A"
-      />,
-    );
+    const state = createSeed();
+    const student = state.students.find((item) => item.id === "6a-student-3")!;
+    const range = resolveRange(state.sessions, state.reportBatches[0]);
+    const report = buildRangeStudentReport(student, range, { ...state, generalComment: "" })!;
+    const html = text(renderToStaticMarkup(<ReportPreview report={report} range={range} className="Lớp" />));
     expect(html).toContain("Chưa có điểm");
-    expect(html).toContain("2/3 bài");
     expect(html).not.toMatch(/vắng thi/i);
+  });
+
+  it("đợt không có số buổi: tiêu đề chỉ có ngày", () => {
+    const state = createSeed();
+    const student = state.students.find((item) => item.id === "6a-student-1")!;
+    const range = resolveRange(state.sessions, { ...state.reportBatches[0], fromSessionId: null, toSessionId: null });
+    const report = buildRangeStudentReport(student, range, { ...state, generalComment: "x" })!;
+    const html = text(renderToStaticMarkup(<ReportPreview report={report} range={range} className="Lớp" />));
+    expect(html).toContain("<h2>Báo cáo</h2>");
+    expect(html).toContain("21/09–14/10 · Trần Gia Bảo");
   });
 });
 
-describe("màn duyệt & phát hành báo cáo (ảnh 13)", () => {
-  it("hiện tình trạng sẵn sàng/thiếu dữ liệu và ô nhận xét chung, không còn nút Nhận xét", () => {
-    seedStore();
-    const html = renderPage();
-    expect(html).toContain("sẵn sàng");
-    expect(html).toContain("thiếu dữ liệu");
-    expect(html).toContain("đã phát hành");
-    expect(html).toContain("Thiếu dữ liệu");
-    expect(html).toContain("Thiếu nhận xét chung");
-    expect(html).toContain("Đã phát hành · 12/10");
-    expect(html).toContain("Nhận xét chung của tháng");
-    expect(html).toContain('aria-label="Nhận xét chung của tháng"');
-    // Không còn nút "Nhận xét" và khối "Nhận xét đã gửi" của bản cũ.
-    expect(html).not.toMatch(/>\s*Nhận xét\s*</);
-    expect(html).not.toContain("Nhận xét đã gửi");
-    expect(html).not.toContain("Xem trước bản in");
-    expect(html).not.toMatch(/vắng thi/i);
-  });
-
-  it("gợi ý nhận xét chung theo số buổi sao và nút dùng gợi ý", () => {
+describe("danh sách đợt báo cáo", () => {
+  it("không còn chọn tháng; mỗi đợt ghi 'Buổi 1–8 · 21/09–14/10' kèm đếm đã phát hành / nháp / cần phát hành lại", () => {
     const state = createSeed();
-    // Đưa em có đủ ba mức sao lên đầu danh sách để mở sẵn em đó.
-    const index = state.students.findIndex((item) => item.id === "6a-student-1");
-    const [target] = state.students.splice(index, 1);
-    state.students.unshift(target);
+    state.reports = state.reports.map((report) => (report.id === "6a-student-1-report" ? { ...report, needsRepublish: true } : report));
     replaceStore(state);
-
-    const suggestion = monthlyReport(state, "6a-student-1").suggestion;
-    expect(suggestion).toBe(
-      "Gợi ý theo số buổi 3/2/1 sao của tháng: Tháng này con có 2 buổi 3 sao, 1 buổi 2 sao, 1 buổi 1 sao.",
-    );
-    const html = renderPage();
-    expect(html).toContain("Dùng gợi ý làm bản nháp");
-    expect(html).toContain(suggestion!);
-    expect(html).not.toMatch(/vắng thi/i);
+    const html = renderStatic();
+    expect(html).toContain("Buổi 1–8 · 21/09–14/10");
+    expect(html).toContain('href="/lop/6a/bao-cao?dot=6a-batch"');
+    expect(html).toContain("<b>1</b> đã phát hành");
+    expect(html).toContain("<b>8</b> nháp");
+    expect(html).toMatch(/<b[^>]*>1<\/b> cần phát hành lại/);
+    expect(html).toContain("Thêm báo cáo");
+    expect(html).not.toContain("Chọn tháng");
+    expect(html).not.toContain("Tháng trước");
+    expect(html).not.toContain("3 tháng");
   });
 
-  it("em còn thiếu dữ liệu hiện lý do và không được phát hành", () => {
-    const state = seedStore();
-    const slotHtml = renderPage();
-    expect(slotHtml).toContain("Thiếu dữ liệu");
-    expect(slotHtml).toContain("Phát hành báo cáo");
-    expect(state.reports.find((item) => item.id === "6a-student-1-report")?.status).toBe(
-      "published",
-    );
+  it("đợt cũ chuyển từ báo cáo tháng chỉ ghi ngày", () => {
+    const state = createSeed();
+    state.reportBatches = [{ id: "old", classId: "6a", fromSessionId: null, toSessionId: null, fromKey: "2026-09-01 00:00", toKey: "2026-09-31 23:59" }];
+    state.reports = state.reports.map((report) => ({ ...report, batchId: "old" }));
+    replaceStore(state);
+    const html = renderStatic();
+    expect(html).toContain("01/09–31/09");
+    expect(html).not.toContain("Buổi 1–");
   });
 
-    it("lưu nhận xét chung xong thì em đó đủ dữ liệu để phát hành", async () => {
-    const state = seedStore();
-      await saveReportComment(
-      "6a-student-0-report",
-      "Con chăm chỉ và tiến bộ đều trong tháng 10.",
-    );
-    const html = renderPage();
-    expect(html).toContain("Con chăm chỉ và tiến bộ đều trong tháng 10.");
-    expect(html).toContain("<b>2/10</b> sẵn sàng");
-    expect(html).not.toMatch(/vắng thi/i);
+  it("chưa có đợt nào thì hiện trạng thái rỗng; lớp chưa có buổi đã diễn ra thì không thêm được", () => {
+    const state = createSeed();
+    state.reportBatches = []; state.reports = [];
+    replaceStore(state);
+    expect(renderStatic()).toContain("Chưa có báo cáo nào");
+    expect(renderStatic()).toContain("Thêm báo cáo để chọn khoảng buổi và tạo nháp cho cả lớp.");
+
+    state.sessions = state.sessions.map((session) => (session.classId === "6a" ? { ...session, status: "planned" } : session));
+    replaceStore(state);
+    const html = renderStatic();
+    expect(html).toContain("Báo cáo cần ít nhất một buổi đã diễn ra.");
+    expect(html).not.toContain("Thêm báo cáo<");
   });
 
-  it("chỉ role có quyền Sửa mới thấy nút phát hành và nút dùng gợi ý", () => {
+  it("vai chỉ xem không có nút thêm báo cáo", () => {
     const state = createSeed();
     state.activeMemberId = MEMBER_IDS.lanTeacher;
-    const teacherRole = state.roles.find((role) => role.id === ROLE_IDS.teacher)!;
-    teacherRole.permissions.comments_reports = "read";
+    state.roles.find((role) => role.id === ROLE_IDS.teacher)!.permissions.comments_reports = "read";
     replaceStore(state);
-
-    const html = renderPage();
-    expect(html).toContain("Nhận xét chung của tháng");
-    expect(html).not.toContain("Dùng gợi ý làm bản nháp");
-    expect(html).not.toContain("Phát hành báo cáo");
-    expect(html).not.toMatch(/>\s*Phát hành\s*</);
+    const html = renderStatic();
+    expect(html).toContain("Buổi 1–8");
+    expect(html).not.toContain("Thêm báo cáo");
   });
 
-  it("role không có nhóm Nhận xét và báo cáo thì không xem được màn", () => {
+  it("vai không có nhóm Nhận xét và báo cáo không xem được màn", () => {
     const state = createSeed();
     state.auth?.memberIds.push(MEMBER_IDS.trang);
     state.activeMemberId = MEMBER_IDS.trang;
     state.members.find((member) => member.id === MEMBER_IDS.trang)!.classIds = ["6a"];
     replaceStore(state);
-    const html = renderPage();
-    expect(html).toContain("Bạn không có quyền xem báo cáo");
+    expect(renderStatic()).toContain("Bạn không có quyền xem báo cáo");
+  });
+
+  it("offline báo ngay trên danh sách", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    renderLive();
+    expect(await screen.findByText("Đang offline. Thêm và phát hành báo cáo cần kết nối mạng.")).toBeVisible();
   });
 });
 
-describe("logic phát hành báo cáo", () => {
-  it("phát hành báo cáo đã đủ dữ liệu, ghi ngày phát hành và hiện Đã phát hành", () => {
-    const state = seedStore();
-    state.reports.find((item) => item.id === "6a-student-0-report")!.generalComment =
-      "Tháng này con tiến bộ rõ ở phần nghe.";
-    Object.defineProperty(navigator, "onLine", {
-      value: true,
-      configurable: true,
-    });
-    publishReport("6a-student-0-report");
-    const saved = getStore().reports.find((item) => item.id === "6a-student-0-report");
-    expect(saved?.status).toBe("published");
-    expect(saved?.publishedAt).not.toBeNull();
+describe("thêm báo cáo theo khoảng buổi", () => {
+  it("mặc định từ Buổi 1 đến buổi đã diễn ra gần nhất, không có buổi hủy trong lựa chọn", async () => {
+    renderLive();
+    fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Thêm báo cáo" });
+    const from = within(dialog).getByLabelText("Buổi bắt đầu") as HTMLSelectElement;
+    const to = within(dialog).getByLabelText("Buổi kết thúc") as HTMLSelectElement;
+    expect(from.selectedOptions[0].textContent).toBe("Buổi 1 · 21/09");
+    expect(to.selectedOptions[0].textContent).toBe("Buổi 8 · 14/10");
+    const labels = [...from.options].map((option) => option.textContent);
+    expect(labels).toContain("Buổi 9 · 19/10");
+    expect(labels.some((label) => label?.includes("16/10"))).toBe(false);
+  });
 
-    const html = renderPage();
-    expect(html).toMatch(/Đã phát hành · \d{1,2}\/10/);
+  it("tạo đợt gọi POST với id ổn định qua thử lại, rồi mở chi tiết đợt vừa tạo", async () => {
+    let attempts = 0;
+    await mockApi((_endpoint, options) => {
+      if (++attempts === 1) throw new TypeError("network");
+      const reports = getStore().students.filter((student) => student.classId === "6a" && !student.leftAt).map((student, index) => ({ report_id: `new-${index}`, batch_id: options!.body.id, student_id: student.id, month: "2026-10", status: "draft", general_comment: "", needs_republish: false, publication_count: 0, published_at: null, version: 1 }));
+      return { batch: { id: options!.body.id, class_id: "6a", from_session_id: options!.body.from_session_id, to_session_id: options!.body.to_session_id, from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, counts: {}, created_at: "" }, reports };
+    });
+    renderLive();
+    fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Thêm báo cáo" });
+    const submit = within(dialog).getByRole("button", { name: "Tạo báo cáo" });
+    fireEvent.click(submit);
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Không kết nối được máy chủ");
+    // Nút giữ trạng thái đang lưu tối thiểu một lúc rồi mới bấm lại được.
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Tạo báo cáo" })).toBeEnabled());
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tạo báo cáo" }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toMatch(/\?dot=[0-9a-f-]{36}$/));
+    expect(calls).toHaveLength(2);
+    expect(calls[0].endpoint).toBe("POST /classes/6a/report-batches");
+    expect(calls[1].body).toEqual(calls[0].body);
+    expect(calls[0].body).toEqual({ id: expect.stringMatching(/^[0-9a-f-]{36}$/), from_session_id: "6a-session-0", to_session_id: "6a-session-7" });
+    expect(screen.getByTestId("where").textContent).toContain(calls[0].body.id);
+    expect(getStore().reportBatches.map((batch) => batch.id)).toContain(calls[0].body.id);
+  });
+
+  it("lỗi 422 của máy chủ hiện ngay trong hộp thoại", async () => {
+    await mockApi(() => { throw new ApiError(422, { code: "invalid_range", message: "x", request_id: "r" }); });
+    renderLive();
+    fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Thêm báo cáo" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tạo báo cáo" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Buổi bắt đầu phải trước hoặc cùng buổi kết thúc.");
+  });
+
+  it("chặn ngay khi buổi bắt đầu sau buổi kết thúc, không gọi máy chủ", async () => {
+    await mockApi(() => undefined);
+    renderLive();
+    fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Thêm báo cáo" });
+    fireEvent.change(within(dialog).getByLabelText("Buổi bắt đầu"), { target: { value: "6a-session-8" } });
+    expect(within(dialog).getByRole("alert")).toHaveTextContent("Buổi bắt đầu phải trước hoặc cùng buổi kết thúc.");
+    expect(within(dialog).getByRole("button", { name: "Tạo báo cáo" })).toBeDisabled();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("offline báo cần mạng trong hộp thoại", async () => {
+    await mockApi(() => undefined);
+    renderLive();
+    fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
+    const dialog = await screen.findByRole("dialog", { name: "Thêm báo cáo" });
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Tạo báo cáo" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Thêm báo cáo cần kết nối mạng.");
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("chi tiết một đợt", () => {
+  const open = () => renderLive("/lop/6a/bao-cao?dot=6a-batch");
+
+  it("liệt kê học sinh của đợt với tình trạng sẵn sàng / thiếu dữ liệu / đã phát hành", () => {
+    const html = renderStatic("/lop/6a/bao-cao?dot=6a-batch");
+    expect(html).toContain("Buổi 1–8 · 21/09–14/10");
+    expect(html).toContain("Tất cả báo cáo");
+    expect(html).toContain("sẵn sàng");
+    expect(html).toContain("thiếu dữ liệu");
+    expect(html).toContain("Thiếu nhận xét chung");
+    expect(html).toContain("Đã phát hành · 12/10");
+    expect(html).toContain("Nhận xét chung của đợt");
+    expect(html).not.toContain("Nhận xét chung của tháng");
     expect(html).not.toMatch(/vắng thi/i);
+  });
+
+  it("gợi ý nhận xét theo số buổi sao của đợt", () => {
+    const state = createSeed();
+    const index = state.students.findIndex((item) => item.id === "6a-student-1");
+    const [target] = state.students.splice(index, 1);
+    state.students.unshift(target);
+    replaceStore(state);
+    const html = renderStatic("/lop/6a/bao-cao?dot=6a-batch");
+    expect(html).toContain("Dùng gợi ý làm bản nháp");
+    expect(html).toContain("Gợi ý theo số buổi 3/2/1 sao của đợt: Trong đợt này con có 2 buổi 3 sao, 1 buổi 2 sao, 1 buổi 1 sao.");
+  });
+
+  it("chỉ vai có quyền Sửa mới thấy nút phát hành và nút dùng gợi ý", () => {
+    const state = createSeed();
+    state.activeMemberId = MEMBER_IDS.lanTeacher;
+    state.roles.find((role) => role.id === ROLE_IDS.teacher)!.permissions.comments_reports = "read";
+    replaceStore(state);
+    const html = renderStatic("/lop/6a/bao-cao?dot=6a-batch");
+    expect(html).toContain("Nhận xét chung của đợt");
+    expect(html).not.toContain("Dùng gợi ý làm bản nháp");
+    expect(html).not.toContain("Phát hành báo cáo");
+  });
+
+  it("đợt không thuộc lớp thì quay về danh sách", () => {
+    expect(renderStatic("/lop/ielts/bao-cao?dot=6a-batch")).not.toContain("Tất cả báo cáo");
+  });
+
+  it("lưu nhận xét chung khi rời ô, gọi PUT /reports/:id", async () => {
+    await mockApi((_endpoint, options) => ({ id: "6a-student-0-report", general_comment: options!.body.general_comment, needs_republish: false, version: 3 }));
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: /Nguyễn Minh Anh/ }));
+    const box = await screen.findByLabelText("Nhận xét chung của đợt");
+    fireEvent.change(box, { target: { value: "Con chăm chỉ." } });
+    fireEvent.blur(box);
+    await waitFor(() => expect(calls).toEqual([{ endpoint: "PUT /reports/6a-student-0-report", body: { general_comment: "Con chăm chỉ." } }]));
+    await waitFor(() => expect(getStore().reports.find((report) => report.id === "6a-student-0-report")?.generalComment).toBe("Con chăm chỉ."));
+  });
+
+  it("lưu nhận xét lỗi (offline) hiện lỗi tại chỗ", async () => {
+    await mockApi(() => undefined);
+    open();
+    fireEvent.click(await screen.findByRole("button", { name: /Nguyễn Minh Anh/ }));
+    const box = await screen.findByLabelText("Nhận xét chung của đợt");
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    fireEvent.change(box, { target: { value: "Ghi chú." } });
+    fireEvent.blur(box);
+    expect(await screen.findByText("Lưu nhận xét cần kết nối mạng.")).toBeVisible();
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("xem trước trong popup", () => {
+  const openPreview = async (path = "/lop/6a/bao-cao?dot=6a-batch") => {
+    renderLive(path);
+    fireEvent.click(await screen.findByRole("button", { name: /Trần Gia Bảo/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Xem trước" }));
+    return screen.findByRole("dialog", { name: "Báo cáo Buổi 1–8" });
+  };
+
+  it("mobile: mở thành sheet toàn màn, tải bản của máy chủ và không nối bên dưới danh sách", async () => {
+    await mockApi((endpoint) => (endpoint === "GET /reports/6a-student-1-report/preview" ? previewBody("6a-student-1") : undefined));
+    const dialog = await openPreview();
+    // Đầu popup và đầu bản in cùng ghi khoảng buổi, tên em và lớp.
+    expect(within(dialog).getAllByText("21/09–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A")).toHaveLength(2);
+    expect(await within(dialog).findByText("Con tiến bộ rõ.")).toBeVisible();
+    expect(calls.map((call) => call.endpoint)).toEqual(["GET /reports/6a-student-1-report/preview"]);
+    expect(within(dialog).getByText("Điểm từng bài")).toBeVisible();
+    expect(within(dialog).getByText("Chưa có điểm")).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "In báo cáo" })).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "Phát hành lại" })).toBeDisabled();
+    expect(document.querySelectorAll("article[aria-label='Bản xem trước báo cáo']")).toHaveLength(1);
+    expect(dialog.closest("main")).not.toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Đóng" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Báo cáo Buổi 1–8" })).toBeNull());
+  });
+
+  it("desktop: mở thành dialog trong trang chi tiết đợt", async () => {
+    desktop(true);
+    await mockApi(() => previewBody("6a-student-1"));
+    renderLive("/lop/6a/bao-cao?dot=6a-batch");
+    fireEvent.click(await screen.findByRole("button", { name: /Trần Gia Bảo/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Xem trước" }));
+    const dialog = await screen.findByRole("dialog", { name: "Báo cáo Buổi 1–8" });
+    expect(await within(dialog).findByText("Con tiến bộ rõ.")).toBeVisible();
+    expect(screen.getByText(/Sẵn sàng/)).toBeInTheDocument();
+  });
+
+  it("máy chủ lỗi hiện thông báo kèm nút Thử lại", async () => {
+    let fail = true;
+    await mockApi(() => {
+      if (fail) throw new ApiError(500, { code: "internal", message: "x", request_id: "r" });
+      return previewBody("6a-student-1");
+    });
+    const dialog = await openPreview();
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Không tải được bản xem trước.");
+    expect(within(dialog).getByRole("button", { name: "In báo cáo" })).toBeDisabled();
+    fail = false;
+    fireEvent.click(within(dialog).getByRole("button", { name: "Thử lại" }));
+    expect(await within(dialog).findByText("Con tiến bộ rõ.")).toBeVisible();
+  });
+
+  it("offline hiện cần mạng ngay trong popup, không gọi máy chủ", async () => {
+    await mockApi(() => previewBody("6a-student-1"));
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const dialog = await openPreview();
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Xem trước báo cáo cần kết nối mạng.");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("phát hành từ popup gọi POST /reports/:id/publish rồi đóng popup", async () => {
+    replaceStore(completeState());
+    await mockApi((endpoint) => (endpoint.endsWith("/preview") ? previewBody("6a-student-2") : { report_id: "6a-student-2-report", batch_id: "6a-batch", publication_no: 1, published_at: "2026-10-25T01:00:00Z", snapshot: {} }));
+    renderLive("/lop/6a/bao-cao?dot=6a-batch");
+    fireEvent.click(await screen.findByRole("button", { name: /Lê Khánh Chi/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Xem trước" }));
+    const dialog = await screen.findByRole("dialog", { name: "Báo cáo Buổi 1–8" });
+    await within(dialog).findByText("Con tiến bộ rõ.");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Phát hành" }));
+    await waitFor(() => expect(calls.map((call) => call.endpoint)).toContain("POST /reports/6a-student-2-report/publish"));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Báo cáo Buổi 1–8" })).toBeNull());
+    expect(await screen.findByText("Đã phát hành báo cáo.")).toBeVisible();
+    expect(getStore().reports.find((report) => report.id === "6a-student-2-report")?.status).toBe("published");
+  });
+
+  it("phát hành lỗi hiện ngay trong popup", async () => {
+    replaceStore(completeState());
+    await mockApi((endpoint) => {
+      if (endpoint.endsWith("/preview")) return previewBody("6a-student-2");
+      throw new ApiError(409, { code: "conflict", message: "x", request_id: "r" });
+    });
+    renderLive("/lop/6a/bao-cao?dot=6a-batch");
+    fireEvent.click(await screen.findByRole("button", { name: /Lê Khánh Chi/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Xem trước" }));
+    const dialog = await screen.findByRole("dialog", { name: "Báo cáo Buổi 1–8" });
+    await within(dialog).findByText("Con tiến bộ rõ.");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Phát hành" }));
+    expect(await within(dialog).findByText("Báo cáo vừa được phát hành ở nơi khác. Tải lại rồi thử lại.")).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Báo cáo Buổi 1–8" })).toBeVisible();
+  });
+});
+
+describe("phát hành cả lớp", () => {
+  it("khi mọi em đủ dữ liệu: một lần POST /report-batches/:id/publish", async () => {
+    replaceStore(completeState());
+    await mockApi(() => ({
+      published: getStore().reports.filter((report) => report.batchId === "6a-batch" && report.status === "draft").map((report, index) => ({ report_id: report.id, publication_no: index + 1 })),
+      published_at: "2026-10-25T01:00:00Z",
+    }));
+    renderLive("/lop/6a/bao-cao?dot=6a-batch");
+    fireEvent.click(await screen.findByRole("button", { name: "Phát hành 8 báo cáo" }));
+    expect(await screen.findByText("Đã phát hành 8 báo cáo.")).toBeVisible();
+    expect(calls).toEqual([{ endpoint: "POST /report-batches/6a-batch/publish", body: undefined }]);
+    expect(getStore().reports.filter((report) => report.batchId === "6a-batch").every((report) => report.status === "published")).toBe(true);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Phát hành báo cáo" })).toBeDisabled());
+  });
+
+  it("còn em thiếu dữ liệu thì chỉ phát hành từng em đã đủ, không dùng lệnh cả đợt", async () => {
+    const state = createSeed();
+    state.reports = state.reports.map((report) => (report.id === "6a-student-4-report" ? { ...report, generalComment: "Đủ." } : report));
+    replaceStore(state);
+    await mockApi(() => ({ publication_no: 1, published_at: "2026-10-25T01:00:00Z" }));
+    renderLive("/lop/6a/bao-cao?dot=6a-batch");
+    fireEvent.click(await screen.findByRole("button", { name: "Phát hành 1 báo cáo" }));
+    expect(await screen.findByText("Đã phát hành 1 báo cáo.")).toBeVisible();
+    expect(calls.map((call) => call.endpoint)).toEqual(["POST /reports/6a-student-4-report/publish"]);
+  });
+
+  it("offline báo cần mạng và không gọi máy chủ", async () => {
+    replaceStore(completeState());
+    await mockApi(() => undefined);
+    renderLive("/lop/6a/bao-cao?dot=6a-batch");
+    const button = await screen.findByRole("button", { name: "Phát hành 8 báo cáo" });
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    fireEvent.click(button);
+    expect(await screen.findByText("Phát hành báo cáo cần kết nối mạng.")).toBeVisible();
+    expect(calls).toHaveLength(0);
   });
 });

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { ReactElement } from "react";
 import { MEMBER_IDS } from "../../data/defaults";
@@ -8,7 +8,6 @@ import { createSeed } from "../../data/seed";
 import { getStore, replaceStore } from "../../data/store";
 import { switchRole } from "../../data/repositories/access";
 import {
-  getChildMonthlyReport,
   getChildOverview,
   listMyChildren,
 } from "../../data/repositories/guardian";
@@ -97,7 +96,7 @@ describe("PH · Lớp học của con (tab 1)", () => {
     // Lối vào Điểm và Báo cáo tháng dạng hàng.
     expect(html).toContain('href="/ph/diem"');
     expect(html).toContain('href="/ph/bao-cao"');
-    expect(html).toContain("Báo cáo tháng");
+    expect(html).toContain("<strong>Báo cáo</strong>");
     // Danh sách buổi: nhóm tháng, mới nhất trước, nhãn điểm danh, sao, Mới, buổi huỷ.
     expect(html).toContain("Tháng 10/2026");
     expect(html).toContain('href="/ph/buoi/6a-session-7"');
@@ -455,57 +454,142 @@ describe("PH · Buổi học: bài tập về nhà (ảnh 09, 34, 35)", () => {
   });
 });
 
-describe("PH · Báo cáo tháng (ảnh 10)", () => {
-  it("chuyên cần, điểm từng bài, sao 3/2/1 và bảng BTVN theo phần", () => {
-    seedGuardian();
-    const html = renderPage(<GuardianReportPage />);
-    expect(html).toContain("Trần Gia Bảo");
-    expect(html).toContain("Báo cáo tháng 10");
-    expect(html).not.toContain("3 tháng gần nhất");
-    expect(html).toContain("Chuyên cần");
-    expect(html).toContain("3/4 buổi");
-    expect(html).toContain("0 muộn");
-    expect(html).not.toContain("trung bình");
-    expect(html).not.toContain("TB");
-    expect(html).toContain("3/3 bài");
-    // Điểm từng bài dạng value/max, bài chưa có điểm ghi rõ.
-    expect(html).toContain("Điểm từng bài");
-    expect(html).toContain("10/10");
-    expect(html).toContain("Nhận xét theo sao");
-    expect(html).toContain("4 buổi có phiếu");
-    expect(html).toContain("Tính trên các phiếu đã gửi.");
-    expect(html).toContain("2 buổi");
-    expect(html).toContain("1 buổi");
-    expect(html).toContain("Bài tập về nhà");
-    expect(html).toContain("Tốt = Hoàn thành tốt · Chưa = Chưa hoàn thành");
-    expect(html).toContain("Luyện từ vựng");
-    expect(html).toContain(
-      "Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.",
+describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
+  const listItem = (id: string, patch: object = {}) => ({
+    report_id: id, batch_id: `batch-${id}`, student_id: "6a-student-1", month: "2026-10", status: "published", needs_republish: false,
+    publication_count: 1, published_at: "2026-10-25T09:00:00Z", version: 2, from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, ...patch,
+  });
+  const snapshot = {
+    month: "2026-10", range: { from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, session_count: 8, label: "x" },
+    attendance: { present: 5, late: 1, excused: 1, absent: 0, held_sessions: 8 },
+    tests: [{ test_id: "t1", name: "Nói", date: "2026-10-12", max: 10, value: 10 }, { test_id: "t2", name: "Viết", date: "2026-10-13", max: 10, value: null }],
+    stars: { three: 2, two: 1, one: 1 }, homework: [{ kind: "vocabulary", excellent: 1, done: 2, not_done: 0 }],
+    general_comment: "Con học tập chăm chỉ.", ready: true,
+  };
+
+  async function mockApi(handler: (endpoint: string, options?: { query?: { cursor?: string } }) => unknown) {
+    const { api } = await import("../../data/sync");
+    return vi.spyOn(api, "request").mockImplementation((async (endpoint: string, options?: { query?: { cursor?: string } }) => handler(endpoint, options)) as never);
+  }
+  function renderAt(path: string) {
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <GuardianProvider>
+          <Routes>
+            <Route path="/ph/bao-cao" element={<GuardianReportPage />} />
+            <Route path="/ph/bao-cao/:reportId/:publicationNo" element={<GuardianReportPage />} />
+          </Routes>
+        </GuardianProvider>
+      </MemoryRouter>,
     );
-    expect(html).toContain("Tải PDF về máy");
-    expect(html).not.toContain("Điểm có cập nhật, cần phát hành lại");
+  }
+
+  it("danh sách chỉ có báo cáo đã phát hành theo khoảng buổi, mới nhất trước, mở bằng mã báo cáo và lần phát hành", async () => {
+    seedGuardian();
+    await mockApi(() => ({
+      items: [
+        listItem("r-new", { needs_republish: true, publication_count: 3 }),
+        listItem("r-draft", { status: "draft", publication_count: 0, published_at: null }),
+        listItem("r-old", { from_number: null, to_number: null, from_key: "2026-09-01 00:00", to_key: "2026-09-31 23:59", published_at: "2026-10-01T09:00:00Z" }),
+      ],
+      next_cursor: null,
+    }));
+    renderAt("/ph/bao-cao");
+    const links = await screen.findAllByRole("link", { name: /Buổi 1–8|09/ });
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(["/ph/bao-cao/r-new/3", "/ph/bao-cao/r-old/1"]);
+    expect(links[0]).toHaveTextContent("Buổi 1–8 · 21/09–14/10");
+    expect(links[0]).toHaveTextContent("Phát hành 25/10");
+    expect(links[0]).toHaveTextContent("Cập nhật");
+    expect(links[1]).toHaveTextContent("01/09–31/09");
+    expect(screen.queryByText("Xem thêm")).toBeNull();
   });
 
-  it("cờ phát hành lại khi điểm có cập nhật", () => {
+  it("phân trang bằng next_cursor của máy chủ qua nút Xem thêm", async () => {
     seedGuardian();
-    const state = createSeed();
-    state.reports = state.reports.map((report) =>
-      report.id === "6a-student-1-report"
-        ? { ...report, needsRepublish: true }
-        : report,
+    const spy = await mockApi((_endpoint, options) =>
+      options?.query?.cursor
+        ? { items: [listItem("r-2", { to_key: "2026-09-30 18:00", from_number: 1, to_number: 4 })], next_cursor: null }
+        : { items: [listItem("r-1")], next_cursor: "cursor-2" },
     );
-    replaceStore(state);
-    switchRole(MEMBER_IDS.lanGuardian);
-    const html = renderPage(<GuardianReportPage />);
-    expect(html).toContain("Điểm có cập nhật, cần phát hành lại");
+    renderAt("/ph/bao-cao");
+    fireEvent.click(await screen.findByRole("button", { name: "Xem thêm" }));
+    await waitFor(() => expect(screen.getAllByRole("link")).toHaveLength(2));
+    expect(spy.mock.calls.map((call) => call[1])).toEqual([{ query: undefined }, { query: { cursor: "cursor-2" } }]);
+    expect(screen.queryByRole("button", { name: "Xem thêm" })).toBeNull();
   });
 
-  it("chưa phát hành thì phụ huynh không thấy báo cáo", () => {
+  it("chưa phát hành báo cáo nào thì hiện trạng thái rỗng, không có bản nháp", async () => {
     seedGuardian();
     storeSelectedChild("6a-student-8");
-    const html = renderPage(<GuardianReportPage />);
-    expect(html).toContain("Cô chưa phát hành báo cáo tháng này");
-    expect(getChildMonthlyReport("6a-student-8", "2026-10")).toBeNull();
+    await mockApi(() => ({ items: [], next_cursor: null }));
+    renderAt("/ph/bao-cao");
+    expect(await screen.findByText("Cô chưa phát hành báo cáo nào")).toBeVisible();
+  });
+
+  it("lỗi và offline hiện ngay trong màn kèm nút Thử lại", async () => {
+    seedGuardian();
+    let fail = true;
+    await mockApi(() => {
+      if (fail) throw new TypeError("network");
+      return { items: [listItem("r-1")], next_cursor: null };
+    });
+    renderAt("/ph/bao-cao");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Không kết nối được máy chủ");
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
+    expect(await screen.findByRole("link", { name: /Buổi 1–8/ })).toBeVisible();
+
+    cleanup();
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    renderAt("/ph/bao-cao");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Xem báo cáo cần kết nối mạng.");
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+  });
+
+  it("mở bản phát hành: chuyên cần, điểm từng bài, sao 3/2/1 và bảng BTVN theo phần", async () => {
+    seedGuardian();
+    const spy = await mockApi(() => ({ student_id: "6a-student-1", published_at: "2026-10-25T09:00:00Z", snapshot }));
+    renderAt("/ph/bao-cao/r-new/2");
+    expect(await screen.findByRole("heading", { name: "Báo cáo Buổi 1–8" })).toBeVisible();
+    expect(spy.mock.calls[0][0]).toBe("GET /reports/r-new/publications/2");
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("21/09–14/10");
+    expect(text).toContain("6/8 buổi");
+    expect(text).toContain("1 muộn");
+    expect(text).toContain("1/2 bài");
+    expect(text).toContain("10/10");
+    expect(text).toContain("Chưa có điểm");
+    expect(text).toContain("Nhận xét theo sao");
+    expect(text).toContain("4 buổi có phiếu");
+    expect(text).toContain("Luyện từ vựng");
+    expect(text).toContain("Tính trên các phiếu đã gửi.");
+    expect(text).toContain("Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.");
+    expect(text).toContain("Tải PDF về máy");
+    expect(text).not.toContain("trung bình");
+    expect(text).not.toContain("Điểm có cập nhật, cần phát hành lại");
+  });
+
+  it("cờ cập nhật hiện khi báo cáo đã đồng bộ về máy có cờ phát hành lại", async () => {
+    seedGuardian();
+    const state = createSeed();
+    state.reports = state.reports.map((report) => (report.id === "6a-student-1-report" ? { ...report, needsRepublish: true } : report));
+    replaceStore(state);
+    switchRole(MEMBER_IDS.lanGuardian);
+    await mockApi(() => ({ student_id: "6a-student-1", published_at: "2026-10-25T09:00:00Z", snapshot }));
+    renderAt("/ph/bao-cao/6a-student-1-report/1");
+    expect(await screen.findByText("Điểm có cập nhật, cần phát hành lại")).toBeVisible();
+  });
+
+  it("báo cáo không đọc được hoặc không phải của con thì không hiện nội dung", async () => {
+    seedGuardian();
+    await mockApi(() => ({ student_id: "6a-student-2", published_at: "2026-10-25T09:00:00Z", snapshot }));
+    renderAt("/ph/bao-cao/r-other/1");
+    expect(await screen.findByText("Chưa có báo cáo này")).toBeVisible();
+    expect(document.body.textContent).not.toContain("Con học tập chăm chỉ.");
+    cleanup();
+    await mockApi(() => ({ student_id: "6a-student-1", published_at: null, snapshot: { month: "2026-10", attendance: {} } }));
+    renderAt("/ph/bao-cao/r-bad/1");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Báo cáo không đọc được");
   });
 });
 

@@ -102,14 +102,28 @@ export interface HomeworkGrade {
   level: HomeworkLevel;
 }
 
+/** Đợt báo cáo của cả lớp theo khoảng buổi; khoảng lưu theo mốc "YYYY-MM-DD HH:MM" của buổi đầu/cuối. */
+export interface ReportBatch {
+  id: string;
+  classId: string;
+  /** null với đợt chuyển từ báo cáo tháng cũ (không có buổi đầu/cuối). */
+  fromSessionId: string | null;
+  toSessionId: string | null;
+  fromKey: string;
+  toKey: string;
+}
+
 export interface Report {
   id: string;
   classId: string;
   studentId: string;
+  /** Đợt báo cáo chứa bản này; mỗi đợt có tối đa một bản cho mỗi học sinh. */
+  batchId: string;
+  /** Tháng của buổi kết thúc đợt (YYYY-MM), luôn có giá trị. */
   month: string;
   status: "draft" | "published";
   needsRepublish: boolean;
-  /** Nhận xét chung của tháng do giáo viên soạn (nội dung báo cáo, spec mục 4). */
+  /** Nhận xét chung của đợt do giáo viên soạn (nội dung báo cáo, spec mục 4). */
   generalComment: string;
   /** Thời điểm phát hành gần nhất; null = chưa phát hành. */
   publishedAt: string | null;
@@ -185,8 +199,9 @@ export interface StoreState {
   comments: Comment[];
   homeworkSections: HomeworkSection[];
   homeworkGrades: HomeworkGrade[];
+  reportBatches: ReportBatch[];
   reports: Report[];
-  reportPublications: Array<{ id: string; report_id: string; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; snapshot: unknown }>;
+  reportPublications: Array<{ id: string; report_id: string; batch_id?: string | null; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; snapshot: unknown }>;
   changeLogs: ChangeLog[];
   pending: PendingChange[];
   auth: AuthSession | null;

@@ -1,8 +1,8 @@
 import type { Report } from "../../data/types";
-import type { MonthlyStudentReport } from "../../data/reportModel";
+import type { PeriodStudentReport } from "../../data/reportModel";
 
 /**
- * Trạng thái một dòng trong màn Duyệt & phát hành báo cáo (ảnh 13, 26).
+ * Trạng thái một dòng trong chi tiết đợt báo cáo (ảnh 13, 26).
  * Thứ tự ưu tiên theo ảnh: còn thiếu dữ liệu thì luôn hiện "Thiếu dữ liệu"
  * (kèm lý do), sau đó mới tới cờ phát hành lại / đã phát hành / nháp.
  */
@@ -54,9 +54,9 @@ export interface ReviewSummary {
   publishable: number;
 }
 
-export type ReportReviewRow = Pick<MonthlyStudentReport, "ready" | "missing">;
+export type ReportReviewRow = Pick<PeriodStudentReport, "ready" | "missing">;
 
-/** Trạng thái của một em theo dữ liệu báo cáo tháng và bản ghi `Report` hiện có. */
+/** Trạng thái của một em theo dữ liệu báo cáo của đợt và bản ghi `Report` hiện có. */
 export function reportSlot(
   row: ReportReviewRow,
   report?: Report,
@@ -125,39 +125,4 @@ export function reviewSummary(slots: ReportSlot[]): ReviewSummary {
 /** Nhãn nút phát hành hàng loạt (ảnh 13: "Phát hành 6 báo cáo"). */
 export function publishAllLabel(count: number): string {
   return count > 0 ? `Phát hành ${count} báo cáo` : "Phát hành báo cáo";
-}
-
-/** Số thứ tự tháng trong kỳ, dùng cho "Báo cáo tháng 10" / "· Tháng 10". */
-export function monthNumber(month: string): number {
-  return Number(month.slice(5, 7));
-}
-
-/** Nhãn tháng đầy đủ cho tiêu đề bản xem trước: "Báo cáo tháng 10". */
-export function reportMonthTitle(month: string): string {
-  return `Báo cáo tháng ${monthNumber(month)}`;
-}
-
-/** Nhãn một tháng trong ô chọn kỳ: "Tháng 10, 2026". */
-export function monthOptionLabel(month: string): string {
-  return `Tháng ${monthNumber(month)}, ${month.slice(0, 4)}`;
-}
-
-/** Nhãn kỳ trên màn duyệt: "Tháng 10". */
-export function monthPeriodLabel(month: string): string {
-  return `Tháng ${monthNumber(month)}`;
-}
-
-/**
- * Tháng liền trước (delta = 1) hoặc liền sau (delta = -1) trong danh sách
- * tháng có dữ liệu. Web chỉ cho chọn MỘT tháng (không có "3 tháng gần nhất");
- * hết danh sách thì giữ nguyên tháng đang chọn.
- */
-export function stepMonthChoice(
-  choices: string[],
-  current: string,
-  delta: number,
-): string {
-  const index = choices.indexOf(current);
-  if (index < 0) return current;
-  return choices[index + delta] ?? current;
 }

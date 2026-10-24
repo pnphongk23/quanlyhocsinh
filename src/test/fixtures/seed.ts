@@ -7,7 +7,7 @@ export function createSeed(): StoreState {
     classes: [
       { id:"6a", name:"Tiếng Anh giao tiếp 6A", weekdays:[1,3], time:"18:00", teacherName:"Cô Lan", status:"active" },
       { id:"ielts", name:"IELTS 7.0", weekdays:[2,4], time:"19:30", teacherName:null, status:"active" },
-      ], students: [], sessions: [], attendance: [], tests: [], scores: [], comments: [], homeworkSections: [], homeworkGrades: [], reports: [], reportPublications: [], changeLogs: [], pending: [],
+      ], students: [], sessions: [], attendance: [], tests: [], scores: [], comments: [], homeworkSections: [], homeworkGrades: [], reportBatches: [], reports: [], reportPublications: [], changeLogs: [], pending: [],
     auth: { phone:"fixture-user", memberIds:[MEMBER_IDS.lanAdmin, MEMBER_IDS.lanTeacher] }, currentClassId:"6a", roles:defaultRoles(), members:[], activeMemberId:MEMBER_IDS.lanAdmin,
   };
   const names=["Nguyễn Minh Anh","Trần Gia Bảo","Lê Khánh Chi","Phạm Đức Dũng","Hoàng Thu Hà","Vũ Quang Huy","Đặng Ngọc Lan","Bùi Tuấn Kiệt","Ngô Bảo Ngọc","Đỗ Hải Nam"];
@@ -15,12 +15,13 @@ export function createSeed(): StoreState {
   for (const [classId, classDates] of [["6a",dates],["ielts",["2026-09-22","2026-09-24","2026-09-29","2026-10-01","2026-10-06","2026-10-08","2026-10-13","2026-10-15","2026-10-20"]]] as const) {
     classDates.forEach((date,i)=>state.sessions.push({id:`${classId}-session-${i}`,classId,date,time:classId==="6a"?"18:00":"19:30",origin:"recurring",status:i===8?"planned":"held"}));
     if(classId==="6a") state.sessions.push({id:"6a-extra-session",classId,date:"2026-10-25",time:"17:00",origin:"manual",note:"Buổi học bù",makeup:true,status:"planned"},{id:"6a-extra-cancelled",classId,date:"2026-10-16",time:"18:00",origin:"manual",note:"Buổi bù bị hủy",makeup:true,status:"cancelled"});
+    state.reportBatches.push({id:`${classId}-batch`,classId,fromSessionId:`${classId}-session-0`,toSessionId:`${classId}-session-7`,fromKey:`${classDates[0]} ${classId==="6a"?"18:00":"19:30"}`,toKey:`${classDates[7]} ${classId==="6a"?"18:00":"19:30"}`});
     names.forEach((name,i)=>{
       const studentId=`${classId}-student-${i}`; const left=i===9&&classId==="6a";
       state.students.push({id:studentId,classId,name,parentPhone:"",enrolledAt:"2026-09-01",leftAt:left?"2026-10-09":null,status:left?"left":"active"});
       classDates.slice(0,8).forEach((date,j)=>{ if(left&&date>"2026-10-09")return; const status=i===0&&j>=6?"absent":i===1&&j===7?"excused":i===2&&j===7?"late":"present"; state.attendance.push({id:`${classId}-attendance-${i}-${j}`,sessionId:`${classId}-session-${j}`,studentId,status,note:"",lateAt:status==="late"?"18:10":null}); });
         for(let j=0;j<4;j++) state.scores.push({id:`${classId}-score-${i}-${j}`,testId:`${classId}-test-${j}`,studentId,value:i===3&&j===3?null:classId==="6a"&&i===1&&j===2?10:classId==="6a"&&i===1&&j===3?9:6+((i+j)%5)});
-      state.reports.push({id:`${studentId}-report`,classId,studentId,month:"2026-10",status:i<2?"published":"draft",needsRepublish:false,generalComment:i===1&&classId==="6a"?"Nhận xét kiểm thử tổng hợp.":"",publishedAt:i<2?"2026-10-12T09:00:00.000Z":null});
+      state.reports.push({id:`${studentId}-report`,classId,studentId,batchId:`${classId}-batch`,month:"2026-10",status:i<2?"published":"draft",needsRepublish:false,generalComment:i===1&&classId==="6a"?"Nhận xét kiểm thử tổng hợp.":"",publishedAt:i<2?"2026-10-12T09:00:00.000Z":null});
     });
     for(let j=0;j<4;j++) state.tests.push({id:`${classId}-test-${j}`,classId,name:["Từ vựng","Ngữ pháp","Nghe","Nói"][j],date:classDates[j+3],max:10,archived:false});
   }

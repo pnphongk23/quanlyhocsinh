@@ -35,19 +35,30 @@ export interface ApiScore extends Cell { test_id: string; value: number | null }
 export interface ApiSlip extends Cell { session_id: string; stars: StarLevel | null; note: string; status: "draft" | "sent"; sent_at: string | null }
 export interface ApiHomeworkSection extends Versioned { id: string; class_id: string; session_id: string; kind: HomeworkKind; title: string; description: string }
 export interface ApiHomeworkGrade extends Cell { section_id: string; level: HomeworkLevel | null }
-export interface ReportPreview {
+/** Nội dung báo cáo một đợt, dùng cho xem trước (`GET /reports/:id/preview`) và bản chụp đã phát hành. */
+export interface ReportBody {
   student_id: string; month: string;
+  range?: ApiReportRange;
   attendance: { present: number; late: number; excused: number; absent: number; held_sessions: number };
   tests: { test_id: string; name: string; date: string; max: number; value: number | null }[];
   stars: { three: number; two: number; one: number };
   homework: { kind: HomeworkKind; excellent: number; done: number; not_done: number }[];
   general_comment: string; ready: boolean;
 }
-export interface ApiReport extends Versioned { id: string; class_id: string; student_id: string; month: string; status: "draft" | "published"; general_comment: string; needs_republish: boolean; publication_count: number; published_at: string | null }
-export interface ApiPublication { id: string; report_id: string; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; snapshot: unknown }
+export interface ApiReportRange { from_key: string; to_key: string; from_number: number | null; to_number: number | null; session_count?: number; label?: string }
+export interface ReportPreview extends ReportBody { report_id?: string; batch_id?: string }
+export interface ApiReportBatch extends Versioned { id: string; class_id: string; from_session_id: string | null; to_session_id: string | null; from_key: string; to_key: string }
+export interface ApiReport extends Versioned { id: string; class_id: string; student_id: string; batch_id: string; month: string; status: "draft" | "published"; general_comment: string; needs_republish: boolean; publication_count: number; published_at: string | null }
+export interface ApiPublication { id: string; report_id: string; batch_id?: string | null; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; snapshot: unknown }
+/** Đợt trong `GET/POST .../report-batches`: thêm số buổi và đếm trạng thái, không có `version`. */
+export interface ApiBatchListItem { id: string; class_id: string; from_session_id: string | null; to_session_id: string | null; from_key: string; to_key: string; from_number: number | null; to_number: number | null; counts: { total: number; draft: number; published: number; needs_republish: number }; created_at: string }
+/** Dòng báo cáo trong `GET /report-batches/:id/reports`. */
+export interface ApiBatchReportItem { report_id: string; batch_id: string; student_id: string; student_name?: string; month: string; status: "draft" | "published"; general_comment?: string; needs_republish: boolean; publication_count: number; published_at: string | null; version: number }
+/** Dòng trong `GET /students/:id/reports`. */
+export interface ApiStudentReportItem { report_id: string; batch_id: string; student_id: string; month: string; status: "draft" | "published"; needs_republish: boolean; publication_count: number; published_at: string | null; version: number; from_key: string; to_key: string; from_number: number | null; to_number: number | null }
 export interface ApiConflict extends Versioned { id: string; entity: "attendance" | "score" | "slip" | "homework_grade"; k1: string; k2: string; server_value: Record<string, unknown>; server_version: number; client_value: Record<string, unknown>; created_at: string; resolved_at: string | null }
 export interface EntityMap {
-  class: ApiClass; student: ApiStudent; class_session: ApiSession; attendance: ApiAttendance; test: ApiTest; score: ApiScore; slip: ApiSlip; homework_section: ApiHomeworkSection; homework_grade: ApiHomeworkGrade; report: ApiReport; report_publication: ApiPublication; conflict: ApiConflict;
+  class: ApiClass; student: ApiStudent; class_session: ApiSession; attendance: ApiAttendance; test: ApiTest; score: ApiScore; slip: ApiSlip; homework_section: ApiHomeworkSection; homework_grade: ApiHomeworkGrade; report_batch: ApiReportBatch; report: ApiReport; report_publication: ApiPublication; conflict: ApiConflict;
 }
 export interface CommandPayloads {
   "attendance.set": { session_id: string; student_id: string; status: ApiAttendance["status"]; note?: string; late_at?: string | null };

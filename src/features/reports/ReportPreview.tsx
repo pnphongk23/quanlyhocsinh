@@ -1,44 +1,28 @@
 import { formatDate, formatScore } from "../../shared/format";
-import { Button, EmptyState, Icon } from "../../shared/ui";
-import type { MonthlyStudentReport } from "../../data/reportModel";
-import { reportMonthTitle } from "./reviewStatus";
+import { EmptyState } from "../../shared/ui";
+import type { PeriodStudentReport } from "../../data/reportModel";
+import type { RangeLabels } from "../../data/reportRange";
 import styles from "./ReportsPage.module.css";
 
 const starOrder = [3, 2, 1] as const;
-  const formatScoreDot = (value: number) => formatScore(value);
 
 export interface ReportPreviewProps {
-  report: MonthlyStudentReport;
+  report: PeriodStudentReport;
+  range: RangeLabels;
   className: string;
-  /** Báo cáo của em này đã phát hành hay chưa (đổi nhãn nút). */
-  published?: boolean;
-  /** Vai trò có quyền Sửa nhóm Nhận xét và báo cáo. */
-  canPublish?: boolean;
-  /** Dữ liệu cho phép phát hành (nháp mới, chưa có bản ghi, hoặc có cờ phát hành lại). */
-  publishable?: boolean;
-  onPublish?: () => void;
-  /** Đang phát hành báo cáo này (loading). */
-  publishing?: boolean;
-  /** Đang có một lần phát hành bất kỳ: khoá nút. */
-  publishBusy?: boolean;
-  onBack?: () => void;
 }
 
 /**
- * Bản xem trước báo cáo tháng của một em (ảnh 07): chuyên cần, số bài đã có
- * điểm, số buổi 3/2/1 sao, kết quả BTVN theo từng phần, điểm từng bài và nhận
- * xét chung. BTVN không quy ra điểm; không có trung bình (spec 3.1/4).
+ * Nội dung xem trước báo cáo theo khoảng buổi của một em (ảnh 07): chuyên cần,
+ * số bài đã có điểm, số buổi 3/2/1 sao, kết quả BTVN theo từng phần, điểm từng
+ * bài và nhận xét chung. Hiện trong popup (dialog desktop, sheet toàn màn
+ * mobile); nút phát hành/in nằm ở chân popup. BTVN không quy ra điểm; không có
+ * trung bình (spec 3.1/4).
  */
 export default function ReportPreview({
   report,
+  range,
   className,
-  published = false,
-  canPublish = false,
-  publishable = true,
-  onPublish,
-  publishing = false,
-  publishBusy = false,
-  onBack,
 }: ReportPreviewProps) {
   const starMax = Math.max(1, ...starOrder.map((level) => report.stars.byStars[level]));
   const attendanceParts = [
@@ -49,23 +33,12 @@ export default function ReportPreview({
 
   return (
     <article className={styles.preview} aria-label="Bản xem trước báo cáo">
-      <header className={`${styles.previewHead} ${styles.previewCard}`}>
-        {onBack && (
-          <button
-            type="button"
-            className={styles.previewBack}
-            aria-label="Quay lại danh sách báo cáo"
-            onClick={onBack}
-          >
-            <Icon name="back" />
-          </button>
-        )}
-        <div className={styles.previewHeadText}>
-          <h2>{reportMonthTitle(report.month)}</h2>
-          <p>
-            Xem trước · {report.student.name} · {className}
-          </p>
-        </div>
+      {/* Tiêu đề đã có ở đầu popup; bản in chỉ lấy phần này nên giữ lại cho in. */}
+      <header className={styles.printHead}>
+        <h2>{range.sessionsLabel ? `Báo cáo ${range.sessionsLabel}` : "Báo cáo"}</h2>
+        <p>
+          {range.datesLabel} · {report.student.name} · {className}
+        </p>
       </header>
 
       <div className={`${styles.statGrid} ${styles.previewCard}`}>
@@ -118,7 +91,7 @@ export default function ReportPreview({
             })}
           </ul>
         ) : (
-          <EmptyState size="compact" title="Chưa có phiếu nào được gửi trong tháng này" />
+          <EmptyState size="compact" title="Chưa có phiếu nào được gửi trong đợt này" />
         )}
       </section>
 
@@ -149,7 +122,7 @@ export default function ReportPreview({
             </tbody>
           </table>
         ) : (
-          <EmptyState size="compact" title="Chưa có kết quả bài tập nào được gửi trong tháng này" />
+          <EmptyState size="compact" title="Chưa có kết quả bài tập nào được gửi trong đợt này" />
         )}
         <p className={styles.blockFootnote}>
           Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.
@@ -168,14 +141,14 @@ export default function ReportPreview({
                 </span>
                 <strong>
                   {score && score.value !== null
-                    ? `${formatScoreDot(score.value)}/${test.max}`
+                    ? `${formatScore(score.value)}/${test.max}`
                     : "Chưa có điểm"}
                 </strong>
               </li>
             ))}
           </ul>
         ) : (
-          <EmptyState size="compact" title="Không có bài kiểm tra trong tháng này" />
+          <EmptyState size="compact" title="Không có bài kiểm tra trong đợt này" />
         )}
         <p className={styles.blockFootnote}>
           Bài chưa có điểm cần chấm trước khi phát hành.
@@ -190,36 +163,6 @@ export default function ReportPreview({
           <EmptyState size="compact" title="Chưa có nhận xét chung" />
         )}
       </section>
-
-      {(canPublish || onBack) && (
-        <div className={styles.previewActions}>
-          {onPublish && canPublish && (
-            <Button
-              size="lg"
-              className={styles.publishButton}
-              onClick={onPublish}
-              disabled={!report.ready || !publishable || publishBusy}
-              loading={publishing}
-              title={
-                !report.ready
-                  ? "Hoàn tất dữ liệu còn thiếu để phát hành."
-                  : !publishable
-                    ? "Báo cáo đã phát hành và chưa có thay đổi cần phát hành lại."
-                    : undefined
-              }
-            >
-              {published ? "Phát hành lại" : "Phát hành"}
-            </Button>
-          )}
-          <Button
-            variant="secondary"
-            className={styles.printButton}
-            onClick={() => window.print()}
-          >
-              Tải PDF / ảnh
-          </Button>
-        </div>
-      )}
     </article>
   );
 }

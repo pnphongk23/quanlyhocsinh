@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Report } from "../../data/types";
 import {
-  monthPeriodLabel,
   publishAllLabel,
   REPUBLISH_NOTE,
-  reportMonthTitle,
   reportSlot,
   reviewSummary,
 } from "./reviewStatus";
@@ -13,6 +11,7 @@ const report = (patch: Partial<Report> = {}): Report => ({
   id: "6a-student-1-report",
   classId: "6a",
   studentId: "6a-student-1",
+  batchId: "6a-batch",
   month: "2026-10",
   status: "draft",
   needsRepublish: false,
@@ -92,7 +91,5 @@ describe("tổng hợp đầu màn duyệt", () => {
     });
     expect(publishAllLabel(3)).toBe("Phát hành 3 báo cáo");
     expect(publishAllLabel(0)).toBe("Phát hành báo cáo");
-    expect(monthPeriodLabel("2026-10")).toBe("Tháng 10");
-    expect(reportMonthTitle("2026-10")).toBe("Báo cáo tháng 10");
   });
 });
