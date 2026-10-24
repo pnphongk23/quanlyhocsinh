@@ -226,6 +226,8 @@ struct TeacherClassDetailView: View {
                     .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .safeAreaPadding(.top)
         .background(AppColors.background.ignoresSafeArea())
         .overlay(alignment: .topTrailing) {
             if showingMenu, let klass {
