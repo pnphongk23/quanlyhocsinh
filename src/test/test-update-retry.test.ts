@@ -63,4 +63,21 @@ describe("test.update payload repair", () => {
     expect(server.rows.get("test")!.get("t1")).toMatchObject({ name: "Quiz sửa" });
     expect(server.rows.get("test")!.get("t2")).toMatchObject({ date: "2026-10-21" });
   });
+
+  it("does not guess the id when several legacy updates could belong to different tests", async () => {
+    server.put("test", { id: "t2", class_id: "c1", name: "Quiz sửa", date: "2026-10-20", max: 20, archived: false });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const id = d.identityKey();
+    await d.db.tests.put(d.stored("test", `${id}|test|t1`, { id: "t1", class_id: "c1", name: "Quiz sau", date: "2026-10-20", max: 20, archived: false, version: 1 }) as never);
+    const base = { identity: id, type: "test.update", base_version: 1, membership_id: "m-staff", status: "rejected", error: "validation_error" };
+    await d.db.outbox.bulkPut([
+      { ...base, id: "old-1", payload: { name: "Quiz sửa", max: 20 }, created_at: "2026-10-23T00:00:01Z" },
+      { ...base, id: "old-2", payload: { name: "Quiz sau" }, created_at: "2026-10-23T00:00:02Z" },
+    ] as never);
+    await d.retryRejectedCommands(["old-1", "old-2"]);
+    expect(server.rows.get("test")!.get("t2")).toMatchObject({ name: "Quiz sửa", max: 20 });
+    expect(server.rows.get("test")!.get("t1")).toMatchObject({ name: "Quiz" });
+    expect((await d.db.outbox.toArray()).every((row: any) => row.status === "rejected")).toBe(true);
+  });
 });

@@ -234,13 +234,16 @@ function publishRejected(rows: OutboxRow[]): void {
 /** Lệnh ghi một ô (điểm, điểm danh, phiếu, chấm BTVN): có thể bỏ vì ô đó lấy lại được từ máy chủ. */
 const cellEntity: Record<string, EntityName> = { "score.set": "score", "attendance.set": "attendance", "slip.set": "slip", "homework.grade.set": "homework_grade" };
 export const canDiscardRejected = (type: string): boolean => type in cellEntity;
-/** Lệnh test.update cũ thiếu `id`: lấy id từ khoá thực thể của dòng; dòng cũ chưa có khoá thì chỉ nhận khi đúng một bài trong bộ nhớ đệm khớp phần sửa. */
+/** Lệnh test.update cũ thiếu `id`: lấy id từ khoá thực thể của dòng; dòng cũ chưa có khoá thì chỉ nhận khi đó là lệnh cũ duy nhất và đúng một bài trong bộ nhớ đệm khớp phần sửa. */
 async function withTestUpdateId(row: OutboxRow, identity: string): Promise<OutboxRow> {
   if (row.type !== "test.update" || (row.payload as { id?: string }).id) return row;
   const prefix = `${identity}|test|`;
   const patch = row.payload as { name?: string; date?: string; max?: number };
   let id = row.entity_key?.startsWith(prefix) ? row.entity_key.slice(prefix.length) : undefined;
   if (!id) {
+    // Nhiều lệnh cũ có thể cùng sửa một bài; khi đó khớp theo nội dung không phân biệt được, nên không đoán.
+    const legacy = await db.outbox.where("identity").equals(identity).and((x) => x.type === "test.update" && !x.entity_key && !(x.payload as { id?: string }).id).count();
+    if (legacy !== 1) return row;
     const matches = await db.tests.where("identity").equals(identity).and((test) =>
       (patch.name === undefined || test.name === patch.name) &&
       (patch.date === undefined || test.date === patch.date) &&
