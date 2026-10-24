@@ -18,9 +18,11 @@ struct MonthlyReportView: View {
     @State private var shareItem: I4ReportPDFShareItem?
     @State private var temporaryPDFURL: URL?
 
-    init(classID: String, data: I4FeatureStore = I4FeatureStore()) {
+    /// `seedError` lets the debug screenshot harness open the screen already in its error state.
+    init(classID: String, data: I4FeatureStore = I4FeatureStore(), seedError: String? = nil) {
         self.classID = classID
         self.data = data
+        _error = State(initialValue: seedError)
         _month = State(initialValue: I4Format.currentMonth())
     }
 
@@ -68,7 +70,9 @@ struct MonthlyReportView: View {
                 if month == I4Format.currentMonth(), let latest = latestMonth() { month = latest }
                 if studentID.isEmpty { studentID = rows.first?.student.id ?? "" }
             }
-            .onChange(of: studentID) { _, _ in
+            .onChange(of: studentID) { old, _ in
+                // The first selection (from empty) is not a user switch: keep a pending notice.
+                guard !old.isEmpty else { return }
                 previewOpen = false
                 message = nil
                 error = nil

@@ -1,6 +1,13 @@
 {
   "sourceLanguage" : "vi",
   "strings" : {
+    "reports.demo.error.long" : {
+      "comment" : "Thông điệp lỗi dài chỉ dùng cho màn chụp ảnh Debug của tab Báo cáo.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không thể lưu nhận xét chung lên máy chủ vì mất kết nối. Nhận xét vẫn được giữ trên máy này và sẽ tự đồng bộ khi có mạng trở lại; hãy kiểm tra kết nối rồi thử lại." } }
+      }
+    },
     "attendance.save.no_changes" : {
       "comment" : "Trạng thái điểm danh khi không có thay đổi cần lưu.",
       "extractionState" : "manual",

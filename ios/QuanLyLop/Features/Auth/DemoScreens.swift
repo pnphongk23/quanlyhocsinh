@@ -81,7 +81,7 @@ enum DemoScreens {
               model.applyDemo(memberships: [teacher, guardian], activeID: guardian.id, screen: screen)
               if name == "settings-blocked" { model.demoPendingCommands = 1 }
               return AnyView(GuardianRootView(model: model).environment(model))
-          case "scores", "score-grid", "homework", "comments", "reports":
+          case "scores", "score-grid", "homework", "comments", "reports", "reports-error":
               return AnyView(DemoI4Screen(kind: name))
           case "guardian", "guardian-empty":
             model.applyDemo(memberships: [guardian], activeID: guardian.id, screen: .main)
@@ -105,7 +105,7 @@ private struct DemoI4Screen: View {
     private var selectedTab: String {
         switch kind {
         case "score-grid": "diem"
-        case "reports": "bao-cao"
+        case "reports", "reports-error": "bao-cao"
         case "homework": "btvn"
         case "comments": "nhan-xet"
         default: "bai-kiem-tra"
@@ -129,6 +129,9 @@ private struct DemoI4Screen: View {
         ]
     }
 
+    /// Long sync failure copy so the banner is shown wrapping over several lines.
+    private static let longReportError = String(localized: "reports.demo.error.long", table: "Teacher")
+
     init(kind: String) {
         self.kind = kind
         let teacher = DemoScreens.membership("demo-teacher", roleName: String(localized: "feature.auth.giao.vien"),
@@ -136,7 +139,14 @@ private struct DemoI4Screen: View {
         let model = AuthModel(configuration: .fallback)
         model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
         _model = State(initialValue: model)
-        _data = StateObject(wrappedValue: I4FeatureStore())
+        if kind == "reports-error" {
+            let sessions = TeacherDemoData.makeSessions()
+            _data = StateObject(wrappedValue: I4FeatureStore(
+                demoClasses: [TeacherDemoData.classroom], students: TeacherDemoData.students,
+                sessions: sessions, attendance: TeacherDemoData.attendance(for: sessions)))
+        } else {
+            _data = StateObject(wrappedValue: I4FeatureStore())
+        }
     }
 
     var body: some View {
@@ -160,7 +170,8 @@ private struct DemoI4Screen: View {
                             case "comments":
                                 SessionCommentsView(sessionID: data.defaultSession?.id ?? "fixture-session", data: data)
                             default:
-                                MonthlyReportView(classID: data.classID, data: data)
+                                MonthlyReportView(classID: data.classID, data: data,
+                                                  seedError: kind == "reports-error" ? Self.longReportError : nil)
                             }
                         }
                         .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
@@ -221,18 +232,32 @@ private struct DemoAuthFlow: View {
         case .forgot: AuthForgotPasswordView(model: model)
         case .forcedPassword: AuthForcedPasswordView(model: model)
         case .chooseRole: AuthRolePickerView(model: model)
-        case .settings:
+        case .settings, .changePassword:
             if model.activeMembership?.role.scopeKind == .linkedStudents {
-                AuthSettingsView(model: model)
+                if model.screen == .changePassword {
+                    AuthChangePasswordView(model: model, isPushed: true) { model.show(.settings) }
+                } else {
+                    AuthSettingsView(model: model)
+                }
             } else {
+                // Same shell as `AuthFlowView.teacherShell`: Đổi mật khẩu is pushed inside the Cài đặt stack.
                 TeacherRootView(initialTab: .settings) {
-                    AnyView(AuthSettingsView(model: model, isRootTab: true))
+                    AnyView(
+                        AuthSettingsView(model: model, isRootTab: true)
+                            .navigationDestination(isPresented: changePasswordPresented) {
+                                AuthChangePasswordView(model: model, isPushed: true) { model.show(.settings) }
+                            }
+                    )
                 }
             }
-        case .changePassword: AuthChangePasswordView(model: model) { model.show(.settings) }
         case .main: TeacherRootView()
         case .login, .loading: AuthLoginView(model: model)
         }
+    }
+
+    private var changePasswordPresented: Binding<Bool> {
+        Binding(get: { model.screen == .changePassword },
+                set: { if !$0 && model.screen == .changePassword { model.show(.settings) } })
     }
 }
 #endif

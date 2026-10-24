@@ -33,6 +33,19 @@ final class I4FeatureStore: ObservableObject {
         self.api = api
     }
 
+#if DEBUG
+    /// Screenshot harness only: synthetic roster with report permissions, no store or network.
+    init(demoClasses: [Classroom], students: [Student], sessions: [ClassSession], attendance: [Attendance]) {
+        self.classes = demoClasses
+        self.students = students
+        self.sessions = sessions
+        self.attendance = attendance
+        canReadCommentsReports = true
+        canWriteCommentsReports = true
+        isReady = true
+    }
+#endif
+
     init(auth: AuthModel) {
         _ = bind(auth: auth)
     }
