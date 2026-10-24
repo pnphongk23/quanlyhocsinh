@@ -13,7 +13,7 @@ describe('server logs', () => {
 
     await scheduled({} as ScheduledController, env, {} as ExecutionContext);
 
-    expect(lines).toHaveLength(2);
+    expect(lines).toHaveLength(3);
     for (const line of lines) {
       const record = JSON.parse(line);
       expect(Object.keys(record).sort()).toEqual(['code', 'duration_ms', 'path', 'request_id']);

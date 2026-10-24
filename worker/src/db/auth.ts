@@ -80,6 +80,7 @@ export interface UserRow {
   id: string;
   phone: string;
   display_name: string | null;
+  email: string | null;
   password_hash: string;
   must_change_password: number;
   password_changed_at: string | null;
@@ -114,6 +115,7 @@ export interface UserView {
   id: string;
   phone: string;
   display_name: string | null;
+  email: string | null;
   must_change_password: boolean;
 }
 
@@ -122,6 +124,7 @@ export function toUserView(row: UserRow): UserView {
     id: row.id,
     phone: row.phone,
     display_name: row.display_name,
+    email: row.email,
     must_change_password: row.must_change_password === 1,
   };
 }
@@ -132,7 +135,7 @@ export async function findUserByPhone(
 ): Promise<UserRow | undefined> {
   const row = await db
     .prepare(
-      `SELECT id, phone, display_name, password_hash, must_change_password,
+      `SELECT id, phone, display_name, email, password_hash, must_change_password,
               password_changed_at, status, created_at, version
          FROM users WHERE phone = ?`,
     )
@@ -147,7 +150,7 @@ export async function getUserById(
 ): Promise<UserRow | undefined> {
   const row = await db
     .prepare(
-      `SELECT id, phone, display_name, password_hash, must_change_password,
+      `SELECT id, phone, display_name, email, password_hash, must_change_password,
               password_changed_at, status, created_at, version
          FROM users WHERE id = ?`,
     )
@@ -257,7 +260,7 @@ export async function getMe(
   const [user, memberships, linkedStudents] = await db.batch([
     db
       .prepare(
-        `SELECT id, phone, display_name, password_hash, must_change_password,
+        `SELECT id, phone, display_name, email, password_hash, must_change_password,
                 password_changed_at, status, created_at, version
            FROM users WHERE id = ?`,
       )
@@ -360,6 +363,7 @@ interface RegisterWorkspaceInput {
   sessionId: string;
   phone: string;
   displayName: string | null;
+  email: string | null;
   passwordHash: string;
   workspaceName: string;
   tokenHash: string;
@@ -441,14 +445,15 @@ export async function registerWorkspace(
     db
       .prepare(
         `INSERT INTO users
-          (id, phone, display_name, password_hash, must_change_password,
+          (id, phone, display_name, email, password_hash, must_change_password,
            password_changed_at, status, created_at, version)
-         VALUES (?, ?, ?, ?, 0, ?, 'active', ?, 1)`,
+         VALUES (?, ?, ?, ?, ?, 0, ?, 'active', ?, 1)`,
       )
       .bind(
         input.userId,
         input.phone,
         input.displayName,
+        input.email,
         input.passwordHash,
         input.now,
         input.now,
@@ -490,6 +495,7 @@ export interface RegisterGuardianInput {
   sessionId: string;
   phone: string;
   displayName: string | null;
+  email: string | null;
   passwordHash: string;
   tokenHash: string;
   now: string;
@@ -516,10 +522,10 @@ export async function registerGuardian(
 
   const statements: D1PreparedStatement[] = [
     db.prepare(`INSERT INTO users
-        (id, phone, display_name, password_hash, must_change_password,
+        (id, phone, display_name, email, password_hash, must_change_password,
          password_changed_at, status, created_at, version)
-       VALUES (?, ?, ?, ?, 0, ?, 'active', ?, 1)`)
-      .bind(input.userId, input.phone, input.displayName, input.passwordHash, input.now, input.now),
+       VALUES (?, ?, ?, ?, ?, 0, ?, 'active', ?, 1)`)
+      .bind(input.userId, input.phone, input.displayName, input.email, input.passwordHash, input.now, input.now),
   ];
   for (const row of workspaces) {
     statements.push(

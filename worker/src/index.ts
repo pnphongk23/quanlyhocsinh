@@ -6,6 +6,7 @@ import { ApiError, errorBody, payloadTooLarge } from './lib/errors';
 import { maxBodyBytes } from './lib/http';
 import { generateUpcomingSessions } from './db/session-generation';
 import { runScheduledPush } from './db/notification-dispatch';
+import { purgeResetData } from './db/password-reset';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_.:-]{1,128}$/;
 
@@ -54,6 +55,10 @@ const scheduledJobs: ScheduledJob[] = [
   {
     name: 'notification_dispatch',
     run: async (_controller, env) => { await runScheduledPush(env); },
+  },
+  {
+    name: 'password_reset_cleanup',
+    run: async (_controller, env) => { await purgeResetData(env.DB); },
   },
 ];
 

@@ -12,6 +12,8 @@ export default defineConfig({
           TEST_MIGRATIONS: migrations,
             PBKDF2_ITERATIONS: '30000',
           ENVIRONMENT: 'test',
+          MAIL_MODE: 'test',
+          RESET_LINK_BASE: 'https://web.test',
         },
       },
     }),

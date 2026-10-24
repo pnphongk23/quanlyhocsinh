@@ -12,7 +12,11 @@
     "ENVIRONMENT": "local",
     "PBKDF2_ITERATIONS": "30000",
     // CORS cho /v1/*: danh sách origin (phân tách dấu phẩy), rỗng = không cho origin nào.
-    "ALLOWED_ORIGINS": ""
+    "ALLOWED_ORIGINS": "",
+    // Gửi mail: disabled | test (ghi test_mailbox, chỉ staging/local) | cloudflare.
+    // Khi có miền: chạy `npx wrangler email sending enable <miền>`, thêm
+    // "send_email": [{ "name": "EMAIL" }] ở cấp gốc, đặt MAIL_MODE="cloudflare" và MAIL_FROM.
+    "MAIL_MODE": "disabled"
   },
   "triggers": {
     "crons": ["* * * * *"]
@@ -32,6 +36,8 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "PBKDF2_ITERATIONS": "30000",
+        "MAIL_MODE": "test",
+        "RESET_LINK_BASE": "https://qlh-staging-web.pages.dev",
         // Origin được phép gọi /v1/* (phân tách dấu phẩy, khớp chính xác). Hiện chưa có
         // project Pages riêng cho mảng Web nên dùng origin của Pages prototype
         // (quanlyhocsinh-proto) cộng các cổng dev/Preview của máy cục bộ.

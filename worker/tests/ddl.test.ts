@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { db, insertClass, insertSession, insertStudent, registerWorkspace } from './helpers';
 
 describe('D1 schema constraints and history', () => {
-  it('has 29 application tables and no foreign key violations', async () => {
+  it('has 32 application tables and no foreign key violations', async () => {
     const tables = await db.prepare(
       `SELECT count(*) AS count FROM sqlite_master WHERE type='table'
        AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name <> 'd1_migrations'`,
     ).first<{ count: number }>();
-    expect(tables?.count).toBe(29);
+    expect(tables?.count).toBe(32);
     const fk = await db.prepare('PRAGMA foreign_key_check').all();
     expect(fk.results).toEqual([]);
   });

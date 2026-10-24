@@ -29,10 +29,28 @@ import {
   updateSessionMembership,
   workspaceCreateKey,
 } from '../db/auth';
+import {
+  RESET_CONFIRM_IP_POLICY,
+  RESET_IP_POLICY,
+  RESET_PHONE_POLICY,
+  RESET_TOKEN_TTL_MS,
+  confirmPasswordReset,
+  createResetToken,
+  findResetAccountByPhone,
+  findValidResetToken,
+  invalidateResetToken,
+  resetConfirmIpKey,
+  resetIpKey,
+  resetPhoneKey,
+  setUserEmail,
+} from '../db/password-reset';
 import { getClientIp } from '../lib/client-ip';
 import {
+  base64UrlEncode,
   hashPassword,
   newSessionToken,
+  randomBytes,
+  sha256Hex,
   dummyVerify,
   resolveIterations,
   verifyPassword,
@@ -48,6 +66,7 @@ import {
   validationError,
 } from '../lib/errors';
 import { optionalDisplayName, readJsonObject, stringField } from '../lib/http';
+import { maskEmail, mailUnavailable, normalizeEmail, resolveMailSender } from '../lib/mail';
 import { assertPassword, normalizePhone } from '../lib/phone';
 import { SESSION_TTL_MS, isoAfterMs, nowIso } from '../lib/time';
 import { requireAuth } from '../middleware/auth';
@@ -69,6 +88,30 @@ function roleView(systemKey: 'admin' | 'teacher' | 'assistant' | 'guardian') {
   return role;
 }
 
+/** Email tùy chọn khi đăng ký: vắng/null/rỗng = không có; sai định dạng = 422. */
+function optionalEmail(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null;
+  const email = normalizeEmail(value);
+  if (email === null) throw validationError({ email: 'invalid_email' });
+  return email;
+}
+
+function tokenInvalid() {
+  return new ApiError(400, 'token_invalid', 'Reset link is invalid or expired.');
+}
+
+/** Giữ chỗ throttle theo IP rồi SĐT; hoàn lại IP nếu SĐT bị từ chối. */
+async function reserveResetThrottle(db: D1Database, ip: string, phone: string): Promise<void> {
+  const ipKey = resetIpKey(ip);
+  const ipReservation = await consumeThrottle(db, ipKey, RESET_IP_POLICY);
+  if (!ipReservation.allowed) throw rateLimited(ipReservation.retryAfterSeconds);
+  const phoneReservation = await consumeThrottle(db, resetPhoneKey(phone), RESET_PHONE_POLICY);
+  if (!phoneReservation.allowed) {
+    await refundThrottle(db, ipKey);
+    throw rateLimited(phoneReservation.retryAfterSeconds);
+  }
+}
+
 authRoutes.post('/auth/register', async (c) => {
   const db = c.env.DB;
   const ip = getClientIp(c.req.raw);
@@ -86,6 +129,7 @@ authRoutes.post('/auth/register', async (c) => {
     max: 100,
   }) as string;
   const displayName = optionalDisplayName(body);
+  const email = optionalEmail(body.email);
 
   const existing = await findUserByPhone(db, phone);
   if (existing) throw conflict('phone_registered');
@@ -110,6 +154,7 @@ authRoutes.post('/auth/register', async (c) => {
     sessionId,
     phone,
     displayName,
+    email,
     passwordHash,
     workspaceName,
     tokenHash,
@@ -128,6 +173,7 @@ authRoutes.post('/auth/register', async (c) => {
         id: userId,
         phone,
         display_name: displayName,
+        email,
         must_change_password: false,
       },
       memberships: [
@@ -163,6 +209,7 @@ authRoutes.post('/auth/register-guardian', async (c) => {
   const password = requirePassword(body.password);
   assertPassword(password, phone);
   const displayName = optionalDisplayName(body);
+  const email = optionalEmail(body.email);
 
   if (await findUserByPhone(db, phone)) throw conflict('phone_registered');
 
@@ -180,6 +227,7 @@ authRoutes.post('/auth/register-guardian', async (c) => {
     sessionId,
     phone,
     displayName,
+    email,
     passwordHash,
     tokenHash,
     now,
@@ -195,6 +243,7 @@ authRoutes.post('/auth/register-guardian', async (c) => {
       id: userId,
       phone,
       display_name: displayName,
+      email,
       must_change_password: false,
     },
     memberships,
@@ -393,6 +442,126 @@ authRoutes.get('/me', requireAuth, async (c) => {
   const activeMembershipId = identity.membershipId === '' ? null : identity.membershipId;
   const me = await getMe(c.env.DB, identity.userId, activeMembershipId);
   return c.json(me);
+});
+
+authRoutes.put('/me/email', requireAuth, async (c) => {
+  const db = c.env.DB;
+  const identity = c.get('identity');
+  const body = await readJsonObject(c.req.raw);
+  const currentPassword = requirePassword(body.current_password, 'current_password');
+  if (!('email' in body)) throw validationError({ email: 'required' });
+  const email = body.email === null ? null : normalizeEmail(body.email);
+  if (body.email !== null && email === null) throw validationError({ email: 'invalid_email' });
+
+  const user = await getUserById(db, identity.userId);
+  if (!user) throw unauthorized();
+
+  const throttleKey = loginPhoneKey(user.phone);
+  const reservation = await consumeThrottle(
+    db,
+    throttleKey,
+    LOGIN_PHONE_POLICY,
+    Date.now(),
+    LOGIN_PHONE_POLICY.lockMs,
+  );
+  if (!reservation.allowed) throw rateLimited(reservation.retryAfterSeconds);
+
+  const verified = await verifyPassword(user.password_hash, currentPassword);
+  if (!verified.ok) throw invalidCredentials();
+
+  await setUserEmail(db, user.id, email);
+  await clearThrottle(db, throttleKey);
+  return c.json({ email });
+});
+
+authRoutes.post('/auth/password-reset/lookup', async (c) => {
+  const db = c.env.DB;
+  const body = await readJsonObject(c.req.raw);
+  const phone = normalizePhone(body.phone);
+  if (phone === null) throw validationError({ phone: 'invalid_phone' });
+  await reserveResetThrottle(db, getClientIp(c.req.raw), phone);
+
+  const account = await findResetAccountByPhone(db, phone);
+  return c.json({
+    account: account !== undefined,
+    has_email: account?.email != null,
+    email_masked: account?.email != null ? maskEmail(account.email) : null,
+  });
+});
+
+authRoutes.post('/auth/password-reset/request', async (c) => {
+  const db = c.env.DB;
+  const sender = resolveMailSender(c.env);
+  const linkBase = (c.env.RESET_LINK_BASE ?? '').trim().replace(/\/+$/, '');
+  if (sender === null || linkBase === '') throw mailUnavailable();
+
+  const body = await readJsonObject(c.req.raw);
+  const phone = normalizePhone(body.phone);
+  if (phone === null) throw validationError({ phone: 'invalid_phone' });
+  const email = normalizeEmail(body.email);
+  if (email === null) throw validationError({ email: 'invalid_email' });
+  await reserveResetThrottle(db, getClientIp(c.req.raw), phone);
+
+  const account = await findResetAccountByPhone(db, phone);
+  if (!account) throw notFound();
+  if (account.email === null) throw conflict('no_email');
+  if (account.email !== email) throw validationError({ email: 'email_mismatch' });
+
+  const token = base64UrlEncode(randomBytes(32));
+  const tokenHash = await sha256Hex(token);
+  const now = nowIso();
+  await createResetToken(db, {
+    userId: account.id,
+    tokenHash,
+    now,
+    expiresAt: isoAfterMs(RESET_TOKEN_TTL_MS, Date.parse(now)),
+  });
+
+  const link = `${linkBase}/dat-lai-mat-khau#token=${token}`;
+  try {
+    await sender.send({
+      to: account.email,
+      subject: 'Đặt lại mật khẩu tài khoản của bạn',
+      text:
+        'Bạn vừa yêu cầu đặt lại mật khẩu.\n\n' +
+        `Mở liên kết sau để đặt mật khẩu mới (hiệu lực 30 phút, chỉ dùng một lần):\n${link}\n\n` +
+        'Nếu bạn không yêu cầu, hãy bỏ qua email này; mật khẩu hiện tại vẫn giữ nguyên.',
+    });
+  } catch {
+    await invalidateResetToken(db, tokenHash, nowIso());
+    throw mailUnavailable();
+  }
+  return c.json({ sent: true }, 202);
+});
+
+authRoutes.post('/auth/password-reset/confirm', async (c) => {
+  const db = c.env.DB;
+  const ipReservation = await consumeThrottle(
+    db,
+    resetConfirmIpKey(getClientIp(c.req.raw)),
+    RESET_CONFIRM_IP_POLICY,
+  );
+  if (!ipReservation.allowed) throw rateLimited(ipReservation.retryAfterSeconds);
+
+  const body = await readJsonObject(c.req.raw);
+  const newPassword = requirePassword(body.new_password, 'new_password');
+  if (typeof body.token !== 'string' || body.token === '') throw tokenInvalid();
+
+  const now = nowIso();
+  const valid = await findValidResetToken(db, await sha256Hex(body.token), now);
+  if (!valid) throw tokenInvalid();
+  assertPassword(newPassword, valid.phone);
+
+  const passwordHash = await hashPassword(newPassword, resolveIterations(c.env.PBKDF2_ITERATIONS));
+  const changed = await confirmPasswordReset(db, {
+    tokenId: valid.id,
+    userId: valid.userId,
+    passwordHash,
+    now,
+  });
+  if (!changed) throw tokenInvalid();
+  await clearThrottle(db, loginPhoneKey(valid.phone));
+  return c.json({ ok: true });
 });
 
 authRoutes.put('/session/membership', requireAuth, async (c) => {

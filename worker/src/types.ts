@@ -44,6 +44,24 @@ export interface Env {
    * `https://qlh.pages.dev,http://localhost:5173`. Rỗng/không đặt = không cho origin nào.
    */
   ALLOWED_ORIGINS?: string;
+  /** `cloudflare` | `test` | `disabled` (mặc định). `test` chỉ có hiệu lực ở staging/local/test. */
+  MAIL_MODE?: string;
+  /** Địa chỉ gửi đi (miền đã onboard Email Service) khi MAIL_MODE=cloudflare. */
+  MAIL_FROM?: string;
+  /** Gốc URL web để dựng link đặt lại mật khẩu, ví dụ `https://qlh-staging-web.pages.dev`. */
+  RESET_LINK_BASE?: string;
+  /** Binding Email Service (`send_email`); chưa khai báo trong wrangler.jsonc vì chưa có miền. */
+  EMAIL?: EmailSender;
+}
+
+export interface EmailSender {
+  send(message: {
+    to: string;
+    from: string | { email: string; name?: string };
+    subject: string;
+    text: string;
+    html?: string;
+  }): Promise<unknown>;
 }
 
 export type AppEnv = {
