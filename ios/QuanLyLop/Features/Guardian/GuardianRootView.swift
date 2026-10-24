@@ -103,8 +103,10 @@ struct GuardianRootView: View {
                 shortcut(String(localized: "guardian.scores", table: "Guardian"), icon: "chart.bar", action: { classesPath.append(.scores) })
                 shortcut(String(localized: "feature.guardian.bao.cao"), icon: "doc.text", action: { classesPath.append(.report) })
             }
-            GuardianCardHead(title: String(localized: "guardian.sessionList", table: "Guardian"))
-            GuardianSessionListPage(child: child) { row in classesPath.append(row.destination) }
+            AppSection(title: String(localized: "guardian.sessionList", table: "Guardian")) {
+                GuardianSessionListPage(child: child) { row in classesPath.append(row.destination) }
+            }
+            .padding(.top, AppMetrics.sectionGap - TeacherMetrics.contentGap)
         }
     }
 
@@ -184,10 +186,7 @@ struct GuardianRootView: View {
                 .navigationTitle(String(localized: "guardian.scores", table: "Guardian"))
                 .navigationBarTitleDisplayMode(.inline)
             case .report:
-                GuardianScroll {
-                    GuardianPageHeader(eyebrow: child.student.name, title: nil)
-                    GuardianReportView(child: child)
-                }
+                GuardianReportView(child: child)
                 .navigationTitle(String(localized: "feature.guardian.bao.cao"))
                 .navigationBarTitleDisplayMode(.inline)
             }

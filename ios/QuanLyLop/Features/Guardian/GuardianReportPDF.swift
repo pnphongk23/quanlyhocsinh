@@ -13,20 +13,20 @@ struct GuardianReportDownloadButton: View {
     @State private var temporaryPDFURL: URL?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: TeacherMetrics.listGap) {
             Button { preparePDF() } label: {
                 Text(String(localized: "feature.guardian.tai.pdf.ve.may"))
                     .appText(AppText.buttonLarge)
                     .foregroundStyle(AppColors.onPrimary)
                     .frame(maxWidth: .infinity)
-                    .frame(minHeight: 52)
+                    .frame(minHeight: AppMetrics.buttonHeightLarge)
                     .background(AppColors.primary, in: RoundedRectangle(cornerRadius: AppRadius.control))
             }
             .buttonStyle(.plain)
             .disabled(isPreparing)
             .accessibilityIdentifier("guardian.report.pdf")
             if isPreparing {
-                HStack(spacing: 8) {
+                HStack(spacing: AppMetrics.saveFeedbackGap) {
                     AppSpinner()
                     Text(String(localized: "feature.reports.dang.chuan.bi.pdf"))
                         .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
