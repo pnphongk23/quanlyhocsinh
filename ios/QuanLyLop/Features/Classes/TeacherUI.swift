@@ -307,7 +307,7 @@ struct TeacherStatusPill: View {
     }
 }
 
-// MARK: - Text tabs (`.subTabs` 13/600 · `.tabs` 14/600, 48 high)
+// MARK: - Text tabs (`.subTabs` 13/600 · `.tabs` 14/600, 48 high, indicator under the selected tab)
 
 struct TeacherTextTabs: View {
     struct Item: Identifiable, Sendable {
@@ -355,8 +355,9 @@ struct TeacherTextTabs: View {
                   .padding(.horizontal, fillsWidth ? 4 : 8)
                   .frame(height: 48)
                   .contentShape(Rectangle())
-                  .background(active ? AppState.selectedBg : .clear,
-                              in: RoundedRectangle(cornerRadius: AppRadius.segment))
+                  .overlay(alignment: .bottom) {
+                      (active ? AppColors.primary : .clear).frame(height: AppMetrics.borderWidth * 2)
+                  }
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? [.isSelected] : [])

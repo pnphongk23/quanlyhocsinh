@@ -81,6 +81,16 @@ enum DemoScreens {
               model.applyDemo(memberships: [teacher, guardian], activeID: guardian.id, screen: screen)
               if name == "settings-blocked" { model.demoPendingCommands = 1 }
               return AnyView(GuardianRootView(model: model).environment(model))
+        case "teacher-session", "teacher-session-clean", "teacher-class-detail", "teacher-classes":
+            model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
+            let data = TeacherDemoData.data(withAbsenceWarning: name != "teacher-session-clean")
+            let routes: [TeacherRoute] = switch name {
+            case "teacher-classes": []
+            case "teacher-class-detail": [.classDetail(TeacherDemoData.classID)]
+            default: [.classDetail(TeacherDemoData.classID),
+                      .session(classID: TeacherDemoData.classID, sessionID: "demo-session-8")]
+            }
+            return AnyView(TeacherRootView(demoData: data, initialRoutes: routes).environment(model))
           case "scores", "score-grid", "homework", "comments", "reports", "reports-error":
               return AnyView(DemoI4Screen(kind: name))
           case "guardian", "guardian-empty":

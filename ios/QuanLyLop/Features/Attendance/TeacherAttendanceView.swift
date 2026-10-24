@@ -3,7 +3,8 @@ import SwiftUI
 /// Điểm danh buổi học (`features/attendance/AttendancePanel.tsx`).
 ///
 /// Bốn trạng thái đúng thứ tự hợp đồng Có mặt → Vắng → Muộn → Có phép; bấm vào nhãn
-/// để đổi, hoặc vuốt như prototype (phải: vắng, trái: muộn). Trạng thái được lưu vào
+/// để mở menu chọn trạng thái (vuốt phải: vắng, vuốt trái: muộn là đường phụ, không hiện hướng dẫn).
+/// Nút Lưu ghim ở đáy màn, danh sách tự cuộn. Trạng thái được lưu vào
 /// `LocalStore` + hàng đợi lệnh trước khi đồng bộ, nên mất mạng vẫn giữ nháp.
 struct TeacherAttendanceView: View {
     let session: ClassSession
@@ -40,12 +41,6 @@ struct TeacherAttendanceView: View {
           drafts[student.id] = value
     }
 
-    private func cycle(_ student: Student) {
-        let current = draft(for: student).status
-        let index = cycleOrder.firstIndex(of: current) ?? 0
-        update(student) { $0.status = cycleOrder[(index + 1) % cycleOrder.count] }
-    }
-
     private var absentCount: Int {
         roster.filter { draft(for: $0).status == .absent }.count
     }
@@ -57,71 +52,78 @@ struct TeacherAttendanceView: View {
         }
     }
 
-    private var warnings: [Student] {
-        roster.filter { data.hasAbsenceWarning($0) }
+    private var warnings: [Student] { data.studentsNeedingAttention(in: roster) }
+
+    private var showsBottomBar: Bool {
+        data.canReadAttendance && !roster.isEmpty && (readOnly || !viewOnly)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !data.canReadAttendance {
-                AppEmptyState(title: String(localized: "feature.attendance.ban.khong.co.quyen.xem.iem.danh"))
-            } else if roster.isEmpty {
-                AppEmptyState(title: String(localized: "feature.attendance.lop.chua.co.hoc.sinh"))
-            } else {
-                if !viewOnly { summaryRow }
-                if readOnly { readOnlyNotice }
-                if !readOnly && !canEdit { permissionNotice }
-          if !viewOnly {
-                    Text(String(localized: "feature.attendance.vuot.phai.vang.vuot.trai.muon"))
-                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
-                        .foregroundStyle(AppColors.muted)
+        TeacherScroll {
+            VStack(alignment: .leading, spacing: 8) {
+                if !data.canReadAttendance {
+                    AppEmptyState(title: String(localized: "feature.attendance.ban.khong.co.quyen.xem.iem.danh"))
+                } else if roster.isEmpty {
+                    AppEmptyState(title: String(localized: "feature.attendance.lop.chua.co.hoc.sinh"))
+                } else {
+                    if !viewOnly { summaryRow }
+                    if readOnly { readOnlyNotice }
+                    if !readOnly && !canEdit { permissionNotice }
+                    if saveController.error != nil {
+                        TeacherErrorBanner(message: String(localized: "feature.attendance.khong.luu.uoc.iem.danh"))
+                    }
+                    VStack(spacing: 8) {
+                        ForEach(roster) { student in row(student) }
+                    }
+                    if !warnings.isEmpty && !viewOnly { attentionCard }
                 }
-                  if saveController.error != nil {
-                      TeacherErrorBanner(message: String(localized: "feature.attendance.khong.luu.uoc.iem.danh"))
-                }
-                VStack(spacing: 8) {
-                    ForEach(roster) { student in row(student) }
-                }
-                if !viewOnly { attentionCard }
-                bottomButton
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+            .padding(.top, 4)
+            .padding(.bottom, TeacherMetrics.cardPadding)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, 48)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if showsBottomBar { bottomBar }
+        }
     }
 
-    /// Image 17 keeps a disabled “Điểm danh” button in the same sticky spot; the label and
-    /// grey fill come from `.stickyBar > button:disabled`.
-    @ViewBuilder private var bottomButton: some View {
-        if !viewOnly && !readOnly {
-          VStack(spacing: 8) {
-              AppSaveButton(title: String(localized: "feature.attendance.luu.iem.danh"),
-                            controller: saveController, isEnabled: hasChanges) {
-                  try await data.saveAttendance(session: session, drafts: drafts)
-                  drafts.removeAll()
-                  await data.saveStatusSource?.refresh()
-              }
-              .frame(maxWidth: .infinity)
-              if !hasChanges && saveController.error == nil && saveController.phase == .idle {
-                  Text(String(localized: "attendance.save.no_changes", table: "Teacher"))
-                      .appText(AppText.caption)
-                      .foregroundStyle(AppColors.muted)
-              } else if let source = data.saveStatusSource {
-                  AppSaveStatus(kind: saveController.error == nil ? source.kind : .error)
-              } else {
-                  AppSaveStatus(kind: saveController.error == nil ? .savedLocal : .error)
-              }
-          }
-          .padding(.top, 8)
-        } else if readOnly {
-            Text(String(localized: "feature.attendance.iem.danh"))
-                .appText(AppText.buttonLarge)
-                .foregroundStyle(AppColors.muted)
-                .frame(maxWidth: .infinity, minHeight: AppMetrics.buttonHeightLarge)
-                .background(AppColors.inputBorder, in: RoundedRectangle(cornerRadius: AppRadius.button))
-                .padding(.top, 8)
-                .accessibilityLabel(String(localized: "feature.attendance.iem.danh"))
+    /// Nút Lưu luôn ghim đáy màn (không cuộn theo danh sách). Image 17 giữ nút “Điểm danh” xám
+    /// khi buổi chưa tới ngày; nhãn và màu nền xám theo `.stickyBar > button:disabled`.
+    @ViewBuilder private var bottomBar: some View {
+        VStack(spacing: 8) {
+            if readOnly {
+                Text(String(localized: "feature.attendance.iem.danh"))
+                    .appText(AppText.buttonLarge)
+                    .foregroundStyle(AppColors.muted)
+                    .frame(maxWidth: .infinity, minHeight: AppMetrics.buttonHeightLarge)
+                    .background(AppColors.inputBorder, in: RoundedRectangle(cornerRadius: AppRadius.button))
+                    .accessibilityLabel(String(localized: "feature.attendance.iem.danh"))
+            } else {
+                AppSaveButton(title: String(localized: "feature.attendance.luu.iem.danh"),
+                              controller: saveController, isEnabled: hasChanges) {
+                    try await data.saveAttendance(session: session, drafts: drafts)
+                    drafts.removeAll()
+                    await data.saveStatusSource?.refresh()
+                }
+                .frame(maxWidth: .infinity)
+                if !hasChanges && saveController.error == nil && saveController.phase == .idle {
+                    Text(String(localized: "attendance.save.no_changes", table: "Teacher"))
+                        .appText(AppText.caption)
+                        .foregroundStyle(AppColors.muted)
+                } else if let source = data.saveStatusSource {
+                    AppSaveStatus(kind: saveController.error == nil ? source.kind : .error)
+                } else {
+                    AppSaveStatus(kind: saveController.error == nil ? .savedLocal : .error)
+                }
+            }
         }
+        .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        .background(AppColors.surface)
+        .overlay(alignment: .top) { AppColors.border.frame(height: 1) }
     }
 
     private var summaryRow: some View {
@@ -170,16 +172,10 @@ struct TeacherAttendanceView: View {
             Text(String(localized: "feature.attendance.can.chu.y"))
                 .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 24))
                 .foregroundStyle(AppColors.text)
-            if warnings.isEmpty {
-                Text(String(localized: "feature.attendance.chua.co.hoc.sinh.vang.2.buoi.lien.tiep"))
+            ForEach(warnings) { student in
+                Text(String.localizedStringWithFormat(String(localized: "feature.attendance.vang.it.nhat.2.buoi.lien.tiep"), String(describing: (student.name))))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
-            } else {
-                ForEach(warnings) { student in
-                    Text(String.localizedStringWithFormat(String(localized: "feature.attendance.vang.it.nhat.2.buoi.lien.tiep"), String(describing: (student.name))))
-                        .appText(AppText.muted)
-                        .foregroundStyle(AppColors.muted)
-                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -246,28 +242,43 @@ struct TeacherAttendanceView: View {
         }
     }
 
-    private func statusButton(_ student: Student, _ displayed: AttendanceStatus?) -> some View {
-        Button {
-            guard !viewOnly else { return }
-            cycle(student)
-        } label: {
-            Text(displayed?.label ?? "–")
-                .appText(AppText.pill)
-                .foregroundStyle(pillTone(displayed))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(pillBackground(displayed), in: Capsule())
-                .frame(minWidth: 96, minHeight: AppMetrics.tap)
-                .contentShape(Rectangle())
+    @ViewBuilder private func statusButton(_ student: Student, _ displayed: AttendanceStatus?) -> some View {
+        if viewOnly {
+            statusPill(displayed, showsChevron: false)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(student.name): \(displayed?.label ?? String(localized: "feature.attendance.chua.iem.danh"))")
+        } else {
+            Menu {
+                Picker("", selection: statusBinding(student)) {
+                    ForEach(cycleOrder, id: \.self) { Text($0.label).tag($0) }
+                }
+            } label: {
+                statusPill(displayed, showsChevron: true)
+            }
+            .accessibilityLabel(String.localizedStringWithFormat(
+                String(localized: "attendance.status.a11y", table: "Teacher"), student.name))
+            .accessibilityValue(displayed?.label ?? String(localized: "feature.attendance.chua.iem.danh"))
         }
-        .buttonStyle(.plain)
-        .disabled(viewOnly)
-        .accessibilityLabel(accessibilityLabel(student, displayed))
     }
 
-    private func accessibilityLabel(_ student: Student, _ displayed: AttendanceStatus?) -> String {
-        let state = displayed?.label ?? String(localized: "feature.attendance.chua.iem.danh")
-        return viewOnly ? "\(student.name): \(state)" : String.localizedStringWithFormat(String(localized: "feature.attendance.bam.e.oi"), String(describing: (student.name)), String(describing: (state)))
+    private func statusPill(_ displayed: AttendanceStatus?, showsChevron: Bool) -> some View {
+        HStack(spacing: 4) {
+            Text(displayed?.label ?? "–").appText(AppText.pill)
+            if showsChevron {
+                Image(systemName: "chevron.down").font(.system(size: 10, weight: .semibold))
+            }
+        }
+        .foregroundStyle(pillTone(displayed))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(pillBackground(displayed), in: Capsule())
+        .frame(minWidth: 96, minHeight: AppMetrics.tap)
+        .contentShape(Rectangle())
+    }
+
+    private func statusBinding(_ student: Student) -> Binding<AttendanceStatus> {
+        Binding(get: { draft(for: student).status },
+                set: { newValue in update(student) { $0.status = newValue } })
     }
 
     private func pillTone(_ status: AttendanceStatus?) -> Color {
@@ -290,7 +301,7 @@ struct TeacherAttendanceView: View {
         }
     }
 
-    /// Swipe right marks “Vắng”, swipe left marks “Muộn”, same as the prototype hint.
+    /// Swipe right marks “Vắng”, swipe left marks “Muộn” (secondary path; no hint text is shown).
     private func swipeGesture(_ student: Student) -> some Gesture {
         DragGesture(minimumDistance: 24)
             .onEnded { value in

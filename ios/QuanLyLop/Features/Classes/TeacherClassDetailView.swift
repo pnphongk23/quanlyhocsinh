@@ -210,6 +210,7 @@ struct TeacherClassDetailView: View {
         .background(AppColors.background.ignoresSafeArea())
         .navigationTitle(klass?.name ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             if let klass, data.canWriteClasses {
                 ToolbarItem(placement: .topBarTrailing) {

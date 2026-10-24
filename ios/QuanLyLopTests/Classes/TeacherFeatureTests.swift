@@ -108,6 +108,7 @@ final class TeacherFeatureTests: XCTestCase {
         XCTAssertEqual(absentTwice.consecutiveAbsences(of: student), 2)
         XCTAssertTrue(absentTwice.hasAbsenceWarning(student))
         XCTAssertEqual(absentTwice.absenceWarningCount(in: "class"), 1)
+        XCTAssertEqual(absentTwice.studentsNeedingAttention(in: [student]).map(\.id), ["st"])
 
         let excusedLatest = demoData(sessions: sessions, attendance: [
             attendance(session: "s1", student: "st", status: .absent),
@@ -115,6 +116,7 @@ final class TeacherFeatureTests: XCTestCase {
         ], students: [student])
         XCTAssertEqual(excusedLatest.consecutiveAbsences(of: student), 0)
         XCTAssertFalse(excusedLatest.hasAbsenceWarning(student))
+        XCTAssertTrue(excusedLatest.studentsNeedingAttention(in: [student]).isEmpty)
     }
 
     func testAttendanceRateExcludesExcusedSessions() {

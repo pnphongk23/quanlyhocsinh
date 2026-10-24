@@ -11,12 +11,12 @@ enum TeacherDemoData {
     static let classID = "demo-class-6a"
     static let today = TeacherFormat.todayISO()
 
-    static func data() -> TeacherFeatureData {
+    static func data(withAbsenceWarning: Bool = true) -> TeacherFeatureData {
         let sessions = makeSessions()
         return TeacherFeatureData(previewClasses: [classroom],
                                   previewStudents: students,
                                   previewSessions: sessions,
-                                  previewAttendance: attendance(for: sessions),
+                                  previewAttendance: attendance(for: sessions, withAbsenceWarning: withAbsenceWarning),
                                   displayName: String(localized: "feature.classes.co.lan"))
     }
 
@@ -73,13 +73,13 @@ enum TeacherDemoData {
     }
 
     /// Minh Anh is absent in the last two held sessions, so the “Cần chú ý” card has a row.
-    static func attendance(for sessions: [ClassSession]) -> [Attendance] {
+    static func attendance(for sessions: [ClassSession], withAbsenceWarning: Bool = true) -> [Attendance] {
         let held = sessions.filter { $0.status == .held }.sorted { $0.date < $1.date }
         let warned = held.suffix(2).map(\.id)
         var rows: [Attendance] = []
         for session in held {
             for (index, student) in students.enumerated() {
-                let status: AttendanceStatus = (index == 0 && warned.contains(session.id)) ? .absent : .present
+                let status: AttendanceStatus = (withAbsenceWarning && index == 0 && warned.contains(session.id)) ? .absent : .present
                 rows.append(Attendance(sessionId: session.id, studentId: student.id, status: status,
                                        note: "", lateAt: nil, version: 1,
                                        updatedAt: "\(session.date)T11:00:00Z"))

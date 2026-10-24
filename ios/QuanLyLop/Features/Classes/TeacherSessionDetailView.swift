@@ -10,6 +10,7 @@ struct TeacherSessionDetailView: View {
     @ObservedObject var i4Data: I4FeatureStore
     @State private var tab = "diem-danh"
     @State private var confirmingCancel = false
+    @State private var showingInfo = false
     @State private var error: String?
 
     private var session: ClassSession? { data.session(id: sessionID) }
@@ -26,7 +27,7 @@ struct TeacherSessionDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             if let session {
-                header(session)
+                if !cancelled { tabsBar }
                 body(session)
             } else {
                 AppEmptyState(title: String(localized: "feature.classes.khong.tim.thay.buoi.hoc"))
@@ -36,7 +37,18 @@ struct TeacherSessionDetailView: View {
         .background(AppColors.background.ignoresSafeArea())
         .navigationTitle(session.map { "\(TeacherFeatureData.sessionPrefix($0)) · \(TeacherFormat.dayMonth($0.date))" } ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
+            if session != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingInfo = true } label: {
+                        Image(systemName: "info.circle")
+                            .frame(minWidth: AppMetrics.tap, minHeight: AppMetrics.tap)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel(String(localized: "session.info.title", table: "Teacher"))
+                }
+            }
             if let session, !cancelled, session.status == .planned, data.canWriteAttendance {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -50,6 +62,11 @@ struct TeacherSessionDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingInfo) {
+            if let session {
+                TeacherSessionInfoSheet(session: session, className: klass?.name, teacherName: data.displayName)
+            }
+        }
         .teacherConfirmDialog(
             isPresented: $confirmingCancel,
             title: String.localizedStringWithFormat(String(localized: "feature.classes.huy.buoi.hoc.a26a4ee4"), String(describing: (session.map { TeacherFormat.dayMonth($0.date) } ?? ""))),
@@ -61,80 +78,42 @@ struct TeacherSessionDetailView: View {
             dismiss: { confirmingCancel = false })
     }
 
-    private func header(_ session: ClassSession) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Text("\(klass?.name ?? String(localized: "feature.classes.lop.hoc")) · \(TeacherFormat.sessionDateLine(date: session.date, start: session.startTime, end: nil))")
-                    .appText(AppText.muted)
-                    .foregroundStyle(AppColors.muted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                if cancelled { TeacherStatusPill(text: String(localized: "feature.classes.a.huy"), tone: .warning) }
-            }
-            .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
-            .padding(.top, 2)
-            .padding(.bottom, 8)
-            if !cancelled {
-                TeacherTextTabs(items: tabs, selection: tab, fontSize: 14, fillsWidth: true) { tab = $0 }
-            }
-        }
-        .background(AppColors.surface)
+    private var tabsBar: some View {
+        TeacherTextTabs(items: tabs, selection: tab, fontSize: 14, fillsWidth: true) { tab = $0 }
+            .background(AppColors.surface)
     }
 
     @ViewBuilder private func body(_ session: ClassSession) -> some View {
+        if cancelled {
+            scrolled { cancelledBody(session) }
+        } else {
+            switch tab {
+            case "nhan-xet":
+                scrolled { SessionCommentsView(sessionID: session.id, data: i4Data) }
+            case "btvn":
+                scrolled { SessionHomeworkView(sessionID: session.id, data: i4Data) }
+            default:
+                // Điểm danh tự cuộn và ghim nút Lưu ở đáy màn.
+                VStack(spacing: 0) {
+                    if let error {
+                        TeacherErrorBanner(message: error)
+                            .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+                    }
+                    TeacherAttendanceView(session: session, data: data)
+                }
+            }
+        }
+    }
+
+    private func scrolled<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         TeacherScroll {
             VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
                 if let error { TeacherErrorBanner(message: error) }
-                if cancelled || tab == "diem-danh" { teacherCard }
-                if cancelled {
-                    cancelledBody(session)
-                } else {
-                    switch tab {
-                    case "nhan-xet":
-                        SessionCommentsView(sessionID: session.id, data: i4Data)
-                    case "btvn":
-                        SessionHomeworkView(sessionID: session.id, data: i4Data)
-                    default:
-                        TeacherAttendanceView(session: session, data: data)
-                    }
-                }
+                content()
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, 4)
-            .padding(.bottom, TeacherMetrics.tabBarHeight)
-        }
-    }
-
-    private var teacherCard: some View {
-        VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-            Text(String(localized: "feature.classes.nguoi.day"))
-                .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
-                .foregroundStyle(AppColors.text)
-            teacherRow(position: String(localized: "feature.classes.giao.vien.chinh"), name: data.displayName)
-            teacherRow(position: String(localized: "feature.classes.tro.giang"), name: nil)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-    }
-
-    private func teacherRow(position: String, name: String?) -> some View {
-        HStack(spacing: 12) {
-            if let name {
-                TeacherAvatar(name: name, size: 40)
-            } else {
-                TeacherAvatar(initials: "", size: 40, isEmpty: true)
-            }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(position)
-                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 17.6))
-                    .foregroundStyle(AppColors.muted)
-                Text(name ?? String(localized: "feature.classes.khong.co"))
-                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 21))
-                    .foregroundStyle(AppColors.text)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, TeacherMetrics.cardPadding)
         }
     }
 
@@ -188,6 +167,91 @@ struct TeacherSessionDetailView: View {
             } catch {
                 self.error = String(localized: "feature.classes.khong.huy.uoc.buoi.hoc")
             }
+        }
+    }
+}
+
+// MARK: - Thông tin buổi học (sheet từ nút info ở thanh điều hướng)
+
+struct TeacherSessionInfoSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let session: ClassSession
+    let className: String?
+    let teacherName: String
+
+    var body: some View {
+        NavigationStack {
+            TeacherScroll {
+                VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
+                    card {
+                        infoRow(String(localized: "session.info.class", table: "Teacher"),
+                                className ?? String(localized: "feature.classes.lop.hoc"))
+                        infoRow(String(localized: "session.info.date", table: "Teacher"),
+                                TeacherFormat.weekdayDate(session.date))
+                        infoRow(String(localized: "session.info.time", table: "Teacher"), session.startTime)
+                    }
+                    card {
+                        Text(String(localized: "feature.classes.nguoi.day"))
+                            .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
+                            .foregroundStyle(AppColors.text)
+                        teacherRow(position: String(localized: "feature.classes.giao.vien.chinh"), name: teacherName)
+                        teacherRow(position: String(localized: "feature.classes.tro.giang"), name: nil)
+                    }
+                }
+                .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
+                .padding(.top, TeacherMetrics.screenPaddingTop)
+                .padding(.bottom, TeacherMetrics.cardPadding)
+            }
+            .background(AppColors.background.ignoresSafeArea())
+            .navigationTitle(String(localized: "session.info.title", table: "Teacher"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(String(localized: "session.info.close", table: "Teacher")) { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) { content() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+
+    private func infoRow(_ title: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(title)
+                .appText(AppText.muted)
+                .foregroundStyle(AppColors.muted)
+            Text(value)
+                .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 21))
+                .foregroundStyle(AppColors.text)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .multilineTextAlignment(.trailing)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func teacherRow(position: String, name: String?) -> some View {
+        HStack(spacing: 12) {
+            if let name {
+                TeacherAvatar(name: name, size: 40)
+            } else {
+                TeacherAvatar(initials: "", size: 40, isEmpty: true)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(position)
+                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 17.6))
+                    .foregroundStyle(AppColors.muted)
+                Text(name ?? String(localized: "feature.classes.khong.co"))
+                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 21))
+                    .foregroundStyle(AppColors.text)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

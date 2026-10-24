@@ -77,6 +77,48 @@
       "localizations" : {
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Buổi tới: %@ %@ · %@" } }
       }
+    },
+    "session.info.title" : {
+      "comment" : "Tên nút info và tiêu đề sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thông tin buổi học" } }
+      }
+    },
+    "session.info.class" : {
+      "comment" : "Nhãn dòng lớp trong sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lớp" } }
+      }
+    },
+    "session.info.date" : {
+      "comment" : "Nhãn dòng ngày trong sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Ngày" } }
+      }
+    },
+    "session.info.time" : {
+      "comment" : "Nhãn dòng giờ trong sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Giờ" } }
+      }
+    },
+    "session.info.close" : {
+      "comment" : "Nút đóng sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đóng" } }
+      }
+    },
+    "attendance.status.a11y" : {
+      "comment" : "Nhãn trợ năng của nút trạng thái điểm danh; %@ là tên học sinh.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Trạng thái điểm danh của %@" } }
+      }
     }
   },
   "version" : "1.0"

@@ -290,6 +290,11 @@ final class TeacherFeatureData {
         student.status == .active && consecutiveAbsences(of: student) >= 2
     }
 
+    /// Học sinh của buổi cần hiện trong thẻ “Cần chú ý”; rỗng thì thẻ ẩn hẳn.
+    func studentsNeedingAttention(in roster: [Student]) -> [Student] {
+        roster.filter(hasAbsenceWarning)
+    }
+
     func absenceWarningCount(in classID: String) -> Int {
         activeStudents(in: classID).filter(hasAbsenceWarning).count
     }

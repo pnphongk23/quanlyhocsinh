@@ -15,6 +15,17 @@ struct TeacherRootView: View {
         self.accountSettings = accountSettings
     }
 
+    #if DEBUG
+    /// Screenshot harness only: renders the real tab shell with synthetic data and a pre-pushed route.
+    init(demoData: TeacherFeatureData, initialRoutes: [TeacherRoute]) {
+        _data = State(initialValue: demoData)
+        _i4Data = State(initialValue: I4FeatureStore())
+        _tab = State(initialValue: .classes)
+        _classesPath = State(initialValue: NavigationPath(initialRoutes))
+        accountSettings = nil
+    }
+    #endif
+
     /// Cài đặt và Đổi mật khẩu là các màn của mô hình đăng nhập; cả hai nằm trong tab Cài đặt.
     private var tabSelection: Binding<TeacherTab> {
         Binding(get: { auth.screen == .settings || auth.screen == .changePassword ? .settings : tab },
