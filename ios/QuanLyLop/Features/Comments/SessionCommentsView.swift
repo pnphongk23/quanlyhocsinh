@@ -229,7 +229,7 @@ struct SessionCommentsView: View {
                   let homeworkSuffix = ungraded.parts > 0
                       ? String.localizedStringWithFormat(String(localized: "feature.comments.homeworkResultSuffix"), previousLabel)
                       : String(localized: "feature.comments.sentencePeriod")
-                  Text(String.localizedStringWithFormat(String(localized: "feature.comments.phu.huynh.nhan.mot.thong.bao.cho.buoi.nay.gom.sa"), homeworkSuffix))
+                  Text(LocalizedStringKey(String.localizedStringWithFormat(String(localized: "feature.comments.phu.huynh.nhan.mot.thong.bao.cho.buoi.nay.gom.sa"), homeworkSuffix)))
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                     .foregroundStyle(AppColors.muted)
                 if !skipped.isEmpty {
