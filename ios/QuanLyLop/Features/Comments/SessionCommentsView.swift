@@ -10,6 +10,9 @@ struct SessionCommentsView: View {
     @State private var showingSend = false
     @State private var sendError: String?
     @State private var toast: String?
+    @State private var sendController = AppSaveController()
+    @State private var saveStatusSource: AppSaveStatusSource?
+    @State private var dismissSendAfterSuccess = false
 
     init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.sessionID = sessionID
@@ -64,7 +67,23 @@ struct SessionCommentsView: View {
         .overlay {
             if showingSend { sendDialog }
         }
-        .task { await data.configure(auth: auth) }
+        .task {
+            await data.configure(auth: auth)
+            if let store = data.store {
+                let source = AppSaveStatusSource(store: store)
+                await source.refresh()
+                saveStatusSource = source
+            }
+        }
+        .onChange(of: sendController.phase) { oldPhase, newPhase in
+            if oldPhase == .saved, newPhase == .idle, dismissSendAfterSuccess {
+                showingSend = false
+                dismissSendAfterSuccess = false
+            }
+        }
+        .onChange(of: SyncStatusCenter.shared.state) { _, _ in
+            Task { await saveStatusSource?.refresh() }
+        }
     }
 
     @ViewBuilder
@@ -80,6 +99,7 @@ struct SessionCommentsView: View {
                 AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.e.nhan.xet"))
             } else {
                 if !leftStudents.isEmpty { infoBanner(session) }
+                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                 filters
                 if let sendError {
                     I4Banner(text: sendError, tone: .error, systemImage: "exclamationmark.triangle",
@@ -101,15 +121,8 @@ struct SessionCommentsView: View {
         HStack(spacing: 6) {
             ForEach(TicketFilter.allCases, id: \.self) { option in
                 Button { filter = option } label: {
-                    Text(CommentsRules.filterLabel(option, counts))
-                        .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
-                        .foregroundStyle(filter == option ? AppColors.onPrimary : AppColors.text)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .padding(.horizontal, 10)
-                        .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
-                        .background(filter == option ? AppColors.primary : AppColors.surface,
-                                    in: Capsule())
+                    AppChip(title: CommentsRules.filterLabel(option, counts), selected: filter == option)
+                        .frame(minHeight: AppMetrics.tap)
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(filter == option ? [.isSelected] : [])
@@ -120,7 +133,7 @@ struct SessionCommentsView: View {
     private var list: some View {
         VStack(spacing: 8) {
             if visibleRows.isEmpty {
-                AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.trong.muc.nay"))
+                AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.trong.muc.nay"), size: .compact)
             }
             ForEach(visibleRows) { row in
                 ticketCard(row)
@@ -220,19 +233,12 @@ struct SessionCommentsView: View {
     private var footer: some View {
         VStack(spacing: 8) {
             if let toast { I4Toast(text: toast) }
-            Button { showingSend = true } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "paperplane").font(.system(size: 16, weight: .regular))
-                    Text(String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))))
-                        .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
-                }
-                .foregroundStyle(sendableRows.isEmpty ? AppColors.placeholder : AppColors.onPrimary)
-                .frame(maxWidth: .infinity, minHeight: AppMetrics.buttonHeightLarge)
-                .background(sendableRows.isEmpty ? AppColors.neutralSoft : AppColors.primary,
-                            in: RoundedRectangle(cornerRadius: AppRadius.button))
-            }
-            .buttonStyle(.plain)
-            .disabled(sendableRows.isEmpty)
+            AppButton(
+                title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),
+                systemImage: "paperplane",
+                size: .large
+            ) { showingSend = true }
+                .disabled(sendableRows.isEmpty)
         }
         .padding(.top, 4)
     }
@@ -269,7 +275,10 @@ struct SessionCommentsView: View {
             }
         }, actions: {
             VStack(spacing: 8) {
-                AppButton(title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu"), String(describing: (sendableRows.count))), size: .large) { send() }
+                AppSaveButton(
+                    title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu"), String(describing: (sendableRows.count))),
+                    controller: sendController
+                ) { try await send() }
                 AppButton(title: String(localized: "feature.comments.quay.lai"), variant: .neutral, size: .large) { showingSend = false }
             }
         }, dismiss: { showingSend = false })
@@ -313,23 +322,23 @@ struct SessionCommentsView: View {
         return HomeworkRules.ordered(candidates).last
     }
 
-    private func send() {
+    private func send() async throws {
         let ids = sendableRows.map(\.student.id)
-        let sessionID = self.sessionID
-        Task {
-            let outcome = await data.sendSlips(sessionID: sessionID, studentIDs: ids)
-            switch outcome {
-            case .sent:
-                showingSend = false
-                sendError = nil
-                toast = nil
-            case .queued:
-                showingSend = false
-                sendError = nil
-                toast = String(localized: "feature.comments.se.gui.khi.co.mang")
-            case .failed(let message):
-                sendError = message
-            }
+        let outcome = await data.sendSlips(sessionID: sessionID, studentIDs: ids)
+        switch outcome {
+        case .sent:
+            dismissSendAfterSuccess = true
+            sendError = nil
+            toast = nil
+            await saveStatusSource?.refresh()
+        case .queued:
+            dismissSendAfterSuccess = true
+            sendError = nil
+            toast = String(localized: "feature.comments.se.gui.khi.co.mang")
+            await saveStatusSource?.refresh()
+        case .failed(let message):
+            sendError = message
+            throw I4SaveFailure(message: message)
         }
     }
 
@@ -347,15 +356,15 @@ struct SessionCommentsView: View {
             sections: sections,
             grades: data.grades,
             canWrite: data.canWriteCommentsReports,
+            saveStatusSource: saveStatusSource,
             onClose: { self.target = nil },
             onGoHomework: { self.target = nil },
             onSave: { stars, note in
-                if let failure = await data.saveSlip(sessionID: target.session.id, student: target.student,
-                                                     stars: stars, note: note) {
-                    return failure
-                }
-                self.target = nil
-                return nil
+                  if let failure = await data.saveSlip(sessionID: target.session.id, student: target.student,
+                                                       stars: stars, note: note) {
+                      return failure
+                  }
+                  return nil
             }
         )
     }
@@ -376,6 +385,7 @@ struct I4TicketSheet: View {
     let sections: [HomeworkSection]
     let grades: [HomeworkGrade]
     let canWrite: Bool
+    let saveStatusSource: AppSaveStatusSource?
     let onClose: () -> Void
     let onGoHomework: () -> Void
     let onSave: (Stars?, String) async -> String?
@@ -383,11 +393,12 @@ struct I4TicketSheet: View {
     @State private var stars: Stars?
     @State private var note: String = ""
     @State private var error: String?
-    @State private var saving = false
+    @State private var saveController = AppSaveController()
 
     init(session: ClassSession, student: Student, slip: SessionSlip?,
          previousSessionNumber: Int?, sections: [HomeworkSection], grades: [HomeworkGrade],
-         canWrite: Bool, onClose: @escaping () -> Void, onGoHomework: @escaping () -> Void,
+         canWrite: Bool, saveStatusSource: AppSaveStatusSource?,
+         onClose: @escaping () -> Void, onGoHomework: @escaping () -> Void,
          onSave: @escaping (Stars?, String) async -> String?) {
         self.session = session
         self.student = student
@@ -396,6 +407,7 @@ struct I4TicketSheet: View {
         self.sections = sections
         self.grades = grades
         self.canWrite = canWrite
+        self.saveStatusSource = saveStatusSource
         self.onClose = onClose
         self.onGoHomework = onGoHomework
         self.onSave = onSave
@@ -430,22 +442,30 @@ struct I4TicketSheet: View {
                             .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                             .foregroundStyle(AppColors.error)
                     }
+                    if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
             }
             if canWrite {
-                AppButton(title: String(localized: "feature.comments.luu"), size: .large) { save() }
-                    .disabled(saving)
+                AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController) {
+                    try await save()
+                }
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
                     .padding(.bottom, 20)
                     .overlay(alignment: .top) { AppColors.border.frame(height: 1) }
             }
         }
-        .background(AppColors.surface)
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.hidden)
+          .background(AppColors.surface)
+          .presentationDetents([.medium, .large])
+          .presentationDragIndicator(.hidden)
+          .onChange(of: saveController.phase) { oldPhase, newPhase in
+              if oldPhase == .saved, newPhase == .idle { onClose() }
+          }
+          .onChange(of: SyncStatusCenter.shared.state) { _, _ in
+              Task { await saveStatusSource?.refresh() }
+          }
     }
 
     private var header: some View {
@@ -492,14 +512,11 @@ struct I4TicketSheet: View {
             ForEach(Stars.allCases, id: \.self) { option in
                 Button { if canWrite { stars = option; error = nil } } label: {
                     Text(String(repeating: "★", count: option.rawValue))
-                        .font(.system(size: 16))
-                        .foregroundStyle(I4Style.star)
-                        .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(stars == option ? AppColors.warningSoft : AppColors.background,
-                                    in: RoundedRectangle(cornerRadius: AppRadius.button))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: AppRadius.button)
-                                .strokeBorder(stars == option ? I4Style.star : .clear, lineWidth: 2))
+                          .font(.system(size: 16))
+                          .foregroundStyle(I4Style.star)
+                          .frame(maxWidth: .infinity, minHeight: 56)
+                          .background(stars == option ? AppState.selectedBg : AppColors.background,
+                                      in: RoundedRectangle(cornerRadius: AppRadius.button))
                 }
                 .buttonStyle(.plain)
                 .disabled(!canWrite)
@@ -600,15 +617,13 @@ struct I4TicketSheet: View {
         }
     }
 
-    private func save() {
-        guard !saving else { return }
-        saving = true
+    private func save() async throws {
         let stars = self.stars
         let note = self.note
-        Task {
-            let failure = await onSave(stars, note)
-            saving = false
-            if let failure { error = failure }
+        if let failure = await onSave(stars, note) {
+            error = failure
+            throw I4SaveFailure(message: failure)
         }
+        await saveStatusSource?.refresh()
     }
 }

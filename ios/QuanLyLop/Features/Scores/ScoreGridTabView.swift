@@ -30,7 +30,7 @@ struct ScoreGridTabView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if tests.isEmpty {
+              if tests.isEmpty {
                 emptyState
             } else {
                 if data.canWriteScores { newButton }
@@ -117,7 +117,11 @@ struct ScoreGridTabView: View {
                         .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                         .foregroundStyle(AppColors.text)
                         .lineLimit(1)
-                    Text("\(I4Format.dayMonth(test.date)) · thang \(test.maxScore)")
+                      Text(String.localizedStringWithFormat(
+                          String(localized: "feature.scores.ngay.thang.iem"),
+                          String(describing: I4Format.dayMonth(test.date)),
+                          String(describing: test.maxScore)
+                      ))
                         .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                         .foregroundStyle(AppColors.muted)
                         .lineLimit(1)
@@ -147,17 +151,9 @@ struct ScoreGridTabView: View {
                         .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                         .foregroundStyle(AppColors.text)
                 } else {
-                    Text("–")
-                        .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
-                        .foregroundStyle(AppColors.muted)
-                        .frame(width: 64, height: 44)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .strokeBorder(AppColors.inputBorderStrong,
-                                              style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
-                    Text(String(localized: "feature.scores.chua.co.iem"))
-                        .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
-                        .foregroundStyle(AppColors.warning)
+                      Text(I4Format.score(nil))
+                          .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
+                          .foregroundStyle(AppColors.placeholder)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -173,28 +169,13 @@ struct ScoreGridTabView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "chart.bar.xaxis")
-                .font(.system(size: 30, weight: .regular))
-                .foregroundStyle(AppColors.primaryInk)
-                .frame(width: 72, height: 72)
-                .background(AppColors.primarySoft, in: Circle())
-            VStack(spacing: 8) {
-                Text(String(localized: "feature.scores.chua.co.bai.kiem.tra"))
-                    .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 30))
-                    .foregroundStyle(AppColors.text)
-                Text(String(localized: "feature.scores.tao.bai.kiem.tra.au.tien.sau.o.nhap.iem.cho.ca.l"))
-                    .appText(AppText.body)
-                    .foregroundStyle(AppColors.muted)
-                    .multilineTextAlignment(.center)
-            }
-            if data.canWriteScores {
-                AppButton(title: String(localized: "feature.scores.tao.bai.kiem.tra"), size: .large) { showingCreate = true }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 24)
-        .multilineTextAlignment(.center)
+        AppEmptyState(
+            title: String(localized: "feature.scores.chua.co.bai.kiem.tra"),
+            description: String(localized: "feature.scores.tao.bai.kiem.tra.au.tien.sau.o.nhap.iem.cho.ca.l"),
+            size: .compact,
+            actionTitle: String(localized: "feature.scores.tao.bai.kiem.tra"),
+            action: { showingCreate = true }
+        )
+        .padding(.horizontal, 16)
     }
 }

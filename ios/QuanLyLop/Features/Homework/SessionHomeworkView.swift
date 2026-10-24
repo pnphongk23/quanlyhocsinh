@@ -10,6 +10,8 @@ struct SessionHomeworkView: View {
     @State private var selectedKind: HomeworkKind?
     @State private var editor: HomeworkEditor?
     @State private var error: String?
+    @State private var saveStatusSource: AppSaveStatusSource?
+    @State private var gradeController = AppSaveController()
 
     init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.sessionID = sessionID
@@ -61,11 +63,22 @@ struct SessionHomeworkView: View {
                                   existingKinds: todaySections.map(\.kind),
                                   missingKinds: missingKinds,
                                   gradingStudentCount: gradingPlan.session.map { data.students(enrolledOn: $0).count } ?? 0,
+                                  saveStatusSource: saveStatusSource,
                                   onClose: { self.editor = nil })
                 .presentationDetents([.large])
                 .presentationDragIndicator(.hidden)
         }
-        .task { await data.configure(auth: auth) }
+        .task {
+            await data.configure(auth: auth)
+            if let store = data.store {
+                let source = AppSaveStatusSource(store: store)
+                await source.refresh()
+                saveStatusSource = source
+            }
+        }
+        .onChange(of: SyncStatusCenter.shared.state) { _, _ in
+            Task { await saveStatusSource?.refresh() }
+        }
     }
 
     @ViewBuilder
@@ -83,6 +96,10 @@ struct SessionHomeworkView: View {
                     I4Banner(text: error, tone: .error, systemImage: "exclamationmark.triangle",
                              horizontal: 14, vertical: 10)
                 }
+                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
+                if let failure = gradeController.error {
+                    I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
+                }
                 if !data.canWriteCommentsReports {
                     I4Banner(text: String(localized: "feature.homework.ban.chi.co.quyen.xem.bai.tap.ve.nha.cua.buoi.nay"),
                              horizontal: 12, vertical: 10)
@@ -95,25 +112,12 @@ struct SessionHomeworkView: View {
     }
 
     private var segmented: some View {
-        HStack(spacing: 3) {
-            ForEach(HomeworkTab.allCases, id: \.self) { option in
-                Button { view = option } label: {
-                    Text(option.label)
-                        .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                        .foregroundStyle(view == option ? AppColors.primaryInk : AppColors.muted)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
-                        .background(view == option ? AppColors.surface : .clear,
-                                    in: RoundedRectangle(cornerRadius: 10))
-                        .shadow(color: view == option ? Color(.sRGB, white: 0, opacity: 0.12) : .clear,
-                                radius: 1, x: 0, y: 1)
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(view == option ? [.isSelected] : [])
-            }
+        AppSegmented(
+            options: HomeworkTab.allCases.map { .init(value: $0.rawValue, label: $0.label) },
+            value: view.rawValue
+        ) { selection in
+            if let selected = HomeworkTab(rawValue: selection) { view = selected }
         }
-        .padding(3)
-        .background(AppColors.border, in: RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Previous homework
@@ -122,10 +126,11 @@ struct SessionHomeworkView: View {
     private var previousBody: some View {
         if previousSections.isEmpty || activeProgress == nil {
             let copy = HomeworkRules.previousEmptyCopy(first: previousSession == nil)
-            noticeCard(title: copy.title, body: copy.body)
-            if data.canWriteCommentsReports {
-                AppButton(title: String(localized: "feature.homework.giao.btvn.o.bai.tap.hom.nay"), variant: .secondary, size: .medium) {
-                    view = .today
+            AppEmptyState(title: copy.title, description: copy.body, size: .compact) {
+                if data.canWriteCommentsReports {
+                    AppButton(title: String(localized: "feature.homework.giao.btvn.o.bai.tap.hom.nay"), variant: .secondary, size: .medium) {
+                        view = .today
+                    }
                 }
             }
         } else if let activeProgress, let session {
@@ -168,15 +173,17 @@ struct SessionHomeworkView: View {
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                     .foregroundStyle(AppColors.muted)
             }
-            softButton(String(localized: "feature.homework.anh.dau.ca.lop.hoan.thanh")) {
-                let section = progress.section
-                let roster = students
-                Task {
-                    await data.gradeAll(section, students: roster, level: .done)
-                    error = data.errorMessage
-                }
+            AppSaveButton(
+                title: String(localized: "feature.homework.anh.dau.ca.lop.hoan.thanh"),
+                controller: gradeController,
+                variant: .secondary,
+                size: .medium,
+                isEnabled: data.canWriteCommentsReports
+            ) {
+                await data.gradeAll(progress.section, students: students, level: .done)
+                if let message = data.errorMessage { throw I4SaveFailure(message: message) }
+                await saveStatusSource?.refresh()
             }
-            .disabled(!data.canWriteCommentsReports)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -188,20 +195,10 @@ struct SessionHomeworkView: View {
         I4FlowLayout(spacing: 6) {
             ForEach(previousProgress) { progress in
                 let active = progress.section.id == activeProgress?.section.id
-                Button {
-                    selectedKind = progress.section.kind
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: progress.section.kind.systemImage)
-                            .font(.system(size: 15, weight: .regular))
-                        Text(progress.section.kind.label)
-                            .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                    }
-                    .foregroundStyle(active ? AppColors.onPrimary : AppColors.text)
-                    .padding(.horizontal, 14)
-                    .frame(height: AppMetrics.tap)
-                    .background(active ? AppColors.primary : AppColors.neutralSoft, in: Capsule())
-                }
+                  Button { selectedKind = progress.section.kind } label: {
+                      AppChip(title: progress.section.kind.label, selected: active)
+                          .frame(minHeight: AppMetrics.tap)
+                  }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(active ? [.isSelected] : [])
             }
@@ -242,6 +239,7 @@ struct SessionHomeworkView: View {
                 Task {
                     await data.grade(section, student: student, level: newLevel)
                     error = data.errorMessage
+                    await saveStatusSource?.refresh()
                 }
             }
         }
@@ -267,9 +265,7 @@ struct SessionHomeworkView: View {
                     AppPill(title: String(localized: "feature.homework.a.luu.phu.huynh.a.thay"), tone: .success)
                 }
                 if todaySections.isEmpty {
-                    Text(String(localized: "feature.homework.chua.giao.phan.bai.tap.nao"))
-                        .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
-                        .foregroundStyle(AppColors.muted)
+            AppEmptyState(title: String(localized: "feature.homework.chua.giao.phan.bai.tap.nao"), size: .compact)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(todaySections, id: \.id) { section in
@@ -395,16 +391,6 @@ struct SessionHomeworkView: View {
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 
-    private func softButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                .foregroundStyle(AppColors.primaryInk)
-                .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
-                .background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
-        }
-        .buttonStyle(.plain)
-    }
 }
 
 enum HomeworkTab: String, CaseIterable {
@@ -432,23 +418,26 @@ struct HomeworkSectionEditor: View {
     let existingKinds: [HomeworkKind]
     let missingKinds: [HomeworkKind]
     let gradingStudentCount: Int
+    let saveStatusSource: AppSaveStatusSource?
     let onClose: () -> Void
 
     @State private var kind: HomeworkKind?
     @State private var title: String
     @State private var description: String
     @State private var error: String?
+    @State private var saveController = AppSaveController()
     @State private var confirmingDelete = false
 
     init(data: I4FeatureStore, sessionID: String, editor: HomeworkEditor,
          existingKinds: [HomeworkKind], missingKinds: [HomeworkKind],
-         gradingStudentCount: Int, onClose: @escaping () -> Void) {
+         gradingStudentCount: Int, saveStatusSource: AppSaveStatusSource?, onClose: @escaping () -> Void) {
         self.data = data
         self.sessionID = sessionID
         self.editor = editor
         self.existingKinds = existingKinds
         self.missingKinds = missingKinds
         self.gradingStudentCount = gradingStudentCount
+        self.saveStatusSource = saveStatusSource
         self.onClose = onClose
         switch editor {
         case .add(let kind):
@@ -490,7 +479,7 @@ struct HomeworkSectionEditor: View {
                     }
                     titleField
                     descriptionField
-                    if let error {
+                      if let error {
                         Text(error)
                             .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                             .foregroundStyle(AppColors.error)
@@ -498,21 +487,32 @@ struct HomeworkSectionEditor: View {
                             .padding(.vertical, 10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
-                    }
+                      }
+                      if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                     if let section = editingSection {
                         deleteRow(section)
                         savedHint
-                        AppButton(title: String(localized: "feature.homework.luu"), size: .large) { save() }
-                    } else {
-                        footHint
-                        AppButton(title: String(localized: "feature.homework.luu.phan"), size: .large) { save() }
+                          AppSaveButton(title: String(localized: "feature.homework.luu"), controller: saveController) {
+                              try await save()
+                          }
+                      } else {
+                          footHint
+                          AppSaveButton(title: String(localized: "feature.homework.luu.phan"), controller: saveController) {
+                              try await save()
+                          }
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
             }
-        }
-        .background(AppColors.surface)
+          }
+          .background(AppColors.surface)
+          .onChange(of: saveController.phase) { oldPhase, newPhase in
+              if oldPhase == .saved, newPhase == .idle { onClose() }
+          }
+          .onChange(of: SyncStatusCenter.shared.state) { _, _ in
+              Task { await saveStatusSource?.refresh() }
+          }
     }
 
     private var addHeader: some View {
@@ -537,27 +537,22 @@ struct HomeworkSectionEditor: View {
 
     private func kindOption(_ option: HomeworkKind) -> some View {
         let taken = existingKinds.contains(option)
-        let chosen = kind == option
-        return Button { kind = option } label: {
-            HStack(spacing: 8) {
-                Image(systemName: option.systemImage).font(.system(size: 17, weight: .regular))
-                Text(option.label)
-                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 18))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if taken {
-                    Text(String(localized: "feature.homework.a.co")).appText(AppTextStyle(size: 12, weight: .medium, lineHeight: 18))
-                }
-            }
-            .foregroundStyle(taken ? AppColors.placeholder : (chosen ? AppColors.primaryInk : AppColors.text))
-            .padding(.horizontal, 12)
-            .frame(height: 56)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(taken ? AppColors.background : (chosen ? AppColors.primarySoft : AppColors.background),
-                        in: RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(chosen ? AppColors.primary : .clear, lineWidth: 2))
-        }
+          let chosen = kind == option
+          return Button { kind = option } label: {
+              AppCard(selected: chosen) {
+                  HStack(spacing: 8) {
+                      Image(systemName: option.systemImage).font(.system(size: 17, weight: .regular))
+                      Text(option.label)
+                          .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 18))
+                          .frame(maxWidth: .infinity, alignment: .leading)
+                      if taken {
+                          Text(String(localized: "feature.homework.a.co")).appText(AppTextStyle(size: 12, weight: .medium, lineHeight: 18))
+                      }
+                  }
+                  .foregroundStyle(taken ? AppColors.placeholder : (chosen ? AppState.selectedFg : AppColors.text))
+              }
+              .frame(height: 56)
+          }
         .buttonStyle(.plain)
         .disabled(taken)
     }
@@ -674,24 +669,25 @@ struct HomeworkSectionEditor: View {
         }
     }
 
-    private func save() {
-        guard let kind = editingSection?.kind ?? kind else { return }
+    private func save() async throws {
+        guard let kind = editingSection?.kind ?? kind else {
+            let message = String(localized: "feature.homework.loai")
+            error = message
+            throw I4SaveFailure(message: message)
+        }
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            error = String(localized: "feature.homework.nhap.tieu.e.phan.bai.tap")
-            return
+            let message = String(localized: "feature.homework.nhap.tieu.e.phan.bai.tap")
+            error = message
+            throw I4SaveFailure(message: message)
         }
-        let draftTitle = title
-        let draftDescription = description
-        let section = editingSection
-        Task {
-            if let failure = await data.saveSection(sessionID: sessionID, kind: kind,
-                                                     title: draftTitle, description: draftDescription,
-                                                     section: section) {
-                error = failure
-            } else {
-                onClose()
-            }
+        if let failure = await data.saveSection(sessionID: sessionID, kind: kind,
+                                                title: title, description: description,
+                                                section: editingSection) {
+            error = failure
+            throw I4SaveFailure(message: failure)
         }
+        error = nil
+        await saveStatusSource?.refresh()
     }
 
     private func remove(_ section: HomeworkSection) {

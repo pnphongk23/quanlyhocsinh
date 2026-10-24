@@ -46,6 +46,13 @@ final class ScoreRulesTests: XCTestCase {
         XCTAssertEqual(ScoreRules.inputText(0), "0")
     }
 
+    func testScoreDisplayUsesVietnameseDecimalsAndDashForMissingValues() {
+        XCTAssertEqual(I4Format.score(82.0), "82")
+        XCTAssertEqual(I4Format.score(7.5), "7,5")
+        XCTAssertEqual(I4Format.score(0.0), "0")
+        XCTAssertEqual(I4Format.score(nil), "–")
+    }
+
     func testMaximumAndHighestScoreValidation() throws {
         let test = try TestDefinition(id: "t", classId: "c", name: "Unit 6", date: "2026-10-21")
         XCTAssertEqual(test.maxScore, 15)

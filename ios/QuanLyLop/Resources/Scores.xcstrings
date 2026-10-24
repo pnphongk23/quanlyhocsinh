@@ -1,0 +1,13 @@
+{
+  "sourceLanguage" : "vi",
+  "strings" : {
+    "scores.value.missing" : {
+      "comment" : "Giá trị trong ô điểm khi học sinh chưa có điểm.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "–" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

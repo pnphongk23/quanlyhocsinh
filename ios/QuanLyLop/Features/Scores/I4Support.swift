@@ -1,6 +1,11 @@
 import Foundation
 import SwiftUI
 
+struct I4SaveFailure: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
+}
+
 /// Date/number labels in the same `vi-VN` shapes as `design/prototype/src/shared/format`.
 /// Shared by the I-8C groups (scores, homework, comments, reports).
 enum I4Format {
@@ -90,6 +95,11 @@ enum I4Format {
         scoreFormatter.string(from: NSNumber(value: value)) ?? String(value)
     }
 
+    static func score(_ value: Double?) -> String {
+        guard let value else { return String(localized: "scores.value.missing", table: "Scores") }
+        return score(value)
+    }
+
     static func monthOption(_ month: String) -> String {
         String.localizedStringWithFormat(String(localized: "feature.scores.thang"), String(describing: (Int(month.dropFirst(5)) ?? 0)), String(describing: (month.prefix(4))))
     }
@@ -122,21 +132,13 @@ enum I4Style {
     static let starBar = Color(.sRGB, red: 0xF2 / 255, green: 0xB2 / 255, blue: 0x00 / 255, opacity: 1)
 }
 
-/// Two initials of the last two words, the avatar convention used across the prototype.
-enum I4Name {
-    static func initials(_ name: String) -> String {
-        let words = name.split(whereSeparator: { $0 == " " }).suffix(2)
-        return words.compactMap { $0.first.map(String.init) }.joined().uppercased()
-    }
-}
-
 struct I4Avatar: View {
     let name: String
     var diameter: CGFloat = 36
     var fontSize: CGFloat = 13
 
     var body: some View {
-        Text(I4Name.initials(name))
+        Text(AppInitials.of(name).isEmpty ? "–" : AppInitials.of(name))
             .appText(AppTextStyle(size: fontSize, weight: .bold, lineHeight: fontSize * 1.5))
             .foregroundStyle(AppColors.primaryInk)
             .frame(width: diameter, height: diameter)
