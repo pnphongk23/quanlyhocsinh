@@ -247,20 +247,22 @@ export async function discardRejectedCommands(ids: string[]): Promise<void> {
   const identity = identityKey(), wanted = new Set(ids);
   const rows = (await db.outbox.where("identity").equals(identity).toArray()).filter((row) => row.status === "rejected" && wanted.has(row.id) && canDiscardRejected(row.type));
   if (!rows.length) return;
-  const restore = new Map<EntityName, Set<string>>();
+  const restore = new Map<EntityName, Map<string, string | undefined>>();
   for (const row of rows) {
     const entity = cellEntity[row.type];
-    const superseded = (await db.outbox.where("identity").equals(identity).toArray()).some((other) => other.cell_key && other.cell_key === row.cell_key && other.status !== "rejected");
-    if (superseded) continue;
     const key = `${identity}|${entity}|${keyParts(entity, row.payload as unknown as Record<string, unknown>).join("|")}`;
-    restore.set(entity, (restore.get(entity) ?? new Set()).add(key));
+    restore.set(entity, (restore.get(entity) ?? new Map()).set(key, row.cell_key));
   }
   // Lấy bản máy chủ trước khi xoá lệnh: lỗi mạng thì giữ nguyên, người dùng thử lại được.
   const fresh = new Map<string, ReturnType<typeof stored>>();
   for (const entity of restore.keys()) await fetchEntity(identity, cache.membershipId, entity, () => false, async (page) => { for (const item of page) fresh.set(item.key, item); });
   await db.transaction("rw", [db.outbox, ...[...restore.keys()].map((entity) => tableFor(entity))], async () => {
-    await db.outbox.bulkDelete(rows.map((row) => row.id));
-    for (const [entity, keys] of restore) for (const key of keys) {
+    // Kiểm lại trong giao dịch: ô vừa được ghi lại trong lúc tải bản máy chủ thì giữ giá trị mới.
+    const live = await db.outbox.where("identity").equals(identity).toArray();
+    const current = new Set(live.filter((row) => row.status !== "rejected" && row.cell_key).map((row) => row.cell_key));
+    await db.outbox.bulkDelete(rows.filter((row) => live.some((x) => x.id === row.id && x.status === "rejected")).map((row) => row.id));
+    for (const [entity, keys] of restore) for (const [key, cell] of keys) {
+      if (cell && current.has(cell)) continue;
       const item = fresh.get(key);
       if (item) await tableFor(entity).put(item as any); else await tableFor(entity).delete(key);
     }

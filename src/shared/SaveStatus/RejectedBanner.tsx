@@ -19,7 +19,7 @@ const subjects: Record<string, string> = {
 export function RejectedBanner() {
   const rejected = useRejectedCommands();
   const [busy, setBusy] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState<string[] | null>(null);
   const [failure, setFailure] = useState("");
   if (!rejected.length) return null;
   const ids = rejected.map((row) => row.id);
@@ -46,13 +46,13 @@ export function RejectedBanner() {
           {busy ? "Đang thử lại" : "Thử lại"}
         </button>
         {rejected.every((row) => canDiscardRejected(row.type)) && (
-          <button type="button" className={styles.button} disabled={busy} onClick={() => setConfirming(true)}>
+          <button type="button" className={styles.button} disabled={busy} onClick={() => setConfirming(ids)}>
             Bỏ thay đổi
           </button>
         )}
       </div>
       <ConfirmDialog
-        open={confirming}
+        open={confirming !== null}
         title="Bỏ thay đổi bị lỗi?"
         message="Các thay đổi chưa lưu được lên máy chủ sẽ bị bỏ, ô quay về giá trị đang lưu trên máy chủ."
         error={failure}
@@ -61,11 +61,11 @@ export function RejectedBanner() {
             label: "Bỏ thay đổi",
             variant: "danger",
             busy,
-            onClick: () => void run(async () => { await discardRejectedCommands(ids); setConfirming(false); }),
+            onClick: () => void run(async () => { await discardRejectedCommands(confirming ?? []); setConfirming(null); }),
           },
-          { label: "Giữ lại", variant: "neutral", onClick: () => setConfirming(false) },
+          { label: "Giữ lại", variant: "neutral", onClick: () => setConfirming(null) },
         ]}
-        onDismiss={() => setConfirming(false)}
+        onDismiss={() => setConfirming(null)}
       />
     </>
   );
