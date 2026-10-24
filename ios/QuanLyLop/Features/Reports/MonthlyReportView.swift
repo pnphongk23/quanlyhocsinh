@@ -185,9 +185,7 @@ struct MonthlyReportView: View {
                 .foregroundStyle(AppColors.success)
         }
         if let error {
-            Text(error)
-                .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
-                .foregroundStyle(AppColors.error)
+            TeacherErrorBanner(message: error)
         }
     }
 
