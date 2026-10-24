@@ -65,6 +65,16 @@ final class GuardianAccessTests: XCTestCase {
         XCTAssertEqual(month.rows.count, 2)
     }
 
+    func testSessionListIncludesFutureAndCancelledNewestFirstAndOpensSessionDetail() throws {
+        let child = try fixture(sent: false)
+        let rows = child.sessionRows
+
+        XCTAssertEqual(rows.map(\.session.id), ["third-session", "cancelled-session", "grading-session", "assignment-session"])
+        XCTAssertEqual(rows.map(\.destination), rows.map { .ticket($0.session.id) })
+        XCTAssertNil(rows.first(where: { $0.session.id == "grading-session" })?.sentSlip)
+        XCTAssertNotNil(rows.first(where: { $0.session.id == "assignment-session" }))
+    }
+
     func testLatestReportUsesHighestPublicationNumber() throws {
         let child = try fixture(sent: true)
         let snapshot = ReportSnapshot(studentId: childID, month: "2026-10",

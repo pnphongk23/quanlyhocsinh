@@ -98,7 +98,7 @@ struct GuardianRootView: View {
                         shortcut(String(localized: "feature.guardian.bao.cao"), icon: "doc.text", action: { detail = .report })
                     }
                     GuardianCardHead(title: String(localized: "guardian.sessionList", table: "Guardian"))
-                    GuardianAttendancePage(child: child, month: month(for: child)) { months[child.student.id] = $0 }
+                      GuardianSessionListPage(child: child) { row in detail = row.destination }
                 } else {
                     GuardianPageHeader(eyebrow: child.student.name,
                                        title: String(localized: "guardian.tab.comments", table: "Guardian"))
@@ -115,7 +115,7 @@ struct GuardianRootView: View {
     private func shortcut(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(title, systemImage: icon)
-                .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+                .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                 .foregroundStyle(AppColors.primaryInk)
                 .frame(maxWidth: .infinity, minHeight: 52)
                 .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
@@ -166,12 +166,12 @@ struct GuardianRootView: View {
             Button { if children.count > 1 { showingChildPicker = true } } label: {
                 HStack(spacing: 8) {
                     Text(child.map { AppInitials.of($0.student.name) } ?? "–")
-                        .appText(AppTextStyle(size: 13, weight: .bold, lineHeight: 18))
+                        .appDynamicText(AppTextStyle(size: 13, weight: .bold, lineHeight: 18))
                         .foregroundStyle(AppColors.primaryInk)
                         .frame(width: 36, height: 36)
                         .background(AppColors.primarySoft, in: Circle())
                     Text(child?.student.name ?? String(localized: "feature.guardian.chua.co.con.nao.uoc.lien.ket"))
-                        .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 21))
+                        .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 21))
                         .foregroundStyle(AppColors.text).lineLimit(1)
                     if children.count > 1 { Image(systemName: "chevron.down").font(.caption.weight(.semibold)) }
                 }
@@ -182,7 +182,7 @@ struct GuardianRootView: View {
             Spacer(minLength: 0)
             Button { model?.show(.settings) } label: {
                 Text(model?.currentUser.flatMap { AppInitials.of($0.displayName ?? "") } ?? "PH")
-                    .appText(AppTextStyle(size: 13, weight: .bold, lineHeight: 18))
+                    .appDynamicText(AppTextStyle(size: 13, weight: .bold, lineHeight: 18))
                     .foregroundStyle(AppColors.primaryInk)
                     .frame(width: 44, height: 44)
                     .background(AppColors.primarySoft, in: Circle())
@@ -194,7 +194,7 @@ struct GuardianRootView: View {
               let formatted = updatedAt.formatted(Date.FormatStyle(date: .numeric, time: .shortened)
                   .locale(Locale(identifier: "vi_VN")))
               Text(String.localizedStringWithFormat(String(localized: "guardian.updatedAt", table: "Guardian"), formatted))
-                  .appText(AppTextStyle(size: 12, weight: .regular, lineHeight: 18))
+                  .appDynamicText(AppTextStyle(size: 12, weight: .regular, lineHeight: 18))
                   .foregroundStyle(AppColors.muted)
           }
         }
@@ -215,10 +215,15 @@ struct GuardianRootView: View {
                             Text(item.className).foregroundStyle(AppColors.muted)
                         }
                         Spacer()
-                        if item.student.id == child?.student.id { Image(systemName: "checkmark").foregroundStyle(AppColors.primary) }
-                    }
-                    .frame(minHeight: 44)
-                }.buttonStyle(.plain)
+                          if item.student.id == child?.student.id {
+                              Image(systemName: "checkmark").foregroundStyle(AppState.selectedFg)
+                          }
+                      }
+                      .frame(minHeight: 44)
+                      .padding(.horizontal, 12)
+                      .background(item.student.id == child?.student.id ? AppState.selectedBg : AppColors.surface,
+                                  in: RoundedRectangle(cornerRadius: AppRadius.row))
+                  }.buttonStyle(.plain)
             }
             .navigationTitle(String(localized: "guardian.childPicker.title", table: "Guardian"))
             .navigationBarTitleDisplayMode(.inline)
@@ -232,7 +237,7 @@ struct GuardianRootView: View {
             ForEach(GuardianTab.allCases) { item in
                 Button { select(item) } label: {
                     Label(item.label, systemImage: item == .classes ? "house.fill" : "text.bubble")
-                        .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 18))
+                        .appDynamicText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 18))
                         .foregroundStyle(tab == item ? AppColors.primaryInk : AppColors.muted)
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .background(tab == item ? AppColors.primarySoft : Color.clear, in: Capsule())

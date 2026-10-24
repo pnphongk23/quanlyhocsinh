@@ -100,6 +100,36 @@
           }
         }
       }
+    },
+    "guardian.session.planned" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sắp học"
+          }
+        }
+      }
+    },
+    "guardian.session.cancelled" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã huỷ"
+          }
+        }
+      }
+    },
+    "guardian.session.notTaken" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa điểm danh"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

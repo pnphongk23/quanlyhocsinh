@@ -43,6 +43,18 @@ struct GuardianChildData: Sendable, Identifiable {
         sessions.sorted { GuardianFormat.isBefore($0, $1) }
     }
 
+    /// All sessions shown in the child's class list, newest first. Draft slips stay hidden;
+    /// the row can still open a session so parents can read homework assigned before a slip is sent.
+    var sessionRows: [GuardianSessionRow] {
+        orderedSessions.reversed().map { session in
+            let attendance = attendances.first { $0.studentId == student.id && $0.sessionId == session.id }
+            let sentSlip = slips.first {
+                $0.studentId == student.id && $0.sessionId == session.id && $0.status == .sent
+            }
+            return GuardianSessionRow(session: session, attendance: attendance, sentSlip: sentSlip)
+        }
+    }
+
     func session(id: String) -> ClassSession? { sessions.first { $0.id == id } }
 
     /// `listChildTickets`: phiếu đã gửi, mới nhất trước.
@@ -192,6 +204,41 @@ struct GuardianAttendanceRow: Identifiable, Sendable {
     var status: AttendanceStatus? { attendance?.status }
     var note: String { attendance?.note ?? "" }
     var lateAt: String? { attendance?.lateAt }
+}
+
+struct GuardianSessionRow: Identifiable, Sendable {
+    let session: ClassSession
+    let attendance: Attendance?
+    let sentSlip: SessionSlip?
+
+    var id: String { session.id }
+    var destination: GuardianDetail { .ticket(session.id) }
+    var month: String { String(session.date.prefix(7)) }
+
+    var statusLabel: String {
+        switch session.status {
+        case .planned: String(localized: "guardian.session.planned", table: "Guardian")
+        case .cancelled: String(localized: "guardian.session.cancelled", table: "Guardian")
+        case .held:
+            attendance?.status.guardianPillLabel
+                ?? String(localized: "guardian.session.notTaken", table: "Guardian")
+        }
+    }
+
+    var statusColor: Color {
+        switch session.status {
+        case .planned: AppColors.warning
+        case .cancelled: AppColors.muted
+        case .held:
+            switch attendance?.status {
+            case .present: AppColors.success
+            case .late: AppColors.warning
+            case .excused: AppColors.primary
+            case .absent: AppColors.error
+            case nil: AppColors.muted
+            }
+        }
+    }
 }
 
 struct GuardianAttendanceMonth: Sendable {

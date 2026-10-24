@@ -1,5 +1,34 @@
 import SwiftUI
 
+private struct GuardianDynamicTextModifier: ViewModifier {
+    let style: AppTextStyle
+
+    private var weight: Font.Weight {
+        switch style.weight {
+        case .extraLight: .ultraLight
+        case .light: .light
+        case .regular: .regular
+        case .medium: .medium
+        case .semiBold: .semibold
+        case .bold: .bold
+        case .extraBold: .heavy
+        }
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .font(.custom(AppFont.postScriptName, size: style.size, relativeTo: .body).weight(weight))
+            .lineSpacing(style.extraLineSpacing)
+            .tracking(style.tracking)
+    }
+}
+
+extension View {
+    func appDynamicText(_ style: AppTextStyle) -> some View {
+        modifier(GuardianDynamicTextModifier(style: style))
+    }
+}
+
 // MARK: - Màu riêng của màn phụ huynh (`guardian.module.css`)
 
 enum GuardianColors {
@@ -225,11 +254,11 @@ struct GuardianPageHeader: View {
             VStack(alignment: .leading, spacing: 2) {
                 if let eyebrow, !eyebrow.isEmpty {
                     Text(eyebrow)
-                        .appText(AppText.muted)
+                        .appDynamicText(AppText.muted)
                         .foregroundStyle(AppColors.muted)
                 }
                 Text(title)
-                    .appText(AppText.title)
+                    .appDynamicText(AppText.title)
                     .foregroundStyle(AppColors.text)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -269,7 +298,7 @@ struct GuardianChildChips: View {
                     .frame(width: 24, height: 24)
                     .background(active ? AppColors.surface : AppColors.primarySoft, in: Circle())
                 Text(GuardianFormat.shortName(child.student.name))
-                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+                    .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
             }
             .foregroundStyle(active ? AppColors.onPrimary : AppColors.text)
             .padding(.horizontal, 16)
@@ -302,7 +331,7 @@ struct GuardianMonthSwitch: View {
             .accessibilityLabel(String(localized: "feature.guardian.xem.thang.truoc"))
             .disabled(index + 1 >= sorted.count)
             Text(GuardianFormat.monthLabel(month))
-                .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+                .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                 .foregroundStyle(AppColors.text)
             Spacer(minLength: 0)
             Button { if index > 0 { select(sorted[index - 1]) } } label: {
@@ -327,10 +356,10 @@ struct GuardianNoteBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
+                .appDynamicText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
                 .foregroundStyle(AppColors.muted)
             Text(text)
-                .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
+                .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                 .foregroundStyle(AppColors.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -354,10 +383,10 @@ struct GuardianNoteBox: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(String(localized: "feature.guardian.ieu.co.muon.chia.se"))
-                .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+                .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                 .foregroundStyle(AppColors.warning)
             Text(text)
-                .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
+                .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                 .foregroundStyle(Self.bodyInk)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -378,13 +407,13 @@ struct GuardianStatCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
+                .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                 .foregroundStyle(AppColors.muted)
             Text(value)
-                .appText(AppTextStyle(size: 26, weight: .bold, lineHeight: 31.2))
+                .appDynamicText(AppTextStyle(size: 26, weight: .bold, lineHeight: 31.2))
                 .foregroundStyle(AppColors.text)
             Text(detail)
-                .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 19.6))
+                .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 19.6))
                 .foregroundStyle(AppColors.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -401,10 +430,10 @@ struct GuardianStatCell: View {
     var body: some View {
         VStack(spacing: 2) {
             Text("\(value)")
-                .appText(AppTextStyle(size: 22, weight: .bold, lineHeight: 25.3))
+                .appDynamicText(AppTextStyle(size: 22, weight: .bold, lineHeight: 25.3))
                 .foregroundStyle(AppColors.text)
             Text(name)
-                .appText(AppTextStyle(size: 12, weight: .regular, lineHeight: 15.6))
+                .appDynamicText(AppTextStyle(size: 12, weight: .regular, lineHeight: 15.6))
                 .foregroundStyle(AppColors.muted)
         }
         .frame(maxWidth: .infinity)
@@ -425,15 +454,15 @@ struct GuardianScoreRows: View {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(row.test.name)
-                            .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
+                            .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                             .foregroundStyle(AppColors.text)
                         Text(GuardianFormat.longDayMonth(row.test.date))
-                            .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                            .appDynamicText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                             .foregroundStyle(AppColors.muted)
                     }
                     Spacer(minLength: 0)
                     Text(row.value == nil ? String(localized: "feature.guardian.noScore") : "\(GuardianFormat.scoreText(row.value))/\(row.test.maxScore)")
-                        .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
+                        .appDynamicText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                         .foregroundStyle(AppColors.text)
                 }
                 .padding(.vertical, 8)
@@ -477,7 +506,7 @@ struct GuardianCardHead: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(title)
-                .appText(titleStyle)
+                .appDynamicText(titleStyle)
                 .foregroundStyle(AppColors.text)
             Spacer(minLength: 0)
             if let trailing { trailing }
@@ -501,19 +530,19 @@ struct GuardianHomeworkParts: View {
                         .background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: 10))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(part.kindLabel.uppercased())
-                            .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18, tracking: 0.24))
+                            .appDynamicText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18, tracking: 0.24))
                             .foregroundStyle(AppColors.primaryInk)
                         Text(part.title)
-                            .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 20.25))
+                            .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 20.25))
                             .foregroundStyle(AppColors.text)
                         if showDescriptions, !part.detail.isEmpty {
                             Text(part.detail)
-                                .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
+                                .appDynamicText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                                 .foregroundStyle(AppColors.muted)
                         }
                         if part.graded, part.level == nil {
                             Text(String(localized: "feature.guardian.co.cham.xong.la.hien.ngay"))
-                                .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
+                                .appDynamicText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                                 .foregroundStyle(AppColors.muted)
                         }
                     }
@@ -548,7 +577,7 @@ struct GuardianMutedText: View {
     let text: String
     var body: some View {
         Text(text)
-            .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 20.3))
+            .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 20.3))
             .foregroundStyle(AppColors.muted)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -558,7 +587,7 @@ struct GuardianErrorText: View {
     let text: String
     var body: some View {
         Text(text)
-            .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 20.3))
+            .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 20.3))
             .foregroundStyle(AppColors.error)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

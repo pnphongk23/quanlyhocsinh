@@ -38,11 +38,11 @@ struct GuardianOverviewPage: View {
                 GuardianCardHead(title: String(localized: "feature.guardian.nhan.xet.moi.nhat"),
                                  trailing: AnyView(
                                     Text(String.localizedStringWithFormat(String(localized: "feature.guardian.buoi"), SessionLabel.title(for: item.session)))
-                                        .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
+                                        .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                                         .foregroundStyle(AppColors.muted)))
                 GuardianStars(level: item.slip.stars ?? .one)
                 Text(item.slip.stars?.template ?? "")
-                    .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
+                    .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                     .foregroundStyle(AppColors.text)
                     .multilineTextAlignment(.leading)
                 if !item.slip.note.isEmpty {
@@ -60,10 +60,10 @@ struct GuardianOverviewPage: View {
             GuardianCardHead(title: String(localized: "feature.guardian.iem.gan.ay"),
                              trailing: AnyView(
                                 Button(String(localized: "feature.guardian.xem.tat.ca"), action: openScores)
-                                    .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                                    .appDynamicText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
                                     .foregroundStyle(AppColors.primaryInk)))
             if rows.isEmpty {
-                GuardianMutedText(text: String(localized: "feature.guardian.chua.co.iem.trong.thang.nay"))
+                  AppEmptyState(title: String(localized: "feature.guardian.chua.co.iem.trong.thang.nay"), size: .compact)
             } else {
                 GuardianScoreRows(rows: rows)
             }
@@ -74,65 +74,66 @@ struct GuardianOverviewPage: View {
     }
 }
 
-// MARK: - PH · Điểm danh
-
-struct GuardianAttendancePage: View {
+/// The class tab's session list is the entry point to both published slips and assigned homework.
+struct GuardianSessionListPage: View {
     let child: GuardianChildData
-    let month: String
-    let selectMonth: (String) -> Void
+    let openSession: (GuardianSessionRow) -> Void
+
+    private var rowsByMonth: [(month: String, rows: [GuardianSessionRow])] {
+        let groups = Dictionary(grouping: child.sessionRows, by: \.month)
+        return groups.keys.sorted(by: >).map { month in
+            (month, groups[month] ?? [])
+        }
+    }
 
     var body: some View {
-        let data = child.attendanceMonth(month)
-        VStack(alignment: .leading, spacing: 12) {
-            GuardianMonthSwitch(month: month, months: child.months, select: selectMonth)
-            HStack(spacing: 6) {
-                GuardianStatCell(value: data.present, name: AttendanceStatus.present.guardianLabel)
-                GuardianStatCell(value: data.late, name: AttendanceStatus.late.guardianLabel)
-                GuardianStatCell(value: data.excused, name: AttendanceStatus.excused.guardianLabel)
-                GuardianStatCell(value: data.absent, name: AttendanceStatus.absent.guardianLabel)
-            }
-            if data.rows.isEmpty {
-                GuardianMutedText(text: String(localized: "feature.guardian.chua.co.buoi.hoc.nao.trong.thang.nay"))
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(data.rows) { row in
-                        attendanceRow(row)
+        if rowsByMonth.isEmpty {
+            AppEmptyState(title: String(localized: "feature.guardian.chua.co.buoi.hoc.nao.trong.thang.nay"),
+                          size: .compact)
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(rowsByMonth, id: \.month) { group in
+                    Text(GuardianFormat.monthLabel(group.month))
+                        .appDynamicText(AppText.label)
+                        .foregroundStyle(AppColors.muted)
+                        .padding(.top, 4)
+                    VStack(spacing: 8) {
+                        ForEach(group.rows) { row in sessionRow(row) }
                     }
                 }
             }
         }
     }
 
-    private func attendanceRow(_ row: GuardianAttendanceRow) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(GuardianFormat.sessionPrefix(row.session)) · \(GuardianFormat.weekdayDayMonth(row.session.date))")
-                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
-                    .foregroundStyle(AppColors.text)
-                if row.status == .late, let time = row.lateAt, !time.isEmpty {
-                    Text(String.localizedStringWithFormat(String(localized: "feature.guardian.en.muon"), String(describing: (time))))
-                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.2))
-                        .foregroundStyle(AppColors.muted)
+    private func sessionRow(_ row: GuardianSessionRow) -> some View {
+        Button { openSession(row) } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(GuardianFormat.sessionPrefix(row.session)) · \(GuardianFormat.weekdayDayMonth(row.session.date))")
+                        .appDynamicText(AppText.segment)
+                        .foregroundStyle(AppColors.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(row.statusLabel)
+                        .appDynamicText(AppText.caption)
+                        .foregroundStyle(row.statusColor)
                 }
-                if !row.note.isEmpty {
-                    Text(String.localizedStringWithFormat(String(localized: "feature.guardian.ghi.chu.2c1e0c8e"), String(describing: (row.note))))
-                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.2))
-                        .foregroundStyle(AppColors.muted)
+                if let slip = row.sentSlip {
+                    GuardianStars(level: slip.stars ?? .one)
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if let status = row.status {
-                AppPill(title: status.guardianPillLabel, tone: status.guardianTone)
-                    .fixedSize()
-            } else {
-                Text(String(localized: "feature.guardian.chua.iem.danh"))
-                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AppColors.muted)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(minHeight: AppMetrics.tap)
+            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+            .contentShape(RoundedRectangle(cornerRadius: AppRadius.card))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        .buttonStyle(.plain)
+        .accessibilityLabel(String.localizedStringWithFormat(
+            String(localized: "feature.guardian.mo.phieu.buoi.hoc.buoi"),
+            SessionLabel.title(for: row.session)))
     }
 }
 
@@ -148,13 +149,13 @@ struct GuardianScoresPage: View {
         VStack(alignment: .leading, spacing: 12) {
             GuardianMonthSwitch(month: month, months: child.months, select: selectMonth)
             if rows.isEmpty {
-                GuardianMutedText(text: String(localized: "feature.guardian.chua.co.bai.kiem.tra.nao.trong.thang.nay"))
+                  AppEmptyState(title: String(localized: "feature.guardian.chua.co.bai.kiem.tra.nao.trong.thang.nay"), size: .compact)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     GuardianCardHead(title: String(localized: "feature.guardian.iem.tung.bai"),
                                      trailing: AnyView(
                                         Text(String.localizedStringWithFormat(String(localized: "feature.guardian.bai.co.iem"), String(describing: (rows.filter { $0.value != nil }.count))))
-                                            .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
+                                            .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                                             .foregroundStyle(AppColors.muted)))
                     GuardianScoreRows(rows: rows)
                 }
@@ -176,7 +177,7 @@ struct GuardianCommentsPage: View {
         let tickets = child.sentSlips
         VStack(alignment: .leading, spacing: 12) {
             Text(String(localized: "feature.guardian.phieu.buoi.hoc.theo.tung.buoi.sao.cau.mau.ghi.ch"))
-                .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
+                .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                 .foregroundStyle(AppColors.muted)
                 .padding(.top, -4)
             if tickets.isEmpty {
@@ -199,7 +200,7 @@ struct GuardianCommentsPage: View {
                                         GuardianStars(level: item.slip.stars ?? .one)
                                     }))
                 Text(item.slip.stars?.template ?? "")
-                    .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
+                    .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                     .foregroundStyle(AppColors.text)
                     .multilineTextAlignment(.leading)
                 if !item.slip.note.isEmpty {
@@ -208,7 +209,7 @@ struct GuardianCommentsPage: View {
                 if let homework = child.gradedHomework(for: item.session), !homework.parts.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(String.localizedStringWithFormat(String(localized: "feature.guardian.ket.qua.btvn.buoi"), SessionLabel.inline(for: homework.session)))
-                            .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
+                            .appDynamicText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                             .foregroundStyle(AppColors.muted)
                         GuardianPillFlow(parts: homework.parts)
                     }
