@@ -538,10 +538,7 @@ final class AuthModel {
         let scope = CacheScope(userId: user.id, workspaceId: membership.workspace.id, membershipId: membershipId)
         let store = try storeFactory(scope)
         activeStore = store
-        let key = "vn.quanlylop.device_id"
-        let deviceId = UserDefaults.standard.string(forKey: key) ?? UUID().uuidString
-        UserDefaults.standard.set(deviceId, forKey: key)
-        activeSync = SyncCoordinator(api: api, store: store, deviceId: deviceId)
+        activeSync = SyncCoordinator(api: api, store: store, deviceId: DeviceIdentity.current())
     }
 
     private func makeStore(user: User, membershipId: String, workspaceId: String = "") throws -> SQLiteStore {

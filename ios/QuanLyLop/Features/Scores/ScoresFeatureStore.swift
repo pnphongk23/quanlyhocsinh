@@ -31,7 +31,7 @@ final class I4FeatureStore: ObservableObject {
 
     private(set) var store: SQLiteStore?
     private(set) var api: (any APIClient)?
-    private let deviceID = "fixture-device"
+    private var deviceID: String { DeviceIdentity.current() }
 
     init(store: SQLiteStore? = nil, api: (any APIClient)? = nil) {
         self.store = store
