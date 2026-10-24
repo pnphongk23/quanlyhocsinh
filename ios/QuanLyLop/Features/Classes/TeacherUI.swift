@@ -15,6 +15,7 @@ enum TeacherMetrics {
     static let cardPadding: CGFloat = 16
     static let rowMinHeight: CGFloat = 56
     static let listGap: CGFloat = 8
+    static let sectionGap: CGFloat = 24
 }
 
 /// Prototype date labels (`src/shared/format/index.ts`) in the same `vi-VN` shapes.
@@ -321,11 +322,25 @@ struct TeacherTextTabs: View {
     let select: (String) -> Void
 
     var body: some View {
+        Group {
+            if fillsWidth {
+                row
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal) { row }
+                        .scrollIndicators(.hidden)
+                        .onChange(of: selection) { _, id in withAnimation { proxy.scrollTo(id) } }
+                }
+            }
+        }
+        .overlay(alignment: .bottom) { AppColors.border.frame(height: 1) }
+    }
+
+    private var row: some View {
         HStack(spacing: fillsWidth ? 0 : 4) {
-            ForEach(items) { item in tabButton(item) }
+            ForEach(items) { item in tabButton(item).id(item.id) }
         }
         .padding(.horizontal, fillsWidth ? 20 : 12)
-        .overlay(alignment: .bottom) { AppColors.border.frame(height: 1) }
     }
 
     private func tabButton(_ item: Item) -> some View {
@@ -335,6 +350,7 @@ struct TeacherTextTabs: View {
                   .appText(AppTextStyle(size: fontSize, weight: .semiBold, lineHeight: fontSize * 1.5))
                   .foregroundStyle(active ? AppState.selectedFg : AppColors.muted)
                   .lineLimit(1)
+                  .fixedSize(horizontal: !fillsWidth, vertical: false)
                   .frame(maxWidth: fillsWidth ? .infinity : nil)
                   .padding(.horizontal, fillsWidth ? 4 : 8)
                   .frame(height: 48)

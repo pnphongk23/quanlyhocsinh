@@ -31,7 +31,7 @@ struct TeacherNewClassView: View {
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, TeacherMetrics.screenPaddingTop)
-            .padding(.bottom, 16)
+            .padding(.bottom, TeacherMetrics.cardPadding)
         }
         .background(AppColors.background.ignoresSafeArea())
         .safeAreaInset(edge: .bottom, spacing: 0) { stickyBar }
@@ -113,7 +113,7 @@ struct TeacherNewClassView: View {
     }
 
     private var stickyBar: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: TeacherMetrics.listGap) {
             AppSaveButton(title: String(localized: "feature.classes.tao.lop"), controller: saveController,
                           onSuccess: { dismiss() }) {
                 try await save()
@@ -122,7 +122,7 @@ struct TeacherNewClassView: View {
             saveStatus
         }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
-            .padding(.vertical, 8)
+            .padding(.vertical, TeacherMetrics.listGap)
             .background(AppColors.background)
     }
 
@@ -153,7 +153,7 @@ struct TeacherNewClassView: View {
     private var saveStatus: some View {
         Group {
             if saveController.error != nil { AppSaveStatus(kind: .error) }
-            else if let source = data.saveStatusSource { AppSaveStatus(kind: source.kind) }
+            else if let source = data.saveStatusSource, source.kind == .error { AppSaveStatus(kind: .error) }
         }
     }
 
