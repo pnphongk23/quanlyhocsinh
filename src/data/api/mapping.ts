@@ -1,12 +1,13 @@
 import type { ApiClass, ApiReport, ApiReportBatch } from "./types";
 import type { Class, Report, ReportBatch } from "../types";
+import { normalizeWeekdays } from "../../shared/weekdays";
 
 export function classFromApi(item: ApiClass): Class {
   return {
     id: item.id,
     name: item.name,
     status: item.status,
-    weekdays: item.weekdays,
+    weekdays: normalizeWeekdays(item.weekdays),
     time: item.start_time,
     teacherName: item.teacher_name ?? null,
   };

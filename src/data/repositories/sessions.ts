@@ -8,6 +8,7 @@ import { api, syncNow } from "../sync";
 import { identityKey } from "../db";
 import { commitRemote, createOnce } from "./rest-cache";
 import { setSaveStatus } from "../saveStatus";
+import { isoWeekday, normalizeWeekdays } from "../../shared/weekdays";
 
 const sessionWire = (s: Session) => ({ id: s.id, class_id: s.classId, date: s.date, start_time: s.time, origin: s.origin ?? "manual", is_makeup: s.makeup ?? false, status: s.status ?? "planned", note: s.note ?? "", version: s.version });
 export function localToday(): string { return todayISO(); }
@@ -79,7 +80,43 @@ type SchedulePreview = {
     retimed: Session[];
 };
 
-export function previewScheduleChange(classId: string, next: Schedule, today = localToday()): SchedulePreview { if(!getStore().classes.some(c=>c.id===classId))return{toRemove:[],toAdd:[],kept:[],retimed:[]};if(!next.weekdays.length||next.weekdays.some(d=>!Number.isInteger(d)||d<0||d>6)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(next.time))throw new Error("Chọn ít nhất một ngày và kiểm tra giờ học.");const state=getStore();const eligible=state.sessions.filter(s=>s.classId===classId&&s.date>=today&&s.origin==="recurring"&&s.status==="planned"&&!state.attendance.some(a=>a.sessionId===s.id));const toRemove=eligible.filter(s=>!next.weekdays.includes(new Date(`${s.date}T12:00:00`).getDay()));const kept=eligible.filter(s=>!toRemove.includes(s)&&s.time===next.time);const retimed=eligible.filter(s=>!toRemove.includes(s)&&s.time!==next.time);const removed=new Set(toRemove.map(s=>s.id));const existingDates=new Set(state.sessions.filter(s=>s.classId===classId&&!removed.has(s.id)).map(s=>s.date));const toAdd=Array.from({length:28},(_,i)=>{const d=new Date(`${today}T12:00:00`);d.setDate(d.getDate()+i);return d;}).filter(d=>next.weekdays.includes(d.getDay())).map(d=>({date:d.toISOString().slice(0,10),time:next.time})).filter(x=>!existingDates.has(x.date));return{toRemove,toAdd,kept,retimed}; }
+export function previewScheduleChange(classId: string, next: Schedule, today = localToday()): SchedulePreview {
+  const weekdays = normalizeWeekdays(next.weekdays);
+  const empty: SchedulePreview = { toRemove: [], toAdd: [], kept: [], retimed: [] };
+  if (!getStore().classes.some((item) => item.id === classId)) return empty;
+  if (
+    !weekdays.length ||
+    next.weekdays.some((day) => !Number.isInteger(day) || day < 0 || day > 7) ||
+    !/^([01]\d|2[0-3]):[0-5]\d$/.test(next.time)
+  ) {
+    throw new Error("Chọn ít nhất một ngày và kiểm tra giờ học.");
+  }
+
+  const state = getStore();
+  const eligible = state.sessions.filter((session) =>
+    session.classId === classId && session.date >= today && session.origin === "recurring" &&
+    session.status === "planned" && !state.attendance.some((entry) => entry.sessionId === session.id),
+  );
+  const toRemove = eligible.filter((session) =>
+    !weekdays.includes(isoWeekday(new Date(`${session.date}T12:00:00`))),
+  );
+  const kept = eligible.filter((session) => !toRemove.includes(session) && session.time === next.time);
+  const retimed = eligible.filter((session) => !toRemove.includes(session) && session.time !== next.time);
+  const removed = new Set(toRemove.map((session) => session.id));
+  const existingDates = new Set(state.sessions
+    .filter((session) => session.classId === classId && !removed.has(session.id))
+    .map((session) => session.date));
+  const toAdd = Array.from({ length: 28 }, (_, index) => {
+    const date = new Date(`${today}T12:00:00`);
+    date.setDate(date.getDate() + index);
+    return date;
+  })
+    .filter((date) => weekdays.includes(isoWeekday(date)))
+    .map((date) => ({ date: date.toISOString().slice(0, 10), time: next.time }))
+    .filter((session) => !existingDates.has(session.date));
+
+  return { toRemove, toAdd, kept, retimed };
+}
 
 async function changeSchedule(classId: string, next: Schedule, name: string | undefined, today?: string): Promise<{ removed: number; added: number; retimed: number }> {
   requirePermission("classes","write");requireClassAccess(classId);
@@ -88,8 +125,9 @@ async function changeSchedule(classId: string, next: Schedule, name: string | un
   if(typeof navigator!=="undefined"&&!navigator.onLine)throw new Error("Sửa lịch lớp cần kết nối mạng.");
   const preview=previewScheduleChange(classId,next,today);
   const identity=identityKey();
-  const saved:any=await api.request(`PATCH /classes/${classId}` as any,{body:{...(name===undefined?{}:{name}),weekdays:next.weekdays,start_time:next.time}} as any);
-  await commitRemote(identity,"class",{id:classId,...saved},{id:classId,name:current.name,status:current.status,weekdays:current.weekdays,start_time:current.time,teacher_name:current.teacherName??null},()=>commitState("schedule",classId,d=>{d.classes=d.classes.map(c=>c.id===classId?{...c,...next,...(name===undefined?{}:{name})}:c);}));
+  const weekdays=normalizeWeekdays(next.weekdays);
+  const saved:any=await api.request(`PATCH /classes/${classId}` as any,{body:{...(name===undefined?{}:{name}),weekdays,start_time:next.time}} as any);
+  await commitRemote(identity,"class",{id:classId,...saved,weekdays:normalizeWeekdays(saved.weekdays??weekdays)},{id:classId,name:current.name,status:current.status,weekdays:current.weekdays,start_time:current.time,teacher_name:current.teacherName??null},()=>commitState("schedule",classId,d=>{d.classes=d.classes.map(c=>c.id===classId?{...c,...next,weekdays,...(name===undefined?{}:{name})}:c);}));
   await syncNow();
   return{removed:preview.toRemove.length,added:preview.toAdd.length,retimed:preview.retimed.length};
 }

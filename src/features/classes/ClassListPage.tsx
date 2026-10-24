@@ -23,13 +23,13 @@ import {
 } from "../../shared/ui";
 import { TodayCard } from "./TodayCard";
 import { buildTodayAgenda, nextSessionOf } from "./todayModel";
+import { normalizeWeekdays } from "../../shared/weekdays";
 import s from "./classes.module.css";
 
-const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
-const WEEKDAY_LABEL = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const WEEKDAY_LABEL: Record<number, string> = { 1: "T2", 2: "T3", 3: "T4", 4: "T5", 5: "T6", 6: "T7", 7: "CN" };
 const scheduleText = (item: Class) =>
   [
-    WEEKDAY_ORDER.filter((day) => item.weekdays.includes(day))
+    normalizeWeekdays(item.weekdays)
       .map((day) => WEEKDAY_LABEL[day])
       .join(" · "),
     item.time,

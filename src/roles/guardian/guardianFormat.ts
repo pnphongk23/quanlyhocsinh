@@ -1,5 +1,6 @@
 import type { HomeworkKind, HomeworkLevel, StarLevel } from "../../data/types";
 import { formatScore } from "../../data/scoreFormat";
+import { normalizeWeekdays } from "../../shared/weekdays";
 import {
   HOMEWORK_KIND_LABELS,
   HOMEWORK_LEVEL_LABELS,
@@ -54,11 +55,10 @@ export function monthYearLabel(month: string): string {
   return `Tháng ${Number(month.slice(5, 7))}/${month.slice(0, 4)}`;
 }
 
-/** "Thứ Ba, Thứ Năm · 18:00" từ ngày trong tuần của lớp (0 = Chủ nhật). */
+/** "Thứ Ba, Thứ Năm · 18:00" từ ngày trong tuần ISO của lớp (1..7). */
 export function scheduleText(weekdays: number[], time: string): string {
-  const days = [...weekdays]
-    .sort((a, b) => (a || 7) - (b || 7))
-    .map((day) => WEEKDAYS[day])
+  const days = normalizeWeekdays(weekdays)
+    .map((day) => WEEKDAYS[day === 7 ? 0 : day])
     .join(", ");
   return [days, time].filter(Boolean).join(" · ");
 }

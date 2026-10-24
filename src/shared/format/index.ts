@@ -1,3 +1,5 @@
+import { normalizeWeekdays } from "../weekdays";
+
 function asDate(value: string | Date): Date {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
     ? new Date(value + "T00:00:00")
@@ -52,9 +54,8 @@ export function formatClassSchedule(klass: {
   weekdays: number[];
   time: string;
 }): string {
-  const order = [1, 2, 3, 4, 5, 6, 0];
-  const days = [...klass.weekdays]
-    .sort((a, b) => order.indexOf(a) - order.indexOf(b))
+  const days = normalizeWeekdays(klass.weekdays)
+    .map((day) => day === 7 ? 0 : day)
     .map((day) => weekdayNames[day])
     .filter(Boolean);
   return days.length ? `${days.join(", ")} · ${klass.time}` : klass.time;

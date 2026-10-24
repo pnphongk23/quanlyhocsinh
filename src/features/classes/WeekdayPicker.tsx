@@ -6,7 +6,7 @@ const weekdays = [
   { value: 4, label: "T5" },
   { value: 5, label: "T6" },
   { value: 6, label: "T7" },
-  { value: 0, label: "CN" },
+  { value: 7, label: "CN" },
 ];
 const order = weekdays.map((day) => day.value);
 export function WeekdayPicker({

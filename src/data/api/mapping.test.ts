@@ -29,6 +29,12 @@ describe("class API mapping", () => {
       }),
     ).toMatchObject({ teacherName: null });
   });
+
+  it("keeps ISO Sunday and Monday weekdays from the server", () => {
+    const mapped = classFromApi({ id: "sunday", name: "CN", status: "active", weekdays: [1, 7], start_time: "09:00", teacher_name: null, version: 1 });
+    expect(mapped.weekdays).toEqual([1, 7]);
+    expect(classFromApi({ id: "sunday", name: "CN", status: "active", weekdays: [7], start_time: "09:00", teacher_name: null, version: 1 })).toMatchObject({ weekdays: [7] });
+  });
 });
 
 describe("report API mapping", () => {

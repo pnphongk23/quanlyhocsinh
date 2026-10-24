@@ -109,6 +109,52 @@ describe("REST writes persist to the device cache", () => {
     expect(getStore().classes.filter((c) => c.id === created.id)).toHaveLength(1);
   });
 
+  it("sends a Sunday-only class using ISO weekday 7", async () => {
+    const { api } = await import("../data/sync");
+    const { createClass } = await import("../data/repositories/classes");
+    const bodies: any[] = [];
+    vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => { bodies.push(options.body); return { ...classRow, id: options.body.id, weekdays: options.body.weekdays }; }) as never);
+    await createClass({ name: "Lớp Chủ nhật", weekdays: [7], time: "09:00" });
+    expect(bodies[0].weekdays).toEqual([7]);
+  });
+
+  it("normalizes legacy Sunday values before creating a class", async () => {
+    const { api } = await import("../data/sync");
+    const { createClass } = await import("../data/repositories/classes");
+    const bodies: any[] = [];
+    vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => { bodies.push(options.body); return { ...classRow, id: options.body.id, weekdays: options.body.weekdays }; }) as never);
+    await createClass({ name: "Lớp thứ Hai và Chủ nhật", weekdays: [1, 7], time: "09:00" });
+    expect(bodies[0].weekdays).toEqual([1, 7]);
+  });
+
+  it("hydrates legacy cached Sunday zero as a unique sorted ISO weekday", async () => {
+    const { stored } = await import("../data/db");
+    const { hydrateStore, getStore } = await import("../data/store");
+    await db.classes.put(stored("class", `${identityKey()}|class|legacy`, { id: "legacy", name: "Lớp cũ", status: "active", weekdays: [7, 0, 1, 0], start_time: "09:00" }) as never);
+    await hydrateStore();
+    expect(getStore().classes.find((item) => item.id === "legacy")?.weekdays).toEqual([1, 7]);
+  });
+
+  it("matches and creates Sunday sessions using ISO weekday 7", async () => {
+    const { replaceStore, getStore } = await import("../data/store");
+    const { previewScheduleChange } = await import("../data/repositories/sessions");
+    const state = createSeed();
+    replaceStore({ ...state, classes: [{ id: "c1", name: "Lớp A", status: "active", weekdays: [7], time: "09:00" } as never], sessions: [{ id: "sun", classId: "c1", date: "2026-11-01", time: "09:00", origin: "recurring", status: "planned" }] as never, attendance: [] });
+    const preview = previewScheduleChange("c1", { weekdays: [7], time: "09:00" }, "2026-10-26");
+    expect(preview.kept.map((session) => session.id)).toContain("sun");
+    expect(preview.toAdd.some((session) => new Date(`${session.date}T12:00:00`).getDay() === 0)).toBe(true);
+    expect(getStore().classes[0].weekdays).toEqual([7]);
+  });
+
+  it("sends an edited Sunday schedule using ISO weekday 7", async () => {
+    const { api } = await import("../data/sync");
+    const { updateClassSchedule } = await import("../data/repositories/sessions");
+    const bodies: any[] = [];
+    vi.spyOn(api, "request").mockImplementation((async (_e: string, options: any) => { bodies.push(options.body); return { ...classRow, weekdays: options.body.weekdays, start_time: options.body.start_time, version: 2 }; }) as never);
+    await updateClassSchedule("c1", { weekdays: [7], time: "09:00" }, "2026-10-26");
+    expect(bodies[0].weekdays).toEqual([7]);
+  });
+
   it("updateClass resolves when REST succeeds but the cache write fails, and recovers by pulling", async () => {
     const { api } = await import("../data/sync");
     const { getStore } = await import("../data/store");
