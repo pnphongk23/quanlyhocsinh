@@ -6,7 +6,6 @@ import { replaceStore } from "../data/store";
 import { createSeed } from "../test/fixtures/seed";
 import { getClass } from "../data/repositories/classes";
 import { getSession } from "../data/repositories/sessions";
-import { saveSessionComment } from "../data/repositories/comments";
 import AttendancePanel from "./attendance/AttendancePanel";
 import CommentsPanel from "./comments/CommentsPanel";
 import SessionDetailDesktop from "./class-space/SessionDetailDesktop";
@@ -16,6 +15,12 @@ import NewTestPage from "./scores/NewTestPage";
 import ScoreGridDesktop from "./scores/ScoreGridDesktop";
 import TestScoresPage from "./scores/TestScoresPage";
 import TestsDesktop from "./scores/TestsDesktop";
+
+// Test chỉ cần dữ liệu trong bộ nhớ; ghi bền IndexedDB không có phiên đăng nhập trong jsdom.
+vi.mock("../data/outbox", async (original) => ({
+  ...(await original<typeof import("../data/outbox")>()),
+  persistCommand: vi.fn().mockResolvedValue(undefined),
+}));
 
 const mocks = vi.hoisted(() => ({
   saveAttendanceBatchDurable: vi.fn(),
@@ -188,7 +193,8 @@ describe("phiếu nhận xét: ghi bền lỗi", () => {
 
   it("gửi phiếu: báo lỗi trong hộp xác nhận và hộp còn mở", async () => {
     const sessionId = "6a-session-6";
-    saveSessionComment({ sessionId, studentId: "6a-student-0", stars: 3 });
+    const actual = await vi.importActual<typeof import("../data/repositories/comments")>("../data/repositories/comments");
+    await actual.saveSessionCommentDurable({ sessionId, studentId: "6a-student-0", stars: 3 });
     inRouter(
       <CommentsPanel classId="6a" sessionId={sessionId} />,
       "/lop/:classId/buoi-hoc/:sessionId",

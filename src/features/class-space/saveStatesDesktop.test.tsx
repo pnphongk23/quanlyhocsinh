@@ -7,7 +7,7 @@ import { getStore, replaceStore } from "../../data/store";
 import { getClass } from "../../data/repositories/classes";
 import { getSession } from "../../data/repositories/sessions";
 import { listScores } from "../../data/repositories/scores";
-import { saveSessionComment } from "../../data/repositories/comments";
+import { saveSessionCommentDurable } from "../../data/repositories/comments";
 import ScoreGridDesktop from "../scores/ScoreGridDesktop";
 import StudentsDesktop from "../students/StudentsDesktop";
 import HomeworkDesktop from "../homework/HomeworkDesktop";
@@ -215,9 +215,9 @@ describe("Gửi phiếu: không gửi lại phiếu đang chờ gửi", () => {
       ungraded: { students: [], ungradedParts: 0 },
     });
     const sessionId = "6a-session-6";
-    saveSessionComment({ sessionId, studentId: "6a-student-0", stars: 3 });
-    saveSessionComment({ sessionId, studentId: "6a-student-1", stars: 2 });
-    saveSessionComment({ sessionId, studentId: "6a-student-2", stars: 1 });
+    await saveSessionCommentDurable({ sessionId, studentId: "6a-student-0", stars: 3 });
+    await saveSessionCommentDurable({ sessionId, studentId: "6a-student-1", stars: 2 });
+    await saveSessionCommentDurable({ sessionId, studentId: "6a-student-2", stars: 1 });
     const queued = getStore().comments.find(
       (item) => item.sessionId === sessionId && item.studentId === "6a-student-1",
     )!;

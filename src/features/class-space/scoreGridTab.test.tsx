@@ -3,9 +3,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { createSeed } from "../../test/fixtures/seed";
 import { replaceStore } from "../../data/store";
-import { createTest } from "../../data/repositories/tests";
+import { createTestDurable } from "../../data/repositories/tests";
 import ScoreGridTab from "./ScoreGridTab";
 import TestsTab from "./TestsTab";
+
+// Test chỉ cần dữ liệu trong bộ nhớ; ghi bền IndexedDB không có phiên đăng nhập trong jsdom.
+vi.mock("../../data/outbox", async (original) => ({
+  ...(await original<typeof import("../../data/outbox")>()),
+  persistCommand: vi.fn().mockResolvedValue(undefined),
+}));
 
 const memory = new Map<string, string>();
 const storage = {
@@ -49,8 +55,8 @@ describe("bảng điểm lớp theo thang điểm từng bài", () => {
     expect(html).not.toContain("Trung bình");
   });
 
-  it("header mỗi bài hiện thang điểm riêng", () => {
-    createTest({
+  it("header mỗi bài hiện thang điểm riêng", async () => {
+    await createTestDurable({
       classId: "6a",
       name: "Kiểm tra 15 phút",
       date: "2026-10-10",
@@ -90,8 +96,8 @@ describe("bảng điểm lớp theo thang điểm từng bài", () => {
 });
 
 describe("danh sách bài kiểm tra theo thang điểm từng bài", () => {
-  it("bài thang 15 hiện Thang 15 điểm", () => {
-    createTest({
+  it("bài thang 15 hiện Thang 15 điểm", async () => {
+    await createTestDurable({
       classId: "6a",
       name: "Kiểm tra 15 phút",
       date: "2026-10-10",

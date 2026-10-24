@@ -4,9 +4,15 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { createSeed } from "../../test/fixtures/seed";
 import { replaceStore } from "../../data/store";
 import { MEMBER_IDS, ROLE_IDS } from "../../data/defaults";
-import { createTest } from "../../data/repositories/tests";
+import { createTestDurable } from "../../data/repositories/tests";
 import NewTestPage from "./NewTestPage";
 import TestScoresPage, { isInvalidDraft } from "./TestScoresPage";
+
+// Test chỉ cần dữ liệu trong bộ nhớ; ghi bền IndexedDB không có phiên đăng nhập trong jsdom.
+vi.mock("../../data/outbox", async (original) => ({
+  ...(await original<typeof import("../../data/outbox")>()),
+  persistCommand: vi.fn().mockResolvedValue(undefined),
+}));
 
 const memory = new Map<string, string>();
 const storage = {
@@ -92,8 +98,8 @@ describe("màn nhập điểm hiện thang điểm của bài", () => {
     expect(html).toContain("Thang 10 điểm");
   });
 
-  it("bài tạo với thang 15 hiện thang 15", () => {
-    const test = createTest({
+  it("bài tạo với thang 15 hiện thang 15", async () => {
+    const test = await createTestDurable({
       classId: "6a",
       name: "Kiểm tra 15 phút",
       date: "2026-10-10",
