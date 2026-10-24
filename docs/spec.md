@@ -1,6 +1,6 @@
 # Đặc tả: App quản lý lớp tiếng Anh
 
-Cập nhật: 2026-10-24 · Báo cáo do giáo viên tự thêm theo khoảng buổi (không theo tháng), xem trước trong popup; quên mật khẩu tự phục vụ qua link gửi email đã lưu trong tài khoản; trạng thái lưu hiện "Đã lưu"/"Chờ đồng bộ". Trước đó 2026-10-23: Phụ huynh được tự đăng ký bằng SĐT chưa khai cho học sinh; app báo "chưa có con nào được liên kết" và tự liên kết khi giáo viên khai số sau. Luồng mời đã gỡ hẳn. Các quyết định trước: đặt lại mật khẩu thủ công; PBKDF2 30.000 vòng; điểm bước 0,5; cảnh báo vắng và cách đánh số buổi theo prototype; lịch lặp áp dụng từ ngày mai khi buổi hôm nay đã có dữ liệu; PDF/ảnh tạo trên thiết bị, báo cáo xem từ bản chụp dữ liệu; mascot Mít là lớp trang trí; FCM, Cloudflare Worker + D1, iOS native dùng chung API với PWA/web, triển khai staging và phạm vi Bản đầu ở mục 8. Bài giảng, role tuỳ chỉnh, nhân sự, học phí và báo cáo điểm ngoài Bản đầu.
+Cập nhật: 2026-10-25 · Gửi phiếu nhận xét và lưu nhận xét chung của báo cáo cần có mạng, không xếp hàng; bản đầu chỉ tải PDF, tải ảnh để Làm sau. Trước đó 2026-10-24: Báo cáo do giáo viên tự thêm theo khoảng buổi (không theo tháng), xem trước trong popup; quên mật khẩu tự phục vụ qua link gửi email đã lưu trong tài khoản; trạng thái lưu hiện "Đã lưu"/"Chờ đồng bộ". Trước đó 2026-10-23: Phụ huynh được tự đăng ký bằng SĐT chưa khai cho học sinh; app báo "chưa có con nào được liên kết" và tự liên kết khi giáo viên khai số sau. Luồng mời đã gỡ hẳn. Các quyết định trước: đặt lại mật khẩu thủ công; PBKDF2 30.000 vòng; điểm bước 0,5; cảnh báo vắng và cách đánh số buổi theo prototype; lịch lặp áp dụng từ ngày mai khi buổi hôm nay đã có dữ liệu; PDF/ảnh tạo trên thiết bị, báo cáo xem từ bản chụp dữ liệu; mascot Mít là lớp trang trí; FCM, Cloudflare Worker + D1, iOS native dùng chung API với PWA/web, triển khai staging và phạm vi Bản đầu ở mục 8. Bài giảng, role tuỳ chỉnh, nhân sự, học phí và báo cáo điểm ngoài Bản đầu.
 
 ## 1. Tổng quan
 
@@ -18,7 +18,7 @@ App cho giáo viên tiếng Anh dạy lớp riêng tại Việt Nam. Dữ liệu
 | Giáo viên | Tạo lớp, thêm học sinh, điểm danh, nhập điểm, nhận xét, giao và chấm bài tập về nhà, soạn bài giảng, phát hành báo cáo. Làm trong các lớp được gán, theo quyền của role; không quản lý mật khẩu người khác. |
 | Trợ giảng | Role mặc định có quyền hẹp hơn giáo viên (ví dụ điểm danh, xem bài giảng). Admin chỉnh được. |
 | Phụ huynh | Tự đăng ký bằng SĐT + mật khẩu tự đặt; nếu chưa có học sinh nào khai số này thì app báo "chưa có con nào được liên kết". Hệ thống tự liên kết học sinh có SĐT trùng khi giáo viên khai số sau. Chỉ xem, không sửa dữ liệu, chỉ thấy con được liên kết. |
-| Hệ thống | Phân quyền, tính toán, lưu bản chụp dữ liệu báo cáo khi phát hành, thông báo, đồng bộ. PDF/ảnh được tạo trên thiết bị khi người dùng bấm tải. |
+| Hệ thống | Phân quyền, tính toán, lưu bản chụp dữ liệu báo cáo khi phát hành, thông báo, đồng bộ. PDF được tạo trên thiết bị khi người dùng bấm tải (tải ảnh để Làm sau, đã chốt 2026-10-25). |
 
 Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thêm role khác và chỉnh quyền (mục 4).
 
@@ -146,7 +146,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | BTVN | Giao BTVN theo phần (tiêu đề, mô tả), chấm từng em từng phần 3 mức | ✗ |
 | | Nhận xét tổng hợp theo kỳ | ✗ |
 | Báo cáo | Thêm báo cáo theo khoảng buổi (mặc định từ Buổi 1), danh sách báo cáo của lớp, xem em nào đủ dữ liệu | ✓ |
-| | Xem trước trong popup, phát hành, phát hành lại; tạo PDF/ảnh trên thiết bị khi bấm tải | ◐ |
+| | Xem trước trong popup, phát hành, phát hành lại; tạo PDF trên thiết bị khi bấm tải | ◐ |
 | Phụ huynh | Nhập SĐT dùng để phụ huynh đăng ký và đăng nhập; hệ thống tự liên kết tài khoản khớp SĐT | ◐ |
 | Tài khoản | Giáo viên đăng ký workspace; phụ huynh tự đăng ký SĐT + mật khẩu, đổi mật khẩu, lưu email, quên mật khẩu qua link gửi email đã lưu, ngôn ngữ, cài đặt tài khoản | ✗ |
 | Bài giảng | Thư viện bài giảng; soạn bài giảng nhiều phần (tên, mô tả, tệp); gắn bài giảng vào buổi học | ✗ |
@@ -172,7 +172,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | BTVN | Xem đề BTVN ngay khi giao; xem kết quả chấm sau khi giáo viên gửi | ✗ |
 | | Nhận xét tổng hợp theo kỳ | ✗ |
 | Bài giảng | Xem bài giảng của buổi con đã học, nếu role phụ huynh được bật | ✗ |
-| Báo cáo | Danh sách báo cáo đã phát hành của con (theo khoảng buổi), xem từ bản chụp khi phát hành, tạo PDF/ảnh trên thiết bị khi bấm tải và chia sẻ | ✓ |
+| Báo cáo | Danh sách báo cáo đã phát hành của con (theo khoảng buổi), xem từ bản chụp khi phát hành, tạo PDF trên thiết bị khi bấm tải và chia sẻ | ✓ |
 | Học phí | Xem phiếu học phí theo tháng, lịch sử đã thu (thiết kế trước) | ✗ |
 | Cài đặt | Hồ sơ, Việt/Anh, thông báo, đổi mật khẩu, đăng xuất | ◐ |
 
@@ -185,10 +185,10 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | Dữ liệu | Giữ lịch sử khi nghỉ hoặc chuyển lớp; lịch sử sửa điểm và điểm danh. |
 | Tính toán | Mỗi bài kiểm tra có điểm tối đa riêng; so sánh giữa các bài theo % thang điểm (score/max); bài chưa có điểm không tính vào đâu. |
 | Thông báo | Thông báo trong app và push bằng FCM cho iOS native (qua APNs, SDK Firebase Messaging) và PWA/web (FCM web token), đã chốt 2026-10-21. Chỉ gửi khi giáo viên bấm gửi phiếu buổi học, phát hành báo cáo, lưu đề BTVN hoặc có điểm mới; sửa phiếu/kết quả chấm đã gửi không phát push riêng. Gộp thông báo điểm theo phụ huynh + học sinh + bài kiểm tra, gửi sau 5 phút không nhập thêm; BTVN gộp các phần trong một lần giao, sửa nội dung đề đã giao không phát push mới (đã chốt 2026-10-21). Push chỉ có tiêu đề và mã tham chiếu, không chứa nội dung nhận xét, điểm chi tiết hay mức sao; mở app phải tải dữ liệu qua API có phân quyền (đã chốt 2026-10-21). Thông báo quan trọng gửi thêm qua Zalo hoặc SMS (kênh thông báo, không dùng để đăng nhập; làm sau). Đổi vai trò, đăng xuất, đổi tài khoản cần mạng và máy chủ xác nhận đã gỡ đăng ký nhận push của đúng phiên đó trước khi máy đổi danh tính; push đã hiện trên thiết bị trước lúc xác nhận thì không thu hồi từ xa được. |
-| Báo cáo | Khi phát hành, máy chủ lưu bản chụp dữ liệu để xem trong app/web; có bản nháp và phát hành lại. Nút "Tải PDF / ảnh" tạo file ngay trên thiết bị khi bấm, không tải lên máy chủ. |
+| Báo cáo | Khi phát hành, máy chủ lưu bản chụp dữ liệu để xem trong app/web; có bản nháp và phát hành lại. Nút "Tải PDF" tạo file ngay trên thiết bị khi bấm, không tải lên máy chủ. |
 | Song ngữ | Giao diện, lỗi, thông báo, ngày tháng, PDF. |
 | PWA | Cài lên màn hình chính, giữ đăng nhập lâu. App iOS native dùng chung API, không vướng các giới hạn của PWA (đã chốt 2026-10-21). |
-| Offline | Điểm danh, nhập điểm, tạo bài kiểm tra, soạn nhận xét, giao và chấm BTVN ghi được khi mất mạng, tự đồng bộ khi có mạng. Đồng bộ chạy ngầm. Trạng thái lưu (đã chốt 2026-10-24, thay quy tắc 2026-10-18): bấm lưu hiện loading tối thiểu khoảng 400 ms rồi "Đã lưu" khoảng 1,5 giây; nếu sau khoảng 1 giây thay đổi chưa lên máy chủ thì hiện "Chờ đồng bộ", mất mạng thì "Đã lưu trên máy · sẽ đồng bộ khi có mạng"; lỗi lưu giữ dữ liệu và ô đang soạn để thử lại. Không có chip đồng bộ thường trực hay số thay đổi chờ. Quy tắc giao diện ở `design/ux-v2/rules.md` mục 6. Hệ thống vẫn theo dõi trạng thái nội bộ (chưa lưu, đã lưu trên máy, đã đồng bộ, lỗi). Phụ huynh xem được dữ liệu đã tải kèm thời gian cập nhật. Cần có mạng: đăng nhập, đăng ký workspace, quên mật khẩu, lưu email, cấp và đổi mật khẩu, gửi nhận xét, phát hành báo cáo, đổi vai trò, đăng xuất và đổi tài khoản (thu hồi đăng ký nhận push của phiên trước khi đổi danh tính). Hai thiết bị sửa cùng một ô: thay đổi tới máy chủ sau cùng được áp dụng, không giữ cả hai giá trị và không hiện cờ chọn (đã chốt 2026-10-21); lịch sử sửa điểm danh và điểm vẫn ghi trước/sau. Không cho đăng xuất khi còn thay đổi chưa đồng bộ; khi chặn thì giải thích lý do. Quyền bị đổi trong lúc offline: lệnh bị từ chối khi đồng bộ và hiện lỗi. |
+| Offline | Điểm danh, nhập điểm, tạo bài kiểm tra, soạn phiếu nhận xét buổi, giao và chấm BTVN ghi được khi mất mạng, tự đồng bộ khi có mạng. Đồng bộ chạy ngầm. Trạng thái lưu (đã chốt 2026-10-24, thay quy tắc 2026-10-18): bấm lưu hiện loading tối thiểu khoảng 400 ms rồi "Đã lưu" khoảng 1,5 giây; nếu sau khoảng 1 giây thay đổi chưa lên máy chủ thì hiện "Chờ đồng bộ", mất mạng thì "Đã lưu trên máy · sẽ đồng bộ khi có mạng"; lỗi lưu giữ dữ liệu và ô đang soạn để thử lại. Không có chip đồng bộ thường trực hay số thay đổi chờ. Quy tắc giao diện ở `design/ux-v2/rules.md` mục 6. Hệ thống vẫn theo dõi trạng thái nội bộ (chưa lưu, đã lưu trên máy, đã đồng bộ, lỗi). Phụ huynh xem được dữ liệu đã tải kèm thời gian cập nhật. Cần có mạng: đăng nhập, đăng ký workspace, quên mật khẩu, lưu email, cấp và đổi mật khẩu, gửi phiếu nhận xét (khoá nút khi mất mạng, không xếp hàng; phiếu đã soạn vẫn giữ trên máy), lưu nhận xét chung của báo cáo, phát hành báo cáo, đổi vai trò, đăng xuất và đổi tài khoản (thu hồi đăng ký nhận push của phiên trước khi đổi danh tính). Hai thiết bị sửa cùng một ô: thay đổi tới máy chủ sau cùng được áp dụng, không giữ cả hai giá trị và không hiện cờ chọn (đã chốt 2026-10-21); lịch sử sửa điểm danh và điểm vẫn ghi trước/sau. Không cho đăng xuất khi còn thay đổi chưa đồng bộ; khi chặn thì giải thích lý do. Quyền bị đổi trong lúc offline: lệnh bị từ chối khi đồng bộ và hiện lỗi. |
 | Trạng thái chung | Đang tải, rỗng, lỗi lưu, mất mạng. |
 
 ## 6. PWA: lưu ý cho phụ huynh
@@ -217,11 +217,11 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Điểm: tạo, sửa, xoá (lưu trữ) bài kiểm tra với điểm tối đa riêng mặc định 15; nhập điểm theo bước 0,5 trong 0..max; ghi log sửa điểm trong DB.
 - Nhận xét sau buổi theo 3 mức sao + ghi chú, giáo viên bấm gửi.
 - BTVN: giao theo phần ở buổi N, chấm ở buổi N+1, phụ huynh xem đề và kết quả đã gửi.
-- Báo cáo do giáo viên tự thêm theo khoảng buổi (mặc định từ Buổi 1), xem trước trong popup (đã chốt 2026-10-24): xem trong app/web từ bản chụp dữ liệu lưu khi phát hành; có đếm sao và kết quả BTVN. Nút "Tải PDF / ảnh" tạo file trên thiết bị khi bấm, không tải lên máy chủ.
+- Báo cáo do giáo viên tự thêm theo khoảng buổi (mặc định từ Buổi 1), xem trước trong popup (đã chốt 2026-10-24): xem trong app/web từ bản chụp dữ liệu lưu khi phát hành; có đếm sao và kết quả BTVN. Nút "Tải PDF" tạo file trên thiết bị khi bấm, không tải lên máy chủ.
 - Phụ huynh: xem điểm danh, điểm, nhận xét, BTVN, báo cáo của con; chuyển giữa các con.
 - Đăng nhập (đã chốt 2026-10-23): giáo viên tự đăng ký workspace bằng SĐT + mật khẩu, người tạo là Admin đầu tiên; phụ huynh được tự đăng ký SĐT + mật khẩu tự đặt cả khi chưa có học sinh khớp số. App báo "chưa có con nào được liên kết"; khi giáo viên khai SĐT sau, hệ thống tự liên kết học sinh trùng số. Tài khoản đã tồn tại có thể tạm không còn con sau khi SĐT bị đổi/gỡ. Giáo viên không quản lý mật khẩu; quên mật khẩu qua link gửi email đã lưu (đã chốt 2026-10-24), chưa có email thì người vận hành đặt lại thủ công. Người khác biết SĐT có thể đăng ký trước phụ huynh dự kiến; throttle theo IP, chấp nhận rủi ro tới phase OTP.
 - Hệ thống: phân quyền ở máy chủ, thông báo trong app và push bằng FCM (đã chốt 2026-10-21). Lược đồ dữ liệu có sẵn workspace, role, ma trận quyền và gán lớp ngay từ đầu (role mặc định cài sẵn); màn quản lý role và nhân sự làm sau.
-- Offline cho điểm danh, nhập điểm, tạo bài kiểm tra, soạn nhận xét, giao và chấm BTVN (hàng đợi ghi, đồng bộ lại, chỉ báo khi lỗi).
+- Offline cho điểm danh, nhập điểm, tạo bài kiểm tra, soạn phiếu nhận xét buổi, giao và chấm BTVN (hàng đợi ghi, đồng bộ lại, chỉ báo khi lỗi).
 - Chạy hai client dùng chung backend và API: app iOS native (SwiftUI) và PWA/web mobile; giao diện tiếng Việt. Android sau.
 - Bản web desktop cho giáo viên (đã chốt 2026-10-21): phần Chi tiết lớp gồm các tab Buổi học (điểm danh, nhận xét, bài tập về nhà), Bài kiểm tra, Điểm, Học sinh, Báo cáo, kèm đăng nhập và đăng ký workspace; deploy web lên Cloudflare Pages staging.
 - Deploy: Cloudflare, chỉ môi trường staging; chưa đụng production (đã chốt 2026-10-21).
@@ -233,6 +233,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Giao diện tiếng Anh, passkey.
 - Thông báo qua Zalo hoặc SMS.
 - Màn lịch sử điểm danh và lịch sử sửa điểm.
+- Tải báo cáo dạng ảnh (bản đầu chỉ tải PDF, đã chốt 2026-10-25).
 - Bài giảng (thư viện, nhiều phần, tệp trên R2, gắn vào buổi học).
 - Màn quản lý nhân sự và role: thêm giáo viên, trợ giảng, tạo role tuỳ chỉnh, ma trận quyền, gán lớp. Không thiết kế hay triển khai luồng mời.
 
