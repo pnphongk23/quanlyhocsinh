@@ -87,18 +87,8 @@ struct TeacherSessionsView: View {
             TeacherLink(route: .session(classID: classID, sessionID: session.id)) {
                 primaryActionLabel(for: session)
             }
-            if session.date > today && session.status == .planned {
-                Text(String(localized: "feature.classes.iem.danh.mo.vao.ngay.hoc"))
-                    .appText(AppText.muted)
-                    .foregroundStyle(AppColors.muted)
-            }
-            if session.status == .planned && data.canWriteAttendance {
-                HStack(spacing: 8) {
-                    if session.origin == .manual {
-                        AppButton(title: String(localized: "feature.classes.sua.buoi.le"), variant: .secondary) { editing = session }
-                    }
-                    AppButton(title: String(localized: "feature.classes.huy.buoi.c50dd61d"), variant: .danger) { cancelling = session }
-                }
+            if session.status == .planned && session.origin == .manual && data.canWriteAttendance {
+                AppButton(title: String(localized: "feature.classes.sua.buoi.le"), variant: .secondary) { editing = session }
             }
         }
         .padding(TeacherMetrics.cardPadding)
