@@ -133,6 +133,28 @@
         }
       }
     },
+    "reports.detail.skippedReason": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@"
+          }
+        }
+      }
+    },
+    "reports.detail.students": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Học sinh"
+          }
+        }
+      }
+    },
     "reports.error.conflict": {
       "extractionState": "manual",
       "localizations": {

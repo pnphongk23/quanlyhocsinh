@@ -9,6 +9,7 @@ struct ClassReportsView: View {
     @State private var adding = false
     @State private var openBatchID: String?
     @State private var error: String?
+    @State private var loading = false
 
     /// `seedError` lets the debug screenshot harness open the screen already in its error state.
     init(classID: String, data: I4FeatureStore = I4FeatureStore(), seedError: String? = nil) {
@@ -27,7 +28,7 @@ struct ClassReportsView: View {
             .safeAreaInset(edge: .bottom) { addBar }
             .task {
                 await data.configure(auth: auth)
-                if error == nil { error = await data.loadClassReports(classID: classID)?.message }
+                if error == nil { await reload() }
             }
             .sheet(isPresented: $adding) {
                 AddReportBatchSheet(classID: classID, data: data) { batchID in
@@ -40,6 +41,15 @@ struct ClassReportsView: View {
             }
     }
 
+    /// Reads the class's sessions, batches and reports from the server. A failure is kept as `error`,
+    /// so a failed load is never shown as an empty list.
+    private func reload() async {
+        loading = true
+        error = nil
+        error = await data.loadClassReports(classID: classID)?.message
+        loading = false
+    }
+
     @ViewBuilder private var content: some View {
         VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
             if !data.canReadCommentsReports {
@@ -47,16 +57,18 @@ struct ClassReportsView: View {
                     Text(String(localized: "feature.reports.lien.he.admin.neu.ban.can.quyen.truy.cap")).appText(AppText.body)
                 }
             } else if !data.isReady {
-                HStack { Spacer(); AppSpinner(); Spacer() }.padding(.top, 32)
+                HStack { Spacer(); AppSpinner(); Spacer() }.padding(.top, AppMetrics.sectionGap)
             } else {
-                if let error {
-                    TeacherErrorBanner(message: error) { self.error = nil; Task { await data.refresh() } }
-                }
-                if batches.isEmpty {
+                if let error, batches.isEmpty {
+                    AppErrorState(message: error) { Task { await reload() } }
+                } else if loading && batches.isEmpty {
+                    HStack { Spacer(); AppSpinner(); Spacer() }.padding(.top, AppMetrics.sectionGap)
+                } else if batches.isEmpty {
                     emptyState
                 } else {
+                    if let error { TeacherErrorBanner(message: error) { Task { await reload() } } }
                     AppSection(title: String(localized: "reports.list.title", table: "Reports")) {
-                        VStack(spacing: 8) {
+                        VStack(spacing: TeacherMetrics.listGap) {
                             ForEach(batches, id: \.id) { batchRow($0) }
                         }
                     }
@@ -80,8 +92,8 @@ struct ClassReportsView: View {
         let range = ReportRangeRules.resolve(batch, sessions: sessions)
         let counts = ReportRangeRules.counts(data.reports(batchID: batch.id))
         return Button { openBatchID = batch.id } label: {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: TeacherMetrics.contentGap) {
+                VStack(alignment: .leading, spacing: AppMetrics.fieldGap) {
                     Text(range.label)
                         .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
                         .foregroundStyle(AppColors.text)
@@ -96,9 +108,9 @@ struct ClassReportsView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(AppColors.muted)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, minHeight: 64)
+            .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+            .padding(.vertical, TeacherMetrics.contentGap)
+            .frame(maxWidth: .infinity, minHeight: TeacherMetrics.reportRowMinHeight)
             .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
             .contentShape(Rectangle())
         }
@@ -151,7 +163,7 @@ struct AddReportBatchSheet: View {
 
     var body: some View {
         AppSheet(title: String(localized: "reports.add.title", table: "Reports")) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: AppMetrics.cardPaddingHorizontal) {
                 Text(String(localized: "reports.add.hint", table: "Reports"))
                     .appText(AppText.muted).foregroundStyle(AppColors.muted)
                 picker(String(localized: "reports.add.from", table: "Reports"), selection: $fromID, id: "reports.add.from")
@@ -163,7 +175,7 @@ struct AddReportBatchSheet: View {
                     TeacherErrorBanner(message: message)
                 }
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, AppMetrics.cardPaddingHorizontal)
         } footer: {
             AppSaveButton(title: String(localized: "reports.add.create", table: "Reports"), controller: controller,
                           isEnabled: problem == nil, onSuccess: {}) {
@@ -189,21 +201,21 @@ struct AddReportBatchSheet: View {
     }
 
     private func picker(_ title: String, selection: Binding<String>, id: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: AppMetrics.fieldGap) {
             Text(title).appText(AppText.label).foregroundStyle(AppColors.text)
             Menu {
                 Picker(title, selection: selection) {
                     ForEach(choices) { choice in Text(choice.label).tag(choice.id) }
                 }
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: AppMetrics.saveFeedbackGap) {
                     Text(choices.first { $0.id == selection.wrappedValue }?.label ?? "")
                         .appText(AppText.body).foregroundStyle(AppColors.text)
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.system(size: 14, weight: .semibold)).foregroundStyle(AppColors.muted)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
                 .frame(maxWidth: .infinity, minHeight: AppMetrics.inputHeight)
                 .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.control))
                 .overlay(RoundedRectangle(cornerRadius: AppRadius.control)

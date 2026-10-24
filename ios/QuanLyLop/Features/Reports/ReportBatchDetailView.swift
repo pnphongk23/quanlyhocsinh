@@ -11,7 +11,7 @@ struct ReportBatchDetailView: View {
     @State private var message: String?
     @State private var error: String?
     @State private var loadError: String?
-    @State private var skippedCount = 0
+    @State private var skipped: [BatchPublishResponse.Skipped] = []
     @State private var publishing = false
     @State private var commentController = AppSaveController()
 
@@ -54,7 +54,7 @@ struct ReportBatchDetailView: View {
         let rows = rows
         let summary = ReportRules.summary(rows.map(\.slot))
         TeacherScroll {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
                 if !data.canReadCommentsReports {
                     AppEmptyState(title: String(localized: "feature.reports.ban.khong.co.quyen.xem.bao.cao"))
                 } else if batch == nil {
@@ -63,9 +63,13 @@ struct ReportBatchDetailView: View {
                     AppEmptyState(title: String(localized: "reports.detail.empty.title", table: "Reports"),
                                   description: String(localized: "reports.detail.empty.hint", table: "Reports"))
                 } else {
-                    summaryLine(summary)
-                    notices
-                    VStack(spacing: 8) { ForEach(rows) { studentRow($0) } }
+                    VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
+                        summaryLine(summary)
+                        notices
+                    }
+                    AppSection(title: String(localized: "reports.detail.students", table: "Reports")) {
+                        VStack(spacing: TeacherMetrics.listGap) { ForEach(rows) { studentRow($0) } }
+                    }
                     if data.canWriteCommentsReports {
                         Text(String(localized: "feature.reports.phu.huynh.chi.thay.bao.cao.sau.khi.ban.phat.hanh"))
                             .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
@@ -109,22 +113,33 @@ struct ReportBatchDetailView: View {
         if let message {
             Text(message).appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5)).foregroundStyle(AppColors.success)
         }
-        if skippedCount > 0 {
-            I4Banner(text: String.localizedStringWithFormat(String(localized: "reports.detail.skipped", table: "Reports"), skippedCount),
+        if !skipped.isEmpty {
+            I4Banner(text: String.localizedStringWithFormat(String(localized: "reports.detail.skipped", table: "Reports"), skipped.count),
                      tone: .warning, systemImage: "exclamationmark.triangle")
+            ForEach(skipped, id: \.reportId) { item in
+                Text(skippedLine(item)).appText(AppText.muted).foregroundStyle(AppColors.muted)
+            }
         }
         if let loadError { TeacherErrorBanner(message: loadError) }
         if let error { TeacherErrorBanner(message: error) }
+    }
+
+    /// "Name: missing attendance, comment" for a report the server left out of the batch publish.
+    private func skippedLine(_ item: BatchPublishResponse.Skipped) -> String {
+        let name = data.report(id: item.reportId).flatMap { report in data.students.first { $0.id == report.studentId }?.name } ?? ""
+        let reasons = ReportRules.missingReasons(item.missing)
+        let reason = reasons.isEmpty ? String(localized: "reports.preview.notReady", table: "Reports") : reasons.joined(separator: ", ")
+        return String.localizedStringWithFormat(String(localized: "reports.detail.skippedReason", table: "Reports"), name, reason)
     }
 
     // MARK: Rows
 
     private func studentRow(_ row: Row) -> some View {
         let active = row.id == openReportID
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: TeacherMetrics.listGap) {
             Button { openReportID = active ? nil : row.id } label: {
-                HStack(alignment: .top, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .top, spacing: TeacherMetrics.listGap) {
+                    VStack(alignment: .leading, spacing: AppMetrics.fieldGap) {
                         Text(row.content.student.name)
                             .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 21.6))
                             .foregroundStyle(AppColors.text).multilineTextAlignment(.leading)
@@ -137,14 +152,14 @@ struct ReportBatchDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     AppPill(title: row.slot.label, tone: row.slot.tone)
                 }
-                .frame(minHeight: 40)
+                .frame(minHeight: TeacherMetrics.studentRowMinHeight)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("reports.student.row")
             if active {
-                AppColors.divider.frame(height: 1).padding(.top, 8)
-                HStack(spacing: 8) {
+                AppColors.divider.frame(height: AppMetrics.hairline).padding(.top, TeacherMetrics.listGap)
+                HStack(spacing: TeacherMetrics.listGap) {
                     ReportFactCard(label: String(localized: "feature.reports.chuyen.can"),
                                    value: String.localizedStringWithFormat(String(localized: "feature.reports.buoi"), String(describing: row.content.attendanceCount), String(describing: row.content.snapshot.attendance.heldSessions)),
                                    detail: row.content.attendanceDetail)
@@ -159,11 +174,10 @@ struct ReportBatchDetailView: View {
                 .accessibilityIdentifier("reports.preview")
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, TeacherMetrics.contentGap)
+        .padding(.vertical, TeacherMetrics.listGap)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(active ? AppColors.primary : .clear, lineWidth: 2))
+        .background(active ? AppState.selectedBg : AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.row))
     }
 
     private func commentValue(_ row: Row) -> String { drafts[row.id] ?? row.record.generalComment }
@@ -171,15 +185,15 @@ struct ReportBatchDetailView: View {
     private func commentEditor(_ row: Row) -> some View {
         let value = commentValue(row)
         let changed = value.trimmingCharacters(in: .whitespacesAndNewlines) != row.record.generalComment
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: TeacherMetrics.listGap) {
             Text(String(localized: "feature.reports.nhan.xet.chung"))
                 .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21)).foregroundStyle(AppColors.text)
             if data.canWriteCommentsReports {
                 TextEditor(text: Binding(get: { commentValue(row) }, set: { drafts[row.id] = $0 }))
                     .font(.system(size: 15)).foregroundStyle(AppColors.text)
                     .scrollContentBackground(.hidden)
-                    .padding(10).frame(minHeight: 72)
-                    .background(AppColors.background, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(AppMetrics.chipPaddingHorizontal).frame(minHeight: TeacherMetrics.commentEditorMinHeight)
+                    .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.row))
                     .overlay(alignment: .topLeading) {
                         if value.isEmpty {
                             Text(row.content.suggestion ?? String(localized: "feature.reports.nhap.nhan.xet.chung.cho.phu.huynh.cua.em.nay"))
@@ -206,8 +220,8 @@ struct ReportBatchDetailView: View {
             } else {
                 Text(value.isEmpty ? String(localized: "feature.reports.chua.co.nhan.xet.chung") : value)
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25)).foregroundStyle(AppColors.text)
-                    .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppColors.background, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(TeacherMetrics.contentGap).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.row))
             }
         }
     }
@@ -232,16 +246,20 @@ struct ReportBatchDetailView: View {
         publishing = true
         message = nil
         error = nil
+        skipped = []
         Task {
             switch await data.publishBatch(batchID: batchID) {
             case .success(let outcome):
-                skippedCount = outcome.skipped.count
+                skipped = outcome.skipped
                 message = outcome.published > 0
                     ? String.localizedStringWithFormat(String(localized: "feature.reports.a.phat.hanh.bao.cao.b1c96543"), String(describing: outcome.published))
                     : nil
             case .failure(let failure):
                 error = failure.message
             }
+            // Rows left out (and the ones just published) show what the server holds now, not the
+            // state from before the call.
+            loadError = await data.loadBatchDetail(batchID: batchID)?.message
             publishing = false
         }
     }
@@ -276,7 +294,7 @@ struct ReportPreviewScreen: View {
             Group {
                 switch phase {
                 case .loading:
-                    VStack(spacing: 12) {
+                    VStack(spacing: TeacherMetrics.contentGap) {
                         AppSpinner()
                         Text(String(localized: "reports.preview.loading", table: "Reports"))
                             .appText(AppText.muted).foregroundStyle(AppColors.muted)
@@ -288,7 +306,7 @@ struct ReportPreviewScreen: View {
                         .frame(maxHeight: .infinity, alignment: .top)
                 case .loaded(let snapshot):
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
                             header(snapshot)
                             if !snapshot.ready { missingNote(snapshot) }
                             ReportContentView(snapshot: snapshot, comment: snapshot.generalComment)
@@ -320,13 +338,13 @@ struct ReportPreviewScreen: View {
     }
 
     private func header(_ snapshot: ReportSnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: AppMetrics.fieldGap) {
             Text(snapshot.range.map(ReportRangeRules.label(of:)) ?? "")
                 .appText(AppTextStyle(size: 22, weight: .bold, lineHeight: 27.5, tracking: -0.22)).foregroundStyle(AppColors.text)
             Text(String.localizedStringWithFormat(String(localized: "feature.reports.xem.truoc.d5092a86"), target.studentName, className))
                 .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 19.6)).foregroundStyle(AppColors.muted)
         }
-        .padding(16)
+        .padding(TeacherMetrics.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }

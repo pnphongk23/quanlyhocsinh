@@ -15,6 +15,12 @@ enum TeacherMetrics {
     static let cardPadding: CGFloat = 16
     static let rowMinHeight: CGFloat = 56
     static let listGap: CGFloat = 8
+    /// Row of a report batch: range line plus its counts line.
+    /// Comment box of a student in a batch.
+    static let commentEditorMinHeight: CGFloat = 72
+    static let reportRowMinHeight: CGFloat = 64
+    /// Student row of a batch, closed.
+    static let studentRowMinHeight: CGFloat = 40
 }
 
 /// Prototype date labels (`src/shared/format/index.ts`) in the same `vi-VN` shapes.
