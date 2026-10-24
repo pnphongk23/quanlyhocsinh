@@ -206,7 +206,14 @@ function buildPeriodReport(
         test.archived !== true &&
         test.date >= start &&
         test.date <= end &&
-        inStudentRange(test.date),
+        (!student.leftAt || test.date <= student.leftAt) &&
+        (test.date >= student.enrolledAt ||
+          data.scores.some(
+            (score) =>
+              score.studentId === student.id &&
+              score.testId === test.id &&
+              score.value !== null,
+          )),
     )
     .map((test) => ({
       test,

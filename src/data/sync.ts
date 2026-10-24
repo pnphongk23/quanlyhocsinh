@@ -3,7 +3,7 @@ import type { ApiClass, ApiReport, ApiReportBatch, CommandResult, EntityMap, Pul
 import { db, getCacheIdentity, identityKey, rowKey, stored, tableFor, type EntityName, type OutboxRow } from "./db";
 import { clearSession, getToken, invalidateActiveMembership } from "./auth/session";
 import { hydrateStore } from "./store";
-import { setSaveStatus } from "./saveStatus";
+import { setRejectedCommands, setSaveStatus } from "./saveStatus";
 import { logoutLockKey } from "./outbox";
 import { classFromApi, reportBatchFromApi, reportFromApi } from "./api/mapping";
 const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
@@ -219,11 +219,33 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
     const changed = await pull(identity, membershipId);
     if (changed || outboxChanged) await hydrateStore();
     const remaining = await db.outbox.where("identity").equals(identity).toArray();
+    publishRejected(remaining);
     setSaveStatus(remaining.some((x) => x.status === "rejected") ? "error" : remaining.length ? "local" : "synced");
   } catch {
     if (outboxChanged) await hydrateStore();
+    publishRejected(await db.outbox.where("identity").equals(identity).toArray());
     if (await db.outbox.where("identity").equals(identity).count()) setSaveStatus("error");
   }
+}
+function publishRejected(rows: OutboxRow[]): void {
+  setRejectedCommands(rows.filter((x) => x.status === "rejected").map((x) => ({ id: x.id, type: x.type, error: x.error ?? "rejected" })));
+}
+/** Đưa lại các lệnh bị từ chối vào hàng đợi và đẩy ngay; còn bị từ chối thì trạng thái lỗi quay lại kèm mã mới. */
+export async function retryRejectedCommands(): Promise<void> {
+  const identity = identityKey();
+  await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected").modify({ status: "pending", error: undefined });
+  setRejectedCommands([]); setSaveStatus("local");
+  await syncNow();
+}
+/** Bỏ các lệnh bị từ chối và tải lại bản của máy chủ để ô điểm quay về giá trị đã lưu. */
+export async function discardRejectedCommands(): Promise<void> {
+  const identity = identityKey();
+  await db.transaction("rw", [db.outbox, db.meta], async () => {
+    await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected").delete();
+    await db.meta.delete(identity);
+  });
+  setRejectedCommands([]); setSaveStatus("synced");
+  await syncNow();
 }
 async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {
   const row = await db.outbox.get(result.id); if (!row) return;

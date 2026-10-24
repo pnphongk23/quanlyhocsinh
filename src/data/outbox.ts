@@ -31,6 +31,8 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
         const matching = cellKey ? await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "pending").first() : undefined;
         const finalRow = matching ? { ...row, base_version: matching.base_version } : row;
         if (matching) await db.outbox.delete(matching.id);
+        // Lệnh mới cho cùng ô thay thế lệnh cũ đã bị từ chối, để lỗi cũ không kẹt mãi.
+        if (cellKey) await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "rejected").delete();
         await db.outbox.put(finalRow);
         if (command.type === "score.set") {
           const testId = (command.payload as { test_id: string }).test_id;

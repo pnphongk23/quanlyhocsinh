@@ -1,11 +1,14 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { getSaveStatus, subscribeSaveStatus } from "../../data/saveStatus";
+import { getRejectedCommands, getSaveStatus, subscribeSaveStatus } from "../../data/saveStatus";
 import type { SaveState } from "../../data/types";
 import { useOnline } from "../hooks/useOnline";
 import styles from "./SaveStatus.module.css";
 
 /** Trạng thái `local` kéo dài quá mức này thì coi là đang chờ đồng bộ. */
 export const PENDING_AFTER_MS = 1000;
+export function useRejectedCommands() {
+  return useSyncExternalStore(subscribeSaveStatus, getRejectedCommands, getRejectedCommands);
+}
 export function useSaveStatus() {
   const globalStatus = useSyncExternalStore(
     subscribeSaveStatus,

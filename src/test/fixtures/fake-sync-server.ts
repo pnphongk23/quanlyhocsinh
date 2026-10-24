@@ -19,7 +19,7 @@ export function createFakeServer() {
   const log: Array<{ seq: number; entity: string; item?: Row; gone?: { k1: string; k2: string } }> = [];
   const tokens = new Map<string, Scope>();
   const requests: TracedRequest[] = [];
-  const hooks = { failEntity: null as string | null, hold: null as ((req: TracedRequest) => Promise<void> | void) | null, latencyMs: 0, pushDoneAt: [] as number[], afterPull: null as (() => void) | null, respond: null as ((req: TracedRequest) => { status: number; code: string } | undefined) | null, onSnapshotPage: null as ((entity: string) => void) | null };
+  const hooks = { failEntity: null as string | null, hold: null as ((req: TracedRequest) => Promise<void> | void) | null, latencyMs: 0, pushDoneAt: [] as number[], afterPull: null as (() => void) | null, respond: null as ((req: TracedRequest) => { status: number; code: string } | undefined) | null, onSnapshotPage: null as ((entity: string) => void) | null, rejectCommand: null as ((command: Row) => string | undefined) | null };
   const table = (entity: string) => { let t = rows.get(entity); if (!t) rows.set(entity, t = new Map()); return t; };
 
   const put = (entity: string, item: Row): Row => {
@@ -93,7 +93,10 @@ export function createFakeServer() {
     }
     if (path === "/sync/push") {
       const body = JSON.parse(String(init.body));
-      const results = body.commands.map(apply);
+      const results = body.commands.map((command: Row) => {
+        const code = hooks.rejectCommand?.(command);
+        return code ? { id: command.id, status: "rejected", error: { code, message: code, request_id: "fake" } } : apply(command);
+      });
       hooks.pushDoneAt.push(performance.now());
       return json({ epoch: 1, cursor: log.length, results });
     }

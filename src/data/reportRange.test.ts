@@ -114,3 +114,28 @@ describe("báo cáo của một em theo khoảng", () => {
     expect(buildRangeStudentReport({ ...student, leftAt: "2026-09-30" }, range, data())).toBeNull();
   });
 });
+
+describe("điểm của học sinh vào lớp sau ngày bài kiểm tra", () => {
+  const joined: Student = { id: "n1", classId: "c1", name: "Mới", parentPhone: "", enrolledAt: "2026-10-10", leftAt: null, status: "active" };
+  const data = (scores: Array<{ testId: string; value: number | null }>) => ({
+    sessions: [session("s3", "2026-10-12", "held")],
+    attendance: [],
+    tests: [
+      { id: "t1", classId: "c1", name: "Trước khi vào", date: "2026-10-05", max: 10 },
+      { id: "t2", classId: "c1", name: "Sau khi vào", date: "2026-10-11", max: 10 },
+    ],
+    scores: scores.map((item) => ({ id: `${item.testId}:n1`, testId: item.testId, studentId: "n1", value: item.value })),
+    comments: [], homeworkSections: [], homeworkGrades: [], generalComment: "",
+  });
+  const range = { fromKey: "2026-10-01 00:00", toKey: "2026-10-20 23:59" };
+  const names = (scores: Array<{ testId: string; value: number | null }>) =>
+    buildRangeStudentReport(joined, range, data(scores) as never)?.tests.map((row) => row.test.name);
+
+  it("bài trước ngày vào lớp chưa có điểm thì không tính", () => {
+    expect(names([])).toEqual(["Sau khi vào"]);
+  });
+
+  it("bài trước ngày vào lớp đã có điểm thì tính như mọi bài", () => {
+    expect(names([{ testId: "t1", value: 6 }])).toEqual(["Trước khi vào", "Sau khi vào"]);
+  });
+});
