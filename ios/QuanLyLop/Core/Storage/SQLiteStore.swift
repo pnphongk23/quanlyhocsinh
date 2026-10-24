@@ -68,8 +68,19 @@ actor SQLiteStore: LocalStore {
             try db.execute("PRAGMA user_version=1")
             // An interrupted request is replayed with the same UUID, never coalesced.
             try db.execute("UPDATE commands SET state='pending' WHERE scope=? AND state='sending'", [scope.storageKey])
+            try Self.dropQueuedSlipSends(db)
             try db.execute("COMMIT")
         } catch { _ = try? db.execute("ROLLBACK"); throw error }
+    }
+
+    /// A slip send goes straight to the server and never waits in the outbox, so one found here was left by
+    /// an older build and must not be replayed. Its optimistic rows can no longer be trusted either, so the
+    /// affected scopes reinstall their snapshot on the next sync.
+    private static func dropQueuedSlipSends(_ db: SQLiteConnection) throws {
+        let scopes = try db.execute("SELECT DISTINCT scope FROM commands WHERE kind='slip.send'").compactMap { $0["scope"] }
+        guard !scopes.isEmpty else { return }
+        for scope in scopes { try db.execute("DELETE FROM meta WHERE scope=?", [scope]) }
+        try db.execute("DELETE FROM commands WHERE kind='slip.send'")
     }
 
     static func open(scope: CacheScope, directory: URL = .applicationSupportDirectory) throws -> SQLiteStore {

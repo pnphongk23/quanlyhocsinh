@@ -318,56 +318,60 @@ final class I4FeatureStore: ObservableObject {
 
     enum SendOutcome: Equatable {
         case sent(Int)
+        /// The server sent some slips and left others out (stars removed, or already sent elsewhere).
+        case partial(sent: Int, notSent: Int)
         case failed(String)
     }
 
-    /// Sends every starred, not-yet-sent slip of the session in one command and waits for the server.
-    /// A send the server did not confirm is never left in the outbox: the command is removed and the
-    /// slips go back to their previous state (stars and notes kept), so the teacher can retry.
+    /// Sends every starred, not-yet-sent slip of the session and waits for the server's answer.
+    /// The `slip.send` command goes straight to the server and is never written to the outbox, so an
+    /// unconfirmed send leaves nothing behind that could be replayed later; the slips stay as they were.
+    /// The local state follows what the server reports as `sent` and `skipped`.
     func sendSlips(sessionID: String, studentIDs: [String]) async -> SendOutcome {
-        guard let store else { return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu")) }
+        guard let api, let store else { return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu")) }
+        let failure = SendOutcome.failed(String(localized: "comments.send.failed", table: "Teacher"))
+        // Edits still waiting in the outbox must reach the server first, or it would send older stars and notes.
+        guard await syncIfNeeded() else { return failure }
+        await refresh()
         let chosen = slips(sessionID: sessionID).filter {
             studentIDs.contains($0.studentId) && $0.stars != nil && $0.status != .sent
         }
         guard let first = chosen.first else { return .failed(String(localized: "feature.scores.chon.sao.cho.it.nhat.mot.hoc.sinh")) }
-        var localRows: [SessionSlip] = []
-        for slip in chosen {
-            localRows.append(SessionSlip(sessionId: slip.sessionId, studentId: slip.studentId,
-                                         stars: slip.stars, note: slip.note, status: .sent,
-                                         sentAt: Self.now, version: slip.version, updatedAt: Self.now))
-        }
+        let slipKeys = Set(chosen.map { key("slip", sessionID, $0.studentId) })
+        let waiting = (try? await store.pendingCommands()) ?? []
+        if waiting.contains(where: { slipKeys.contains($0.recordKey) }) { return failure }
+
         let payload = object([
             "session_id": .string(sessionID),
             "student_ids": .array(chosen.map { JSONValue.string($0.studentId) })
         ])
-        let command = PendingCommand(recordKey: key("slip", sessionID, first.studentId),
-                                     baseVersion: first.version, kind: "slip.send", payload: payload)
+        let command = SyncCommand(id: UUID(), type: "slip.send", baseVersion: first.version, createdAt: .now, payload: payload)
+        let request = PushRequest(membershipId: store.scope.membershipId, deviceId: deviceID, commands: [command])
+        let result: CommandResult?
         do {
-            try await store.write(localRows[0], forKey: command.recordKey, enqueueing: command)
-            for row in localRows.dropFirst() {
-                try await store.write(row, forKey: key("slip", sessionID, row.studentId), enqueueing: nil)
-            }
+            let response = try await api.send(try .json(method: .post, path: "sync/push", body: request), as: PushResponse.self)
+            result = response.results.first { $0.id == command.id }
         } catch {
-            await rollbackSend(command: command, slips: chosen, sessionID: sessionID)
-            return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu"))
+            // The answer may have been lost after the server applied it; a pull shows the real state.
+            await syncIfNeeded()
+            await refresh()
+            return failure
+        }
+        guard let result, result.status == .applied else {
+            await refresh()
+            return failure
+        }
+
+        let sentIDs = Set(result.sent ?? [])
+        for slip in chosen where sentIDs.contains(slip.studentId) {
+            let row = SessionSlip(sessionId: slip.sessionId, studentId: slip.studentId, stars: slip.stars, note: slip.note,
+                                  status: .sent, sentAt: Self.now, version: slip.version, updatedAt: Self.now)
+            try? await store.write(row, forKey: key("slip", sessionID, slip.studentId), enqueueing: nil)
         }
         await syncIfNeeded()
-        let pending = try? await store.pendingCommands()
-        if let pending, !pending.contains(where: { $0.id == command.id }) {
-            await refresh()
-            return .sent(localRows.count)
-        }
-        await rollbackSend(command: command, slips: chosen, sessionID: sessionID)
-        return .failed(String(localized: "comments.send.failed", table: "Teacher"))
-    }
-
-    private func rollbackSend(command: PendingCommand, slips: [SessionSlip], sessionID: String) async {
-        guard let store else { return }
-        try? await store.discardCommand(id: command.id)
-        for slip in slips {
-            try? await store.write(slip, forKey: key("slip", sessionID, slip.studentId), enqueueing: nil)
-        }
         await refresh()
+        let notSent = chosen.count - chosen.filter { sentIDs.contains($0.studentId) }.count
+        return notSent == 0 ? .sent(chosen.count) : .partial(sent: chosen.count - notSent, notSent: notSent)
     }
 
     // MARK: - Homework

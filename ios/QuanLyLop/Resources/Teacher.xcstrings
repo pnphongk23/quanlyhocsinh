@@ -8,6 +8,13 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa gửi được phiếu. Kiểm tra kết nối rồi thử lại. Phiếu đã soạn vẫn được giữ." } }
       }
     },
+    "comments.send.partial" : {
+      "comment" : "Một số phiếu chưa được gửi vì máy chủ bỏ qua (bỏ sao hoặc đã gửi ở máy khác). %lld là số em chưa gửi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Còn %lld em chưa nhận được phiếu (đã bỏ sao hoặc đã gửi ở nơi khác). Kiểm tra lại danh sách rồi gửi tiếp." } }
+      }
+    },
     "comments.send.retry" : {
       "comment" : "Nút gửi lại phiếu sau khi gửi lỗi.",
       "extractionState" : "manual",

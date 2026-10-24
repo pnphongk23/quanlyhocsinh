@@ -296,6 +296,11 @@ struct SessionCommentsView: View {
             dismissSendAfterSuccess = true
             sendError = nil
             await saveStatusSource?.refresh()
+        case .partial(_, let notSent):
+            let message = String.localizedStringWithFormat(String(localized: "comments.send.partial", table: "Teacher"), notSent)
+            sendError = message
+            await saveStatusSource?.refresh()
+            throw I4SaveFailure(message: message)
         case .failed(let message):
             sendError = message
             throw I4SaveFailure(message: message)
