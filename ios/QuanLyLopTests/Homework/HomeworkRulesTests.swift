@@ -125,4 +125,26 @@ final class HomeworkRulesTests: XCTestCase {
         XCTAssertEqual(edited.title, "Luyện đọc thêm")
         XCTAssertEqual(edited.autoFilled, "Luyện đọc")
     }
+
+    func testActiveProgressFollowsTheSelectedKindAndFallsBackToTheFirst() {
+        let vocabulary = I4SectionProgress(section: section("a", kind: .vocabulary, session: "s"),
+                                           summary: I4HomeworkSummary(total: 2, graded: 1))
+        let grammar = I4SectionProgress(section: section("b", kind: .reading, session: "s"),
+                                        summary: I4HomeworkSummary(total: 2, graded: 0))
+        XCTAssertEqual(HomeworkRules.activeProgress([vocabulary, grammar], selected: .reading)?.section.id, "b")
+        XCTAssertEqual(HomeworkRules.activeProgress([vocabulary, grammar], selected: nil)?.section.id, "a")
+        XCTAssertEqual(HomeworkRules.activeProgress([vocabulary], selected: .reading)?.section.id, "a")
+        XCTAssertNil(HomeworkRules.activeProgress([], selected: .reading))
+    }
+
+    func testPartLabelRepeatsTheKindOnlyWhenTheTitleSaysSomethingElse() {
+        let plain = HomeworkSection(id: "a", classId: "c", sessionId: "s", kind: .vocabulary,
+                                    title: HomeworkKind.vocabulary.label, description: "", version: 1)
+        XCTAssertEqual(HomeworkRules.partLabel(plain), HomeworkKind.vocabulary.label)
+        let blank = HomeworkSection(id: "a", classId: "c", sessionId: "s", kind: .vocabulary,
+                                    title: "  ", description: "", version: 1)
+        XCTAssertEqual(HomeworkRules.partLabel(blank), HomeworkKind.vocabulary.label)
+        let named = section("b", kind: .reading, session: "s")
+        XCTAssertEqual(HomeworkRules.partLabel(named), "\(HomeworkKind.reading.label) · Tiêu đề")
+    }
 }

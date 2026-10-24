@@ -1,6 +1,34 @@
 {
   "sourceLanguage" : "vi",
   "strings" : {
+    "homework.grading.header" : {
+      "comment" : "Tiêu đề mục danh sách chấm bài của tab Bài tập về nhà.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chấm bài" } }
+      }
+    },
+    "homework.grading.summary" : {
+      "comment" : "Dòng phụ của hàng chọn phần: BTVN của buổi nào, ngày nào, đã chấm bao nhiêu em. %1 là tên buổi, %2 là ngày, %3 là số em đã chấm, %4 là tổng số em.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "BTVN %1$@ · %2$@ · %3$@/%4$@ em đã chấm" } }
+      }
+    },
+    "homework.part.picker.a11y" : {
+      "comment" : "Nhãn VoiceOver của menu chọn phần bài tập đang chấm.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chọn phần bài tập" } }
+      }
+    },
+    "homework.part.more.a11y" : {
+      "comment" : "Nhãn VoiceOver của menu tuỳ chọn chấm cả lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tuỳ chọn chấm cả lớp" } }
+      }
+    },
     "comments.send.failed" : {
       "comment" : "Lỗi khi gửi phiếu cả lớp không được máy chủ xác nhận.",
       "extractionState" : "manual",

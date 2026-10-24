@@ -60,6 +60,18 @@ enum HomeworkRules {
         }
     }
 
+    /// The part being graded: the selected kind, or the first part when none is selected (or the
+    /// selected kind is not in this lesson's homework).
+    static func activeProgress(_ progress: [I4SectionProgress], selected: HomeworkKind?) -> I4SectionProgress? {
+        progress.first { $0.section.kind == selected } ?? progress.first
+    }
+
+    /// One line for the part picker: the kind, plus the title when it says something else.
+    static func partLabel(_ section: HomeworkSection) -> String {
+        let title = section.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty || title == section.kind.label ? section.kind.label : "\(section.kind.label) · \(title)"
+    }
+
     /// Tapping the selected level again clears it.
     static func nextGrade(current: HomeworkLevel?, clicked: HomeworkLevel) -> HomeworkLevel? {
         current == clicked ? nil : clicked

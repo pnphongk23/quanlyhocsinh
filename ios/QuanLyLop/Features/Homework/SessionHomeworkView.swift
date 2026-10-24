@@ -11,7 +11,6 @@ struct SessionHomeworkView: View {
     @State private var editor: HomeworkEditor?
     @State private var error: String?
     @State private var saveStatusSource: AppSaveStatusSource?
-    @State private var gradeController = AppSaveController()
 
     init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.sessionID = sessionID
@@ -42,7 +41,7 @@ struct SessionHomeworkView: View {
     }
 
     private var activeProgress: I4SectionProgress? {
-        previousProgress.first { $0.section.kind == selectedKind } ?? previousProgress.first
+        HomeworkRules.activeProgress(previousProgress, selected: selectedKind)
     }
 
     private var missingKinds: [HomeworkKind] {
@@ -96,10 +95,7 @@ struct SessionHomeworkView: View {
                     I4Banner(text: error, tone: .error, systemImage: "exclamationmark.triangle",
                              horizontal: 14, vertical: 10)
                 }
-                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
-                if let failure = gradeController.error {
-                    I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
-                }
+                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
                 if !data.canWriteCommentsReports {
                     I4Banner(text: String(localized: "feature.homework.ban.chi.co.quyen.xem.bai.tap.ve.nha.cua.buoi.nay"),
                              horizontal: 12, vertical: 10)
@@ -134,75 +130,80 @@ struct SessionHomeworkView: View {
                 }
             }
         } else if let activeProgress, let session {
-            previousCard(activeProgress, session: session)
-            ForEach(students, id: \.id) { student in
-                studentCard(activeProgress.section, student: student)
+            VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
+                partPicker(activeProgress, session: session)
+                AppSection(title: String(localized: "homework.grading.header", table: "Teacher")) {
+                    VStack(spacing: TeacherMetrics.listGap) {
+                        ForEach(students, id: \.id) { student in
+                            studentCard(activeProgress.section, student: student)
+                        }
+                    }
+                }
             }
         }
     }
 
-    private func previousCard(_ progress: I4SectionProgress, session: ClassSession) -> some View {
+    /// One row picks the part being graded; the class-wide mark sits in the row's own menu.
+    private func partPicker(_ progress: I4SectionProgress, session: ClassSession) -> some View {
         let giving = previousSession
-        return VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("BTVN \(giving.map(SessionLabel.inline(for:)) ?? "buổi trước") · \(I4Format.dayMonth(giving?.date ?? session.date))")
-                    .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 21.6))
-                    .foregroundStyle(AppColors.text)
-                Text(String.localizedStringWithFormat(String(localized: "feature.homework.cham.hom.nay.o.buoi.ket.qua.gui.kem.phieu"), SessionLabel.inline(for: session)))
-                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
-                    .foregroundStyle(AppColors.muted)
+        let summary = String.localizedStringWithFormat(
+            String(localized: "homework.grading.summary", table: "Teacher"),
+            SessionLabel.inline(for: giving), I4Format.dayMonth(giving?.date ?? session.date),
+            String(progress.summary.graded), String(progress.summary.total))
+        return HStack(spacing: 4) {
+            Menu {
+                Picker(selection: Binding(get: { progress.section.kind }, set: { selectedKind = $0 })) {
+                    ForEach(previousProgress) { option in
+                        Text(HomeworkRules.partLabel(option.section)).tag(option.section.kind)
+                    }
+                } label: {
+                    Text(String(localized: "homework.part.picker.a11y", table: "Teacher"))
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(summary)
+                            .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
+                            .foregroundStyle(AppColors.muted)
+                            .lineLimit(1)
+                        Text(HomeworkRules.partLabel(progress.section))
+                            .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 22))
+                            .foregroundStyle(AppColors.text)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppColors.muted)
+                }
+                .padding(.leading, 16)
+                .frame(maxWidth: .infinity, minHeight: AppMetrics.buttonHeightLarge, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            kindChips
-            VStack(alignment: .leading, spacing: 0) {
-                Text(progress.section.kind.label.uppercased())
-                    .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18, tracking: 0.24))
-                    .foregroundStyle(AppColors.primaryInk)
-                Text(progress.section.title)
-                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 21))
-                    .foregroundStyle(AppColors.text)
-            }
-            .padding(.top, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(alignment: .top) { AppColors.divider.frame(height: 1) }
-            HStack {
-                Text(String.localizedStringWithFormat(String(localized: "feature.homework.em.a.cham"), String(describing: (progress.summary.graded)), String(describing: (progress.summary.total))))
-                    .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
-                    .foregroundStyle(AppColors.text)
-                Spacer(minLength: 0)
-                Text(String.localizedStringWithFormat(String(localized: "feature.homework.con.chua.cham"), String(describing: (progress.summary.ungraded))))
-                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
-                    .foregroundStyle(AppColors.muted)
-            }
-            AppSaveButton(
-                title: String(localized: "feature.homework.anh.dau.ca.lop.hoan.thanh"),
-                controller: gradeController,
-                variant: .secondary,
-                size: .medium,
-                isEnabled: data.canWriteCommentsReports
-            ) {
-                await data.gradeAll(progress.section, students: students, level: .done)
-                if let message = data.errorMessage { throw I4SaveFailure(message: message) }
-                await saveStatusSource?.refresh()
+            .accessibilityLabel(String(localized: "homework.part.picker.a11y", table: "Teacher"))
+            if data.canWriteCommentsReports {
+                Menu {
+                    Button {
+                        Task {
+                            await data.gradeAll(progress.section, students: students, level: .done)
+                            error = data.errorMessage
+                            await saveStatusSource?.refresh()
+                        }
+                    } label: {
+                        Label(String(localized: "feature.homework.anh.dau.ca.lop.hoan.thanh"), systemImage: "checkmark.circle")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(AppColors.muted)
+                        .frame(width: AppMetrics.tap, height: AppMetrics.tap)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel(String(localized: "homework.part.more.a11y", table: "Teacher"))
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.trailing, 4)
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-    }
-
-    private var kindChips: some View {
-        I4FlowLayout(spacing: 6) {
-            ForEach(previousProgress) { progress in
-                let active = progress.section.id == activeProgress?.section.id
-                  Button { selectedKind = progress.section.kind } label: {
-                      AppChip(title: progress.section.kind.label, selected: active)
-                          .frame(minHeight: AppMetrics.tap)
-                  }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(active ? [.isSelected] : [])
-            }
-        }
     }
 
     private func studentCard(_ section: HomeworkSection, student: Student) -> some View {
