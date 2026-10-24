@@ -113,4 +113,15 @@ final class ReportAPIDecodingTests: XCTestCase {
         XCTAssertEqual(ReportFailure.from(APIFailure.offline, fallback: "fallback"),
                        ReportFailure.from(APIFailure.missingToken, fallback: "x"))
     }
+
+    func testRangeErrorsAreReadFromDetailsReason() {
+        func failure(_ reason: String) -> ReportFailure {
+            let error = APIError(code: "validation_error", message: nil,
+                                 details: .object(["reason": .string(reason)]), requestId: nil)
+            return ReportFailure.from(APIFailure.server(status: 422, error: error, retryAfter: nil), fallback: "fallback")
+        }
+        XCTAssertEqual(failure("invalid_range").message, ReportRangeProblem.order.message)
+        XCTAssertEqual(failure("session_cancelled").message, ReportRangeProblem.cancelled.message)
+        XCTAssertNotEqual(failure("other").message, ReportRangeProblem.order.message)
+    }
 }

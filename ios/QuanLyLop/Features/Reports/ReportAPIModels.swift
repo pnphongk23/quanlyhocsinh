@@ -111,10 +111,11 @@ struct ReportFailure: Error, Equatable {
             if status == 409, error.details?["reason"]?.string == "report_not_ready" {
                 return ReportFailure(message: notReady(error.details?["missing"]))
             }
-            if status == 422, error.code == "invalid_range" {
+            // The server answers 422 `validation_error`; what went wrong is in `details.reason`.
+            if status == 422, error.details?["reason"]?.string == "invalid_range" {
                 return ReportFailure(message: ReportRangeProblem.order.message)
             }
-            if status == 422, error.code == "session_cancelled" {
+            if status == 422, error.details?["reason"]?.string == "session_cancelled" {
                 return ReportFailure(message: ReportRangeProblem.cancelled.message)
             }
             if status == 422 { return ReportFailure(message: String(localized: "reports.error.range", table: "Reports")) }
