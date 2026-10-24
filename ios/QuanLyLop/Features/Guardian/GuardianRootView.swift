@@ -204,13 +204,23 @@ struct GuardianRootView: View {
     }
 
     @ViewBuilder private var updatedLine: some View {
-        if let updatedAt = dashboard?.updatedAt {
-            let formatted = updatedAt.formatted(Date.FormatStyle(date: .numeric, time: .shortened)
-                .locale(Locale(identifier: "vi_VN")))
-            Text(String.localizedStringWithFormat(String(localized: "guardian.updatedAt", table: "Guardian"), formatted))
+        if let dashboard {
+            Text(updatedText(dashboard))
                 .appDynamicText(AppTextStyle(size: 12, weight: .regular, lineHeight: 18))
                 .foregroundStyle(AppColors.muted)
         }
+    }
+
+    private func updatedText(_ dashboard: GuardianDashboard) -> String {
+        guard let updatedAt = dashboard.updatedAt else {
+            return dashboard.isOffline ? String(localized: "reports.guardian.offline", table: "Reports") : ""
+        }
+        let formatted = updatedAt.formatted(Date.FormatStyle(date: .numeric, time: .shortened)
+            .locale(Locale(identifier: "vi_VN")))
+        if dashboard.isOffline {
+            return String.localizedStringWithFormat(String(localized: "reports.guardian.offlineSince", table: "Reports"), formatted)
+        }
+        return String.localizedStringWithFormat(String(localized: "guardian.updatedAt", table: "Guardian"), formatted)
     }
 
     @ViewBuilder private var childSwitcher: some View {

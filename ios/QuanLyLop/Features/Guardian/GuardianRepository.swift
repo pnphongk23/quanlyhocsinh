@@ -5,11 +5,15 @@ import SwiftUI
 
 struct GuardianDashboard: Sendable {
     let children: [GuardianChildData]
-    let updatedAt: Date
+    /// When the data was last refreshed from the server; nil when that time is unknown.
+    let updatedAt: Date?
+    /// The server could not be reached (or answered only in part), so the cache is shown.
+    let isOffline: Bool
 
-    init(children: [GuardianChildData], updatedAt: Date = .now) {
+    init(children: [GuardianChildData], updatedAt: Date? = Date.now, isOffline: Bool = false) {
         self.children = children
         self.updatedAt = updatedAt
+        self.isOffline = isOffline
     }
 }
 
@@ -455,10 +459,21 @@ enum GuardianRepository {
         let scope = CacheScope(userId: identity.user.id, workspaceId: membership.workspace.id, membershipId: membership.id)
         let store = try SQLiteStore.open(scope: scope)
         let sync = SyncCoordinator(api: api, store: store, deviceId: "ios-guardian")
+        var refreshed = true
         do { try await sync.synchronize() } catch {
             guard try await store.position() != nil else { throw error }
+            refreshed = false
         }
-        return try await dashboard(from: store)
+        if refreshed {
+            let studentIDs = try await store.records(Student.self, entity: "student").map(\.id)
+            refreshed = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: studentIDs)
+        }
+        let base = try await dashboard(from: store)
+        if refreshed {
+            GuardianFreshness.record(scope)
+            return GuardianDashboard(children: base.children)
+        }
+        return GuardianDashboard(children: base.children, updatedAt: GuardianFreshness.last(scope), isOffline: true)
     }
 
     /// Every published version of a report stays on the server (`api-spec.md` 6.6), including old ones whose

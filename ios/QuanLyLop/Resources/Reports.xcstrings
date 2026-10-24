@@ -287,6 +287,28 @@
         }
       }
     },
+    "reports.guardian.offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang xem dữ liệu đã lưu trên máy."
+          }
+        }
+      }
+    },
+    "reports.guardian.offlineSince": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang xem dữ liệu đã lưu · cập nhật lúc %@"
+          }
+        }
+      }
+    },
     "reports.guardian.publishedOn": {
       "extractionState": "manual",
       "localizations": {
