@@ -1,5 +1,60 @@
 import Foundation
 import Observation
+import Security
+
+protocol CachedIdentityStore: Sendable {
+    func load() async throws -> CurrentIdentity?
+    func save(_ identity: CurrentIdentity) async throws
+    func clear() async throws
+}
+
+/// Keeps the last server-confirmed identity in the app's Keychain access group.
+/// The encoded value contains its user ID so cached memberships remain tied to that user.
+actor KeychainCachedIdentityStore: CachedIdentityStore {
+    private let service: String
+    private let account = "current-identity"
+
+    init(service: String) { self.service = service }
+
+    private var query: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: service,
+         kSecAttrAccount as String: account]
+    }
+
+    func load() throws -> CurrentIdentity? {
+        var query = query
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = result as? Data else {
+            throw KeychainFailure(status: status == errSecSuccess ? errSecDecode : status)
+        }
+        do { return try JSONDecoder().decode(CurrentIdentity.self, from: data) }
+        catch { throw KeychainFailure(status: errSecDecode) }
+    }
+
+    func save(_ identity: CurrentIdentity) throws {
+        let attributes: [String: Any] = [
+            kSecValueData as String: try JSONEncoder().encode(identity),
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            let addStatus = SecItemAdd(query.merging(attributes) { _, new in new } as CFDictionary, nil)
+            guard addStatus == errSecSuccess else { throw KeychainFailure(status: addStatus) }
+        } else if status != errSecSuccess { throw KeychainFailure(status: status) }
+    }
+
+    func clear() throws {
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw KeychainFailure(status: status)
+        }
+    }
+}
 
 struct AuthCredentials: Encodable, Sendable {
     let phone: String
@@ -96,24 +151,46 @@ final class AuthModel {
     private(set) var activeSync: SyncCoordinator?
     private var returnToSettingsAfterRole = false
 
-    init(configuration: AppConfiguration, apiClient: (any APIClient)? = nil) {
-        let store = KeychainTokenStore(service: "vn.quanlylop.\(configuration.environment.rawValue)")
+    private let identityStore: any CachedIdentityStore
+    private let storeFactory: (CacheScope) throws -> SQLiteStore
+    private let isOnline: @MainActor () -> Bool
+
+    init(configuration: AppConfiguration, apiClient: (any APIClient)? = nil,
+         tokenStore injectedTokenStore: (any TokenStore)? = nil,
+         identityStore injectedIdentityStore: (any CachedIdentityStore)? = nil,
+         storeFactory: ((CacheScope) throws -> SQLiteStore)? = nil,
+         isOnline: @escaping @MainActor () -> Bool = { ConnectivityMonitor.shared.isOnline }) {
+        let service = "vn.quanlylop.\(configuration.environment.rawValue)"
+        let store = injectedTokenStore ?? KeychainTokenStore(service: service)
         tokenStore = store
+        identityStore = injectedIdentityStore ?? KeychainCachedIdentityStore(service: service)
+        self.storeFactory = storeFactory ?? { scope in try SQLiteStore.open(scope: scope) }
+        self.isOnline = isOnline
         api = apiClient ?? URLSessionAPIClient(configuration: configuration, tokenStore: store)
     }
 
     func restoreSession() async {
-        do {
-            guard try await tokenStore.token() != nil else { screen = .login; return }
-            let current = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
-            identity = current
-            if current.user.mustChangePassword { screen = .forcedPassword }
-              else if current.activeMembershipId == nil && current.memberships.isEmpty { screen = .main }
-              else if current.activeMembershipId == nil { screen = .chooseRole }
-            else { try await prepareStore(for: current.user, membershipId: current.activeMembershipId!); screen = .main }
-        } catch {
-            message = Self.userMessage(error)
+        guard (try? await tokenStore.token()) != nil else {
+            try? await identityStore.clear()
             screen = .login
+            return
+        }
+        do {
+            let current = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
+            await installIdentity(current)
+        } catch {
+            if Self.statusCode(error) == 401 {
+                await clearIdentityAndToken()
+                message = Self.userMessage(error)
+                screen = .login
+            } else if Self.statusCode(error) == 403 {
+                await hideRevokedIdentity(error)
+            } else if Self.isRecoverable(error), let cached = try? await identityStore.load() {
+                await installIdentity(cached, persist: false)
+            } else {
+                message = Self.userMessage(error)
+                screen = .login
+            }
         }
     }
 
@@ -138,9 +215,10 @@ final class AuthModel {
         do {
             let request = AuthCredentials(phone: domesticPhone(phone), password: password, deviceLabel: "iPhone")
             let endpoint = try APIEndpoint.json(method: .post, path: "auth/login", body: request, requiresAuthentication: false)
-            let result = try await api.send(endpoint, as: AuthSession.self)
-            try await tokenStore.setToken(result.token)
-            session = result
+              let result = try await api.send(endpoint, as: AuthSession.self)
+              try await tokenStore.setToken(result.token)
+              session = result
+              try? await identityStore.save(Self.currentIdentity(from: result))
             if result.user.mustChangePassword { screen = .forcedPassword }
               else if result.activeMembershipId == nil && result.memberships.isEmpty { screen = .main }
               else if result.activeMembershipId == nil { screen = .chooseRole }
@@ -164,9 +242,10 @@ final class AuthModel {
                                               displayName: name.trimmingCharacters(in: .whitespacesAndNewlines),
                                               workspaceName: workspace.trimmingCharacters(in: .whitespacesAndNewlines))
             let endpoint = try APIEndpoint.json(method: .post, path: "auth/register", body: request, requiresAuthentication: false)
-            let result = try await api.send(endpoint, as: AuthSession.self)
-            try await tokenStore.setToken(result.token)
-            session = result
+              let result = try await api.send(endpoint, as: AuthSession.self)
+              try await tokenStore.setToken(result.token)
+              session = result
+              try? await identityStore.save(Self.currentIdentity(from: result))
             if let membership = result.activeMembershipId {
                 try await prepareStore(for: result.user, membershipId: membership)
                 screen = .main
@@ -183,9 +262,10 @@ final class AuthModel {
                                                        displayName: name.trimmingCharacters(in: .whitespacesAndNewlines))
             let endpoint = try APIEndpoint.json(method: .post, path: "auth/register-guardian",
                                                 body: request, requiresAuthentication: false)
-            let result = try await api.send(endpoint, as: AuthSession.self)
-            try await tokenStore.setToken(result.token)
-            session = result
+              let result = try await api.send(endpoint, as: AuthSession.self)
+              try await tokenStore.setToken(result.token)
+              session = result
+              try? await identityStore.save(Self.currentIdentity(from: result))
             if result.user.mustChangePassword { screen = .forcedPassword }
             else if result.activeMembershipId == nil && result.memberships.isEmpty { screen = .main }
             else if result.activeMembershipId == nil { screen = .chooseRole }
@@ -245,9 +325,10 @@ final class AuthModel {
                 session = AuthSession(token: old.token, expiresAt: old.expiresAt, user: old.user,
                                       memberships: old.memberships, activeMembershipId: selection.activeMembershipId)
             }
-            if let old = identity {
-                identity = CurrentIdentity(user: old.user, activeMembershipId: selection.activeMembershipId,
-                                           memberships: old.memberships)
+              if let old = identity {
+                  identity = CurrentIdentity(user: old.user, activeMembershipId: selection.activeMembershipId,
+                                             memberships: old.memberships)
+                  try? await identityStore.save(identity!)
             }
             try await prepareStore(for: currentUser, membershipId: selection.activeMembershipId)
             screen = returnToSettingsAfterRole ? .settings : .main
@@ -274,8 +355,9 @@ final class AuthModel {
         do {
             let scopeStore = try makeStore(user: user, membershipId: "")
             let controller = SessionController(api: api, tokenStore: tokenStore, store: scopeStore)
-            try await controller.logout()
-            session = nil; identity = nil; activeStore = nil; activeSync = nil; logoutBlock = nil
+              try await controller.logout()
+              try? await identityStore.clear()
+              session = nil; identity = nil; activeStore = nil; activeSync = nil; logoutBlock = nil
             screen = .login
         } catch SessionFailure.pendingCommands(let count) {
             // Sign-out stays blocked while commands are pending (spec mục 5.3).
@@ -295,8 +377,103 @@ final class AuthModel {
     }
 
     func synchronizeWhileActive() async {
+        guard isSyncEligible else { return }
+        if isOnline(), !(await revalidateIdentityWhileOnline()) { return }
         guard isSyncEligible, let activeSync else { return }
         try? await activeSync.synchronize()
+    }
+
+    /// Rechecks server identity when ConnectivityMonitor or SyncScheduler reports reachability.
+    /// A transient failure leaves the cached session usable without a persistent banner.
+    private func revalidateIdentityWhileOnline() async -> Bool {
+        do {
+            let current = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
+            await installIdentity(current)
+            return true
+        } catch {
+            if Self.statusCode(error) == 401 {
+                await clearIdentityAndToken()
+                message = Self.userMessage(error)
+                screen = .login
+                return false
+            }
+            if Self.statusCode(error) == 403 {
+                await hideRevokedIdentity(error)
+                return false
+            }
+            return false
+        }
+    }
+
+    private func installIdentity(_ current: CurrentIdentity, persist: Bool = true) async {
+        identity = current
+        if persist { try? await identityStore.save(current) }
+        if current.user.mustChangePassword {
+            screen = .forcedPassword
+        } else if current.activeMembershipId == nil && current.memberships.isEmpty {
+            activeStore = nil; activeSync = nil
+            screen = .main
+        } else if let membershipId = current.activeMembershipId,
+                  current.memberships.contains(where: { $0.id == membershipId }) {
+            let membership = current.memberships.first { $0.id == membershipId }!
+            let scope = CacheScope(userId: current.user.id, workspaceId: membership.workspace.id, membershipId: membershipId)
+            if activeStore?.scope == scope {
+                screen = .main
+                return
+            }
+            do {
+                try await prepareStore(for: current.user, membershipId: membershipId)
+                screen = .main
+            } catch {
+                message = Self.userMessage(error)
+                screen = .login
+            }
+        } else {
+            activeStore = nil; activeSync = nil
+            screen = .chooseRole
+        }
+    }
+
+    private func hideRevokedIdentity(_ error: Error) async {
+        var previous = identity
+        if previous == nil { previous = try? await identityStore.load() }
+        if let previous, let revokedId = previous.activeMembershipId {
+            let remaining = previous.memberships.filter { $0.id != revokedId }
+            let filtered = CurrentIdentity(user: previous.user, activeMembershipId: nil, memberships: remaining)
+            identity = filtered
+            try? await identityStore.save(filtered)
+            screen = remaining.isEmpty ? .login : .chooseRole
+        } else {
+            try? await identityStore.clear()
+            identity = nil
+            screen = .login
+        }
+        activeStore = nil; activeSync = nil
+        message = Self.userMessage(error)
+    }
+
+    private func clearIdentityAndToken() async {
+        try? await identityStore.clear()
+        try? await tokenStore.clear()
+        session = nil; identity = nil
+        activeStore = nil; activeSync = nil
+    }
+
+    private static func statusCode(_ error: Error) -> Int? {
+        guard let failure = error as? APIFailure else { return nil }
+        if case .server(let status, _, _) = failure { return status }
+        if case .badStatus(let status) = failure { return status }
+        return nil
+    }
+
+    private static func isRecoverable(_ error: Error) -> Bool {
+        guard let failure = error as? APIFailure else { return false }
+        switch failure {
+        case .offline, .invalidURL: return true
+        case .badStatus(let status): return status >= 500
+        case .server(let status, _, _): return status >= 500
+        default: return false
+        }
     }
 
     var isSyncEligible: Bool {
@@ -343,7 +520,12 @@ final class AuthModel {
     private var postPasswordScreen: Screen {
         (session?.activeMembershipId ?? identity?.activeMembershipId) == nil ? .chooseRole : .main
     }
-    var activeStoreForLogout: (any LocalStore)? { activeStore }
+      var activeStoreForLogout: (any LocalStore)? { activeStore }
+
+      private static func currentIdentity(from session: AuthSession) -> CurrentIdentity {
+          CurrentIdentity(user: session.user, activeMembershipId: session.activeMembershipId,
+                          memberships: session.memberships)
+      }
 
     private func pendingCommandCount() async -> Int? {
         guard let activeStore else { return nil }
@@ -353,7 +535,8 @@ final class AuthModel {
     private func prepareStore(for user: User, membershipId: String) async throws {
         let membership = memberships.first { $0.id == membershipId }
         guard let membership else { return }
-        let store = try makeStore(user: user, membershipId: membershipId, workspaceId: membership.workspace.id)
+        let scope = CacheScope(userId: user.id, workspaceId: membership.workspace.id, membershipId: membershipId)
+        let store = try storeFactory(scope)
         activeStore = store
         let key = "vn.quanlylop.device_id"
         let deviceId = UserDefaults.standard.string(forKey: key) ?? UUID().uuidString
@@ -362,7 +545,7 @@ final class AuthModel {
     }
 
     private func makeStore(user: User, membershipId: String, workspaceId: String = "") throws -> SQLiteStore {
-        try SQLiteStore.open(scope: CacheScope(userId: user.id, workspaceId: workspaceId, membershipId: membershipId))
+        try storeFactory(CacheScope(userId: user.id, workspaceId: workspaceId, membershipId: membershipId))
     }
 
     private func domesticPhone(_ value: String) -> String {
