@@ -1,0 +1,45 @@
+{
+  "candidate": "81abd0ad7c4a900db1bb0d7462e8af1cc90e342e",
+  "latencyMs": [
+    687,
+    669,
+    681,
+    694,
+    688,
+    685,
+    669,
+    674,
+    718,
+    707
+  ],
+  "batch": {
+    "scoreInputs": 8,
+    "changed": 8,
+    "pushRequests": 1,
+    "commandsPerRequest": [
+      8
+    ]
+  },
+  "roots": [
+    {
+      "auth": false,
+      "path": "/dang-nhap",
+      "expected": "/dang-nhap",
+      "foundationFlash": false,
+      "screenshot": "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024/shots/after/root-immediate-unauth.png"
+    },
+    {
+      "auth": true,
+      "path": "/lop",
+      "expected": "/lop",
+      "foundationFlash": false,
+      "screenshot": "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024/shots/after/root-immediate-staff.png"
+    }
+  ],
+  "latencySummary": {
+    "min": 669,
+    "median": 686,
+    "max": 718,
+    "under1s": 10
+  }
+}

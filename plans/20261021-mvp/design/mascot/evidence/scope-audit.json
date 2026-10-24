@@ -1,0 +1,13 @@
+{
+  "evidence/completion-source-hashes.json": {
+    "checked": 263,
+    "changed": []
+  },
+  "evidence/protected-baseline.json": {
+    "checked": 260,
+    "changed": []
+  },
+  "temporary_entries": [],
+  "protected_write_set": "No product/docs/research/coordination/lead handback edits; source hashes unchanged",
+  "server": "Reused existing Vite5173 PID37020; no owned server to stop"
+}

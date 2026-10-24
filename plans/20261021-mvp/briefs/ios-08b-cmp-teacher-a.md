@@ -1,0 +1,2 @@
+# I-8B · Đối chiếu: Giáo viên A
+Đọc `briefs/ios-08-cmp-common.md` trước. Nhóm: `Features/Classes/**`, `Features/Attendance/**` (và thư mục con Schedule/Students/ClassSpace nếu có). Báo cáo `ios/docs/report-i8b.md`, ảnh `ios/docs/screens/{classes,attendance}/`. Cổng prototype 5182. Màn: tab bar giáo viên, Lớp (danh sách/tạo/sửa/lưu trữ), Chi tiết lớp (các tab), Học sinh (thêm, sửa SĐT, nghỉ, Cấp mật khẩu), Buổi học, Lịch ngày/tháng, hủy, buổi lẻ, Điểm danh 4 trạng thái. Số buổi: hiển thị `sessionNumber` server trả (buổi hủy không số).

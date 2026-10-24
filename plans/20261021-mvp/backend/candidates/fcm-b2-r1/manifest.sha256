@@ -1,0 +1,9 @@
+e9d11e2b38c0eae2b0a953665e6066dd223084b5db63e8c84b1b3a03e5863ab4  docs/architecture.md
+35d0b3e296f6193d29e2714ae4b90379fd9d82cc7a94a40548a876111b93b92c  docs/spec.md
+fbe481e364579e0bfac967db41a1277eb1d5f773d9f32800d926e44755fb9d7a  plans/20261021-mvp/backend/api-spec.md
+cf727b73ac3c5242d9189e19ec1882d765441bf1176865047eb076a3c5fc3eea  plans/20261021-mvp/backend/authz-matrix.md
+125367f6b0c32fe7ef2585efd511bd897ae6d263d7079d99ccbf623ffa9b76b8  plans/20261021-mvp/backend/check-fcm-ddl.py
+c29d26cb1f22bdd64007058515b0ddb47a067e13cc89865151702248444b9f9e  plans/20261021-mvp/backend/data-model.md
+a22d72f4bc0a4296de707c4488f3f01359259a888aade4ab9290e40e80c676be  plans/20261021-mvp/backend/firebase-setup-checklist.md
+359ddd0d0304bc328f1422d326ee0963cacccf3b68800f29f8bdfb8e05f6bb39  plans/20261021-mvp/backend/offline-plan.md
+03b973d6b2a5a6d1a3280d4c3d9449913e3f30b68d8ef3df8bde3a53fa928446  plans/20261021-mvp/backend/stack-and-cpu.md

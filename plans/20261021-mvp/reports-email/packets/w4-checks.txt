@@ -1,0 +1,1 @@
+cd <worktree> && npm ci (nếu chưa có node_modules; nếu W3 đang chạy npm ci thì chờ xong) && npm run typecheck && npm test && npm run build (lỗi ở file thuộc W3 đang làm dở thì ghi lại, không sửa). Commit theo đường dẫn trên nhánh feat/reports-email: git add <từng file> && git commit -m "feat(web): account email and password reset by link".

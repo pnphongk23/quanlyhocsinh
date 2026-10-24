@@ -1,0 +1,1 @@
+cd design/prototype && npm run typecheck && npm test. Nếu test fail ở file ngoài write-set có sẵn từ trước, ghi lại số fail trước/sau.

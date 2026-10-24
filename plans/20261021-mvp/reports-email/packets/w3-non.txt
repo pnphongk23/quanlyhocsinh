@@ -1,0 +1,1 @@
+Không sửa backend/prototype/iOS/docs/design tokens (cần token mới thì báo lead); không làm nhận xét AI; không deploy, không push, không merge; không git add -A/stash/reset/checkout; không in env/printenv/set/ps/lsof; không in SĐT/email/token/nội dung nhận xét ra log.

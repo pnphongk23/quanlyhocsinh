@@ -1,0 +1,13 @@
+# Tiếp tục visual · 2026-10-22
+
+Cùng Worker Từ Hoảng dưới Domain Lead ece4dfcd, cùng quyền và ràng buộc canonical ở mascot-02-visual.md. General Lead mới: 5c0868ed-278b-4fa3-9fd5-3e8bbf5df5b1; notification vẫn về parent cũ, Domain Lead phụ trách báo đúng General Lead. Đọc mascot-04-render-recovery.md, design/mascot/handback.md và proposal; giữ nguyên 18 SVG đã có.
+
+Đĩa đã phục hồi: Lead đo df còn 12.935.840 KiB. Giới hạn ONE recovery của brief04 là lịch sử khi ENOSPC, không chặn lần tiếp tục được General Lead yêu cầu rõ này. Hoàn tất gói khám phá, không nghiên cứu lại.
+
+Kết quả bắt buộc: ĐỦ 10 PNG mở được, mỗi ảnh 390×844, cùng 10 HTML mockup trên màn prototype thật: Nếp 6 (login, empty, sent, overview, published, error); Mầm 2 (login, empty); Nhịp 2 (login, empty). Không chỉ sáu PNG như brief cũ. Tổng toàn thư mục mascot dưới 15.000.000 bytes. Sử dụng prototype chạy thật với fixture trước load đã sửa, assert đúng route/nội dung trước screenshot; dữ liệu giả rõ ràng, không SĐT/tên/nhận xét thật. Mockup bổ sung mascot vào khoảng trống hoặc vùng minh họa hợp lệ, không đổi chữ, thứ tự, geometry hay che CTA; nếu không có vị trí hợp lệ phải ghi rủi ro và đề xuất riêng, không tự sửa sản phẩm. Phản hồi sent/published trong prototype là minh họa trạng thái, không phải kiểm ACK backend.
+
+Quyền ghi giữ như brief02: directions/, assets/, mockups/, baseline/, evidence/, index.html, proposal.md, visual-handback.md, validate.py trong plans/20261021-mvp/design/mascot/. KHÔNG viết handback.md/coordination.md/research.md (Lead hội tụ); KHÔNG sửa design/prototype, iOS, backend, docs/spec hoặc kiến trúc. Không cài gói nặng/build/DerivedData; dùng deps/browser hiện có. Nếu tạo temp/profile/server riêng phải dọn hoặc dừng khi xong; không xóa dữ liệu người dùng hay server người khác. Không agents/reviewer/polling/sleep.
+
+Cập nhật validator kiểm CẢ 10 PNG: signature, decode bằng thư viện sẵn có, kích thước, đủ10HTML, local links, SVG18, size<15MB. Tạo contact sheet hoặc gallery render nhẹ để Lead xem được cả10; vẫn giữ 10PNG390×844 riêng. Xem lại từng ảnh cạnh baseline; record route/component, baseline hash, fixture/capture command, diff/overlap observations, giới hạn iPhone/VoiceOver/theme/large text. Đừng giữ ảnh thử sai role picker.
+
+Cập nhật proposal và visual-handback bằng kết quả hiện tại, giữ sự kiện ENOSPC cũ ở lịch sử thay vì status hiện hành. Đề xuất Nếp/Mầm/Nhịp bằng tiếng Việt đơn giản, nêu mặt được/chưa được để General Lead trình chọn. Báo file ảnh + số đo + lệnh kiểm, kết thúc Status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT và hai câu. Chỉ báo Domain Lead.

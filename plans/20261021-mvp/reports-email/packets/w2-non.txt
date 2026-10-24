@@ -1,0 +1,1 @@
+Không OTP/SMS, không xác minh email bằng mã, không gửi mail thật, không thêm binding send_email vào wrangler, không web/prototype/iOS/docs, không deploy/--remote, không push; không git add -A/stash/reset/checkout; không in env/printenv/set/ps/lsof; không in SĐT/email/token ra log hay handback.

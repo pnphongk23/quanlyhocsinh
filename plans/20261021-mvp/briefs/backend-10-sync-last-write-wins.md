@@ -1,0 +1,15 @@
+# Việc backend-10: đồng bộ "lệnh tới máy chủ sau cùng thắng" (bỏ xung đột)
+
+Bạn là worker. Worktree `/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-backend`, `worker/` (nhánh `mvp-backend`). Đọc `/Users/phamnhuphong/Git/quanlyhocsinh/docs/spec.md` mục 5.3 và `docs/architecture.md` mục 5 (đã sửa: người dùng chốt 2026-10-21), `plans/20261021-mvp/backend/{api-spec.md (mục 5.5, 6),offline-plan.md,data-model.md,authz-matrix.md}`, `src/db/sync*.ts`, `src/routes/sync.ts`, `tests/sync.test.ts`. Dùng `srcwalk`. Lỗi upstream 429 tạm thời: kiểm `git diff` rồi làm tiếp.
+
+## Quy tắc mới
+Hai thiết bị sửa cùng một ô: thay đổi TỚI MÁY CHỦ SAU CÙNG được áp dụng và thắng; KHÔNG giữ hai giá trị, KHÔNG có bước giáo viên chọn. Thứ tự theo lúc máy chủ nhận/ghi lệnh, không theo giờ thiết bị.
+
+## Việc
+1. Backend (`src/db/sync*.ts`, `src/routes/sync.ts`): lệnh có `base_version` cũ KHÔNG còn `conflict`/`conflict_stale`; áp dụng bình thường (version tăng). Vẫn: bỏ qua `command_id` trùng (idempotent, `duplicate`), `rejected` cho lỗi quyền/hợp lệ/ràng buộc nghiệp vụ (buổi hủy, điểm vượt max, bài đã lưu trữ…). Bỏ ghi `sync_conflicts` và mọi nhánh trả conflict. Nếu cần giữ field phản hồi cho client cũ thì luôn rỗng và ghi chú rõ trong mã/spec. Giữ trigger lịch sử trước/sau nguyên. Không đổi `migrations/` đã áp (nếu bỏ bảng `sync_conflicts` cần migration mới thì KHÔNG làm; chỉ đánh dấu không dùng ở MVP trong docs). Xem lại các lệnh phụ thuộc trạng thái (ví dụ xoá/lưu trữ, tạo trùng id) để quy tắc "sau cùng thắng" nhất quán và không mất dữ liệu ngoài ô bị ghi đè.
+2. Test (`tests/sync.test.ts` và file sync liên quan): đổi các ca conflict thành ca "lệnh sau thắng"; thêm ca hai lệnh cùng ô từ hai thiết bị theo hai thứ tự đến khác nhau (kết quả là giá trị của lệnh ĐẾN SAU, `pull` của cả hai thiết bị thấy cùng giá trị cuối), ca gửi lại UUID (idempotent, không áp dụng lần hai), ca `base_version` cũ vẫn áp dụng. Test đỏ trước khi sửa với ca mới.
+3. Docs ngoài repo code (thư mục chính, chỉ các file này): `plans/20261021-mvp/backend/api-spec.md` (mục 6 và MỌI chỗ nhắc conflict), `offline-plan.md`, `data-model.md` (`sync_conflicts`: đánh dấu không dùng ở MVP, nêu rõ), `authz-matrix.md` (nếu nhắc). Không sửa `docs/spec.md`, `docs/architecture.md` (đã sửa).
+4. `npm run typecheck`, `npm test` xanh. Commit chỉ file bạn sửa trong worktree (conventional, tiếng Anh, không nhắc AI), không push. Deploy lại staging (`wrangler deploy --env staging` từ HEAD, chỉ staging; không đổi `ALLOWED_ORIGINS`), smoke qua HTTPS một ca hai lệnh cùng ô (hai `command_id`, hai thiết bị/hai `device_id` nếu API cần, `base_version` cũ ở lệnh thứ hai): cả hai áp dụng, ô có giá trị lệnh sau, `pull` thấy giá trị cuối. Dùng workspace demo hoặc đăng ký mới với `REGISTRATION_CODE` từ `worker/.dev.vars` (đọc từ file, KHÔNG in mật khẩu/token/mã).
+5. Báo cáo `plans/20261021-mvp/backend/impl-b7-sync-lww-report.md` (thay đổi, lệnh + kết quả đã che, version staging, câu hỏi). Không chứa mật khẩu/token.
+
+Kết thúc: Status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT + 2 câu.
