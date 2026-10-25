@@ -197,7 +197,9 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
       }
       if (!batch.length) break;
       for (let i = 0; i < batch.length; i++) batch[i] = await withTestUpdateId(batch[i], identity);
-      const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({ id, type, payload, base_version, created_at })) as SyncCommand[];
+        const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({
+          id, type, payload: payloadWithoutLegacyTestMax(type, payload), base_version, created_at,
+        })) as SyncCommand[];
       await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "sending" as const })));
       outboxChanged = true;
       let response;
@@ -227,6 +229,11 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
     publishRejected(await db.outbox.where("identity").equals(identity).toArray());
     if (await db.outbox.where("identity").equals(identity).count()) setSaveStatus("error");
   }
+}
+function payloadWithoutLegacyTestMax(type: string, payload: SyncCommand["payload"]): SyncCommand["payload"] {
+  if (type !== "test.create" && type !== "test.update") return payload;
+  const { max: _legacyMax, ...currentPayload } = payload as Record<string, unknown>;
+  return currentPayload as SyncCommand["payload"];
 }
 function publishRejected(rows: OutboxRow[]): void {
   setRejectedCommands(rows.filter((x) => x.status === "rejected").map((x) => ({ id: x.id, type: x.type, error: x.error ?? "rejected" })));

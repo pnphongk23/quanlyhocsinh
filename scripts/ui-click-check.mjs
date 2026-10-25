@@ -198,10 +198,17 @@ try {
         if (await page.getByRole("textbox", { name: "Điểm Học sinh 1" }).inputValue() !== "0") throw new Error("cancel changed a score");
         await click(page.getByRole("button", { name: "Gán điểm mặc định", exact: true }), "reopen default score");
         await dialog.waitFor({ state: "visible" });
+        const pushRequest = page.waitForRequest((request) => request.url().endsWith("/sync/push") && request.method() === "POST" && request.postDataJSON().commands.some((command) => command.type === "score.set"));
         const hit = await click(dialog.getByRole("button", { name: "Gán 15 điểm", exact: true }), "confirm default score");
+        const request = await pushRequest;
+        const commands = request.postDataJSON().commands.filter((command) => command.type === "score.set");
+        if (commands.length !== 8 || commands.some((command) => command.payload.value !== 15 || command.payload.test_id !== "demo-test" || !command.payload.student_id || command.base_version !== 1)) throw new Error("score.set payload does not contain the expected test, students, value, or base version");
+        await page.waitForResponse((response) => response.request() === request && response.ok());
         await page.getByRole("dialog", { name: "Gán điểm mặc định?" }).waitFor({ state: "detached" });
         await page.getByRole("textbox", { name: "Điểm Học sinh 1" }).waitFor({ state: "visible" });
         if (await page.getByRole("textbox", { name: /Điểm Học sinh/ }).evaluateAll((inputs) => inputs.some((input) => input.value !== "15"))) throw new Error("not every visible score became 15");
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.waitForFunction(() => [...document.querySelectorAll('input[aria-label^="Điểm Học sinh"]')].length === 8 && [...document.querySelectorAll('input[aria-label^="Điểm Học sinh"]')].every((input) => input.value === "15"));
         return hit + "; confirmation accepted and visible scores set to 15";
       });
     }

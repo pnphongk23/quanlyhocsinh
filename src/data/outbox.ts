@@ -74,7 +74,13 @@ export async function persistScoreCommands(entries: Array<{ parts: Array<string 
       }
     });
     setSaveStatus("local");
-    commitState("pending", "scores", (draft) => { draft.pending = [...draft.pending.filter((item) => item.entity !== "score"), ...prepared.map((item) => ({ id: item.row.id, entity: "score", recordId: item.key, createdAt: item.row.created_at }))]; });
+    commitState("pending", "scores", (draft) => {
+      const replacedCells = new Set(prepared.map((item) => item.key));
+      draft.pending = [
+        ...draft.pending.filter((item) => item.entity !== "score.set" || !replacedCells.has(item.recordId)),
+        ...prepared.map((item) => ({ id: item.row.id, entity: "score.set", recordId: item.key, createdAt: item.row.created_at })),
+      ];
+    });
     scheduleSync();
   } catch (error) {
     setSaveStatus("error");
