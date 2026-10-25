@@ -52,10 +52,10 @@ enum GuardianDemo {
             Score(testId: "test-grammar", studentId: bao.id, value: 8, version: 1, updatedAt: "2026-10-05T11:00:00.000Z")
         ]
         let slips = [
-            slip("bao-5", .three, ""),
-            slip("bao-6", .two, ""),
-            slip("bao-7", .one, String(localized: "feature.guardian.con.chua.tap.trung.o.phan.luyen.noi")),
-            slip("bao-8", .three, String(localized: "feature.guardian.hom.nay.con.xung.phong.ke.chuyen.truoc.lop.rat.t"))
+            slip("bao-5", 3, ""),
+            slip("bao-6", 2, ""),
+            slip("bao-7", 1, String(localized: "feature.guardian.con.chua.tap.trung.o.phan.luyen.noi")),
+            slip("bao-8", 5, String(localized: "feature.guardian.hom.nay.con.xung.phong.ke.chuyen.truoc.lop.rat.t"))
         ]
         let sections = [
             HomeworkSection(id: "hw-7-vocab", classId: classA, sessionId: "bao-7", kind: .vocabulary,
@@ -77,9 +77,7 @@ enum GuardianDemo {
         ]
         let snapshot = ReportSnapshot(
             studentId: bao.id, month: "2026-10",
-            range: ReportRange(fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00", fromNumber: 1, toNumber: 8,
-                               label: ReportRangeRules.labels(fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00",
-                                                              fromNumber: 1, toNumber: 8).label),
+            range: ReportRange(fromKey: "2026-10-01 00:00", toKey: "2026-10-31 23:59"),
             attendance: AttendanceSummary(present: 3, late: 0, excused: 1, absent: 0, heldSessions: 4),
             // Thứ tự bài kiểm tra trong báo cáo theo thứ tự giáo viên đã tạo (ảnh 10 của P1):
             // Ngữ pháp, Nghe, Nói — không sắp lại theo ngày như tab Điểm số.
@@ -88,7 +86,8 @@ enum GuardianDemo {
                 ReportTest(testId: "test-listening", name: "Nghe", date: "2026-10-07", value: 9),
                 ReportTest(testId: "test-speaking", name: String(localized: "feature.guardian.noi"), date: "2026-10-12", value: 10)
             ],
-            stars: StarsSummary(three: 2, two: 1, one: 1),
+            stars: StarsSummary(three: 2, two: 1, one: 1,
+                                 stars5: Stars5Summary(s5: 3, s4: 1, s3: 1)),
             homework: [
                 HomeworkSummary(kind: .vocabulary, excellent: 1, done: 0, notDone: 0),
                 HomeworkSummary(kind: .exercise, excellent: 0, done: 1, notDone: 0)
@@ -132,10 +131,14 @@ enum GuardianDemo {
                    note: "", lateAt: nil, version: 1, updatedAt: "2026-10-20T11:00:00.000Z")
     }
 
-    private static func slip(_ sessionID: String, _ stars: Stars, _ note: String) -> SessionSlip {
-        SessionSlip(sessionId: sessionID, studentId: "demo-student-bao", stars: stars,
-                    note: note, status: .sent, sentAt: "2026-10-20T11:00:00.000Z",
-                    version: 1, updatedAt: "2026-10-20T11:00:00.000Z")
+    /// Stars 1...3 make an old three-star slip; 4 and 5 make a five-criteria slip with the default sentence.
+    private static func slip(_ sessionID: String, _ stars: Int, _ note: String) -> SessionSlip {
+        let current = stars > 3
+        return SessionSlip(sessionId: sessionID, studentId: "demo-student-bao", stars: stars,
+                           criteria: current ? (1 << stars) - 1 : nil,
+                           comment: current ? SlipRules.defaultSentence(stars: stars) : nil,
+                           note: note, status: .sent, sentAt: "2026-10-20T11:00:00.000Z",
+                           version: 1, updatedAt: "2026-10-20T11:00:00.000Z")
     }
     #endif
 }

@@ -213,21 +213,37 @@ struct GuardianStarShape: Shape {
 }
 
 struct GuardianStars: View {
-    let level: Stars
+    let level: Int
+    /// With a scale the stars are followed by "x/5" (or "x/3" on an old slip); 0 stars then shows only the text.
+    var scale: Int? = nil
     var size: CGFloat = 18
     var label: String? = nil
 
+    init(slip: SessionSlip, size: CGFloat = 18) {
+        self.init(level: slip.stars ?? 0, scale: slip.scale, size: size)
+    }
+
+    init(level: Int, scale: Int? = nil, size: CGFloat = 18, label: String? = nil) {
+        self.level = level; self.scale = scale; self.size = size; self.label = label
+    }
+
     var body: some View {
         HStack(spacing: 2) {
-            ForEach(0..<level.rawValue, id: \.self) { _ in
+            ForEach(0..<max(level, 0), id: \.self) { _ in
                 GuardianStarShape()
                     .fill(GuardianColors.star)
                     .overlay(GuardianStarShape().stroke(GuardianColors.star, lineWidth: 1.5 * size / 24))
                     .frame(width: size, height: size)
             }
+            if let scale {
+                Text(String.localizedStringWithFormat(String(localized: "guardian.stars.outOf", table: "Reports"), level, scale))
+                    .appDynamicText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
+                    .foregroundStyle(AppColors.muted)
+                    .padding(.leading, 4)
+            }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label ?? "\(level.rawValue) sao")
+        .accessibilityLabel(label ?? String.localizedStringWithFormat(String(localized: "guardian.stars.a11y", table: "Reports"), level))
     }
 }
 

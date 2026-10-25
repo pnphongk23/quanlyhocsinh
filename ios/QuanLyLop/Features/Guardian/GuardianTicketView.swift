@@ -26,8 +26,8 @@ struct GuardianTicketView: View {
         if let slip = ticket.slip {
             GuardianTicketCard {
                 GuardianCardHead(title: String(localized: "feature.guardian.nhan.xet.cua.giao.vien"),
-                                 trailing: AnyView(GuardianStars(level: slip.stars ?? .one)))
-                Text(slip.stars?.template ?? "")
+                                 trailing: AnyView(GuardianStars(slip: slip)))
+                Text(SlipRules.sentence(for: slip))
                     .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                     .foregroundStyle(AppColors.text)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -216,8 +216,9 @@ struct GuardianReportView: View {
     }
 
     private func starsCard(_ report: ReportSnapshot) -> some View {
-        let maximum = max(1, report.stars.three, report.stars.two, report.stars.one)
-        let total = report.stars.three + report.stars.two + report.stars.one
+        let stars = report.stars
+        let maximum = max(1, stars.stars5.descending.map(\.count).max() ?? 0, stars.three, stars.two, stars.one)
+        let total = stars.stars5.total + stars.legacyTotal
         return section(String(localized: "feature.guardian.nhan.xet.theo.sao")) {
             Text(String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.co.phieu"), String(describing: (total))))
                 .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
@@ -226,17 +227,36 @@ struct GuardianReportView: View {
                 .appDynamicText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
                 .foregroundStyle(AppColors.muted)
             VStack(spacing: TeacherMetrics.listGap) {
-                starBar(.three, count: report.stars.three, maximum: maximum)
-                starBar(.two, count: report.stars.two, maximum: maximum)
-                starBar(.one, count: report.stars.one, maximum: maximum)
+                if stars.stars5.total > 0 {
+                    ForEach(stars.stars5.descending, id: \.stars) { starBar($0.stars, count: $0.count, maximum: maximum) }
+                }
+                if stars.legacyTotal > 0 {
+                    if stars.stars5.total > 0 {
+                        Text(String(localized: "reports.stars.legacyTitle", table: "Reports"))
+                            .appDynamicText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
+                            .foregroundStyle(AppColors.muted)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    starBar(3, count: stars.three, maximum: maximum)
+                    starBar(2, count: stars.two, maximum: maximum)
+                    starBar(1, count: stars.one, maximum: maximum)
+                }
             }
         }
     }
 
-    private func starBar(_ level: Stars, count: Int, maximum: Int) -> some View {
+    private func starBar(_ level: Int, count: Int, maximum: Int) -> some View {
         HStack(spacing: TeacherMetrics.listGap) {
-            GuardianStars(level: level, size: 16)
-                .frame(width: 62, alignment: .leading)
+            Group {
+                if level == 0 {
+                    Text(String(localized: "reports.stars.zero", table: "Reports"))
+                        .appDynamicText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
+                        .foregroundStyle(AppColors.muted)
+                } else {
+                    GuardianStars(level: level, size: 16)
+                }
+            }
+            .frame(width: 100, alignment: .leading)
             GeometryReader { proxy in
                 Capsule()
                     .fill(AppColors.background)

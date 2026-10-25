@@ -35,7 +35,7 @@ final class GuardianAccessTests: XCTestCase {
         XCTAssertEqual(grading.state, .moved)
 
         let ticket = child.ticket(for: try XCTUnwrap(child.session(id: "grading-session")))
-        XCTAssertEqual(ticket.slip?.stars, .three)
+        XCTAssertEqual(ticket.slip?.stars, 3)
         XCTAssertEqual(ticket.previousSession?.id, "assignment-session")
         XCTAssertEqual(ticket.previousParts.map(\.level), [.excellent])
         XCTAssertEqual(ticket.assigned?.session.id, "grading-session")
@@ -182,7 +182,7 @@ final class GuardianAccessTests: XCTestCase {
             title: "Từ vựng", description: "Ôn bài", version: 1)
         let nextSection = HomeworkSection(id: "next-section", classId: "class", sessionId: second.id, kind: .reading,
             title: "Luyện đọc", description: "Đọc bài mới", version: 1)
-        let slip = SessionSlip(sessionId: second.id, studentId: childID, stars: .three, note: "", status: sent ? .sent : .draft,
+        let slip = SessionSlip(sessionId: second.id, studentId: childID, stars: 3, note: "", status: sent ? .sent : .draft,
             sentAt: sent ? "2026-10-18T00:00:00.000Z" : nil, version: 1, updatedAt: "2026-10-18T00:00:00.000Z")
         return GuardianChildData(student: student, className: "Lớp", sessions: [first, second, third, cancelled],
             attendances: [Attendance(sessionId: second.id, studentId: childID, status: .excused, note: "",

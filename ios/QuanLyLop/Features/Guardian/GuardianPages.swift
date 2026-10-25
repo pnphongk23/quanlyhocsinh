@@ -40,8 +40,8 @@ struct GuardianOverviewPage: View {
                                     Text(String.localizedStringWithFormat(String(localized: "feature.guardian.buoi"), SessionLabel.title(for: item.session)))
                                         .appDynamicText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                                         .foregroundStyle(AppColors.muted)))
-                GuardianStars(level: item.slip.stars ?? .one)
-                Text(item.slip.stars?.template ?? "")
+                GuardianStars(slip: item.slip)
+                Text(SlipRules.sentence(for: item.slip))
                     .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                     .foregroundStyle(AppColors.text)
                     .multilineTextAlignment(.leading)
@@ -118,7 +118,7 @@ struct GuardianSessionListPage: View {
                         .foregroundStyle(row.statusColor)
                 }
                 if let slip = row.sentSlip {
-                    GuardianStars(level: slip.stars ?? .one)
+                    GuardianStars(slip: slip)
                 }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
@@ -197,9 +197,9 @@ struct GuardianCommentsPage: View {
                                  trailing: AnyView(
                                     HStack(spacing: 8) {
                                         if isNew { AppPill(title: String(localized: "feature.guardian.moi"), tone: .primary) }
-                                        GuardianStars(level: item.slip.stars ?? .one)
+                                        GuardianStars(slip: item.slip)
                                     }))
-                Text(item.slip.stars?.template ?? "")
+                Text(SlipRules.sentence(for: item.slip))
                     .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                     .foregroundStyle(AppColors.text)
                     .multilineTextAlignment(.leading)

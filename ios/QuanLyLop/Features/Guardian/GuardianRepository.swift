@@ -543,7 +543,7 @@ extension ReportPublication {
         return "\(month ?? snapshot.month ?? "") 99:99"
     }
 
-    /// "Buổi 1–8 · 01/10–24/10", or "Tháng 10" for a report published before batches existed.
+    /// "Tháng 10/2026" for a monthly report, the dates for a range, or "Tháng 10" for a report published before batches existed.
     var rangeLabel: String {
         if let range = snapshot.range { return ReportRangeRules.label(of: range) }
         return GuardianFormat.monthLabel(month ?? snapshot.month ?? "")
