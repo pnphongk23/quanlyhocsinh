@@ -221,7 +221,9 @@ final class AuthModel {
               try? await identityStore.save(Self.currentIdentity(from: result))
             if result.user.mustChangePassword { screen = .forcedPassword }
               else if result.activeMembershipId == nil && result.memberships.isEmpty { screen = .main }
-              else if result.activeMembershipId == nil { screen = .chooseRole }
+              else if result.activeMembershipId == nil {
+                if !(await selectSoleMembership(result.memberships)) { screen = .chooseRole }
+            }
             else {
                 try await prepareStore(for: result.user, membershipId: result.activeMembershipId!)
                 screen = .main
@@ -428,10 +430,23 @@ final class AuthModel {
                 message = Self.userMessage(error)
                 screen = .login
             }
+        } else if current.activeMembershipId == nil, await selectSoleMembership(current.memberships) {
+            return
         } else {
             activeStore = nil; activeSync = nil
             screen = .chooseRole
         }
+    }
+
+    /// A guardian linked after signing up has exactly one active membership but the server has no active one
+    /// stored for the session yet (`/me` answers `active_membership_id: null`). Picking it for them is the
+    /// only sensible choice, so the role screen is skipped. `selectMembership` does not read `/me`, so this
+    /// cannot loop; when the call fails the caller falls back to the role screen.
+    private func selectSoleMembership(_ memberships: [Membership]) async -> Bool {
+        let active = memberships.filter { $0.status == "active" }
+        guard memberships.count == 1, let only = active.first else { return false }
+        await selectMembership(only)
+        return identity?.activeMembershipId == only.id || session?.activeMembershipId == only.id
     }
 
     private func hideRevokedIdentity(_ error: Error) async {
