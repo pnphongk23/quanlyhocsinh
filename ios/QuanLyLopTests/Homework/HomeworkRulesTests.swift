@@ -3,9 +3,9 @@ import XCTest
 
 final class HomeworkRulesTests: XCTestCase {
     private func session(_ id: String, _ date: String, status: SessionStatus = .held,
-                         number: Int? = nil) -> ClassSession {
+                         number _: Int? = nil) -> ClassSession {
         ClassSession(id: id, classId: "c", date: date, startTime: "18:00", origin: .recurring,
-                     isMakeup: false, status: status, note: nil, version: 1, sessionNumber: number)
+                     isMakeup: false, status: status, note: nil, version: 1)
     }
 
     private func student(_ id: String) -> Student {

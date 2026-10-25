@@ -38,7 +38,7 @@ struct SessionCommentsView: View {
                 slip: data.slip(sessionID: sessionID, studentID: student.id),
                 previousHomework: HomeworkRules.summary(sections: sections, grades: data.grades,
                                                         studentID: student.id),
-                previousSessionNumber: previous?.sessionNumber,
+                previousDate: previous?.date,
                 previousHadSections: previous != nil
             )
         }
@@ -211,7 +211,7 @@ struct SessionCommentsView: View {
     private var sendDialog: some View {
         let ungraded = CommentsRules.ungradedNotice(rows)
         let skipped = rows.filter { $0.stars == nil }
-        let previousLabel = rows.first?.previousSessionNumber.map { String.localizedStringWithFormat(String(localized: "feature.comments.buoi"), String(describing: ($0))) } ?? String(localized: "feature.comments.previousSession")
+        let previousLabel = CommentsRules.previousLabel(date: rows.first?.previousDate)
         return I4Dialog(title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.buoi"), sessionInline), content: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
@@ -321,7 +321,7 @@ struct SessionCommentsView: View {
             session: target.session,
             student: target.student,
             slip: slip,
-            previousSessionNumber: previous?.sessionNumber,
+            previousDate: previous?.date,
             sections: sections,
             grades: data.grades,
             canWrite: data.canWriteCommentsReports,
@@ -350,7 +350,7 @@ struct I4TicketSheet: View {
     let session: ClassSession
     let student: Student
     let slip: SessionSlip?
-    let previousSessionNumber: Int?
+    let previousDate: String?
     let sections: [HomeworkSection]
     let grades: [HomeworkGrade]
     let canWrite: Bool
@@ -366,14 +366,14 @@ struct I4TicketSheet: View {
     @FocusState private var noteFocused: Bool
 
     init(session: ClassSession, student: Student, slip: SessionSlip?,
-         previousSessionNumber: Int?, sections: [HomeworkSection], grades: [HomeworkGrade],
+         previousDate: String?, sections: [HomeworkSection], grades: [HomeworkGrade],
          canWrite: Bool, saveStatusSource: AppSaveStatusSource?,
          onClose: @escaping () -> Void, onGoHomework: @escaping () -> Void,
          onSave: @escaping (Stars?, String) async -> String?) {
         self.session = session
         self.student = student
         self.slip = slip
-        self.previousSessionNumber = previousSessionNumber
+        self.previousDate = previousDate
         self.sections = sections
         self.grades = grades
         self.canWrite = canWrite
@@ -453,7 +453,7 @@ struct I4TicketSheet: View {
                         .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 25))
                         .foregroundStyle(AppColors.text)
                         .lineLimit(1)
-                    Text(String.localizedStringWithFormat(String(localized: "feature.comments.nhan.xet.buoi"), SessionLabel.inline(for: session), String(describing: (I4Format.dayMonth(session.date)))))
+                    Text(String.localizedStringWithFormat(String(localized: "comments.sheet.subtitle", table: "Teacher"), SessionLabel.title(for: session)))
                         .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                         .foregroundStyle(AppColors.muted)
                 }
@@ -523,7 +523,7 @@ struct I4TicketSheet: View {
     private var homeworkBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 0) {
-                Text(previousSessionNumber.map { String.localizedStringWithFormat(String(localized: "feature.comments.btvn.buoi"), String(describing: ($0))) } ?? String(localized: "feature.comments.previousHomework"))
+                Text(previousDate == nil ? String(localized: "feature.comments.previousHomework") : CommentsRules.homeworkPrefix(date: previousDate))
                     .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                     .foregroundStyle(AppColors.text)
                 Text(String(localized: "feature.comments.chi.oc"))
@@ -531,7 +531,7 @@ struct I4TicketSheet: View {
                     .foregroundStyle(AppColors.muted)
             }
             if sections.isEmpty {
-                Text(previousSessionNumber == nil
+                Text(previousDate == nil
                      ? String(localized: "feature.comments.buoi.au.chua.co.btvn.buoi.truoc")
                      : String(localized: "feature.comments.buoi.truoc.khong.giao.btvn"))
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))

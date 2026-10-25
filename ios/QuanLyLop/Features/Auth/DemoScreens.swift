@@ -207,7 +207,7 @@ private struct DemoI4Screen: View {
                             .foregroundStyle(AppColors.muted)
                             .lineLimit(1)
                     }
-                    Text(sessionFeature ? String(localized: "feature.auth.buoi.9.19.10") : String(localized: "feature.auth.tieng.anh.giao.tiep.6a"))
+                    Text(sessionFeature ? String(localized: "auth.demo.session", table: "Teacher") : String(localized: "feature.auth.tieng.anh.giao.tiep.6a"))
                         .appText(sessionFeature ? AppTextStyle(size: 20, weight: .bold, lineHeight: 25)
                                                  : AppText.titleCompact)
                         .foregroundStyle(AppColors.text)

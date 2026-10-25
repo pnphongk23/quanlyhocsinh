@@ -152,9 +152,9 @@ actor SQLiteStore: LocalStore {
         try db.execute("DELETE FROM records WHERE scope=? AND entity='report_publication' AND json_extract(json,'$.report_id')=?",
                        [scope.storageKey, reportID])
     }
-    /// Class sessions with locally computed numbers; the `class_session` snapshot does not carry them.
+    /// Class sessions from the cache.
     func classSessions() throws -> [ClassSession] {
-        SessionNumbering.numbered(try records(ClassSession.self, entity: "class_session"))
+        try records(ClassSession.self, entity: "class_session")
     }
     /// Like `records`, but a row whose JSON no longer fits `Value` is left out instead of failing the whole read.
     /// Only decoding problems are tolerated; storage errors still throw. `skipped` counts the dropped rows

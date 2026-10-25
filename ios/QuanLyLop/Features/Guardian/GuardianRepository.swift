@@ -86,7 +86,7 @@ struct GuardianChildData: Sendable, Identifiable {
             .reversed()
             .map { session -> GuardianAttendanceRow in
                 let record = attendances.first { $0.studentId == student.id && $0.sessionId == session.id }
-                return GuardianAttendanceRow(session: session, number: session.sessionNumber, attendance: record)
+                return GuardianAttendanceRow(session: session, attendance: record)
             }
         return GuardianAttendanceMonth(month: month, rows: Array(rows))
     }
@@ -201,7 +201,6 @@ struct GuardianSentSlip: Identifiable, Sendable {
 
 struct GuardianAttendanceRow: Identifiable, Sendable {
     let session: ClassSession
-    let number: Int?
     let attendance: Attendance?
     var id: String { session.id }
     var status: AttendanceStatus? { attendance?.status }
@@ -365,7 +364,7 @@ enum GuardianFormat {
         name.split(whereSeparator: \.isWhitespace).suffix(2).joined(separator: " ")
     }
 
-    /// "Buổi 18"; buổi huỷ không có số nên hiện "Buổi bù" / "Buổi học".
+    /// "T3 · 21/10".
     static func sessionPrefix(_ session: ClassSession) -> String {
         SessionLabel.title(for: session)
     }

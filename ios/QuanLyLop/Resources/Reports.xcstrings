@@ -737,6 +737,39 @@
           }
         }
       }
+    },
+    "guardian.homework.resultOnDate": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kết quả BTVN ngày %@"
+          }
+        }
+      }
+    },
+    "guardian.ticket.cancelled": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · Đã huỷ"
+          }
+        }
+      }
+    },
+    "guardian.ticket.gradedAt": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cô chấm ở buổi %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

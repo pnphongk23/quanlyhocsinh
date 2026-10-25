@@ -35,7 +35,7 @@ struct TeacherSessionDetailView: View {
             }
         }
         .background(AppColors.background.ignoresSafeArea())
-        .navigationTitle(session.map { "\(TeacherFeatureData.sessionPrefix($0)) · \(TeacherFormat.dayMonth($0.date))" } ?? "")
+        .navigationTitle(session.map { TeacherFeatureData.sessionPrefix($0) } ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbar {

@@ -15,7 +15,7 @@ final class CommentsRulesTests: XCTestCase {
                                version: 1, updatedAt: "2026-10-19T11:00:00.000Z")
         return I4TicketRow(student: student(id, name), slip: slip,
                            previousHomework: I4HomeworkSummary(total: total, graded: graded),
-                           previousSessionNumber: 8, previousHadSections: true)
+                           previousDate: "2026-10-14", previousHadSections: true)
     }
 
     func testCountsAndLabels() {
@@ -63,21 +63,21 @@ final class CommentsRulesTests: XCTestCase {
 
     func testHomeworkLineCopy() {
         let ungraded = CommentsRules.homeworkLine(row("c", "Chi", stars: .one, sent: false, graded: 1, total: 3))
-        XCTAssertEqual(ungraded.text, "BTVN buổi 8: 2 phần Chưa chấm")
+        XCTAssertEqual(ungraded.text, "BTVN ngày 14/10: 2 phần Chưa chấm")
         XCTAssertTrue(ungraded.warning)
 
         let graded = CommentsRules.homeworkLine(row("a", "An", stars: .three, sent: true, graded: 3, total: 3))
-        XCTAssertEqual(graded.text, "BTVN buổi 8: 3/3 phần đã chấm")
+        XCTAssertEqual(graded.text, "BTVN ngày 14/10: 3/3 phần đã chấm")
         XCTAssertFalse(graded.warning)
 
         let noneGiven = I4TicketRow(student: student("d", "Dũng"), slip: nil,
                                     previousHomework: I4HomeworkSummary(total: 0, graded: 0),
-                                    previousSessionNumber: 8, previousHadSections: true)
+                                    previousDate: "2026-10-14", previousHadSections: true)
         XCTAssertEqual(CommentsRules.homeworkLine(noneGiven).text, "Buổi trước không giao BTVN")
 
         let first = I4TicketRow(student: student("e", "Em"), slip: nil,
                                 previousHomework: I4HomeworkSummary(total: 0, graded: 0),
-                                previousSessionNumber: nil, previousHadSections: false)
+                                previousDate: nil, previousHadSections: false)
         XCTAssertEqual(CommentsRules.homeworkLine(first).text, "Buổi đầu · chưa có BTVN buổi trước")
     }
 

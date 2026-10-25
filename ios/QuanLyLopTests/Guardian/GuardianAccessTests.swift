@@ -170,11 +170,11 @@ final class GuardianAccessTests: XCTestCase {
         let student = Student(id: childID, classId: "class", name: "Trần Gia Bảo", parentPhone: nil,
             enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
         let first = ClassSession(id: "assignment-session", classId: "class", date: "2026-10-10", startTime: "18:00",
-            origin: .recurring, status: .held, version: 1, sessionNumber: 1)
+            origin: .recurring, status: .held, version: 1)
         let second = ClassSession(id: "grading-session", classId: "class", date: "2026-10-17", startTime: "18:00",
-            origin: .recurring, status: .held, version: 1, sessionNumber: gradingNumber)
+            origin: .recurring, status: .held, version: 1)
         let third = ClassSession(id: "third-session", classId: "class", date: "2026-10-24", startTime: "18:00",
-            origin: .recurring, status: .planned, version: 1, sessionNumber: 3)
+            origin: .recurring, status: .planned, version: 1)
         let cancelled = ClassSession(id: "cancelled-session", classId: "class", date: "2026-10-22", startTime: "18:00",
             origin: .manual, isMakeup: true, status: .cancelled, note: nil, version: 1)
         let test = TestDefinition(id: "test", classId: "class", name: "Bài kiểm tra", date: "2026-10-16")

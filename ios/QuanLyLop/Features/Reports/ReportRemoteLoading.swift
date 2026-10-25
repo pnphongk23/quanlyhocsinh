@@ -65,7 +65,7 @@ extension I4FeatureStore {
         // or failed session list must not hide the batches, it only blocks picking a new range.
         do {
             let list = try await ReportRemote.sessions(api: api, classID: classID)
-            fullSessions[classID] = SessionNumbering.numbered(list)
+            fullSessions[classID] = list
             sessionListFailure[classID] = nil
         } catch {
             sessionListFailure[classID] = Self.sessionListMessage(error, fallback: fallback)

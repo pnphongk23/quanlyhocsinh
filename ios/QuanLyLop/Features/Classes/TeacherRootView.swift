@@ -287,7 +287,7 @@ struct TeacherClassListView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(String(localized: "classes.tasks.attendance", table: "Teacher"))
                         .appText(AppText.heading).foregroundStyle(AppState.pendingFg)
-                    Text("\(classroom.name) · \(TeacherFeatureData.sessionPrefix(session)) · \(TeacherFormat.dayMonth(session.date))")
+                    Text("\(classroom.name) · \(TeacherFeatureData.sessionPrefix(session))")
                         .appText(AppText.muted).foregroundStyle(AppColors.muted)
                 }
                 Spacer(minLength: 0)

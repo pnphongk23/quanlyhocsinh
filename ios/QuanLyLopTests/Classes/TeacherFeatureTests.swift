@@ -59,19 +59,14 @@ final class TeacherFeatureTests: XCTestCase {
 
     // MARK: - Prototype rules copied from design/prototype/src/data
 
-    func testSessionPrefixUsesServerNumberAndHidesItForCancelledSessions() {
-        let numbered = ClassSession(id: "s", classId: "c", date: "2026-10-19", startTime: "18:00",
-                                    origin: .recurring, status: .planned, version: 1, sessionNumber: 9)
-        XCTAssertEqual(TeacherFeatureData.sessionPrefix(numbered), "Buổi 9")
+    func testSessionPrefixIsWeekdayAndDateForEverySession() {
+        let planned = ClassSession(id: "s", classId: "c", date: "2026-10-19", startTime: "18:00",
+                                   origin: .recurring, status: .planned, version: 1)
+        XCTAssertEqual(TeacherFeatureData.sessionPrefix(planned), "T2 · 19/10")
 
         let cancelled = ClassSession(id: "s", classId: "c", date: "2026-10-16", startTime: "18:00",
-                                     origin: .manual, isMakeup: true, status: .cancelled,
-                                     version: 1, sessionNumber: 9)
-        XCTAssertEqual(TeacherFeatureData.sessionPrefix(cancelled), "Buổi bù")
-
-        let unnumbered = ClassSession(id: "s2", classId: "c", date: "2026-10-16", startTime: "18:00",
-                                      origin: .recurring, status: .planned, version: 1)
-        XCTAssertEqual(TeacherFeatureData.sessionPrefix(unnumbered), "Buổi học")
+                                     origin: .manual, isMakeup: true, status: .cancelled, version: 1)
+        XCTAssertEqual(TeacherFeatureData.sessionPrefix(cancelled), "T6 · 16/10")
     }
 
     func testSplitSessionsSpotlightsTodayOrTheNextPlannedSession() {

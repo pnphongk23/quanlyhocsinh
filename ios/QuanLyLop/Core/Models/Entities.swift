@@ -35,34 +35,13 @@ struct ClassSession: Codable, Sendable, Equatable, Identifiable {
     let status: SessionStatus
     let note: String?
     let version: Int
-    // Stored value is only a hint: `SessionNumbering` recomputes it whenever sessions are read.
-    private let serverSessionNumber: Int?
-    var sessionNumber: Int? { status == .cancelled ? nil : serverSessionNumber }
 
-    enum CodingKeys: String, CodingKey {
-        case id, classId, date, startTime, origin, isMakeup, status, note, version
-        case serverSessionNumber = "sessionNumber"
-    }
+    /// Rows saved or answered with a `session_number` still decode; the key is ignored.
     init(id: String, classId: String, date: String, startTime: String, origin: SessionOrigin,
-         isMakeup: Bool = false, status: SessionStatus = .planned, note: String? = nil,
-         version: Int = 1, sessionNumber: Int? = nil) {
+         isMakeup: Bool = false, status: SessionStatus = .planned, note: String? = nil, version: Int = 1) {
         self.id = id; self.classId = classId; self.date = date; self.startTime = startTime
         self.origin = origin; self.isMakeup = isMakeup; self.status = status
         self.note = note; self.version = version
-        self.serverSessionNumber = status == .cancelled ? nil : sessionNumber
-    }
-    func withSessionNumber(_ number: Int?) -> ClassSession {
-        ClassSession(id: id, classId: classId, date: date, startTime: startTime, origin: origin, isMakeup: isMakeup,
-                     status: status, note: note, version: version, sessionNumber: number)
-    }
-    func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(id, forKey: .id); try c.encode(classId, forKey: .classId)
-        try c.encode(date, forKey: .date); try c.encode(startTime, forKey: .startTime)
-        try c.encode(origin, forKey: .origin); try c.encode(isMakeup, forKey: .isMakeup)
-        try c.encode(status, forKey: .status); try c.encodeIfPresent(note, forKey: .note)
-        try c.encode(version, forKey: .version)
-        try c.encode(sessionNumber, forKey: .serverSessionNumber)
     }
 }
 

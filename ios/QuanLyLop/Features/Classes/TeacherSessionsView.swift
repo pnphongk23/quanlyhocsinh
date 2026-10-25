@@ -77,7 +77,7 @@ struct TeacherSessionsView: View {
     private func currentCard(_ session: ClassSession) -> some View {
         VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(TeacherFeatureData.sessionPrefix(session)) · \(TeacherFormat.weekdayDate(session.date))")
+                Text(TeacherFeatureData.sessionPrefix(session))
                     .appText(AppTextStyle(size: 18, weight: .bold, lineHeight: 23.4))
                     .foregroundStyle(AppColors.text)
                     .fixedSize(horizontal: false, vertical: true)
@@ -163,7 +163,7 @@ struct TeacherSessionsView: View {
                         identifier: "session.row.\(session.id)") {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(TeacherFeatureData.sessionPrefix(session)) · \(TeacherFormat.weekdayDate(session.date))")
+                        Text(TeacherFeatureData.sessionPrefix(session))
                             .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
                             .foregroundStyle(AppColors.text)
                             .multilineTextAlignment(.leading)

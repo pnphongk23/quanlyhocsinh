@@ -18,7 +18,7 @@ struct GuardianTicketView: View {
             }
             .padding(.top, AppMetrics.sectionGap - TeacherMetrics.contentGap)
         }
-        .navigationTitle("\(GuardianFormat.sessionPrefix(session)) · \(GuardianFormat.weekdayDayMonth(session.date))")
+        .navigationTitle(GuardianFormat.sessionPrefix(session))
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -44,7 +44,7 @@ struct GuardianTicketView: View {
 
     @ViewBuilder private var previousHomeworkSection: some View {
         if !ticket.previousParts.isEmpty, let previous = ticket.previousSession {
-            AppSection(title: String.localizedStringWithFormat(String(localized: "feature.guardian.ket.qua.btvn.buoi.3b11636e"), SessionLabel.inline(for: previous), String(describing: (GuardianFormat.dayMonth(previous.date))))) {
+            AppSection(title: String.localizedStringWithFormat(String(localized: "guardian.homework.resultOnDate", table: "Reports"), GuardianFormat.dayMonth(previous.date))) {
                 GuardianTicketCard {
                     GuardianHomeworkParts(parts: ticket.previousParts)
                 }
@@ -57,7 +57,7 @@ struct GuardianTicketView: View {
             GuardianTicketCard {
                 if let homework = ticket.assigned {
                     ForEach(homework.grading.cancelled) { cancelled in
-                        Text(String.localizedStringWithFormat(String(localized: "feature.guardian.a.huy"), String(describing: (GuardianFormat.sessionPrefix(cancelled))), String(describing: (GuardianFormat.dayMonth(cancelled.date)))))
+                        Text(String.localizedStringWithFormat(String(localized: "guardian.ticket.cancelled", table: "Reports"), GuardianFormat.sessionPrefix(cancelled)))
                             .appDynamicText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
                             .foregroundStyle(AppColors.warning)
                             .padding(.horizontal, 8)
@@ -78,10 +78,10 @@ struct GuardianTicketView: View {
         return String.localizedStringWithFormat(String(localized: "feature.guardian.btvn.moi.76c7ccf2"), String(describing: (gradingLine(homework))))
     }
 
-    /// "Cô chấm ở buổi 19 · Thứ Tư 21/10" hoặc "Chưa có buổi chấm".
+    /// "Cô chấm ở buổi T4 · 21/10" hoặc "Chưa có buổi chấm".
     private func gradingLine(_ homework: GuardianHomeworkSession) -> String {
         guard let gradingSession = homework.grading.session else { return String(localized: "feature.guardian.chua.co.buoi.cham") }
-        return String.localizedStringWithFormat(String(localized: "feature.guardian.co.cham.o.buoi"), SessionLabel.inline(for: gradingSession), String(describing: (GuardianFormat.weekdayDayMonth(gradingSession.date))))
+        return String.localizedStringWithFormat(String(localized: "guardian.ticket.gradedAt", table: "Reports"), SessionLabel.title(for: gradingSession))
     }
 }
 

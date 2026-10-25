@@ -58,17 +58,17 @@ enum TeacherDemoData {
         var items: [ClassSession] = pastOffsets.enumerated().map { index, offset in
             ClassSession(id: "demo-session-\(index)", classId: classID, date: addDays(offset),
                          startTime: "18:00", origin: .recurring, status: .held,
-                         version: 1, sessionNumber: index + 1)
+                         version: 1)
         }
         items.append(ClassSession(id: "demo-session-8", classId: classID, date: addDays(-2),
                                   startTime: "18:00", origin: .recurring, status: .planned,
-                                  version: 1, sessionNumber: 9))
+                                  version: 1))
         items.append(ClassSession(id: "demo-session-cancelled", classId: classID, date: addDays(-5),
                                   startTime: "18:00", origin: .manual, isMakeup: true,
                                   status: .cancelled, note: String(localized: "feature.classes.buoi.bu.bi.huy"), version: 1))
         items.append(ClassSession(id: "demo-session-extra", classId: classID, date: addDays(4),
                                   startTime: "17:00", origin: .manual, status: .planned,
-                                  version: 1, sessionNumber: 10))
+                                  version: 1))
         return items
     }
 

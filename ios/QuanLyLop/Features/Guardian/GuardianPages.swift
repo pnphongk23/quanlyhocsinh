@@ -109,7 +109,7 @@ struct GuardianSessionListPage: View {
         Button { openSession(row) } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(GuardianFormat.sessionPrefix(row.session)) · \(GuardianFormat.weekdayDayMonth(row.session.date))")
+                    Text(GuardianFormat.sessionPrefix(row.session))
                         .appDynamicText(AppText.segment)
                         .foregroundStyle(AppColors.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -193,7 +193,7 @@ struct GuardianCommentsPage: View {
     private func ticket(_ item: GuardianSentSlip, isNew: Bool) -> some View {
         Button { openTicket(item.session) } label: {
             GuardianTicketCard(isNew: isNew) {
-                GuardianCardHead(title: String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.c9f84c0e"), SessionLabel.title(for: item.session), String(describing: (GuardianFormat.longDayMonth(item.session.date)))),
+                GuardianCardHead(title: SessionLabel.title(for: item.session),
                                  trailing: AnyView(
                                     HStack(spacing: 8) {
                                         if isNew { AppPill(title: String(localized: "feature.guardian.moi"), tone: .primary) }
@@ -208,7 +208,7 @@ struct GuardianCommentsPage: View {
                 }
                 if let homework = child.gradedHomework(for: item.session), !homework.parts.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(String.localizedStringWithFormat(String(localized: "feature.guardian.ket.qua.btvn.buoi"), SessionLabel.inline(for: homework.session)))
+                        Text(String.localizedStringWithFormat(String(localized: "guardian.homework.resultOnDate", table: "Reports"), GuardianFormat.dayMonth(homework.session.date)))
                             .appDynamicText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                             .foregroundStyle(AppColors.muted)
                         GuardianPillFlow(parts: homework.parts)

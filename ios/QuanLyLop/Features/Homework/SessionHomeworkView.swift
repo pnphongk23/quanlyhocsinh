@@ -148,7 +148,7 @@ struct SessionHomeworkView: View {
         let giving = previousSession
         let summary = String.localizedStringWithFormat(
             String(localized: "homework.grading.summary", table: "Teacher"),
-            SessionLabel.inline(for: giving), I4Format.dayMonth(giving?.date ?? session.date),
+            I4Format.dayMonth(giving?.date ?? session.date),
             String(progress.summary.graded), String(progress.summary.total))
         return HStack(spacing: 4) {
             Menu {
@@ -321,7 +321,7 @@ struct SessionHomeworkView: View {
         let plan = gradingPlan
         if !plan.cancelled.isEmpty, let grading = plan.session {
             let cancelledSessions = plan.cancelled.map { String.localizedStringWithFormat(String(localized: "feature.homework.cancelledSession"), I4Format.dayMonth($0.date)) }.joined(separator: ", ")
-            I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.homework.a.bi.huy.btvn.buoi.cham.o.buoi.phu.huynh.thay.th"), cancelledSessions, SessionLabel.inline(for: session), SessionLabel.inline(for: grading), String(describing: (I4Format.weekdayDayMonth(grading.date)))),
+            I4Banner(text: String.localizedStringWithFormat(String(localized: "homework.grading.cancelledBanner", table: "Teacher"), cancelledSessions, I4Format.dayMonth(session.date), SessionLabel.title(for: grading)),
                      tone: .warning, horizontal: 14)
         } else if plan.session == nil {
             I4Banner(text: String.localizedStringWithFormat(String(localized: "feature.homework.lich.lop.khong.con.buoi.nao.sau.buoi.phu.huynh.t"), SessionLabel.inline(for: session)),

@@ -19,7 +19,6 @@ final class SyncContractFixtureTests: XCTestCase {
         XCTAssertEqual(try decoded(Student.self, "student").first?.enrolledAt, "2026-09-01")
         let sessions = try decoded(ClassSession.self, "class_session")
         XCTAssertEqual(sessions.map(\.status), [.held, .planned])
-        XCTAssertEqual(sessions.map(\.sessionNumber), [nil, nil])
         XCTAssertEqual(try decoded(Attendance.self, "attendance").first?.lateAt, "18:10")
         XCTAssertEqual(try decoded(TestDefinition.self, "test").first?.name, "Kiểm tra 15 phút")
         XCTAssertEqual(try decoded(Score.self, "score").first?.value, 12.5)

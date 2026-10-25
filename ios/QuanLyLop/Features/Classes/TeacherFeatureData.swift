@@ -197,7 +197,7 @@ final class TeacherFeatureData {
         guard let existing = sessions.first(where: { $0.id == value.id }) else { return }
         let changed = ClassSession(id: existing.id, classId: existing.classId, date: existing.date, startTime: existing.startTime,
                                    origin: existing.origin, isMakeup: existing.isMakeup, status: value.status, note: existing.note,
-                                   version: value.version, sessionNumber: existing.sessionNumber)
+                                   version: value.version)
         try await cache(changed, entity: "class_session")
         await refresh()
     }
@@ -299,8 +299,7 @@ final class TeacherFeatureData {
         activeStudents(in: classID).filter(hasAbsenceWarning).count
     }
 
-    /// `sessionPrefix` of `data/repositories/sessions.ts`: numbering is computed on the device
-    /// (`SessionNumbering`); a cancelled session has no number.
+    /// "T3 · 21/10": how a session is named.
     static func sessionPrefix(_ session: ClassSession) -> String {
         SessionLabel.title(for: session)
     }

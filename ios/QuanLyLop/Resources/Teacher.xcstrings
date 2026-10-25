@@ -51,10 +51,9 @@
       }
     },
     "homework.grading.summary" : {
-      "comment" : "Dòng phụ của hàng chọn phần: BTVN của buổi nào, ngày nào, đã chấm bao nhiêu em. %1 là tên buổi, %2 là ngày, %3 là số em đã chấm, %4 là tổng số em.",
       "extractionState" : "manual",
       "localizations" : {
-        "vi" : { "stringUnit" : { "state" : "translated", "value" : "BTVN %1$@ · %2$@ · %3$@/%4$@ em đã chấm" } }
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "BTVN ngày %1$@ · %2$@/%3$@ em đã chấm" } }
       }
     },
     "homework.part.picker.a11y" : {
@@ -265,6 +264,36 @@
       "extractionState" : "manual",
       "localizations" : {
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Huỷ" } }
+      }
+    },
+    "homework.grading.cancelledBanner" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%1$@ đã bị hủy. BTVN ngày %2$@ chấm ở %3$@. Phụ huynh thấy thay đổi này." } }
+      }
+    },
+    "comments.homework.prefixOnDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "BTVN ngày %@" } }
+      }
+    },
+    "comments.previous.onDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "ngày %@" } }
+      }
+    },
+    "comments.sheet.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Nhận xét %@" } }
+      }
+    },
+    "auth.demo.session" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "T2 · 19/10" } }
       }
     }
   },

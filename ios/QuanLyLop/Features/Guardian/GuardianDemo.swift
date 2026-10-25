@@ -28,15 +28,14 @@ enum GuardianDemo {
                            status: .active, version: 1)
 
         let sessions = [
-            session("bao-5", classA, "2026-10-05", 5, .held),
-            session("bao-6", classA, "2026-10-07", 6, .held),
-            session("bao-7", classA, "2026-10-12", 7, .held),
-            session("bao-8", classA, "2026-10-14", 8, .held),
+            session("bao-5", classA, "2026-10-05", .held),
+            session("bao-6", classA, "2026-10-07", .held),
+            session("bao-7", classA, "2026-10-12", .held),
+            session("bao-8", classA, "2026-10-14", .held),
             ClassSession(id: "bao-makeup", classId: classA, date: "2026-10-16", startTime: "18:00",
                          origin: .manual, isMakeup: true, status: .cancelled, note: nil, version: 1),
             ClassSession(id: "bao-9", classId: classA, date: "2026-10-19", startTime: "18:00",
-                         origin: .recurring, isMakeup: false, status: .planned, note: nil,
-                         version: 1, sessionNumber: 9)
+                         origin: .recurring, isMakeup: false, status: .planned, note: nil, version: 1)
         ]
         let attendances = [
             attendance("bao-5", .present), attendance("bao-6", .present),
@@ -108,8 +107,8 @@ enum GuardianDemo {
             attendances: attendances, tests: tests, scores: scores, slips: slips,
             homeworkSections: sections, homeworkGrades: grades, publications: publications)
 
-        let ngocSessions = [session("ngoc-5", classB, "2026-10-05", 5, .held),
-                            session("ngoc-6", classB, "2026-10-07", 6, .held)]
+        let ngocSessions = [session("ngoc-5", classB, "2026-10-05", .held),
+                            session("ngoc-6", classB, "2026-10-07", .held)]
         let ngocData = GuardianChildData(
             student: ngoc, className: String(localized: "feature.guardian.tieng.anh.giao.tiep.6a"),
             sessions: ngocSessions,
@@ -122,10 +121,10 @@ enum GuardianDemo {
     }
 
     private static func session(_ id: String, _ classID: String, _ date: String,
-                                _ number: Int, _ status: SessionStatus) -> ClassSession {
+                                _ status: SessionStatus) -> ClassSession {
         ClassSession(id: id, classId: classID, date: date, startTime: "18:00",
                      origin: .recurring, isMakeup: false, status: status, note: nil,
-                     version: 1, sessionNumber: number)
+                     version: 1)
     }
 
     private static func attendance(_ sessionID: String, _ status: AttendanceStatus) -> Attendance {

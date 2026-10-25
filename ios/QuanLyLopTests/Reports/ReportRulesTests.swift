@@ -14,10 +14,10 @@ final class ReportRulesTests: XCTestCase {
 
     /// s0 #1, s1 #2, s2 #3, s3 cancelled, s4 #4 (planned).
     private var sessions: [ClassSession] {
-        SessionNumbering.numbered([
+        [
             session("s0", "2026-09-28"), session("s1", "2026-10-05"), session("s2", "2026-10-12"),
             session("s3", "2026-10-19", .cancelled), session("s4", "2026-10-26", .planned)
-        ])
+        ]
     }
 
     private func attendance(_ session: String, _ status: AttendanceStatus) -> Attendance {
@@ -74,7 +74,7 @@ final class ReportRulesTests: XCTestCase {
     }
 
     func testDefaultRangeIsNilBeforeAnySessionIsHeld() {
-        let planned = SessionNumbering.numbered([session("p1", "2026-10-05", .planned), session("p2", "2026-10-12", .planned)])
+        let planned = [session("p1", "2026-10-05", .planned), session("p2", "2026-10-12", .planned)]
         XCTAssertNil(ReportRangeRules.defaultRange(planned, classID: "c"))
         XCTAssertNil(ReportRangeRules.defaultRange([], classID: "c"))
     }

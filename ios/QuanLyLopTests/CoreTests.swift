@@ -21,15 +21,12 @@ final class CoreTests: XCTestCase {
         let legacy = Data(#"{"id":"test","class_id":"class","name":"Fixture","date":"2026-10-21","max":10,"version":1,"archived":false}"#.utf8)
         XCTAssertEqual(try WireJSON.decoder().decode(TestDefinition.self, from: legacy), test)
     }
-    func testSessionNumberComesOnlyFromServer() throws {
-        let base = #"{"id":"s","class_id":"c","date":"2026-10-21","start_time":"18:00","origin":"recurring","is_makeup":false,"status":"planned","version":1,"session_number":37}"#
-        let session = try WireJSON.decoder().decode(ClassSession.self, from: Data(base.utf8))
-        XCTAssertEqual(session.sessionNumber, 37)
-        let cancelled = try WireJSON.decoder().decode(ClassSession.self, from: Data(base.replacingOccurrences(of: "planned", with: "cancelled").utf8))
-        XCTAssertNil(cancelled.sessionNumber)
-        XCTAssertEqual(try WireJSON.value(cancelled)["session_number"], .null)
-        let camel = base.replacingOccurrences(of: "session_number", with: "sessionNumber")
-        XCTAssertEqual(try WireJSON.decoder().decode(ClassSession.self, from: Data(camel.utf8)).sessionNumber, 37)
+    func testSessionDecodesWithoutOrIgnoringSessionNumber() throws {
+        let base = #"{"id":"s","class_id":"c","date":"2026-10-21","start_time":"18:00","origin":"recurring","is_makeup":false,"status":"planned","version":1}"#
+        let plain = try WireJSON.decoder().decode(ClassSession.self, from: Data(base.utf8))
+        let withNumber = base.replacingOccurrences(of: #""version":1"#, with: #""version":1,"session_number":37"#)
+        XCTAssertEqual(try WireJSON.decoder().decode(ClassSession.self, from: Data(withNumber.utf8)), plain)
+        XCTAssertNil(try WireJSON.value(plain)["session_number"])
     }
     func testEnumsRejectUnsupportedStatesAndTemplates() throws {
         XCTAssertEqual(AttendanceStatus.allCases.count, 4)
@@ -210,7 +207,6 @@ final class CoreTests: XCTestCase {
         let publications = try await store.records(ReportPublication.self, entity: "report_publication")
         XCTAssertEqual([classes.count,students.count,sessions.count,attendance.count,tests.count,scores.count,
                         slips.count,sections.count,grades.count,reports.count,publications.count], Array(repeating: 1, count: 11))
-        XCTAssertEqual(sessions.first?.sessionNumber, 8)
         XCTAssertEqual(tests.first?.name, "Bài mẫu")
         XCTAssertEqual(publications.first?.snapshot.homework.first?.excellent, 4)
     }

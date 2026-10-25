@@ -18,7 +18,8 @@ struct I4TicketRow: Identifiable {
     let student: Student
     let slip: SessionSlip?
     let previousHomework: I4HomeworkSummary
-    let previousSessionNumber: Int?
+    /// Date of the session before this one, when there is one.
+    let previousDate: String?
     /// Whether the session before this one had homework sections at all.
     let previousHadSections: Bool
 
@@ -83,14 +84,9 @@ enum CommentsRules {
     }
 
     static func homeworkLine(_ row: I4TicketRow) -> (text: String, warning: Bool) {
-        let prefix: String
-        if let number = row.previousSessionNumber {
-            prefix = String.localizedStringWithFormat(String(localized: "feature.comments.btvn.buoi"), String(describing: (number)))
-        } else {
-            prefix = String(localized: "feature.comments.btvn.buoi.truoc")
-        }
+        let prefix = homeworkPrefix(date: row.previousDate)
         if row.previousHomework.total == 0 {
-            if row.previousSessionNumber == nil && !row.previousHadSections {
+            if row.previousDate == nil && !row.previousHadSections {
                 return (String(localized: "feature.comments.buoi.au.chua.co.btvn.buoi.truoc"), false)
             }
             return (String(localized: "feature.comments.buoi.truoc.khong.giao.btvn"), false)
@@ -99,6 +95,20 @@ enum CommentsRules {
             return (String.localizedStringWithFormat(String(localized: "feature.comments.phan.chua.cham"), String(describing: (prefix)), String(describing: (row.previousHomework.ungraded))), true)
         }
         return (String.localizedStringWithFormat(String(localized: "feature.comments.phan.a.cham"), String(describing: (prefix)), String(describing: (row.previousHomework.graded)), String(describing: (row.previousHomework.total))), false)
+    }
+
+    /// "BTVN ngày 21/10", or "BTVN buổi trước" before the first session.
+    static func homeworkPrefix(date: String?) -> String {
+        guard let date else { return String(localized: "feature.comments.btvn.buoi.truoc") }
+        return String.localizedStringWithFormat(String(localized: "comments.homework.prefixOnDate", table: "Teacher"),
+                                                I4Format.dayMonth(date))
+    }
+
+    /// "ngày 21/10", or "buổi trước" before the first session: how a sentence names the previous homework.
+    static func previousLabel(date: String?) -> String {
+        guard let date else { return String(localized: "feature.comments.previousSession") }
+        return String.localizedStringWithFormat(String(localized: "comments.previous.onDate", table: "Teacher"),
+                                                I4Format.dayMonth(date))
     }
 
     /// Students (and parts) still "Chưa chấm" among the slips that will be sent.
