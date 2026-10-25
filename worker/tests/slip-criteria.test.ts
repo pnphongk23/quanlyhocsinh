@@ -1,0 +1,134 @@
+import { beforeEach, describe, it, expect } from 'vitest';
+import { call, post, db, registerWorkspace, fakePhone, insertUser, insertClass, insertStudent, insertSession,
+  insertGuardianMembership, clubToken } from './helpers';
+
+beforeEach(async () => { await db.prepare('DELETE FROM auth_throttle').run(); });
+const uid = () => crypto.randomUUID();
+const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+const command = (type: string, payload: any, base_version = 0) =>
+  ({ id: uid(), type, payload, base_version, created_at: new Date().toISOString() });
+
+async function setup() {
+  const a = await registerWorkspace(fakePhone(), 'Slip criteria');
+  const cls = await insertClass(a.workspaceId, 'C1', a.userId);
+  const ids = [] as string[];
+  for (const name of ['S1', 'S2', 'S3', 'S4'])
+    ids.push(await insertStudent(a.workspaceId, cls, name, null, a.userId));
+  await db.prepare("UPDATE students SET enrolled_at='2000-01-01' WHERE workspace_id=?").bind(a.workspaceId).run();
+  const ses = await insertSession(a.workspaceId, cls, today(), a.userId);
+  const parentUser = await insertUser(fakePhone());
+  const parent = await insertGuardianMembership(a.workspaceId, parentUser, a.roles.guardian!, [ids[0]!]);
+  const parentToken = await clubToken(a.workspaceId, parentUser, parent);
+  const send = (commands: any[]) =>
+    call('/v1/sync/push', post({ membership_id: a.membershipId, device_id: uid(), commands }), a.token);
+  const row = (student: string) => db.prepare('SELECT * FROM session_comments WHERE session_id=? AND student_id=?')
+    .bind(ses, student).first<any>();
+  const parentSlips = async () => (await call(`/v1/sync/snapshot/slip?membership_id=${parent}`, {}, parentToken)).body.items;
+  return { a, cls, s: ids, ses, send, row, parentSlips };
+}
+const attend = (f: Awaited<ReturnType<typeof setup>>, student: string, status: string) =>
+  command('attendance.set', { session_id: f.ses, student_id: student, status });
+
+describe('slip criteria', () => {
+  it('derives stars from the criteria bitmask and keeps per-slip comments', async () => {
+    const f = await setup();
+    const set = (extra: any, base = 0) => f.send([command('slip.set', { session_id: f.ses, student_id: f.s[0], note: '', ...extra }, base)]);
+    expect((await set({ criteria: 0b10111 })).body.results[0].status).toBe('applied');
+    expect(await f.row(f.s[0]!)).toMatchObject({ stars: 4, scale: 5, criteria: 23, comment: null, status: 'draft' });
+    expect((await set({ criteria: 0b10111, comment: '  Con tiến bộ  ' }, 1)).body.results[0].status).toBe('applied');
+    expect((await f.row(f.s[0]!)).comment).toBe('Con tiến bộ');
+    expect((await set({ criteria: 0 }, 2)).body.results[0].status).toBe('applied');
+    expect(await f.row(f.s[0]!)).toMatchObject({ stars: 0, criteria: 0, comment: 'Con tiến bộ' });
+    expect((await set({ criteria: 31, comment: null }, 3)).body.results[0].status).toBe('applied');
+    expect(await f.row(f.s[0]!)).toMatchObject({ stars: 5, comment: null });
+    for (const bad of [32, -1, 1.5, '3', null])
+      expect((await set({ criteria: bad }, 4)).body.results[0].error.details.reason).toBe('invalid_criteria');
+    for (const bad of [7, 'x'.repeat(301)])
+      expect((await set({ criteria: 31, comment: bad }, 4)).body.results[0].error.details.reason).toBe('invalid_comment');
+    expect((await set({}, 4)).body.results[0].error.details.reason).toBe('criteria_required');
+  });
+
+  it('keeps legacy three-star slips readable and editable by installed clients', async () => {
+    const f = await setup();
+    const legacy = (student: string, stars: number | null, status: string) => db.prepare(
+      `INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,status,sent_at,version,created_at,updated_at)
+       VALUES(?,?,?,?,?,3,NULL,NULL,'',?,?,1,'2026-01-01','2026-01-01')`)
+      .bind(f.a.workspaceId, f.cls, f.ses, student, stars, status, status === 'sent' ? '2026-01-01' : null).run();
+    await legacy(f.s[0]!, 2, 'sent');
+    await legacy(f.s[1]!, null, 'draft');
+    const old = (student: string, stars: number | null, base: number) =>
+      f.send([command('slip.set', { session_id: f.ses, student_id: student, stars, note: 'x' }, base)]);
+    expect((await old(f.s[0]!, 3, 1)).body.results[0].status).toBe('applied');
+    expect(await f.row(f.s[0]!)).toMatchObject({ stars: 3, scale: 3, criteria: null, status: 'sent' });
+    const withCriteria = await f.send([command('slip.set', { session_id: f.ses, student_id: f.s[0], criteria: 31, note: '' }, 2)]);
+    expect(withCriteria.body.results[0].error.details.reason).toBe('legacy_scale');
+    // A new slip written by an old client stays on the old scale.
+    expect((await old(f.s[2]!, 1, 0)).body.results[0].status).toBe('applied');
+    expect(await f.row(f.s[2]!)).toMatchObject({ stars: 1, scale: 3 });
+    // A legacy draft moves to the five-criteria scale when edited with criteria.
+    const upgraded = await f.send([command('slip.set', { session_id: f.ses, student_id: f.s[1], criteria: 15, note: '' }, 1)]);
+    expect(upgraded.body.results[0].status).toBe('applied');
+    expect(await f.row(f.s[1]!)).toMatchObject({ stars: 4, scale: 5, criteria: 15 });
+    expect((await old(f.s[1]!, 2, 2)).body.results[0].error.details.reason).toBe('criteria_required');
+    // The parent keeps getting stars 1..3 with scale 3 and no new-scale text.
+    const seen = (await f.parentSlips()).find((x: any) => x.student_id === f.s[0]);
+    expect(seen).toMatchObject({ stars: 3, scale: 3, comment: null });
+    expect(seen).not.toHaveProperty('criteria');
+  });
+
+  it('sends default five-star slips only for present or late students, and hides criteria from parents', async () => {
+    const f = await setup();
+    const [present, late, absent, opened] = f.s as [string, string, string, string];
+    await f.send([attend(f, present, 'present'), attend(f, late, 'late'), attend(f, absent, 'absent'), attend(f, opened, 'absent'),
+      command('slip.set', { session_id: f.ses, student_id: opened, criteria: 3, note: '' })]);
+    const sent = await f.send([command('slip.send', { session_id: f.ses, student_ids: [present, late, absent, opened] })]);
+    const result = sent.body.results[0];
+    expect(result.status).toBe('applied');
+    expect([...result.sent].sort()).toEqual([present, late, opened].sort());
+    expect(result.skipped).toEqual([{ student_id: absent, reason: 'not_attended' }]);
+    expect(await f.row(present)).toMatchObject({ stars: 5, scale: 5, criteria: 31, comment: null, status: 'sent' });
+    expect(await f.row(opened)).toMatchObject({ stars: 2, criteria: 3, status: 'sent' });
+    expect(await f.row(absent)).toBeNull();
+    const view = (await f.parentSlips()).find((x: any) => x.student_id === present);
+    expect(view).toMatchObject({ stars: 5, scale: 5, comment: 'Con học rất tốt, chăm chỉ, tích cực tham gia phát biểu' });
+    expect(view).not.toHaveProperty('criteria');
+    const again = await f.send([command('slip.send', { session_id: f.ses, student_ids: [present] })]);
+    expect(again.body.results[0].skipped).toEqual([{ student_id: present, reason: 'already_sent' }]);
+  });
+
+  it('builds monthly report batches and counts sent slips by stars per scale', async () => {
+    const f = await setup();
+    const month = today().slice(0, 7);
+    const [s1, s2] = f.s as [string, string];
+    await f.send([attend(f, s1, 'present'), attend(f, s2, 'present'),
+      command('slip.set', { session_id: f.ses, student_id: s2, criteria: 7, note: '' })]);
+    await f.send([command('slip.send', { session_id: f.ses, student_ids: [s1, s2] })]);
+    await db.prepare(
+      `INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,status,sent_at,version,created_at,updated_at)
+       SELECT ?,?,?,?,2,3,NULL,NULL,'','sent','2026-01-01',1,'2026-01-01','2026-01-01'
+       WHERE NOT EXISTS(SELECT 1 FROM session_comments WHERE session_id=? AND student_id=?)`)
+      .bind(f.a.workspaceId, f.cls, f.ses, f.s[3], f.ses, f.s[3]).run();
+
+    const id = uid();
+    const create = (body: any) => call(`/v1/classes/${f.cls}/report-batches`, post(body), f.a.token);
+    const first = await create({ month, id });
+    expect(first.status).toBe(201);
+    expect(first.body.batch).toMatchObject({ id, month, from_session_id: null, to_session_id: null,
+      from_key: `${month}-01 00:00`, from_number: null, to_number: null });
+    expect(first.body.batch.to_key.startsWith(`${month}-`)).toBe(true);
+    expect(first.body.reports).toHaveLength(4);
+    expect((await create({ month, id })).status).toBe(200);
+    expect((await create({ month: '2020-01', id })).status).toBe(409);
+    expect((await create({ month })).status).toBe(201);
+    for (const bad of ['2026-13', '2026-1', 7, null])
+      expect((await create({ month: bad })).status).toBe(422);
+
+    const report = (student: string) => first.body.reports.find((r: any) => r.student_id === student).report_id;
+    const preview = async (student: string) => (await call(`/v1/reports/${report(student)}/preview`, {}, f.a.token)).body;
+    const p2 = await preview(s2);
+    expect(p2.snapshot?.stars5 ?? p2.stars5).toMatchObject({ s5: 0, s3: 1 });
+    const p4 = await preview(f.s[3]!);
+    expect(p4.snapshot?.stars ?? p4.stars).toMatchObject({ two: 1 });
+    expect((p4.snapshot?.stars5 ?? p4.stars5)).toMatchObject({ s5: 0, s4: 0, s3: 0, s2: 0, s1: 0, s0: 0 });
+  });
+});

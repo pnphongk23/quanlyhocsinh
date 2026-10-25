@@ -1,3 +1,4 @@
+import {slipForViewer} from "./slip-view";
 import type { Identity, PermGroup } from '../types';
 import { ApiError, notFound, validationError } from '../lib/errors';
 import { requireAccess } from './authz';
@@ -12,10 +13,10 @@ const entities:Record<string,Entity>={
   attendance:{table:'attendance',keys:['session_id','student_id'],fields:['session_id','student_id','status','note','late_at','version','updated_at'],group:'sessions_attendance',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   test:{table:'tests',keys:['id'],fields:['id','class_id','name','date','archived','version'],group:'scores',day:'e.date'},
   score:{table:'scores',keys:['test_id','student_id'],fields:['test_id','student_id','value','version','updated_at'],group:'scores',join:'JOIN tests parent ON parent.id=e.test_id',day:'parent.date'},
-  slip:{table:'session_comments',keys:['session_id','student_id'],fields:['session_id','student_id','stars','note','status','sent_at','version','updated_at'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
+  slip:{table:'session_comments',keys:['session_id','student_id'],fields:['session_id','student_id','stars','scale','criteria','comment','note','status','sent_at','version','updated_at'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   homework_section:{table:'homework_sections',keys:['id'],fields:['id','class_id','session_id','kind','title','description','version'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   homework_grade:{table:'homework_grades',keys:['section_id','student_id'],fields:['section_id','student_id','level','version','updated_at'],group:'comments_reports',join:'JOIN homework_sections hs ON hs.id=e.section_id JOIN class_sessions parent ON parent.id=hs.session_id',day:'parent.date'},
-  report_batch:{table:'report_batches',keys:['id'],fields:['id','class_id','from_session_id','to_session_id','from_key','to_key','version'],group:'comments_reports',day:'substr(e.to_key,1,10)'},
+  report_batch:{table:'report_batches',keys:['id'],fields:['id','class_id','month','from_session_id','to_session_id','from_key','to_key','version'],group:'comments_reports',day:'substr(e.to_key,1,10)'},
   report:{table:'reports',keys:['id'],fields:['id','class_id','student_id','batch_id','month','status','general_comment','needs_republish','publication_count','published_at','version'],group:'comments_reports',day:"e.month||'-01'"},
   report_publication:{table:'report_publications',keys:['id'],fields:['id','report_id','class_id','student_id','batch_id','month','publication_no','published_at','snapshot'],group:'comments_reports',day:"e.month||'-01'"},
 };
@@ -51,11 +52,12 @@ function visibility(i:Identity,name:string):string {
 }
 function fields(i:Identity,name:string):string {
   const e=entities[name]!;
-  const list=e.fields.filter(f=>!(i.scopeKind==='linked_students' && ((name==='student' && f==='parent_phone')||(name==='class_session'&&f==='note'))));
+  const list=e.fields.filter(f=>!(i.scopeKind==='linked_students' && ((name==='student' && f==='parent_phone')||(name==='class_session'&&f==='note')||(name==='slip'&&f==='criteria'))));
     if (name==='class') return `e.id,e.name,e.status,e.weekdays,e.start_time,e.version,${classTeacherNameSql('e')} AS teacher_name`;
   return list.map(f=>`e.${f}`).join(',');
 }
-function decode(name:string,row:Row):Row {
+function decode(i:Identity,name:string,row:Row):Row {
+  if (name==='slip') return slipForViewer(i,row);
   if (name==='class' && row.weekdays!==undefined) row.weekdays=Array.from({length:7},(_,i)=>i+1).filter(day=>(row.weekdays & (1<<(day-1)))!==0);
   if (name==='report_publication') row.snapshot=JSON.parse(row.snapshot);
   if (name==='test') row.archived=Boolean(row.archived);
@@ -95,7 +97,7 @@ export async function snapshotPage(db:D1Database,i:Identity,name:string,after:st
   const page=rows.results.slice(0,limit),last=page.at(-1);
   const next_after=rows.results.length>limit && last ? btoa(JSON.stringify(e.keys.map(k=>last[`_${k}`]))) : null;
   for (const row of page) for (const k of e.keys) delete row[`_${k}`];
-  return {items:page.map(row=>decode(name,row)),next_after};
+  return {items:page.map(row=>decode(i,name,row)),next_after};
 }
 export async function pull(db:D1Database,i:Identity,cursor:number,epoch:number,limit:number) {
   const names=Object.keys(entities).filter(n=>allowed(i,n));
@@ -121,7 +123,7 @@ export async function pull(db:D1Database,i:Identity,cursor:number,epoch:number,l
   names.forEach((name,idx)=>{
     const rows=batches[idx+2]!.results;
     for (const row of rows) {seen.add(JSON.stringify([name,row._k1,row._k2]));delete row._k1;delete row._k2;}
-    if (rows.length) upserts[name]=rows.map(r=>decode(name,r));
+    if (rows.length) upserts[name]=rows.map(r=>decode(i,name,r));
   });
   const deletedMap=new Map<string,{entity:string;k1:string;k2:string}>();
   for (const l of logs) {

@@ -263,7 +263,7 @@ describe('sync scope and read protocol',()=>{
     const pulled=await f.pull();
     expect(pulled.body.upserts.report_publication).toContainEqual(expect.objectContaining({id:publicationId,batch_id:batchId,snapshot:{student_id:f.s1,month}}));
     const batches=await f.page('report_batch');
-    expect(batches.body.items).toContainEqual({id:batchId,class_id:f.cls,from_session_id:null,to_session_id:null,from_key:`${month}-01 00:00`,to_key:`${month}-31 23:59`,version:1});
+    expect(batches.body.items).toContainEqual({id:batchId,class_id:f.cls,month:null,from_session_id:null,to_session_id:null,from_key:`${month}-01 00:00`,to_key:`${month}-31 23:59`,version:1});
     expect(pulled.body.upserts.report_batch).toContainEqual(expect.objectContaining({id:batchId}));
     expect((await f.page('report')).body.items).toContainEqual(expect.objectContaining({id:reportId,batch_id:batchId,month}));
     for (const item of [...page.body.items,...pulled.body.upserts.report_publication]) {
@@ -284,7 +284,7 @@ describe('sync scope and read protocol',()=>{
     expect(sends.map(r=>r.body.results[0].status).sort()).toEqual(['applied','duplicate']);
     const sent=sends.find(r=>r.body.results[0].status==='applied')!;
     expect((await db.prepare('SELECT version FROM session_comments WHERE session_id=? AND student_id=?').bind(next,f.s1).first<any>())!.version).toBe(2);
-    expect(sent.body.results[0]).toMatchObject({status:'applied',sent:[f.s1],skipped:[{student_id:f.s2,reason:'stars_required'}]});
+    expect(sent.body.results[0]).toMatchObject({status:'applied',sent:[f.s1],skipped:[{student_id:f.s2,reason:'not_attended'}]});
     const after=await f.pull(before.body.cursor,'p1');expect(after.body.upserts.slip).toHaveLength(1);expect(after.body.upserts.homework_grade).toHaveLength(1);
     expect((await f.send([command('slip.set',{session_id:next,student_id:f.s1,stars:2,note:'Updated fixture'},2)])).body.results[0].status).toBe('applied');
     expect((await f.send([command('slip.set',{session_id:next,student_id:f.s1,stars:null,note:''},0)])).body.results[0].error.details.reason).toBe('stars_required');

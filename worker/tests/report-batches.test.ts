@@ -431,7 +431,7 @@ describe('report batches by session range', () => {
     const page = await sync('snapshot/report_batch', f.ws.token, admin, '&limit=200');
     expect(page.status).toBe(200);
     expect(page.body.items[0]).toEqual({
-      id: expect.any(String), class_id: f.classId, from_session_id: expect.any(String), to_session_id: expect.any(String),
+      id: expect.any(String), class_id: f.classId, month: null, from_session_id: expect.any(String), to_session_id: expect.any(String),
       from_key: expect.any(String), to_key: expect.any(String), version: 1,
     });
     const reports = await sync('snapshot/report', f.ws.token, admin, '&limit=200');

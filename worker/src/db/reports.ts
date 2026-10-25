@@ -9,7 +9,7 @@ const sessionNumberSql = (col: "from_session_id" | "to_session_id") =>
     (SELECT COUNT(*) FROM class_sessions p WHERE p.class_id=s.class_id AND p.status<>'cancelled'
       AND (p.date<s.date OR (p.date=s.date AND p.start_time<=s.start_time))) END
     FROM class_sessions s WHERE s.id=b.${col})`;
-const BATCH_SELECT = `SELECT b.id,b.class_id,b.from_session_id,b.to_session_id,b.from_key,b.to_key,
+const BATCH_SELECT = `SELECT b.id,b.class_id,b.month,b.from_session_id,b.to_session_id,b.from_key,b.to_key,
   ${sessionNumberSql("from_session_id")} AS from_number,${sessionNumberSql("to_session_id")} AS to_number,
   (SELECT count(*) FROM reports r WHERE r.batch_id=b.id) AS total,
   (SELECT count(*) FROM reports r WHERE r.batch_id=b.id AND r.status='draft') AS draft,
@@ -19,6 +19,7 @@ const BATCH_SELECT = `SELECT b.id,b.class_id,b.from_session_id,b.to_session_id,b
 const mapBatch = (row: Row) => ({
   id: row.id,
   class_id: row.class_id,
+  month: row.month,
   from_session_id: row.from_session_id,
   to_session_id: row.to_session_id,
   from_key: row.from_key,
@@ -52,6 +53,7 @@ export async function createReportBatch(
 ) {
   await classExists(db, i, classId);
   requireAccess(i, "comments_reports", "write", { classId });
+  if (input.month !== undefined) return createMonthReportBatch(db, i, classId, input);
   const fields: Record<string, string> = {};
   for (const key of ["from_session_id", "to_session_id"])
     if (typeof input[key] !== "string" || input[key] === "")
@@ -127,6 +129,60 @@ export async function createReportBatch(
   return { ...(await loadBatchWithReports(db, i.workspaceId, id)), created: true };
 }
 
+/** Đợt theo tháng: mọi buổi không huỷ trong tháng, mỗi học sinh có mặt trong tháng một bản nháp. */
+async function createMonthReportBatch(
+  db: D1Database,
+  i: Identity,
+  classId: string,
+  input: Record<string, unknown>,
+) {
+  const month = input.month;
+  if (typeof month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month))
+    throw validationError({ month: "must_be_month" });
+  const clientId = parseClientId(input);
+  if (clientId) {
+    const owner = await db
+      .prepare("SELECT workspace_id,class_id,month,deleted_at FROM report_batches WHERE id=?")
+      .bind(clientId)
+      .first<Row>();
+    if (owner) {
+      if (owner.deleted_at !== null || owner.workspace_id !== i.workspaceId || owner.class_id !== classId || owner.month !== month)
+        throw idConflict();
+      return { ...(await loadBatchWithReports(db, i.workspaceId, clientId)), created: false };
+    }
+    if (await findIdOwner(db, clientId)) throw idConflict();
+  }
+  const [year, mm] = month.split("-").map(Number) as [number, number];
+  const lastDay = String(new Date(Date.UTC(year, mm, 0)).getUTCDate()).padStart(2, "0");
+  const firstDate = `${month}-01`,
+    lastDate = `${month}-${lastDay}`;
+  const id = clientId ?? crypto.randomUUID(),
+    now = new Date().toISOString();
+  try {
+    await db.batch([
+      db
+        .prepare(
+          `INSERT INTO report_batches(id,workspace_id,class_id,month,from_session_id,to_session_id,from_key,to_key,created_by,created_at,version)
+        VALUES(?,?,?,?,NULL,NULL,?,?,?,?,1)`,
+        )
+        .bind(id, i.workspaceId, classId, month, `${firstDate} 00:00`, `${lastDate} 23:59`, i.userId, now),
+      db
+        .prepare(
+          `INSERT INTO reports(id,workspace_id,class_id,student_id,batch_id,month,status,general_comment,needs_republish,publication_count,published_at,version,created_at,updated_at,updated_by)
+        SELECT lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-4'||substr(lower(hex(randomblob(2))),2)||'-'||substr('89ab',abs(random())%4+1,1)||substr(lower(hex(randomblob(2))),2)||'-'||lower(hex(randomblob(6))),
+          s.workspace_id,s.class_id,s.id,?,?,'draft','',0,0,NULL,1,?,?,?
+        FROM students s WHERE s.workspace_id=? AND s.class_id=? AND s.enrolled_at<=? AND (s.left_at IS NULL OR s.left_at>=?)
+        ORDER BY s.name,s.id`,
+        )
+        .bind(id, month, now, now, i.userId, i.workspaceId, classId, lastDate, firstDate),
+    ]);
+  } catch (error) {
+    if (isConstraintError(error)) throw idConflict();
+    throw error;
+  }
+  return { ...(await loadBatchWithReports(db, i.workspaceId, id)), created: true };
+}
+
 async function loadBatchWithReports(db: D1Database, workspaceId: string, batchId: string) {
   const [batch, reports] = await db.batch<Row>([
     db.prepare(`${BATCH_SELECT} WHERE b.workspace_id=? AND b.id=?`).bind(workspaceId, batchId),
@@ -192,6 +248,21 @@ async function loadReport(db: D1Database, i: Identity, reportId: string, level: 
 
 const LIVE_BATCH = "NOT EXISTS (SELECT 1 FROM report_batches b WHERE b.id=reports.batch_id AND b.deleted_at IS NOT NULL)";
 const LIVE_BATCH_R = "NOT EXISTS (SELECT 1 FROM report_batches b WHERE b.id=r.batch_id AND b.deleted_at IS NOT NULL)";
+/** Số buổi theo sao: phiếu thang 5 vào `stars5`, phiếu cũ thang 3 đếm riêng ở `stars`. */
+function summarizeStars(rows: Row[]) {
+  const stars = { three: 0, two: 0, one: 0 };
+  const stars5 = { s5: 0, s4: 0, s3: 0, s2: 0, s1: 0, s0: 0 };
+  for (const x of rows) {
+    const count = x.count as number;
+    if (x.scale === 3) {
+      if (x.stars === 3) stars.three += count;
+      else if (x.stars === 2) stars.two += count;
+      else stars.one += count;
+    } else stars5[`s${x.stars}` as keyof typeof stars5] += count;
+  }
+  return { stars, stars5 };
+}
+
 const SESSION_IN_RANGE = "(s.date||' '||s.start_time)>=? AND (s.date||' '||s.start_time)<=?";
 
 async function buildBatchPreview(db: D1Database, workspaceId: string, report: ReportRow) {
@@ -220,9 +291,9 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
       .bind(studentId, workspaceId, report.class_id, fromKey.slice(0, 10), toKey.slice(0, 10)),
     db
       .prepare(
-        `SELECT stars,count(*) AS count FROM session_comments c JOIN class_sessions s ON s.id=c.session_id
+        `SELECT c.scale,c.stars,count(*) AS count FROM session_comments c JOIN class_sessions s ON s.id=c.session_id
         JOIN students st ON st.id=c.student_id WHERE c.workspace_id=? AND c.student_id=? AND c.status='sent' AND s.status<>'cancelled'
-        AND s.date>=st.enrolled_at AND (st.left_at IS NULL OR s.date<=st.left_at) AND ${SESSION_IN_RANGE} GROUP BY stars`,
+        AND s.date>=st.enrolled_at AND (st.left_at IS NULL OR s.date<=st.left_at) AND ${SESSION_IN_RANGE} GROUP BY c.scale,c.stars`,
       )
       .bind(workspaceId, studentId, fromKey, toKey),
     db
@@ -253,12 +324,7 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
   const counts = Object.fromEntries(
     attendance!.results.map((x) => [x.status, x.count]),
   );
-  const starCounts = Object.fromEntries(
-    stars!.results.map((x) => [
-      x.stars === 3 ? "three" : x.stars === 2 ? "two" : "one",
-      x.count,
-    ]),
-  );
+  const starSummary = summarizeStars(stars!.results);
   const homeworkByKind = new Map<
     string,
     { kind: string; excellent: number; done: number; not_done: number }
@@ -311,11 +377,8 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
       held_sessions: sessions!.results[0]!.held_sessions,
     },
     tests: tests!.results,
-    stars: {
-      three: starCounts.three ?? 0,
-      two: starCounts.two ?? 0,
-      one: starCounts.one ?? 0,
-    },
+    stars: starSummary.stars,
+    stars5: starSummary.stars5,
     homework: homeworkSummary,
     general_comment: report.general_comment,
     ready: missing.length === 0,
@@ -508,11 +571,11 @@ export async function previewReport(
       .all(),
     db
       .prepare(
-        `SELECT stars,count(*) AS count FROM session_comments c JOIN class_sessions s ON s.id=c.session_id
-      WHERE c.workspace_id=? AND c.student_id=? AND c.status='sent' AND substr(s.date,1,7)=? GROUP BY stars`,
+        `SELECT c.scale,c.stars,count(*) AS count FROM session_comments c JOIN class_sessions s ON s.id=c.session_id
+      WHERE c.workspace_id=? AND c.student_id=? AND c.status='sent' AND substr(s.date,1,7)=? GROUP BY c.scale,c.stars`,
       )
       .bind(i.workspaceId, studentId, month)
-      .all<{ stars: number; count: number }>(),
+      .all<{ scale: number; stars: number; count: number }>(),
     db
       .prepare(
         `SELECT hs.kind, g.level, count(*) AS count FROM homework_grades g JOIN homework_sections hs
@@ -532,12 +595,7 @@ export async function previewReport(
   const counts = Object.fromEntries(
     attendance.results.map((x) => [x.status, x.count]),
   );
-  const starCounts = Object.fromEntries(
-    stars.results.map((x) => [
-      x.stars === 3 ? "three" : x.stars === 2 ? "two" : "one",
-      x.count,
-    ]),
-  );
+  const starSummary = summarizeStars(stars.results);
   const held = await db
     .prepare(
       `SELECT count(*) AS n FROM class_sessions WHERE workspace_id=? AND class_id=? AND status='held' AND substr(date,1,7)=?`,
@@ -574,11 +632,8 @@ export async function previewReport(
       held_sessions: held?.n ?? 0,
     },
     tests: tests.results,
-    stars: {
-      three: starCounts.three ?? 0,
-      two: starCounts.two ?? 0,
-      one: starCounts.one ?? 0,
-    },
+    stars: starSummary.stars,
+    stars5: starSummary.stars5,
     homework: homeworkSummary,
     general_comment: report?.general_comment ?? "",
     ready: true,
