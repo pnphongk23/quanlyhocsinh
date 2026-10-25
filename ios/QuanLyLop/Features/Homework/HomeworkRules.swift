@@ -51,6 +51,17 @@ enum HomeworkRules {
         return I4HomeworkSummary(total: sections.count, graded: graded)
     }
 
+    /// Whether the "homework" criterion (bit 4) is ticked for a student. A hand-set value (`manual`, from a slip with
+    /// `hw_manual`) wins; otherwise it follows last session's grades: any "not done" part unticks it, and everything else
+    /// (all parts done, some parts still ungraded, nothing graded, no homework given) keeps it ticked.
+    /// `sections` are the previous session's parts, as in `summary(sections:grades:studentID:)`.
+    static func homeworkCriterionMet(sections: [HomeworkSection], grades: [HomeworkGrade], studentID: String,
+                                     manual: Bool? = nil) -> Bool {
+        if let manual { return manual }
+        let ids = Set(sections.map(\.id))
+        return !grades.contains { ids.contains($0.sectionId) && $0.studentId == studentID && $0.level == .notDone }
+    }
+
     static func progress(sections: [HomeworkSection], grades: [HomeworkGrade], students: [Student]) -> [I4SectionProgress] {
         sections.map { section in
             let graded = students.filter { student in

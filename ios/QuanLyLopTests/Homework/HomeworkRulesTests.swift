@@ -147,4 +147,44 @@ final class HomeworkRulesTests: XCTestCase {
         let named = section("b", kind: .reading, session: "s")
         XCTAssertEqual(HomeworkRules.partLabel(named), "\(HomeworkKind.reading.label) · Tiêu đề")
     }
+
+    // MARK: - Homework criterion
+
+    private var parts: [HomeworkSection] {
+        [section("v", kind: .vocabulary, session: "prev"), section("r", kind: .reading, session: "prev")]
+    }
+
+    private func criterion(_ grades: [HomeworkGrade], sections: [HomeworkSection]? = nil, manual: Bool? = nil) -> Bool {
+        HomeworkRules.homeworkCriterionMet(sections: sections ?? parts, grades: grades, studentID: "a", manual: manual)
+    }
+
+    func testHomeworkCriterionUnticksOnANotDonePart() {
+        XCTAssertFalse(criterion([grade("v", "a", .excellent), grade("r", "a", .notDone)]))
+        XCTAssertFalse(criterion([grade("v", "a", .notDone)]), "a partly graded set with a not-done part")
+    }
+
+    func testHomeworkCriterionTicksWhenEveryGradedPartIsDone() {
+        XCTAssertTrue(criterion([grade("v", "a", .excellent), grade("r", "a", .done)]))
+    }
+
+    func testHomeworkCriterionKeepsTheDefaultWhenNothingIsGradedOrNoHomework() {
+        XCTAssertTrue(criterion([]))
+        XCTAssertTrue(criterion([grade("v", "a", nil)]))
+        XCTAssertTrue(criterion([], sections: []), "no homework given last session")
+    }
+
+    func testHomeworkCriterionTicksOnAPartialGradeWithoutNotDone() {
+        XCTAssertTrue(criterion([grade("v", "a", .done)]))
+    }
+
+    func testHomeworkCriterionIgnoresOtherStudentsAndOtherSessionsParts() {
+        XCTAssertTrue(criterion([grade("v", "b", .notDone)]))
+        XCTAssertTrue(criterion([grade("other", "a", .notDone)]))
+    }
+
+    func testHomeworkCriterionManualValueWinsOverGrades() {
+        let notDone = [grade("v", "a", .notDone)]
+        XCTAssertTrue(criterion(notDone, manual: true))
+        XCTAssertFalse(criterion([grade("v", "a", .excellent)], manual: false))
+    }
 }
