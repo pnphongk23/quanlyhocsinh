@@ -102,13 +102,28 @@ final class ScoreRulesTests: XCTestCase {
         let (data, store) = try await seededData(students: 3)
         let test = try XCTUnwrap(data.tests.first)
         _ = await data.saveScores(test: test, values: ["s0": "15", "s1": "8"])
-        let before = try await store.pendingCommands().count
-        XCTAssertEqual(before, 2)
+        let before = try await store.pendingCommands()
+        XCTAssertEqual(before.count, 2)
+        let baseVersions = Dictionary(uniqueKeysWithValues: before.map { ($0.recordKey, $0.baseVersion) })
         _ = await data.assignDefaultScore(test: test, students: data.activeStudents(in: "c"))
         let pending = try await store.pendingCommands()
-        XCTAssertEqual(pending.count, 4)
+        // s1's unsent 8 is replaced by 15 (the outbox merges unsent commands of one cell): 3 commands, not 4.
+        XCTAssertEqual(pending.count, 3)
+        XCTAssertEqual(Set(pending.map(\.recordKey)).count, 3)
+        XCTAssertTrue(pending.allSatisfy { $0.kind == "score.set" && $0.payload["value"] == .number(15) })
+        for command in pending {
+            if let base = baseVersions[command.recordKey] { XCTAssertEqual(command.baseVersion, base) }
+        }
         XCTAssertEqual(Set(data.scores.compactMap(\.value)), [15])
         XCTAssertEqual(data.scores.count, 3)
+    }
+
+    func testDraftsAfterAssignKeepWhatChangedWhileItRan() {
+        let atConfirm = ["s0": "8", "s1": "12"]
+        // s0 untouched, s1 edited again, s2 typed for the first time during the wait.
+        let current = ["s0": "8", "s1": "12,5", "s2": "9"]
+        XCTAssertEqual(ScoreRules.draftsAfterAssign(current: current, atConfirm: atConfirm), ["s1": "12,5", "s2": "9"])
+        XCTAssertEqual(ScoreRules.draftsAfterAssign(current: atConfirm, atConfirm: atConfirm), [:])
     }
 
     func testSaveScoresRejectsAnythingOutsideTheScoreRangeBeforeWriting() async throws {

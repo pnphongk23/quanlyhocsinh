@@ -110,6 +110,10 @@ extension I4FeatureStore {
             await refresh()
             return await reloadPreviews(reportIDs: rows.map(\.reportId))
         } catch {
+            // Deleted on another device: the batch is gone, not an error to retry.
+            if case .server(let status, _, _)? = error as? APIFailure, status == 404 {
+                return await dropReportBatchLocally(batchID: batchID, fallback: fallback)
+            }
             return ReportFailure.from(error, fallback: fallback)
         }
     }

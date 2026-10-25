@@ -15,6 +15,9 @@ struct ReportBatchDetailView: View {
     @State private var skipped: [BatchPublishResponse.Skipped] = []
     @State private var publishing = false
     @State private var commentController = AppSaveController()
+    @State private var deletion: ReportDeletionTarget?
+    @State private var deleting = false
+    @Environment(\.dismiss) private var dismiss
 
     private var batch: ReportBatch? { data.batches.first { $0.id == batchID } }
     private var classID: String { batch?.classId ?? "" }
@@ -73,6 +76,7 @@ struct ReportBatchDetailView: View {
                 } else {
                     VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
                         summaryLine(summary)
+                        ReportDeleteOfflineNote(data: data)
                         notices
                     }
                     AppSection(title: String(localized: "reports.detail.students", table: "Reports")) {
@@ -93,6 +97,17 @@ struct ReportBatchDetailView: View {
         .navigationTitle(range?.label ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) { publishBar(summary) }
+        .toolbar {
+            if batch != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ReportBatchMenu(batchID: batchID, data: data, target: $deletion, busy: deleting || publishing) {
+                        Image(systemName: "ellipsis")
+                    }
+                }
+            }
+        }
+        .reportDeletionDialog(target: $deletion, data: data, onFailure: { error = $0 }, onDeleted: { dismiss() },
+                              busy: $deleting)
         .task { await reloadDetail() }
         .fullScreenCover(item: $preview) { target in
             ReportPreviewScreen(target: target, data: data, className: klass?.name ?? "") { number in

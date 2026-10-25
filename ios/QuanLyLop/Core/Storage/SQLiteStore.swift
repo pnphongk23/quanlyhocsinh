@@ -127,6 +127,31 @@ actor SQLiteStore: LocalStore {
         try db.execute("SELECT key FROM records WHERE scope=? AND entity=? ORDER BY key", [scope.storageKey, entity])
             .compactMap { try read(type, forKey: $0["key"]!) }
     }
+    /// Drops a deleted report batch from the cache: the batch, every report of it and every publication of those
+    /// reports. `report_publication` rows carry `batch_id` only for batch-based reports, so the publications of
+    /// the batch's reports are matched by `report_id` as well.
+    func removeReportBatch(id: String) throws {
+        try transaction {
+            let reportKeys = try db.execute(
+                "SELECT key, json_extract(json,'$.id') AS id FROM records WHERE scope=? AND entity='report' AND json_extract(json,'$.batch_id')=?",
+                [scope.storageKey, id])
+            let reportIDs = reportKeys.compactMap { $0["id"] }
+            for row in reportKeys { try db.execute("DELETE FROM records WHERE scope=? AND key=?", [scope.storageKey, row["key"]!]) }
+            try db.execute("DELETE FROM records WHERE scope=? AND entity='report_publication' AND json_extract(json,'$.batch_id')=?",
+                           [scope.storageKey, id])
+            for reportID in reportIDs { try deletePublications(ofReport: reportID) }
+            try db.execute("DELETE FROM records WHERE scope=? AND key=?",
+                           [scope.storageKey, RecordKey(entity: "report_batch", k1: id).storageKey])
+        }
+    }
+    /// Drops the cached publications of one report (the server answered 404 for it: its batch was deleted).
+    func removePublications(ofReport reportID: String) throws {
+        try transaction { try deletePublications(ofReport: reportID) }
+    }
+    private func deletePublications(ofReport reportID: String) throws {
+        try db.execute("DELETE FROM records WHERE scope=? AND entity='report_publication' AND json_extract(json,'$.report_id')=?",
+                       [scope.storageKey, reportID])
+    }
     /// Class sessions with locally computed numbers; the `class_session` snapshot does not carry them.
     func classSessions() throws -> [ClassSession] {
         SessionNumbering.numbered(try records(ClassSession.self, entity: "class_session"))

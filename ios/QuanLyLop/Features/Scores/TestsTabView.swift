@@ -28,7 +28,7 @@ struct TestsTabView: View {
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, TeacherMetrics.screenPaddingTop)
-            .padding(.bottom, 96)
+            .padding(.bottom, TeacherMetrics.fabContentInset)
         }
         .background(AppColors.background.ignoresSafeArea())
         .overlay(alignment: .bottomTrailing) {
@@ -37,8 +37,8 @@ struct TestsTabView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(String(localized: "feature.scores.bai.moi"))
                     .accessibilityIdentifier("test.new")
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 16)
+                    .padding(.trailing, TeacherMetrics.fabTrailingInset)
+                    .padding(.bottom, TeacherMetrics.fabBottomInset)
             }
         }
         .navigationDestination(isPresented: $showingCreate) {
@@ -238,7 +238,7 @@ struct TestScoresView: View {
         .confirmationDialog(String(localized: "scores.assignDefault.title", table: "Teacher"),
                             isPresented: $confirmingAssignDefault, titleVisibility: .visible) {
             Button(String(localized: "scores.assignDefault.confirm", table: "Teacher"), role: .destructive) {
-                Task { await assignDefault(test) }
+                Task { await assignDefault(test, draftsAtConfirm: drafts) }
             }
             .accessibilityIdentifier("test.assignDefault.confirm")
             Button(String(localized: "students.leave.cancel", table: "Teacher"), role: .cancel) {}
@@ -268,13 +268,13 @@ struct TestScoresView: View {
         .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
-    private func assignDefault(_ test: TestDefinition) async {
+    private func assignDefault(_ test: TestDefinition, draftsAtConfirm: [String: String]) async {
         if let failure = await data.assignDefaultScore(test: test, students: students) {
             error = failure
             return
         }
         error = nil
-        drafts.removeAll()
+        drafts = ScoreRules.draftsAfterAssign(current: drafts, atConfirm: draftsAtConfirm)
         await saveStatusSource?.refresh()
     }
 

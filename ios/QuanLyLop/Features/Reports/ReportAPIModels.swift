@@ -138,3 +138,9 @@ struct ReportFailure: Error, Equatable {
                                                 reasons.joined(separator: ", "))
     }
 }
+
+/// `DELETE /report-batches/{id}` answer; deleting an already deleted batch answers the same.
+struct DeleteReportBatchResponse: Decodable, Sendable, Equatable {
+    let id: String
+    let deleted: Bool
+}

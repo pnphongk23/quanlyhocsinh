@@ -176,15 +176,15 @@ struct TeacherClassListView: View {
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, TeacherMetrics.screenPaddingTop)
-            .padding(.bottom, 96)
+            .padding(.bottom, TeacherMetrics.fabContentInset)
         }
         .background(AppColors.background.ignoresSafeArea())
         .overlay(alignment: .bottomTrailing) {
             if data.canWriteClasses {
                 TeacherLink(route: .newClass) { TeacherFab() }
                     .accessibilityLabel(String(localized: "feature.classes.tao.lop.moi"))
-                .padding(.trailing, 20)
-                .padding(.bottom, 16)
+                .padding(.trailing, TeacherMetrics.fabTrailingInset)
+                .padding(.bottom, TeacherMetrics.fabBottomInset)
             }
         }
         .navigationTitle(String(localized: "feature.classes.lop.cua.toi"))

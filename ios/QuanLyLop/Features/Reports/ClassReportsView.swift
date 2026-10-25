@@ -10,6 +10,8 @@ struct ClassReportsView: View {
     @State private var openBatchID: String?
     @State private var error: String?
     @State private var loading = false
+    @State private var deletion: ReportDeletionTarget?
+    @State private var deleting = false
 
     /// `seedError` lets the debug screenshot harness open the screen already in its error state.
     init(classID: String, data: I4FeatureStore = I4FeatureStore(), seedError: String? = nil) {
@@ -39,6 +41,8 @@ struct ClassReportsView: View {
             .navigationDestination(item: $openBatchID) { batchID in
                 ReportBatchDetailView(batchID: batchID, data: data)
             }
+            .reportDeletionDialog(target: $deletion, data: data, onFailure: { error = $0 }, onDeleted: { error = nil },
+                                  busy: $deleting)
     }
 
     /// Reads the class's sessions, batches and reports from the server. A failure is kept as `error`,
@@ -67,6 +71,7 @@ struct ClassReportsView: View {
                     emptyState
                 } else {
                     if let error { TeacherErrorBanner(message: error) { Task { await reload() } } }
+                    ReportDeleteOfflineNote(data: data)
                     AppSection(title: String(localized: "reports.list.title", table: "Reports")) {
                         VStack(spacing: TeacherMetrics.listGap) {
                             ForEach(batches, id: \.id) { batchRow($0) }
@@ -91,31 +96,42 @@ struct ClassReportsView: View {
     private func batchRow(_ batch: ReportBatch) -> some View {
         let range = ReportRangeRules.resolve(batch, sessions: sessions)
         let counts = ReportRangeRules.counts(data.reports(batchID: batch.id))
-        return Button { openBatchID = batch.id } label: {
-            HStack(spacing: TeacherMetrics.contentGap) {
-                VStack(alignment: .leading, spacing: AppMetrics.fieldGap) {
-                    Text(range.label)
-                        .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
-                        .foregroundStyle(AppColors.text)
-                        .multilineTextAlignment(.leading)
-                    Text(countsLine(counts))
-                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
-                        .foregroundStyle(counts.needsRepublish > 0 ? AppColors.warning : AppColors.muted)
-                        .multilineTextAlignment(.leading)
+        return HStack(spacing: 0) {
+            Button { openBatchID = batch.id } label: {
+                HStack(spacing: TeacherMetrics.contentGap) {
+                    VStack(alignment: .leading, spacing: AppMetrics.fieldGap) {
+                        Text(range.label)
+                            .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
+                            .foregroundStyle(AppColors.text)
+                            .multilineTextAlignment(.leading)
+                        Text(countsLine(counts))
+                            .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                            .foregroundStyle(counts.needsRepublish > 0 ? AppColors.warning : AppColors.muted)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppColors.muted)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(AppColors.muted)
+                .padding(.leading, AppMetrics.cardPaddingHorizontal)
+                .padding(.trailing, data.canWriteCommentsReports ? TeacherMetrics.listGap : AppMetrics.cardPaddingHorizontal)
+                .padding(.vertical, TeacherMetrics.contentGap)
+                .frame(maxWidth: .infinity, minHeight: TeacherMetrics.reportRowMinHeight)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
-            .padding(.vertical, TeacherMetrics.contentGap)
-            .frame(maxWidth: .infinity, minHeight: TeacherMetrics.reportRowMinHeight)
-            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("reports.batch.row")
+            ReportBatchMenu(batchID: batch.id, data: data, target: $deletion, busy: deleting) {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(AppColors.muted)
+                    .frame(width: AppMetrics.tap, height: AppMetrics.tap)
+                    .contentShape(Rectangle())
+            }
+            .padding(.trailing, TeacherMetrics.listGap)
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("reports.batch.row")
+        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 
     private func countsLine(_ counts: ReportBatchCounts) -> String {
