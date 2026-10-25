@@ -46,6 +46,22 @@ private final class SQLiteConnection: @unchecked Sendable {
     }
 }
 
+/// Records a sync removed, shared by every store instance of a scope: a request that was already in flight
+/// when the removal landed must not write the record back. A later sync upsert of the same key lifts the mark.
+final class DeletedRecordMarks: @unchecked Sendable {
+    static let shared = DeletedRecordMarks()
+    private let lock = NSLock()
+    private var marks = Set<String>()
+
+    private func mark(_ scope: CacheScope, _ key: String) -> String { scope.storageKey + "|" + key }
+    func insert(_ scope: CacheScope, key: String) { lock.lock(); marks.insert(mark(scope, key)); lock.unlock() }
+    func remove(_ scope: CacheScope, key: String) { lock.lock(); marks.remove(mark(scope, key)); lock.unlock() }
+    func contains(_ scope: CacheScope, anyOf keys: [String]) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return keys.contains { marks.contains(mark(scope, $0)) }
+    }
+}
+
 actor SQLiteStore: LocalStore {
     nonisolated let scope: CacheScope
     private let db: SQLiteConnection
@@ -314,6 +330,25 @@ actor SQLiteStore: LocalStore {
             }
             try setPosition(SyncPosition(cursor: page.cursor, epoch: page.epoch))
         }
+        for (entity, values) in page.upserts where SyncEntity.allowed.contains(entity) {
+            for value in values {
+                if let key = try? Self.recordKey(entity: entity, value: value) {
+                    DeletedRecordMarks.shared.remove(scope, key: key.storageKey)
+                }
+            }
+        }
+        for key in page.deleted where SyncEntity.allowed.contains(key.entity) {
+            DeletedRecordMarks.shared.insert(scope, key: key.storageKey)
+        }
+    }
+
+    /// Writes a record that came from a request made earlier, unless a sync has since removed it or the record
+    /// it belongs to (`guarding` lists those keys). Returns false when the write was skipped.
+    @discardableResult
+    func writeFetched<Value: Encodable & Sendable>(_ value: Value, forKey key: String, guarding owners: [String] = []) throws -> Bool {
+        if DeletedRecordMarks.shared.contains(scope, anyOf: [key] + owners) { return false }
+        try write(value, forKey: key)
+        return true
     }
     private func setPosition(_ position: SyncPosition) throws {
         try db.execute("INSERT INTO meta(scope,cursor,epoch) VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET cursor=excluded.cursor,epoch=excluded.epoch", [scope.storageKey,String(position.cursor),String(position.epoch)])

@@ -45,7 +45,9 @@ enum GuardianReportHistory {
                         .init(method: .get, path: "reports/\(item.reportId)/publications/\(item.publicationCount)"),
                         as: ReportPublication.self)
                     let key = RecordKey(entity: "report_publication", k1: publication.id, k2: "").storageKey
-                    try await store.write(publication, forKey: key, enqueueing: nil)
+                    let owner = RecordKey(entity: "report", k1: publication.reportId).storageKey
+                    // A sync that removed the report while this request was in flight wins.
+                    guard try await store.writeFetched(publication, forKey: key, guarding: [owner]) else { continue }
                     have.insert(marker)
                 } catch {
                     // 404: the teacher deleted the report. Nothing of it may stay readable offline.

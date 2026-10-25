@@ -103,6 +103,41 @@ final class GuardianDeletedReportTests: XCTestCase {
         XCTAssertTrue(next.isOffline)
     }
 
+    func testPublicationFetchedBeforeASyncDeletionDoesNotComeBack() async throws {
+        let store = try await store(reports: [])
+        let latch = FetchLatch()
+        let pub = try publication(report: "r-late")
+        let body = String(decoding: try WireJSON.encoder().encode(pub), as: UTF8.self)
+        let api = LatchedAPI(latch: latch, listJSON: "{\"items\":[{\"report_id\":\"r-late\",\"status\":\"published\",\"publication_count\":1}],\"next_cursor\":null}",
+                             publicationJSON: body)
+
+        let refresh = Task { await GuardianReportHistory.refresh(api: api, store: store, studentIDs: ["st1"]) }
+        while await latch.arrivals == 0 { await Task.yield() }
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                       deleted: [RecordKey(entity: "report_publication", k1: pub.id)]))
+        await latch.release()
+        _ = await refresh.value
+
+        let cached = try await cachedReportIDs(store)
+        XCTAssertTrue(cached.isEmpty)
+    }
+
+    func testAnUpsertAfterADeletionLiftsTheMarkSoTheRecordCanBeCachedAgain() async throws {
+        let store = try await store(reports: [])
+        let pub = try publication(report: "r-back")
+        let key = RecordKey(entity: "report_publication", k1: pub.id).storageKey
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                       deleted: [RecordKey(entity: "report_publication", k1: pub.id)]))
+        let skipped = try await store.writeFetched(pub, forKey: key)
+        XCTAssertFalse(skipped)
+
+        let value = try WireJSON.decoder().decode(JSONValue.self, from: try WireJSON.encoder().encode(pub))
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z",
+                                       upserts: ["report_publication": [value]], deleted: []))
+        let written = try await store.writeFetched(pub, forKey: key)
+        XCTAssertTrue(written)
+    }
+
     func testSyncThatFailsAfterAppliedDeletionStillSignalsTheScreensToRebuild() async throws {
         let store = try SQLiteStore(path: ":memory:", scope: scope)
         try await store.installSnapshot([:], position: SyncPosition(cursor: 0, epoch: 1))
@@ -142,4 +177,32 @@ private actor MemoryIdentityCache: CachedIdentityStore {
     func load() -> CurrentIdentity? { value }
     func save(_ identity: CurrentIdentity) { value = identity }
     func clear() { value = nil }
+}
+
+private actor FetchLatch {
+    private var waiting: [CheckedContinuation<Void, Never>] = []
+    private var released = false
+    private(set) var arrivals = 0
+    func wait() async {
+        arrivals += 1
+        if released { return }
+        await withCheckedContinuation { waiting.append($0) }
+    }
+    func release() { released = true; waiting.forEach { $0.resume() }; waiting = [] }
+}
+
+/// Answers the report list at once and holds the publication request until the latch is released.
+private struct LatchedAPI: APIClient {
+    let baseURL = URL(string: "https://fixture.invalid/v1")!
+    let latch: FetchLatch
+    let listJSON: String
+    let publicationJSON: String
+
+    func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+        let json: String
+        if endpoint.path.hasPrefix("students/") { json = listJSON }
+        else if endpoint.path.contains("/publications/") { await latch.wait(); json = publicationJSON }
+        else { throw APIFailure.offline }
+        do { return try WireJSON.decoder().decode(type, from: Data(json.utf8)) } catch { throw APIFailure.decoding }
+    }
 }
