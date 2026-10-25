@@ -23,6 +23,8 @@ describe("AddSessionModal sửa buổi lẻ", () => {
   let onClose: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-25T12:00:00"));
     const state = createSeed();
     replaceStore(state);
     onClose = vi.fn<() => void>();
@@ -39,6 +41,7 @@ describe("AddSessionModal sửa buổi lẻ", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
     delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).showModal;
     delete (HTMLDialogElement.prototype as Partial<HTMLDialogElement>).close;
   });

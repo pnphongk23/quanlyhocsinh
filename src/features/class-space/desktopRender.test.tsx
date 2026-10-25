@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
@@ -24,7 +24,13 @@ function render(node: ReactNode, url = "/lop/6a/buoi-hoc"): string {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-25T12:00:00"));
   replaceStore(createSeed());
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("Các màn web desktop dựng được và có đúng chữ chính", () => {
