@@ -207,6 +207,7 @@ export interface TicketRow {
   student: Student;
   comment: Comment | null;
   stars: StarLevel | null;
+  attended: boolean;
   status: TicketStatus;
   sentAt: string | null;
   previousHomework: HomeworkSummary;
@@ -266,11 +267,12 @@ export function buildTicketRows(
         (item) =>
           item.sessionId === sessionId && item.studentId === student.id,
       ) ?? null;
-    return {
-      student,
-      comment,
-      stars: comment?.stars ?? null,
-      status: ticketStatusOf(comment),
+      return {
+        student,
+        comment,
+        stars: comment?.stars ?? 5,
+        attended: state.attendance.some((item) => item.sessionId === sessionId && item.studentId === student.id && (item.status === "present" || item.status === "late")),
+        status: comment ? ticketStatusOf(comment) : "draft",
       sentAt: comment?.sentAt ?? null,
       previousHomework: homeworkSummaryFor(state, giving, student.id),
     };

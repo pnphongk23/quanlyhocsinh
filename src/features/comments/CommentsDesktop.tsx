@@ -64,8 +64,8 @@ export default function CommentsDesktop({
     rows[0];
   // Phiếu đang chờ gửi (queued) đã nằm trong hàng đợi đồng bộ: không chọn gửi lại,
   // nếu không repository xếp thêm một lệnh `slip.send` cho cùng em.
-  const sendable = rows.filter((row) => row.status === "draft");
-  const skipped = rows.filter((row) => row.stars === null);
+    const sendable = rows.filter((row) => row.status !== "sent" && (row.comment !== null || row.attended));
+    const skipped = rows.filter((row) => !row.comment && !row.attended);
   const count = sendable.length;
   const ungraded = ungradedHomeworkNotice(
     state,

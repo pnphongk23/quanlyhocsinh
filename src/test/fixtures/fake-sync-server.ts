@@ -44,6 +44,7 @@ export function createFakeServer() {
 
   function apply(command: Row): Row {
     const p = command.payload;
+    let skipped: Array<{ student_id: string; reason: "not_attended" }> | undefined;
     if (command.type === "score.set" && p.value !== null) {
       if (!Number.isFinite(p.value) || p.value < 0 || p.value > 1000) return { id: command.id, status: "rejected", error: { code: "invalid_score", message: "invalid_score", request_id: "fake" } };
       if (Math.round(p.value * 2) !== p.value * 2) return { id: command.id, status: "rejected", error: { code: "invalid_score_step", message: "invalid_score_step", request_id: "fake" } };
@@ -59,14 +60,14 @@ export function createFakeServer() {
       case "test.delete": { const current = table("test").get(p.id); if (current?.archived) put("test", { ...current, archived: true }); else remove("test", p.id); break; }
         case "score.set": put("score", { test_id: p.test_id, student_id: p.student_id, value: p.value }); break;
         case "slip.set": { const comment = typeof p.comment === "string" && !p.comment.trim() ? null : p.comment ?? null; const criteria = p.criteria ?? null; put("slip", { session_id: p.session_id, student_id: p.student_id, ...(criteria === null ? { stars: p.stars, scale: 3 } : { criteria, comment, scale: 5 }), note: p.note ?? "", status: "sent", sent_at: "2026-10-23T00:00:00Z" }); break; }
-      case "slip.send": for (const studentId of p.student_ids) { const current = table("slip").get(`${p.session_id}|${studentId}`); if (current) put("slip", { ...current, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); } break;
+        case "slip.send": for (const studentId of p.student_ids) { const current = table("slip").get(`${p.session_id}|${studentId}`); if (current) put("slip", { ...current, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); else { const attendance = table("attendance").get(`${p.session_id}|${studentId}`); if (attendance?.status === "present" || attendance?.status === "late") put("slip", { session_id: p.session_id, student_id: studentId, criteria: 31, comment: "Con học rất tốt, chăm chỉ, tích cực tham gia phát biểu", scale: 5, stars: 5, note: "", status: "sent", sent_at: "2026-10-23T00:00:00Z" }); else (skipped ??= []).push({ student_id: studentId, reason: "not_attended" }); } } break;
       case "homework.assign": for (const s of p.sections) put("homework_section", { ...s, class_id: "class-1", session_id: p.session_id }); break;
       case "homework.section.upsert": { const session = table("class_session").get(p.session_id); put("homework_section", { ...p, class_id: session?.class_id ?? "class-1" }); break; }
       case "homework.section.delete": remove("homework_section", p.id); break;
       case "homework.grade.set": put("homework_grade", { section_id: p.section_id, student_id: p.student_id, level: p.level }); break;
       default: return { id: command.id, status: "rejected", error: { code: "unsupported", message: "unsupported", request_id: "fake" } };
     }
-    return { id: command.id, status: "applied" };
+      return { id: command.id, status: "applied", ...(skipped?.length ? { skipped } : {}) };
   }
 
   async function fetchFake(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {

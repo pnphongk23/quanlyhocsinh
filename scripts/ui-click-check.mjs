@@ -196,8 +196,24 @@ try {
     server.stdout.on("data", ready); server.stderr.on("data", ready);
     server.once("exit", () => { clearTimeout(timer); reject(new Error("Vite exited before ready: " + output.trim())); });
   });
-    for (const viewport of [mobile, desktop]) {
-      await test("session labels / staff screens have no ordinals", viewport, "staff", "/lop/demo-6a/buoi-hoc", async (page) => {
+      for (const viewport of [mobile, desktop]) {
+        await test("comment editor / five criteria and custom sentence", viewport, "staff", "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet", async (page) => {
+          if (viewport.width <= 430) await click(page.getByRole("button", { name: /Học sinh 1/ }).first(), "open comment sheet");
+          const criterion = page.getByRole("button", { name: "Ghi chép đầy đủ", exact: true });
+          const textarea = page.getByRole("textbox", { name: "Nhận xét phụ huynh thấy" });
+          await criterion.waitFor({ state: "visible" });
+          if (await page.getByText("5/5 sao", { exact: true }).count() === 0) throw new Error("new slip does not start at five stars");
+          await click(criterion, "toggle criterion");
+          await textarea.fill("Nhận xét riêng cho em.");
+          const pushRequest = page.waitForRequest((request) => request.url().endsWith("/sync/push") && request.method() === "POST" && request.postDataJSON().commands.some((command) => command.type === "slip.set" && command.payload.student_id === "demo-student-1" && command.payload.comment === "Nhận xét riêng cho em."));
+          if (viewport.width <= 430) await click(page.getByRole("button", { name: "Lưu", exact: true }), "save slip");
+          else await page.locator("h2").first().click();
+          const request = await pushRequest;
+          const payload = request.postDataJSON().commands.find((command) => command.type === "slip.set" && command.payload.student_id === "demo-student-1" && command.payload.comment === "Nhận xét riêng cho em.").payload;
+          if (payload.criteria !== 29 || payload.note !== "Làm bài tốt, tiếp tục luyện tập.") throw new Error("slip.set did not include the changed bitmask and existing note");
+          return `criteria bitmask ${payload.criteria}; custom comment saved at ${viewport.width}px`;
+        });
+        await test("session labels / staff screens have no ordinals", viewport, "staff", "/lop/demo-6a/buoi-hoc", async (page) => {
         for (const route of [
           "/lop/demo-6a/buoi-hoc",
           "/lop/demo-6a/buoi-hoc/demo-past?tab=diem-danh",

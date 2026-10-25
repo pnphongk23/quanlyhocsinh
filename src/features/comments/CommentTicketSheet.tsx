@@ -7,13 +7,7 @@ import {
 } from "../../data/homework";
 import { saveSessionCommentDurable } from "../../data/repositories/comments";
 import { sessionPrefix } from "../../data/repositories/sessions";
-import { STAR_LEVELS, starTemplate } from "../../data/logic";
-import type {
-  HomeworkKind,
-  HomeworkLevel,
-  Session,
-  StarLevel,
-} from "../../data/types";
+import type { HomeworkKind, HomeworkLevel, Session } from "../../data/types";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, EmptyState, Modal, Pill, Sheet, UnsavedChangesDialog } from "../../shared/ui";
@@ -28,6 +22,8 @@ import { clearDraft, readDraft, writeDraft } from "./draftStore";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./CommentsPanel.module.css";
 import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
+import { SlipCriteriaFields } from "./SlipCriteriaFields";
+import { starsFromCriteria } from "../../data/slip";
 
 export interface SheetHomeworkSection {
   id: string;
@@ -153,21 +149,25 @@ export default function CommentTicketSheet({
   const stored = readDraft(session.id, row.student.id);
   // Nháp đang sửa là nguồn chuẩn: chọn sao rồi gõ ghi chú ngay trong cùng một
   // nhịp vẫn lưu đúng cả hai (state React có thể chưa kịp render lại).
-  const draft = useRef<{ stars: StarLevel | null; note: string }>({
-    stars: stored ? stored.stars : row.stars,
+  const draft = useRef<{ criteria: number; comment: string | null; note: string }>({
+    criteria: stored?.criteria ?? row.comment?.criteria ?? (row.comment?.scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31),
+    comment: stored ? stored.comment : row.comment?.comment ?? null,
     note: stored ? stored.note : (row.comment?.note ?? ""),
   });
-  const [stars, setStars] = useState<StarLevel | null>(draft.current.stars);
+  const [criteria, setCriteria] = useState(draft.current.criteria);
+  const [comment, setComment] = useState<string | null>(draft.current.comment);
   const [note, setNote] = useState(draft.current.note);
+  const baselineCriteria = row.comment?.criteria ?? (row.comment?.scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31);
   const action = useSaveAction({
-    baseline: { stars: row.stars, note: row.comment?.note ?? "" },
-    value: { stars, note },
+      baseline: { criteria: baselineCriteria, comment: row.comment?.comment ?? null, note: row.comment?.note ?? "" },
+      value: { criteria, comment, note },
     save: async (value) => {
       await saveSessionCommentDurable({
         sessionId: session.id,
         studentId: row.student.id,
-        stars: value.stars,
-        note: value.note,
+          criteria: value.criteria,
+          comment: value.comment,
+          note: value.note,
       });
       clearDraft(session.id, row.student.id);
     },
@@ -188,7 +188,7 @@ export default function CommentTicketSheet({
       : "Không lưu được phiếu nhận xét."
     : "";
   const badge = ticketBadge(row);
-  const template = starTemplate(stars);
+    const stars = starsFromCriteria(criteria);
   const previousLine = homeworkLine(
     {
       state: homework.state,
@@ -201,15 +201,20 @@ export default function CommentTicketSheet({
     },
   );
 
-  function keepDraft(next: { stars?: StarLevel | null; note?: string }) {
+  function keepDraft(next: { criteria?: number; comment?: string | null; note?: string }) {
     draft.current = { ...draft.current, ...next };
     writeDraft(session.id, row.student.id, draft.current);
   }
 
-  function pick(next: StarLevel) {
+  function updateCriteria(next: number) {
     if (readOnly) return;
-    setStars(next);
-    keepDraft({ stars: next });
+    setCriteria(next);
+    keepDraft({ criteria: next });
+  }
+
+  function updateComment(next: string | null) {
+    setComment(next);
+    keepDraft({ comment: next });
   }
 
   function changeNote(value: string) {
@@ -232,38 +237,8 @@ export default function CommentTicketSheet({
         </p>
       )}
 
-      <div className={s.starPicker} role="group" aria-label="Chọn mức sao">
-        {STAR_LEVELS.map((level) => (
-          <button
-            key={level}
-            type="button"
-            aria-pressed={stars === level}
-            aria-label={`${level} sao`}
-            disabled={readOnly}
-            className={
-              s.starOption + (stars === level ? " " + s.starOptionOn : "")
-            }
-            onClick={() => pick(level)}
-          >
-            {Array.from({ length: level }, (_, index) => (
-              <Star key={index} />
-            ))}
-          </button>
-        ))}
-      </div>
-
-        <div className={s.templateBox}>
-          <Mascot pose={starPose(stars)} size={72} className={s.templateMascot} />
-          <div>
-          <p className={s.templateText}>
-            {template ?? "Chọn mức sao để xem câu mẫu gửi phụ huynh."}
-          </p>
-          <p className={s.templateCaption}>
-            <LockIcon />
-            Câu mẫu cố định theo mức sao
-          </p>
-        </div>
-      </div>
+        <SlipCriteriaFields criteria={criteria} comment={comment} disabled={readOnly || row.comment?.scale === 3} onCriteriaChange={updateCriteria} onCommentChange={updateComment} />
+        <div className={s.templateBox}><Mascot pose={starPose(stars)} size={72} className={s.templateMascot} /><p className={s.templateText}>{stars}/5 sao</p></div>
 
       <label className={s.noteField} htmlFor="ticket-note">
         <span className={s.noteLabel}>

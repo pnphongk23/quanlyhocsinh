@@ -165,10 +165,8 @@ export default function CommentsPanel({
   const rows = buildTicketRows(state, sessionId);
   const counts = ticketCounts(rows);
   const visibleRows = filterTicketRows(rows, filter);
-  const sendable = rows.filter(
-    (row) => row.stars !== null && row.status !== "sent",
-  );
-  const skipped = rows.filter((row) => row.stars === null);
+    const sendable = rows.filter((row) => row.status !== "sent" && (row.comment !== null || row.attended));
+    const skipped = rows.filter((row) => !row.comment && !row.attended);
   const count = sendableCount(rows);
   const ungraded = ungradedHomeworkNotice(
     state,
@@ -302,9 +300,9 @@ export default function CommentsPanel({
             </span>
           </span>
           <span className={s.starsLine}>
-            {row.stars === null ? (
-              <span className={s.noStars}>Chưa chọn sao</span>
-            ) : (
+              {row.stars === null ? (
+                <span className={s.noStars}>Chưa gửi</span>
+              ) : (
               Array.from({ length: row.stars }, (_, index) => (
                 <Star key={index} />
               ))

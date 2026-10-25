@@ -102,9 +102,10 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
       <CommentsDesktop sessionId="6a-session-7" tabBar={(actions) => <div>{actions}</div>} />,
     );
     expect(html).toContain("Gửi phiếu cả lớp");
-    expect(html).toContain("Câu mẫu");
+    expect(html).toContain("Năm tiêu chí nhận xét");
+    expect(html).toContain("Nhận xét phụ huynh thấy");
     expect(html).toContain("Kết quả BTVN buổi trước");
-    expect(html).toContain("Chưa chọn sao");
+    expect(html).toContain("5/5 sao");
     expect(html).toContain("Đã gửi");
   });
 

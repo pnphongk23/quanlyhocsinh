@@ -13,7 +13,7 @@ export const classes = classIds.map((id, i) => ({ id, name: ["Lớp 6A", "Lớp 
 export const tests = [{ id: "demo-test", class_id: classIds[0], name: "Kiểm tra giữa kỳ", date: "2026-10-20", max: 15, archived: false, version: 1 }];
 export const scores = students.map((s, i) => ({ test_id: "demo-test", student_id: s.id, value: i ? 10 + i / 2 : 0, updated_at: "2026-10-20T10:00:00Z", version: 1 }));
 export const attendance = sessions.flatMap((session) => students.map((student, i) => ({ session_id: session.id, student_id: student.id, status: i === 2 ? "absent" : "present", note: "", late_at: null, updated_at: `${session.date}T10:00:00Z`, version: 1 })));
-export const slips = students.map((s, i) => ({ session_id: "demo-past", student_id: s.id, stars: (i % 3) + 1, note: "Làm bài tốt, tiếp tục luyện tập.", status: "sent", sent_at: "2026-10-20T12:00:00Z", version: 1 }));
+export const slips = students.map((s) => ({ session_id: "demo-past", student_id: s.id, criteria: 31, comment: null, scale: 5, stars: 5, note: "Làm bài tốt, tiếp tục luyện tập.", status: "sent", sent_at: "2026-10-20T12:00:00Z", version: 1 }));
 export const homeworkSections = [{ id: "demo-homework", class_id: classIds[0], session_id: "demo-past", kind: "vocabulary", title: "Ôn từ vựng Unit 3", description: "Đọc và luyện phát âm." }];
 export const homeworkGrades = students.map((s, i) => ({ section_id: "demo-homework", student_id: s.id, level: ["excellent", "done", "not_done"][i % 3], updated_at: "2026-10-20T12:00:00Z", version: 1 }));
 export const reportBatches = [{ id: "demo-report-batch", class_id: classIds[0], from_session_id: "demo-past", to_session_id: "demo-today", from_key: "2026-10-20 17:00", to_key: "2026-10-23 17:00", version: 1 }];

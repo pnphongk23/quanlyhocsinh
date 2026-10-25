@@ -6,7 +6,8 @@ import type { StarLevel } from "../../data/types";
  * nhận xét không bao giờ ghi ra console/log.
  */
 export interface TicketDraft {
-  stars: StarLevel | null;
+  criteria: number;
+  comment: string | null;
   note: string;
 }
 
@@ -24,10 +25,6 @@ function storage(): Storage | null {
   }
 }
 
-function validStars(value: unknown): StarLevel | null {
-  return value === 1 || value === 2 || value === 3 ? value : null;
-}
-
 export function readDraft(
   sessionId: string,
   studentId: string,
@@ -40,10 +37,11 @@ export function readDraft(
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return null;
     const record = parsed as Record<string, unknown>;
-    return {
-      stars: validStars(record.stars),
-      note: typeof record.note === "string" ? record.note : "",
-    };
+      const legacyStars: StarLevel | null = record.stars === 1 || record.stars === 2 || record.stars === 3 ? record.stars : null;
+      const criteria = Number.isInteger(record.criteria) && Number(record.criteria) >= 0 && Number(record.criteria) <= 31
+        ? Number(record.criteria)
+        : legacyStars === null ? 31 : (1 << legacyStars) - 1;
+      return { criteria, comment: typeof record.comment === "string" ? record.comment : null, note: typeof record.note === "string" ? record.note : "" };
   } catch {
     return null;
   }

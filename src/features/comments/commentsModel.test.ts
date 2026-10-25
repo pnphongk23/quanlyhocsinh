@@ -27,14 +27,15 @@ function student(name: string): Student {
 
 function row(
   name: string,
-  options: Partial<Pick<TicketRow, "stars" | "status" | "sentAt">> = {},
+    options: Partial<Pick<TicketRow, "stars" | "status" | "sentAt" | "attended">> = {},
   previous: Partial<HomeworkSummary> = {},
 ): TicketRow {
   const who = student(name);
   return {
     student: who,
-    comment: null,
-    stars: options.stars ?? null,
+      comment: options.status === "sent" || options.status === "draft" || options.status === "queued" ? ({ id: name, classId: "6a", studentId: name, sessionId: "session", criteria: 31, comment: null, scale: 5, stars: options.stars ?? 5, note: "", status: options.status === "sent" ? "sent" : "draft", sendQueued: options.status === "queued", sentAt: options.sentAt ?? null, updatedAt: "", createdAt: "" }) : null,
+      stars: options.stars ?? null,
+      attended: options.attended ?? false,
     status: options.status ?? (options.stars ? "draft" : "none"),
     sentAt: options.sentAt ?? null,
     previousHomework: {
@@ -48,28 +49,21 @@ function row(
   };
 }
 
-describe("bộ lọc danh sách phiếu (ảnh 40)", () => {
+  describe("bộ lọc danh sách phiếu", () => {
   const rows = [
     row("A", { stars: 3, status: "sent", sentAt: "2026-10-14T13:14:00.000Z" }),
     row("B", { stars: 2, status: "draft" }),
     row("C", { stars: 2, status: "queued" }),
-    row("D"),
-    row("E"),
+      row("D", { attended: true }),
+      row("E"),
   ];
 
-  it("đếm Tất cả / Chưa chọn sao / Chưa gửi và gắn số vào nhãn", () => {
-    const counts = ticketCounts(rows);
-    expect(counts).toEqual({ all: 5, none: 2, unsent: 4 });
-    expect(ticketFilterLabel("all", counts)).toBe("Tất cả (5)");
-    expect(ticketFilterLabel("none", counts)).toBe("Chưa chọn sao (2)");
-    expect(ticketFilterLabel("unsent", counts)).toBe("Chưa gửi (4)");
-  });
-
-  it("lọc Chưa chọn sao chỉ giữ em chưa có mức sao", () => {
-    expect(filterTicketRows(rows, "none").map((item) => item.student.id)).toEqual(
-      ["D", "E"],
-    );
-  });
+    it("đếm Tất cả / Chưa gửi và gắn số vào nhãn", () => {
+      const counts = ticketCounts(rows);
+      expect(counts).toEqual({ all: 5, unsent: 4 });
+      expect(ticketFilterLabel("all", counts)).toBe("Tất cả (5)");
+      expect(ticketFilterLabel("unsent", counts)).toBe("Chưa gửi (4)");
+    });
 
   it("lọc Chưa gửi bỏ phiếu đã gửi nhưng giữ phiếu chờ mạng", () => {
     expect(
@@ -79,7 +73,7 @@ describe("bộ lọc danh sách phiếu (ảnh 40)", () => {
   });
 
   it("chỉ phiếu đã chọn sao và chưa gửi mới nằm trong nút gửi cả lớp", () => {
-    expect(sendableCount(rows)).toBe(2);
+      expect(sendableCount(rows)).toBe(3);
     expect(sendableCount([row("A"), row("B")])).toBe(0);
   });
 

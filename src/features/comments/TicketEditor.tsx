@@ -6,7 +6,7 @@ import {
 } from "../../data/homework";
 import { saveSessionCommentDurable } from "../../data/repositories/comments";
 import { listAttendance } from "../../data/repositories/attendance";
-import { starTemplate } from "../../data/logic";
+import { defaultSlipComment, starsFromCriteria } from "../../data/slip";
 import type {
   Attendance,
   HomeworkLevel,
@@ -19,6 +19,7 @@ import { Mascot, starPose } from "../../shared/ui/Mascot";
 import { readDraft, writeDraft } from "./draftStore";
 import type { SheetHomework } from "./CommentTicketSheet";
 import s from "./CommentsDesktop.module.css";
+import { SlipCriteriaFields } from "./SlipCriteriaFields";
 
 const LEVEL_CLASS: Record<HomeworkLevel, string> = {
   excellent: s.levelExcellent,
@@ -58,17 +59,17 @@ function Star({ filled }: { filled: boolean }) {
 export function StarRow({ level }: { level: StarLevel | null }) {
   return (
     <span className={s.stars}>
-      {[1, 2, 3].map((index) => (
+        {[1, 2, 3, 4, 5].map((index) => (
         <Star key={index} filled={level !== null && index <= level} />
       ))}
     </span>
   );
 }
 
-/** Trạng thái phiếu trên web: "Đã gửi" / "Nháp" / "Chưa chọn sao". */
+/** Trạng thái phiếu trên web. */
 export function desktopTicketLabel(row: TicketRow): string {
   if (row.status === "sent") return "Đã gửi";
-  if (row.stars === null) return "Chưa chọn sao";
+  if (row.stars === null) return "Chưa gửi";
   return "Nháp";
 }
 
@@ -93,25 +94,28 @@ export default function TicketEditor({
   const access = useAccess();
   const canWrite = access.can("comments_reports", "write") && !readOnly;
   const stored = readDraft(session.id, row.student.id);
-  const draft = useRef<{ stars: StarLevel | null; note: string }>({
-    stars: stored ? stored.stars : row.stars,
+  const draft = useRef<{ criteria: number; comment: string | null; note: string }>({
+    criteria: stored?.criteria ?? row.comment?.criteria ?? (row.comment?.scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31),
+    comment: stored ? stored.comment : row.comment?.comment ?? null,
     note: stored ? stored.note : (row.comment?.note ?? ""),
   });
-  const [stars, setStars] = useState<StarLevel | null>(draft.current.stars);
+  const [criteria, setCriteria] = useState(draft.current.criteria);
+  const [comment, setComment] = useState<string | null>(draft.current.comment);
   const [note, setNote] = useState(draft.current.note);
   const [error, setError] = useState("");
   const attendance = listAttendance(session.id).find(
     (record) => record.studentId === row.student.id,
   );
-  const template = starTemplate(stars);
-  const statusLabel = row.status === "sent" ? "Đã gửi" : stars === null ? "Chưa chọn sao" : "Nháp";
+    const stars = starsFromCriteria(criteria);
+    const statusLabel = row.status === "sent" ? "Đã gửi" : "Nháp";
 
-  async function persist(next: { stars: StarLevel | null; note: string }) {
+    async function persist(next: { criteria: number; comment: string | null; note: string }) {
     try {
       await saveSessionCommentDurable({
         sessionId: session.id,
         studentId: row.student.id,
-        stars: next.stars,
+          criteria: next.criteria,
+          comment: next.comment,
         note: next.note,
       });
       setError("");
@@ -122,14 +126,21 @@ export default function TicketEditor({
     }
   }
 
-  function pick(next: StarLevel) {
-    if (!canWrite) return;
-    draft.current = { ...draft.current, stars: next };
-    writeDraft(session.id, row.student.id, draft.current);
-    setStars(next);
-    setError("");
-    void persist(draft.current);
-  }
+    function updateCriteria(next: number) {
+      if (!canWrite) return;
+      draft.current = { ...draft.current, criteria: next };
+      writeDraft(session.id, row.student.id, draft.current);
+      setCriteria(next);
+      setError("");
+      void persist(draft.current);
+    }
+
+    function updateComment(value: string | null) {
+      draft.current = { ...draft.current, comment: value };
+      writeDraft(session.id, row.student.id, draft.current);
+      setComment(value);
+      setError("");
+    }
 
   function changeNote(value: string) {
     draft.current = { ...draft.current, note: value };
@@ -150,38 +161,8 @@ export default function TicketEditor({
         </Pill>
       </div>
 
-      <div className={s.starPicker} role="group" aria-label="Chọn mức sao">
-        {[3, 2, 1].map((level) => (
-          <button
-            key={level}
-            type="button"
-            aria-pressed={stars === level}
-            aria-label={`${level} sao`}
-            disabled={!canWrite}
-            className={
-              s.starOption + (stars === level ? " " + s.starOptionOn : "")
-            }
-            onClick={() => pick(level as StarLevel)}
-          >
-            <span className={s.starOptionLabel}>{level} sao</span>
-            <StarRow level={level as StarLevel} />
-          </button>
-        ))}
-      </div>
-
-        <div className={s.templateBox}>
-          <Mascot pose={starPose(stars)} size={84} className={s.templateMascot} />
-          <div>
-        <p className={s.templateCaption}>
-          {stars === null
-            ? "Câu mẫu theo mức sao · cố định, không sửa được"
-            : `Câu mẫu của mức ${stars} sao · cố định, không sửa được`}
-        </p>
-        <p className={s.templateText}>
-          {template ?? "Chọn mức sao để xem câu mẫu gửi phụ huynh."}
-        </p>
-        </div>
-      </div>
+        <SlipCriteriaFields criteria={criteria} comment={comment} disabled={!canWrite || row.comment?.scale === 3} onCriteriaChange={updateCriteria} onCommentChange={updateComment} onBlur={() => { if (canWrite) void persist(draft.current); }} />
+        <div className={s.templateBox}><Mascot pose={starPose(stars)} size={84} className={s.templateMascot} /><p className={s.templateText}>{stars}/5 · {comment ?? defaultSlipComment(stars)}</p></div>
 
       <label className={s.noteField} htmlFor="desktop-ticket-note">
         <span className={s.fieldLabel}>
@@ -196,7 +177,7 @@ export default function TicketEditor({
           placeholder="Thêm lời nhắn riêng cho phụ huynh…"
           onChange={(event) => changeNote(event.target.value)}
           onBlur={() => {
-            if (canWrite && draft.current.stars !== null) void persist(draft.current);
+              if (canWrite) void persist(draft.current);
           }}
         />
       </label>

@@ -1,0 +1,104 @@
+.criteriaGroup {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.criteriaList {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.criterion,
+.criterionOn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--tap);
+  padding: var(--space-4) var(--space-8);
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: var(--color-bg);
+  color: var(--color-text);
+  text-align: left;
+  font: inherit;
+}
+
+.criterionOn {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
+}
+
+.checkbox {
+  display: grid;
+  place-items: center;
+  width: var(--tap-desktop);
+  height: var(--tap-desktop);
+  flex: none;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-chip);
+  background: var(--color-surface);
+  font-weight: var(--weight-bold);
+}
+
+.starCount {
+  margin: 0;
+  color: var(--color-primary-ink);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+}
+
+.commentField {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.label {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.commentInput {
+  width: 100%;
+  min-height: var(--control-h);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  resize: vertical;
+}
+
+.commentInput:focus-visible,
+.defaultButton:focus-visible {
+  outline: var(--state-focus-ring);
+  outline-offset: 1px;
+}
+
+.commentActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.defaultButton {
+  min-height: var(--tap-desktop);
+  padding: 0 var(--space-8);
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+}
+
+@media (max-width: 1023px) {
+  .checkbox {
+    width: var(--tap);
+    height: var(--tap);
+  }
+}

@@ -64,4 +64,18 @@ describe("phiếu nhận xét khi mất mạng", () => {
     await sendSessionTicketsDurable("6a-session-7", ["6a-student-0"]);
     expect((await db.outbox.toArray()).map((row) => row.type)).toContain("slip.send");
   });
+
+  it("gửi phiếu mặc định chỉ cho Có mặt/Muộn và giữ phiếu đã mở cho em vắng", async () => {
+    const { getStore } = await import("../store");
+    const seed = getStore();
+    seed.attendance = seed.attendance.map((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-0" ? { ...item, status: "absent" } : item);
+    replaceStore(seed);
+    const { sendSessionTicketsDurable } = await import("./comments");
+    const result = await sendSessionTicketsDurable("6a-session-6");
+    expect(result.sent).not.toContain("6a-student-0");
+    expect(result.skipped).toContain("6a-student-0");
+    expect(result.skippedReasons).toContainEqual({ studentId: "6a-student-0", reason: "not_attended" });
+    const created = getStore().comments.find((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-1");
+    expect(created).toMatchObject({ criteria: 31, stars: 5, scale: 5, comment: null, sendQueued: true });
+  });
 });

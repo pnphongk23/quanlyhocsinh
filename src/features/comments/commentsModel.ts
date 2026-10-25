@@ -6,19 +6,17 @@ import { formatTime } from "../../shared/format";
  * Mô hình hiển thị của tab Nhận xét (ảnh 40–47): bộ lọc, số đếm, nhãn trạng
  * thái phiếu và tóm tắt BTVN buổi trước. Tách khỏi React để test được.
  */
-export type TicketFilter = "all" | "none" | "unsent";
+export type TicketFilter = "all" | "unsent";
 
-export const TICKET_FILTERS: TicketFilter[] = ["all", "none", "unsent"];
+export const TICKET_FILTERS: TicketFilter[] = ["all", "unsent"];
 
 export const TICKET_FILTER_LABELS: Record<TicketFilter, string> = {
   all: "Tất cả",
-  none: "Chưa chọn sao",
   unsent: "Chưa gửi",
 };
 
 export interface TicketCounts {
   all: number;
-  none: number;
   unsent: number;
 }
 
@@ -26,7 +24,6 @@ export function ticketMatchesFilter(
   row: TicketRow,
   filter: TicketFilter,
 ): boolean {
-  if (filter === "none") return row.status === "none";
   if (filter === "unsent") return row.status !== "sent";
   return true;
 }
@@ -38,16 +35,15 @@ export function filterTicketRows(
   return rows.filter((row) => ticketMatchesFilter(row, filter));
 }
 
-/** Số đếm trên ba bộ lọc Tất cả / Chưa chọn sao / Chưa gửi. */
+/** Số đếm trên hai bộ lọc Tất cả / Chưa gửi. */
 export function ticketCounts(rows: TicketRow[]): TicketCounts {
   return {
     all: rows.length,
-    none: rows.filter((row) => row.status === "none").length,
     unsent: rows.filter((row) => row.status !== "sent").length,
   };
 }
 
-/** Nhãn bộ lọc kèm số đếm, đúng chữ trong ảnh: "Chưa chọn sao (4)". */
+/** Nhãn bộ lọc kèm số đếm. */
 export function ticketFilterLabel(
   filter: TicketFilter,
   counts: TicketCounts,
@@ -60,7 +56,7 @@ export function ticketFilterLabel(
  * Em chưa chọn sao bị bỏ qua, phiếu đã gửi không gửi lại.
  */
 export function sendableCount(rows: TicketRow[]): number {
-  return rows.filter((row) => row.stars !== null && row.status !== "sent")
+  return rows.filter((row) => row.status !== "sent" && (row.comment !== null || row.attended))
     .length;
 }
 

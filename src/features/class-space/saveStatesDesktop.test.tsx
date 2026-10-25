@@ -207,7 +207,7 @@ describe("Thêm học sinh: chặn tạo trùng", () => {
 });
 
 describe("Gửi phiếu: không gửi lại phiếu đang chờ gửi", () => {
-  it("chỉ chọn phiếu nháp, bỏ phiếu queued", async () => {
+  it("gửi phiếu nháp và mặc định cho em có mặt, bỏ phiếu queued", async () => {
     mocks.sendSessionTickets.mockResolvedValue({
       sent: [],
       skipped: [],
@@ -229,11 +229,11 @@ describe("Gửi phiếu: không gửi lại phiếu đang chờ gửi", () => {
       />,
       "/lop/6a/buoi-hoc/" + sessionId,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Gửi phiếu cả lớp (2)" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Gửi 2 phiếu" }));
+      fireEvent.click(screen.getByRole("button", { name: "Gửi phiếu cả lớp (8)" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Gửi 8 phiếu" }));
     expect(mocks.sendSessionTickets).toHaveBeenCalledTimes(1);
     const [, ids] = mocks.sendSessionTickets.mock.calls[0];
-    expect([...ids].sort()).toEqual(["6a-student-0", "6a-student-2"]);
+      expect([...ids].sort()).toEqual(["6a-student-0", "6a-student-2", "6a-student-3", "6a-student-4", "6a-student-5", "6a-student-6", "6a-student-7", "6a-student-8"]);
   });
 });
 
