@@ -157,6 +157,15 @@ describe("reports routes and publication snapshots", () => {
       ),
     };
   });
+  it("serves a published snapshot that still carries the retired test max", async () => {
+    const legacy = { tests: [{ test_id: "t1", name: "Cũ", date: "2026-10-01", max: 15, value: 12 }], ready: true };
+    await db.prepare(`INSERT INTO report_publications(id,workspace_id,class_id,student_id,report_id,batch_id,month,publication_no,snapshot,published_by,published_at)
+      SELECT ?,workspace_id,class_id,student_id,report_id,batch_id,month,99,?,published_by,published_at FROM report_publications WHERE report_id=? AND publication_no=1`)
+      .bind(crypto.randomUUID(), JSON.stringify(legacy), f.reportId).run();
+    const res = await call(`/v1/reports/${f.reportId}/publications/99`, {}, f.token);
+    expect(res.status).toBe(200);
+    expect(res.body.snapshot.tests[0]).toMatchObject({ name: "Cũ", max: 15, value: 12 });
+  });
   it("checks report endpoint authorization and workspace scope", async () => {
     const id = "00000000-0000-4000-8000-000000000001";
     for (const token of [f.token, f.teacher, f.assistant])
