@@ -10,6 +10,7 @@ import { commitRemote, createOnce } from "./rest-cache";
 import { reportBatchFromApi, reportFromApi } from "../api/mapping";
 import { decodeServerReport, type ServerReport } from "../reportModel";
 import { compareBatches } from "../reportRange";
+import { markReportBatchDeleted } from "../reportBatchTombstones";
 
 type Wire = Record<string, unknown> & { id: string };
 
@@ -36,18 +37,20 @@ export async function deleteReportBatch(id: string): Promise<void> {
   const identity = identityKey();
   try {
     await call<{ id: string; deleted: true }>(`DELETE /report-batches/${id}`);
-  } catch (cause) {
-    if (!(cause instanceof ApiError && cause.status === 404)) {
-      throw new Error(reportErrorMessage(cause, "Không thể xoá báo cáo."));
+    } catch (cause) {
+      if (!(cause instanceof ApiError && cause.status === 404)) {
+        throw new Error(reportErrorMessage(cause, "Không thể xoá báo cáo."));
+      }
     }
-  }
-  if (identityKey() !== identity) return;
+    markReportBatchDeleted(identity, id, getStore().reports.filter((report) => report.batchId === id).map((report) => report.id));
+    if (identityKey() !== identity) return;
 
-  const cachedReports = await db.reports.where("identity").equals(identity).and((report) => report.batch_id === id).toArray();
+    const cachedReports = await db.reports.where("identity").equals(identity).and((report) => report.batch_id === id).toArray();
   const reportIds = new Set([
     ...getStore().reports.filter((report) => report.batchId === id).map((report) => report.id),
-    ...cachedReports.map((report) => report.id),
-  ]);
+      ...cachedReports.map((report) => report.id),
+    ]);
+    markReportBatchDeleted(identity, id, reportIds);
   await db.transaction("rw", [db.reportBatches, db.reports, db.reportPublications], async () => {
     await db.reportBatches.where("identity").equals(identity).and((row) => row.id === id).delete();
     await db.reports.where("identity").equals(identity).and((row) => row.batch_id === id).delete();

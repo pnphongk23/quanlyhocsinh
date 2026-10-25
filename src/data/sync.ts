@@ -7,6 +7,7 @@ import { setRejectedCommands, setSaveStatus } from "./saveStatus";
 import { logoutLockKey } from "./outbox";
 import { classFromApi, reportBatchFromApi, reportFromApi } from "./api/mapping";
 import { starsFromCriteria } from "./slip";
+import { clearReportBatchTombstones, isReportBatchDeleted, isReportDeleted } from "./reportBatchTombstones";
 const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
 export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_BASE_URL || defaultBase, getToken: () => getToken() });
 let running: Promise<void> | null = null;
@@ -19,6 +20,12 @@ function keyParts(entity: EntityName, item: Record<string, unknown>): Array<stri
     case "homework_grade": return [item.section_id as string, item.student_id as string];
     default: return [item.id as string];
   }
+}
+function isDeletedReportUpsert(entity: EntityName, item: Record<string, unknown>, identity: string): boolean {
+  if (entity === "report_batch") return isReportBatchDeleted(identity, item.id);
+  if (entity === "report") return isReportBatchDeleted(identity, item.batch_id) || isReportDeleted(identity, item.id);
+  if (entity === "report_publication") return isReportBatchDeleted(identity, item.batch_id) || isReportDeleted(identity, item.report_id);
+  return false;
 }
 function toView(entity: EntityName, item: Record<string, any>): Record<string, any> {
   switch (entity) {
@@ -56,7 +63,8 @@ function updateStoreView(entity: EntityName, item: Record<string, any>): void {
 declare global { interface Window { __QLH_STATE__?: import("./types").StoreState } }
 async function applyPull(page: PullResponse, identity: string): Promise<boolean> {
   await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
-    for (const entity of entities) for (const item of page.upserts?.[entity] ?? []) {
+      for (const entity of entities) for (const item of page.upserts?.[entity] ?? []) {
+        if (isDeletedReportUpsert(entity, item as unknown as Record<string, unknown>, identity)) continue;
       const parts = keyParts(entity, item as unknown as Record<string, unknown>), key = `${identity}|${entity}|${parts.join("|")}`;
       const table = tableFor(entity); const existing = await table.get(key) as any;
       if (!existing || Number((item as any).version ?? 0) >= Number(existing.version ?? 0)) await table.put(stored(entity, key, item as object, identity) as any);
@@ -100,8 +108,9 @@ async function snapshot(identity: string, membershipId: string): Promise<void> {
       const current = entity;
       try {
         await fetchEntity(identity, membershipId, current, () => failure !== null, async (rows) => {
-          if (swap) buffered.set(current, [...(buffered.get(current) ?? []), ...rows]);
-          else await tableFor(current).bulkPut(rows as any);
+            const acceptedRows = rows.filter((row) => !isDeletedReportUpsert(current, row as unknown as Record<string, unknown>, identity));
+            if (swap) buffered.set(current, [...(buffered.get(current) ?? []), ...acceptedRows]);
+            else await tableFor(current).bulkPut(acceptedRows as any);
         });
         if (!swap && firstPaintEntities.includes(current) && identityKey() === identity) await hydrateStore();
       } catch (error) { failure ??= { error }; }
@@ -110,9 +119,13 @@ async function snapshot(identity: string, membershipId: string): Promise<void> {
   await Promise.all(Array.from({ length: Math.min(snapshotConcurrency, queue.length) }, worker));
   if (failure) throw (failure as { error: unknown }).error;
   await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
-    if (swap) {
-      for (const entity of entities) { await tableFor(entity).where("identity").equals(identity).delete(); await tableFor(entity).bulkPut((buffered.get(entity) ?? []) as any); }
-    }
+      if (swap) {
+        for (const entity of entities) {
+          await tableFor(entity).where("identity").equals(identity).delete();
+          const acceptedRows = (buffered.get(entity) ?? []).filter((row) => !isDeletedReportUpsert(entity, row as unknown as Record<string, unknown>, identity));
+          await tableFor(entity).bulkPut(acceptedRows as any);
+        }
+      }
     await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
   });
   await pull(identity, membershipId);
@@ -143,7 +156,8 @@ async function clearIdentityCache(identity: string): Promise<void> {
   await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
     for (const entity of entities) await tableFor(entity).where("identity").equals(identity).delete();
     await db.meta.delete(identity);
-  });
+    });
+    clearReportBatchTombstones(identity);
 }
 export async function clearUserCache(userId: string): Promise<boolean> {
   const identityPrefix = `${userId}:`;

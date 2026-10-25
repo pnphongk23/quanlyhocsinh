@@ -62,6 +62,45 @@ describe("report_batch qua đồng bộ", () => {
     expect(await B.db.reportPublications.count()).toBe(0);
   });
 
+  it("không hồi sinh đợt đã xoá từ pull cũ và vẫn áp dụng đợt khác", async () => {
+    const A = await bootDevice(server, "tA", teacherMe);
+    const batch = (id: string, toKey: string) => ({ id, class_id: "c1", from_session_id: "x1", to_session_id: "x3", from_key: "2020-01-06 09:00", to_key: toKey, month: null, from_number: 1, to_number: 3, version: 1 });
+    const report = (id: string, batchId: string) => ({ id, class_id: "c1", student_id: "s1", batch_id: batchId, month: "2020-01", status: "published", general_comment: id, needs_republish: false, publication_count: 1, published_at: "2020-01-21T00:00:00Z", version: 1 });
+    const publication = (id: string, reportId: string, batchId: string) => ({ id, report_id: reportId, batch_id: batchId, class_id: "c1", student_id: "s1", month: "2020-01", publication_no: 1, published_at: "2020-01-21T00:00:00Z", snapshot: {}, version: 1 });
+    const b1 = batch("b1", "2020-01-20 09:00");
+    const b2 = batch("b2", "2020-01-20 09:00");
+    const r1 = report("r1", "b1");
+    const r2 = report("r2", "b2");
+    const p1 = publication("r1-1", "r1", "b1");
+    const p2 = publication("r2-1", "r2", "b2");
+    for (const [entity, row] of [["report_batch", b1], ["report_batch", b2], ["report", r1], ["report", r2], ["report_publication", p1], ["report_publication", p2]] as const) server.put(entity, row);
+    await A.syncNow();
+    await A.hydrateStore();
+
+    const reports = await import("../data/repositories/reports");
+    await reports.deleteReportBatch("b1");
+    const request = vi.spyOn(A.api, "request").mockImplementation(((endpoint: string) => {
+      if (endpoint === "GET /sync/pull") return Promise.resolve({ cursor: 100, epoch: 1, has_more: false, upserts: {
+        report_batch: [b1, { ...b2, to_key: "2020-01-21 09:00", version: 2 }],
+        report: [r1, { ...r2, general_comment: "b2 updated", version: 2 }],
+        report_publication: [p1, p2],
+      }, deleted: [] });
+      throw new Error(`unexpected endpoint ${endpoint}`);
+    }) as never);
+
+    await A.syncNow();
+    await A.hydrateStore();
+
+    expect(request).toHaveBeenCalledWith("GET /sync/pull", expect.anything());
+    expect(A.getStore().reportBatches.map((item) => item.id)).toEqual(["b2"]);
+    expect(A.getStore().reports.map((item) => item.id)).toEqual(["r2"]);
+    expect(A.getStore().reports[0].generalComment).toBe("b2 updated");
+    expect(A.getStore().reportPublications.map((item) => item.id)).toEqual(["r2-1"]);
+    expect((await A.db.reportBatches.toArray()).map((item) => item.id)).toEqual(["b2"]);
+    expect((await A.db.reports.toArray()).map((item) => item.id)).toEqual(["r2"]);
+    expect((await A.db.reportPublications.toArray()).map((item) => item.id)).toEqual(["r2-1"]);
+  });
+
   it("tạo đợt ở máy A thì máy B kéo về đợt và bản nháp có batchId, phát hành cả lớp cũng về B; phụ huynh không nhận đợt", async () => {
     const A = await bootDevice(server, "tA", teacherMe);
     const reports = await import("../data/repositories/reports");
