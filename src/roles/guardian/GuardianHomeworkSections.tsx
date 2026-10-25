@@ -2,11 +2,11 @@ import type {
   ChildHomework,
   ChildHomeworkSection,
 } from "../../data/repositories/guardian";
+import { formatDayMonth } from "../../shared/format";
 import GuardianIcon, { homeworkIcon } from "./GuardianIcon";
 import {
   homeworkLevelLabel,
   homeworkLevelTone,
-  weekdayDayMonth,
 } from "./guardianFormat";
 import { GuardianPill } from "./guardianUi";
 import g from "./guardian.module.css";
@@ -63,12 +63,10 @@ export function HomeworkSections({
   );
 }
 
-/** "Cô chấm ở buổi 19 · Thứ Tư 21/10" hoặc "Chưa có buổi chấm" (ảnh 09/34/35). */
+/** "Cô chấm ngày 21/10" hoặc "Chưa có buổi chấm" (ảnh 09/34/35). */
 export function gradingLine(item: ChildHomework): string {
   if (item.grading.state === "none" || !item.grading.session) {
     return "Chưa có buổi chấm";
   }
-  return `Cô chấm ở buổi ${item.grading.sessionNumber} · ${weekdayDayMonth(
-    item.grading.session.date,
-  )}`;
+  return `Cô chấm ngày ${formatDayMonth(item.grading.session.date)}`;
 }

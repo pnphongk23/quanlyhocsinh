@@ -61,7 +61,7 @@ export default function SessionsTab() {
         <Link className={s.sessionRow} to={`/lop/${classId}/buoi-hoc/${session.id}`}>
           <span className={s.sessionInfo}>
             <span className={s.sessionTitle}>
-              {sessionPrefix(session)} · {formatWeekdayDate(session.date)}
+              {sessionPrefix(session)}
             </span>
             <span className={s.sessionMeta}>
               {session.time ?? klass?.time}
@@ -141,8 +141,7 @@ export default function SessionsTab() {
               <article className={s.currentCard}>
                 <div className={s.currentInfo}>
                   <p className={s.currentTitle}>
-                    {sessionPrefix(spotlight)} ·{" "}
-                    {formatWeekdayDate(spotlight.date)}
+                    {sessionPrefix(spotlight)}
                   </p>
                   <p className={s.currentMeta}>
                     {spotlight.time ?? klass.time}

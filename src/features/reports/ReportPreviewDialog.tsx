@@ -15,7 +15,7 @@ type Preview =
 export interface ReportPreviewDialogProps {
   row: BatchRow;
   className: string;
-  /** "Buổi 1–8" và "01/10–24/10" của đợt, hiện ở đầu popup trong lúc bản xem trước đang tải. */
+  /** Khoảng ngày của đợt, hiện ở đầu popup trong lúc bản xem trước đang tải. */
   heading: { sessionsLabel: string; datesLabel: string };
   /** Vai trò có quyền Sửa nhóm Nhận xét và báo cáo. */
   canPublish: boolean;

@@ -1,10 +1,11 @@
 import type { ReportBatch, Session } from "./types";
+import { sessionDateLabel } from "./sessionLabel";
 
 /** Khoá so sánh thứ tự buổi: "YYYY-MM-DD HH:MM", khớp mốc `from_key`/`to_key` của máy chủ. */
 export const sessionKey = (session: Pick<Session, "date" | "time">): string =>
   `${session.date} ${session.time ?? "00:00"}`;
 
-/** Buổi chưa hủy của lớp theo thứ tự thời gian; số buổi = vị trí + 1 (spec mục 4). */
+/** Buổi chưa hủy của lớp theo thứ tự thời gian. */
 export function countedSessions(sessions: Session[], classId: string): Session[] {
   return sessions
     .filter((session) => session.classId === classId && session.status !== "cancelled")
@@ -20,16 +21,16 @@ export function dayMonthLabel(date: string): string {
 export interface SessionChoice {
   session: Session;
   number: number;
-  /** "Buổi 3 · 21/10". */
+  /** "T3 · 21/10". */
   label: string;
 }
 
-/** Các buổi chọn được làm đầu/cuối đợt: mọi buổi chưa hủy, kèm số buổi và ngày. */
+/** Các buổi chọn được làm đầu/cuối đợt, hiện theo thứ và ngày. */
 export function sessionChoices(sessions: Session[], classId: string): SessionChoice[] {
   return countedSessions(sessions, classId).map((session, index) => ({
     session,
     number: index + 1,
-    label: `Buổi ${index + 1} · ${dayMonthLabel(session.date)}`,
+    label: sessionDateLabel(session.date),
   }));
 }
 
@@ -47,11 +48,11 @@ export function defaultRange(
   return first && last ? { fromSessionId: first.id, toSessionId: last.id } : null;
 }
 
-/** Nhãn của một khoảng; đợt không có số buổi thì chỉ có ngày. */
+/** Nhãn khoảng ngày của một đợt. */
 export interface RangeLabels {
-  /** "Buổi 1–8 · 01/10–24/10" (một buổi: "Buổi 8 · 14/10"; không số buổi: "01/10–24/10"). */
+  /** "01/10–24/10" (một ngày: "14/10"). */
   label: string;
-  /** "Buổi 1–8"; "" khi không có số buổi. */
+  /** Luôn rỗng; giữ thuộc tính để tương thích với hộp xem trước hiện có. */
   sessionsLabel: string;
   /** "01/10–24/10" (một ngày: "14/10"). */
   datesLabel: string;
@@ -66,17 +67,10 @@ export function rangeLabels(range: {
   const from = dayMonthLabel(range.fromKey);
   const to = dayMonthLabel(range.toKey);
   const datesLabel = range.fromKey.slice(0, 10) === range.toKey.slice(0, 10) ? from : `${from}–${to}`;
-  const { fromNumber, toNumber } = range;
-  const sessionsLabel =
-    fromNumber === null || toNumber === null
-      ? ""
-      : fromNumber === toNumber
-        ? `Buổi ${fromNumber}`
-        : `Buổi ${fromNumber}–${toNumber}`;
-  return { label: sessionsLabel ? `${sessionsLabel} · ${datesLabel}` : datesLabel, sessionsLabel, datesLabel };
+  return { label: datesLabel, sessionsLabel: "", datesLabel };
 }
 
-/** Khoảng của một đợt: mốc theo thời gian, số buổi hiện tại (null khi không xác định) và nhãn. */
+/** Khoảng của một đợt: mốc ngày và số thứ tự nội bộ để tương thích dữ liệu. */
 export interface ResolvedRange extends RangeLabels {
   fromKey: string;
   toKey: string;

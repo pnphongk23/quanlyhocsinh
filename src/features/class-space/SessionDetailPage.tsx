@@ -228,7 +228,7 @@ export default function SessionDetailPage() {
             <p className={s.eyebrow}>{klass?.name ?? "Lớp học"}</p>
             <div className={s.titleLine}>
               <h1 className={s.title}>
-                {sessionPrefix(session)} · {formatDayMonth(session.date)}
+                {sessionPrefix(session)}
               </h1>
               {cancelled && <Pill tone="warning">Đã huỷ</Pill>}
             </div>

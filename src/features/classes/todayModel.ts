@@ -1,5 +1,6 @@
 import type { PillTone } from "../../shared/ui";
 import type { Session, StoreState } from "../../data/types";
+import { sessionDateLabel } from "../../data/sessionLabel";
 import {
   buildTicketRows,
   compareSessions,
@@ -24,7 +25,7 @@ export interface TodayEntry {
   classId: string;
   className: string;
   time: string;
-  /** "Buổi 9" hoặc "Buổi bù" khi buổi không có số. */
+  /** Ngày buổi học, ví dụ "T3 · 21/10". */
   prefix: string;
   statusLabel: string;
   statusTone: PillTone;
@@ -56,13 +57,8 @@ export interface TodayAgenda {
   next: TodayEntry | null;
 }
 
-function numberOf(state: StoreState, session: Session): string {
-  const ordered = state.sessions
-    .filter((item) => item.classId === session.classId && item.status !== "cancelled")
-    .sort(compareSessions);
-  const index = ordered.findIndex((item) => item.id === session.id);
-  if (index >= 0) return `Buổi ${index + 1}`;
-  return session.makeup ? "Buổi bù" : "Buổi học";
+function numberOf(_state: StoreState, session: Session): string {
+  return sessionDateLabel(session.date);
 }
 
 function tasksFor(state: StoreState, session: Session, today: string): TodayTask[] {

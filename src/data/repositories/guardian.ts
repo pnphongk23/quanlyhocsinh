@@ -125,7 +125,7 @@ export interface ChildHomeworkResult {
 export interface ChildTicket {
   comment: Comment;
   session: Session;
-  /** Số buổi trong lớp (bỏ buổi đã hủy), vd. "Buổi 18". */
+    /** Vị trí buổi dùng nội bộ khi cần sắp xếp. */
   sessionNumber: number;
   date: string;
   stars: StarLevel;
@@ -214,7 +214,7 @@ export interface ChildHomeworkGrading {
   state: "exists" | "moved" | "none";
   session: Session | null;
   sessionNumber: number | null;
-  /** Buổi bị hủy nằm giữa buổi giao bài và buổi chấm; không có số buổi, hiện theo ngày (vd. "Buổi bù · 16/10 · Đã huỷ"). */
+    /** Buổi bị hủy nằm giữa buổi giao bài và buổi chấm; dùng ngày để nhận diện. */
   cancelled: Array<{ session: Session }>;
 }
 

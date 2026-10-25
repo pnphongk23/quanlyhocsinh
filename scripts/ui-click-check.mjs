@@ -172,8 +172,30 @@ try {
     server.stdout.on("data", ready); server.stderr.on("data", ready);
     server.once("exit", () => { clearTimeout(timer); reject(new Error("Vite exited before ready: " + output.trim())); });
   });
-  for (const viewport of [mobile, desktop]) {
-    for (const item of ["Sửa lớp", "Sửa lịch học", "Lưu trữ lớp"]) await test("class menu / " + item, viewport, "staff", "/lop/demo-6a/buoi-hoc", async (page) => {
+    for (const viewport of [mobile, desktop]) {
+      await test("session labels / staff screens have no ordinals", viewport, "staff", "/lop/demo-6a/buoi-hoc", async (page) => {
+        for (const route of [
+          "/lop/demo-6a/buoi-hoc",
+          "/lop/demo-6a/buoi-hoc/demo-past?tab=diem-danh",
+          "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet",
+          "/lop/demo-6a/buoi-hoc/demo-past?tab=btvn",
+          "/lop/demo-6a/bao-cao",
+        ]) {
+          await page.goto(base + route, { waitUntil: "domcontentloaded" });
+          await page.waitForFunction(() => document.body.innerText.trim().length > 10);
+          if (/Buổi\s+\d/.test(await page.locator("body").innerText())) throw new Error(`numbered session label rendered on ${route}`);
+        }
+        return "session list, attendance, comments, homework and reports use date labels";
+      });
+      await test("session labels / guardian screens have no ordinals", viewport, "guardian", "/ph", async (page) => {
+        for (const route of ["/ph", "/ph/nhan-xet", "/ph/buoi/demo-past", "/ph/diem", "/ph/bao-cao"]) {
+          await page.goto(base + route, { waitUntil: "domcontentloaded" });
+          await page.waitForFunction(() => document.body.innerText.trim().length > 10);
+          if (/Buổi\s+\d/.test(await page.locator("body").innerText())) throw new Error(`numbered session label rendered on ${route}`);
+        }
+        return "guardian home, comments, session, scores and reports use date labels";
+      });
+      for (const item of ["Sửa lớp", "Sửa lịch học", "Lưu trữ lớp"]) await test("class menu / " + item, viewport, "staff", "/lop/demo-6a/buoi-hoc", async (page) => {
       const trigger = viewport.width <= 430 ? "Tuỳ chọn lớp" : "Thêm tùy chọn";
       await click(page.getByRole("button", { name: trigger }).first(), "open class menu");
       const hit = await click(page.getByRole("menuitem", { name: item, exact: true }), item);

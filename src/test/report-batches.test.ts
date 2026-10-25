@@ -193,11 +193,11 @@ describe("nhận xét, xem trước và phát hành theo đợt", () => {
   it("xem trước đọc GET /reports/:id/preview, giải mã khoảng buổi và báo lỗi bằng tiếng Việt", async () => {
     await withBatch([draft("r1", "st1")]);
     const { previewReport } = await import("../data/repositories/reports");
-    const body = { report_id: "r1", batch_id: "b1", student_id: "st1", month: "2026-10", range: { from_key: "2026-10-01 18:00", to_key: "2026-10-24 18:00", from_number: 1, to_number: 8, session_count: 8, label: "Buổi 1–8 · 01/10–24/10" }, attendance: { present: 6, late: 1, excused: 0, absent: 1, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-10-05", max: 10, value: 8 }], stars: { three: 2, two: 1, one: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 0, not_done: 1 }], general_comment: "Tốt", ready: true };
+    const body = { report_id: "r1", batch_id: "b1", student_id: "st1", month: "2026-10", range: { from_key: "2026-10-01 18:00", to_key: "2026-10-24 18:00", from_number: 1, to_number: 8, session_count: 8, label: "01/10–24/10" }, attendance: { present: 6, late: 1, excused: 0, absent: 1, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-10-05", max: 10, value: 8 }], stars: { three: 2, two: 1, one: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 0, not_done: 1 }], general_comment: "Tốt", ready: true };
     await mockApi(() => body);
     const preview = await previewReport("r1");
     expect(calls[0].endpoint).toBe("GET /reports/r1/preview");
-    expect(preview.range.label).toBe("Buổi 1–8 · 01/10–24/10");
+    expect(preview.range.label).toBe("01/10–24/10");
     expect(preview.report).toMatchObject({ attendanceCount: 7, lateCount: 1, absentCount: 1, gradedTestCount: 1, generalComment: "Tốt", stars: { ticketCount: 3 } });
 
     await mockApi(() => ({ ...body, attendance: { present: "x" } }));

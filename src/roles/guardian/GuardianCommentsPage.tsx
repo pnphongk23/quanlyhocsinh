@@ -3,6 +3,7 @@ import {
   listChildTickets,
   type ChildTicket,
 } from "../../data/repositories/guardian";
+import { sessionPrefix } from "../../data/repositories/sessions";
 import { PageHeader } from "../../shared/ui";
 import { motionClass } from "../../shared/motion";
 import { useGuardianContext } from "./guardianContext";
@@ -96,13 +97,12 @@ export default function GuardianCommentsPage() {
                   key={item.ticket.comment.id}
                   to={`/ph/buoi/${item.ticket.session.id}`}
                   state={FROM_COMMENTS}
-                  aria-label={`Mở buổi học buổi ${item.ticket.sessionNumber}`}
+                    aria-label={`Mở buổi học ${item.ticket.date}`}
                   className={`${g.ticketCard} ${motionClass.pressable}`}
                 >
                   <div className={g.cardHead}>
                     <h3>
-                      Buổi {item.ticket.sessionNumber} ·{" "}
-                      {longDayMonth(item.ticket.date)}
+                        {sessionPrefix(item.ticket.session)}
                     </h3>
                     <StarRow level={item.ticket.stars} />
                   </div>

@@ -176,7 +176,7 @@ export function createFakeServer() {
     }
     const snapshotOf = (report: Row) => {
       const batch = table("report_batch").get(report.batch_id)!;
-      return { report_id: report.id, batch_id: batch.id, student_id: report.student_id, month: report.month, range: { from_key: batch.from_key, to_key: batch.to_key, from_number: 1, to_number: 8, session_count: 8, label: "Buổi 1–8" }, attendance: { present: 7, late: 1, excused: 0, absent: 0, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-10-05", max: 10, value: 8 }], stars: { three: 2, two: 1, one: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 1, not_done: 0 }], general_comment: report.general_comment, ready: true };
+      return { report_id: report.id, batch_id: batch.id, student_id: report.student_id, month: report.month, range: { from_key: batch.from_key, to_key: batch.to_key, from_number: 1, to_number: 8, session_count: 8, label: "01/10–24/10" }, attendance: { present: 7, late: 1, excused: 0, absent: 0, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-10-05", max: 10, value: 8 }], stars: { three: 2, two: 1, one: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 1, not_done: 0 }], general_comment: report.general_comment, ready: true };
     };
     const preview = path.match(/^\/reports\/([^/]+)\/preview$/);
     if (preview && method === "GET") {

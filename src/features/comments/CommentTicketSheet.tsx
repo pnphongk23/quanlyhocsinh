@@ -6,6 +6,7 @@ import {
   type TicketRow,
 } from "../../data/homework";
 import { saveSessionCommentDurable } from "../../data/repositories/comments";
+import { sessionPrefix } from "../../data/repositories/sessions";
 import { STAR_LEVELS, starTemplate } from "../../data/logic";
 import type {
   HomeworkKind,
@@ -13,7 +14,6 @@ import type {
   Session,
   StarLevel,
 } from "../../data/types";
-import { formatDayMonth } from "../../shared/format";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, EmptyState, Modal, Pill, Sheet, UnsavedChangesDialog } from "../../shared/ui";
@@ -38,7 +38,6 @@ export interface SheetHomeworkSection {
 
 export interface SheetHomework {
   state: HomeworkPreviousState;
-  sessionNumber: number | null;
   sections: SheetHomeworkSection[];
 }
 
@@ -137,7 +136,6 @@ function pillTone(badge: TicketBadge): "success" | "warning" | "neutral" {
  */
 export default function CommentTicketSheet({
   session,
-  sessionNumber,
   row,
   homework,
   readOnly = false,
@@ -145,7 +143,6 @@ export default function CommentTicketSheet({
   onGoHomework,
 }: {
   session: Session;
-  sessionNumber: number;
   row: TicketRow;
   homework: SheetHomework;
   readOnly?: boolean;
@@ -202,7 +199,6 @@ export default function CommentTicketSheet({
       ungradedSections: homework.sections.filter((item) => item.level === null)
         .length,
     },
-    homework.sessionNumber,
   );
 
   function keepDraft(next: { stars?: StarLevel | null; note?: string }) {
@@ -286,9 +282,7 @@ export default function CommentTicketSheet({
 
       <section className={s.homeworkBlock} aria-label="Kết quả bài tập về nhà">
         <h3 className={s.homeworkTitle}>
-          {homework.sessionNumber === null
-            ? "BTVN buổi trước"
-            : `BTVN buổi ${homework.sessionNumber}`}
+            BTVN buổi trước
           <span className={s.homeworkReadOnly}> · chỉ đọc</span>
         </h3>
         {homework.sections.length ? (
@@ -358,7 +352,7 @@ export default function CommentTicketSheet({
         <div className={s.sheetTitleText}>
           <h2 className={s.sheetName}>{row.student.name}</h2>
           <p className={s.sheetSub}>
-            Nhận xét buổi {sessionNumber} · {formatDayMonth(session.date)}
+            Nhận xét {sessionPrefix(session)}
           </p>
         </div>
         <Pill tone={pillTone(badge)}>{badge.label}</Pill>

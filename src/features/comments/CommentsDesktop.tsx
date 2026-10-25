@@ -5,7 +5,6 @@ import {
   homeworkGradeLevel,
   homeworkSectionsFor,
   leftStudentsForSession,
-  previousHomeworkSession,
   ungradedHomeworkNotice,
 } from "../../data/homework";
 import { useAccess } from "../../data/repositories/access";
@@ -13,10 +12,11 @@ import {
   flushQueuedTickets,
   sendSessionTicketsDurable,
 } from "../../data/repositories/comments";
-import { getSession, sessionNumber } from "../../data/repositories/sessions";
+import { getSession, sessionPrefix } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
 import type { StoreState, Student } from "../../data/types";
 import { useOnline } from "../../shared/hooks/useOnline";
+import { formatDayMonth } from "../../shared/format";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, EmptyState, Pill } from "../../shared/ui";
 import SendTicketsDialog from "./SendTicketsDialog";
@@ -72,8 +72,6 @@ export default function CommentsDesktop({
     sessionId,
     sendable.map((row) => row.student.id),
   );
-  const previous = previousHomeworkSession(state.sessions, sessionId);
-  const previousNumber = previous ? sessionNumber(previous) : null;
   const leftStudents = leftStudentsForSession(state, sessionId);
 
   useEffect(() => {
@@ -104,8 +102,7 @@ export default function CommentsDesktop({
   }
 
   if (!session) return null;
-  const sessionNo = sessionNumber(session);
-  if (sessionNo === null)
+  if (session.status === "cancelled")
     return (
       <div className={d.page}>
         {tabBar(undefined)}
@@ -139,9 +136,6 @@ export default function CommentsDesktop({
   const selectedHomework = selected?.previousHomework.session
     ? {
         state: selected.previousHomework.state,
-        sessionNumber: selected.previousHomework.session
-          ? sessionNumber(selected.previousHomework.session)
-          : null,
         sections: homeworkSectionsFor(
           state,
           selected.previousHomework.session.id,
@@ -155,7 +149,6 @@ export default function CommentsDesktop({
     : selected
       ? {
           state: selected.previousHomework.state,
-          sessionNumber: previousNumber,
           sections: [],
         }
       : null;
@@ -243,8 +236,7 @@ export default function CommentsDesktop({
           </div>
           {leftStudents.length > 0 && (
             <p className={d.muted13}>
-              Phiếu của buổi chỉ gồm em đang học vào ngày đó. Buổi {sessionNo} có{" "}
-              {rows.length} em.
+              Phiếu chỉ gồm học sinh đang học vào ngày {formatDayMonth(session.date)}. Có {rows.length} em.
             </p>
           )}
         </section>
@@ -254,7 +246,6 @@ export default function CommentsDesktop({
             <TicketEditor
               key={`${sessionId}:${selected.student.id}`}
               session={session}
-              sessionNumber={sessionNo}
               row={selected}
               homework={selectedHomework}
               readOnly={!canWrite}
@@ -268,11 +259,10 @@ export default function CommentsDesktop({
 
       <SendTicketsDialog
         open={confirmOpen}
-        sessionNumber={sessionNo}
+        sessionLabel={sessionPrefix(session)}
         sendCount={dialogInfo.current.sendCount}
         skipped={dialogInfo.current.skipped}
         ungraded={dialogInfo.current.ungraded}
-        previousSessionNumber={previousNumber}
         error={dialogError}
         busy={sending.saving}
         onConfirm={() => void confirmAndClose()}
@@ -288,7 +278,7 @@ export default function CommentsDesktop({
 /**
  * Dòng tóm tắt BTVN buổi trước dưới tên em (ảnh 04):
  * "BTVN buổi trước: 2 tốt · 2 xong" / "BTVN buổi trước: 1 tốt · 2 xong · 1 chưa",
- * "Buổi đầu · chưa có BTVN buổi trước", "Buổi trước không giao BTVN".
+ * "Bài tập buổi trước chưa có", "Buổi trước không giao BTVN".
  */
 export function homeworkCountsLine(
   state: StoreState,
@@ -301,7 +291,7 @@ export function homeworkCountsLine(
   },
 ): string {
   if (row.previousHomework.state === "first")
-    return "Buổi đầu · chưa có BTVN buổi trước";
+    return "Bài tập buổi trước chưa có";
   const giving = row.previousHomework.session;
   if (!giving || row.previousHomework.state === "none-given")
     return "Buổi trước không giao BTVN";

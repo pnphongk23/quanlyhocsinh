@@ -9,6 +9,7 @@ import { identityKey } from "../db";
 import { commitRemote, createOnce } from "./rest-cache";
 import { setSaveStatus } from "../saveStatus";
 import { isoWeekday, normalizeWeekdays } from "../../shared/weekdays";
+import { sessionDateLabel } from "../sessionLabel";
 
 const sessionWire = (s: Session) => ({ id: s.id, class_id: s.classId, date: s.date, start_time: s.time, origin: s.origin ?? "manual", is_makeup: s.makeup ?? false, status: s.status ?? "planned", note: s.note ?? "", version: s.version });
 export function localToday(): string { return todayISO(); }
@@ -155,4 +156,4 @@ export function listPlannedSessions(classId?: string): Session[] { return getSto
 
 export function sessionNumber(session: Session): number | null { if(session.status==="cancelled")return null;return listSessions(session.classId).filter(s=>s.status!=="cancelled").findIndex(s=>s.id===session.id)+1; }
 
-export function sessionPrefix(session: Session): string { const number=sessionNumber(session);return number===null?(session.makeup?"Buổi bù":"Buổi học"): `Buổi ${number}`; }
+export function sessionPrefix(session: Session): string { return sessionDateLabel(session.date); }

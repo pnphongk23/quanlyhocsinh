@@ -172,8 +172,7 @@ export default function GuardianClassPage() {
                       >
                         <span className={g.rowMain}>
                           <span className={g.rowTitle}>
-                            {sessionPrefix(item.session)} ·{" "}
-                            {weekdayDayMonth(item.session.date)}
+                              {sessionPrefix(item.session)}
                           </span>
                           <span className={g.sessionMeta}>
                             {item.cancelled ? (

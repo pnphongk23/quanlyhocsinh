@@ -26,7 +26,7 @@ const batch = (patch: Partial<ReportBatch> = {}): ReportBatch => ({
 });
 
 describe("khoảng buổi mặc định và lựa chọn buổi", () => {
-  it("mặc định từ Buổi 1 đến buổi đã diễn ra gần nhất, bỏ buổi hủy và buổi chưa diễn ra", () => {
+    it("mặc định từ ngày đầu đến ngày đã diễn ra gần nhất, bỏ buổi hủy và buổi chưa diễn ra", () => {
     expect(defaultRange(sessions, "c1")).toEqual({ fromSessionId: "s1", toSessionId: "s4" });
   });
 
@@ -35,12 +35,12 @@ describe("khoảng buổi mặc định và lựa chọn buổi", () => {
     expect(defaultRange(sessions, "empty")).toBeNull();
   });
 
-  it("lựa chọn ghi 'Buổi N · dd/mm', đánh số dồn lại và không có buổi hủy", () => {
+  it("lựa chọn hiển thị thứ và ngày, không có buổi hủy", () => {
     expect(sessionChoices(sessions, "c1").map((choice) => choice.label)).toEqual([
-      "Buổi 1 · 01/10",
-      "Buổi 2 · 08/10",
-      "Buổi 3 · 12/10",
-      "Buổi 4 · 19/10",
+      "T5 · 01/10",
+      "T5 · 08/10",
+      "T2 · 12/10",
+      "T2 · 19/10",
     ]);
   });
 
@@ -54,14 +54,14 @@ describe("khoảng buổi mặc định và lựa chọn buổi", () => {
 });
 
 describe("nhãn khoảng", () => {
-  it("đợt có số buổi: 'Buổi a–b · dd/mm–dd/mm'", () => {
+  it("đợt chỉ hiển thị khoảng ngày", () => {
     expect(rangeLabels({ fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00", fromNumber: 1, toNumber: 8 })).toEqual({
-      label: "Buổi 1–8 · 01/10–24/10", sessionsLabel: "Buổi 1–8", datesLabel: "01/10–24/10",
+      label: "01/10–24/10", sessionsLabel: "", datesLabel: "01/10–24/10",
     });
   });
 
-  it("một buổi chỉ ghi một số và một ngày", () => {
-    expect(rangeLabels({ fromKey: "2026-10-14 18:00", toKey: "2026-10-14 18:00", fromNumber: 8, toNumber: 8 }).label).toBe("Buổi 8 · 14/10");
+  it("một buổi chỉ hiển thị ngày", () => {
+    expect(rangeLabels({ fromKey: "2026-10-14 18:00", toKey: "2026-10-14 18:00", fromNumber: 8, toNumber: 8 }).label).toBe("14/10");
   });
 
   it("đợt không có số buổi (chuyển từ báo cáo tháng cũ) chỉ có ngày", () => {
@@ -70,8 +70,8 @@ describe("nhãn khoảng", () => {
     });
   });
 
-  it("giải mã đợt theo số buổi hiện tại; buổi đã hủy hoặc không có mã buổi thì chỉ còn ngày", () => {
-    expect(resolveRange(sessions, batch())).toMatchObject({ fromNumber: 1, toNumber: 3, label: "Buổi 1–3 · 01/10–12/10" });
+  it("giải mã mốc ngày; buổi đã hủy hoặc không có mã buổi vẫn chỉ còn ngày", () => {
+    expect(resolveRange(sessions, batch())).toMatchObject({ fromNumber: 1, toNumber: 3, label: "01/10–12/10" });
     expect(resolveRange(sessions, batch({ fromSessionId: "s2" })).label).toBe("01/10–12/10");
     expect(resolveRange(sessions, batch({ fromSessionId: null, toSessionId: null })).label).toBe("01/10–12/10");
   });

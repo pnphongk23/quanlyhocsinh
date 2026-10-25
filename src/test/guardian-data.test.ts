@@ -123,7 +123,7 @@ describe("guardian membership data", () => {
     }) as never);
     const first = await listChildReports("6a-student-1");
     expect(first.nextCursor).toBe("c-2");
-    expect(first.items.map((item) => [item.id, item.range.label, item.publicationNo, item.needsRepublish])).toEqual([["r-new", "Buổi 1–8 · 01/10–24/10", 2, true]]);
+    expect(first.items.map((item) => [item.id, item.range.label, item.publicationNo, item.needsRepublish])).toEqual([["r-new", "01/10–24/10", 2, true]]);
     const second = await listChildReports("6a-student-1", first.nextCursor!);
     expect(vi.mocked(api.request).mock.calls[1][1]).toEqual({ query: { cursor: "c-2" } });
     expect(second).toMatchObject({ nextCursor: null, items: [{ id: "r-old", range: { label: "01/09–30/09" } }] });
@@ -135,7 +135,7 @@ describe("guardian membership data", () => {
     vi.mocked(api.request).mockResolvedValueOnce(publication("6a-student-1", snapshot()) as never);
     const report = await getChildReport("6a-student-1", "r-new", 2);
     expect(vi.mocked(api.request).mock.calls[0][0]).toBe("GET /reports/r-new/publications/2");
-    expect(report).toMatchObject({ publicationNo: 2, range: { label: "Buổi 1–8 · 01/10–24/10" }, body: { attendanceCount: 7, lateCount: 1, gradedTestCount: 1, generalComment: "Nhận xét đợt", homework: [{ kind: "reading", excellent: 1, done: 2 }] } });
+    expect(report).toMatchObject({ publicationNo: 2, range: { label: "01/10–24/10" }, body: { attendanceCount: 7, lateCount: 1, gradedTestCount: 1, generalComment: "Nhận xét đợt", homework: [{ kind: "reading", excellent: 1, done: 2 }] } });
 
     vi.mocked(api.request).mockResolvedValueOnce(publication("6a-student-2", snapshot()) as never);
     expect(await getChildReport("6a-student-1", "r-new", 1)).toBeNull();

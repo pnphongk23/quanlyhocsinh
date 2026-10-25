@@ -65,7 +65,7 @@ export function defaultChildMonth(studentId: string): string {
 
 export interface ChildAttendanceRow {
   session: Session;
-  /** Số buổi trong lớp (bỏ buổi đã hủy) — "Buổi 18". */
+  /** Vị trí buổi dùng nội bộ khi cần sắp xếp. */
   number: number;
   /** null = giáo viên chưa điểm danh buổi đó. */
   status: AttendanceStatus | null;

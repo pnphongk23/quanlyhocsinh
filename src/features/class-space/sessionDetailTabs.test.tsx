@@ -103,7 +103,7 @@ describe("Màn buổi học có ba tab ở URL (ảnh 60/61)", () => {
     expect(activeTab(html)).toBe("Nhận xét");
     expect(html).toContain("Tất cả (9)");
     expect(html).toContain("Gửi phiếu cả lớp (2)");
-    expect(html).toContain("BTVN buổi 7: 2/2 phần đã chấm");
+      expect(html).toContain("BTVN buổi trước: 2/2 phần đã chấm");
   });
 
   it("?tab=btvn mở tab Bài tập về nhà", () => {

@@ -273,7 +273,7 @@ export default function AttendanceDesktop({
             </div>
           </div>
           <p className={d.muted13}>
-            {sessionPrefix(session)} · {formatWeekdayDate(session.date)}
+            {sessionPrefix(session)}
             {session.time ? ` · ${session.time}` : ""}
             {warnings.length
               ? ` · ${warnings

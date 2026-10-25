@@ -9,8 +9,7 @@ import {
 /**
  * Định dạng ngày, tháng và nhãn dùng riêng cho màn phụ huynh.
  *
- * Chữ lấy đúng ảnh chuẩn (plans/design-review/.../final): "Buổi 18 · Thứ Sáu
- * 16/10" (ảnh 08), "Buổi 18 · 16 tháng 10" (ảnh 14), "Chưa chấm", "Hoàn thành
+ * Chữ ngày buổi theo định dạng ngắn, "T6 · 16/10", "Chưa chấm", "Hoàn thành
  * tốt", "Chưa có buổi chấm". Điểm dùng formatScore chung.
  */
 

@@ -12,22 +12,20 @@ import s from "./CommentsPanel.module.css";
  */
 export default function SendTicketsDialog({
   open,
-  sessionNumber,
+    sessionLabel,
   sendCount,
   skipped,
   ungraded,
-  previousSessionNumber,
   error,
   busy = false,
   onConfirm,
   onClose,
 }: {
   open: boolean;
-  sessionNumber: number;
+    sessionLabel: string;
   sendCount: number;
   skipped: Student[];
   ungraded: UngradedHomeworkNotice;
-  previousSessionNumber: number | null;
   error?: string;
   /** Đang gửi: khoá nút xác nhận để không gửi hai lần. */
   busy?: boolean;
@@ -44,19 +42,16 @@ export default function SendTicketsDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
   if (!open) return null;
-  const previousLabel =
-    previousSessionNumber === null
-      ? "buổi trước"
-      : `buổi ${previousSessionNumber}`;
+  const previousLabel = "buổi trước";
   return (
     <div className={s.scrim}>
       <div
         className={s.confirm}
         role="dialog"
         aria-modal="true"
-        aria-label={`Gửi phiếu buổi ${sessionNumber}?`}
+          aria-label={`Gửi phiếu ${sessionLabel}?`}
       >
-        <p className={s.confirmTitle}>Gửi phiếu buổi {sessionNumber}?</p>
+        <p className={s.confirmTitle}>Gửi phiếu {sessionLabel}?</p>
 
         <div className={s.confirmStats}>
           <div className={s.statSend}>

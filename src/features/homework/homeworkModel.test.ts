@@ -70,12 +70,12 @@ describe("Mô hình tab Bài tập về nhà", () => {
 
   it("câu chữ hai trạng thái rỗng đúng ảnh 55/56", () => {
     expect(previousEmptyCopy("first")).toEqual({
-      title: "Buổi đầu, chưa có BTVN buổi trước",
+      title: "Bài tập buổi trước",
       body: "Lớp chưa giao bài nào nên chưa có gì để chấm.",
     });
     expect(previousEmptyCopy("none-given")).toEqual({
       title: "Buổi trước không giao BTVN",
-      body: "Không có phần nào để chấm ở buổi này. Phiếu vẫn gửi bình thường.",
+        body: "Không có phần nào để chấm hôm nay. Phiếu vẫn gửi bình thường.",
     });
   });
 });

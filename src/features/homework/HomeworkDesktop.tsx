@@ -20,7 +20,7 @@ import {
   setHomeworkGradeDurable,
 } from "../../data/repositories/homework";
 import { useAccess } from "../../data/repositories/access";
-import { sessionNumber, sessionPrefix } from "../../data/repositories/sessions";
+import { sessionPrefix } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
 import { useSaveStatus } from "../../shared/SaveStatus";
 import { formatDayMonth } from "../../shared/format";
@@ -62,11 +62,6 @@ interface EditorState {
   justSaved: boolean;
 }
 const IDLE_EDITOR_STATE: EditorState = { dirty: false, canSave: false, saving: false, justSaved: false };
-
-/** "Thứ Hai 19/10" trong banner buổi chấm — chỉ để đối chiếu, không bắt buộc. */
-function weekdayDay(iso: string): string {
-  return formatDayMonth(iso);
-}
 
 /**
  * Tab Bài tập về nhà trên web desktop (ảnh 05/06/07): chấm theo phần ở cột
@@ -156,7 +151,6 @@ export default function HomeworkDesktop({
     previousSections.find((item) => item.section.kind === selectedKind) ??
     previousSections[0];
   const activeSection = activeProgress?.section;
-  const currentNumber = sessionNumber(session);
   const grading = ctx.today.grading;
   const editingSection =
     editor?.mode === "edit"
@@ -207,7 +201,7 @@ export default function HomeworkDesktop({
   const gradingBanner = (() => {
     if (view !== "today") return null;
     if (grading.state === "moved" && grading.session)
-      return `Buổi ${weekdayDay(grading.session.date)} là buổi chấm BTVN hôm nay.`;
+      return `BTVN ngày ${formatDayMonth(grading.session.date)} được chấm hôm nay.`;
     if (grading.state === "none")
       return "Lịch lớp không còn buổi nào sau buổi này, nên chưa có buổi chấm.";
     return null;

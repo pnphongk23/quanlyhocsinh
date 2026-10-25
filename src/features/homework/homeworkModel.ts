@@ -82,18 +82,18 @@ export function commentsSearch(
   return next.toString();
 }
 
-/** Câu chữ của hai trạng thái rỗng ở phần "Bài tập buổi trước" (ảnh 55/56). */
+/** Câu chữ của hai trạng thái rỗng ở phần bài tập buổi trước. */
 export function previousEmptyCopy(state: "first" | "none-given"): {
   title: string;
   body: string;
 } {
   return state === "first"
     ? {
-        title: "Buổi đầu, chưa có BTVN buổi trước",
+        title: "Bài tập buổi trước",
         body: "Lớp chưa giao bài nào nên chưa có gì để chấm.",
       }
     : {
         title: "Buổi trước không giao BTVN",
-        body: "Không có phần nào để chấm ở buổi này. Phiếu vẫn gửi bình thường.",
+        body: "Không có phần nào để chấm hôm nay. Phiếu vẫn gửi bình thường.",
       };
 }

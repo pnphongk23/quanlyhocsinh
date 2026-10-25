@@ -20,8 +20,6 @@ import { useAccess } from "../../data/repositories/access";
 import { getStudent } from "../../data/repositories/students";
 import {
   getSessionClass,
-  sessionNumber,
-  sessionPrefix,
 } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
 import { useSaveStatus } from "../../shared/SaveStatus";
@@ -255,9 +253,7 @@ export default function HomeworkPanel({
       (progress) => progress.section.kind === selectedKind,
     ) ?? previousSections[0];
   const activeSection = activeProgress?.section;
-  const currentNumber = sessionNumber(session);
   const grading = ctx.today.grading;
-  const gradingNumber = grading.session ? sessionNumber(grading.session) : null;
   const classTime = getSessionClass(session.id)?.time ?? session.time ?? "";
 
   const errorBanner = error ? (
@@ -324,13 +320,10 @@ export default function HomeworkPanel({
         <div className={styles.card}>
           <div>
             <p className={styles.cardTitle}>
-              BTVN {sessionPrefix(previous.givingSession ?? session).toLowerCase()} ·{" "}
-              {formatDayMonth(
-                (previous.givingSession ?? session).date,
-              )}
+                BTVN ngày {formatDayMonth((previous.givingSession ?? session).date)}
             </p>
             <p className={styles.cardMeta}>
-              Chấm hôm nay ở buổi {currentNumber}. Kết quả gửi kèm phiếu.
+                Chấm hôm nay. Kết quả gửi kèm phiếu.
             </p>
           </div>
           <div
@@ -453,7 +446,7 @@ export default function HomeworkPanel({
 
   const todayGradingText = (plan: HomeworkGradingPlan) =>
     plan.session ? (
-      <span>chấm ở {sessionPrefix(plan.session).toLowerCase()}</span>
+        <span>chấm ngày {formatDayMonth(plan.session.date)}</span>
     ) : (
       <b className={styles.warningText}>Chưa có buổi chấm</b>
     );
@@ -461,7 +454,7 @@ export default function HomeworkPanel({
   const gradingBanner = (() => {
     if (grading.state === "moved" && grading.session) {
       const cancelled = grading.cancelled
-        .map((item) => `Buổi ${formatDayMonth(item.date)}`)
+          .map((item) => `Ngày ${formatDayMonth(item.date)}`)
         .join(", ");
       return (
         <div className={styles.gradingBanner} role="status">
@@ -469,9 +462,9 @@ export default function HomeworkPanel({
             <Glyph size={20}>{infoIcon}</Glyph>
           </span>
           <span>
-            {cancelled} đã bị hủy. BTVN buổi {currentNumber} chấm ở buổi{" "}
-            {gradingNumber} · {weekdayDayMonth(grading.session.date)}. Phụ huynh
-            thấy thay đổi này.
+              {cancelled} đã bị hủy. BTVN ngày {formatDayMonth(session.date)} được
+              chấm ngày {formatDayMonth(grading.session.date)}. Phụ huynh thấy thay
+              đổi này.
           </span>
         </div>
       );
@@ -483,8 +476,8 @@ export default function HomeworkPanel({
             <Glyph size={20}>{infoIcon}</Glyph>
           </span>
           <span>
-            Lịch lớp không còn buổi nào sau buổi {currentNumber}. Phụ huynh thấy
-            “Chưa có buổi chấm” cho tới khi bạn thêm buổi vào lịch.
+              Lịch lớp chưa có ngày chấm tiếp theo. Phụ huynh thấy “Chưa có buổi
+              chấm” cho tới khi bạn thêm buổi vào lịch.
           </span>
         </div>
       );

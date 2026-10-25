@@ -53,10 +53,10 @@ export function classSubtitle(
   return `${studentCount} học sinh · ${schedule} · hôm nay ${todayLabel(today)}`;
 }
 
-/** Tiêu đề buổi học trên web: "Buổi 9 · Thứ Hai, 19 tháng 10 · 18:00". */
+/** Tiêu đề buổi học trên web: "T3 · 21/10 · 18:00". */
 export function sessionHeading(session: Session, classTime?: string): string {
   const time = session.time ?? classTime;
-  const base = `${sessionPrefix(session)} · ${formatWeekdayDate(session.date)}`;
+  const base = sessionPrefix(session);
   return time ? `${base} · ${time}` : base;
 }
 

@@ -25,7 +25,7 @@ import ClassDesktopHeader from "./ClassDesktopHeader";
 import { useCancelSession } from "./useCancelSession";
 import s from "./desktop.module.css";
 
-/** "Thứ Hai, 19/10" — ngày ngắn dưới số buổi (ảnh 01). */
+/** "Thứ Hai, 19/10" — ngày ngắn trong lịch. */
 export function weekdayDayShort(iso: string): string {
   const [year, month, day] = iso.split("-").map(Number);
   const weekday = weekdayNames[new Date(year, month - 1, day, 12).getDay()];
@@ -36,7 +36,7 @@ export function weekdayDayShort(iso: string): string {
 export function sessionRowTitle(session: Session): string {
   return session.status === "cancelled"
     ? "Buổi đã hủy"
-    : sessionPrefix(session);
+      : sessionPrefix(session);
 }
 
 type AttendanceBadge = { label: string; tone: "success" | "warning" | "neutral" } | null;
@@ -175,7 +175,7 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
 
   function cardTitle(session: Session): string {
     const time = session.time ?? klass?.time;
-    return `${sessionPrefix(session)} · ${formatWeekdayDate(session.date)}${
+    return `${sessionPrefix(session)}${
       time ? ` · ${time}` : ""
     }`;
   }

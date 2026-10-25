@@ -5,7 +5,6 @@ import {
   homeworkGradeLevel,
   homeworkSectionsFor,
   leftStudentsForSession,
-  previousHomeworkSession,
   ungradedHomeworkNotice,
   type TicketRow,
 } from "../../data/homework";
@@ -14,7 +13,7 @@ import {
   flushQueuedTickets,
   sendSessionTicketsDurable,
 } from "../../data/repositories/comments";
-import { getSession, sessionNumber } from "../../data/repositories/sessions";
+import { getSession, sessionPrefix } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
 import type { StoreState, Student } from "../../data/types";
 import { formatDayMonth } from "../../shared/format";
@@ -176,8 +175,6 @@ export default function CommentsPanel({
     sessionId,
     sendable.map((row) => row.student.id),
   );
-  const previous = previousHomeworkSession(state.sessions, sessionId);
-  const previousNumber = previous ? sessionNumber(previous) : null;
   const leftStudents = leftStudentsForSession(state, sessionId);
   const openStudentId =
     searchParams.get("tab") === "nhan-xet" || !searchParams.get("tab")
@@ -260,17 +257,12 @@ export default function CommentsPanel({
   if (!rows.length)
     return <EmptyState title="Không có học sinh để nhận xét" />;
 
-  const currentNumber = sessionNumber(session);
-  if (currentNumber === null)
+  if (session.status === "cancelled")
     return <EmptyState title="Buổi học đã hủy nên không có phiếu buổi học" />;
-  const sessionNo: number = currentNumber;
   const sessionDate = session.date;
   const sheetHomework: SheetHomework | null = openRow
     ? {
         state: openRow.previousHomework.state,
-        sessionNumber: openRow.previousHomework.session
-          ? sessionNumber(openRow.previousHomework.session)
-          : null,
         sections: openRow.previousHomework.session
           ? homeworkSectionsFor(
               state,
@@ -291,12 +283,7 @@ export default function CommentsPanel({
 
   function ticketRow(row: TicketRow) {
     const badge = ticketBadge(row);
-    const line = homeworkLine(
-      row.previousHomework,
-      row.previousHomework.session
-        ? sessionNumber(row.previousHomework.session)
-        : null,
-    );
+    const line = homeworkLine(row.previousHomework);
     return (
       <li key={row.student.id}>
         <button
@@ -349,8 +336,7 @@ export default function CommentsPanel({
           </Pill>
         </span>
         <span className={s.leftText}>
-          Không có phiếu từ buổi {sessionNo}. Phiếu buổi {sessionNo - 1} trở về
-          trước vẫn giữ.
+          Em đã rời lớp; các phiếu đã gửi trước ngày nghỉ vẫn được giữ.
         </span>
         {oldSessionId && (
           <Link
@@ -370,8 +356,7 @@ export default function CommentsPanel({
         <p className={s.infoBanner}>
           <InfoIcon />
           <span>
-            Phiếu của buổi chỉ gồm em đang học vào ngày đó. Buổi {sessionNo} có{" "}
-            {rows.length} em.
+            Phiếu chỉ gồm học sinh đang học vào ngày {formatDayMonth(sessionDate)}. Có {rows.length} em.
           </span>
         </p>
       )}
@@ -435,7 +420,6 @@ export default function CommentsPanel({
         <CommentTicketSheet
           key={`${sessionId}:${openRow.student.id}`}
           session={session}
-          sessionNumber={sessionNo}
           row={openRow}
           homework={sheetHomework}
           readOnly={!canWrite}
@@ -446,11 +430,10 @@ export default function CommentsPanel({
 
       <SendTicketsDialog
         open={confirmOpen}
-        sessionNumber={sessionNo}
+        sessionLabel={sessionPrefix(session)}
         sendCount={dialogInfo.current.sendCount}
         skipped={dialogInfo.current.skipped}
         ungraded={dialogInfo.current.ungraded}
-        previousSessionNumber={previousNumber}
         error={dialogError}
         busy={sending.saving}
         onConfirm={() => void confirmAndClose()}

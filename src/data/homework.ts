@@ -75,7 +75,7 @@ export function gradingSessionFor(
 
 /**
  * Buổi chấm kèm danh sách buổi bị hủy đã bỏ qua, để UI báo
- * "Buổi 19 đã bị hủy, BTVN buổi 18 chấm ở buổi 20".
+ * "Ngày 19/10 đã bị hủy, BTVN ngày 18/10 chấm vào ngày 20/10".
  */
 export function gradingSessionPlan(
   sessions: Session[],

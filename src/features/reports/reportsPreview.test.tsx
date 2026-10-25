@@ -79,7 +79,7 @@ afterEach(async () => {
 
 const previewBody = (studentId: string, patch: object = {}) => ({
   report_id: "r", batch_id: "6a-batch", student_id: studentId, month: "2026-10",
-  range: { from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, session_count: 8, label: "Buổi 1–8 · 21/09–14/10" },
+    range: { from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, session_count: 8, label: "21/09–14/10" },
   attendance: { present: 6, late: 1, excused: 1, absent: 0, held_sessions: 8 },
   tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-09-30", max: 10, value: 8 }, { test_id: "t2", name: "Nói", date: "2026-10-12", max: 10, value: null }],
   stars: { three: 2, two: 1, one: 1 }, homework: [{ kind: "vocabulary", excellent: 1, done: 2, not_done: 0 }],
@@ -102,7 +102,7 @@ describe("nội dung xem trước báo cáo theo khoảng (ảnh 07)", () => {
     const report = buildRangeStudentReport(student, range, { ...state, generalComment: "Nhận xét kiểm thử tổng hợp." })!;
     const html = text(renderToStaticMarkup(<ReportPreview report={report} range={range} className="Tiếng Anh giao tiếp 6A" />));
 
-    expect(html).toContain("Báo cáo Buổi 1–8");
+      expect(html).toContain("<h2>Báo cáo</h2>");
     expect(html).toContain("21/09–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
     expect(html).toContain("Chuyên cần");
     expect(html).toContain("Bài kiểm tra");
@@ -145,12 +145,12 @@ describe("nội dung xem trước báo cáo theo khoảng (ảnh 07)", () => {
 });
 
 describe("danh sách đợt báo cáo", () => {
-  it("không còn chọn tháng; mỗi đợt ghi 'Buổi 1–8 · 21/09–14/10' kèm đếm đã phát hành / nháp / cần phát hành lại", () => {
+  it("mỗi đợt ghi khoảng ngày kèm đếm đã phát hành / nháp / cần phát hành lại", () => {
     const state = createSeed();
     state.reports = state.reports.map((report) => (report.id === "6a-student-1-report" ? { ...report, needsRepublish: true } : report));
     replaceStore(state);
     const html = renderStatic();
-    expect(html).toContain("Buổi 1–8 · 21/09–14/10");
+      expect(html).toContain("21/09–14/10");
     expect(html).toContain('href="/lop/6a/bao-cao?dot=6a-batch"');
     expect(html).toContain("<b>1</b> đã phát hành");
     expect(html).toContain("<b>8</b> nháp");
@@ -168,7 +168,7 @@ describe("danh sách đợt báo cáo", () => {
     replaceStore(state);
     const html = renderStatic();
     expect(html).toContain("01/09–31/09");
-    expect(html).not.toContain("Buổi 1–");
+      expect(html).not.toMatch(/Buổi\s+\d/);
   });
 
   it("chưa có đợt nào thì hiện trạng thái rỗng; lớp chưa có buổi đã diễn ra thì không thêm được", () => {
@@ -191,7 +191,7 @@ describe("danh sách đợt báo cáo", () => {
     state.roles.find((role) => role.id === ROLE_IDS.teacher)!.permissions.comments_reports = "read";
     replaceStore(state);
     const html = renderStatic();
-    expect(html).toContain("Buổi 1–8");
+      expect(html).toContain("21/09–14/10");
     expect(html).not.toContain("Thêm báo cáo");
   });
 
@@ -212,16 +212,16 @@ describe("danh sách đợt báo cáo", () => {
 });
 
 describe("thêm báo cáo theo khoảng buổi", () => {
-  it("mặc định từ Buổi 1 đến buổi đã diễn ra gần nhất, không có buổi hủy trong lựa chọn", async () => {
+  it("mặc định từ ngày đầu đến ngày đã diễn ra gần nhất, không có buổi hủy trong lựa chọn", async () => {
     renderLive();
     fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
     const dialog = await screen.findByRole("dialog", { name: "Thêm báo cáo" });
     const from = within(dialog).getByLabelText("Buổi bắt đầu") as HTMLSelectElement;
     const to = within(dialog).getByLabelText("Buổi kết thúc") as HTMLSelectElement;
-    expect(from.selectedOptions[0].textContent).toBe("Buổi 1 · 21/09");
-    expect(to.selectedOptions[0].textContent).toBe("Buổi 8 · 14/10");
+    expect(from.selectedOptions[0].textContent).toBe("T2 · 21/09");
+    expect(to.selectedOptions[0].textContent).toBe("T4 · 14/10");
     const labels = [...from.options].map((option) => option.textContent);
-    expect(labels).toContain("Buổi 9 · 19/10");
+    expect(labels).toContain("T2 · 19/10");
     expect(labels.some((label) => label?.includes("16/10"))).toBe(false);
   });
 
@@ -287,7 +287,7 @@ describe("chi tiết một đợt", () => {
 
   it("liệt kê học sinh của đợt với tình trạng sẵn sàng / thiếu dữ liệu / đã phát hành", () => {
     const html = renderStatic("/lop/6a/bao-cao?dot=6a-batch");
-    expect(html).toContain("Buổi 1–8 · 21/09–14/10");
+      expect(html).toContain("21/09–14/10");
     expect(html).toContain("Tất cả báo cáo");
     expect(html).toContain("sẵn sàng");
     expect(html).toContain("thiếu dữ liệu");
@@ -390,7 +390,7 @@ describe("xem trước trong popup", () => {
     renderLive(path);
     fireEvent.click(await screen.findByRole("button", { name: /Trần Gia Bảo/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Xem trước" }));
-    return screen.findByRole("dialog", { name: "Báo cáo Buổi 1–8" });
+      return screen.findByRole("dialog", { name: "Báo cáo" });
   };
 
   it("mobile: mở thành sheet toàn màn, tải bản của máy chủ và không nối bên dưới danh sách", async () => {
@@ -407,7 +407,7 @@ describe("xem trước trong popup", () => {
     expect(document.querySelectorAll("article[aria-label='Bản xem trước báo cáo']")).toHaveLength(1);
     expect(dialog.closest("main")).not.toBeNull();
     fireEvent.click(within(dialog).getByRole("button", { name: "Đóng" }));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Báo cáo Buổi 1–8" })).toBeNull());
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Báo cáo" })).toBeNull());
   });
 
   it("desktop: mở thành dialog trong trang chi tiết đợt", async () => {
@@ -416,7 +416,7 @@ describe("xem trước trong popup", () => {
     renderLive("/lop/6a/bao-cao?dot=6a-batch");
     fireEvent.click(await screen.findByRole("button", { name: /Trần Gia Bảo/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Xem trước" }));
-    const dialog = await screen.findByRole("dialog", { name: "Báo cáo Buổi 1–8" });
+      const dialog = await screen.findByRole("dialog", { name: "Báo cáo" });
     expect(await within(dialog).findByText("Con tiến bộ rõ.")).toBeVisible();
     expect(screen.getByText(/Sẵn sàng/)).toBeInTheDocument();
   });
@@ -449,11 +449,11 @@ describe("xem trước trong popup", () => {
     renderLive("/lop/6a/bao-cao?dot=6a-batch");
     fireEvent.click(await screen.findByRole("button", { name: /Lê Khánh Chi/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Xem trước" }));
-    const dialog = await screen.findByRole("dialog", { name: "Báo cáo Buổi 1–8" });
+      const dialog = await screen.findByRole("dialog", { name: "Báo cáo" });
     await within(dialog).findByText("Con tiến bộ rõ.");
     fireEvent.click(within(dialog).getByRole("button", { name: "Phát hành" }));
     await waitFor(() => expect(calls.map((call) => call.endpoint)).toContain("POST /reports/6a-student-2-report/publish"));
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Báo cáo Buổi 1–8" })).toBeNull());
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Báo cáo" })).toBeNull());
     expect(await screen.findByText("Đã phát hành báo cáo.")).toBeVisible();
     expect(getStore().reports.find((report) => report.id === "6a-student-2-report")?.status).toBe("published");
   });
@@ -467,11 +467,11 @@ describe("xem trước trong popup", () => {
     renderLive("/lop/6a/bao-cao?dot=6a-batch");
     fireEvent.click(await screen.findByRole("button", { name: /Lê Khánh Chi/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Xem trước" }));
-    const dialog = await screen.findByRole("dialog", { name: "Báo cáo Buổi 1–8" });
+      const dialog = await screen.findByRole("dialog", { name: "Báo cáo" });
     await within(dialog).findByText("Con tiến bộ rõ.");
     fireEvent.click(within(dialog).getByRole("button", { name: "Phát hành" }));
     expect(await within(dialog).findByText("Báo cáo vừa được phát hành ở nơi khác. Tải lại rồi thử lại.")).toBeVisible();
-    expect(screen.getByRole("dialog", { name: "Báo cáo Buổi 1–8" })).toBeVisible();
+      expect(screen.getByRole("dialog", { name: "Báo cáo" })).toBeVisible();
   });
 });
 

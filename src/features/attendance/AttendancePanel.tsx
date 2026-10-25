@@ -353,7 +353,7 @@ export default function AttendancePanel({
           {desktop && (
             <div className={s.cardHead}>
               <p className={s.cardTitle}>
-                {sessionPrefix(session)} · {formatWeekdayDate(session.date)}
+                {sessionPrefix(session)}
                 {session.time ? ` · ${session.time}` : ""}
               </p>
               <p className={s.cardSummary}>

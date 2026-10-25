@@ -43,11 +43,11 @@ describe("Khung đầu web Chi tiết lớp (ảnh 01, 03)", () => {
     );
   });
 
-  it("tiêu đề buổi có số buổi, thứ/ngày và giờ", () => {
+  it("tiêu đề buổi có thứ/ngày và giờ, không đánh số buổi", () => {
     replaceStore(createSeed());
     const item = session({ id: "6a-session-0", date: "2026-09-21" });
     expect(sessionHeading(item, "18:00")).toBe(
-      "Buổi 1 · Thứ Hai, 21 tháng 9 · 18:00",
+      "T2 · 21/09 · 18:00",
     );
   });
 
@@ -66,7 +66,7 @@ describe("Khung đầu web Chi tiết lớp (ảnh 01, 03)", () => {
 });
 
 describe("Bảng buổi học trên web (ảnh 01, GL-01)", () => {
-  it("buổi đã hủy không có số, các buổi khác đánh số liên tục", () => {
+  it("buổi học hiển thị theo thứ và ngày", () => {
     replaceStore(createSeed());
     const first = session({ id: "6a-session-0", date: "2026-09-21" });
     const cancelled = session({
@@ -77,7 +77,7 @@ describe("Bảng buổi học trên web (ảnh 01, GL-01)", () => {
       makeup: true,
     });
     expect(sessionRowTitle(cancelled)).toBe("Buổi đã hủy");
-    expect(sessionRowTitle(first)).toBe("Buổi 1");
+    expect(sessionRowTitle(first)).toBe("T2 · 21/09");
   });
 
   it("ngày ngắn dưới số buổi là 'Thứ Hai, 19/10'", () => {

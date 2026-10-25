@@ -122,21 +122,15 @@ export interface HomeworkLine {
 
 /**
  * Dòng tóm tắt BTVN buổi trước dưới mỗi em:
- * "BTVN buổi 17: 2/2 phần đã chấm" / "BTVN buổi 17: 1 phần Chưa chấm" /
- * "Buổi đầu · chưa có BTVN buổi trước" / "Buổi trước không giao BTVN".
+ * "BTVN buổi trước: 2/2 phần đã chấm" / "BTVN buổi trước: 1 phần Chưa chấm" /
+ * "Bài tập buổi trước chưa có" / "Buổi trước không giao BTVN".
  */
-export function homeworkLine(
-  summary: HomeworkSummary,
-  previousSessionNumber: number | null,
-): HomeworkLine {
+export function homeworkLine(summary: HomeworkSummary): HomeworkLine {
   if (summary.state === "first")
-    return { text: "Buổi đầu · chưa có BTVN buổi trước", tone: "muted" };
+    return { text: "Bài tập buổi trước chưa có", tone: "muted" };
   if (summary.state === "none-given")
     return { text: "Buổi trước không giao BTVN", tone: "muted" };
-  const prefix =
-    previousSessionNumber === null
-      ? "BTVN buổi trước"
-      : `BTVN buổi ${previousSessionNumber}`;
+  const prefix = "BTVN buổi trước";
   if (summary.ungradedSections > 0)
     return {
       text: `${prefix}: ${summary.ungradedSections} phần Chưa chấm`,

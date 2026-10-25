@@ -124,18 +124,17 @@ describe("nhãn trạng thái phiếu", () => {
 
 describe("dòng tóm tắt BTVN buổi trước (ảnh 40, 45, 46)", () => {
   it("đã chấm đủ", () => {
-    const line = homeworkLine(row("A").previousHomework, 7);
-    expect(line).toEqual({ text: "BTVN buổi 7: 2/2 phần đã chấm", tone: "muted" });
+    const line = homeworkLine(row("A").previousHomework);
+      expect(line).toEqual({ text: "BTVN buổi trước: 2/2 phần đã chấm", tone: "muted" });
   });
 
   it("còn phần Chưa chấm thì đếm số phần và tô màu cảnh báo", () => {
     const line = homeworkLine(
       row("A", {}, { gradedSections: 1, ungradedSections: 1 })
         .previousHomework,
-      7,
     );
     expect(line).toEqual({
-      text: "BTVN buổi 7: 1 phần Chưa chấm",
+      text: "BTVN buổi trước: 1 phần Chưa chấm",
       tone: "warning",
     });
   });
@@ -145,14 +144,12 @@ describe("dòng tóm tắt BTVN buổi trước (ảnh 40, 45, 46)", () => {
       homeworkLine(
         row("A", {}, { state: "first", totalSections: 0, gradedSections: 0 })
           .previousHomework,
-        null,
       ),
-    ).toEqual({ text: "Buổi đầu · chưa có BTVN buổi trước", tone: "muted" });
+      ).toEqual({ text: "Bài tập buổi trước chưa có", tone: "muted" });
     expect(
       homeworkLine(
         row("A", {}, { state: "none-given", totalSections: 0, gradedSections: 0 })
           .previousHomework,
-        6,
       ),
     ).toEqual({ text: "Buổi trước không giao BTVN", tone: "muted" });
   });

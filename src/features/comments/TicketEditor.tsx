@@ -79,14 +79,12 @@ export function desktopTicketLabel(row: TicketRow): string {
  */
 export default function TicketEditor({
   session,
-  sessionNumber,
   row,
   homework,
   readOnly = false,
   onGoHomework,
 }: {
   session: Session;
-  sessionNumber: number;
   row: TicketRow;
   homework: SheetHomework;
   readOnly?: boolean;
@@ -232,7 +230,7 @@ export default function TicketEditor({
             size="compact"
             title={
               homework.state === "first"
-                ? "Buổi đầu · chưa có BTVN buổi trước"
+                ? "Bài tập buổi trước chưa có"
                 : "Buổi trước không giao BTVN"
             }
           />

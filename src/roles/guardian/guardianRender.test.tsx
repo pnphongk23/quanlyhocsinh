@@ -100,18 +100,18 @@ describe("PH · Lớp học của con (tab 1)", () => {
     // Danh sách buổi: nhóm tháng, mới nhất trước, nhãn điểm danh, sao, Mới, buổi huỷ.
     expect(html).toContain("Tháng 10/2026");
     expect(html).toContain('href="/ph/buoi/6a-session-7"');
-    expect(html).toContain("Buổi 8 · Thứ Tư 14/10");
+      expect(html).toContain("T4 · 14/10");
     expect(html).toContain("Có phép");
     expect(html).toContain("Có mặt");
     expect(html).toContain("3 sao");
     expect(html).toContain("Mới");
-    expect(html).toContain("Buổi bù · Thứ Sáu 16/10");
+      expect(html).toContain("T6 · 16/10");
     expect(html).toContain("Đã huỷ");
     // Buổi sắp tới đã có BTVN vẫn vào danh sách để phụ huynh xem đề.
     expect(html).toContain('href="/ph/buoi/6a-extra-session"');
     expect(html).toContain("Sắp học");
-    expect(html.indexOf("Buổi 8 · Thứ Tư 14/10")).toBeLessThan(
-      html.indexOf("Buổi 7 · Thứ Hai 12/10"),
+      expect(html.indexOf("T4 · 14/10")).toBeLessThan(
+        html.indexOf("T2 · 12/10"),
     );
     // Không còn tab Điểm danh riêng, không có nút sửa/gửi: phụ huynh chỉ đọc.
     expect(html).not.toContain("Lưu");
@@ -253,18 +253,18 @@ describe("PH · Nhận xét của cô (tab 2)", () => {
     const html = renderPage(<GuardianCommentsPage />);
     expect(html).toContain("Nhận xét của cô");
     expect(html).toContain("Tháng 10/2026");
-    expect(html).toContain("Buổi 8 · 14 tháng 10");
-    expect(html).toContain("Buổi 7 · 12 tháng 10");
-    expect(html).toContain("Buổi 6 · 7 tháng 10");
-    expect(html).toContain("Buổi 5 · 5 tháng 10");
-    // Mới nhất trước: "Buổi 8" đứng trước "Buổi 7".
-    expect(html.indexOf("Buổi 8 · 14 tháng 10")).toBeLessThan(
-      html.indexOf("Buổi 7 · 12 tháng 10"),
+      expect(html).toContain("T4 · 14/10");
+      expect(html).toContain("T2 · 12/10");
+      expect(html).toContain("T4 · 07/10");
+      expect(html).toContain("T2 · 05/10");
+      // Mới nhất trước theo ngày.
+      expect(html.indexOf("T4 · 14/10")).toBeLessThan(
+        html.indexOf("T2 · 12/10"),
     );
     // Lời cô của báo cáo tháng đã phát hành là một mục riêng theo ngày phát hành.
     expect(html).toContain("Lời cô · Báo cáo tháng 10");
       expect(html).toContain("Nhận xét kiểm thử tổng hợp.");
-    expect(html.indexOf("Buổi 8 · 14 tháng 10")).toBeLessThan(
+      expect(html.indexOf("T4 · 14/10")).toBeLessThan(
       html.indexOf("Lời cô · Báo cáo tháng 10"),
     );
     expect(html).toContain('href="/ph/buoi/6a-session-7"');
@@ -288,7 +288,7 @@ describe("PH · Nhận xét của cô (tab 2)", () => {
     switchRole(MEMBER_IDS.lanGuardian);
     const html = renderPage(<GuardianCommentsPage />);
     expect(html).not.toContain("Lời cô");
-    expect(html).toContain("Buổi 8 · 14 tháng 10");
+      expect(html).toContain("T4 · 14/10");
   });
 });
 
@@ -301,19 +301,19 @@ describe("PH · Phiếu buổi học (ảnh 08)", () => {
       <GuardianSessionPage />,
     );
     expect(html).toContain("Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
-    expect(html).toContain("Buổi 8 · Thứ Tư 14/10");
+      expect(html).toContain("T4 · 14/10");
       expect(html).toContain("Nhận xét của Cô Lan");
     expect(html).toContain(
       "Con hoàn thành 3 sao 🌟🌟🌟. Tập trung, tích cực học tập. Ghi bài đầy đủ, hiểu bài!",
     );
       expect(html).toContain("Ghi chú kiểm thử.");
-    expect(html).toContain("Kết quả BTVN buổi 7");
+      expect(html).toContain("Kết quả BTVN ngày 12/10");
       expect(html).toContain("Từ vựng kiểm thử");
     expect(html).toContain("Hoàn thành tốt");
     expect(html).toContain("BTVN mới");
-    expect(html).toContain("Cô chấm ở buổi 9 · Thứ Hai 19/10");
+      expect(html).toContain("Cô chấm ngày 19/10");
     expect(html).not.toContain("16/10 · Đã huỷ");
-      expect(html).toContain("Từ vựng buổi 7");
+      expect(html).toContain("Từ vựng ngày 19/10");
   });
 
   it("'Chưa chấm' khi phiếu buổi chấm đã gửi nhưng giáo viên chưa chấm", () => {
@@ -340,7 +340,7 @@ describe("PH · Phiếu buổi học (ảnh 08)", () => {
       "/ph/buoi/:sessionId",
       <GuardianSessionPage />,
     );
-    expect(html).toContain("Kết quả BTVN buổi 7");
+      expect(html).toContain("Kết quả BTVN ngày 12/10");
     expect(html).toContain("Chưa chấm");
     expect(html).toContain("Cô chấm xong là hiện ngay.");
   });
@@ -369,7 +369,7 @@ describe("PH · Buổi học: bài tập về nhà (ảnh 09, 34, 35)", () => {
       "/ph/buoi/:sessionId",
       <GuardianSessionPage />,
     );
-    expect(html).toContain("Buổi 10 · Chủ nhật 25/10");
+      expect(html).toContain("CN · 25/10");
     expect(html).toContain("Đọc bài");
   });
 
@@ -382,7 +382,7 @@ describe("PH · Buổi học: bài tập về nhà (ảnh 09, 34, 35)", () => {
       "/ph/buoi/:sessionId",
       <GuardianSessionPage />,
     );
-    expect(html).toContain("Buổi bù · Thứ Sáu 16/10");
+      expect(html).toContain("T6 · 16/10");
     expect(html).toContain("Buổi này đã huỷ");
     expect(html.indexOf("Buổi này đã huỷ")).toBeLessThan(
       html.indexOf("hwCard") === -1 ? html.length : html.indexOf("hwCard"),
@@ -406,7 +406,7 @@ describe("PH · Buổi học: bài tập về nhà (ảnh 09, 34, 35)", () => {
       "/ph/buoi/:sessionId",
       <GuardianSessionPage />,
     );
-      expect(hidden).toContain("Từ vựng buổi 7");
+      expect(hidden).toContain("Từ vựng ngày 19/10");
     expect(hidden.slice(hidden.indexOf("BTVN mới"))).not.toContain(
       "Hoàn thành tốt",
     );
@@ -448,7 +448,7 @@ describe("PH · Buổi học: bài tập về nhà (ảnh 09, 34, 35)", () => {
       "/ph/buoi/:sessionId",
       <GuardianSessionPage />,
     );
-    expect(html).toContain("Cô chấm ở buổi 9 · Thứ Hai 19/10");
+      expect(html).toContain("Cô chấm ngày 19/10");
     expect(html).not.toContain("16/10 · Đã huỷ");
     expect(html).not.toContain("Các buổi trước");
   });
@@ -495,9 +495,9 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
       next_cursor: null,
     }));
     renderAt("/ph/bao-cao");
-    const links = await screen.findAllByRole("link", { name: /Buổi 1–8|09/ });
+      const links = await screen.findAllByRole("link", { name: /21\/09–14\/10|09/ });
     expect(links.map((link) => link.getAttribute("href"))).toEqual(["/ph/bao-cao/r-new/3", "/ph/bao-cao/r-old/1"]);
-    expect(links[0]).toHaveTextContent("Buổi 1–8 · 21/09–14/10");
+      expect(links[0]).toHaveTextContent("21/09–14/10");
     expect(links[0]).toHaveTextContent("Phát hành 25/10");
     expect(links[0]).toHaveTextContent("Cập nhật");
     expect(links[1]).toHaveTextContent("01/09–31/09");
@@ -537,7 +537,7 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Không kết nối được máy chủ");
     fail = false;
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
-    expect(await screen.findByRole("link", { name: /Buổi 1–8/ })).toBeVisible();
+      expect(await screen.findByRole("link", { name: /21\/09–14\/10/ })).toBeVisible();
 
     cleanup();
     Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
@@ -550,7 +550,7 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
     seedGuardian();
     const spy = await mockApi(() => ({ student_id: "6a-student-1", published_at: "2026-10-25T09:00:00Z", snapshot }));
     renderAt("/ph/bao-cao/r-new/2");
-    expect(await screen.findByRole("heading", { name: "Báo cáo Buổi 1–8" })).toBeVisible();
+      expect(await screen.findByRole("heading", { name: "Báo cáo" })).toBeVisible();
     expect(spy.mock.calls[0][0]).toBe("GET /reports/r-new/publications/2");
     const text = document.body.textContent ?? "";
     expect(text).toContain("21/09–14/10");

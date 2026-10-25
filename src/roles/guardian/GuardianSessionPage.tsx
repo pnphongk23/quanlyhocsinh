@@ -91,7 +91,7 @@ export default function GuardianSessionPage() {
       <PageHeader
         backTo={back}
         eyebrow={`${child.student.name} · ${child.className}`}
-        title={`${sessionPrefix(session)} · ${weekdayDayMonth(session.date)}`}
+        title={sessionPrefix(session)}
       />
 
       {cancelled && (
@@ -157,13 +157,9 @@ export default function GuardianSessionPage() {
             <section className={`${g.card} ${g.hwCard}`}>
               <div className={g.cardHead}>
                 <h2>
-                  Kết quả BTVN buổi {ticketHomework.sessionNumber}{" "}
-                  <span className={g.hwMeta}>
-                    ·{" "}
                     {ticketHomework.session
-                      ? dayMonth(ticketHomework.session.date)
-                      : ""}
-                  </span>
+                      ? `Kết quả BTVN ngày ${dayMonth(ticketHomework.session.date)}`
+                      : "Kết quả BTVN buổi trước"}
                 </h2>
               </div>
               <HomeworkSections
