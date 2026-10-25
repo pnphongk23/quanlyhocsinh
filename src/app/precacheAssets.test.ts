@@ -24,6 +24,12 @@ describe("app shell precache assets", () => {
       "/fonts/plus-jakarta-sans-latin-ext.woff2",
       "/fonts/plus-jakarta-sans-latin.woff2",
       "/fonts/plus-jakarta-sans-vietnamese.woff2",
+      "/mascot/mit-sao-0.webp",
+      "/mascot/mit-sao-0@2x.webp",
+      "/mascot/mit-sao-4.webp",
+      "/mascot/mit-sao-4@2x.webp",
+      "/mascot/mit-sao-5.webp",
+      "/mascot/mit-sao-5@2x.webp",
     ]);
   });
 });

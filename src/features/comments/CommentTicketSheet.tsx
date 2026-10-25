@@ -238,7 +238,7 @@ export default function CommentTicketSheet({
       )}
 
         <SlipCriteriaFields criteria={criteria} comment={comment} disabled={readOnly || row.comment?.scale === 3} onCriteriaChange={updateCriteria} onCommentChange={updateComment} />
-        <div className={s.templateBox}><Mascot pose={starPose(stars)} size={72} className={s.templateMascot} /><p className={s.templateText}>{stars}/5 sao</p></div>
+        <div className={s.templateBox}><Mascot pose={starPose(stars, row.comment?.scale ?? 5)} size={72} className={s.templateMascot} /><p className={s.templateText}>{stars}/{row.comment?.scale ?? 5} sao</p></div>
 
       <label className={s.noteField} htmlFor="ticket-note">
         <span className={s.noteLabel}>

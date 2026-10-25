@@ -162,7 +162,7 @@ export default function TicketEditor({
       </div>
 
         <SlipCriteriaFields criteria={criteria} comment={comment} disabled={!canWrite || row.comment?.scale === 3} onCriteriaChange={updateCriteria} onCommentChange={updateComment} onBlur={() => { if (canWrite) void persist(draft.current); }} />
-        <div className={s.templateBox}><Mascot pose={starPose(stars)} size={84} className={s.templateMascot} /><p className={s.templateText}>{stars}/5 · {comment ?? defaultSlipComment(stars)}</p></div>
+        <div className={s.templateBox}><Mascot pose={starPose(stars, row.comment?.scale ?? 5)} size={84} className={s.templateMascot} /><p className={s.templateText}>{stars}/{row.comment?.scale ?? 5} · {comment ?? defaultSlipComment(stars)}</p></div>
 
       <label className={s.noteField} htmlFor="desktop-ticket-note">
         <span className={s.fieldLabel}>
