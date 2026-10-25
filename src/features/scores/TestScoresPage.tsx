@@ -48,7 +48,7 @@ import s from "./scores.module.css";
 
 const keyFor = (testId: string, studentId: string) => `${testId}:${studentId}`;
 
-/** Điểm gõ dở ngoài thang 0–max của bài (ô trống không tính là lỗi). */
+/** Điểm gõ dở ngoài khoảng 0–1000 hoặc sai bước 0,5 (ô trống không tính lỗi). */
 export function isInvalidDraft(draft: ScoreDraft): boolean {
   const raw = draft.value.trim();
   if (raw === "") return false;

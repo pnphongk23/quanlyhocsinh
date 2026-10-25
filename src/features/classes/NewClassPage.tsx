@@ -87,10 +87,6 @@ export default function NewClassPage() {
           onChange={(event) => setTime(event.target.value)}
           required
         />
-        {/* 10-gv-tao-lop-moi: chỉ còn dòng ghi chú thang điểm, không còn segmented */}
-        <p className={s.scaleNote}>
-          Mỗi bài kiểm tra có thang điểm riêng, mặc định 15; sửa được khi tạo bài.
-        </p>
         <div className={s.studentNote}>
           <p className={s.studentNoteTitle}>Thêm học sinh vào lớp</p>
           <p className={s.studentNoteText}>

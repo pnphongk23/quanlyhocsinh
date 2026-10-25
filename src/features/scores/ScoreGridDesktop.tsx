@@ -50,7 +50,7 @@ export function draftKey(testId: string, studentId: string): string {
 
 /**
  * Bảng điểm nhập trực tiếp trên web (ảnh 13): học sinh × bài kiểm tra, mỗi cột
- * ghi "/điểm tối đa", cột học sinh ghim khi cuộn ngang, nút "Lưu điểm".
+ * ghi điểm theo thang 0–1000, cột học sinh ghim khi cuộn ngang, nút "Lưu điểm".
  * Không có điểm trung bình ở bất kỳ đâu.
  */
 export default function ScoreGridDesktop({ classId }: { classId: string }) {

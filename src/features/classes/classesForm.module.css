@@ -51,12 +51,6 @@
   color: var(--state-selected-fg);
 }
 
-.scaleNote {
-  font-size: var(--text-md);
-  line-height: 1.5;
-  color: var(--color-muted);
-}
-
 .studentNote {
   display: grid;
   gap: 6px;

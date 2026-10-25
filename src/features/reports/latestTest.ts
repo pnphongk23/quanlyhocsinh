@@ -11,7 +11,7 @@ export interface LatestTestScore {
 /**
  * "Kiểm tra gần nhất" của một em: bài có ngày muộn nhất mà em đã có điểm
  * (khác null). Bài chưa có điểm và bài đã lưu trữ không tính. Không dùng điểm
- * trung bình — chỉ một điểm của một bài, kèm "/điểm tối đa" (quyết định R1-06).
+ * trung bình — chỉ trả về điểm của một bài.
  */
 export function latestTestScore(
   tests: Test[],
@@ -40,7 +40,7 @@ export function latestTestScore(
   return candidates[0] ?? null;
 }
 
-/** "14/20" — điểm / điểm tối đa của bài gần nhất, không có điểm trung bình. */
+/** Tên bài và điểm số gọn của bài gần nhất, không có điểm trung bình. */
 export function latestTestLabel(latest: LatestTestScore | null): string {
   if (!latest) return "Chưa có điểm";
     return `${latest.name} · ${trimNumber(latest.value)}`;
