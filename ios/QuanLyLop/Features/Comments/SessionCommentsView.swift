@@ -572,7 +572,7 @@ struct I4TicketSheet: View {
                     .foregroundStyle(AppColors.text)
             }
             HStack(spacing: 12) {
-                AppMascot(pose: .forStars(slip?.stars), height: AppMetrics.ticketMascot)
+                AppMascot(pose: .forStars(slip?.stars, scale: slip?.scale ?? SessionSlip.legacyScale), height: AppMetrics.ticketMascot)
                 Text(slip.map(SlipRules.sentence(for:)) ?? "")
                     .appText(AppTextStyle(size: 16, weight: .regular, lineHeight: 24.8))
                     .foregroundStyle(AppColors.text)

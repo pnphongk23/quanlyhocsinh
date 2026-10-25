@@ -7,14 +7,19 @@ import XCTest
 final class CommentSheetTests: XCTestCase {
     func testMascotPoseFollowsTheChosenStars() {
         XCTAssertEqual(MascotPose.forStars(nil), .cho)
-        XCTAssertEqual(MascotPose.forStars(1), .sao1)
-        XCTAssertEqual(MascotPose.forStars(2), .sao2)
-        XCTAssertEqual(MascotPose.forStars(3), .sao3)
-        // Levels with no pose of their own borrow the nearest one, and never crash.
-        XCTAssertEqual(MascotPose.forStars(0), .sao1)
-        XCTAssertEqual(MascotPose.forStars(4), .sao3)
-        XCTAssertEqual(MascotPose.forStars(5), .sao3)
-        for pose in [MascotPose.sao1, .sao2, .sao3] {
+        let five: [MascotPose] = [.sao0, .sao1, .sao2, .sao3, .sao4, .sao5]
+        for (stars, pose) in five.enumerated() {
+            XCTAssertEqual(MascotPose.forStars(stars, scale: 5), pose)
+            XCTAssertEqual(MascotPose.forStars(stars), pose, "five stars is the default scale")
+        }
+        // Old three-star slips keep their poses; out-of-range levels never crash.
+        XCTAssertEqual(MascotPose.forStars(1, scale: 3), .sao1)
+        XCTAssertEqual(MascotPose.forStars(2, scale: 3), .sao2)
+        XCTAssertEqual(MascotPose.forStars(3, scale: 3), .sao3)
+        XCTAssertEqual(MascotPose.forStars(nil, scale: 3), .cho)
+        XCTAssertEqual(MascotPose.forStars(9, scale: 5), .sao5)
+        XCTAssertEqual(MascotPose.forStars(-1, scale: 5), .sao0)
+        for pose in five {
             XCTAssertNotNil(MascotImage.image(for: pose), "\(pose.fileName).webp must be in the app bundle")
         }
     }

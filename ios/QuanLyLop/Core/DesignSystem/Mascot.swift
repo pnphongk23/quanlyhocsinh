@@ -6,16 +6,26 @@ import UIKit
 enum MascotPose: String, CaseIterable, Sendable {
     case main, cho, chao, khen
     case dangTai = "dang-tai"
-    case sao1 = "sao-1", sao2 = "sao-2", sao3 = "sao-3"
+    case sao0 = "sao-0", sao1 = "sao-1", sao2 = "sao-2", sao3 = "sao-3", sao4 = "sao-4", sao5 = "sao-5"
 
-    /// Pose for a star level; no level yet means Mít is waiting. Mít only has poses for 1...3 stars, so other
-    /// levels borrow the nearest one until a pose for each of 0...5 is chosen.
-    static func forStars(_ stars: Int?) -> MascotPose {
+    /// Pose for a star level on a slip scale; no level yet means Mít is waiting. Five-star slips use the pose of
+    /// each level 0...5; old three-star slips keep their 1...3 poses.
+    static func forStars(_ stars: Int?, scale: Int = 5) -> MascotPose {
         guard let stars else { return .cho }
-        switch min(max(stars, 1), 3) {
+        if scale == SessionSlip.legacyScale {
+            switch min(max(stars, 1), 3) {
+            case 1: return .sao1
+            case 2: return .sao2
+            default: return .sao3
+            }
+        }
+        switch min(max(stars, 0), 5) {
+        case 0: return .sao0
         case 1: return .sao1
         case 2: return .sao2
-        default: return .sao3
+        case 3: return .sao3
+        case 4: return .sao4
+        default: return .sao5
         }
     }
 
@@ -29,9 +39,12 @@ enum MascotPose: String, CaseIterable, Sendable {
         case .chao: 204 / 256
         case .khen: 235 / 256
         case .dangTai: 199 / 256
+        case .sao0: 160 / 256
         case .sao1: 193 / 256
         case .sao2: 227 / 256
         case .sao3: 190 / 256
+        case .sao4: 236 / 256
+        case .sao5: 255 / 256
         }
     }
 }
