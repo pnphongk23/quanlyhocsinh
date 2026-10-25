@@ -1,6 +1,7 @@
 import type { Identity, Permissions, PermGroup } from '../types';
 import { ApiError, notFound, validationError, conflict, errorBody, passwordChangeRequired } from '../lib/errors';
 import { assertStaffWrite, requireAccess, mapTriggerError } from './authz';
+import { generateSlipComment } from '../lib/slip-comment';
 
 type Row = Record<string, any>;
 type SyncIdentity = Identity & { syncState?: Map<string,Row|null>; timezone?: string };
@@ -17,7 +18,7 @@ const groups: Record<string, PermGroup> = { attendance:'sessions_attendance',sco
 const cells: Record<string, { table: string; key: string; fields: string[]; parent: string }> = {
   attendance: {table:'attendance',key:'session_id',fields:['status','note','late_at'],parent:'class_sessions'},
   score: {table:'scores',key:'test_id',fields:['value'],parent:'tests'},
-  slip: {table:'session_comments',key:'session_id',fields:['stars','scale','criteria','comment','note'],parent:'class_sessions'},
+  slip: {table:'session_comments',key:'session_id',fields:['stars','scale','criteria','comment','note','hw_manual'],parent:'class_sessions'},
   homework_grade: {table:'homework_grades',key:'section_id',fields:['level'],parent:'homework_sections'},
 };
 const q = (sql: string, ...args: any[]): SQL => ({sql,args});
@@ -200,21 +201,30 @@ const bits=(n:number):number => { let c=0; for (let m=n;m;m&=m-1) c++; return c;
 /** Slip fields from a slip.set payload. Scale 5 slips carry criteria (stars = criteria met); a payload with
  * only stars writes or keeps a legacy scale 3 slip so installed clients keep working. */
 function slipValues(p:Row,row:Row|null):Row {
-  const note=text(p.note,1000);
-  let comment:string|null=row?.comment ?? null;
-  if (p.comment!==undefined) {
-    if (p.comment!==null && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
-    comment=p.comment===null ? null : p.comment.trim();
-    if (comment==='') comment=null;
-  }
+  const note=p.note===undefined ? (row?.note ?? '') : typeof p.note==='string' ? p.note : (()=>{throw validationError(undefined,'invalid_text')})();
+  if (p.hw_manual!==undefined && typeof p.hw_manual!=='boolean') throw validationError(undefined,'invalid_hw_manual');
+  const hw_manual=p.hw_manual===undefined ? (row?.hw_manual ?? 0) : Number(p.hw_manual);
   if (p.criteria!==undefined) {
     if (typeof p.criteria!=='number' || !Number.isInteger(p.criteria) || p.criteria<0 || p.criteria>CRITERIA_MASK) throw validationError(undefined,'invalid_criteria');
     if (row?.scale===3 && row.status==='sent') throw validationError(undefined,'legacy_scale');
-    return {stars:bits(p.criteria),scale:5,criteria:p.criteria,comment,note};
+    return {stars:bits(p.criteria),scale:5,criteria:p.criteria,comment:generateSlipComment(p.criteria),note,hw_manual};
   }
-  if (row && row.scale===5) throw validationError(undefined,'criteria_required');
-  if (p.comment!==undefined && comment!==null) throw validationError(undefined,'criteria_required');
-  return {stars:memberOf(p.stars,[null,1,2,3]),scale:3,criteria:null,comment:null,note};
+  if (row && row.scale===5) {
+    if (p.stars!==undefined) throw validationError(undefined,'criteria_required');
+    return {stars:row.stars,scale:5,criteria:row.criteria,comment:row.comment,note,hw_manual};
+  }
+  return {stars:memberOf(p.stars,[null,1,2,3]),scale:3,criteria:null,comment:null,note,hw_manual};
+}
+
+async function defaultCriteria(db:D1Database,workspaceId:string,session:Row,studentId:string):Promise<number> {
+  const previous=await one(db,`SELECT id FROM class_sessions WHERE workspace_id=? AND class_id=? AND status<>'cancelled'
+    AND (date<? OR (date=? AND start_time<?)) ORDER BY date DESC,start_time DESC LIMIT 1`,
+    workspaceId,session.class_id,session.date,session.date,session.start_time);
+  if (!previous) return CRITERIA_MASK;
+  const incomplete=await one(db,`SELECT 1 FROM homework_sections hs JOIN homework_grades hg
+    ON hg.workspace_id=hs.workspace_id AND hg.section_id=hs.id AND hg.student_id=?
+    WHERE hs.workspace_id=? AND hs.session_id=? AND hg.level='not_done' LIMIT 1`,studentId,workspaceId,previous.id);
+  return incomplete ? CRITERIA_MASK & ~16 : CRITERIA_MASK;
 }
 async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Promise<Plan> {
   const def=cells[entity]!,p=c.payload,now=new Date().toISOString();
@@ -264,9 +274,32 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
   first.args.push(i.workspaceId,parent.id,parent.version);
   first.sql+=` AND EXISTS(SELECT 1 FROM students WHERE workspace_id=? AND id=? AND version=?)`;
   first.args.push(i.workspaceId,enrolled.id,enrolled.version);
-  const rest:SQL[]=[];
+    const rest:SQL[]=[];
   if (entity==='attendance') rest.push(q(`UPDATE class_sessions SET status='held',version=version+1,updated_at=?,updated_by=? WHERE workspace_id=? AND id=? AND status='planned' AND ${ack(c)}`,now,i.userId,i.workspaceId,parent.id));
-  if (entity==='score' && values.value!==null && (!row || row.value!==values.value)) rest.push(notifications(i,c,'score_updated',parent.class_id,p.student_id,null,parent.id,now));
+    if (entity==='score' && values.value!==null && (!row || row.value!==values.value)) rest.push(notifications(i,c,'score_updated',parent.class_id,p.student_id,null,parent.id,now));
+    if (entity==='homework_grade') {
+      const next=await one(db,`SELECT n.id FROM class_sessions source JOIN class_sessions n
+        ON n.workspace_id=source.workspace_id AND n.class_id=source.class_id AND n.status<>'cancelled'
+        AND (n.date>source.date OR (n.date=source.date AND n.start_time>source.start_time))
+        WHERE source.workspace_id=? AND source.id=? ORDER BY n.date,n.start_time LIMIT 1`,i.workspaceId,parent.session_id);
+      if (next) {
+        const slip=await one(db,'SELECT criteria,hw_manual,version FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?',i.workspaceId,next.id,p.student_id);
+        if (slip && slip.hw_manual===0) {
+          const grades=await db.prepare(`SELECT hs.id section_id,hg.level FROM homework_sections hs LEFT JOIN homework_grades hg
+            ON hg.workspace_id=hs.workspace_id AND hg.section_id=hs.id AND hg.student_id=?
+            WHERE hs.workspace_id=? AND hs.session_id=?`).bind(p.student_id,i.workspaceId,parent.session_id).all<Row>();
+          const hasIncomplete=grades.results.some(g=>g.section_id===p.section_id ? values.level==='not_done' : g.level==='not_done');
+          const criteria=hasIncomplete ? slip.criteria & ~16 : slip.criteria | 16;
+            if (criteria!==slip.criteria) {
+              first.sql+=` AND EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=? AND hw_manual=0)`;
+              first.args.push(i.workspaceId,next.id,p.student_id,slip.version);
+              rest.push(q(`UPDATE session_comments SET criteria=?,stars=?,comment=?,version=version+1,updated_at=?,updated_by=?
+                WHERE workspace_id=? AND session_id=? AND student_id=? AND version=? AND hw_manual=0 AND ${ack(c)}`,
+                criteria,bits(criteria),generateSlipComment(criteria),now,i.userId,i.workspaceId,next.id,p.student_id,slip.version));
+            }
+        }
+      }
+    }
   return {result,first,rest};
 }
 export async function push(db:D1Database,i:SyncIdentity,commands:Command[],requestId:string) {
@@ -352,20 +385,22 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
       await student(db,i,sid,session,session.date);
       const row=await one(db,'SELECT * FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?',i.workspaceId,session.id,sid);
       if (row?.status==='sent') {skipped.push({student_id:sid,reason:'already_sent'});continue;}
-      if (!row) {
-        // No slip yet: the default slip (all five criteria met) is created and sent for students who attended.
-        const att=await one(db,'SELECT status,version FROM attendance WHERE session_id=? AND student_id=?',session.id,sid);
-        if (!att || !DEFAULT_SLIP_ATTENDANCE.includes(att.status)) {skipped.push({student_id:sid,reason:'not_attended'});continue;}
-        sent.push(sid as string);
+        if (!row) {
+          // New slips use the prior session's homework result for criterion five.
+          const att=await one(db,'SELECT status,version FROM attendance WHERE session_id=? AND student_id=?',session.id,sid);
+          if (!att || !DEFAULT_SLIP_ATTENDANCE.includes(att.status)) {skipped.push({student_id:sid,reason:'not_attended'});continue;}
+          const criteria=await defaultCriteria(db,i.workspaceId,session,sid as string);
+          sent.push(sid as string);
         guards.push(q('NOT EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?) AND EXISTS(SELECT 1 FROM attendance WHERE session_id=? AND student_id=? AND version=?)',i.workspaceId,session.id,sid,session.id,sid,att.version));
-        rest.push(q(`INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,status,sent_at,version,created_at,updated_at,updated_by)
-          SELECT ?,?,?,?,5,5,${CRITERIA_MASK},NULL,'','sent',?,1,?,?,? WHERE ${ack(c)}
-          AND NOT EXISTS(SELECT 1 FROM session_comments WHERE session_id=? AND student_id=?)
-          AND EXISTS(SELECT 1 FROM attendance WHERE session_id=? AND student_id=? AND version=?)`,
-        i.workspaceId,session.class_id,session.id,sid,now,now,now,i.userId,session.id,sid,session.id,sid,att.version));
-      } else {
-        // A legacy draft without stars has nothing to send; it becomes the default five-criteria slip.
-        const fill=row.stars===null && row.scale===3 ? `stars=5,scale=5,criteria=${CRITERIA_MASK},` : '';
+          rest.push(q(`INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,hw_manual,status,sent_at,version,created_at,updated_at,updated_by)
+            SELECT ?,?,?,?,?,5,?,?, '',0,'sent',?,1,?,?,? WHERE ${ack(c)}
+            AND NOT EXISTS(SELECT 1 FROM session_comments WHERE session_id=? AND student_id=?)
+            AND EXISTS(SELECT 1 FROM attendance WHERE session_id=? AND student_id=? AND version=?)`,
+          i.workspaceId,session.class_id,session.id,sid,bits(criteria),criteria,generateSlipComment(criteria),now,now,now,i.userId,session.id,sid,session.id,sid,att.version));
+        } else {
+          // A legacy draft without stars has nothing to send; it becomes the default five-criteria slip.
+          const criteria=row.stars===null && row.scale===3 ? await defaultCriteria(db,i.workspaceId,session,sid as string) : null;
+          const fill=criteria!==null ? `stars=${bits(criteria)},scale=5,criteria=${criteria},comment='${generateSlipComment(criteria).replaceAll("'","''")}',hw_manual=0,` : '';
         sent.push(sid as string);
         guards.push(q('EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=?)',i.workspaceId,session.id,sid,row.version));
         rest.push(q(`UPDATE session_comments SET ${fill}status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1

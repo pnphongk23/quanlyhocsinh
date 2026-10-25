@@ -1,4 +1,5 @@
 import { beforeEach, describe, it, expect } from 'vitest';
+import { generateSlipComment } from '../src/lib/slip-comment';
 import { call, post, db, registerWorkspace, fakePhone, insertUser, insertClass, insertStudent, insertSession,
   insertGuardianMembership, clubToken } from './helpers';
 
@@ -7,6 +8,7 @@ const uid = () => crypto.randomUUID();
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
 const command = (type: string, payload: any, base_version = 0) =>
   ({ id: uid(), type, payload, base_version, created_at: new Date().toISOString() });
+const generateExpectedFive = () => generateSlipComment(31);
 
 async function setup() {
   const a = await registerWorkspace(fakePhone(), 'Slip criteria');
@@ -30,24 +32,32 @@ const attend = (f: Awaited<ReturnType<typeof setup>>, student: string, status: s
   command('attendance.set', { session_id: f.ses, student_id: student, status });
 
 describe('slip criteria', () => {
-  it('derives stars from the criteria bitmask and keeps per-slip comments', async () => {
+  it('derives stars and comment from criteria, ignores client comment, and preserves unbounded note', async () => {
     const f = await setup();
     const set = (extra: any, base = 0) => f.send([command('slip.set', { session_id: f.ses, student_id: f.s[0], note: '', ...extra }, base)]);
     expect((await set({ criteria: 0b10111 })).body.results[0].status).toBe('applied');
-    expect(await f.row(f.s[0]!)).toMatchObject({ stars: 4, scale: 5, criteria: 23, comment: null, status: 'draft' });
-    expect((await set({ criteria: 0b10111, comment: '  Con tiến bộ  ' }, 1)).body.results[0].status).toBe('applied');
-    expect((await f.row(f.s[0]!)).comment).toBe('Con tiến bộ');
-    expect((await set({ criteria: 0 }, 2)).body.results[0].status).toBe('applied');
-    expect(await f.row(f.s[0]!)).toMatchObject({ stars: 0, criteria: 0, comment: 'Con tiến bộ' });
-    expect((await set({ criteria: 31, comment: null }, 3)).body.results[0].status).toBe('applied');
-    expect(await f.row(f.s[0]!)).toMatchObject({ stars: 5, comment: null });
+      expect(await f.row(f.s[0]!)).toMatchObject({ stars: 4, scale: 5, criteria: 23, comment: generateSlipComment(23), status: 'draft' });
+    expect((await set({ criteria: 0b10111, comment: 'client comment' }, 1)).body.results[0].status).toBe('applied');
+    expect((await f.row(f.s[0]!)).comment).toBe('Con chú ý nghe giảng, ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp và hoàn thành tốt bài tập về nhà, nhưng còn mất trật tự.');
+      expect((await set({ criteria: 0 }, 1)).body.results[0].status).toBe('applied');
+    expect(await f.row(f.s[0]!)).toMatchObject({ stars: 0, criteria: 0, comment: 'Con chưa chú ý nghe giảng, chưa ghi bài đầy đủ, chưa tích cực tham gia hoạt động, còn mất trật tự và chưa hoàn thành bài tập về nhà.' });
+      expect((await set({ criteria: 31 }, 2)).body.results[0].status).toBe('applied');
+    expect(await f.row(f.s[0]!)).toMatchObject({ stars: 5, comment: 'Con chú ý nghe giảng, ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp, ngồi học ngoan ngoãn, không mất trật tự và hoàn thành tốt bài tập về nhà.' });
     for (const bad of [32, -1, 1.5, '3', null])
-      expect((await set({ criteria: bad }, 4)).body.results[0].error.details.reason).toBe('invalid_criteria');
-    expect((await set({ criteria: 31, comment: 7 }, 4)).body.results[0].error.details.reason).toBe('invalid_comment');
+        expect((await set({ criteria: bad }, 3)).body.results[0].error.details.reason).toBe('invalid_criteria');
+      expect((await set({ criteria: 31, comment: 7 }, 3)).body.results[0].status).toBe('applied');
     const long = 'Con rất cố gắng. '.repeat(400);
-    expect((await set({ criteria: 31, comment: long }, 4)).body.results[0].status).toBe('applied');
-    expect((await f.row(f.s[0]!)).comment).toBe(long.trim());
-    expect((await set({}, 4)).body.results[0].error.details.reason).toBe('criteria_required');
+      expect((await set({ note: long }, 3)).body.results[0].status).toBe('applied');
+    expect((await f.row(f.s[0]!)).note).toBe(long);
+    expect((await f.row(f.s[0]!)).comment).toBe(generateExpectedFive());
+      expect((await set({ hw_manual: 'true' }, 4)).body.results[0].error.details.reason).toBe('invalid_hw_manual');
+      expect((await set({ note: 'updated' }, 4)).body.results[0].status).toBe('applied');
+      expect((await f.row(f.s[0]!)).comment).toBe(generateExpectedFive());
+      expect((await f.row(f.s[0]!)).note).toBe('updated');
+      await f.send([attend(f,f.s[0]!,'present'),command('slip.send',{session_id:f.ses,student_ids:[f.s[0]]})]);
+      const parentSlip=(await f.parentSlips()).find((x:any)=>x.student_id===f.s[0]);
+      expect(parentSlip.comment).toBe(`${generateExpectedFive()}\nupdated`);
+      expect(parentSlip).not.toHaveProperty('note');
   });
 
   it('keeps legacy three-star slips readable and editable by installed clients', async () => {
@@ -88,14 +98,47 @@ describe('slip criteria', () => {
     expect(result.status).toBe('applied');
     expect([...result.sent].sort()).toEqual([present, late, opened].sort());
     expect(result.skipped).toEqual([{ student_id: absent, reason: 'not_attended' }]);
-    expect(await f.row(present)).toMatchObject({ stars: 5, scale: 5, criteria: 31, comment: null, status: 'sent' });
+      expect(await f.row(present)).toMatchObject({ stars: 5, scale: 5, criteria: 31, comment: generateExpectedFive(), status: 'sent' });
     expect(await f.row(opened)).toMatchObject({ stars: 2, criteria: 3, status: 'sent' });
     expect(await f.row(absent)).toBeNull();
     const view = (await f.parentSlips()).find((x: any) => x.student_id === present);
-    expect(view).toMatchObject({ stars: 5, scale: 5, comment: 'Con học rất tốt, chăm chỉ, tích cực tham gia phát biểu' });
-    expect(view).not.toHaveProperty('criteria');
+      expect(view).toMatchObject({ stars: 5, scale: 5, comment: generateExpectedFive() });
+      expect(view).not.toHaveProperty('criteria');
+      expect(view).not.toHaveProperty('note');
+      expect(view).not.toHaveProperty('hw_manual');
     const again = await f.send([command('slip.send', { session_id: f.ses, student_ids: [present] })]);
     expect(again.body.results[0].skipped).toEqual([{ student_id: present, reason: 'already_sent' }]);
+  });
+
+  it('recalculates prior-homework criterion and generated comment until manually overridden', async () => {
+    const f = await setup(), student=f.s[0]!;
+    const next=await insertSession(f.a.workspaceId,f.cls,'2099-01-01',f.a.userId);
+    const section=uid();
+    await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading'}),
+      command('slip.set',{session_id:next,student_id:student,criteria:31,note:''})]);
+    const grade=(level:string)=>f.send([command('homework.grade.set',{section_id:section,student_id:student,level})]);
+    expect((await grade('not_done')).body.results[0].status).toBe('applied');
+    expect(await db.prepare('SELECT criteria,stars,version,hw_manual,comment FROM session_comments WHERE session_id=? AND student_id=?').bind(next,student).first<any>())
+      .toMatchObject({criteria:15,stars:4,version:2,hw_manual:0,comment:generateSlipComment(15)});
+    expect((await grade('done')).body.results[0].status).toBe('applied');
+    expect(await db.prepare('SELECT criteria,stars,version FROM session_comments WHERE session_id=? AND student_id=?').bind(next,student).first<any>())
+      .toMatchObject({criteria:31,stars:5,version:3});
+    await f.send([command('slip.set',{session_id:next,student_id:student,criteria:15,hw_manual:true,note:''},3)]);
+    await grade('not_done');
+      expect(await db.prepare('SELECT criteria,version,hw_manual FROM session_comments WHERE session_id=? AND student_id=?').bind(next,student).first<any>())
+      .toMatchObject({criteria:15,version:4,hw_manual:1});
+  });
+
+  it('uses the prior session homework result when slip.send creates a default slip', async () => {
+    const f=await setup(),student=f.s[0]!;
+    const previous=await insertSession(f.a.workspaceId,f.cls,'2000-01-01',f.a.userId);
+    const section=uid();
+    await f.send([command('homework.section.upsert',{id:section,session_id:previous,kind:'reading'}),
+      command('homework.grade.set',{section_id:section,student_id:student,level:'not_done'}),
+      attend(f,student,'present')]);
+    const sent=await f.send([command('slip.send',{session_id:f.ses,student_ids:[student]})]);
+    expect(sent.body.results[0].sent).toEqual([student]);
+    expect(await f.row(student)).toMatchObject({criteria:15,stars:4,comment:generateSlipComment(15),hw_manual:0,status:'sent'});
   });
 
   it('does not create a default slip when attendance changed after it was read', async () => {

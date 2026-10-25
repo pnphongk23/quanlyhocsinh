@@ -26,7 +26,7 @@ export async function listSlips(
     identity.scopeKind === "linked_students" ? "AND status='sent'" : "";
   return db
     .prepare(
-      `SELECT session_id, student_id, stars, scale, criteria, comment, note, status, sent_at, version, updated_at
+        `SELECT session_id, student_id, stars, scale, criteria, comment, note, hw_manual, status, sent_at, version, updated_at
     FROM session_comments WHERE workspace_id=? AND session_id=? ${studentScope} ${sent} ORDER BY student_id`,
     )
     .bind(

@@ -13,7 +13,7 @@ const entities:Record<string,Entity>={
   attendance:{table:'attendance',keys:['session_id','student_id'],fields:['session_id','student_id','status','note','late_at','version','updated_at'],group:'sessions_attendance',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   test:{table:'tests',keys:['id'],fields:['id','class_id','name','date','archived','version'],group:'scores',day:'e.date'},
   score:{table:'scores',keys:['test_id','student_id'],fields:['test_id','student_id','value','version','updated_at'],group:'scores',join:'JOIN tests parent ON parent.id=e.test_id',day:'parent.date'},
-  slip:{table:'session_comments',keys:['session_id','student_id'],fields:['session_id','student_id','stars','scale','criteria','comment','note','status','sent_at','version','updated_at'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
+    slip:{table:'session_comments',keys:['session_id','student_id'],fields:['session_id','student_id','stars','scale','criteria','comment','note','hw_manual','status','sent_at','version','updated_at'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   homework_section:{table:'homework_sections',keys:['id'],fields:['id','class_id','session_id','kind','title','description','version'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   homework_grade:{table:'homework_grades',keys:['section_id','student_id'],fields:['section_id','student_id','level','version','updated_at'],group:'comments_reports',join:'JOIN homework_sections hs ON hs.id=e.section_id JOIN class_sessions parent ON parent.id=hs.session_id',day:'parent.date'},
   report_batch:{table:'report_batches',keys:['id'],fields:['id','class_id','month','from_session_id','to_session_id','from_key','to_key','version'],group:'comments_reports',day:'substr(e.to_key,1,10)'},
@@ -52,7 +52,12 @@ function visibility(i:Identity,name:string):string {
 }
 function fields(i:Identity,name:string):string {
   const e=entities[name]!;
-  const list=e.fields.filter(f=>!(i.scopeKind==='linked_students' && ((name==='student' && f==='parent_phone')||(name==='class_session'&&f==='note')||(name==='slip'&&f==='criteria'))));
+    const list=e.fields.filter((field) => {
+      if (i.scopeKind !== 'linked_students') return true;
+      if (name === 'student' && field === 'parent_phone') return false;
+      if (name === 'class_session' && field === 'note') return false;
+      return true;
+    });
     if (name==='class') return `e.id,e.name,e.status,e.weekdays,e.start_time,e.version,${classTeacherNameSql('e')} AS teacher_name`;
   return list.map(f=>`e.${f}`).join(',');
 }
