@@ -59,49 +59,13 @@ final class SlipRulesTests: XCTestCase {
                        SlipRules.defaultSentence(stars: 4))
     }
 
-    func testNormalizedCommentNeverCutsALongSentence() {
+    func testALongSentenceIsKeptWhole() {
         let long = String(repeating: "a", count: 400)
         XCTAssertEqual(SlipRules.normalizedComment(long, stars: 5), long)
-        XCTAssertTrue(SlipRules.isCommentTooLong(long))
-    }
-
-    func testCommentLengthCountsTheTrimmedSentenceAgainstTheLimit() {
-        let atLimit = String(repeating: "a", count: SlipRules.maxCommentLength)
-        XCTAssertFalse(SlipRules.isCommentTooLong(atLimit))
-        XCTAssertFalse(SlipRules.isCommentTooLong("  \(atLimit)\n"))
-        XCTAssertTrue(SlipRules.isCommentTooLong(atLimit + "a"))
-        XCTAssertEqual(SlipRules.commentLength(" abc "), 3)
-    }
-
-    /// The worker counts UTF-16 code units (`string.length`), so the app must too.
-    func testCommentLengthIsInUTF16UnitsLikeTheWorker() {
-        let emoji = "\u{1F600}"
-        XCTAssertEqual(SlipRules.commentLength(emoji), 2)
-        XCTAssertFalse(SlipRules.isCommentTooLong(String(repeating: emoji, count: 150)))
-        XCTAssertTrue(SlipRules.isCommentTooLong(String(repeating: emoji, count: 150) + "a"))
-        XCTAssertTrue(SlipRules.isCommentTooLong(String(repeating: emoji, count: 151)))
-        XCTAssertFalse(SlipRules.isCommentTooLong(String(repeating: emoji, count: 149) + "ab"))
-    }
-
-    func testVietnameseCountsDifferByNormalizationForm() {
-        let composed = "\u{1EAF}"
-        let decomposed = "a\u{0306}\u{0301}"
-        XCTAssertEqual(SlipRules.commentLength(composed), 1)
-        XCTAssertEqual(SlipRules.commentLength(decomposed), 3)
-        XCTAssertFalse(SlipRules.isCommentTooLong(String(repeating: composed, count: 300)))
-        XCTAssertFalse(SlipRules.isCommentTooLong(String(repeating: decomposed, count: 100)))
-        XCTAssertTrue(SlipRules.isCommentTooLong(String(repeating: decomposed, count: 101)))
-    }
-
-    func testAnyTextTheTeacherEntersOrPastesIsKeptAndFlaggedWhenTooLong() {
-        // Replacing a full sentence by a paste only one character longer must not be undone.
-        let replaced = String(repeating: "b", count: SlipRules.maxCommentLength + 1)
-        XCTAssertTrue(SlipRules.isCommentTooLong(replaced))
-        XCTAssertEqual(SlipRules.normalizedComment(replaced, stars: 5), replaced)
-        // Replacing a selection inside a long text keeps what was pasted.
-        let pasted = String(repeating: "c", count: 400)
-        XCTAssertTrue(SlipRules.isCommentTooLong(pasted))
-        XCTAssertFalse(SlipRules.isCommentTooLong(String(pasted.prefix(SlipRules.maxCommentLength))))
+        XCTAssertEqual(SlipRules.normalizedComment("  \(long)\n", stars: 5), long)
+        // Emoji and decomposed Vietnamese are kept too, whatever their length.
+        let mixed = String(repeating: "\u{1F600}a\u{0306}\u{0301}", count: 200)
+        XCTAssertEqual(SlipRules.normalizedComment(mixed, stars: 5), mixed)
     }
 
     func testOldSlipDecodesAsScaleThreeAndKeepsItsOldSentence() throws {

@@ -4,7 +4,6 @@ import Foundation
 enum SlipRules {
     static let criteriaCount = 5
     static let allCriteria = (1 << criteriaCount) - 1
-    static let maxCommentLength = 300
 
     /// Bit 0...4 in spec order.
     static let criterionKeys = ["slip.criterion.listen", "slip.criterion.notes", "slip.criterion.participate",
@@ -39,18 +38,10 @@ enum SlipRules {
     }
 
     /// What to send as `comment`: nil when the text is empty or still the default for these stars.
-    /// Never shortens the text: a sentence over `maxCommentLength` is refused by `isCommentTooLong` before it gets here.
+    /// The sentence has no length limit: it is only trimmed, never shortened.
     static func normalizedComment(_ text: String, stars: Int) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed == defaultSentence(stars: stars) { return nil }
         return trimmed
     }
-
-    /// Length the server counts: UTF-16 code units of the trimmed sentence (`comment.trim().length` in the
-    /// worker), not characters, so an emoji is 2 and a decomposed Vietnamese letter is 2 or 3.
-    static func commentLength(_ text: String) -> Int {
-        text.trimmingCharacters(in: .whitespacesAndNewlines).utf16.count
-    }
-
-    static func isCommentTooLong(_ text: String) -> Bool { commentLength(text) > maxCommentLength }
 }
