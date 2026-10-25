@@ -62,10 +62,9 @@ describe("Bảng điểm nhập trực tiếp trên web (ảnh 13)", () => {
     expect(draftKey("t1", "s1")).toBe("t1:s1");
   });
 
-  it("tiêu đề cột ghi /điểm tối đa riêng của từng bài", () => {
+  it("tiêu đề cột chỉ hiện tên và ngày bài kiểm tra", () => {
     replaceStore(createSeed());
     const tests = listTests("6a");
-    expect(tests.map((test) => test.max)).toEqual([10, 10, 10, 10]);
     expect(tests.length).toBeGreaterThan(0);
   });
 

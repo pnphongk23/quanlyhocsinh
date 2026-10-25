@@ -106,7 +106,7 @@ export default function GuardianClassPage() {
                   {latestScore ? (
                     <>
                       <strong className={g.statValue}>
-                        {scoreText(latestScore.value)}/{latestScore.test.max}
+                          {scoreText(latestScore.value)}
                       </strong>
                       <span className={g.statSub}>{latestScore.test.name}</span>
                     </>

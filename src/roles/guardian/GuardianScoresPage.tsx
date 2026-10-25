@@ -84,7 +84,7 @@ export default function GuardianScoresPage() {
                     <b className={g.scoreValue}>
                       {row.value === null
                         ? "Chưa có điểm"
-                        : `${scoreText(row.value)}/${row.test.max}`}
+                          : scoreText(row.value)}
                     </b>
                   </li>
                 ))}

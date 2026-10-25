@@ -242,7 +242,7 @@ describe("PH · Lớp học của con (tab 1)", () => {
     ]);
     const html = renderPage(<GuardianScoresPage />);
     expect(html).not.toContain("Nghe");
-      expect(html).toContain("9/10");
+      expect(html).toContain(">9</b>");
       expect(scores.rows.map((row) => row.test.id)).not.toContain("6a-test-2");
   });
 });
@@ -557,7 +557,8 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
     expect(text).toContain("6/8 buổi");
     expect(text).toContain("1 muộn");
     expect(text).toContain("1/2 bài");
-    expect(text).toContain("10/10");
+      expect(text).toContain("Điểm từng bài");
+      expect(text).toContain("Nói12 tháng 1010");
     expect(text).toContain("Chưa có điểm");
     expect(text).toContain("Nhận xét theo sao");
     expect(text).toContain("4 buổi có phiếu");
@@ -607,7 +608,7 @@ describe("PH · Điểm danh trong Buổi học và Điểm số (dữ liệu th
     expect(html).not.toContain("Nguyễn Minh Anh");
   });
 
-  it("Điểm số: 10/10 và 7,5/10 không bao giờ hiện dạng 10.0 hay 7.5", () => {
+  it("Điểm số hiện điểm thô, không bao giờ hiện dạng 10.0 hay 7.5", () => {
     const state = createSeed();
     const childId = state.members.find(
       (member) => member.id === MEMBER_IDS.lanGuardian,
@@ -621,22 +622,24 @@ describe("PH · Điểm danh trong Buổi học và Điểm số (dữ liệu th
     replaceStore(state);
     switchRole(MEMBER_IDS.lanGuardian);
     const html = renderPage(<GuardianScoresPage />);
-    expect(html).toContain("10/10");
-    expect(html).toContain("7,5/10");
+    expect(html).toContain(">10</b>");
+    expect(html).toContain(">7,5</b>");
+    expect(html).not.toContain("/10");
     expect(html).not.toContain("10.0");
     expect(html).not.toContain("7.5");
   });
 
-  it("Điểm số: chỉ điểm từng bài của con dạng value/max, không có trung bình", () => {
+  it("Điểm số: chỉ điểm từng bài của con, không có trung bình hay điểm tối đa", () => {
     seedGuardian();
     const html = renderPage(<GuardianScoresPage />);
     expect(html).toContain("Điểm số");
     expect(html).toContain("Điểm từng bài");
     expect(html).toContain("3 bài có điểm");
     expect(html).toContain("Ngữ pháp");
-    expect(html).toContain("8/10");
+    expect(html).toContain(">8</b>");
     expect(html).toContain("Nói");
-    expect(html).toContain("10/10");
+    expect(html).toContain(">10</b>");
+    expect(html).not.toContain("/10");
     expect(html).not.toContain("trung bình");
     expect(html).not.toContain("TB");
   });
@@ -653,7 +656,7 @@ describe("PH · Điểm danh trong Buổi học và Điểm số (dữ liệu th
     ]);
     const html = renderPage(<GuardianScoresPage />);
     expect(html).not.toContain("Nghe");
-      expect(html).toContain("9/10");
+      expect(html).toContain(">9</b>");
       expect(scores.rows.map((row) => row.test.id)).not.toContain("6a-test-2");
   });
 });

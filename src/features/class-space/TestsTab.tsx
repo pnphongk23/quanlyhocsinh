@@ -73,7 +73,7 @@ export default function TestsTab() {
               <span className={s.testInfo}>
                 <span className={s.testName}>{test.name}</span>
                 <span className={s.testMeta}>
-                  Ngày {formatDayMonthLong(test.date)} · Thang {test.max} điểm
+                    Ngày {formatDayMonthLong(test.date)}
                 </span>
               </span>
               {missing ? (

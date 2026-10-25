@@ -30,7 +30,7 @@ export interface ApiClass extends Versioned { id: string; name: string; status: 
 export interface ApiStudent extends Versioned { id: string; class_id: string; name: string; parent_phone?: string | null; enrolled_at: string; left_at: string | null; status: "active" | "left" }
 export interface ApiSession extends Versioned { id: string; class_id: string; date: string; start_time: string; origin: "recurring" | "manual"; is_makeup: boolean; status: "planned" | "held" | "cancelled"; note?: string }
 export interface ApiAttendance extends Cell { session_id: string; status: "present" | "late" | "excused" | "absent"; note: string; late_at: string | null }
-export interface ApiTest extends Versioned { id: string; class_id: string; name: string; date: string; max: number; archived: boolean }
+export interface ApiTest extends Versioned { id: string; class_id: string; name: string; date: string; archived: boolean }
 export interface ApiScore extends Cell { test_id: string; value: number | null }
 export interface ApiSlip extends Cell { session_id: string; stars: StarLevel | null; note: string; status: "draft" | "sent"; sent_at: string | null }
 export interface ApiHomeworkSection extends Versioned { id: string; class_id: string; session_id: string; kind: HomeworkKind; title: string; description: string }
@@ -40,7 +40,7 @@ export interface ReportBody {
   student_id: string; month: string;
   range?: ApiReportRange;
   attendance: { present: number; late: number; excused: number; absent: number; held_sessions: number };
-  tests: { test_id: string; name: string; date: string; max: number; value: number | null }[];
+  tests: { test_id: string; name: string; date: string; max?: number; value: number | null }[];
   stars: { three: number; two: number; one: number };
   homework: { kind: HomeworkKind; excellent: number; done: number; not_done: number }[];
   general_comment: string; ready: boolean;
@@ -62,8 +62,8 @@ export interface EntityMap {
 }
 export interface CommandPayloads {
   "attendance.set": { session_id: string; student_id: string; status: ApiAttendance["status"]; note?: string; late_at?: string | null };
-  "test.create": { id: string; class_id: string; name: string; date: string; max?: number };
-  "test.update": { id: string; name?: string; date?: string; max?: number };
+  "test.create": { id: string; class_id: string; name: string; date: string };
+  "test.update": { id: string; name?: string; date?: string };
   "test.delete": { id: string };
   "score.set": { test_id: string; student_id: string; value: number | null };
   "slip.set": { session_id: string; student_id: string; stars: StarLevel | null; note: string };

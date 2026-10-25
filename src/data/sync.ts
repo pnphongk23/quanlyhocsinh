@@ -25,7 +25,7 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
     case "student": return { id: item.id, classId: item.class_id, name: item.name, parentPhone: item.parent_phone ?? "", enrolledAt: item.enrolled_at, leftAt: item.left_at, status: item.status };
       case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status, note: item.note, version: item.version };
     case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };
-    case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, max: item.max, archived: item.archived, version: item.version };
+      case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, archived: item.archived, version: item.version };
     case "score": return { id: `${item.test_id}:${item.student_id}`, testId: item.test_id, studentId: item.student_id, value: item.value, version: item.version };
     case "slip": return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, stars: item.stars, note: item.note, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at };
     case "homework_section": return { id: item.id, sessionId: item.session_id, kind: item.kind, title: item.title, description: item.description, version: item.version };
@@ -238,7 +238,7 @@ export const canDiscardRejected = (type: string): boolean => type in cellEntity;
 async function withTestUpdateId(row: OutboxRow, identity: string): Promise<OutboxRow> {
   if (row.type !== "test.update" || (row.payload as { id?: string }).id) return row;
   const prefix = `${identity}|test|`;
-  const patch = row.payload as { name?: string; date?: string; max?: number };
+    const patch = row.payload as { name?: string; date?: string };
   let id = row.entity_key?.startsWith(prefix) ? row.entity_key.slice(prefix.length) : undefined;
   if (!id) {
     // Nhiều lệnh cũ có thể cùng sửa một bài; khi đó khớp theo nội dung không phân biệt được, nên không đoán.
@@ -246,8 +246,7 @@ async function withTestUpdateId(row: OutboxRow, identity: string): Promise<Outbo
     if (legacy !== 1) return row;
     const matches = await db.tests.where("identity").equals(identity).and((test) =>
       (patch.name === undefined || test.name === patch.name) &&
-      (patch.date === undefined || test.date === patch.date) &&
-      (patch.max === undefined || test.max === patch.max),
+        (patch.date === undefined || test.date === patch.date),
     ).toArray();
     if (matches.length === 1) id = matches[0].id;
   }

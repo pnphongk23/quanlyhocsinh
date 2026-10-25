@@ -10,7 +10,7 @@ function planScore(input:Omit<Score,"id">):WritePlan<Score> {
   if(!test||!student) throw new Error("Không tìm thấy học sinh hoặc bài kiểm tra."); requireClassAccess(test.classId);
   if(test.archived) throw new Error("Bài kiểm tra đã lưu trữ, không nhập điểm được.");
   if(student.classId!==test.classId||(student.leftAt&&student.leftAt<test.date)) throw new Error("Học sinh không thuộc bài kiểm tra này.");
-  if(input.value!==null&&(!Number.isFinite(input.value)||input.value<0||input.value>test.max)) throw new Error(`Điểm phải từ 0 đến ${test.max}.`);
+  if(input.value!==null&&(!Number.isFinite(input.value)||input.value<0||input.value>1000)) throw new Error("Điểm phải từ 0 đến 1000.");
   if(input.value!==null&&Math.round(input.value*2)!==input.value*2) throw new Error("Điểm phải theo bước 0,5.");
   const id=`${input.testId}:${input.studentId}`, old=getStore().scores.find(s=>s.id===id), item={...input,id};
   const payload={test_id:item.testId,student_id:item.studentId,value:item.value}; const cmd={id:crypto.randomUUID(),type:"score.set",payload,base_version:(old as any)?.version??0,created_at:new Date().toISOString()} as SyncCommand;

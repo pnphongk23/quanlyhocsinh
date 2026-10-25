@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import { getClass } from "../../data/repositories/classes";
 import {
   createTestDurable,
-  DEFAULT_TEST_MAX,
   deleteTestDurable,
   listTests,
   updateTestDurable,
@@ -158,15 +157,13 @@ export default function TestsDesktop({ classId }: { classId: string }) {
           <colgroup>
             <col />
             <col style={{ width: 130 }} />
-            <col style={{ width: 130 }} />
-            <col style={{ width: 170 }} />
+              <col style={{ width: 170 }} />
             <col style={{ width: 44 }} />
           </colgroup>
           <thead>
             <tr>
               <th>Tên bài kiểm tra</th>
               <th>Ngày</th>
-              <th>Điểm tối đa</th>
               <th>Đã có điểm</th>
               <th aria-label="Thao tác" />
             </tr>
@@ -187,7 +184,6 @@ export default function TestsDesktop({ classId }: { classId: string }) {
                       </Link>
                     </td>
                     <td>{testDateLabel(test.date)}</td>
-                    <td>{test.max}</td>
                     <td>
                       <Pill tone={pill.tone}>{pill.label}</Pill>
                     </td>
@@ -336,26 +332,18 @@ function TestFormModal({
   const initial = {
     name: test?.name ?? "",
     date: test?.date ?? todayISO(),
-    max: String(test?.max ?? DEFAULT_TEST_MAX),
   };
   const [name, setName] = useState(initial.name);
   const [date, setDate] = useState(initial.date);
-  const [max, setMax] = useState(initial.max);
   const [asking, setAsking] = useState(false);
-  const maxNumber = Number(max.trim());
-  const maxInvalid =
-    max.trim() === "" ||
-    !Number.isInteger(maxNumber) ||
-    maxNumber < 1 ||
-    maxNumber > MAX_SCORE_LIMIT;
   const action = useSaveAction({
     baseline: initial,
-    value: { name: name.trim(), date, max: max.trim() },
+      value: { name: name.trim(), date },
     isEqual: (a, b) =>
-      a.name.trim() === b.name.trim() && a.date === b.date && a.max === b.max,
-    validate: (next) => next.name !== "" && next.date !== "" && !maxInvalid,
+        a.name.trim() === b.name.trim() && a.date === b.date,
+      validate: (next) => next.name !== "" && next.date !== "",
     save: async (next) => {
-      const input = { name: next.name, date: next.date, max: Number(next.max) };
+        const input = { name: next.name, date: next.date };
       if (test) await updateTestDurable(test.id, input);
       else await createTestDurable({ classId, ...input });
     },
@@ -395,23 +383,6 @@ function TestFormModal({
             onChange={(event) => setDate(event.target.value)}
             required
           />
-          <div>
-            <Input
-              label="Điểm tối đa"
-              name="max"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={MAX_SCORE_LIMIT}
-              step={1}
-              value={max}
-              onChange={(event) => setMax(event.target.value)}
-              required
-            />
-            <p className={maxInvalid ? d.error : d.hint}>
-              Số nguyên từ 1 đến 1000. Mặc định 15.
-            </p>
-          </div>
           {action.error != null && (
             <p role="alert" className={d.error}>
               {action.error instanceof Error &&

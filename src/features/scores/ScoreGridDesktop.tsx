@@ -80,13 +80,11 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
     }
   }
   const value = { ...baseline, ...drafts };
-  const maxOf = new Map(tests.map((test) => [test.id, test.max]));
   const isInvalid = (key: string): boolean => {
     if (value[key] === baseline[key]) return false;
     const parsed = parseScoreInput(value[key]);
     if (!parsed.ok) return true;
-    const max = maxOf.get(key.split(":")[0]);
-    return parsed.value !== null && max !== undefined && parsed.value > max;
+      return parsed.value !== null && (parsed.value < 0 || parsed.value > 1000 || Math.round(parsed.value * 2) !== parsed.value * 2);
   };
   const invalidCount = Object.keys(drafts).filter(isInvalid).length;
 
@@ -263,10 +261,7 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
                         >
                           {test.name}
                         </Link>
-                        <span className={s.testMeta}>
-                          {formatDayMonth(test.date)} ·{" "}
-                          <b>/{test.max}</b>
-                        </span>
+                          <span className={s.testMeta}>{formatDayMonth(test.date)}</span>
                       </div>
                       <ColumnResizer
                         label={`Đổi độ rộng cột ${test.name}`}
@@ -322,8 +317,7 @@ export default function ScoreGridDesktop({ classId }: { classId: string }) {
             </table>
           </div>
           <p className={s.note}>
-              Ô trống là “Chưa có điểm”. Nhập điểm theo bước 0,5, ví dụ 7,5 hoặc 7.5. Mỗi bài hiện điểm
-            riêng theo thang điểm của bài đó.
+              Ô trống là “Chưa có điểm”. Nhập điểm từ 0 đến 1000 theo bước 0,5, ví dụ 7,5 hoặc 7.5.
           </p>
         </div>
       )}

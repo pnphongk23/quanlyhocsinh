@@ -74,40 +74,37 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("điểm gõ dở theo thang của bài", () => {
-  it("điểm vượt quá thang của bài bị coi là lỗi", () => {
-    expect(isInvalidDraft({ value: "16" }, 15)).toBe(true);
-    expect(isInvalidDraft({ value: "10,5" }, 10)).toBe(true);
-    expect(isInvalidDraft({ value: "-1" }, 15)).toBe(true);
-      expect(isInvalidDraft({ value: "abc" }, 15)).toBe(true);
-      expect(isInvalidDraft({ value: "7,3" }, 15)).toBe(true);
+describe("điểm gõ dở trong khoảng 0..1000, bước 0,5", () => {
+  it("chặn ngoài khoảng và sai bước", () => {
+    expect(isInvalidDraft({ value: "1000,5" })).toBe(true);
+    expect(isInvalidDraft({ value: "-1" })).toBe(true);
+    expect(isInvalidDraft({ value: "abc" })).toBe(true);
+    expect(isInvalidDraft({ value: "0,3" })).toBe(true);
   });
 
-  it("điểm trong thang hợp lệ, ô trống không tính là lỗi", () => {
-    expect(isInvalidDraft({ value: "15" }, 15)).toBe(false);
-    expect(isInvalidDraft({ value: "0" }, 15)).toBe(false);
-      expect(isInvalidDraft({ value: "7,5" }, 15)).toBe(false);
-      expect(isInvalidDraft({ value: "7.5" }, 15)).toBe(false);
-    expect(isInvalidDraft({ value: "" }, 15)).toBe(false);
+  it("chấp nhận 0,5, 1000 và ô trống", () => {
+    expect(isInvalidDraft({ value: "0,5" })).toBe(false);
+    expect(isInvalidDraft({ value: "1000" })).toBe(false);
+    expect(isInvalidDraft({ value: "" })).toBe(false);
   });
 });
 
-describe("màn nhập điểm hiện thang điểm của bài", () => {
-  it("bài cũ giữ thang 10", () => {
+describe("màn nhập điểm không hiện điểm tối đa", () => {
+  it("không hiện thang điểm cũ", () => {
     const html = scorePage("6a-test-3");
-    expect(html).toContain("Thang 10 điểm");
+    expect(html).not.toContain("Thang 10 điểm");
+    expect(html).not.toContain("/10");
   });
 
-  it("bài tạo với thang 15 hiện thang 15", async () => {
+  it("bài mới cũng không có điểm tối đa", async () => {
     const test = await createTestDurable({
       classId: "6a",
       name: "Kiểm tra 15 phút",
       date: "2026-10-10",
-      max: 15,
     });
     const html = scorePage(test.id);
-    expect(html).toContain("Thang 15 điểm");
-    expect(html).not.toContain("Điểm từ 0 đến 10");
+    expect(html).not.toContain("Thang");
+    expect(html).not.toContain("/15");
   });
 
   it("màn chi tiết điểm không còn nút tạo bài mới", () => {
@@ -159,16 +156,15 @@ describe("màn nhập điểm hiện thang điểm của bài", () => {
   });
 });
 
-describe("form tạo bài kiểm tra có điểm tối đa", () => {
-  it("ô điểm tối đa mặc định 15", () => {
+describe("form tạo bài kiểm tra không có điểm tối đa", () => {
+  it("chỉ hiện tên và ngày", () => {
     const html = render(
       "/lop/6a/bai-kiem-tra/moi",
       "/lop/:classId/bai-kiem-tra/moi",
       <NewTestPage />,
     );
-    expect(html).toContain("Điểm tối đa");
-    expect(html).toContain('value="15"');
-    expect(html).toContain("Mỗi bài có thang điểm riêng");
+    expect(html).not.toContain("Điểm tối đa");
+    expect(html).not.toContain('value="15"');
     expect(html).not.toContain("Điểm theo thang 10");
     expect(html).not.toContain("Trung bình là trung bình cộng");
   });

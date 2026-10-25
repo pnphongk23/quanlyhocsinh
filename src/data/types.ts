@@ -23,6 +23,8 @@ export interface Session {
   id: string;
   classId: string;
   date: string;
+  /** Legacy cache field: accepted on read and ignored by current features. */
+  max?: number;
   time?: string;
   origin?: "recurring" | "manual";
   note?: string;
@@ -46,8 +48,6 @@ export interface Test {
   classId: string;
   name: string;
   date: string;
-  /** Thang điểm của bài: số nguyên 1..1000. Bài tạo mới mặc định 15. */
-  max: number;
   /**
    * Bài đã lưu trữ: còn học sinh có điểm (kể cả 0) nên không xoá cứng.
    * Thiếu trường (dữ liệu localStorage cũ) nghĩa là chưa lưu trữ.

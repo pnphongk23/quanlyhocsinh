@@ -5,8 +5,6 @@ export interface LatestTestScore {
   name: string;
   /** Điểm đã nhập của bài gần nhất. */
   value: number;
-  /** Điểm tối đa của chính bài đó (mỗi bài một thang riêng). */
-  max: number;
   date: string;
 }
 
@@ -34,7 +32,6 @@ export function latestTestScore(
         {
           name: test.name,
           value: score.value,
-          max: test.max,
           date: test.date,
         },
       ];
@@ -46,7 +43,7 @@ export function latestTestScore(
 /** "14/20" — điểm / điểm tối đa của bài gần nhất, không có điểm trung bình. */
 export function latestTestLabel(latest: LatestTestScore | null): string {
   if (!latest) return "Chưa có điểm";
-  return `${latest.name} · ${trimNumber(latest.value)}/${latest.max}`;
+    return `${latest.name} · ${trimNumber(latest.value)}`;
 }
 
 /** Số gọn cho điểm: 14 → "14", 7.5 → "7,5". */

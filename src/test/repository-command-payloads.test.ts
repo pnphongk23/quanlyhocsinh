@@ -9,8 +9,8 @@ process.env.TZ = "Asia/Ho_Chi_Minh";
 type RequiredKeys<T> = { [K in keyof T]-?: {} extends Pick<T, K> ? never : K }[keyof T];
 const payloadFields = {
   "attendance.set": ["session_id", "student_id", "status", "note", "late_at"],
-  "test.create": ["id", "class_id", "name", "date", "max"],
-  "test.update": ["id", "name", "date", "max"],
+  "test.create": ["id", "class_id", "name", "date"],
+  "test.update": ["id", "name", "date"],
   "test.delete": ["id"],
   "score.set": ["test_id", "student_id", "value"],
   "slip.set": ["session_id", "student_id", "stars", "note"],
@@ -41,7 +41,7 @@ beforeEach(() => {
   server.put("class", { id: "c1", name: "6A", status: "active", weekdays: [1], start_time: "09:00" });
   server.put("student", { id: "s1", class_id: "c1", name: "Student", enrolled_at: "2026-09-01", left_at: null, status: "active" });
   server.put("class_session", { id: "session-1", class_id: "c1", date: "2026-10-20", start_time: "09:00", origin: "manual", status: "held" });
-  server.put("test", { id: "test-1", class_id: "c1", name: "Quiz", date: "2026-10-20", max: 10, archived: false });
+  server.put("test", { id: "test-1", class_id: "c1", name: "Quiz", date: "2026-10-20", archived: false });
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
@@ -74,7 +74,7 @@ describe("repository command payload contracts", () => {
       import("../data/repositories/attendance"), import("../data/repositories/comments"),
       import("../data/repositories/homework"),
     ]);
-    await tests.createTestDurable({ classId: "c1", name: "New", date: "2026-10-20", max: 15 });
+  await tests.createTestDurable({ classId: "c1", name: "New", date: "2026-10-20" });
     await tests.updateTestDurable("test-1", { name: "Quiz updated" });
     await scores.saveScoreDurable({ testId: "test-1", studentId: "s1", value: 7 });
     await attendance.saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "present", note: "", lateAt: null });

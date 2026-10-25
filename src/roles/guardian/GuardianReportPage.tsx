@@ -315,7 +315,7 @@ function ReportDetail({
                 </span>
                 <b className={g.scoreValue}>
                   {score && score.value !== null
-                    ? `${formatScore(score.value)}/${test.max}`
+                      ? formatScore(score.value)
                     : "Chưa có điểm"}
                 </b>
               </li>

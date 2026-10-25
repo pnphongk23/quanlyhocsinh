@@ -23,7 +23,7 @@ export function createSeed(): StoreState {
         for(let j=0;j<4;j++) state.scores.push({id:`${classId}-score-${i}-${j}`,testId:`${classId}-test-${j}`,studentId,value:i===3&&j===3?null:classId==="6a"&&i===1&&j===2?10:classId==="6a"&&i===1&&j===3?9:6+((i+j)%5)});
       state.reports.push({id:`${studentId}-report`,classId,studentId,batchId:`${classId}-batch`,month:"2026-10",status:i<2?"published":"draft",needsRepublish:false,generalComment:i===1&&classId==="6a"?"Nhận xét kiểm thử tổng hợp.":"",publishedAt:i<2?"2026-10-12T09:00:00.000Z":null});
     });
-    for(let j=0;j<4;j++) state.tests.push({id:`${classId}-test-${j}`,classId,name:["Từ vựng","Ngữ pháp","Nghe","Nói"][j],date:classDates[j+3],max:10,archived:false});
+  for(let j=0;j<4;j++) state.tests.push({id:`${classId}-test-${j}`,classId,name:["Từ vựng","Ngữ pháp","Nghe","Nói"][j],date:classDates[j+3],archived:false});
   }
   const admin:Member={id:MEMBER_IDS.lanAdmin,name:"Admin Fixture",phone:"fixture-user",roleId:ROLE_IDS.admin,classIds:[],status:"active"};
     const teacher:Member={id:MEMBER_IDS.lanTeacher,name:"Teacher Fixture",phone:"fixture-user",roleId:ROLE_IDS.teacher,classIds:["6a"],status:"active"};

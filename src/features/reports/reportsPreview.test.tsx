@@ -114,7 +114,8 @@ describe("nội dung xem trước báo cáo theo khoảng (ảnh 07)", () => {
     expect(html).toContain("Luyện từ vựng");
     expect(html).toContain("Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.");
     expect(html).toContain("Điểm từng bài");
-    expect(html).toContain("8/10");
+      expect(html).toContain(">8<");
+      expect(html).not.toMatch(/<strong>[^<]*\/10<\/strong>/);
     expect(html).not.toContain("10.0");
     expect(html).toContain("Bài chưa có điểm cần chấm trước khi phát hành.");
     expect(html).toContain("Nhận xét kiểm thử tổng hợp.");

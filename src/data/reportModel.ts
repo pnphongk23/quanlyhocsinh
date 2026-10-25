@@ -344,7 +344,7 @@ export function decodeServerReport(value: unknown, student: Student, key: string
   if (!["present", "late", "excused", "absent", "held_sessions"].every((name) => isCount(attendance, name))) return null;
   if (!["three", "two", "one"].every((name) => isCount(stars, name))) return null;
   if (typeof value.general_comment !== "string" || typeof value.ready !== "boolean") return null;
-  const validTest = value.tests.every((item) => isRecord(item) && typeof item.test_id === "string" && typeof item.name === "string" && typeof item.date === "string" && typeof item.max === "number" && Number.isFinite(item.max) && (item.value === null || (typeof item.value === "number" && Number.isFinite(item.value))));
+    const validTest = value.tests.every((item) => isRecord(item) && typeof item.test_id === "string" && typeof item.name === "string" && typeof item.date === "string" && (item.value === null || (typeof item.value === "number" && Number.isFinite(item.value))));
   if (!validTest) return null;
   const kinds = new Set<HomeworkKind>(HOMEWORK_KINDS);
   const validHomework = value.homework.every((item) => isRecord(item) && kinds.has(item.kind as HomeworkKind) && ["excellent", "done", "not_done"].every((name) => isCount(item, name)));
@@ -358,8 +358,8 @@ export function decodeServerReport(value: unknown, student: Student, key: string
   for (const [status, amount] of [["present", counts.present], ["late", counts.late], ["excused", counts.excused], ["absent", counts.absent]] as const) {
     for (let index = 0; index < amount; index++) attendanceRows.push({ id: `${key}:${status}:${index}`, sessionId: sessions[index % Math.max(1, sessions.length)]?.id ?? "", studentId: student.id, status, note: "", lateAt: null });
   }
-  const tests = (value.tests as Array<{ test_id: string; name: string; date: string; max: number; value: number | null }>).map((item) => ({
-    test: { id: item.test_id, classId: student.classId, name: item.name, date: item.date, max: item.max, archived: false } as Test,
+    const tests = (value.tests as Array<{ test_id: string; name: string; date: string; max?: number; value: number | null }>).map((item) => ({
+      test: { id: item.test_id, classId: student.classId, name: item.name, date: item.date, archived: false } as Test,
     score: item.value === null ? undefined : { id: `${item.test_id}:${student.id}`, testId: item.test_id, studentId: student.id, value: item.value } as Score,
   }));
   const homework = (value.homework as Array<{ kind: HomeworkKind; excellent: number; done: number; not_done: number }>)

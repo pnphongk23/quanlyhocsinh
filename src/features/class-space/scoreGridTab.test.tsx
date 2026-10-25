@@ -55,20 +55,19 @@ describe("bảng điểm lớp theo thang điểm từng bài", () => {
     expect(html).not.toContain("Trung bình");
   });
 
-  it("header mỗi bài hiện thang điểm riêng", async () => {
+  it("header mỗi bài không hiện điểm tối đa", async () => {
     await createTestDurable({
       classId: "6a",
       name: "Kiểm tra 15 phút",
       date: "2026-10-10",
-      max: 15,
     });
     const html = render(
       "/lop/6a/diem",
       "/lop/:classId/diem",
       <ScoreGridTab />,
     );
-    expect(html).toContain("thang 15");
-    expect(html).toContain("thang 10");
+    expect(html).not.toContain("thang 15");
+    expect(html).not.toContain("thang 10");
     expect(html).not.toContain("điểm từ 0 đến 10");
   });
 
@@ -95,19 +94,18 @@ describe("bảng điểm lớp theo thang điểm từng bài", () => {
   });
 });
 
-describe("danh sách bài kiểm tra theo thang điểm từng bài", () => {
-  it("bài thang 15 hiện Thang 15 điểm", async () => {
+describe("danh sách bài kiểm tra", () => {
+  it("không hiện điểm tối đa", async () => {
     await createTestDurable({
       classId: "6a",
       name: "Kiểm tra 15 phút",
       date: "2026-10-10",
-      max: 15,
     });
     const html = render(
       "/lop/6a/bai-kiem-tra",
       "/lop/:classId/bai-kiem-tra",
       <TestsTab />,
     );
-    expect(html).toContain("Thang 15 điểm");
+    expect(html).not.toContain("Thang 15 điểm");
   });
 });

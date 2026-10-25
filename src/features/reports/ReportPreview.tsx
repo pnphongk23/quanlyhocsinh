@@ -141,7 +141,7 @@ export default function ReportPreview({
                 </span>
                 <strong>
                   {score && score.value !== null
-                    ? `${formatScore(score.value)}/${test.max}`
+                      ? formatScore(score.value)
                     : "Chưa có điểm"}
                 </strong>
               </li>

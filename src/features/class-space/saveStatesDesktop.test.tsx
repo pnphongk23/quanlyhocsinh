@@ -93,14 +93,14 @@ describe("Lưới điểm desktop: nút lưu", () => {
     expect(screen.queryByText(/Đã lưu/)).toBeNull();
   });
 
-  it("ô sai bước 0,5 hoặc vượt điểm tối đa: tắt nút và nói rõ số ô lỗi", () => {
+  it("ô sai bước 0,5 hoặc vượt 1000: tắt nút và nói rõ số ô lỗi", () => {
     inRouter(<ScoreGridDesktop classId="6a" />);
     const save = screen.getByRole("button", { name: "Lưu điểm" });
     fireEvent.change(screen.getByLabelText("Điểm Từ vựng của Nguyễn Minh Anh"), {
       target: { value: "7.3" },
     });
     fireEvent.change(screen.getByLabelText("Điểm Từ vựng của Trần Gia Bảo"), {
-      target: { value: "11" },
+      target: { value: "1000,5" },
     });
     expect(save).toBeDisabled();
     expect(screen.getByText("Sửa 2 ô lỗi để lưu điểm")).toBeInTheDocument();
@@ -267,7 +267,7 @@ function HomeworkHarness({ onDirty }: { onDirty: (dirty: boolean) => void }) {
 }
 
 describe("Bài kiểm tra desktop: form tạo/sửa", () => {
-  it("Tạo bài tắt khi thiếu tên hoặc điểm tối đa sai; bật khi hợp lệ", () => {
+  it("Tạo bài chỉ cần tên và ngày", () => {
     inRouter(<TestsDesktop classId="6a" />, "/lop/6a/bai-kiem-tra");
     fireEvent.click(screen.getByRole("button", { name: "Tạo bài kiểm tra" }));
     const create = screen.getByRole("button", { name: "Tạo bài" });
@@ -276,9 +276,6 @@ describe("Bài kiểm tra desktop: form tạo/sửa", () => {
       target: { value: "Kiểm tra Unit 9" },
     });
     expect(create).toBeEnabled();
-    fireEvent.change(screen.getByLabelText("Điểm tối đa"), {
-      target: { value: "0" },
-    });
-    expect(create).toBeDisabled();
+    expect(create).toBeEnabled();
   });
 });

@@ -72,7 +72,7 @@ export default function ScoreGridTab() {
                   >
                     <span>{test.name}</span>
                     <span className={s.testDate}>
-                      {formatDayMonth(test.date)} · thang {test.max}
+                        {formatDayMonth(test.date)}
                     </span>
                   </Link>
                 </th>

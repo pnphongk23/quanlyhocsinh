@@ -49,11 +49,11 @@ import s from "./scores.module.css";
 const keyFor = (testId: string, studentId: string) => `${testId}:${studentId}`;
 
 /** Điểm gõ dở ngoài thang 0–max của bài (ô trống không tính là lỗi). */
-export function isInvalidDraft(draft: ScoreDraft, max: number): boolean {
+export function isInvalidDraft(draft: ScoreDraft): boolean {
   const raw = draft.value.trim();
   if (raw === "") return false;
   const parsed = parseHalfScore(raw);
-  return parsed === null || parsed < 0 || parsed > max;
+  return parsed === null || parsed < 0 || parsed > 1000;
 }
 
 export default function TestScoresPage() {
@@ -65,7 +65,6 @@ export default function TestScoresPage() {
   const { status, markUnsaved, clearStatus, setStatus } = useSaveStatus();
   const classItem = getClass(classId);
   const test = listTests(classId).find((item) => item.id === testId);
-  const testMax = test?.max ?? 0;
   const students = listStudents(classId, false);
   const [drafts, setDrafts] = useState<ClassScoreDrafts>({});
   const [error, setError] = useState("");
@@ -103,7 +102,7 @@ export default function TestScoresPage() {
     typedValues[student.id] = draftValue(student.id).value;
   }
   const invalidTotal = students.filter((student) =>
-    isInvalidDraft({ value: typedValues[student.id] }, testMax),
+    isInvalidDraft({ value: typedValues[student.id] }),
   ).length;
   const action = useSaveAction({
     baseline: storedValues,
@@ -160,8 +159,8 @@ export default function TestScoresPage() {
           (item) => item.studentId === studentId,
         );
           const parsed = draft.value.trim() === "" ? null : parseHalfScore(draft.value);
-          if (isInvalidDraft(draft, testMax))
-            throw new Error(`Điểm phải từ 0 đến ${testMax}, theo bước 0,5.`);
+            if (isInvalidDraft(draft))
+              throw new Error("Điểm phải từ 0 đến 1000, theo bước 0,5.");
         if (old && old.value === parsed) continue;
         if (!old && parsed === null) continue;
         // `absent` đã bỏ khỏi Score (đã chốt 2026-10-19); ép kiểu để file này
@@ -210,7 +209,7 @@ export default function TestScoresPage() {
     );
 
   const invalidCount = students.filter((student) =>
-    isInvalidDraft(valueFor(student.id), testMax),
+      isInvalidDraft(valueFor(student.id)),
   ).length;
   // Mọi ô đều trống nghĩa là bài chưa có điểm nào: xoá hẳn thay vì lưu trữ.
   const hasScores = listScores(testId).some(
@@ -259,7 +258,7 @@ export default function TestScoresPage() {
         <div className={s.testCardText}>
           <p className={s.testCardName}>{test.name}</p>
           <p className={s.testCardMeta}>
-            Ngày {formatDayMonthLong(test.date)} · Thang {test.max} điểm
+              Ngày {formatDayMonthLong(test.date)}
           </p>
         </div>
         <Link className={s.switchTest} to={listPath}>
@@ -314,7 +313,7 @@ export default function TestScoresPage() {
       <div className={s.studentList} ref={listRef}>
         {students.map((student, index) => {
           const draft = valueFor(student.id);
-          const invalid = isInvalidDraft(draft, testMax);
+            const invalid = isInvalidDraft(draft);
           const missing = draft.value.trim() === "";
           return (
             <div
@@ -355,7 +354,7 @@ export default function TestScoresPage() {
               {invalid && (
                 <span className={s.rowError}>
                   <AlertTriangleIcon />
-                    Điểm từ 0 đến {testMax}, theo bước 0,5
+                      Điểm từ 0 đến 1000, theo bước 0,5
                 </span>
               )}
             </div>
@@ -434,7 +433,7 @@ export default function TestScoresPage() {
   );
 }
 
-/** Sửa tên, ngày và thang điểm của bài đang mở. */
+/** Sửa tên và ngày của bài đang mở. */
 function EditTestModal({
   test,
   onClose,
@@ -442,29 +441,15 @@ function EditTestModal({
   test: Test;
   onClose: () => void;
 }) {
-  const [form, setForm] = useState({
-    name: test.name,
-    date: test.date,
-    max: String(test.max),
-  });
+    const [form, setForm] = useState({ name: test.name, date: test.date });
   const action = useSaveAction({
-    baseline: { name: test.name, date: test.date, max: String(test.max) },
+      baseline: { name: test.name, date: test.date },
     value: form,
-    validate: (value) => {
-      const max = Number(value.max.trim());
-      return (
-        value.name.trim() !== "" &&
-        value.date !== "" &&
-        Number.isInteger(max) &&
-        max >= 1 &&
-        max <= 1000
-      );
-    },
+      validate: (value) => value.name.trim() !== "" && value.date !== "",
     save: (value) =>
       updateTestDurable(test.id, {
         name: value.name,
-        date: value.date,
-        max: Number(value.max.trim()),
+          date: value.date,
       }),
   });
   const saved = useSavedPeek();
@@ -502,17 +487,6 @@ function EditTestModal({
             type="date"
             value={form.date}
             onChange={(event) => setForm({ ...form, date: event.target.value })}
-            required
-          />
-          <Input
-            label="Điểm tối đa"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={1000}
-            step={1}
-            value={form.max}
-            onChange={(event) => setForm({ ...form, max: event.target.value })}
             required
           />
           {error && (

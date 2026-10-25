@@ -1,7 +1,6 @@
 const messages: Record<string, string> = {
   forbidden: "Bạn không còn quyền thực hiện thay đổi này.",
   not_found: "Dữ liệu này không còn trên máy chủ.",
-  score_above_max: "Điểm cao hơn điểm tối đa của bài kiểm tra.",
   invalid_score: "Điểm không hợp lệ.",
   invalid_score_step: "Điểm phải theo bước 0,5.",
   session_cancelled: "Buổi học đã bị huỷ.",

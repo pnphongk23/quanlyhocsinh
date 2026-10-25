@@ -122,18 +122,18 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     expect(html).toContain("Chưa chấm");
   });
 
-  it("Bài kiểm tra: bảng 4 cột và nút tạo bài", () => {
+  it("Bài kiểm tra: bảng 4 cột không có điểm tối đa và có nút tạo bài", () => {
     const html = render(<TestsDesktop classId="6a" />, "/lop/6a/bai-kiem-tra");
     expect(html).toContain("Tên bài kiểm tra");
-    expect(html).toContain("Điểm tối đa");
+    expect(html).not.toContain("Điểm tối đa");
     expect(html).toContain("Đã có điểm");
     expect(html).toContain("Tạo bài kiểm tra");
   });
 
-  it("Điểm: tiêu đề cột ghi /điểm tối đa, ô nhập trực tiếp, nút Lưu điểm", () => {
+  it("Điểm: tiêu đề cột không ghi điểm tối đa, ô nhập trực tiếp, nút Lưu điểm", () => {
     const html = render(<ScoreGridDesktop classId="6a" />, "/lop/6a/diem");
     expect(html).toContain("Lưu điểm");
-    expect(html).toContain("/10");
+    expect(html).not.toMatch(/<b>\/\d+<\/b>/);
     expect(html).toContain("Chưa có điểm");
     expect(html).not.toContain("Vắng thi");
   });

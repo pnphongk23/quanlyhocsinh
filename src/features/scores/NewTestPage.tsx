@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useStore } from "../../data/store";
-import { createTestDurable, DEFAULT_TEST_MAX } from "../../data/repositories/tests";
+import { createTestDurable } from "../../data/repositories/tests";
 import { getClass } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
 import { useSaveStatus } from "../../shared/SaveStatus";
@@ -30,7 +30,6 @@ export default function NewTestPage() {
   const initial = {
     name: "",
     date: todayISO(),
-    max: String(DEFAULT_TEST_MAX),
   };
   const [form, setForm] = useState(initial);
   const [done, setDone] = useState<string | null>(null);
@@ -39,14 +38,7 @@ export default function NewTestPage() {
     baseline: initial,
     value: form,
     validate: (value) => {
-      const max = Number(value.max.trim());
-      return (
-        value.name.trim() !== "" &&
-        value.date !== "" &&
-        Number.isInteger(max) &&
-        max >= 1 &&
-        max <= 1000
-      );
+        return value.name.trim() !== "" && value.date !== "";
     },
     save: async (value) => {
       if (!classItem) throw new Error("Không tìm thấy lớp học.");
@@ -54,7 +46,6 @@ export default function NewTestPage() {
         classId,
         name: value.name,
         date: value.date,
-        max: Number(value.max.trim()),
       });
       created.current = test.id;
     },
@@ -83,10 +74,9 @@ export default function NewTestPage() {
       ? action.error.message
       : "Không tạo được bài kiểm tra."
     : "";
-  const { name, date, max } = form;
+    const { name, date } = form;
   const setName = (next: string) => setForm((current) => ({ ...current, name: next }));
   const setDate = (next: string) => setForm((current) => ({ ...current, date: next }));
-  const setMax = (next: string) => setForm((current) => ({ ...current, max: next }));
 
   return (
     <section className={s.formPage}>
@@ -110,23 +100,6 @@ export default function NewTestPage() {
           }}
           required
         />
-        <Input
-          label="Điểm tối đa"
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={1000}
-          step={1}
-          value={max}
-          onChange={(event) => {
-            setMax(event.target.value);
-          }}
-          required
-        />
-        <p className={s.hint}>
-          Mỗi bài có thang điểm riêng, mặc định {DEFAULT_TEST_MAX}. Sửa được lúc
-          tạo bài hoặc khi sửa bài.
-        </p>
         {error && (
           <p role="alert" className={s.errorBanner}>
             <AlertTriangleIcon size={18} />

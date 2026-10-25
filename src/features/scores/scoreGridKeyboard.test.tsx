@@ -141,16 +141,16 @@ describe("bảng điểm desktop: phím di chuyển giữa các ô", () => {
 
   it("giá trị sai báo lỗi và không mất khi rời ô bằng phím", () => {
     const input = cell(0, 0);
-    fireEvent.change(input, { target: { value: "11" } });
+      fireEvent.change(input, { target: { value: "1000,5" } });
     input.focus();
     press(input, "Enter");
     expect(document.activeElement).toBe(cell(1, 0));
-    expect(cell(0, 0).value).toBe("11");
+      expect(cell(0, 0).value).toBe("1000,5");
     expect(cell(0, 0)).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("Sửa 1 ô lỗi để lưu điểm")).toBeInTheDocument();
     press(cell(1, 0), "ArrowUp");
     press(cell(0, 0), "ArrowRight");
-    expect(cell(0, 0).value).toBe("11");
+      expect(cell(0, 0).value).toBe("1000,5");
   });
 });
 
@@ -263,11 +263,11 @@ describe("màn nhập điểm mobile: Enter chuyển học sinh kế tiếp", ()
     press(all[0], "Enter");
     expect(document.activeElement).toBe(all[1]);
     const last = all[all.length - 1];
-    fireEvent.change(last, { target: { value: "12" } });
+      fireEvent.change(last, { target: { value: "1000,5" } });
     last.focus();
     press(last, "Enter");
     expect(document.activeElement).not.toBe(last);
-    expect(last.value).toBe("12");
+      expect(last.value).toBe("1000,5");
     expect(last).toHaveAttribute("aria-invalid", "true");
   });
 });
