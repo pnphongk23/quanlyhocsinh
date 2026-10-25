@@ -46,6 +46,18 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("repository command payload contracts", () => {
+  it("keeps slip comments longer than 300 characters in the outgoing payload", async () => {
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { saveSessionCommentDurable } = await import("../data/repositories/comments");
+    const longComment = "Nhận xét ".repeat(40);
+
+    await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 31, comment: longComment, note: "" });
+    await d.syncNow();
+
+    expect(server.rows.get("slip")?.get("session-1|s1")?.comment).toBe(longComment);
+  });
+
   it.each(["2026-10-24T17:30:00.000Z", "2026-10-24T23:59:00.000Z"])(
     "cho điểm danh ngày 25/10 và chặn ngày 26/10 tại %s",
     async (instant) => {

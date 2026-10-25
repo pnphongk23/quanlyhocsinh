@@ -51,7 +51,7 @@ export function createFakeServer() {
     }
     if (command.type === "slip.set") {
       if (p.criteria !== undefined && (!Number.isInteger(p.criteria) || p.criteria < 0 || p.criteria > 31)) return { id: command.id, status: "rejected", error: { code: "invalid_criteria", message: "invalid_criteria", request_id: "fake" } };
-      if (p.comment !== undefined && p.comment !== null && (typeof p.comment !== "string" || p.comment.length > 300)) return { id: command.id, status: "rejected", error: { code: "invalid_comment", message: "invalid_comment", request_id: "fake" } };
+      if (p.comment !== undefined && p.comment !== null && typeof p.comment !== "string") return { id: command.id, status: "rejected", error: { code: "invalid_comment", message: "invalid_comment", request_id: "fake" } };
     }
     switch (command.type) {
       case "attendance.set": put("attendance", { session_id: p.session_id, student_id: p.student_id, status: p.status, note: p.note ?? "", late_at: p.late_at ?? null }); break;

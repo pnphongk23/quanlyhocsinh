@@ -31,9 +31,8 @@ export function SlipCriteriaFields({
       <p className={s.starCount} aria-live="polite">{stars}/5 sao</p>
       <label className={s.commentField}>
         <span className={s.label}>Nhận xét phụ huynh thấy</span>
-        <textarea className={s.commentInput} value={effectiveComment} maxLength={300} rows={3} disabled={disabled} onChange={(event) => onCommentChange(event.target.value || null)} onBlur={onBlur} />
+        <textarea className={s.commentInput} value={effectiveComment} rows={3} disabled={disabled} onChange={(event) => onCommentChange(event.target.value || null)} onBlur={onBlur} />
         <span className={s.commentActions}>
-          <span>{effectiveComment.length}/300 ký tự</span>
           {comment !== null && <button type="button" className={s.defaultButton} disabled={disabled} onClick={() => onCommentChange(null)}>Dùng câu mặc định</button>}
         </span>
       </label>
