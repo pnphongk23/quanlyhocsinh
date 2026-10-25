@@ -81,7 +81,7 @@ final class ReportAPIDecodingTests: XCTestCase {
          "range":{"from_key":"2026-10-01 18:00","to_key":"2026-10-24 18:00","from_number":1,"to_number":8,"label":"Buổi 1–8 · 01/10–24/10"},
          "missing":["comment","score:t1"],
          "attendance":{"present":5,"late":1,"excused":1,"absent":1,"held_sessions":8},
-         "stars":{"three":4,"two":3,"one":1,"stars5":{"s5":6,"s4":2,"s3":1,"s2":0,"s1":0,"s0":1}},
+         "stars":{"three":4,"two":3,"one":1},"stars5":{"s5":6,"s4":2,"s3":1,"s2":0,"s1":0,"s0":1},
          "homework":[{"kind":"vocabulary","excellent":4,"done":3,"not_done":1}],
          "tests":[{"test_id":"t1","name":"Kiểm tra","date":"2026-10-07","max":15,"value":null}]}
         """)
@@ -91,6 +91,20 @@ final class ReportAPIDecodingTests: XCTestCase {
         XCTAssertEqual(snapshot.missing, ["comment", "score:t1"])
         XCTAssertFalse(snapshot.ready)
         XCTAssertNil(snapshot.tests.first?.value)
+    }
+
+    func testCachedSnapshotKeepsStars5InsideStars() throws {
+        let snapshot = try decode(ReportSnapshot.self, """
+        {"student_id":"st1","ready":true,"general_comment":"x","tests":[],"homework":[],
+         "attendance":{"present":1,"late":0,"excused":0,"absent":0,"held_sessions":1},
+         "stars":{"three":1,"two":0,"one":0}}
+        """)
+        XCTAssertEqual(snapshot.stars.stars5, Stars5Summary(), "a snapshot without stars5 counts as zero")
+        let five = ReportSnapshot(studentId: "st1", attendance: snapshot.attendance, tests: [],
+                                  stars: StarsSummary(three: 0, two: 0, one: 0, stars5: Stars5Summary(s5: 2)),
+                                  homework: [], generalComment: "x", ready: true)
+        let again = try WireJSON.decoder().decode(ReportSnapshot.self, from: try WireJSON.encoder().encode(five))
+        XCTAssertEqual(again, five)
     }
 
     func testPublishResponsesDecodePublishedAndSkipped() throws {
@@ -124,7 +138,7 @@ final class ReportAPIDecodingTests: XCTestCase {
 
     func testABadMonthIsAnsweredWithTheMonthMessageNotTheFallback() {
         let error = APIError(code: "validation_error", message: nil,
-                             details: .object(["reason": .string("must_be_month")]), requestId: nil)
+                             details: .object(["fields": .object(["month": .string("must_be_month")])]), requestId: nil)
         let failure = ReportFailure.from(APIFailure.server(status: 422, error: error, retryAfter: nil), fallback: "fallback")
         XCTAssertNotEqual(failure.message, "fallback")
         XCTAssertTrue(failure.message.contains("Tháng"))

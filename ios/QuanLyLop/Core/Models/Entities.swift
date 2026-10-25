@@ -251,6 +251,43 @@ struct ReportSnapshot: Codable, Sendable, Equatable {
     /// Only in previews: which data is still missing (`attendance`, `scores`, `comment`).
     var missing: [String]?
 
+    private enum CodingKeys: String, CodingKey {
+        case studentId, month, batchId, range, attendance, tests, stars, stars5, homework, generalComment, ready, missing
+    }
+
+    /// The server sends `stars5` next to `stars`; the copy this app caches nests it inside `stars`.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        studentId = try c.decode(String.self, forKey: .studentId)
+        month = try c.decodeIfPresent(String.self, forKey: .month)
+        batchId = try c.decodeIfPresent(String.self, forKey: .batchId)
+        range = try c.decodeIfPresent(ReportRange.self, forKey: .range)
+        attendance = try c.decode(AttendanceSummary.self, forKey: .attendance)
+        tests = try c.decode([ReportTest].self, forKey: .tests)
+        let plain = try c.decode(StarsSummary.self, forKey: .stars)
+        let sibling = try c.decodeIfPresent(Stars5Summary.self, forKey: .stars5)
+        stars = sibling.map { StarsSummary(three: plain.three, two: plain.two, one: plain.one, stars5: $0) } ?? plain
+        homework = try c.decode([HomeworkSummary].self, forKey: .homework)
+        generalComment = try c.decode(String.self, forKey: .generalComment)
+        ready = try c.decode(Bool.self, forKey: .ready)
+        missing = try c.decodeIfPresent([String].self, forKey: .missing)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(studentId, forKey: .studentId)
+        try c.encodeIfPresent(month, forKey: .month)
+        try c.encodeIfPresent(batchId, forKey: .batchId)
+        try c.encodeIfPresent(range, forKey: .range)
+        try c.encode(attendance, forKey: .attendance)
+        try c.encode(tests, forKey: .tests)
+        try c.encode(stars, forKey: .stars)
+        try c.encode(homework, forKey: .homework)
+        try c.encode(generalComment, forKey: .generalComment)
+        try c.encode(ready, forKey: .ready)
+        try c.encodeIfPresent(missing, forKey: .missing)
+    }
+
     init(studentId: String, month: String? = nil, batchId: String? = nil, range: ReportRange? = nil,
          attendance: AttendanceSummary, tests: [ReportTest], stars: StarsSummary,
          homework: [HomeworkSummary], generalComment: String, ready: Bool, missing: [String]? = nil) {
