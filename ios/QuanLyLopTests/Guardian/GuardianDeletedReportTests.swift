@@ -1,0 +1,85 @@
+import XCTest
+@testable import QuanLyLop
+
+/// A report the teacher deleted must disappear from the guardian's cache, also when the guardian was
+/// offline at the time and learns about it on the next refresh.
+final class GuardianDeletedReportTests: XCTestCase {
+    private let scope = CacheScope(userId: "guardian-user", workspaceId: "workspace", membershipId: "guardian")
+
+    private func publication(report: String) throws -> ReportPublication {
+        let snapshot = try WireJSON.decoder().decode(ReportSnapshot.self, from: Data("""
+        {"student_id":"st1","ready":true,"general_comment":"","attendance":{"present":1,"late":0,"excused":0,"absent":0,"held_sessions":1},
+         "stars":{"three":1,"two":0,"one":0},"homework":[],"tests":[]}
+        """.utf8))
+        return ReportPublication(id: "p-\(report)", reportId: report, classId: "c1", studentId: "st1", batchId: "b-\(report)",
+                                 month: "2026-10", publicationNo: 1, publishedAt: "2026-10-20T00:00:00.000Z", snapshot: snapshot)
+    }
+
+    private func store(reports: [String]) async throws -> SQLiteStore {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        for id in reports {
+            let item = try publication(report: id)
+            try await store.write(item, forKey: RecordKey(entity: "report_publication", k1: item.id).storageKey, enqueueing: nil)
+        }
+        return store
+    }
+
+    private func cachedReportIDs(_ store: SQLiteStore) async throws -> Set<String> {
+        Set(try await store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication").values.map(\.reportId))
+    }
+
+    func testCachedPublicationMissingFromTheServerListIsRemoved() async throws {
+        let store = try await store(reports: ["r-kept", "r-deleted"])
+        let api = RouteAPI { endpoint in
+            guard endpoint.path == "students/st1/reports" else { return nil }
+            return """
+            {"items":[{"report_id":"r-kept","batch_id":"b-r-kept","student_id":"st1","month":"2026-10","status":"published",
+                       "needs_republish":0,"publication_count":1,"published_at":"2026-10-20T00:00:00.000Z","version":2,
+                       "from_key":"2026-10-01 18:00","to_key":"2026-10-20 18:00","from_number":1,"to_number":6}],"next_cursor":null}
+            """
+        }
+
+        let complete = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: ["st1"])
+
+        XCTAssertTrue(complete)
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertEqual(remaining, ["r-kept"])
+    }
+
+    func testPublicationAnswered404IsDroppedAndDoesNotMakeTheRefreshIncomplete() async throws {
+        let store = try await store(reports: [])
+        let api = RouteAPI(route: { endpoint in
+            guard endpoint.path == "students/st1/reports" else { return nil }
+            return """
+            {"items":[{"report_id":"r-gone","batch_id":"b-r-gone","student_id":"st1","month":"2026-10","status":"published",
+                       "needs_republish":0,"publication_count":1,"published_at":"2026-10-20T00:00:00.000Z","version":2,
+                       "from_key":"2026-10-01 18:00","to_key":"2026-10-20 18:00","from_number":1,"to_number":6}],"next_cursor":null}
+            """
+        }, failures: ["reports/r-gone/publications/1": 404])
+
+        let complete = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: ["st1"])
+
+        XCTAssertTrue(complete)
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertTrue(remaining.isEmpty)
+    }
+
+    func testOfflineRefreshKeepsCachedPublications() async throws {
+        let store = try await store(reports: ["r-kept"])
+
+        let complete = await GuardianReportHistory.refresh(api: RouteAPI { _ in nil }, store: store, studentIDs: ["st1"])
+
+        XCTAssertFalse(complete)
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertEqual(remaining, ["r-kept"])
+    }
+
+    func testSyncDeletedPublicationRemovesItFromTheDashboardHistory() async throws {
+        let store = try await store(reports: ["r-kept", "r-deleted"])
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                       deleted: [RecordKey(entity: "report_publication", k1: "p-r-deleted")]))
+
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertEqual(remaining, ["r-kept"])
+    }
+}

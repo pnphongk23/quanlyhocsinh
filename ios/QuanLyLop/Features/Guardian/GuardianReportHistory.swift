@@ -18,8 +18,10 @@ enum GuardianReportHistory {
     /// True when every published report of the students is in the cache afterwards.
     static func refresh(api: any APIClient, store: SQLiteStore, studentIDs: [String]) async -> Bool {
         var have = Set<String>()
+        var cached: [ReportPublication] = []
         if let known = try? await store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication") {
-            have = Set(known.values.map { "\($0.reportId)#\($0.publicationNo)" })
+            cached = known.values
+            have = Set(cached.map { "\($0.reportId)#\($0.publicationNo)" })
         }
         var complete = true
         for studentID in studentIDs {
@@ -29,6 +31,11 @@ enum GuardianReportHistory {
                 complete = false
                 if (error as? APIFailure) == .offline { return false }
                 continue
+            }
+            // The list holds every published report of the child, so a cached one missing from it was deleted.
+            let listed = Set(items.map(\.reportId))
+            for stale in Set(cached.filter { $0.studentId == studentID && !listed.contains($0.reportId) }.map(\.reportId)) {
+                try? await store.removePublications(ofReport: stale)
             }
             for item in items where item.status == .published && item.publicationCount > 0 {
                 let marker = "\(item.reportId)#\(item.publicationCount)"
@@ -41,6 +48,11 @@ enum GuardianReportHistory {
                     try await store.write(publication, forKey: key, enqueueing: nil)
                     have.insert(marker)
                 } catch {
+                    // 404: the teacher deleted the report. Nothing of it may stay readable offline.
+                    if case .server(let status, _, _)? = error as? APIFailure, status == 404 {
+                        try? await store.removePublications(ofReport: item.reportId)
+                        continue
+                    }
                     complete = false
                     if (error as? APIFailure) == .offline { return false }
                 }
