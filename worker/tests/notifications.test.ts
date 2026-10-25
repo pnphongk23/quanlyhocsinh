@@ -126,7 +126,7 @@ describe('notification inbox routes (guardian only)', () => {
     const sessionId = await insertSession(ws.workspaceId, classId, '2026-10-21', ws.userId, 'held');
     const reportId = await insertReport(ws.workspaceId, classId, studentId);
     const testId = await insertTest(ws.workspaceId, classId, ws.userId);
-    const archivedTestId = await insertTest(ws.workspaceId, classId, ws.userId, 15, '2026-10-07');
+    const archivedTestId = await insertTest(ws.workspaceId, classId, ws.userId, '2026-10-07');
     await db
       .prepare('UPDATE tests SET archived = 1 WHERE id = ?')
       .bind(archivedTestId)

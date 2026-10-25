@@ -210,7 +210,7 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
       .bind(workspaceId, studentId, fromKey, toKey),
     db
       .prepare(
-        `SELECT t.id AS test_id,t.name,t.date,t.max,s.value FROM tests t JOIN students st ON st.id=? LEFT JOIN scores s
+        `SELECT t.id AS test_id,t.name,t.date,s.value FROM tests t JOIN students st ON st.id=? LEFT JOIN scores s
         ON s.test_id=t.id AND s.student_id=st.id WHERE t.workspace_id=? AND t.class_id=? AND t.archived=0
         AND t.date>=? AND t.date<=? AND (t.date>=st.enrolled_at OR s.value IS NOT NULL) AND (st.left_at IS NULL OR t.date<=st.left_at) ORDER BY t.date,t.id`,
       )
@@ -494,7 +494,7 @@ export async function previewReport(
       .all<{ status: string; count: number }>(),
     db
       .prepare(
-        `SELECT t.id AS test_id,t.name,t.date,t.max,s.value FROM tests t LEFT JOIN scores s
+        `SELECT t.id AS test_id,t.name,t.date,s.value FROM tests t LEFT JOIN scores s
       ON s.test_id=t.id AND s.student_id=? WHERE t.workspace_id=? AND t.class_id=? AND t.archived=0
       AND substr(t.date,1,7)=? ORDER BY t.date,t.id`,
       )

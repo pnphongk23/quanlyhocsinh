@@ -43,10 +43,6 @@ function memberOf(value: any,values: any[]): any {
   if (!values.includes(value)) throw validationError(undefined,'invalid_value');
   return value;
 }
-function maxScore(value: any): number {
-  if (!Number.isInteger(value) || value<1 || value>1000) throw validationError({max:'must_be_1_to_1000'});
-  return value;
-}
 export function validatePush(body: Row): { membership_id: string; commands: Command[] } {
   const membership_id=id(body.membership_id); id(body.device_id);
   if (!Array.isArray(body.commands) || body.commands.length>50) throw validationError(undefined,'invalid_commands');
@@ -150,7 +146,7 @@ async function student(db:D1Database,i:SyncIdentity,studentId:unknown,parent:Row
 }
 /** Object commands follow the same "later command wins" rule as cells: a stale base_version still
  * applies (the server bumps version from what it currently holds). Only a base_version from the
- * future is rejected; business rules (archived test, missing row, max below score…) still reject. */
+ * future is rejected; business rules (archived test, missing row…) still reject. */
 function version(c:Command,row:Row):void {
   if (c.base_version>row.version) throw validationError(undefined,'base_version_ahead');
 }
@@ -214,8 +210,7 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
     if (late!==null && (status!=='late' || typeof late!=='string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(late))) throw validationError(undefined,'invalid_late_at');
     values={status,note:text(p.note,500,''),late_at:late};
   } else if (entity==='score') {
-    if (p.value!==null && (typeof p.value!=='number' || !Number.isFinite(p.value) || p.value<0)) throw validationError(undefined,'invalid_score');
-    if (p.value>parent.max) throw validationError(undefined,'score_above_max');
+    if (p.value!==null && (typeof p.value!=='number' || !Number.isFinite(p.value) || p.value<0 || p.value>1000)) throw validationError(undefined,'invalid_score');
     if (p.value!==null && !Number.isInteger(p.value*2)) throw validationError(undefined,'invalid_score_step');
     values={value:p.value};
   } else if (entity==='slip') values={stars:memberOf(p.stars,[null,1,2,3]),note:text(p.note,1000)};
@@ -304,8 +299,8 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
       const cls=await resource(db,i,'classes',p.class_id,'scores'); id(p.id);
       const name=text(p.name,100); if (!name.trim()) throw validationError({name:'required'});
       result.version=1;
-      return {result,rest,first:q(`INSERT INTO tests(id,workspace_id,class_id,name,date,max,created_by,created_at,updated_at,updated_by)
-        VALUES(?,?,?,?,?,?,?,?,?,?)`,p.id,i.workspaceId,cls.id,name,date(p.date),maxScore(p.max ?? 15),i.userId,now,now,i.userId)};
+      return {result,rest,first:q(`INSERT INTO tests(id,workspace_id,class_id,name,date,created_by,created_at,updated_at,updated_by)
+        VALUES(?,?,?,?,?,?,?,?,?)`,p.id,i.workspaceId,cls.id,name,date(p.date),i.userId,now,now,i.userId)};
     }
     const row=await resource(db,i,'tests',p.id,'scores'); version(c,row);
     if (row.archived) throw notFound();
@@ -313,8 +308,8 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
     if (c.type==='test.update') {
       const name=p.name===undefined ? row.name : text(p.name,100);
       if (!name.trim()) throw validationError({name:'required'});
-      return {result,rest,first:q(`UPDATE tests SET name=?,date=?,max=?,version=version+1,updated_at=?,updated_by=? WHERE workspace_id=? AND id=? AND version=?`,
-        name,p.date===undefined ? row.date : date(p.date),p.max===undefined ? row.max : maxScore(p.max),now,i.userId,i.workspaceId,row.id,row.version)};
+      return {result,rest,first:q(`UPDATE tests SET name=?,date=?,version=version+1,updated_at=?,updated_by=? WHERE workspace_id=? AND id=? AND version=?`,
+        name,p.date===undefined ? row.date : date(p.date),now,i.userId,i.workspaceId,row.id,row.version)};
     }
     const scores=await one(db,'SELECT COUNT(*) n FROM scores WHERE workspace_id=? AND test_id=? AND value IS NOT NULL',i.workspaceId,row.id);
     const archive=scores!.n>0; result.outcome=archive ? 'archived' : 'deleted';

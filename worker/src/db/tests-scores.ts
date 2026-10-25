@@ -7,7 +7,6 @@ export interface TestRow {
   class_id: string;
   name: string;
   date: string;
-  max: number;
   archived: number;
   version: number;
 }
@@ -35,7 +34,7 @@ export async function listTests(
   const includeArchived = archived && identity.scopeKind !== "linked_students";
   const result = await db
     .prepare(
-      `SELECT id, class_id, name, date, max, archived, version FROM tests
+      `SELECT id, class_id, name, date, archived, version FROM tests
     WHERE workspace_id = ? AND class_id = ? AND archived = ? ORDER BY date, id`,
     )
     .bind(identity.workspaceId, classId, includeArchived ? 1 : 0)

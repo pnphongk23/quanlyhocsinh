@@ -12,7 +12,7 @@ async function setup() {
   const s1=await insertStudent(a.workspaceId,cls,'S1',null,a.userId),s2=await insertStudent(a.workspaceId,cls,'S2',null,a.userId);
   const s3=await insertStudent(a.workspaceId,other,'S3',null,a.userId);
   await db.prepare("UPDATE students SET enrolled_at='2000-01-01' WHERE workspace_id=?").bind(a.workspaceId).run();
-  const ses=await insertSession(a.workspaceId,cls,today(),a.userId),test=await insertTest(a.workspaceId,cls,a.userId,15,today());
+  const ses=await insertSession(a.workspaceId,cls,today(),a.userId),test=await insertTest(a.workspaceId,cls,a.userId,today());
   const teacherUser=await insertUser(fakePhone()),taUser=await insertUser(fakePhone()),p1User=await insertUser(fakePhone()),p2User=await insertUser(fakePhone());
   const teacher=await insertMembership(a.workspaceId,teacherUser,a.roles.teacher!,[cls]);
   const ta=await insertMembership(a.workspaceId,taUser,a.roles.assistant!,[cls]);
@@ -89,7 +89,7 @@ describe('sync commands and recovery',()=>{
       command('score.set',{test_id:f.test,student_id:f.s1,value:7.5}),
       command('score.set',{test_id:f.test,student_id:f.s1,value:7.3}),
       command('score.set',{test_id:f.test,student_id:f.s1,value:7.25}),
-      command('score.set',{test_id:f.test,student_id:f.s1,value:15.5}),
+      command('score.set',{test_id:f.test,student_id:f.s1,value:1000.5}),
       command('score.set',{test_id:f.test,student_id:f.s1,value:-0.5}),
       command('score.set',{test_id:f.test,student_id:f.s1,value:'7.5'}),
     ]);
@@ -100,7 +100,7 @@ describe('sync commands and recovery',()=>{
       'validation_error','validation_error','validation_error','validation_error','validation_error',
     ]);
     expect(results.body.results.slice(4).map((r:any)=>r.error.details?.reason)).toEqual([
-      'invalid_score_step','invalid_score_step','score_above_max','invalid_score','invalid_score',
+      'invalid_score_step','invalid_score_step','invalid_score','invalid_score','invalid_score',
     ]);
 
     const snapshot=await f.page('score');
@@ -118,7 +118,7 @@ describe('sync commands and recovery',()=>{
     const r=await f.send([command('test.create',{id:test,class_id:f.cls,name:'T',date:today()}),
       command('attendance.set',{session_id:f.ses,student_id:f.s3,status:'present'}),command('score.set',{test_id:test,student_id:f.s1,value:15})]);
     expect(r.body.results.map((x:any)=>x.status)).toEqual(['applied','rejected','applied']);
-    expect((await db.prepare('SELECT max FROM tests WHERE id=?').bind(test).first<any>())!.max).toBe(15);
+    expect(await db.prepare('SELECT name FROM tests WHERE id=?').bind(test).first<any>()).toMatchObject({name:'T'});
   });
   it('validates expiration, ahead/missing versions, attendance dates, enrollment and late time',async()=>{
     const f=await setup(),future=await insertSession(f.a.workspaceId,f.cls,'2099-01-01',f.a.userId);
@@ -132,7 +132,7 @@ describe('sync commands and recovery',()=>{
     await db.prepare("UPDATE students SET enrolled_at='2099-01-01' WHERE id=?").bind(f.s1).run();
     expect((await f.send([command('slip.set',{session_id:f.ses,student_id:f.s1,stars:3,note:''})])).body.results[0].error.details.reason).toBe('student_not_enrolled_on_date');
   });
-  it('updates/deletes tests, rejects max below score, archives zero, deletes null-only tests',async()=>{
+  it('updates/deletes tests, ignores legacy max, archives zero, deletes null-only tests',async()=>{
     const f=await setup();
     await f.send([command('score.set',{test_id:f.test,student_id:f.s1,value:0})]);
     expect((await f.send([command('test.update',{id:f.test,name:'Updated',max:20},1)])).body.results[0].version).toBe(2);
@@ -141,11 +141,13 @@ describe('sync commands and recovery',()=>{
       .toMatchObject({status:'applied',version:3});
     expect((await f.send([command('test.update',{id:f.test,name:'Ahead'},9)])).body.results[0].error.details.reason).toBe('base_version_ahead');
     await f.send([command('score.set',{test_id:f.test,student_id:f.s1,value:18},1)]);
-    expect((await f.send([command('test.update',{id:f.test,max:10},2)])).body.results[0].error.details.reason).toBe('max_below_score');
-    expect((await f.send([command('score.set',{test_id:f.test,student_id:f.s1,value:21},2)])).body.results[0].error.details.reason).toBe('score_above_max');
-    expect(await db.prepare('SELECT name,version FROM tests WHERE id=?').bind(f.test).first<any>()).toMatchObject({name:'Updated again',version:3});
+    expect((await f.send([command('test.update',{id:f.test,max:10},2)])).body.results[0]).toMatchObject({status:'applied',version:4});
+    expect((await f.send([command('score.set',{test_id:f.test,student_id:f.s1,value:1000.5},2)])).body.results[0].error.details.reason).toBe('invalid_score');
+    expect((await f.send([command('score.set',{test_id:f.test,student_id:f.s1,value:1000},2)])).body.results[0].status).toBe('applied');
+    expect(await db.prepare('SELECT * FROM tests WHERE id=?').bind(f.test).first<any>()).not.toHaveProperty('max');
+    expect(await db.prepare('SELECT name,version FROM tests WHERE id=?').bind(f.test).first<any>()).toMatchObject({name:'Updated again',version:4});
     expect((await f.send([command('test.delete',{id:f.test},2)])).body.results[0].outcome).toBe('archived');
-    const test=await insertTest(f.a.workspaceId,f.cls,f.a.userId,15,today());
+    const test=await insertTest(f.a.workspaceId,f.cls,f.a.userId,today());
     await f.send([command('score.set',{test_id:test,student_id:f.s1,value:null})]);
     expect((await f.send([command('test.delete',{id:test},1)])).body.results[0].outcome).toBe('deleted');
   });

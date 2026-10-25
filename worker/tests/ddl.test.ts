@@ -46,8 +46,8 @@ describe('D1 schema constraints and history', () => {
 
     const testId = crypto.randomUUID();
     await db.prepare(
-      `INSERT INTO tests (id,workspace_id,class_id,name,date,max,archived,created_by,created_at,updated_at,updated_by,version)
-       VALUES (?, ?, ?, 'Unit test', '2026-10-20', 15, 0, ?, '2026-10-21T00:00:00.000Z','2026-10-21T00:00:00.000Z',?,1)`,
+      `INSERT INTO tests (id,workspace_id,class_id,name,date,archived,created_by,created_at,updated_at,updated_by,version)
+       VALUES (?, ?, ?, 'Unit test', '2026-10-20', 0, ?, '2026-10-21T00:00:00.000Z','2026-10-21T00:00:00.000Z',?,1)`,
     ).bind(testId, owner.workspaceId, classA, owner.userId, owner.userId).run();
     await db.prepare(
       `INSERT INTO scores (workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at,updated_by)
@@ -58,6 +58,9 @@ describe('D1 schema constraints and history', () => {
     ).bind(owner.userId, testId, studentA).run();
     const scoreHistory = await db.prepare('SELECT old_value,new_value,changed_by FROM score_history').all();
     expect(scoreHistory.results).toEqual([{ old_value: 10, new_value: 12, changed_by: owner.userId }]);
+    await expect(db.prepare('UPDATE scores SET value=1000.5 WHERE test_id=? AND student_id=?').bind(testId, studentA).run())
+      .rejects.toThrow(/score_out_of_range/);
+    await db.prepare('UPDATE scores SET value=1000 WHERE test_id=? AND student_id=?').bind(testId, studentA).run();
     expect(sessionB).toBeTruthy();
   });
 });

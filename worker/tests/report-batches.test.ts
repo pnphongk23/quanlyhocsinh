@@ -161,8 +161,8 @@ describe('report batches by session range', () => {
   });
 
   it('previews only non-cancelled sessions and tests inside the range', async () => {
-    const homework = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-02');
-    const outside = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-08');
+    const homework = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, '2026-10-02');
+    const outside = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, '2026-10-08');
     const now = new Date().toISOString();
     await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at) VALUES(?,?,?,?,8,1,?,?)`)
       .bind(f.ws.workspaceId, f.classId, homework, f.students.a, now, now).run();
@@ -193,8 +193,8 @@ describe('report batches by session range', () => {
     const batch = await create('s1', 's2');
     const joinedReport = batch.body.reports.find((r: any) => r.student_id === joined);
     const leftReport = batch.body.reports.find((r: any) => r.student_id === left);
-    const t1 = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-01');
-    const t3 = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-03');
+    const t1 = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, '2026-10-01');
+    const t3 = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, '2026-10-03');
     const now = new Date().toISOString();
     const attendance = (studentId: string, sessionId: string) => db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
       VALUES(?,?,?,?, 'present','',1,?,?)`).bind(f.ws.workspaceId, f.classId, sessionId, studentId, now, now).run();
@@ -238,8 +238,8 @@ describe('report batches by session range', () => {
     expect((await batchesOf()).find((b) => b.id === batch.id).counts).toEqual({ total: 3, draft: 2, published: 1, needs_republish: 0 });
 
     // Score inside the range flags the published report; a score outside does not.
-    const inRange = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-06');
-    const outRange = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-20');
+    const inRange = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, '2026-10-06');
+    const outRange = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, '2026-10-20');
     const now = new Date().toISOString();
     const score = (test: string, studentId = f.students.a) => db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at) VALUES(?,?,?,?,9,1,?,?)`)
       .bind(f.ws.workspaceId, f.classId, test, studentId, now, now).run();
@@ -270,7 +270,7 @@ describe('report batches by session range', () => {
         await db.prepare(`UPDATE students SET enrolled_at='2026-10-03',left_at='2026-10-03',status='left' WHERE id=?`).bind(studentId).run();
       const batch = await create('s2', 's2');
       const report = batch.body.reports.find((r: any) => r.student_id === studentId);
-      const testId = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-03');
+      const testId = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, '2026-10-03');
       const now = new Date().toISOString();
       for (const studentId of [f.students.a, f.students.left])
         await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
@@ -312,7 +312,7 @@ describe('report batches by session range', () => {
       await db.prepare(`UPDATE students SET enrolled_at='2026-10-09' WHERE id=?`).bind(studentId).run();
       const batch = await create('s4', 's5');
       const report = batch.body.reports.find((r: any) => r.student_id === studentId);
-      const testId = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, 10, '2026-10-09');
+      const testId = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, '2026-10-09');
       const now = new Date().toISOString();
       await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
         VALUES(?,?,?,?,8,1,?,?)`).bind(f.ws.workspaceId, f.classId, testId, studentId, now, now).run();

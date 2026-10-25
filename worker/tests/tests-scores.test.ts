@@ -126,7 +126,6 @@ describe("tests and score routes", () => {
       class_id: f.c1,
       name: 'Unit test',
       date: '2026-10-14',
-      max: 15,
       archived: 0,
       version: 1,
     });

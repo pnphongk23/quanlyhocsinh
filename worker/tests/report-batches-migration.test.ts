@@ -102,8 +102,8 @@ describe('migration 0004 report batches', () => {
     await expect(db.prepare('UPDATE report_publications SET batch_id=? WHERE id=?').bind(second, publicationId).run())
       .rejects.toThrow(/publication_immutable/);
     const test = crypto.randomUUID();
-    await db.prepare(`INSERT INTO tests(id,workspace_id,class_id,name,date,max,archived,created_by,created_at,updated_at,version)
-      VALUES(?,?,?,'T','2026-09-15',15,0,?,?,?,1)`).bind(test, ws.workspaceId, classA, ws.userId, now, now).run();
+    await db.prepare(`INSERT INTO tests(id,workspace_id,class_id,name,date,archived,created_by,created_at,updated_at,version)
+      VALUES(?,?,?,'T','2026-09-15',0,?,?,?,1)`).bind(test, ws.workspaceId, classA, ws.userId, now, now).run();
     await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
       VALUES(?,?,?,?,9,1,?,?)`).bind(ws.workspaceId, classA, test, s1, now, now).run();
     const flags = (await db.prepare('SELECT id,needs_republish FROM reports WHERE student_id=? AND status=?').bind(s1, 'published').all<any>()).results;

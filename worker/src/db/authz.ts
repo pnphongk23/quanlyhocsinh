@@ -73,8 +73,7 @@ export function mapTriggerError(error: unknown, fallback: ApiError): ApiError {
     'guardian_without_link',
     'last_admin',
     'staff_only',
-    'score_above_max',
-    'max_below_score',
+    'score_out_of_range',
     'test_has_scores',
     'cannot_unsend',
     'section_has_grades',
@@ -82,7 +81,7 @@ export function mapTriggerError(error: unknown, fallback: ApiError): ApiError {
     'immutable_keys',
   ].find((code) => message.includes(code));
   if (!known) return fallback;
-  if (known === 'score_above_max' || known === 'max_below_score') {
+  if (known === 'score_out_of_range') {
     return new ApiError(422, 'validation_error', 'Invalid request.', { reason: known });
   }
   if (known === 'section_has_grades' || known === 'test_has_scores') {

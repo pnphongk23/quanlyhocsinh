@@ -228,7 +228,6 @@ export async function insertTest(
   workspaceId: string,
   classId: string,
   createdBy: string,
-  max = 15,
   date = '2026-10-14',
 ): Promise<string> {
   const testId = crypto.randomUUID();
@@ -236,11 +235,11 @@ export async function insertTest(
   await db
     .prepare(
       `INSERT INTO tests
-        (id, workspace_id, class_id, name, date, max, archived, created_by,
+        (id, workspace_id, class_id, name, date, archived, created_by,
          created_at, updated_at, updated_by, version)
-       VALUES (?, ?, ?, 'Unit test', ?, ?, 0, ?, ?, ?, ?, 1)`,
+       VALUES (?, ?, ?, 'Unit test', ?, 0, ?, ?, ?, ?, 1)`,
     )
-    .bind(testId, workspaceId, classId, date, max, createdBy, now, now, createdBy)
+    .bind(testId, workspaceId, classId, date, createdBy, now, now, createdBy)
     .run();
   return testId;
 }
