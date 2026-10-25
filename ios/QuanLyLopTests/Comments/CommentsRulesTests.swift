@@ -52,6 +52,40 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertEqual(rows.filter(\.getsDefaultSlip).map(\.student.id), ["present", "late"])
     }
 
+    func testSendMatrixCoversEveryAttendanceWithAndWithoutADraftSlip() {
+        let statuses: [(name: String, value: AttendanceStatus?, attended: Bool)] = [
+            ("present", .present, true), ("late", .late, true), ("absent", .absent, false),
+            ("excused", .excused, false), ("unmarked", nil, false)
+        ]
+        var rows: [I4TicketRow] = []
+        var expectedSendable: [String] = []
+        var expectedWithoutSlip: [String] = []
+        var expectedDefault: [String] = []
+        for status in statuses {
+            let bare = "\(status.name)-none"
+            let draft = "\(status.name)-draft"
+            rows.append(row(bare, bare, stars: nil, sent: false, attendance: status.value))
+            rows.append(row(draft, draft, stars: 2, sent: false, attendance: status.value))
+            expectedSendable.append(draft)
+            if status.attended {
+                expectedSendable.append(bare)
+                expectedDefault.append(bare)
+            } else {
+                expectedWithoutSlip.append(bare)
+            }
+        }
+        rows.append(row("already-sent", "Đã gửi", stars: 3, sent: true, attendance: .present))
+
+        XCTAssertEqual(Set(CommentsRules.sendable(rows).map(\.student.id)), Set(expectedSendable))
+        XCTAssertEqual(CommentsRules.sendable(rows).count, expectedSendable.count)
+        XCTAssertEqual(Set(CommentsRules.withoutSlip(rows).map(\.student.id)), Set(expectedWithoutSlip))
+        XCTAssertEqual(CommentsRules.withoutSlip(rows).count, expectedWithoutSlip.count)
+        XCTAssertEqual(Set(rows.filter(\.getsDefaultSlip).map(\.student.id)), Set(expectedDefault))
+        XCTAssertEqual(rows.filter(\.getsDefaultSlip).count, expectedDefault.count)
+        XCTAssertFalse(CommentsRules.sendable(rows).map(\.student.id).contains("already-sent"))
+        XCTAssertFalse(CommentsRules.withoutSlip(rows).map(\.student.id).contains("already-sent"))
+    }
+
     func testAnOpenedSlipOfAnAbsentStudentIsStillSent() {
         let rows = [row("a", "An", stars: 0, sent: false, attendance: .absent)]
         XCTAssertEqual(CommentsRules.sendable(rows).map(\.student.id), ["a"])
