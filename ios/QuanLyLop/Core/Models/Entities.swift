@@ -209,6 +209,9 @@ struct ReportBatch: Codable, Sendable, Equatable {
     let toSessionId: String?
     let fromKey: String
     let toKey: String
+    /// Session numbers of an old range batch as the server counted them; nil for monthly batches.
+    var fromNumber: Int? = nil
+    var toNumber: Int? = nil
     let version: Int
 }
 
@@ -231,10 +234,14 @@ struct ReportPublication: Codable, Sendable, Equatable {
     }
 }
 
-/// Period printed on a report. The server's own `label` and any session numbers are ignored on decode.
+/// Period printed on a report. Only reports of old session-range batches carry session numbers and a
+/// server `label` ("Buổi 1–8 · 01/10–24/10"); the label of a monthly batch is dates only.
 struct ReportRange: Codable, Sendable, Equatable {
     let fromKey: String
     let toKey: String
+    var fromNumber: Int?
+    var toNumber: Int?
+    var label: String?
 }
 
 struct ReportSnapshot: Codable, Sendable, Equatable {

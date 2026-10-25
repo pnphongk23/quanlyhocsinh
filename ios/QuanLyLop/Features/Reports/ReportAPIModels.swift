@@ -10,6 +10,8 @@ struct ReportBatchItem: Decodable, Sendable {
     let toKey: String
     /// "YYYY-MM" for a monthly batch; nil for an older session-range batch.
     let month: String?
+    let fromNumber: Int?
+    let toNumber: Int?
 }
 
 extension KeyedDecodingContainer {

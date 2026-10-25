@@ -90,7 +90,7 @@ struct ClassReportsView: View {
     }
 
     private func batchRow(_ batch: ReportBatch) -> some View {
-        let range = ReportRangeRules.resolve(batch)
+        let range = ReportRangeRules.resolve(batch, sessions: data.reportSessions(in: classID))
         let counts = ReportRangeRules.counts(data.reports(batchID: batch.id))
         return HStack(spacing: 0) {
             Button { openBatchID = batch.id } label: {

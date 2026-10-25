@@ -3,7 +3,10 @@ import Foundation
 struct ResolvedReportRange: Equatable {
     let fromKey: String
     let toKey: String
-    /// "Tháng 10/2026" for a monthly batch, otherwise the dates alone ("01/10–24/10").
+    /// Session numbers of an old range batch; nil for monthly batches.
+    var fromNumber: Int? = nil
+    var toNumber: Int? = nil
+    /// "Tháng 10/2026" for a monthly batch, "Buổi 1–8 · 01/10–24/10" for an old range batch.
     let label: String
 }
 
@@ -83,24 +86,54 @@ enum ReportRangeRules {
         return String(fromKey.prefix(7))
     }
 
-    /// Name of a range. The stored `month` of a batch wins; keys that span one whole month name the same
-    /// month; anything else shows its dates, never a session count.
-    static func label(fromKey: String, toKey: String, month: String? = nil) -> String {
-        if let month, let title = monthTitle(month) { return title }
-        if let whole = monthOfWholeMonthKeys(fromKey: fromKey, toKey: toKey), let title = monthTitle(whole) { return title }
+    static func datesLabel(fromKey: String, toKey: String) -> String {
         let from = dayMonth(fromKey)
         let to = dayMonth(toKey)
         return fromKey.prefix(10) == toKey.prefix(10) ? from : "\(from)–\(to)"
     }
 
-    static func resolve(_ batch: ReportBatch) -> ResolvedReportRange {
-        ResolvedReportRange(fromKey: batch.fromKey, toKey: batch.toKey,
-                            label: label(fromKey: batch.fromKey, toKey: batch.toKey, month: batch.month))
+    /// "Buổi 1–8 · 01/10–24/10" (old range batches keep their session numbers), or the dates alone when the
+    /// numbers are unknown.
+    static func numberedLabel(fromKey: String, toKey: String, fromNumber: Int?, toNumber: Int?) -> String {
+        let dates = datesLabel(fromKey: fromKey, toKey: toKey)
+        guard let fromNumber, let toNumber else { return dates }
+        let sessions = fromNumber == toNumber
+            ? String.localizedStringWithFormat(String(localized: "reports.range.single", table: "Reports"), fromNumber)
+            : String.localizedStringWithFormat(String(localized: "reports.range.span", table: "Reports"), fromNumber, toNumber)
+        return String.localizedStringWithFormat(String(localized: "reports.range.withDates", table: "Reports"), sessions, dates)
     }
 
-    /// Label of a snapshot, computed from its keys: the server's text may still carry session numbers.
+    /// Name of a stored batch: "Tháng 10/2026" for a monthly batch; an old range batch keeps its old name
+    /// with session numbers, from the server or, when the cache lacks them, counted from the class's sessions.
+    static func resolve(_ batch: ReportBatch, sessions: [ClassSession] = []) -> ResolvedReportRange {
+        if let month = batch.month, let title = monthTitle(month) {
+            return ResolvedReportRange(fromKey: batch.fromKey, toKey: batch.toKey, label: title)
+        }
+        var from = batch.fromNumber
+        var to = batch.toNumber
+        if from == nil || to == nil {
+            let list = counted(sessions, classID: batch.classId)
+            func number(_ id: String?) -> Int? {
+                guard let id, let index = list.firstIndex(where: { $0.id == id }) else { return nil }
+                return index + 1
+            }
+            from = number(batch.fromSessionId)
+            to = number(batch.toSessionId)
+            if from == nil || to == nil { from = nil; to = nil }
+        }
+        return ResolvedReportRange(fromKey: batch.fromKey, toKey: batch.toKey, fromNumber: from, toNumber: to,
+                                   label: numberedLabel(fromKey: batch.fromKey, toKey: batch.toKey,
+                                                        fromNumber: from, toNumber: to))
+    }
+
+    /// Label of a snapshot: the server's text when the report is of an old range batch (it has session
+    /// numbers), "Tháng M/YYYY" for keys that span one whole month, otherwise the dates.
     static func label(of range: ReportRange) -> String {
-        label(fromKey: range.fromKey, toKey: range.toKey)
+        if range.fromNumber != nil, range.toNumber != nil, let text = range.label, !text.isEmpty { return text }
+        if let whole = monthOfWholeMonthKeys(fromKey: range.fromKey, toKey: range.toKey),
+           let title = monthTitle(whole) { return title }
+        return numberedLabel(fromKey: range.fromKey, toKey: range.toKey,
+                             fromNumber: range.fromNumber, toNumber: range.toNumber)
     }
 
     /// Newest last session first, as the server lists them.
@@ -257,7 +290,8 @@ enum ReportRules {
         let snapshot = ReportSnapshot(
             studentId: student.id,
             batchId: batchID,
-            range: ReportRange(fromKey: range.fromKey, toKey: range.toKey),
+            range: ReportRange(fromKey: range.fromKey, toKey: range.toKey, fromNumber: range.fromNumber,
+                               toNumber: range.toNumber, label: range.label),
             attendance: AttendanceSummary(present: count(.present), late: count(.late), excused: count(.excused),
                                          absent: count(.absent), heldSessions: rangeSessions.count),
             tests: rangeTests,

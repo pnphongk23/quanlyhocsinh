@@ -143,6 +143,7 @@ extension I4FeatureStore {
         guard let store else { return }
         let batch = ReportBatch(id: item.id, classId: classID, month: item.month, fromSessionId: item.fromSessionId,
                                 toSessionId: item.toSessionId, fromKey: item.fromKey, toKey: item.toKey,
+                                fromNumber: item.fromNumber, toNumber: item.toNumber,
                                 version: self.batch(id: item.id)?.version ?? 1)
         try await store.write(batch, forKey: key("report_batch", batch.id), enqueueing: nil)
     }

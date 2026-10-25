@@ -85,7 +85,7 @@ final class ReportAPIDecodingTests: XCTestCase {
          "homework":[{"kind":"vocabulary","excellent":4,"done":3,"not_done":1}],
          "tests":[{"test_id":"t1","name":"Kiểm tra","date":"2026-10-07","max":15,"value":null}]}
         """)
-        XCTAssertEqual(snapshot.range.map(ReportRangeRules.label(of:)), "01/10–24/10")
+        XCTAssertEqual(snapshot.range.map(ReportRangeRules.label(of:)), "Buổi 1–8 · 01/10–24/10")
         XCTAssertEqual(snapshot.stars.stars5, Stars5Summary(s5: 6, s4: 2, s3: 1, s2: 0, s1: 0, s0: 1))
         XCTAssertEqual(snapshot.stars.legacyTotal, 8)
         XCTAssertEqual(snapshot.missing, ["comment", "score:t1"])
