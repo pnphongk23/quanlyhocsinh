@@ -41,10 +41,18 @@ export async function activateSession(token: string, user: WebSession["user"], m
 }
 export async function updateMe(me: MeResponse): Promise<void> {
   if (!session) return;
+  const current = session;
+  const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
+  const activeMemberships = me.memberships.filter((membership) => membership.status === "active");
+  if (!active && activeMemberships.length === 1) {
+    const { switchMembership } = await import("./index");
+    if (session !== current) return;
+    await switchMembership(activeMemberships[0].id, me);
+    return;
+  }
   generation++;
   rememberUserEmail(me.user);
-  const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
-  session = { ...session, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null, guardianAccount: me.memberships.length === 0 || session.guardianAccount };
+  session = { ...current, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null, guardianAccount: me.memberships.length === 0 };
   persist(); await activateMembershipCache(active?.id ?? null);
 }
 export async function activateMembershipCache(membershipId: string | null): Promise<void> {
@@ -80,8 +88,13 @@ export async function invalidateActiveMembership(): Promise<void> {
     if (!session || mine !== generation || session.user.id !== previous.user.id || session.token !== previous.token) return;
     if (me.memberships.length === 0) { await clearSession(); return; }
     const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
+    const activeMemberships = me.memberships.filter((membership) => membership.status === "active");
+    if (!active && activeMemberships.length === 1) {
+      await updateMe(me);
+      return;
+    }
     rememberUserEmail(me.user);
-    session = { ...session, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null };
+    session = { ...session, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null, guardianAccount: false };
     persist();
     if (!active) return;
     setCacheIdentity({ userId: session.user.id, workspaceId: active.workspace.id, membershipId: active.id });
@@ -104,23 +117,26 @@ export function checkSessionInBackground(): Promise<void> {
 async function confirmSession(): Promise<void> {
   const mine = generation;
   const stale = () => mine !== generation || !session;
+  let receivedMe = false;
   try {
     const me = await api.request("GET /me");
+    receivedMe = true;
     if (stale()) return;
     const current = session!;
     const previousId = current.activeMembershipId;
     const previousMembership = current.me.memberships.find((membership) => membership.id === previousId);
     const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
-    if (previousId && active?.id !== previousId && previousMembership) {
+    const shouldSelectSoleMembership = !active && me.memberships.filter((membership) => membership.status === "active").length === 1;
+    if (!shouldSelectSoleMembership && previousId && active?.id !== previousId && previousMembership) {
       await clearMembershipCache(`${current.user.id}:${previousMembership.workspace.id}:${previousId}`);
       if (stale()) return;
     }
-    rememberUserEmail(me.user);
-    session = { ...current, me: { ...me, active_membership_id: active?.id ?? null }, user: me.user, activeMembershipId: active?.id ?? null, guardianAccount: me.memberships.length === 0 || current.guardianAccount };
-    persist();
-    await activateMembershipCache(active?.id ?? null);
+    await updateMe(me);
   } catch (error) {
     if (stale()) return;
+    // A failed automatic membership switch keeps the last known session intact.
+    // Only errors from GET /me are eligible for revocation handling below.
+    if (receivedMe) return;
     if (error instanceof ApiError && (error.status === 401 || (error.status === 403 && error.error.code === "account_disabled"))) { await clearSession(); return; }
     if (error instanceof ApiError && (error.status === 403 || error.status === 404) && session!.activeMembershipId) {
       const previousId = session!.activeMembershipId;

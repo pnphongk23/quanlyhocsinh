@@ -1,4 +1,5 @@
-import { api, clearUserCache } from "../sync";
+import type { MeResponse } from "../api/types";
+import { api, clearMembershipCache, clearUserCache } from "../sync";
 import { activateSession, activateMembershipCache, clearSession, getSession, setActiveMembershipId, setSessionUserEmail, updateMe } from "./session";
 import { beginLogout, cancelLogout, clearLogoutLock } from "../outbox";
 import { getStore } from "../store";
@@ -8,9 +9,14 @@ import { rememberEmail } from "./rememberedEmail";
 export async function login(phone: string, password: string): Promise<{ activeMembershipId: string | null; membershipCount: number }> {
   const result = await api.request("POST /auth/login", { body: { phone, password, device_label: typeof navigator === "undefined" ? "Web" : navigator.userAgent.slice(0, 80) } });
   const me = await api.request("GET /me", { authToken: result.token });
-    await clearLogoutLock(result.user.id);
-    await activateSession(result.token, result.user, me, result.active_membership_id, me.memberships.length === 0);
-  return { activeMembershipId: result.active_membership_id, membershipCount: result.memberships.length };
+  await clearLogoutLock(result.user.id);
+  await activateSession(result.token, result.user, me, result.active_membership_id, me.memberships.length === 0);
+  const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
+  const activeMemberships = me.memberships.filter((membership) => membership.status === "active");
+  if (!active && activeMemberships.length === 1) {
+    try { await switchMembership(activeMemberships[0].id, me); } catch { /* Keep the authenticated session if automatic selection is unavailable. */ }
+  }
+  return { activeMembershipId: getSession()?.activeMembershipId ?? null, membershipCount: me.memberships.length };
 }
 export async function registerTeacher(phone: string, password: string, displayName: string, workspaceName: string, email?: string): Promise<void> {
   const result = await api.request("POST /auth/register", { body: { phone, password, display_name: displayName, workspace_name: workspaceName, ...(email ? { email } : {}) } });
@@ -53,15 +59,30 @@ export async function logout(): Promise<void> {
     throw error;
   }
 }
-export async function switchMembership(membershipId: string): Promise<void> {
+export async function switchMembership(membershipId: string, latestMe?: MeResponse): Promise<void> {
   const current = getSession(); if (!current) throw new Error("Bạn cần đăng nhập.");
-  const membership = current.me.memberships.find((entry) => entry.id === membershipId && entry.status === "active");
+  const sourceMe = latestMe ?? current.me;
+  const membership = sourceMe.memberships.find((entry) => entry.id === membershipId && entry.status === "active");
   if (!membership) throw new Error("Không tìm thấy vai trò đang hoạt động.");
   const response = await api.request("PUT /session/membership", { body: { membership_id: membershipId } });
+  if (getSession() !== current) return;
   if (response.active_membership_id !== membershipId) throw new Error("Máy chủ chưa xác nhận việc đổi vai trò.");
+  if (latestMe) {
+    const previous = current.me.memberships.find((entry) => entry.id === current.activeMembershipId);
+    if (previous && previous.id !== membershipId) await clearMembershipCache(`${current.user.id}:${previous.workspace.id}:${previous.id}`);
+    if (getSession() !== current) return;
+    await updateMe({ ...latestMe, active_membership_id: membershipId });
+    return;
+  }
   setActiveMembershipId(membershipId); await activateMembershipCache(membershipId);
 }
-export async function refreshSession(): Promise<void> { if (getSession()) await updateMe(await api.request("GET /me")); }
+export async function refreshSession(): Promise<void> {
+  const current = getSession();
+  if (!current) return;
+  const me = await api.request("GET /me");
+  if (getSession() !== current) return;
+    await updateMe(me);
+}
 export function authFailureMessage(error: unknown): string {
   if (error instanceof ApiError) {
     const reason = error.error.details?.reason;

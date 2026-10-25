@@ -108,6 +108,14 @@ export function createFakeServer() {
       return json({ epoch: 1, cursor: log.length, results });
     }
     const body = init.body ? JSON.parse(String(init.body)) : {};
+    if (path === "/session/membership" && request.method === "PUT") {
+      const me = scope.me as { memberships?: Array<{ id: string; status: string }>; active_membership_id?: string | null } | undefined;
+      const membership = me?.memberships?.find((item) => item.id === body.membership_id && item.status === "active");
+      if (!membership) return apiError(403, "membership_inactive");
+      scope.membershipId = membership.id;
+      scope.me = { ...me, active_membership_id: membership.id };
+      return json({ active_membership_id: membership.id, device_registration_cleared: true });
+    }
     const addStudent = path.match(/^\/classes\/([^/]+)\/students$/);
     if (addStudent && request.method === "POST") return json(put("student", { id: body.id, class_id: addStudent[1], name: body.name, parent_phone: body.parent_phone ?? null, enrolled_at: body.enrolled_at, left_at: null, status: "active" }), 201);
     const addSession = path.match(/^\/classes\/([^/]+)\/sessions$/);

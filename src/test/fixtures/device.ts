@@ -23,9 +23,9 @@ export async function bootDevice(server: Server, token: string, me: MeResponse) 
   vi.stubGlobal("fetch", server.fetch);
   localStorage.setItem("qlh.session.v1", JSON.stringify({ token, user: me.user, me, activeMembershipId: me.active_membership_id }));
   const [dbModule, sync, session, store] = await Promise.all([import("../../data/db"), import("../../data/sync"), import("../../data/auth/session"), import("../../data/store")]);
-  const identity = `${me.user.id}:${me.memberships.find((m) => m.id === me.active_membership_id)!.workspace.id}:${me.active_membership_id}`;
-  const active = me.memberships.find((m) => m.id === me.active_membership_id)!;
-  dbModule.setCacheIdentity({ userId: me.user.id, workspaceId: active.workspace.id, membershipId: active.id });
+  const active = me.memberships.find((m) => m.id === me.active_membership_id && m.status === "active");
+  const identity = active ? `${me.user.id}:${active.workspace.id}:${active.id}` : "anonymous";
+  dbModule.setCacheIdentity(active ? { userId: me.user.id, workspaceId: active.workspace.id, membershipId: active.id } : null);
   return { ...dbModule, ...sync, ...session, ...store, identity };
 }
 export const flush = () => vi.waitFor(() => undefined);
