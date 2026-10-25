@@ -316,8 +316,11 @@ final class AuthModel {
         screen = screen == .forcedPassword ? postPasswordScreen : .settings
     }
 
-    func selectMembership(_ membership: Membership) async {
-        guard let currentUser = session?.user ?? identity?.user else { return }
+    /// True once the role is selected on the server and its store is open; on failure `message` says why
+    /// and the caller keeps the role screen so the user can try again.
+    @discardableResult
+    func selectMembership(_ membership: Membership) async -> Bool {
+        guard let currentUser = session?.user ?? identity?.user else { return false }
         message = nil
         do {
             let scopeStore = try makeStore(user: currentUser, membershipId: "")
@@ -335,7 +338,11 @@ final class AuthModel {
             try await prepareStore(for: currentUser, membershipId: selection.activeMembershipId)
             screen = returnToSettingsAfterRole ? .settings : .main
             returnToSettingsAfterRole = false
-        } catch { message = Self.userMessage(error) }
+            return true
+        } catch {
+            message = Self.userMessage(error)
+            return false
+        }
     }
 
     func changeRoleFromSettings() {
@@ -445,8 +452,7 @@ final class AuthModel {
     private func selectSoleMembership(_ memberships: [Membership]) async -> Bool {
         let active = memberships.filter { $0.status == "active" }
         guard memberships.count == 1, let only = active.first else { return false }
-        await selectMembership(only)
-        return identity?.activeMembershipId == only.id || session?.activeMembershipId == only.id
+        return await selectMembership(only)
     }
 
     private func hideRevokedIdentity(_ error: Error) async {

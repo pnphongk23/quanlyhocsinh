@@ -18,10 +18,18 @@ final class SoleMembershipSelectionTests: XCTestCase {
                         activeMembershipId: nil, memberships: memberships)
     }
 
-    private func model(api: SelectionAPI, cache: IdentityBox) throws -> AuthModel {
+    private struct StoreUnavailable: Error {}
+
+    private func model(api: SelectionAPI, cache: IdentityBox, failingMembershipStore: Bool = false) throws -> AuthModel {
         let store = try SQLiteStore(path: ":memory:", scope: scope)
         return AuthModel(configuration: .fallback, apiClient: api, tokenStore: InMemoryTokenStore(token: "fixture-session"),
-                         identityStore: cache, storeFactory: { _ in store }, isOnline: { true })
+                         identityStore: cache,
+                         storeFactory: { requested in
+                             // The scratch store before the PUT has no membership; the real one comes after it.
+                             if failingMembershipStore, requested.membershipId == "late-member" { throw StoreUnavailable() }
+                             return store
+                         },
+                         isOnline: { true })
     }
 
     func testSingleActiveMembershipIsSelectedOnceAndOpensTheMainScreen() async throws {
@@ -69,6 +77,18 @@ final class SoleMembershipSelectionTests: XCTestCase {
         await model.restoreSession()
 
         XCTAssertEqual(model.screen, .chooseRole)
+        let calls = await api.calls
+        XCTAssertEqual(calls, ["GET me", "PUT session/membership"])
+    }
+
+    func testStoreFailureAfterSelectionKeepsTheRoleScreenInsteadOfLoading() async throws {
+        let api = SelectionAPI(me: identity([membership()]))
+        let model = try model(api: api, cache: IdentityBox(nil), failingMembershipStore: true)
+
+        await model.restoreSession()
+
+        XCTAssertEqual(model.screen, .chooseRole)
+        XCTAssertNotNil(model.message)
         let calls = await api.calls
         XCTAssertEqual(calls, ["GET me", "PUT session/membership"])
     }
