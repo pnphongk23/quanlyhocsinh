@@ -118,6 +118,10 @@ export interface ReportBatch {
   toSessionId: string | null;
   fromKey: string;
   toKey: string;
+  /** YYYY-MM for month-based batches; null for legacy session-range batches. */
+  month?: string | null;
+  fromNumber?: number | null;
+  toNumber?: number | null;
 }
 
 export interface Report {

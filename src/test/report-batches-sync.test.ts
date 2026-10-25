@@ -25,6 +25,16 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("report_batch qua đồng bộ", () => {
+  it("fake server trả chi tiết must_be_month cho tháng sai và client báo tiếng Việt", async () => {
+    const A = await bootDevice(server, "tA", teacherMe);
+    await A.syncNow();
+    await A.hydrateStore();
+    const reports = await import("../data/repositories/reports");
+    await expect(reports.createReportBatch({ classId: "c1", month: "2020-13" })).rejects.toThrow("Chọn tháng hợp lệ theo định dạng tháng/năm.");
+    const request = server.requests.find((item) => item.method === "POST" && item.path === "/classes/c1/report-batches");
+    expect(request).toBeDefined();
+  });
+
   it("xoá đợt qua REST và xoá batch, report, publication trên thiết bị khác khi pull", async () => {
     const A = await bootDevice(server, "tA", teacherMe);
     const B = await bootDevice(server, "tB", teacherMe);
@@ -60,8 +70,8 @@ describe("report_batch qua đồng bộ", () => {
     await Promise.all([A.syncNow(), B.syncNow(), P.syncNow()]);
     await Promise.all([A.hydrateStore(), B.hydrateStore()]);
 
-    const batch = await reports.createReportBatch({ classId: "c1", fromSessionId: "x1", toSessionId: "x3" });
-    expect(batch).toMatchObject({ classId: "c1", fromKey: "2020-01-06 09:00", toKey: "2020-01-20 09:00" });
+    const batch = await reports.createReportBatch({ classId: "c1", month: "2020-01" });
+    expect(batch).toMatchObject({ classId: "c1", month: "2020-01", fromSessionId: null, toSessionId: null });
     expect(A.getStore().reports.filter((report) => report.batchId === batch.id).map((report) => report.studentId).sort()).toEqual(["s1", "s2"]);
 
     await Promise.all([B.syncNow(), P.syncNow()]);

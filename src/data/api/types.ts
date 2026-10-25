@@ -40,18 +40,19 @@ export interface ReportBody {
   student_id: string; month: string;
   range?: ApiReportRange;
   attendance: { present: number; late: number; excused: number; absent: number; held_sessions: number };
-  tests: { test_id: string; name: string; date: string; max?: number; value: number | null }[];
-  stars: { three: number; two: number; one: number };
+    tests: { test_id: string; name: string; date: string; value: number | null }[];
+    stars: { three: number; two: number; one: number };
+    stars5?: { s5: number; s4: number; s3: number; s2: number; s1: number; s0: number };
   homework: { kind: HomeworkKind; excellent: number; done: number; not_done: number }[];
   general_comment: string; ready: boolean;
 }
 export interface ApiReportRange { from_key: string; to_key: string; from_number: number | null; to_number: number | null; session_count?: number; label?: string }
 export interface ReportPreview extends ReportBody { report_id?: string; batch_id?: string }
-export interface ApiReportBatch extends Versioned { id: string; class_id: string; from_session_id: string | null; to_session_id: string | null; from_key: string; to_key: string }
+export interface ApiReportBatch extends Versioned { id: string; class_id: string; from_session_id: string | null; to_session_id: string | null; from_key: string; to_key: string; month?: string | null; from_number?: number | null; to_number?: number | null }
 export interface ApiReport extends Versioned { id: string; class_id: string; student_id: string; batch_id: string; month: string; status: "draft" | "published"; general_comment: string; needs_republish: boolean; publication_count: number; published_at: string | null }
 export interface ApiPublication { id: string; report_id: string; batch_id?: string | null; class_id: string; student_id: string; month: string; publication_no: number; published_at: string; snapshot: unknown }
 /** Đợt trong `GET/POST .../report-batches`: thêm số buổi và đếm trạng thái, không có `version`. */
-export interface ApiBatchListItem { id: string; class_id: string; from_session_id: string | null; to_session_id: string | null; from_key: string; to_key: string; from_number: number | null; to_number: number | null; counts: { total: number; draft: number; published: number; needs_republish: number }; created_at: string }
+export interface ApiBatchListItem { id: string; class_id: string; from_session_id: string | null; to_session_id: string | null; from_key: string; to_key: string; month?: string | null; from_number: number | null; to_number: number | null; counts: { total: number; draft: number; published: number; needs_republish: number }; created_at: string }
 /** Dòng báo cáo trong `GET /report-batches/:id/reports`. */
 export interface ApiBatchReportItem { report_id: string; batch_id: string; student_id: string; student_name?: string; month: string; status: "draft" | "published"; general_comment?: string; needs_republish: boolean; publication_count: number; published_at: string | null; version: number }
 /** Dòng trong `GET /students/:id/reports`. */

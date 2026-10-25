@@ -4,7 +4,7 @@ import type { PeriodStudentReport } from "../../data/reportModel";
 import type { RangeLabels } from "../../data/reportRange";
 import styles from "./ReportsPage.module.css";
 
-const starOrder = [3, 2, 1] as const;
+const starOrder = [5, 4, 3, 2, 1, 0] as const;
 
 export interface ReportPreviewProps {
   report: PeriodStudentReport;
@@ -24,7 +24,9 @@ export default function ReportPreview({
   range,
   className,
 }: ReportPreviewProps) {
-  const starMax = Math.max(1, ...starOrder.map((level) => report.stars.byStars[level]));
+  const modernTotal = Object.values(report.stars.byFiveStars).reduce((sum, count) => sum + count, 0);
+  const legacyTotal = report.stars.legacy.three + report.stars.legacy.two + report.stars.legacy.one;
+  const starMax = Math.max(1, ...starOrder.map((level) => report.stars.byFiveStars[`s${level}` as keyof typeof report.stars.byFiveStars]));
   const attendanceParts = [
     report.lateCount ? `${report.lateCount} muộn` : "",
     report.excusedCount ? `${report.excusedCount} có phép` : "",
@@ -37,7 +39,7 @@ export default function ReportPreview({
       <header className={styles.printHead}>
         <h2>{range.sessionsLabel ? `Báo cáo ${range.sessionsLabel}` : "Báo cáo"}</h2>
         <p>
-          {range.datesLabel} · {report.student.name} · {className}
+          {range.label} · {report.student.name} · {className}
         </p>
       </header>
 
@@ -65,31 +67,36 @@ export default function ReportPreview({
             {report.stars.ticketCount} buổi có phiếu
           </span>
         </div>
-        <p className={styles.blockNote}>Tính trên các phiếu đã gửi.</p>
-        {report.stars.ticketCount ? (
-          <ul className={styles.starList}>
-            {starOrder.map((level) => {
-              const count = report.stars.byStars[level];
-              return (
-                <li key={level} className={styles.starRow}>
-                  <span
-                    className={styles.stars}
-                    aria-label={`${level} sao`}
-                    title={`${level} sao`}
-                  >
-                    {"★".repeat(level)}
-                  </span>
-                  <span className={styles.barTrack} aria-hidden="true">
-                    <span
-                      className={styles.barFill}
-                      style={{ width: `${(count / starMax) * 100}%` }}
-                    />
-                  </span>
-                  <b className={styles.starCount}>{count} buổi</b>
-                </li>
-              );
-            })}
-          </ul>
+          <p className={styles.blockNote}>Tính trên các phiếu đã gửi.</p>
+          {report.stars.ticketCount ? (
+            <>
+              {modernTotal > 0 && <>
+                <h4>Thang 5 sao</h4>
+                <ul className={styles.starList}>
+                  {starOrder.map((level) => {
+                    const count = report.stars.byFiveStars[`s${level}` as keyof typeof report.stars.byFiveStars];
+                    return <li key={`five-${level}`} className={styles.starRow}>
+                      <span className={styles.stars} aria-label={`${level} sao`} title={`${level} sao`}>{"★".repeat(level) || "0 sao"}</span>
+                      <span className={styles.barTrack} aria-hidden="true"><span className={styles.barFill} style={{ width: `${(count / starMax) * 100}%` }} /></span>
+                      <b className={styles.starCount}>{count} buổi</b>
+                    </li>;
+                  })}
+                </ul>
+              </>}
+              {legacyTotal > 0 && <>
+                <h4>Phiếu cũ · thang 3 sao</h4>
+                <ul className={styles.starList}>
+                  {([3, 2, 1] as const).map((level) => {
+                    const count = report.stars.legacy[({ 1: "one", 2: "two", 3: "three" } as const)[level]];
+                    return <li key={`three-${level}`} className={styles.starRow}>
+                      <span className={styles.stars} aria-label={`${level} sao`} title={`${level} sao`}>{"★".repeat(level)}</span>
+                      <span className={styles.barTrack} aria-hidden="true"><span className={styles.barFill} style={{ width: `${(count / Math.max(1, legacyTotal)) * 100}%` }} /></span>
+                      <b className={styles.starCount}>{count} buổi</b>
+                    </li>;
+                  })}
+                </ul>
+              </>}
+            </>
         ) : (
           <EmptyState size="compact" title="Chưa có phiếu nào được gửi trong đợt này" />
         )}

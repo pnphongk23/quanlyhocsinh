@@ -9,7 +9,7 @@ import { db, identityKey } from "../db";
 import { commitRemote, createOnce } from "./rest-cache";
 import { reportBatchFromApi, reportFromApi } from "../api/mapping";
 import { decodeServerReport, type ServerReport } from "../reportModel";
-import { compareBatches, rangeError } from "../reportRange";
+import { compareBatches } from "../reportRange";
 
 type Wire = Record<string, unknown> & { id: string };
 
@@ -92,6 +92,7 @@ export function reportErrorMessage(cause: unknown, fallback: string): string {
     }
     if (cause.status === 422 && code === "invalid_range") return "Buổi bắt đầu phải trước hoặc cùng buổi kết thúc.";
     if (cause.status === 422 && code === "session_cancelled") return "Không chọn buổi đã hủy.";
+    if (cause.status === 422 && (details as { fields?: Record<string, unknown> } | undefined)?.fields?.month === "must_be_month") return "Chọn tháng hợp lệ theo định dạng tháng/năm.";
     if (cause.status === 422) return "Khoảng buổi không hợp lệ. Kiểm tra lại buổi bắt đầu và kết thúc.";
     if (cause.status === 403) return "Bạn không có quyền thực hiện thao tác này.";
     if (cause.status === 404) return "Không tìm thấy dữ liệu. Tải lại trang rồi thử lại.";
@@ -145,18 +146,15 @@ const reportWire = (classId: string, item: ApiBatchReportItem): Wire & { version
  */
 export async function createReportBatch(input: {
   classId: string;
-  fromSessionId: string;
-  toSessionId: string;
+  month: string;
 }): Promise<ReportBatch> {
   requirePermission("comments_reports", "write");
   requireClassAccess(input.classId);
-  const problem = rangeError(getStore().sessions, input.classId, input.fromSessionId, input.toSessionId);
-  if (problem) throw new Error(problem);
   requireOnline("Thêm báo cáo");
   const identity = identityKey();
-  const body = { from_session_id: input.fromSessionId, to_session_id: input.toSessionId };
+  const body = { month: input.month };
   const result = await remote("Không thể tạo báo cáo.", () =>
-    createOnce(`report-batch:${input.classId}`, body, (id) =>
+    createOnce(`report-batch:${input.classId}:${input.month}`, body, (id) =>
       call<{ batch: ApiBatchListItem; reports: ApiBatchReportItem[] }>(
         `POST /classes/${input.classId}/report-batches`,
         { body: { id, ...body } },
@@ -170,6 +168,9 @@ export async function createReportBatch(input: {
     to_session_id: result.batch.to_session_id,
     from_key: result.batch.from_key,
     to_key: result.batch.to_key,
+    month: result.batch.month ?? input.month,
+    from_number: result.batch.from_number ?? null,
+    to_number: result.batch.to_number ?? null,
     version: 1,
   };
   const batch = reportBatchFromApi(batchWire);

@@ -63,11 +63,19 @@ export function rangeLabels(range: {
   toKey: string;
   fromNumber: number | null;
   toNumber: number | null;
+  month?: string | null;
 }): RangeLabels {
+  if (range.month && range.fromNumber === null && range.toNumber === null) {
+    const [year, month] = range.month.split("-");
+    const label = `Tháng ${Number(month)}/${year}`;
+    return { label, sessionsLabel: "", datesLabel: label };
+  }
   const from = dayMonthLabel(range.fromKey);
   const to = dayMonthLabel(range.toKey);
   const datesLabel = range.fromKey.slice(0, 10) === range.toKey.slice(0, 10) ? from : `${from}–${to}`;
-  return { label: datesLabel, sessionsLabel: "", datesLabel };
+  const hasRangeNumbers = range.fromNumber !== null && range.toNumber !== null;
+  const label = hasRangeNumbers ? `Buổi ${range.fromNumber}–${range.toNumber} · ${datesLabel}` : datesLabel;
+  return { label, sessionsLabel: "", datesLabel };
 }
 
 /** Khoảng của một đợt: mốc ngày và số thứ tự nội bộ để tương thích dữ liệu. */
@@ -91,8 +99,9 @@ export function resolveRange(sessions: Session[], batch: ReportBatch): ResolvedR
   const range = {
     fromKey: batch.fromKey,
     toKey: batch.toKey,
-    fromNumber: numberOf(batch.fromSessionId),
-    toNumber: numberOf(batch.toSessionId),
+    fromNumber: batch.fromNumber ?? numberOf(batch.fromSessionId),
+    toNumber: batch.toNumber ?? numberOf(batch.toSessionId),
+    month: batch.month,
   };
   const complete = range.fromNumber !== null && range.toNumber !== null;
   return { ...range, ...rangeLabels(complete ? range : { ...range, fromNumber: null, toNumber: null }) };

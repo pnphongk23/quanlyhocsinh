@@ -39,6 +39,8 @@ export interface MonthlyStarTally {
   /** Số buổi có phiếu đã gửi (mọi mức sao). */
   ticketCount: number;
   byStars: Record<StarLevel, number>;
+  byFiveStars: Record<`s${0 | 1 | 2 | 3 | 4 | 5}`, number>;
+  legacy: { three: number; two: number; one: number };
 }
 
 /** Kết quả BTVN của một loại phần trong tháng (chỉ lượt đã gửi + đã chấm). */
@@ -231,14 +233,20 @@ function buildPeriodReport(
     sentComments.map((comment) => comment.sessionId),
   );
 
-    const byStars: Record<StarLevel, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const byStars: Record<StarLevel, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const byFiveStars: MonthlyStarTally["byFiveStars"] = { s0: 0, s1: 0, s2: 0, s3: 0, s4: 0, s5: 0 };
+  const legacy = { three: 0, two: 0, one: 0 };
   let ticketCount = 0;
   for (const comment of sentComments) {
     const session = sessionById.get(comment.sessionId);
     if (!session) continue;
     if (!sessionIds.has(session.id)) continue;
     if (comment.stars === null) continue;
-      byStars[comment.stars] += 1;
+    byStars[comment.stars] += 1;
+    if (comment.scale === 5) byFiveStars[`s${comment.stars}` as keyof typeof byFiveStars] += 1;
+    else if (comment.stars === 1) legacy.one += 1;
+    else if (comment.stars === 2) legacy.two += 1;
+    else if (comment.stars === 3) legacy.three += 1;
     ticketCount += 1;
   }
 
@@ -299,7 +307,7 @@ function buildPeriodReport(
     lateCount: countStatus("late"),
     excusedCount: countStatus("excused"),
     absentCount: countStatus("absent"),
-    stars: { ticketCount, byStars },
+    stars: { ticketCount, byStars, byFiveStars, legacy },
     homework,
     generalComment,
     suggestion: buildStarSuggestion(byStars, period.suggestionUnit),
@@ -327,7 +335,9 @@ function rangeFromServer(value: unknown, month: string): RangeLabels {
     typeof value.to_key === "string"
   ) {
     const number = (key: string) => (typeof value[key] === "number" ? (value[key] as number) : null);
-    return rangeLabels({ fromKey: value.from_key, toKey: value.to_key, fromNumber: number("from_number"), toNumber: number("to_number") });
+    const fromNumber = number("from_number"), toNumber = number("to_number");
+    const reportMonth = typeof value.month === "string" ? value.month : fromNumber === null && toNumber === null ? month : null;
+    return rangeLabels({ fromKey: value.from_key, toKey: value.to_key, fromNumber, toNumber, month: reportMonth });
   }
   // Bản chụp phát hành trước khi có đợt chỉ có tháng.
   const label = `Tháng ${Number(month.slice(5, 7))}`;
@@ -353,19 +363,37 @@ export function decodeServerReport(value: unknown, student: Student, key: string
   const month = typeof value.month === "string" ? value.month : "";
   const counts = attendance as Record<string, number>;
   const starCounts = stars as Record<string, number>;
+  const stars5 = isRecord(value.stars5) ? value.stars5 : {};
+  if (value.stars5 !== undefined && !["s5", "s4", "s3", "s2", "s1", "s0"].every((name) => isCount(stars5, name))) return null;
+  const byFiveStars: MonthlyStarTally["byFiveStars"] = {
+    s5: isCount(stars5, "s5") ? stars5.s5 as number : 0,
+    s4: isCount(stars5, "s4") ? stars5.s4 as number : 0,
+    s3: isCount(stars5, "s3") ? stars5.s3 as number : 0,
+    s2: isCount(stars5, "s2") ? stars5.s2 as number : 0,
+    s1: isCount(stars5, "s1") ? stars5.s1 as number : 0,
+    s0: isCount(stars5, "s0") ? stars5.s0 as number : 0,
+  };
   const sessions: Session[] = Array.from({ length: counts.held_sessions }, (_, index) => ({ id: `${key}:session:${index}`, classId: student.classId, date: month ? `${month}-01` : "", origin: "recurring", status: "held" }));
   const attendanceRows: Attendance[] = [];
   for (const [status, amount] of [["present", counts.present], ["late", counts.late], ["excused", counts.excused], ["absent", counts.absent]] as const) {
     for (let index = 0; index < amount; index++) attendanceRows.push({ id: `${key}:${status}:${index}`, sessionId: sessions[index % Math.max(1, sessions.length)]?.id ?? "", studentId: student.id, status, note: "", lateAt: null });
   }
-    const tests = (value.tests as Array<{ test_id: string; name: string; date: string; max?: number; value: number | null }>).map((item) => ({
+    const tests = (value.tests as Array<{ test_id: string; name: string; date: string; value: number | null }>).map((item) => ({
       test: { id: item.test_id, classId: student.classId, name: item.name, date: item.date, archived: false } as Test,
     score: item.value === null ? undefined : { id: `${item.test_id}:${student.id}`, testId: item.test_id, studentId: student.id, value: item.value } as Score,
   }));
   const homework = (value.homework as Array<{ kind: HomeworkKind; excellent: number; done: number; not_done: number }>)
     .map((item) => ({ ...item, label: HOMEWORK_KIND_LABELS[item.kind], total: item.excellent + item.done + item.not_done }))
     .sort((a, b) => HOMEWORK_KINDS.indexOf(a.kind) - HOMEWORK_KINDS.indexOf(b.kind));
-  const byStars = { 1: starCounts.one, 2: starCounts.two, 3: starCounts.three } as Record<StarLevel, number>;
+  const legacy = { one: starCounts.one, two: starCounts.two, three: starCounts.three };
+  const byStars = {
+    0: byFiveStars.s0,
+    1: byFiveStars.s1 + legacy.one,
+    2: byFiveStars.s2 + legacy.two,
+    3: byFiveStars.s3 + legacy.three,
+    4: byFiveStars.s4,
+    5: byFiveStars.s5,
+  } as Record<StarLevel, number>;
   const ready = value.ready;
   return {
     month,
@@ -374,7 +402,7 @@ export function decodeServerReport(value: unknown, student: Student, key: string
       student, sessions, attendance: attendanceRows, tests,
       gradedTestCount: tests.filter(({ score }) => score?.value != null).length,
       attendanceCount: counts.present + counts.late, lateCount: counts.late, excusedCount: counts.excused, absentCount: counts.absent,
-      stars: { ticketCount: starCounts.one + starCounts.two + starCounts.three, byStars }, homework,
+      stars: { ticketCount: starCounts.one + starCounts.two + starCounts.three + Object.values(byFiveStars).reduce((sum, count) => sum + count, 0), byStars, byFiveStars, legacy }, homework,
       generalComment: value.general_comment.trim(), suggestion: buildStarSuggestion(byStars, "range"), ready, missing: ready ? [] : ["Báo cáo chưa đủ dữ liệu"],
     },
   };

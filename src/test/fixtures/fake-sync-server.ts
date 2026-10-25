@@ -12,7 +12,7 @@ const keyOf = (entity: string, item: Row): string[] => {
   }
 };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-const apiError = (status: number, code: string) => json({ error: { code, message: code, request_id: "fake" } }, status);
+const apiError = (status: number, code: string, details?: Record<string, unknown>) => json({ error: { code, message: code, ...(details ? { details } : {}), request_id: "fake" } }, status);
 
 export function createFakeServer() {
   const rows = new Map<string, Map<string, Row>>();
@@ -165,23 +165,23 @@ export function createFakeServer() {
         return json({ id: batchId, deleted: true });
       }
       const createBatch = path.match(/^\/classes\/([^/]+)\/report-batches$/);
-    if (createBatch && method === "POST") {
-      const from = table("class_session").get(body.from_session_id), to = table("class_session").get(body.to_session_id);
-      if (!from || !to) return apiError(404, "not_found");
-      if (from.status === "cancelled" || to.status === "cancelled") return json({ error: { code: "session_cancelled", message: "session_cancelled", request_id: "fake" } }, 422);
-      if (keyOfSession(from) > keyOfSession(to)) return json({ error: { code: "invalid_range", message: "invalid_range", request_id: "fake" } }, 422);
+      if (createBatch && method === "POST") {
+      if (typeof body.month !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(body.month)) return apiError(422, "invalid_month", { fields: { month: "must_be_month" } });
+      const [year, monthNumber] = body.month.split("-").map(Number);
+      const monthStart = `${body.month}-01`;
+      const monthEnd = `${body.month}-${String(new Date(year, monthNumber, 0).getDate()).padStart(2, "0")}`;
       const existing = body.id ? table("report_batch").get(body.id) : undefined;
-      const batch = existing ?? put("report_batch", { id: body.id ?? crypto.randomUUID(), class_id: createBatch[1], from_session_id: from.id, to_session_id: to.id, from_key: keyOfSession(from), to_key: keyOfSession(to) });
-      const students = [...table("student").values()].filter((student) => student.class_id === createBatch[1] && student.enrolled_at <= to.date && (!student.left_at || student.left_at >= from.date));
+      const batch = existing ?? put("report_batch", { id: body.id ?? crypto.randomUUID(), class_id: createBatch[1], month: body.month, from_session_id: null, to_session_id: null, from_key: `${monthStart} 00:00`, to_key: `${monthEnd} 23:59` });
+      const students = [...table("student").values()].filter((student) => student.class_id === createBatch[1] && student.enrolled_at <= monthEnd && (!student.left_at || student.left_at >= monthStart));
       const reports = existing
         ? [...table("report").values()].filter((report) => report.batch_id === batch.id)
-        : students.map((student) => put("report", { id: crypto.randomUUID(), class_id: createBatch[1], student_id: student.id, batch_id: batch.id, month: to.date.slice(0, 7), status: "draft", general_comment: "", needs_republish: false, publication_count: 0, published_at: null }));
+        : students.map((student) => put("report", { id: crypto.randomUUID(), class_id: createBatch[1], student_id: student.id, batch_id: batch.id, month: body.month, status: "draft", general_comment: "", needs_republish: false, publication_count: 0, published_at: null }));
       const item = (report: Row) => ({ report_id: report.id, batch_id: report.batch_id, student_id: report.student_id, student_name: table("student").get(report.student_id)?.name, month: report.month, status: report.status, general_comment: report.general_comment, needs_republish: report.needs_republish, publication_count: report.publication_count, published_at: report.published_at, version: report.version });
-      return json({ batch: { id: batch.id, class_id: batch.class_id, from_session_id: batch.from_session_id, to_session_id: batch.to_session_id, from_key: batch.from_key, to_key: batch.to_key, from_number: null, to_number: null, counts: { total: reports.length, draft: reports.length, published: 0, needs_republish: 0 }, created_at: "2026-10-24T00:00:00Z" }, reports: reports.map(item) }, existing ? 200 : 201);
+      return json({ batch: { id: batch.id, class_id: batch.class_id, from_session_id: batch.from_session_id, to_session_id: batch.to_session_id, from_key: batch.from_key, to_key: batch.to_key, month: batch.month, from_number: null, to_number: null, counts: { total: reports.length, draft: reports.length, published: 0, needs_republish: 0 }, created_at: "2026-10-24T00:00:00Z" }, reports: reports.map(item) }, existing ? 200 : 201);
     }
     const snapshotOf = (report: Row) => {
       const batch = table("report_batch").get(report.batch_id)!;
-      return { report_id: report.id, batch_id: batch.id, student_id: report.student_id, month: report.month, range: { from_key: batch.from_key, to_key: batch.to_key, from_number: 1, to_number: 8, session_count: 8, label: "01/10–24/10" }, attendance: { present: 7, late: 1, excused: 0, absent: 0, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-10-05", max: 10, value: 8 }], stars: { three: 2, two: 1, one: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 1, not_done: 0 }], general_comment: report.general_comment, ready: true };
+      return { report_id: report.id, batch_id: batch.id, student_id: report.student_id, month: report.month, range: { from_key: batch.from_key, to_key: batch.to_key, month: batch.month ?? null, from_number: batch.month ? null : 1, to_number: batch.month ? null : 8, session_count: 8, label: batch.month ? `Tháng ${Number(batch.month.slice(5, 7))}/${batch.month.slice(0, 4)}` : "Buổi 1–8 · 01/10–24/10" }, attendance: { present: 7, late: 1, excused: 0, absent: 0, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-10-05", value: 8 }], stars: { three: 2, two: 1, one: 0 }, stars5: { s5: 4, s4: 2, s3: 0, s2: 0, s1: 0, s0: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 1, not_done: 0 }], general_comment: report.general_comment, ready: true };
     };
     const preview = path.match(/^\/reports\/([^/]+)\/preview$/);
     if (preview && method === "GET") {

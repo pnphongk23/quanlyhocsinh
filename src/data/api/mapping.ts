@@ -21,6 +21,9 @@ export function reportBatchFromApi(item: ApiReportBatch): ReportBatch {
     toSessionId: item.to_session_id ?? null,
     fromKey: item.from_key,
     toKey: item.to_key,
+    month: item.month ?? null,
+    fromNumber: item.from_number ?? null,
+    toNumber: item.to_number ?? null,
   };
 }
 

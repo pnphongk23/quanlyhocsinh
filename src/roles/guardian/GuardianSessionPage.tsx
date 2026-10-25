@@ -108,10 +108,10 @@ export default function GuardianSessionPage() {
               <section className={`${g.card} ${g.hwCard}`}>
                 <div className={g.cardHead}>
                   <h2>Nhận xét của {teacher ?? "giáo viên"}</h2>
-                  <StarRow level={ticket.stars} />
+                  <span><StarRow level={ticket.stars} /><span className={g.muted}> {ticket.stars}/{ticket.scale} sao</span></span>
                 </div>
                 <div className={g.ticketBody}>
-                  <Mascot pose={starPose(ticket.stars)} size={88} />
+                  <Mascot pose={starPose(ticket.stars, ticket.scale)} size={88} />
                   <p className={g.ticketText}>{ticket.template}</p>
                 </div>
                 {ticket.note && (

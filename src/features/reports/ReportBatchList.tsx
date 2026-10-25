@@ -4,10 +4,7 @@ import { useAccess } from "../../data/repositories/access";
 import { createReportBatch, listReportBatches } from "../../data/repositories/reports";
 import { useStore } from "../../data/store";
 import {
-  defaultRange,
-  rangeError,
   resolveRange,
-  sessionChoices,
 } from "../../data/reportRange";
 import type { Class } from "../../data/types";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
@@ -40,15 +37,11 @@ export default function ReportBatchList({ klass }: { klass: Class }) {
       })),
     [snapshot, klass.id],
   );
-  const hasHeld = defaultRange(snapshot.sessions, klass.id) !== null;
-
   const addButton = canWrite && (
     <Button
       size={desktop ? "md" : "lg"}
       block={!desktop}
-      disabled={!hasHeld}
-      title={hasHeld ? undefined : "Lớp chưa có buổi nào đã diễn ra."}
-      onClick={() => setAdding(true)}
+        onClick={() => setAdding(true)}
     >
       Thêm báo cáo
     </Button>
@@ -95,11 +88,9 @@ export default function ReportBatchList({ klass }: { klass: Class }) {
         title="Chưa có báo cáo nào"
         mascot="cho"
         description={
-          hasHeld
-            ? "Thêm báo cáo để chọn khoảng buổi và tạo nháp cho cả lớp."
-            : "Báo cáo cần ít nhất một buổi đã diễn ra."
+            "Thêm báo cáo theo tháng để tạo nháp cho cả lớp."
         }
-        action={canWrite && hasHeld ? addButton : undefined}
+        action={canWrite ? addButton : undefined}
       />
     </Card>
   );
@@ -155,22 +146,19 @@ function AddReportDialog({
   onClose: () => void;
   onCreated: (batchId: string) => void;
 }) {
-  const sessions = useStore().sessions;
-  const choices = useMemo(() => sessionChoices(sessions, classId), [sessions, classId]);
-  const initial = useMemo(() => defaultRange(sessions, classId), [sessions, classId]);
-  const [from, setFrom] = useState(initial?.fromSessionId ?? "");
-  const [to, setTo] = useState(initial?.toSessionId ?? "");
+    const current = new Date();
+    const currentMonth = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`;
+    const [month, setMonth] = useState(currentMonth);
   const created = useRef("");
   const [failure, setFailure] = useState("");
-  const problem = from && to ? rangeError(sessions, classId, from, to) : "Chọn buổi.";
-  const action = useSaveAction({
-    baseline: { from: "", to: "" },
-    value: { from, to },
-    validate: () => problem === null,
+    const action = useSaveAction({
+    baseline: { month: "" },
+    value: { month },
+    validate: () => /^\d{4}-(0[1-9]|1[0-2])$/.test(month),
     save: async (value) => {
       try {
         created.current = (
-          await createReportBatch({ classId, fromSessionId: value.from, toSessionId: value.to })
+          await createReportBatch({ classId, month: value.month })
         ).id;
       } catch (cause) {
         setFailure(cause instanceof Error ? cause.message : "Không thể tạo báo cáo.");
@@ -185,41 +173,12 @@ function AddReportDialog({
     if (await action.submit()) onCreated(created.current);
   }
 
-  const select = (
-    id: string,
-    label: string,
-    value: string,
-    onChange: (value: string) => void,
-    invalid: boolean,
-  ) => (
-    <div className={styles.rangeField}>
-      <label htmlFor={id}>{label}</label>
-      <select
-        id={id}
-        className={styles.rangeSelect}
-        value={value}
-        aria-invalid={invalid || undefined}
-        onChange={(event) => {
-          onChange(event.target.value);
-          setFailure("");
-        }}
-      >
-        {choices.map((choice) => (
-          <option key={choice.session.id} value={choice.session.id}>
-            {choice.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-
-  const invalidRange = problem !== null && Boolean(from && to);
-  return (
+    return (
     <ReportDialog
       open
       onClose={onClose}
       title="Thêm báo cáo"
-      subtitle="Tạo một bản nháp cho mỗi học sinh có học trong khoảng buổi này."
+        subtitle="Tạo một bản nháp cho mỗi học sinh trong tháng đã chọn."
       footer={
         <Button
           type="submit"
@@ -233,16 +192,14 @@ function AddReportDialog({
         </Button>
       }
     >
-      <form id="add-report-form" className={styles.rangeForm} onSubmit={submit} noValidate>
-        {select("report-from", "Buổi bắt đầu", from, setFrom, invalidRange)}
-        {select("report-to", "Buổi kết thúc", to, setTo, invalidRange)}
-        <p className={styles.blockNote}>
-          Buổi đã hủy không có trong danh sách. Số liệu chỉ tính các buổi chưa hủy
-          thuộc khoảng.
-        </p>
-        {(invalidRange || failure) && (
-          <p role="alert" className={styles.error}>
-            {failure || problem}
+        <form id="add-report-form" className={styles.rangeForm} onSubmit={submit} noValidate>
+          <div className={styles.rangeField}>
+            <label htmlFor="report-month">Tháng báo cáo</label>
+            <input id="report-month" className={styles.rangeSelect} type="month" value={month} onChange={(event) => { setMonth(event.target.value); setFailure(""); }} />
+          </div>
+          {failure && (
+            <p role="alert" className={styles.error}>
+              {failure}
           </p>
         )}
       </form>

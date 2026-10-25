@@ -41,7 +41,7 @@ describe("report API mapping", () => {
   it("maps report_batch with its time marks and optional session ids", () => {
     expect(
       reportBatchFromApi({ id: "b1", class_id: "6a", from_session_id: "s1", to_session_id: "s8", from_key: "2026-10-01 18:00", to_key: "2026-10-24 18:00", version: 1 }),
-    ).toEqual({ id: "b1", classId: "6a", fromSessionId: "s1", toSessionId: "s8", fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00" });
+      ).toEqual({ id: "b1", classId: "6a", fromSessionId: "s1", toSessionId: "s8", fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00", month: null, fromNumber: null, toNumber: null });
     expect(
       reportBatchFromApi({ id: "old", class_id: "6a", from_session_id: null, to_session_id: null, from_key: "2026-09-01 00:00", to_key: "2026-09-31 23:59", version: 1 }),
     ).toMatchObject({ fromSessionId: null, toSessionId: null });

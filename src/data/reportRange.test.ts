@@ -54,15 +54,21 @@ describe("khoảng buổi mặc định và lựa chọn buổi", () => {
 });
 
 describe("nhãn khoảng", () => {
-  it("đợt chỉ hiển thị khoảng ngày", () => {
-    expect(rangeLabels({ fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00", fromNumber: 1, toNumber: 8 })).toEqual({
-      label: "01/10–24/10", sessionsLabel: "", datesLabel: "01/10–24/10",
+    it("đợt cũ giữ số buổi cạnh khoảng ngày", () => {
+      expect(rangeLabels({ fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00", fromNumber: 1, toNumber: 8 })).toEqual({
+        label: "Buổi 1–8 · 01/10–24/10", sessionsLabel: "", datesLabel: "01/10–24/10",
+      });
     });
-  });
 
   it("một buổi chỉ hiển thị ngày", () => {
-    expect(rangeLabels({ fromKey: "2026-10-14 18:00", toKey: "2026-10-14 18:00", fromNumber: 8, toNumber: 8 }).label).toBe("14/10");
-  });
+      expect(rangeLabels({ fromKey: "2026-10-14 18:00", toKey: "2026-10-14 18:00", fromNumber: 8, toNumber: 8 }).label).toBe("Buổi 8–8 · 14/10");
+    });
+
+    it("đợt theo tháng có tên tháng và năm", () => {
+      expect(rangeLabels({ fromKey: "2026-10-01 00:00", toKey: "2026-10-31 23:59", fromNumber: null, toNumber: null, month: "2026-10" })).toEqual({
+        label: "Tháng 10/2026", sessionsLabel: "", datesLabel: "Tháng 10/2026",
+      });
+    });
 
   it("đợt không có số buổi (chuyển từ báo cáo tháng cũ) chỉ có ngày", () => {
     expect(rangeLabels({ fromKey: "2026-09-01 00:00", toKey: "2026-09-31 23:59", fromNumber: null, toNumber: null })).toEqual({
@@ -71,7 +77,7 @@ describe("nhãn khoảng", () => {
   });
 
   it("giải mã mốc ngày; buổi đã hủy hoặc không có mã buổi vẫn chỉ còn ngày", () => {
-    expect(resolveRange(sessions, batch())).toMatchObject({ fromNumber: 1, toNumber: 3, label: "01/10–12/10" });
+    expect(resolveRange(sessions, batch())).toMatchObject({ fromNumber: 1, toNumber: 3, label: "Buổi 1–3 · 01/10–12/10" });
     expect(resolveRange(sessions, batch({ fromSessionId: "s2" })).label).toBe("01/10–12/10");
     expect(resolveRange(sessions, batch({ fromSessionId: null, toSessionId: null })).label).toBe("01/10–12/10");
   });

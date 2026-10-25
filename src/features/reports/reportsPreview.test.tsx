@@ -82,7 +82,7 @@ const previewBody = (studentId: string, patch: object = {}) => ({
     range: { from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, session_count: 8, label: "21/09–14/10" },
   attendance: { present: 6, late: 1, excused: 1, absent: 0, held_sessions: 8 },
   tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-09-30", max: 10, value: 8 }, { test_id: "t2", name: "Nói", date: "2026-10-12", max: 10, value: null }],
-  stars: { three: 2, two: 1, one: 1 }, homework: [{ kind: "vocabulary", excellent: 1, done: 2, not_done: 0 }],
+    stars: { three: 2, two: 1, one: 1 }, stars5: { s5: 2, s4: 1, s3: 0, s2: 1, s1: 0, s0: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 2, not_done: 0 }],
   general_comment: "Con tiến bộ rõ.", ready: true, ...patch,
 });
 
@@ -97,18 +97,21 @@ function completeState(): StoreState {
 describe("nội dung xem trước báo cáo theo khoảng (ảnh 07)", () => {
   it("có khối sao, bảng BTVN theo phần, điểm từng bài, nhận xét chung và nhãn khoảng buổi để in", () => {
     const state = createSeed();
+    state.comments[0] = { ...state.comments[0], criteria: 31, comment: null, scale: 5, stars: 5 };
     const student = state.students.find((item) => item.id === "6a-student-1")!;
     const range = resolveRange(state.sessions, state.reportBatches.find((item) => item.id === "6a-batch")!);
     const report = buildRangeStudentReport(student, range, { ...state, generalComment: "Nhận xét kiểm thử tổng hợp." })!;
     const html = text(renderToStaticMarkup(<ReportPreview report={report} range={range} className="Tiếng Anh giao tiếp 6A" />));
 
       expect(html).toContain("<h2>Báo cáo</h2>");
-    expect(html).toContain("21/09–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
+      expect(html).toContain("Buổi 1–8 · 21/09–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
     expect(html).toContain("Chuyên cần");
     expect(html).toContain("Bài kiểm tra");
     expect(html).not.toContain("trung bình");
-    expect(html).toContain("Nhận xét theo sao");
-    expect(html).toContain("Tính trên các phiếu đã gửi.");
+      expect(html).toContain("Nhận xét theo sao");
+      expect(html).toContain("Tính trên các phiếu đã gửi.");
+      expect(html).toContain("Thang 5 sao");
+      expect(html).toContain("Phiếu cũ · thang 3 sao");
     expect(html).toContain('aria-label="3 sao"');
     expect(html).toContain("Bài tập về nhà");
     expect(html).toContain("Luyện từ vựng");
@@ -150,7 +153,7 @@ describe("danh sách đợt báo cáo", () => {
     state.reports = state.reports.map((report) => (report.id === "6a-student-1-report" ? { ...report, needsRepublish: true } : report));
     replaceStore(state);
     const html = renderStatic();
-      expect(html).toContain("21/09–14/10");
+      expect(html).toContain("Buổi 1–8 · 21/09–14/10");
     expect(html).toContain('href="/lop/6a/bao-cao?dot=6a-batch"');
     expect(html).toContain("<b>1</b> đã phát hành");
     expect(html).toContain("<b>8</b> nháp");
@@ -161,28 +164,27 @@ describe("danh sách đợt báo cáo", () => {
     expect(html).not.toContain("3 tháng");
   });
 
-  it("đợt cũ chuyển từ báo cáo tháng chỉ ghi ngày", () => {
+    it("đợt cũ theo buổi giữ số buổi cạnh khoảng ngày", () => {
     const state = createSeed();
     state.reportBatches = [{ id: "old", classId: "6a", fromSessionId: null, toSessionId: null, fromKey: "2026-09-01 00:00", toKey: "2026-09-31 23:59" }];
     state.reports = state.reports.map((report) => ({ ...report, batchId: "old" }));
     replaceStore(state);
     const html = renderStatic();
-    expect(html).toContain("01/09–31/09");
+      expect(html).toContain("01/09–31/09");
       expect(html).not.toMatch(/Buổi\s+\d/);
   });
 
-  it("chưa có đợt nào thì hiện trạng thái rỗng; lớp chưa có buổi đã diễn ra thì không thêm được", () => {
+  it("chưa có đợt nào thì vẫn có thể thêm báo cáo theo tháng", () => {
     const state = createSeed();
     state.reportBatches = []; state.reports = [];
     replaceStore(state);
     expect(renderStatic()).toContain("Chưa có báo cáo nào");
-    expect(renderStatic()).toContain("Thêm báo cáo để chọn khoảng buổi và tạo nháp cho cả lớp.");
+      expect(renderStatic()).toContain("Thêm báo cáo theo tháng để tạo nháp cho cả lớp.");
 
     state.sessions = state.sessions.map((session) => (session.classId === "6a" ? { ...session, status: "planned" } : session));
     replaceStore(state);
     const html = renderStatic();
-    expect(html).toContain("Báo cáo cần ít nhất một buổi đã diễn ra.");
-    expect(html).not.toContain("Thêm báo cáo<");
+      expect(html).toContain("Thêm báo cáo");
   });
 
   it("vai chỉ xem không có nút thêm báo cáo", () => {
@@ -212,25 +214,19 @@ describe("danh sách đợt báo cáo", () => {
 });
 
 describe("thêm báo cáo theo khoảng buổi", () => {
-  it("mặc định từ ngày đầu đến ngày đã diễn ra gần nhất, không có buổi hủy trong lựa chọn", async () => {
+    it("mặc định tháng hiện tại", async () => {
     renderLive();
     fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
     const dialog = await screen.findByRole("dialog", { name: "Thêm báo cáo" });
-    const from = within(dialog).getByLabelText("Buổi bắt đầu") as HTMLSelectElement;
-    const to = within(dialog).getByLabelText("Buổi kết thúc") as HTMLSelectElement;
-    expect(from.selectedOptions[0].textContent).toBe("T2 · 21/09");
-    expect(to.selectedOptions[0].textContent).toBe("T4 · 14/10");
-    const labels = [...from.options].map((option) => option.textContent);
-    expect(labels).toContain("T2 · 19/10");
-    expect(labels.some((label) => label?.includes("16/10"))).toBe(false);
+      expect(within(dialog).getByLabelText("Tháng báo cáo")).toHaveValue("2026-10");
   });
 
   it("tạo đợt gọi POST với id ổn định qua thử lại, rồi mở chi tiết đợt vừa tạo", async () => {
     let attempts = 0;
     await mockApi((_endpoint, options) => {
       if (++attempts === 1) throw new TypeError("network");
-      const reports = getStore().students.filter((student) => student.classId === "6a" && !student.leftAt).map((student, index) => ({ report_id: `new-${index}`, batch_id: options!.body.id, student_id: student.id, month: "2026-10", status: "draft", general_comment: "", needs_republish: false, publication_count: 0, published_at: null, version: 1 }));
-      return { batch: { id: options!.body.id, class_id: "6a", from_session_id: options!.body.from_session_id, to_session_id: options!.body.to_session_id, from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, counts: {}, created_at: "" }, reports };
+        const reports = getStore().students.filter((student) => student.classId === "6a" && !student.leftAt).map((student, index) => ({ report_id: `new-${index}`, batch_id: options!.body.id, student_id: student.id, month: options!.body.month, status: "draft", general_comment: "", needs_republish: false, publication_count: 0, published_at: null, version: 1 }));
+        return { batch: { id: options!.body.id, class_id: "6a", from_session_id: null, to_session_id: null, from_key: `${options!.body.month}-01 00:00`, to_key: `${options!.body.month}-31 23:59`, month: options!.body.month, from_number: null, to_number: null, counts: {}, created_at: "" }, reports };
     });
     renderLive();
     fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
@@ -245,27 +241,26 @@ describe("thêm báo cáo theo khoảng buổi", () => {
     expect(calls).toHaveLength(2);
     expect(calls[0].endpoint).toBe("POST /classes/6a/report-batches");
     expect(calls[1].body).toEqual(calls[0].body);
-    expect(calls[0].body).toEqual({ id: expect.stringMatching(/^[0-9a-f-]{36}$/), from_session_id: "6a-session-0", to_session_id: "6a-session-7" });
+      expect(calls[0].body).toEqual({ id: expect.stringMatching(/^[0-9a-f-]{36}$/), month: "2026-10" });
     expect(screen.getByTestId("where").textContent).toContain(calls[0].body.id);
     expect(getStore().reportBatches.map((batch) => batch.id)).toContain(calls[0].body.id);
   });
 
   it("lỗi 422 của máy chủ hiện ngay trong hộp thoại", async () => {
-    await mockApi(() => { throw new ApiError(422, { code: "invalid_range", message: "x", request_id: "r" }); });
+      await mockApi(() => { throw new ApiError(422, { code: "invalid_month", message: "x", details: { fields: { month: "must_be_month" } }, request_id: "r" }); });
     renderLive();
     fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
     const dialog = await screen.findByRole("dialog", { name: "Thêm báo cáo" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Tạo báo cáo" }));
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Buổi bắt đầu phải trước hoặc cùng buổi kết thúc.");
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent("Chọn tháng hợp lệ theo định dạng tháng/năm.");
   });
 
-  it("chặn ngay khi buổi bắt đầu sau buổi kết thúc, không gọi máy chủ", async () => {
+    it("chặn tháng sai định dạng trước khi gọi máy chủ", async () => {
     await mockApi(() => undefined);
     renderLive();
     fireEvent.click(screen.getByRole("button", { name: "Thêm báo cáo" }));
     const dialog = await screen.findByRole("dialog", { name: "Thêm báo cáo" });
-    fireEvent.change(within(dialog).getByLabelText("Buổi bắt đầu"), { target: { value: "6a-session-8" } });
-    expect(within(dialog).getByRole("alert")).toHaveTextContent("Buổi bắt đầu phải trước hoặc cùng buổi kết thúc.");
+      fireEvent.change(within(dialog).getByLabelText("Tháng báo cáo"), { target: { value: "2026-13" } });
     expect(within(dialog).getByRole("button", { name: "Tạo báo cáo" })).toBeDisabled();
     expect(calls).toHaveLength(0);
   });
@@ -398,7 +393,7 @@ describe("xem trước trong popup", () => {
     const dialog = await openPreview();
     // Chờ nội dung từ máy chủ rồi xác nhận tiêu đề của bản in.
     expect(await within(dialog).findByText("Con tiến bộ rõ.")).toBeVisible();
-    expect(await within(dialog).findAllByText("21/09–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A")).toHaveLength(2);
+      expect(await within(dialog).findAllByText("Buổi 1–8 · 21/09–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A")).toHaveLength(1);
     expect(calls.map((call) => call.endpoint)).toEqual(["GET /reports/6a-student-1-report/preview"]);
     expect(within(dialog).getByText("Điểm từng bài")).toBeVisible();
     expect(within(dialog).getByText("Chưa có điểm")).toBeVisible();

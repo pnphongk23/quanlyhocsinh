@@ -202,7 +202,9 @@ function ReportDetail({
 
   const body = report.body;
   const { range } = report;
-  const starMax = Math.max(1, body.stars.byStars[3], body.stars.byStars[2], body.stars.byStars[1]);
+  const modernTotal = Object.values(body.stars.byFiveStars).reduce((sum, count) => sum + count, 0);
+  const legacyTotal = body.stars.legacy.three + body.stars.legacy.two + body.stars.legacy.one;
+  const starMax = Math.max(1, ...Object.values(body.stars.byFiveStars));
 
   return (
     <main className={g.page}>
@@ -210,7 +212,7 @@ function ReportDetail({
         backTo="/ph/bao-cao"
         eyebrow={childName}
         title={range.sessionsLabel ? `Báo cáo ${range.sessionsLabel}` : "Báo cáo"}
-        overlay={<p className={g.muted}>{range.datesLabel}</p>}
+          overlay={<p className={g.muted}>{range.label}</p>}
       />
 
       {report.needsRepublish && (
@@ -242,23 +244,32 @@ function ReportDetail({
           <span className={g.statSub}>{body.stars.ticketCount} buổi có phiếu</span>
         </div>
         <p className={g.reportNote}>Tính trên các phiếu đã gửi.</p>
-        <div className={g.starBars}>
-          {([3, 2, 1] as const).map((level) => {
-            const count = body.stars.byStars[level];
-            return (
-              <div key={level} className={g.barRow}>
-                <StarRow level={level} size={16} />
-                <span className={g.barTrack}>
-                  <span
-                    className={g.barFill}
-                    style={{ width: `${Math.round((count / starMax) * 100)}%` }}
-                  />
-                </span>
-                <span className={g.barCount}>{count} buổi</span>
-              </div>
-            );
-          })}
-        </div>
+          {modernTotal > 0 && <>
+            <p className={g.reportNote}>Thang 5 sao</p>
+            <div className={g.starBars}>
+              {([5, 4, 3, 2, 1, 0] as const).map((level) => {
+                const count = body.stars.byFiveStars[`s${level}` as keyof typeof body.stars.byFiveStars];
+                return <div key={`five-${level}`} className={g.barRow}>
+                  <StarRow level={level} size={16} />
+                  <span className={g.barTrack}><span className={g.barFill} style={{ width: `${Math.round((count / starMax) * 100)}%` }} /></span>
+                  <span className={g.barCount}>{count} buổi</span>
+                </div>;
+              })}
+            </div>
+          </>}
+          {legacyTotal > 0 && <>
+            <p className={g.reportNote}>Phiếu cũ · thang 3 sao</p>
+            <div className={g.starBars}>
+              {([3, 2, 1] as const).map((level) => {
+                const count = body.stars.legacy[({ 1: "one", 2: "two", 3: "three" } as const)[level]];
+                return <div key={`three-${level}`} className={g.barRow}>
+                  <StarRow level={level} size={16} />
+                  <span className={g.barTrack}><span className={g.barFill} style={{ width: `${Math.round((count / Math.max(1, legacyTotal)) * 100)}%` }} /></span>
+                  <span className={g.barCount}>{count} buổi</span>
+                </div>;
+              })}
+            </div>
+          </>}
       </Card>
 
       <Card className={g.card}>

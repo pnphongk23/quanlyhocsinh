@@ -10,7 +10,7 @@ export const sessions = [
   { id: "demo-7b-session", class_id: classIds[1], date: "2026-10-24", start_time: "09:00", origin: "recurring", is_makeup: false, status: "planned", version: 1 },
 ];
 export const classes = classIds.map((id, i) => ({ id, name: ["Lớp 6A", "Lớp 7B", "Lớp trống"][i], status: "active", weekdays: [2, 5], start_time: "17:00", teacher_name: "Cô Demo", version: 1 }));
-export const tests = [{ id: "demo-test", class_id: classIds[0], name: "Kiểm tra giữa kỳ", date: "2026-10-20", max: 15, archived: false, version: 1 }];
+export const tests = [{ id: "demo-test", class_id: classIds[0], name: "Kiểm tra giữa kỳ", date: "2026-10-20", archived: false, version: 1 }];
 export const scores = students.map((s, i) => ({ test_id: "demo-test", student_id: s.id, value: i ? 10 + i / 2 : 0, updated_at: "2026-10-20T10:00:00Z", version: 1 }));
 export const attendance = sessions.flatMap((session) => students.map((student, i) => ({ session_id: session.id, student_id: student.id, status: i === 2 ? "absent" : "present", note: "", late_at: null, updated_at: `${session.date}T10:00:00Z`, version: 1 })));
 export const slips = students.map((s) => ({ session_id: "demo-past", student_id: s.id, criteria: 31, comment: null, scale: 5, stars: 5, note: "Làm bài tốt, tiếp tục luyện tập.", status: "sent", sent_at: "2026-10-20T12:00:00Z", version: 1 }));

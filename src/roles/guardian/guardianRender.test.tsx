@@ -276,6 +276,19 @@ describe("PH · Nhận xét của cô (tab 2)", () => {
     expect(html).not.toContain("Con cần luyện nghe thêm mỗi ngày.");
   });
 
+  it("phiếu thang 5 hiện câu hiệu lực và x/5 sao cho phụ huynh", () => {
+    const state = createSeed();
+    state.comments = state.comments.map((comment) => comment.id === "fixture-comment-3"
+      ? { ...comment, criteria: 31, scale: 5, stars: 5, comment: "Con chủ động phát biểu." }
+      : comment);
+    replaceStore(state);
+    switchRole(MEMBER_IDS.lanGuardian);
+    const html = renderPage(<GuardianCommentsPage />);
+    expect(html).toContain("5/5 sao");
+    expect(html).toContain("Con chủ động phát biểu.");
+    expect(html).not.toContain("Chú ý nghe giảng");
+  });
+
   it("phiếu chưa gửi hoặc báo cáo chưa phát hành thì không có trong dòng thời gian", () => {
     seedGuardian();
     const state = createSeed();
@@ -459,11 +472,11 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
     report_id: id, batch_id: `batch-${id}`, student_id: "6a-student-1", month: "2026-10", status: "published", needs_republish: false,
     publication_count: 1, published_at: "2026-10-25T09:00:00Z", version: 2, from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, ...patch,
   });
-  const snapshot = {
-    month: "2026-10", range: { from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, session_count: 8, label: "x" },
-    attendance: { present: 5, late: 1, excused: 1, absent: 0, held_sessions: 8 },
-    tests: [{ test_id: "t1", name: "Nói", date: "2026-10-12", max: 10, value: 10 }, { test_id: "t2", name: "Viết", date: "2026-10-13", max: 10, value: null }],
-    stars: { three: 2, two: 1, one: 1 }, homework: [{ kind: "vocabulary", excellent: 1, done: 2, not_done: 0 }],
+    const snapshot = {
+      month: "2026-10", range: { from_key: "2026-09-21 18:00", to_key: "2026-10-14 18:00", from_number: 1, to_number: 8, session_count: 8, label: "x" },
+      attendance: { present: 5, late: 1, excused: 1, absent: 0, held_sessions: 8 },
+      tests: [{ test_id: "t1", name: "Nói", date: "2026-10-12", max: 10, value: 10 }, { test_id: "t2", name: "Viết", date: "2026-10-13", max: 10, value: null }],
+      stars: { three: 2, two: 1, one: 1 }, stars5: { s5: 2, s4: 1, s3: 0, s2: 1, s1: 0, s0: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 2, not_done: 0 }],
     general_comment: "Con học tập chăm chỉ.", ready: true,
   };
 
@@ -484,24 +497,31 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
     );
   }
 
-  it("danh sách chỉ có báo cáo đã phát hành theo khoảng buổi, mới nhất trước, mở bằng mã báo cáo và lần phát hành", async () => {
+  it("danh sách giữ số buổi của báo cáo cũ và chỉ có báo cáo đã phát hành", async () => {
     seedGuardian();
     await mockApi(() => ({
       items: [
         listItem("r-new", { needs_republish: true, publication_count: 3 }),
         listItem("r-draft", { status: "draft", publication_count: 0, published_at: null }),
-        listItem("r-old", { from_number: null, to_number: null, from_key: "2026-09-01 00:00", to_key: "2026-09-31 23:59", published_at: "2026-10-01T09:00:00Z" }),
+        listItem("r-old", { from_number: 1, to_number: 8, from_key: "2026-09-01 00:00", to_key: "2026-09-31 23:59", published_at: "2026-10-01T09:00:00Z" }),
       ],
       next_cursor: null,
     }));
     renderAt("/ph/bao-cao");
-      const links = await screen.findAllByRole("link", { name: /21\/09–14\/10|09/ });
+      const links = await screen.findAllByRole("link", { name: /Buổi 1–8/ });
     expect(links.map((link) => link.getAttribute("href"))).toEqual(["/ph/bao-cao/r-new/3", "/ph/bao-cao/r-old/1"]);
-      expect(links[0]).toHaveTextContent("21/09–14/10");
+      expect(links[0]).toHaveTextContent("Buổi 1–8 · 21/09–14/10");
     expect(links[0]).toHaveTextContent("Phát hành 25/10");
     expect(links[0]).toHaveTextContent("Cập nhật");
-    expect(links[1]).toHaveTextContent("01/09–31/09");
+      expect(links[1]).toHaveTextContent("Buổi 1–8 · 01/09–31/09");
     expect(screen.queryByText("Xem thêm")).toBeNull();
+  });
+
+  it("đợt báo cáo theo tháng hiện tên tháng và năm", async () => {
+    seedGuardian();
+    await mockApi(() => ({ items: [listItem("r-month", { from_number: null, to_number: null })], next_cursor: null }));
+    renderAt("/ph/bao-cao");
+    expect(await screen.findByRole("link", { name: /Tháng 10\/2026/ })).toBeVisible();
   });
 
   it("phân trang bằng next_cursor của máy chủ qua nút Xem thêm", async () => {
@@ -537,7 +557,7 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Không kết nối được máy chủ");
     fail = false;
     fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
-      expect(await screen.findByRole("link", { name: /21\/09–14\/10/ })).toBeVisible();
+      expect(await screen.findByRole("link", { name: /Buổi 1–8 · 21\/09–14\/10/ })).toBeVisible();
 
     cleanup();
     Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
@@ -546,7 +566,7 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
     Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   });
 
-  it("mở bản phát hành: chuyên cần, điểm từng bài, sao 3/2/1 và bảng BTVN theo phần", async () => {
+  it("mở bản phát hành: điểm, phân bố thang 5 cạnh thang 3 và BTVN theo phần", async () => {
     seedGuardian();
     const spy = await mockApi(() => ({ student_id: "6a-student-1", published_at: "2026-10-25T09:00:00Z", snapshot }));
     renderAt("/ph/bao-cao/r-new/2");
@@ -561,7 +581,10 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
       expect(text).toContain("Nói12 tháng 1010");
     expect(text).toContain("Chưa có điểm");
     expect(text).toContain("Nhận xét theo sao");
-    expect(text).toContain("4 buổi có phiếu");
+    expect(text).toContain("8 buổi có phiếu");
+    expect(text).toContain("Thang 5 sao");
+    expect(text).toContain("Phiếu cũ · thang 3 sao");
+    expect(text).not.toContain("10/10");
     expect(text).toContain("Luyện từ vựng");
     expect(text).toContain("Tính trên các phiếu đã gửi.");
     expect(text).toContain("Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.");

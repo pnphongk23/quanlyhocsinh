@@ -104,11 +104,11 @@ export default function GuardianCommentsPage() {
                     <h3>
                         {sessionPrefix(item.ticket.session)}
                     </h3>
-                    <StarRow level={item.ticket.stars} />
+                    <span><StarRow level={item.ticket.stars} /><span className={g.muted}> {item.ticket.stars}/{item.ticket.scale} sao</span></span>
                   </div>
                   <div className={g.ticketBody}>
                     {item === newestTicket && (
-                      <Mascot pose={starPose(item.ticket.stars)} size={56} />
+                      <Mascot pose={starPose(item.ticket.stars, item.ticket.scale)} size={56} />
                     )}
                     <p className={g.ticketText}>{item.ticket.template}</p>
                   </div>

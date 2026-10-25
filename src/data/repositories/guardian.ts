@@ -29,6 +29,7 @@ import {
   previousHomeworkSession,
 } from "../homework";
 import { starTemplate } from "../logic";
+import { defaultSlipComment } from "../slip";
 import {
   buildMonthlyStudentReport,
   decodeServerReport,
@@ -129,7 +130,8 @@ export interface ChildTicket {
   sessionNumber: number;
   date: string;
   stars: StarLevel;
-  /** Câu mẫu cố định của mức sao (spec mục 4). */
+  scale: 3 | 5;
+  /** Nội dung hiệu lực: câu tùy chỉnh hoặc câu mặc định theo sao. */
   template: string;
   note: string;
   sentAt: string | null;
@@ -161,8 +163,11 @@ function buildTicket(state: StoreState, comment: Comment): ChildTicket | null {
     session,
     sessionNumber: number,
     date: session.date,
-    stars: comment.stars,
-    template: starTemplate(comment.stars) ?? "",
+      stars: comment.stars,
+      scale: comment.scale ?? 3,
+      template: comment.scale === 5
+        ? comment.comment ?? defaultSlipComment(comment.stars)
+        : starTemplate(comment.stars) ?? "",
     note: comment.note,
     sentAt: comment.sentAt,
     homework: {
@@ -514,7 +519,7 @@ export async function listChildReports(studentId: string, cursor?: string): Prom
       publicationNo: item.publication_count,
       publishedAt: item.published_at,
       needsRepublish: item.needs_republish,
-      range: rangeLabels({ fromKey: item.from_key, toKey: item.to_key, fromNumber: item.from_number, toNumber: item.to_number }),
+        range: rangeLabels({ fromKey: item.from_key, toKey: item.to_key, fromNumber: item.from_number, toNumber: item.to_number, month: item.month ?? null }),
     }));
   return { items, nextCursor: page.next_cursor ?? null };
 }

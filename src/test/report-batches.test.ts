@@ -13,8 +13,8 @@ vi.mock("../data/sync", async (original) => ({ ...(await original<object>()), ..
 const identity = { userId: "u", workspaceId: "w", membershipId: "m" };
 const session = (id: string, date: string, status: string) => ({ id, classId: "c1", date, time: "18:00", origin: "recurring", status });
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const batchResponse = (id: string) => ({
-  batch: { id, class_id: "c1", from_session_id: "s1", to_session_id: "s3", from_key: "2026-10-01 18:00", to_key: "2026-10-08 18:00", from_number: 1, to_number: 3, counts: { total: 2, draft: 2, published: 0, needs_republish: 0 }, created_at: "2026-10-24T00:00:00Z" },
+const batchResponse = (id: string, month = "2026-10") => ({
+  batch: { id, class_id: "c1", from_session_id: null, to_session_id: null, from_key: "2026-10-01 00:00", to_key: "2026-10-31 23:59", month, from_number: null, to_number: null, counts: { total: 2, draft: 2, published: 0, needs_republish: 0 }, created_at: "2026-10-24T00:00:00Z" },
   reports: ["st1", "st2"].map((studentId, index) => ({ report_id: `r${index + 1}`, batch_id: id, student_id: studentId, student_name: studentId, month: "2026-10", status: "draft", general_comment: "", needs_republish: false, publication_count: 0, published_at: null, version: 1 })),
 });
 
@@ -48,7 +48,7 @@ afterEach(async () => {
 });
 
 describe("tạo đợt báo cáo theo khoảng buổi", () => {
-  it("gọi POST /classes/:id/report-batches với id UUID giữ nguyên qua lần thử lại, rồi lưu đợt và bản nháp bền", async () => {
+  it("gọi POST /classes/:id/report-batches với tháng và id UUID giữ nguyên qua lần thử lại", async () => {
     const { createReportBatch } = await import("../data/repositories/reports");
     const { hydrateStore, getStore } = await import("../data/store");
     let attempts = 0;
@@ -57,14 +57,14 @@ describe("tạo đợt báo cáo theo khoảng buổi", () => {
       expect(endpoint).toBe("POST /classes/c1/report-batches");
       return batchResponse(options.body.id);
     });
-    const input = { classId: "c1", fromSessionId: "s1", toSessionId: "s3" };
+      const input = { classId: "c1", month: "2026-10" };
     await expect(createReportBatch(input)).rejects.toThrow(/Không kết nối được máy chủ/);
     const batch = await createReportBatch(input);
 
     expect(calls).toHaveLength(2);
     expect(calls[0].body.id).toMatch(uuid);
-    expect(calls[1].body).toEqual({ id: calls[0].body.id, from_session_id: "s1", to_session_id: "s3" });
-    expect(batch).toEqual({ id: calls[0].body.id, classId: "c1", fromSessionId: "s1", toSessionId: "s3", fromKey: "2026-10-01 18:00", toKey: "2026-10-08 18:00" });
+      expect(calls[1].body).toEqual({ id: calls[0].body.id, month: "2026-10" });
+      expect(batch).toEqual({ id: calls[0].body.id, classId: "c1", fromSessionId: null, toSessionId: null, fromKey: "2026-10-01 00:00", toKey: "2026-10-31 23:59", month: "2026-10", fromNumber: null, toNumber: null });
     expect(getStore().reportBatches).toEqual([batch]);
     expect(getStore().reports.map((r) => [r.id, r.batchId, r.status, r.month])).toEqual([["r1", batch.id, "draft", "2026-10"], ["r2", batch.id, "draft", "2026-10"]]);
     expect(sync.scheduleSync).toHaveBeenCalledWith(0);
@@ -72,34 +72,30 @@ describe("tạo đợt báo cáo theo khoảng buổi", () => {
     await hydrateStore();
     expect(getStore().reportBatches).toEqual([batch]);
     expect(getStore().reports.filter((r) => r.batchId === batch.id)).toHaveLength(2);
-    expect(await db.reportBatches.get(`${identityKey()}|report_batch|${batch.id}`)).toMatchObject({ from_key: "2026-10-01 18:00", to_key: "2026-10-08 18:00" });
+    expect(await db.reportBatches.get(`${identityKey()}|report_batch|${batch.id}`)).toMatchObject({ from_key: "2026-10-01 00:00", to_key: "2026-10-31 23:59", month: "2026-10" });
     expect(await db.reports.get(`${identityKey()}|report|r1`)).toMatchObject({ batch_id: batch.id, class_id: "c1" });
   });
 
-  it("dùng id mới cho một khoảng khác và coi 200 (gửi lại cùng id) như thành công", async () => {
-    const { createReportBatch } = await import("../data/repositories/reports");
-    await mockApi((_e, options) => batchResponse(options.body.id));
-    await createReportBatch({ classId: "c1", fromSessionId: "s1", toSessionId: "s3" });
-    await createReportBatch({ classId: "c1", fromSessionId: "s1", toSessionId: "s4" });
-    expect(calls[0].body.id).not.toBe(calls[1].body.id);
-  });
+    it("cho phép tạo nhiều đợt trong cùng tháng với id riêng", async () => {
+      const { createReportBatch } = await import("../data/repositories/reports");
+      await mockApi((_e, options) => batchResponse(options.body.id));
+      await createReportBatch({ classId: "c1", month: "2026-10" });
+      await createReportBatch({ classId: "c1", month: "2026-10" });
+      expect(calls[0].body.id).not.toBe(calls[1].body.id);
+    });
 
-  it("không gọi máy chủ khi buổi hủy hoặc ngược thứ tự, và báo lỗi 422 của máy chủ tại chỗ", async () => {
-    const { createReportBatch } = await import("../data/repositories/reports");
-    await mockApi(() => { throw new ApiError(422, { code: "session_cancelled", message: "x", request_id: "r" }); });
-    await expect(createReportBatch({ classId: "c1", fromSessionId: "s2", toSessionId: "s3" })).rejects.toThrow("Không chọn buổi đã hủy.");
-    await expect(createReportBatch({ classId: "c1", fromSessionId: "s3", toSessionId: "s1" })).rejects.toThrow("Buổi bắt đầu phải trước hoặc cùng buổi kết thúc.");
-    expect(calls).toHaveLength(0);
-    // Máy chủ thấy buổi đã hủy ở nơi khác: lỗi 422 hiện bằng tiếng Việt.
-    await expect(createReportBatch({ classId: "c1", fromSessionId: "s1", toSessionId: "s3" })).rejects.toThrow("Không chọn buổi đã hủy.");
-    expect(calls).toHaveLength(1);
-  });
+    it("hiện thông báo thân thiện khi tháng bị máy chủ từ chối", async () => {
+      const { createReportBatch } = await import("../data/repositories/reports");
+      await mockApi(() => { throw new ApiError(422, { code: "invalid_month", message: "invalid_month", details: { fields: { month: "must_be_month" } }, request_id: "r" }); });
+      await expect(createReportBatch({ classId: "c1", month: "2026-13" })).rejects.toThrow("Chọn tháng hợp lệ theo định dạng tháng/năm.");
+      expect(calls).toHaveLength(1);
+    });
 
   it("offline thì báo cần mạng và không gọi máy chủ", async () => {
     const { createReportBatch } = await import("../data/repositories/reports");
     await mockApi(() => undefined);
     Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
-    await expect(createReportBatch({ classId: "c1", fromSessionId: "s1", toSessionId: "s3" })).rejects.toThrow("Thêm báo cáo cần kết nối mạng.");
+      await expect(createReportBatch({ classId: "c1", month: "2026-10" })).rejects.toThrow("Thêm báo cáo cần kết nối mạng.");
     expect(calls).toHaveLength(0);
   });
 });
@@ -193,12 +189,16 @@ describe("nhận xét, xem trước và phát hành theo đợt", () => {
   it("xem trước đọc GET /reports/:id/preview, giải mã khoảng buổi và báo lỗi bằng tiếng Việt", async () => {
     await withBatch([draft("r1", "st1")]);
     const { previewReport } = await import("../data/repositories/reports");
-    const body = { report_id: "r1", batch_id: "b1", student_id: "st1", month: "2026-10", range: { from_key: "2026-10-01 18:00", to_key: "2026-10-24 18:00", from_number: 1, to_number: 8, session_count: 8, label: "01/10–24/10" }, attendance: { present: 6, late: 1, excused: 0, absent: 1, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-10-05", max: 10, value: 8 }], stars: { three: 2, two: 1, one: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 0, not_done: 1 }], general_comment: "Tốt", ready: true };
+    const body = { report_id: "r1", batch_id: "b1", student_id: "st1", month: "2026-10", range: { from_key: "2026-10-01 18:00", to_key: "2026-10-24 18:00", from_number: 1, to_number: 8, session_count: 8, label: "Buổi 1–8 · 01/10–24/10" }, attendance: { present: 6, late: 1, excused: 0, absent: 1, held_sessions: 8 }, tests: [{ test_id: "t1", name: "Từ vựng", date: "2026-10-05", max: 10, value: 8 }], stars: { three: 2, two: 1, one: 0 }, stars5: { s5: 4, s4: 2, s3: 0, s2: 0, s1: 0, s0: 0 }, homework: [{ kind: "vocabulary", excellent: 1, done: 0, not_done: 1 }], general_comment: "Tốt", ready: true };
     await mockApi(() => body);
     const preview = await previewReport("r1");
     expect(calls[0].endpoint).toBe("GET /reports/r1/preview");
-    expect(preview.range.label).toBe("01/10–24/10");
-    expect(preview.report).toMatchObject({ attendanceCount: 7, lateCount: 1, absentCount: 1, gradedTestCount: 1, generalComment: "Tốt", stars: { ticketCount: 3 } });
+    expect(preview.range.label).toBe("Buổi 1–8 · 01/10–24/10");
+    expect(preview.report).toMatchObject({ attendanceCount: 7, lateCount: 1, absentCount: 1, gradedTestCount: 1, generalComment: "Tốt", stars: { ticketCount: 9, legacy: { three: 2, two: 1, one: 0 }, byFiveStars: { s5: 4, s4: 2 } } });
+
+    await mockApi(() => ({ ...body, stars5: undefined }));
+    const oldSnapshot = await previewReport("r1");
+    expect(oldSnapshot.report.stars.byFiveStars).toEqual({ s0: 0, s1: 0, s2: 0, s3: 0, s4: 0, s5: 0 });
 
     await mockApi(() => ({ ...body, attendance: { present: "x" } }));
     await expect(previewReport("r1")).rejects.toThrow("Bản xem trước không đọc được");
