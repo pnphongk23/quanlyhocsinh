@@ -9,6 +9,13 @@ const root = process.cwd();
 const failureShots = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024/shots/after";
 const results = [];
 let server;
+const LEGACY_REPORT_RANGE_LABEL = /Buổi \d+–\d+ · \d{2}\/\d{2}–\d{2}\/\d{2}/g;
+const hasUnallowedSessionOrdinal = (text) => /Buổi\s+\d/.test(text.replace(LEGACY_REPORT_RANGE_LABEL, ""));
+
+if (hasUnallowedSessionOrdinal("Buổi 1–8 · 01/10–24/10")) throw new Error("legacy report range label should be allowed");
+if (!hasUnallowedSessionOrdinal("Buổi 3") || !hasUnallowedSessionOrdinal("Buổi 3 · 21/10")) {
+  throw new Error("standalone session ordinal should remain disallowed");
+}
 
 async function seed(page, role, data = entities) {
   const session = sessionFor(role);
@@ -223,7 +230,9 @@ try {
         ]) {
           await page.goto(base + route, { waitUntil: "domcontentloaded" });
           await page.waitForFunction(() => document.body.innerText.trim().length > 10);
-          if (/Buổi\s+\d/.test(await page.locator("body").innerText())) throw new Error(`numbered session label rendered on ${route}`);
+          const text = await page.locator("body").innerText();
+          const hasOrdinal = route === "/lop/demo-6a/bao-cao" ? hasUnallowedSessionOrdinal(text) : /Buổi\s+\d/.test(text);
+          if (hasOrdinal) throw new Error(`numbered session label rendered on ${route}`);
         }
         return "session list, attendance, comments, homework and reports use date labels";
       });
