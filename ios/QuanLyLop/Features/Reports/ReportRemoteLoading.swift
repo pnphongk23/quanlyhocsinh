@@ -140,7 +140,7 @@ extension I4FeatureStore {
     }
 
     func cacheBatch(_ item: ReportBatchItem, classID: String) async throws {
-        guard let store else { return }
+        guard let store, !deletedBatchIDs.contains(item.id) else { return }
         let batch = ReportBatch(id: item.id, classId: classID, month: item.month, fromSessionId: item.fromSessionId,
                                 toSessionId: item.toSessionId, fromKey: item.fromKey, toKey: item.toKey,
                                 fromNumber: item.fromNumber, toNumber: item.toNumber,
@@ -149,7 +149,7 @@ extension I4FeatureStore {
     }
 
     func cacheReport(_ row: ReportBatchRow, classID: String) async throws {
-        guard let store else { return }
+        guard let store, !deletedBatchIDs.contains(row.batchId) else { return }
         let report = StudentReport(id: row.reportId, classId: classID, studentId: row.studentId,
                                    batchId: row.batchId, month: row.month, status: row.status,
                                    generalComment: row.generalComment ?? "", needsRepublish: row.needsRepublish,

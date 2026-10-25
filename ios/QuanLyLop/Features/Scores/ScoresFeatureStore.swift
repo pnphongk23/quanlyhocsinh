@@ -18,6 +18,8 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var reports: [StudentReport] = []
     @Published private(set) var batches: [ReportBatch] = []
     @Published private(set) var hiddenSectionIDs: Set<String> = []
+    /// Batches deleted in this session: a read that was already in flight must not write them back.
+    var deletedBatchIDs: Set<String> = []
     /// Complete session list per class from the server; the sync cache only holds a window around today.
     @Published var fullSessions: [String: [ClassSession]] = [:]
     /// Why a class's full session list could not be read (no attendance permission, offline), by class id.

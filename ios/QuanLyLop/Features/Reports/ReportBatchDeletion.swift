@@ -59,10 +59,12 @@ extension I4FeatureStore {
 
     /// Removes the batch, its reports and publications from the cache and from what the screens hold.
     func dropReportBatchLocally(batchID: String, fallback: String = String(localized: "reports.error.delete", table: "Reports")) async -> ReportFailure? {
+        deletedBatchIDs.insert(batchID)
         let reportIDs = reports(batchID: batchID).map(\.id)
         do {
             try await store?.removeReportBatch(id: batchID)
         } catch {
+            deletedBatchIDs.remove(batchID)
             return ReportFailure(message: fallback)
         }
         for id in reportIDs { previews[id] = nil }
