@@ -96,6 +96,16 @@ describe('slip criteria', () => {
     expect(again.body.results[0].skipped).toEqual([{ student_id: present, reason: 'already_sent' }]);
   });
 
+  it('does not create a default slip when attendance changed after it was read', async () => {
+    const f = await setup();
+    const student = f.s[0]!;
+    await f.send([attend(f, student, 'present')]);
+    await db.prepare("UPDATE attendance SET status='absent',version=version+1 WHERE session_id=? AND student_id=?").bind(f.ses, student).run();
+    const sent = await f.send([command('slip.send', { session_id: f.ses, student_ids: [student] })]);
+    expect(sent.body.results[0].skipped).toEqual([{ student_id: student, reason: 'not_attended' }]);
+    expect(await f.row(student)).toBeNull();
+  });
+
   it('builds monthly report batches and counts sent slips by stars per scale', async () => {
     const f = await setup();
     const month = today().slice(0, 7);

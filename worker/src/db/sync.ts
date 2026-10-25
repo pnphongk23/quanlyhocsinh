@@ -355,14 +355,15 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
       if (row?.status==='sent') {skipped.push({student_id:sid,reason:'already_sent'});continue;}
       if (!row) {
         // No slip yet: the default slip (all five criteria met) is created and sent for students who attended.
-        const att=await one(db,'SELECT status FROM attendance WHERE session_id=? AND student_id=?',session.id,sid);
+        const att=await one(db,'SELECT status,version FROM attendance WHERE session_id=? AND student_id=?',session.id,sid);
         if (!att || !DEFAULT_SLIP_ATTENDANCE.includes(att.status)) {skipped.push({student_id:sid,reason:'not_attended'});continue;}
         sent.push(sid as string);
-        guards.push(q('NOT EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?)',i.workspaceId,session.id,sid));
+        guards.push(q('NOT EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?) AND EXISTS(SELECT 1 FROM attendance WHERE session_id=? AND student_id=? AND version=?)',i.workspaceId,session.id,sid,session.id,sid,att.version));
         rest.push(q(`INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,status,sent_at,version,created_at,updated_at,updated_by)
           SELECT ?,?,?,?,5,5,${CRITERIA_MASK},NULL,'','sent',?,1,?,?,? WHERE ${ack(c)}
-          AND NOT EXISTS(SELECT 1 FROM session_comments WHERE session_id=? AND student_id=?)`,
-        i.workspaceId,session.class_id,session.id,sid,now,now,now,i.userId,session.id,sid));
+          AND NOT EXISTS(SELECT 1 FROM session_comments WHERE session_id=? AND student_id=?)
+          AND EXISTS(SELECT 1 FROM attendance WHERE session_id=? AND student_id=? AND version=?)`,
+        i.workspaceId,session.class_id,session.id,sid,now,now,now,i.userId,session.id,sid,session.id,sid,att.version));
       } else {
         // A legacy draft without stars has nothing to send; it becomes the default five-criteria slip.
         const fill=row.stars===null && row.scale===3 ? `stars=5,scale=5,criteria=${CRITERIA_MASK},` : '';
