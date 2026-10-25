@@ -211,7 +211,8 @@ struct ReportBatchDetailView: View {
                     TeacherErrorBanner(message: failure)
                 }
                 AppSaveButton(title: String(localized: "reports.detail.comment.save", table: "Reports"),
-                              controller: commentController, variant: .secondary, size: .large, isEnabled: changed) {
+                              controller: commentController, variant: .secondary, size: .large, isEnabled: changed,
+                              identifier: "report.comment.save") {
                     if let failure = await data.saveReportComment(reportID: row.id, comment: value) {
                         throw I4SaveFailure(message: failure)
                     }
@@ -371,6 +372,7 @@ struct ReportPreviewScreen: View {
             AppButton(title: String(localized: "feature.reports.in.bao.cao"), variant: .secondary, size: .large) {
                 printReport(snapshot)
             }
+            .accessibilityIdentifier("report.downloadPDF")
         }
     }
 

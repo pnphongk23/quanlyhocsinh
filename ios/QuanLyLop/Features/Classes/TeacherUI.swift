@@ -170,6 +170,7 @@ extension TeacherAvatar {
 struct TeacherLink<Label: View>: View {
     @Environment(\.teacherStaticLayout) private var isStatic
     let route: TeacherRoute
+    var identifier: String?
     @ViewBuilder let label: Label
 
     var body: some View {
@@ -178,6 +179,7 @@ struct TeacherLink<Label: View>: View {
         } else {
             NavigationLink(value: route) { label }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(identifier ?? "")
         }
     }
 }

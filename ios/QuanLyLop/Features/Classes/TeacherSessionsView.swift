@@ -55,6 +55,7 @@ struct TeacherSessionsView: View {
             isPresented: Binding(get: { cancelling != nil }, set: { if !$0 { cancelling = nil } }),
             titleVisibility: .visible) {
             Button(String(localized: "feature.classes.huy.buoi.hoc"), role: .destructive) { cancel() }
+                .accessibilityIdentifier("session.cancel.confirm")
             Button(String(localized: "feature.classes.giu.buoi.hoc"), role: .cancel) {}
         } message: {
             Text(String(localized: "feature.classes.buoi.hoc.se.uoc.anh.dau.la.a.huy.ban.co.the.khoi"))
@@ -130,6 +131,7 @@ struct TeacherSessionsView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("session.upcoming.toggle")
             if upcomingOpen {
                 AppColors.divider.frame(height: 1)
                 VStack(spacing: TeacherMetrics.listGap) {
@@ -157,7 +159,8 @@ struct TeacherSessionsView: View {
 
     private func sessionRow(_ session: ClassSession, surfaceOnBackground: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            TeacherLink(route: .session(classID: classID, sessionID: session.id)) {
+            TeacherLink(route: .session(classID: classID, sessionID: session.id),
+                        identifier: "session.row.\(session.id)") {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(TeacherFeatureData.sessionPrefix(session)) · \(TeacherFormat.weekdayDate(session.date))")

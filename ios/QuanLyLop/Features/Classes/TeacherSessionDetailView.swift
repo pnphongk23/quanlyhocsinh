@@ -55,6 +55,7 @@ struct TeacherSessionDetailView: View {
                         Button(role: .destructive) { confirmingCancel = true } label: {
                             Label(String(localized: "feature.classes.huy.buoi"), systemImage: "xmark.circle")
                         }
+                        .accessibilityIdentifier("session.cancel")
                     } label: {
                         Image(systemName: "ellipsis")
                     }
@@ -71,6 +72,7 @@ struct TeacherSessionDetailView: View {
             String.localizedStringWithFormat(String(localized: "feature.classes.huy.buoi.hoc.a26a4ee4"), String(describing: (session.map { TeacherFormat.dayMonth($0.date) } ?? ""))),
             isPresented: $confirmingCancel, titleVisibility: .visible) {
             Button(String(localized: "feature.classes.huy.buoi.hoc"), role: .destructive) { cancel() }
+                .accessibilityIdentifier("session.cancel.confirm")
             Button(String(localized: "feature.classes.giu.buoi.hoc"), role: .cancel) {}
         } message: {
             Text(String(localized: "feature.classes.buoi.hoc.se.uoc.anh.dau.la.a.huy.ban.co.the.khoi"))
@@ -148,6 +150,7 @@ struct TeacherSessionDetailView: View {
                     Text(String(localized: "feature.classes.buoi.nay.a.huy"))
                         .appText(AppTextStyle(size: 20, weight: .bold, lineHeight: 28))
                         .foregroundStyle(AppColors.text)
+                        .accessibilityIdentifier("session.cancelled")
                     Text(String(localized: "feature.classes.khong.can.iem.danh.khoi.phuc.neu.ban.huy.nham"))
                         .appText(AppText.body)
                         .foregroundStyle(AppColors.muted)

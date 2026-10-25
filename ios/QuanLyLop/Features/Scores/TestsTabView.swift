@@ -337,6 +337,7 @@ struct TestScoresView: View {
 
     private func scoreField(_ student: Student, invalid: Bool, missing: Bool) -> some View {
         TextField("–", text: binding(student))
+            .accessibilityIdentifier("test.score")
             .keyboardType(.decimalPad)
             .multilineTextAlignment(.center)
             .font(.system(size: 17, weight: .bold))
@@ -406,7 +407,8 @@ struct TestScoresView: View {
             AppSaveButton(
                 title: String(localized: "feature.scores.luu.iem"),
                 controller: saveController,
-                isEnabled: dirty && invalidCount == 0 && data.canWriteScores
+                isEnabled: dirty && invalidCount == 0 && data.canWriteScores,
+                identifier: "test.save"
             ) { try await save(test) }
         }
         .padding(.horizontal, 20)
@@ -447,9 +449,9 @@ struct TestEditorView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, placeholder: String(localized: "feature.scores.vi.du.unit.6.test"))
+                    AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, placeholder: String(localized: "feature.scores.vi.du.unit.6.test"), identifier: "test.name")
                     dateField
-                    AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad)
+                    AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad, identifier: "test.maxScore")
                     Text(String(localized: "feature.scores.moi.bai.co.thang.iem.rieng.mac.inh.15.sua.uoc.lu"))
                         .appText(AppText.muted)
                         .foregroundStyle(AppColors.muted)
@@ -475,7 +477,7 @@ struct TestEditorView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 8) {
-              AppSaveButton(title: String(localized: "feature.scores.tao.bai.va.nhap.iem"), controller: saveController) {
+              AppSaveButton(title: String(localized: "feature.scores.tao.bai.va.nhap.iem"), controller: saveController, identifier: "test.save") {
                   try await save()
               }
                 AppButton(title: String(localized: "feature.scores.huy"), variant: .ghost, size: .medium) { dismiss() }
@@ -579,9 +581,9 @@ struct TestFormSheet: View {
     var body: some View {
         AppSheet(title: String(localized: "feature.scores.sua.bai.kiem.tra")) {
             VStack(spacing: 14) {
-                AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name)
+                AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, identifier: "test.name")
                 AppTextField(label: String(localized: "feature.scores.ngay.kiem.tra"), text: $date, placeholder: "YYYY-MM-DD")
-                AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad)
+                AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad, identifier: "test.maxScore")
                 if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                 if let failure = saveController.error {
                     I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
@@ -599,7 +601,7 @@ struct TestFormSheet: View {
                 }
             }
         } footer: {
-              AppSaveButton(title: String(localized: "feature.scores.luu.thay.oi"), controller: saveController) {
+              AppSaveButton(title: String(localized: "feature.scores.luu.thay.oi"), controller: saveController, identifier: "test.save") {
                   try await save()
               }
           } close: {

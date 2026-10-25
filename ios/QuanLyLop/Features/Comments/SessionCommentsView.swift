@@ -196,7 +196,7 @@ struct SessionCommentsView: View {
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                     .foregroundStyle(AppColors.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("comments.send.needsNetwork")
+                    .accessibilityIdentifier("comment.sendClass.disabledReason")
             }
             AppButton(
                 title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),
@@ -204,6 +204,7 @@ struct SessionCommentsView: View {
                 size: .large
             ) { showingSend = true }
                 .disabled(sendAvailability != .ready)
+                .accessibilityIdentifier("comment.sendClass")
         }
     }
 
@@ -422,7 +423,7 @@ struct I4TicketSheet: View {
           .safeAreaInset(edge: .bottom, spacing: 0) {
               if canWrite {
                   TeacherPinnedBar {
-                      AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController) {
+                      AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController, identifier: "comment.save") {
                           try await save()
                       }
                   }
@@ -476,6 +477,7 @@ struct I4TicketSheet: View {
                 .buttonStyle(.plain)
                 .disabled(!canWrite)
                 .accessibilityLabel("\(option.rawValue) sao")
+                .accessibilityIdentifier("comment.rating.\(option.rawValue)")
                 .accessibilityAddTraits(stars == option ? [.isSelected] : [])
             }
         }
@@ -514,6 +516,7 @@ struct I4TicketSheet: View {
                 .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
                 .focused($noteFocused)
                 .disabled(!canWrite)
+                .accessibilityIdentifier("comment.note")
         }
     }
 

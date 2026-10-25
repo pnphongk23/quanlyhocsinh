@@ -192,6 +192,7 @@ struct SessionHomeworkView: View {
                     } label: {
                         Label(String(localized: "feature.homework.anh.dau.ca.lop.hoan.thanh"), systemImage: "checkmark.circle")
                     }
+                    .accessibilityIdentifier("homework.grade.bulk")
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 18, weight: .regular))
@@ -528,7 +529,7 @@ struct HomeworkSectionEditor: View {
                 TeacherPinnedBar {
                     AppSaveButton(title: editingSection == nil ? String(localized: "feature.homework.luu.phan")
                                                                : String(localized: "feature.homework.luu"),
-                                  controller: saveController) {
+                                  controller: saveController, identifier: "homework.assign.save") {
                         try await save()
                     }
                 }

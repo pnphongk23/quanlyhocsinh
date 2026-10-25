@@ -57,6 +57,7 @@ struct TeacherStudentsView: View {
         .confirmationDialog(String(localized: "feature.classes.anh.dau.hoc.sinh.a.nghi"),
                             isPresented: leavingBinding, titleVisibility: .visible, presenting: leaving) { student in
             Button(String(localized: "feature.classes.xac.nhan.nghi.hoc"), role: .destructive) { markLeft(student) }
+                .accessibilityIdentifier("student.leave")
             Button(String(localized: "students.leave.cancel", table: "Teacher"), role: .cancel) {}
         } message: { _ in
             Text(String(localized: "feature.classes.ngay.nghi.la.hom.nay.iem.va.iem.danh.cu.van.uoc"))
@@ -171,7 +172,7 @@ struct TeacherAddStudentSheet: View {
             VStack(spacing: 8) {
                 AppSaveButton(title: String(localized: "feature.classes.luu.hoc.sinh"), controller: saveController,
                               isEnabled: !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                              onSuccess: { dismiss() }) {
+                              identifier: "student.save", onSuccess: { dismiss() }) {
                       try await save()
                 }
                 .frame(maxWidth: .infinity)
@@ -235,7 +236,7 @@ struct TeacherParentPhoneSheet: View {
         } footer: {
             VStack(spacing: 8) {
                 AppSaveButton(title: String(localized: "feature.classes.luu.so.ien.thoai"), controller: saveController,
-                              isEnabled: phone != (student.parentPhone ?? ""), onSuccess: { dismiss() }) {
+                              isEnabled: phone != (student.parentPhone ?? ""), identifier: "student.save", onSuccess: { dismiss() }) {
                       try await save()
                 }
                 .frame(maxWidth: .infinity)

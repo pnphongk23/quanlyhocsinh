@@ -53,6 +53,7 @@ struct AuthLoginView: View {
                         .multilineTextAlignment(.center)
               }
               .buttonStyle(.plain)
+              .accessibilityIdentifier("login.registerTeacher")
               Button { model.show(.guardianRegister) } label: {
                   Text(String(localized: "auth.guardian.registerLink", table: "Guardian"))
                       .appText(AuthText.noteStrong)
@@ -109,7 +110,7 @@ struct AuthRegisterView: View {
                     .appText(AuthText.note)
                     .foregroundStyle(AppColors.muted)
                   AppSaveButton(title: String(localized: "feature.auth.tao.khong.gian.lam.viec"),
-                                controller: saveController, isEnabled: !blocked) {
+                                controller: saveController, isEnabled: !blocked, identifier: "register.submit") {
                       try await model.register(name: name, workspace: workspace, phone: phone,
                                                password: password, confirmation: confirmation)
                   }

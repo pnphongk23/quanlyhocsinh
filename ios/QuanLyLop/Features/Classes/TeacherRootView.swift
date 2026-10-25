@@ -299,7 +299,7 @@ struct TeacherClassListView: View {
     }
 
     private func classCard(_ klass: Classroom) -> some View {
-        TeacherLink(route: .classDetail(klass.id)) {
+        TeacherLink(route: .classDetail(klass.id), identifier: "class.card.\(klass.id)") {
             VStack(alignment: .leading, spacing: 12) {
                   Text(klass.name)
                     .appText(AppText.heading)
@@ -312,6 +312,7 @@ struct TeacherClassListView: View {
                   if let weekdays = klass.weekdays, !weekdays.isEmpty {
                       Text(classScheduleLine(klass))
                           .appText(AppText.muted).foregroundStyle(AppColors.muted)
+                          .accessibilityIdentifier("class.schedule.\(klass.id)")
                   }
                   if let next = TeacherFeatureData.nextPlannedSessions(data.sessions.filter { $0.classId == klass.id }, today: today).first {
                       Text(String.localizedStringWithFormat(

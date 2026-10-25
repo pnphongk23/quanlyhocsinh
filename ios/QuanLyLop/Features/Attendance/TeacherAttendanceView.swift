@@ -101,7 +101,7 @@ struct TeacherAttendanceView: View {
                     .accessibilityLabel(String(localized: "feature.attendance.iem.danh"))
             } else {
                 AppSaveButton(title: String(localized: "feature.attendance.luu.iem.danh"),
-                              controller: saveController, isEnabled: hasChanges) {
+                              controller: saveController, isEnabled: hasChanges, identifier: "attendance.save") {
                     try await data.saveAttendance(session: session, drafts: drafts)
                     drafts.removeAll()
                     await data.saveStatusSource?.refresh()
@@ -149,6 +149,7 @@ struct TeacherAttendanceView: View {
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.primarySoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
+        .accessibilityIdentifier("attendance.readOnlyNotice")
     }
 
     private var permissionNotice: some View {
@@ -176,6 +177,7 @@ struct TeacherAttendanceView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        .accessibilityIdentifier("attendance.warning")
     }
 
     private func row(_ student: Student) -> some View {
@@ -244,7 +246,9 @@ struct TeacherAttendanceView: View {
         } else {
             Menu {
                 Picker("", selection: statusBinding(student)) {
-                    ForEach(cycleOrder, id: \.self) { Text($0.label).tag($0) }
+                    ForEach(cycleOrder, id: \.self) {
+                        Text($0.label).tag($0).accessibilityIdentifier("attendance.status.\($0.rawValue)")
+                    }
                 }
             } label: {
                 statusPill(displayed, showsChevron: true)

@@ -12,6 +12,7 @@ struct AppSaveButton: View {
     var variant: AppButtonStyle.Variant = .primary
     var size: AppButtonStyle.Size = .large
     var isEnabled = true
+    var identifier: String?
     var onSuccess: @MainActor () -> Void = {}
     let work: @MainActor () async throws -> Void
 
@@ -39,6 +40,7 @@ struct AppSaveButton: View {
         .buttonStyle(AppButtonStyle(variant: variant, size: size, phase: controller.phase))
         .disabled(!isEnabled || controller.phase == .saving)
         .accessibilityLabel(accessibilityText)
+        .accessibilityIdentifier(identifier ?? "")
         .accessibilityAddTraits(controller.phase == .saving ? .updatesFrequently : [])
     }
 

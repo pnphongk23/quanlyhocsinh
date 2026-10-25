@@ -88,6 +88,7 @@ struct TeacherNewClassView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(String(localized: "feature.classes.gio.bat.au"))
+            .accessibilityIdentifier("class.time")
             if showingTime {
                 DatePicker("", selection: $timeSelection, displayedComponents: .hourAndMinute)
                     .datePickerStyle(.wheel)
