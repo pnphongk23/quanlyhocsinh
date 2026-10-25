@@ -214,7 +214,7 @@ struct ReportBatchDetailView: View {
                         if value.isEmpty {
                             Text(row.content.suggestion ?? String(localized: "feature.reports.nhap.nhan.xet.chung.cho.phu.huynh.cua.em.nay"))
                                 .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25)).foregroundStyle(AppColors.muted)
-                                .padding(.horizontal, 15).padding(.vertical, 18).allowsHitTesting(false)
+                                .padding(.horizontal, TeacherMetrics.commentPlaceholderInsetX).padding(.vertical, TeacherMetrics.commentPlaceholderInsetY).allowsHitTesting(false)
                         }
                     }
                     .accessibilityIdentifier("reports.comment")

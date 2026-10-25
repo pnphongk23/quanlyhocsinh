@@ -599,7 +599,7 @@ struct HomeworkSectionEditor: View {
             .foregroundStyle(taken ? AppColors.placeholder : (chosen ? AppState.selectedFg : AppColors.text))
             .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
             .frame(maxWidth: .infinity)
-            .frame(height: 56)
+            .frame(height: TeacherMetrics.rowMinHeight)
             .background(chosen ? AppState.selectedBg : AppColors.surface,
                         in: RoundedRectangle(cornerRadius: AppRadius.card))
             .overlay(
@@ -644,9 +644,9 @@ struct HomeworkSectionEditor: View {
             TextField("", text: $title)
                 .font(.system(size: 15))
                 .foregroundStyle(AppColors.text)
-                .padding(12)
+                .padding(TeacherMetrics.contentGap)
                 .frame(minHeight: AppMetrics.tap)
-                .background(AppColors.background, in: RoundedRectangle(cornerRadius: 12))
+                .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
         }
     }
 
@@ -664,9 +664,9 @@ struct HomeworkSectionEditor: View {
                 .lineLimit(2...5)
                 .font(.system(size: 15))
                 .foregroundStyle(AppColors.text)
-                .padding(12)
-                .frame(minHeight: 72, alignment: .topLeading)
-                .background(AppColors.background, in: RoundedRectangle(cornerRadius: 12))
+                .padding(TeacherMetrics.contentGap)
+                .frame(minHeight: TeacherMetrics.commentEditorMinHeight, alignment: .topLeading)
+                .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
         }
     }
 

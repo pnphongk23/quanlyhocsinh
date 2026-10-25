@@ -73,12 +73,12 @@ struct ReportContentView: View {
                         .frame(width: geometry.size.width * CGFloat(count) / CGFloat(maxCount))
                 }
             }
-            .frame(height: 10)
+            .frame(height: TeacherMetrics.starBarHeight)
             Text(String.localizedStringWithFormat(String(localized: "feature.reports.buoi.d5e8f7ce"), String(describing: count)))
                 .appText(AppTextStyle(size: 16, weight: .bold, lineHeight: 24)).foregroundStyle(AppColors.text)
-                .frame(minWidth: 60, alignment: .trailing)
+                .frame(minWidth: TeacherMetrics.starCountMinWidth, alignment: .trailing)
         }
-        .frame(minHeight: 32)
+        .frame(minHeight: TeacherMetrics.starRowMinHeight)
     }
 
     private var homeworkBlock: some View {

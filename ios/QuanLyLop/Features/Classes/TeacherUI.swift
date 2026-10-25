@@ -21,6 +21,13 @@ enum TeacherMetrics {
     static let reportRowMinHeight: CGFloat = 64
     /// Student row of a batch, closed.
     static let studentRowMinHeight: CGFloat = 40
+    /// Placeholder inset inside a comment box, matching the text editor's own inset.
+    static let commentPlaceholderInsetX: CGFloat = 15
+    static let commentPlaceholderInsetY: CGFloat = 18
+    /// Star distribution row of a report: bar height, count column and row height.
+    static let starBarHeight: CGFloat = 10
+    static let starCountMinWidth: CGFloat = 60
+    static let starRowMinHeight: CGFloat = 32
 }
 
 /// Prototype date labels (`src/shared/format/index.ts`) in the same `vi-VN` shapes.
