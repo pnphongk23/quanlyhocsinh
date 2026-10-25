@@ -18,6 +18,7 @@ import { Button, Card, EmptyState, Icon } from "../../shared/ui";
 import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
 import { batchCounts } from "./batchRows";
 import ReportDialog from "./ReportDialog";
+import ReportBatchDeleteMenu from "./ReportBatchDeleteMenu";
 import styles from "./ReportsPage.module.css";
 
 /** Danh sách đợt báo cáo của lớp và nút "Thêm báo cáo". */
@@ -55,28 +56,38 @@ export default function ReportBatchList({ klass }: { klass: Class }) {
 
   const content = items.length ? (
     <ul className={styles.batchList}>
-      {items.map(({ batch, range, counts }) => (
-        <li key={batch.id}>
-          <Link
-            to={`?dot=${batch.id}`}
-            className={styles.batchRow}
-            aria-label={`Mở báo cáo ${range.label}`}
-          >
-            <span className={styles.batchText}>
-              <span className={styles.batchTitle}>{range.label}</span>
-              <span className={styles.batchMeta}>
-                <b>{counts.published}</b> đã phát hành · <b>{counts.draft}</b> nháp
-                {counts.republish > 0 && (
-                  <>
-                    {" "}· <b className={styles.metaAlert}>{counts.republish}</b> cần phát hành lại
-                  </>
-                )}
+      {items.map(({ batch, range, counts }) => {
+        const batchReports = snapshot.reports.filter((report) => report.batchId === batch.id);
+        const reportIds = new Set(batchReports.map((report) => report.id));
+        const hasPublished =
+          batchReports.some((report) => report.status === "published") ||
+          snapshot.reportPublications.some(
+            (publication) => publication.batch_id === batch.id || reportIds.has(publication.report_id),
+          );
+        return (
+          <li key={batch.id} className={styles.batchItem}>
+            <Link
+              to={`?dot=${batch.id}`}
+              className={styles.batchRow}
+              aria-label={`Mở báo cáo ${range.label}`}
+            >
+              <span className={styles.batchText}>
+                <span className={styles.batchTitle}>{range.label}</span>
+                <span className={styles.batchMeta}>
+                  <b>{counts.published}</b> đã phát hành · <b>{counts.draft}</b> nháp
+                  {counts.republish > 0 && (
+                    <>
+                      {" "}· <b className={styles.metaAlert}>{counts.republish}</b> cần phát hành lại
+                    </>
+                  )}
+                </span>
               </span>
-            </span>
-            <Icon name="chevron-right" />
-          </Link>
-        </li>
-      ))}
+              <Icon name="chevron-right" />
+            </Link>
+            {canWrite && <ReportBatchDeleteMenu batch={batch} hasPublished={hasPublished} />}
+          </li>
+        );
+      })}
     </ul>
   ) : (
     <Card>

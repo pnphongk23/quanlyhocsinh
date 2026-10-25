@@ -18,7 +18,7 @@ async function seed(page, role) {
     const req = indexedDB.open("qlh-web");
     const db = await new Promise((resolve, reject) => {
       req.onupgradeneeded = () => {
-        const indexes = { classes: ["key", "identity", "id"], students: ["key", "identity", "class_id", "id"], sessions: ["key", "identity", "class_id", "date", "id"], attendance: ["key", "identity", "session_id", "student_id"], tests: ["key", "identity", "class_id", "date", "id"], scores: ["key", "identity", "test_id", "student_id"], slips: ["key", "identity", "session_id", "student_id"], homeworkSections: ["key", "identity", "session_id", "id"], homeworkGrades: ["key", "identity", "section_id", "student_id"], reports: ["key", "identity", "class_id", "student_id", "month"], reportPublications: ["key", "identity", "report_id", "publication_no"], outbox: ["id", "identity", "status", "created_at"], meta: ["key", "identity"] };
+        const indexes = { classes: ["key", "identity", "id"], students: ["key", "identity", "class_id", "id"], sessions: ["key", "identity", "class_id", "date", "id"], attendance: ["key", "identity", "session_id", "student_id"], tests: ["key", "identity", "class_id", "date", "id"], scores: ["key", "identity", "test_id", "student_id"], slips: ["key", "identity", "session_id", "student_id"], homeworkSections: ["key", "identity", "session_id", "id"], homeworkGrades: ["key", "identity", "section_id", "student_id"], reportBatches: ["key", "identity", "class_id", "id"], reports: ["key", "identity", "class_id", "student_id", "month", "batch_id"], reportPublications: ["key", "identity", "report_id", "publication_no"], outbox: ["id", "identity", "status", "created_at"], meta: ["key", "identity"] };
         for (const [table, fields] of Object.entries(indexes)) if (!req.result.objectStoreNames.contains(table)) {
           const store = req.result.createObjectStore(table, { keyPath: fields[0] });
           for (const field of fields.slice(1)) store.createIndex(field, field);
@@ -31,7 +31,7 @@ async function seed(page, role) {
     await new Promise((resolve, reject) => {
       const tx = db.transaction(Object.keys(entities), "readwrite");
       for (const [table, rows] of Object.entries(entities)) {
-        const entity = table === "homeworkSections" ? "homework_section" : table === "homeworkGrades" ? "homework_grade" : table === "reportPublications" ? "report_publication" : table === "sessions" ? "class_session" : table.replace(/s$/, "");
+        const entity = table === "homeworkSections" ? "homework_section" : table === "homeworkGrades" ? "homework_grade" : table === "reportPublications" ? "report_publication" : table === "reportBatches" ? "report_batch" : table === "sessions" ? "class_session" : table.replace(/s$/, "");
         for (const row of rows) tx.objectStore(table).put({ ...row, identity: active, key: active + "|" + entity + "|" + (row.id ?? row.session_id + "|" + row.student_id + "|" + (row.test_id ?? "")), entity });
       }
       tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
@@ -48,10 +48,10 @@ async function setup(page, role) {
       if (url.pathname.endsWith("/me")) return route.fulfill({ json: sessionFor(role).me });
       const writeResponse = mockWriteResponse(request, entities);
       if (writeResponse) return route.fulfill({ json: writeResponse });
-      if (url.pathname === "/v1/sync/snapshot") return route.fulfill({ json: { cursor: 0, epoch: 1, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"] } });
+      if (url.pathname === "/v1/sync/snapshot") return route.fulfill({ json: { cursor: 0, epoch: 1, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report_batch", "report", "report_publication"] } });
     const entity = url.pathname.match(/\/v1\/sync\/snapshot\/([^/]+)$/)?.[1];
     if (entity) {
-      const table = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "slips", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report: "reports", report_publication: "reportPublications" })[entity] ?? entity + "s";
+      const table = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "slips", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report_batch: "reportBatches", report: "reports", report_publication: "reportPublications" })[entity] ?? entity + "s";
       return route.fulfill({ json: { items: entities[table] ?? [], next_after: null } });
     }
     if (url.pathname === "/v1/sync/pull") return route.fulfill({ json: { cursor: 0, epoch: 1, has_more: false, upserts: {}, deleted: [] } });
@@ -212,6 +212,16 @@ try {
         return hit + "; confirmation accepted and visible scores set to 15";
       });
     }
+    for (const viewport of [mobile, desktop]) await test("report batch menu / delete confirmation", viewport, "staff", "/lop/demo-6a/bao-cao", async (page) => {
+      await click(page.getByRole("button", { name: "Thêm tùy chọn báo cáo" }).first(), "open report menu");
+      const menuHit = await click(page.getByRole("menuitem", { name: "Xoá báo cáo", exact: true }), "delete report");
+      const dialog = page.getByRole("dialog", { name: "Xoá báo cáo?" });
+      await dialog.waitFor({ state: "visible" });
+      if (!(await dialog.innerText()).includes("Phụ huynh sẽ không còn thấy báo cáo đã phát hành")) throw new Error("published report confirmation omits the parent visibility change");
+      await click(dialog.getByRole("button", { name: "Huỷ", exact: true }), "cancel delete");
+      await dialog.waitFor({ state: "detached" });
+      return menuHit + "; published confirmation opened and cancelled";
+    });
   for (const item of ["Sửa", "Xoá"]) await test("desktop test row menu / " + item, desktop, "staff", "/lop/demo-6a/bai-kiem-tra", async (page) => {
     await click(page.locator('button[aria-label="Thêm tùy chọn Kiểm tra giữa kỳ"]'), "open test row menu");
     const hit = await click(page.getByRole("menuitem", { name: item, exact: true }), item);

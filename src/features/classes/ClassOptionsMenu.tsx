@@ -23,6 +23,7 @@ export interface ClassOption {
   label: string;
   icon: MenuIcon;
   danger?: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }
 
@@ -57,6 +58,7 @@ export function ClassOptionsMenu({
               type="button"
               role="menuitem"
               className={s.menuItem + (item.danger ? " " + s.menuItemDanger : "")}
+              disabled={item.disabled}
               onClick={item.onSelect}
             >
               <span aria-hidden="true">

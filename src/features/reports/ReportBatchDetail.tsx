@@ -24,6 +24,7 @@ import {
   UnsavedChangesDialog,
 } from "../../shared/ui";
 import ReportPreviewDialog from "./ReportPreviewDialog";
+import ReportBatchDeleteMenu from "./ReportBatchDeleteMenu";
 import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
 import { latestTestLabel, latestTestScore } from "./latestTest";
 import {
@@ -91,6 +92,13 @@ export default function ReportBatchDetail({
   const pendingSave = useRef<Promise<boolean> | null>(null);
 
   const canWrite = access.can("comments_reports", "write");
+  const batchReports = snapshot.reports.filter((report) => report.batchId === batch.id);
+  const reportIds = new Set(batchReports.map((report) => report.id));
+  const hasPublished =
+    batchReports.some((report) => report.status === "published") ||
+    snapshot.reportPublications.some(
+      (publication) => publication.batch_id === batch.id || reportIds.has(publication.report_id),
+    );
   const summary = reviewSummary(rows.map((row) => row.slot));
   const selected = rows.find((row) => row.report.student.id === studentId) ?? rows[0];
   const draftKey = selected ? `${batch.id}:${selected.report.student.id}` : "";
@@ -349,6 +357,7 @@ export default function ReportBatchDetail({
     <div className={styles.batchHead}>
       {backLink}
       <h2 className={styles.batchHeading}>{range.label}</h2>
+      {canWrite && <ReportBatchDeleteMenu batch={batch} hasPublished={hasPublished} />}
     </div>
   );
 
