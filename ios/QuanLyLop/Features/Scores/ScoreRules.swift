@@ -35,6 +35,13 @@ enum ScoreRules {
         }.count
     }
 
+    /// Drafts left after "Gán điểm mặc định" finished: the ones still equal to what they were when the
+    /// teacher confirmed were overwritten by the default and go; anything typed or changed while the
+    /// assignment was running stays.
+    static func draftsAfterAssign(current: [String: String], atConfirm: [String: String]) -> [String: String] {
+        current.filter { atConfirm[$0.key] != $0.value }
+    }
+
     /// A test with any saved score (including 0) is archived; otherwise it is deleted outright.
     static func deletionMode(hasScores: Bool) -> TestDeletion {
         hasScores ? .archive : .delete

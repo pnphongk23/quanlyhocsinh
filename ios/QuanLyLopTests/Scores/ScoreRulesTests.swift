@@ -118,6 +118,14 @@ final class ScoreRulesTests: XCTestCase {
         XCTAssertEqual(data.scores.count, 3)
     }
 
+    func testDraftsAfterAssignKeepWhatChangedWhileItRan() {
+        let atConfirm = ["s0": "8", "s1": "12"]
+        // s0 untouched, s1 edited again, s2 typed for the first time during the wait.
+        let current = ["s0": "8", "s1": "12,5", "s2": "9"]
+        XCTAssertEqual(ScoreRules.draftsAfterAssign(current: current, atConfirm: atConfirm), ["s1": "12,5", "s2": "9"])
+        XCTAssertEqual(ScoreRules.draftsAfterAssign(current: atConfirm, atConfirm: atConfirm), [:])
+    }
+
     func testSaveScoresRejectsAnythingOutsideTheScoreRangeBeforeWriting() async throws {
         let (data, store) = try await seededData(students: 2)
         let test = try XCTUnwrap(data.tests.first)
