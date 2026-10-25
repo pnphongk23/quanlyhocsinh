@@ -1,6 +1,14 @@
 import SwiftUI
 import UIKit
 
+/// An empty identifier would still replace the one a caller set on the view, so it is only applied when given.
+private struct OptionalIdentifier: ViewModifier {
+    let identifier: String?
+    @ViewBuilder func body(content: Content) -> some View {
+        if let identifier { content.accessibilityIdentifier(identifier) } else { content }
+    }
+}
+
 /// Save button with the four states of rules.md mục 6: default, loading (same size, label hidden,
 /// spinner, at least 400 ms), success (check + "Đã lưu" for 1.6 s) and error (back to default, the
 /// error is in `controller.error` for the screen to show; nothing is cleared or closed).
@@ -40,7 +48,7 @@ struct AppSaveButton: View {
         .buttonStyle(AppButtonStyle(variant: variant, size: size, phase: controller.phase))
         .disabled(!isEnabled || controller.phase == .saving)
         .accessibilityLabel(accessibilityText)
-        .accessibilityIdentifier(identifier ?? "")
+        .modifier(OptionalIdentifier(identifier: identifier))
         .accessibilityAddTraits(controller.phase == .saving ? .updatesFrequently : [])
     }
 

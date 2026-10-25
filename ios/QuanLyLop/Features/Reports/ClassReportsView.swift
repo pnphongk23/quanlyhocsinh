@@ -185,7 +185,7 @@ struct AddReportBatchSheet: View {
             .padding(.bottom, AppMetrics.cardPaddingHorizontal)
         } footer: {
             AppSaveButton(title: String(localized: "reports.add.create", table: "Reports"), controller: controller,
-                          isEnabled: problem == nil, onSuccess: {}) {
+                          isEnabled: problem == nil, identifier: "reports.add.create", onSuccess: {}) {
                 let result = await data.createBatch(classID: classID, fromSessionID: fromID, toSessionID: toID,
                                                     requestID: requestID)
                 switch result {
@@ -193,7 +193,6 @@ struct AddReportBatchSheet: View {
                 case .failure(let failure): throw I4SaveFailure(message: failure.message)
                 }
             }
-            .accessibilityIdentifier("reports.add.create")
         } close: { dismiss() }
         .onAppear(perform: applyDefault)
         // A new range needs a new id: the same id with another range is refused by the server.

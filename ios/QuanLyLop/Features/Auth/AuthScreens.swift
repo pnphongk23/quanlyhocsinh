@@ -37,10 +37,9 @@ struct AuthLoginView: View {
                     .foregroundStyle(AppColors.primary)
                 }
                   AppSaveButton(title: String(localized: "feature.auth.ang.nhap"), controller: saveController,
-                                isEnabled: !model.isLocked) {
+                                isEnabled: !model.isLocked, identifier: "login.submit") {
                       try await model.login(phone: phone, password: password)
                   }
-                .accessibilityIdentifier("login.submit")
             }
             .padding(.top, 24)
 
@@ -329,11 +328,11 @@ struct AuthGuardianRegisterView: View {
                                   errorText: mismatch ? AuthCopy.passwordMismatch : nil,
                                   identifier: "guardian.register.confirm")
                 AppSaveButton(title: String(localized: "auth.guardian.createAccount", table: "Guardian"),
-                              controller: saveController, isEnabled: !disabled) {
+                              controller: saveController, isEnabled: !disabled,
+                              identifier: "guardian.register.submit") {
                     try await model.registerGuardian(name: name, phone: phone,
                                                      password: password, confirmation: confirmation)
                 }
-                .accessibilityIdentifier("guardian.register.submit")
             }
             .padding(.top, AppMetrics.buttonHeightMedium / 2)
         }
