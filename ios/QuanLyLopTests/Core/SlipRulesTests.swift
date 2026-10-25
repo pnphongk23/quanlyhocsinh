@@ -148,4 +148,22 @@ final class SlipRulesTests: XCTestCase {
         }
         XCTAssertEqual(SlipRules.generatedSentence(criteria: 0b111111), SlipRules.generatedSentence(criteria: 0b11111))
     }
+
+    // MARK: - Hand-set homework flag
+
+    func testHwManualDecodesFromZeroOneBoolOrAbsent() throws {
+        let base = #"{"session_id":"s","student_id":"a","criteria":15,"scale":5,"note":"","status":"draft","sent_at":null,"version":1,"updated_at":"2026-10-26T10:00:00.000Z""#
+        XCTAssertTrue(try decodeSlip(base + #","hw_manual":1}"#).hwManual)
+        XCTAssertFalse(try decodeSlip(base + #","hw_manual":0}"#).hwManual)
+        XCTAssertTrue(try decodeSlip(base + #","hw_manual":true}"#).hwManual)
+        XCTAssertFalse(try decodeSlip(base + "}").hwManual, "an old cache or a parent view has no flag")
+    }
+
+    func testHwManualSurvivesTheCacheRoundTrip() throws {
+        let slip = SessionSlip(sessionId: "s", studentId: "a", stars: 4, criteria: 15, hwManual: true, note: "",
+                               status: .draft, sentAt: nil, version: 2, updatedAt: "2026-10-26T10:00:00.000Z")
+        let data = try WireJSON.encoder().encode(slip)
+        XCTAssertEqual(try WireJSON.decoder().decode(SessionSlip.self, from: data), slip)
+        XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("\"hw_manual\":true"))
+    }
 }

@@ -42,6 +42,33 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(slips.first { $0.studentId == "b" }?.stars, 2)
     }
 
+    private func saveCriteria(hwManual: Bool?) async throws -> (payload: JSONValue, slip: SessionSlip?) {
+        let store = try await seededStore()
+        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .offline))
+        await data.refresh()
+        let student = Student(id: "a", classId: "c", name: "Em a", parentPhone: nil, enrolledAt: "2026-09-01",
+                              leftAt: nil, status: .active, version: 1)
+        let failure = await data.saveSlip(sessionID: "session", student: student,
+                                          grading: .criteria(0b01111, comment: nil, hwManual: hwManual), note: "")
+        XCTAssertNil(failure)
+        let command = try await store.pendingCommands().first { $0.kind == "slip.set" }
+        return (try XCTUnwrap(command).payload, data.slip(sessionID: "session", studentID: "a"))
+    }
+
+    func testSlipSetSendsHwManualWhenTheTeacherSetsIt() async throws {
+        let saved = try await saveCriteria(hwManual: true)
+        guard case .object(let fields) = saved.payload else { return XCTFail("payload is not an object") }
+        XCTAssertEqual(fields["hw_manual"], .bool(true))
+        XCTAssertEqual(saved.slip?.hwManual, true)
+    }
+
+    func testSlipSetOmitsHwManualWhenTheTeacherDidNotTouchHomework() async throws {
+        let saved = try await saveCriteria(hwManual: nil)
+        guard case .object(let fields) = saved.payload else { return XCTFail("payload is not an object") }
+        XCTAssertNil(fields["hw_manual"])
+        XCTAssertEqual(saved.slip?.hwManual, false)
+    }
+
     func testFailedPushAfterSyncStillLeavesNoCommand() async throws {
         let store = try await seededStore()
         let api = SlipPushAPI(mode: .pushFails)

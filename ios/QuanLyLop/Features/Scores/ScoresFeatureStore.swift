@@ -301,7 +301,9 @@ final class I4FeatureStore: ObservableObject {
     /// What the teacher chose on a slip: the five criteria with an optional edited sentence, or only a note
     /// on an old three-star slip (those keep their stars and sentence).
     enum SlipGrading: Equatable {
-        case criteria(Int, comment: String?)
+        /// `hwManual` is nil when the teacher did not touch the homework criterion: the slip keeps its flag and
+        /// `slip.set` does not send one.
+        case criteria(Int, comment: String?, hwManual: Bool? = nil)
         case legacy
     }
 
@@ -315,19 +317,21 @@ final class I4FeatureStore: ObservableObject {
         ]
         let row: SessionSlip
         switch grading {
-        case .criteria(let criteria, let comment):
+        case .criteria(let criteria, let comment, let hwManual):
             let bits = criteria & SlipRules.allCriteria
             fields["criteria"] = .number(Double(bits))
             fields["comment"] = comment.map { .string($0) } ?? .null
+            if let hwManual { fields["hw_manual"] = .bool(hwManual) }
             row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: SlipRules.stars(criteria: bits),
-                              criteria: bits, comment: comment, scale: SessionSlip.currentScale, note: note,
+                              criteria: bits, comment: comment, scale: SessionSlip.currentScale,
+                              hwManual: hwManual ?? old?.hwManual ?? false, note: note,
                               status: old?.status ?? .draft, sentAt: old?.sentAt,
                               version: old?.version ?? 0, updatedAt: Self.now)
         case .legacy:
             guard let old, let stars = old.stars else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
             fields["stars"] = .number(Double(stars))
             row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: stars, criteria: old.criteria,
-                              comment: old.comment, scale: old.scale, note: note, status: old.status,
+                              comment: old.comment, scale: old.scale, hwManual: old.hwManual, note: note, status: old.status,
                               sentAt: old.sentAt, version: old.version, updatedAt: Self.now)
         }
         let command = PendingCommand(recordKey: key("slip", sessionID, student.id),
@@ -391,7 +395,8 @@ final class I4FeatureStore: ObservableObject {
         for id in chosen where sentIDs.contains(id) {
             guard let slip = slip(sessionID: sessionID, studentID: id) else { continue }
             let row = SessionSlip(sessionId: slip.sessionId, studentId: slip.studentId, stars: slip.stars,
-                                  criteria: slip.criteria, comment: slip.comment, scale: slip.scale, note: slip.note,
+                                  criteria: slip.criteria, comment: slip.comment, scale: slip.scale, hwManual: slip.hwManual,
+                                  note: slip.note,
                                   status: .sent, sentAt: Self.now, version: slip.version, updatedAt: Self.now)
             try? await store.write(row, forKey: key("slip", sessionID, id), enqueueing: nil)
         }

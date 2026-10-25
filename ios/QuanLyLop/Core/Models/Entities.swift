@@ -123,6 +123,9 @@ struct SessionSlip: Codable, Sendable, Equatable {
     /// Teacher-edited sentence; nil means "follow the default sentence for the stars".
     let comment: String?
     let scale: Int
+    /// The teacher ticked or unticked the homework criterion by hand, so it no longer follows last session's grades.
+    /// The server sends 0/1; parents never receive it.
+    let hwManual: Bool
     let note: String
     let status: SlipStatus
     let sentAt: String?
@@ -130,10 +133,12 @@ struct SessionSlip: Codable, Sendable, Equatable {
     let updatedAt: String
 
     init(sessionId: String, studentId: String, stars: Int?, criteria: Int? = nil, comment: String? = nil,
-         scale: Int? = nil, note: String, status: SlipStatus, sentAt: String?, version: Int, updatedAt: String) {
+         scale: Int? = nil, hwManual: Bool = false, note: String, status: SlipStatus, sentAt: String?,
+         version: Int, updatedAt: String) {
         self.sessionId = sessionId; self.studentId = studentId; self.stars = stars
         self.criteria = criteria; self.comment = comment
         self.scale = scale ?? (criteria == nil ? Self.legacyScale : Self.currentScale)
+        self.hwManual = hwManual
         self.note = note; self.status = status; self.sentAt = sentAt; self.version = version
         self.updatedAt = updatedAt
     }
@@ -146,6 +151,11 @@ struct SessionSlip: Codable, Sendable, Equatable {
         criteria = try c.decodeIfPresent(Int.self, forKey: .criteria)
         comment = try c.decodeIfPresent(String.self, forKey: .comment)
         scale = try c.decodeIfPresent(Int.self, forKey: .scale) ?? Self.legacyScale
+        if let flag = try? c.decodeIfPresent(Bool.self, forKey: .hwManual) {
+            hwManual = flag
+        } else {
+            hwManual = (try c.decodeIfPresent(Int.self, forKey: .hwManual) ?? 0) != 0
+        }
         note = try c.decode(String.self, forKey: .note)
         status = try c.decode(SlipStatus.self, forKey: .status)
         sentAt = try c.decodeIfPresent(String.self, forKey: .sentAt)
