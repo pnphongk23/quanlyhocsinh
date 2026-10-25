@@ -82,4 +82,23 @@ final class GuardianDeletedReportTests: XCTestCase {
         let remaining = try await cachedReportIDs(store)
         XCTAssertEqual(remaining, ["r-kept"])
     }
+
+    func testReloadAfterSyncDeletionTakesTheReportOffAnOpenDashboard() async throws {
+        let store = try await store(reports: ["r-kept", "r-deleted"])
+        let student = Student(id: "st1", classId: "c1", name: "Trần Gia Bảo", parentPhone: nil,
+                              enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
+        try await store.write(student, forKey: RecordKey(entity: "student", k1: student.id).storageKey, enqueueing: nil)
+        let refreshed = Date(timeIntervalSince1970: 1_700_000_000)
+        let open = GuardianDashboard(children: try await GuardianRepository.dashboard(from: store).children,
+                                     updatedAt: refreshed, isOffline: true)
+        XCTAssertEqual(Set(open.children.first?.publishedReports.map(\.reportId) ?? []), ["r-kept", "r-deleted"])
+
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                       deleted: [RecordKey(entity: "report_publication", k1: "p-r-deleted")]))
+        let next = try await GuardianRepository.reload(from: store, keeping: open)
+
+        XCTAssertEqual(next.children.first?.publishedReports.map(\.reportId), ["r-kept"])
+        XCTAssertEqual(next.updatedAt, refreshed)
+        XCTAssertTrue(next.isOffline)
+    }
 }

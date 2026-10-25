@@ -88,6 +88,9 @@ struct GuardianRootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await load() } }
         }
+        .onChange(of: model?.syncRevision) { _, _ in
+            Task { await rebuildFromCache() }
+        }
     }
 
     // MARK: Tabs
@@ -286,6 +289,13 @@ struct GuardianRootView: View {
             let next = try await GuardianRepository.load()
             dashboard = next; selectFirstChild(next); errorMessage = nil
         } catch { errorMessage = String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai") }
+    }
+    /// A background sync changed the cache (a deleted report, for one): redraw from it, no request.
+    @MainActor private func rebuildFromCache() async {
+        guard GuardianDemo.dashboard == nil, let store = model?.activeSQLiteStore, let current = dashboard else { return }
+        guard let next = try? await GuardianRepository.reload(from: store, keeping: current) else { return }
+        dashboard = next
+        selectFirstChild(next)
     }
     private func selectFirstChild(_ dashboard: GuardianDashboard) {
         if let selectedChildID, dashboard.children.contains(where: { $0.student.id == selectedChildID }) { return }

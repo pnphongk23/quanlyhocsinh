@@ -489,6 +489,13 @@ enum GuardianRepository {
         return GuardianDashboard(children: base.children, updatedAt: GuardianFreshness.last(scope, defaults: defaults), isOffline: true)
     }
 
+    /// Rebuilds the dashboard from what the cache holds now, without a request: a sync that applied a
+    /// deletion must take the report off a screen that is already open. The freshness of `previous` stays.
+    static func reload(from store: SQLiteStore, keeping previous: GuardianDashboard) async throws -> GuardianDashboard {
+        let base = try await dashboard(from: store)
+        return GuardianDashboard(children: base.children, updatedAt: previous.updatedAt, isOffline: previous.isOffline)
+    }
+
     /// Every published version of a report stays on the server (`api-spec.md` 6.6), including old ones whose
     /// snapshot predates the current shape. Those are decoded one by one and dropped when unreadable, so a
     /// single stale version cannot hide the child's attendance, scores and newer reports.
