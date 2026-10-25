@@ -3,6 +3,7 @@ import XCTest
 
 /// A report the teacher deleted must disappear from the guardian's cache, also when the guardian was
 /// offline at the time and learns about it on the next refresh.
+@MainActor
 final class GuardianDeletedReportTests: XCTestCase {
     private let scope = CacheScope(userId: "guardian-user", workspaceId: "workspace", membershipId: "guardian")
 
@@ -101,4 +102,44 @@ final class GuardianDeletedReportTests: XCTestCase {
         XCTAssertEqual(next.updatedAt, refreshed)
         XCTAssertTrue(next.isOffline)
     }
+
+    func testSyncThatFailsAfterAppliedDeletionStillSignalsTheScreensToRebuild() async throws {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        try await store.installSnapshot([:], position: SyncPosition(cursor: 0, epoch: 1))
+        let item = try publication(report: "r-deleted")
+        try await store.write(item, forKey: RecordKey(entity: "report_publication", k1: item.id).storageKey, enqueueing: nil)
+        let user = User(id: "guardian-user", phone: "0900000000", displayName: "Phụ huynh", mustChangePassword: false)
+        let role = Role(id: "guardian-role", name: "Guardian", systemKey: nil, scopeKind: .assignedClasses)
+        let membership = Membership(id: "guardian", workspace: Workspace(id: "workspace", name: "Lớp"), role: role,
+                                    status: "active", scopeEpoch: 1, permissions: [:])
+        let identity = CurrentIdentity(user: user, activeMembershipId: "guardian", memberships: [membership])
+        let firstPage = PullPage(cursor: 1, epoch: 1, hasMore: true, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                 deleted: [RecordKey(entity: "report_publication", k1: item.id)])
+        let api = RouteAPI(route: { endpoint in
+            switch (endpoint.path, endpoint.query["cursor"]) {
+            case ("me", _): return String(decoding: try! WireJSON.encoder().encode(identity), as: UTF8.self)
+            case ("sync/pull", "0"?): return String(decoding: try! WireJSON.encoder().encode(firstPage), as: UTF8.self)
+            default: return nil
+            }
+        })
+        let model = AuthModel(configuration: .fallback, apiClient: api,
+                              tokenStore: InMemoryTokenStore(token: "fixture-session"),
+                              identityStore: MemoryIdentityCache(identity), storeFactory: { _ in store }, isOnline: { true })
+        await model.restoreSession()
+        let before = model.syncRevision
+
+        await model.synchronizeWhileActive()
+
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertTrue(remaining.isEmpty)
+        XCTAssertGreaterThan(model.syncRevision, before)
+    }
+}
+
+private actor MemoryIdentityCache: CachedIdentityStore {
+    private var value: CurrentIdentity?
+    init(_ identity: CurrentIdentity?) { value = identity }
+    func load() -> CurrentIdentity? { value }
+    func save(_ identity: CurrentIdentity) { value = identity }
+    func clear() { value = nil }
 }

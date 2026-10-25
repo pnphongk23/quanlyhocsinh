@@ -148,7 +148,7 @@ final class AuthModel {
     private let tokenStore: any TokenStore
     private let api: any APIClient
     private var activeStore: (any LocalStore)?
-    /// Counts the syncs that finished and may have changed the cache, so a screen built from it can rebuild.
+    /// Counts the sync attempts, failed ones too, that may have changed the cache, so a screen built from it can rebuild.
     private(set) var syncRevision = 0
     var activeSQLiteStore: SQLiteStore? { activeStore as? SQLiteStore }
     private(set) var activeSync: SyncCoordinator?
@@ -383,9 +383,9 @@ final class AuthModel {
     func retrySync() async {
         guard let activeSync else { return }
         message = nil
+        defer { syncRevision += 1 }
         do {
             try await activeSync.synchronize()
-            syncRevision += 1
         } catch { message = Self.userMessage(error) }
     }
 
@@ -393,7 +393,9 @@ final class AuthModel {
         guard isSyncEligible else { return }
         if isOnline(), !(await revalidateIdentityWhileOnline()) { return }
         guard isSyncEligible, let activeSync else { return }
-        if (try? await activeSync.synchronize()) != nil { syncRevision += 1 }
+        // Pages are committed one by one, so a sync that fails half way may already have changed the cache.
+        defer { syncRevision += 1 }
+        try? await activeSync.synchronize()
     }
 
     /// Rechecks server identity when ConnectivityMonitor or SyncScheduler reports reachability.
