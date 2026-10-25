@@ -231,14 +231,14 @@ function buildPeriodReport(
     sentComments.map((comment) => comment.sessionId),
   );
 
-  const byStars: Record<StarLevel, number> = { 1: 0, 2: 0, 3: 0 };
+    const byStars: Record<StarLevel, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let ticketCount = 0;
   for (const comment of sentComments) {
     const session = sessionById.get(comment.sessionId);
     if (!session) continue;
     if (!sessionIds.has(session.id)) continue;
     if (comment.stars === null) continue;
-    byStars[comment.stars] += 1;
+      byStars[comment.stars] += 1;
     ticketCount += 1;
   }
 

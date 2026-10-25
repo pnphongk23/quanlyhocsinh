@@ -48,13 +48,17 @@ export function createFakeServer() {
       if (!Number.isFinite(p.value) || p.value < 0 || p.value > 1000) return { id: command.id, status: "rejected", error: { code: "invalid_score", message: "invalid_score", request_id: "fake" } };
       if (Math.round(p.value * 2) !== p.value * 2) return { id: command.id, status: "rejected", error: { code: "invalid_score_step", message: "invalid_score_step", request_id: "fake" } };
     }
+    if (command.type === "slip.set") {
+      if (p.criteria !== undefined && (!Number.isInteger(p.criteria) || p.criteria < 0 || p.criteria > 31)) return { id: command.id, status: "rejected", error: { code: "invalid_criteria", message: "invalid_criteria", request_id: "fake" } };
+      if (p.comment !== undefined && p.comment !== null && (typeof p.comment !== "string" || p.comment.length > 300)) return { id: command.id, status: "rejected", error: { code: "invalid_comment", message: "invalid_comment", request_id: "fake" } };
+    }
     switch (command.type) {
       case "attendance.set": put("attendance", { session_id: p.session_id, student_id: p.student_id, status: p.status, note: p.note ?? "", late_at: p.late_at ?? null }); break;
         case "test.create": put("test", { id: p.id, class_id: p.class_id, name: p.name, date: p.date, archived: false }); break;
         case "test.update": { const current = table("test").get(p.id); if (!current) return { id: command.id, status: "rejected", error: { code: "not_found", message: "not_found", request_id: "fake" } }; const { max: _oldMax, ...withoutMax } = current; const { max: _ignoredMax, ...patch } = p; put("test", { ...withoutMax, ...patch }); break; }
       case "test.delete": { const current = table("test").get(p.id); if (current?.archived) put("test", { ...current, archived: true }); else remove("test", p.id); break; }
         case "score.set": put("score", { test_id: p.test_id, student_id: p.student_id, value: p.value }); break;
-      case "slip.set": put("slip", { session_id: p.session_id, student_id: p.student_id, stars: p.stars, note: p.note, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); break;
+        case "slip.set": { const comment = typeof p.comment === "string" && !p.comment.trim() ? null : p.comment ?? null; const criteria = p.criteria ?? null; put("slip", { session_id: p.session_id, student_id: p.student_id, ...(criteria === null ? { stars: p.stars, scale: 3 } : { criteria, comment, scale: 5 }), note: p.note ?? "", status: "sent", sent_at: "2026-10-23T00:00:00Z" }); break; }
       case "slip.send": for (const studentId of p.student_ids) { const current = table("slip").get(`${p.session_id}|${studentId}`); if (current) put("slip", { ...current, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); } break;
       case "homework.assign": for (const s of p.sections) put("homework_section", { ...s, class_id: "class-1", session_id: p.session_id }); break;
       case "homework.section.upsert": { const session = table("class_session").get(p.session_id); put("homework_section", { ...p, class_id: session?.class_id ?? "class-1" }); break; }
@@ -105,7 +109,7 @@ export function createFakeServer() {
           if (body.commands.length > 50) return apiError(422, "validation_error");
           hooks.pushBatches.push(body.commands);
         const results = body.commands.map((command: Row) => {
-          const required: Record<string, string[]> = { "attendance.set": ["session_id", "student_id", "status"], "test.create": ["id", "class_id", "name", "date"], "test.update": ["id"], "test.delete": ["id"], "score.set": ["test_id", "student_id", "value"], "slip.set": ["session_id", "student_id", "stars", "note"], "slip.send": ["session_id", "student_ids"], "homework.assign": ["session_id", "sections"], "homework.section.upsert": ["id", "session_id", "kind", "title", "description"], "homework.section.delete": ["id"], "homework.grade.set": ["section_id", "student_id", "level"], "conflict.resolve": ["conflict_id", "choice"] };
+            const required: Record<string, string[]> = { "attendance.set": ["session_id", "student_id", "status"], "test.create": ["id", "class_id", "name", "date"], "test.update": ["id"], "test.delete": ["id"], "score.set": ["test_id", "student_id", "value"], "slip.set": ["session_id", "student_id", "criteria", "comment", "note"], "slip.send": ["session_id", "student_ids"], "homework.assign": ["session_id", "sections"], "homework.section.upsert": ["id", "session_id", "kind", "title", "description"], "homework.section.delete": ["id"], "homework.grade.set": ["section_id", "student_id", "level"], "conflict.resolve": ["conflict_id", "choice"] };
           if ((required[command.type] ?? []).some((key) => !Object.hasOwn(command.payload, key))) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "missing_required_field", request_id: "fake" } };
           const code = hooks.rejectCommand?.(command);
         return code ? { id: command.id, status: "rejected", error: { code, message: code, request_id: "fake" } } : apply(command);

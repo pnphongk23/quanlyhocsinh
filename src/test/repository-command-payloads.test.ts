@@ -13,7 +13,7 @@ const payloadFields = {
   "test.update": ["id", "name", "date"],
   "test.delete": ["id"],
   "score.set": ["test_id", "student_id", "value"],
-  "slip.set": ["session_id", "student_id", "stars", "note"],
+    "slip.set": ["session_id", "student_id", "criteria", "comment", "note"],
   "slip.send": ["session_id", "student_ids"],
   "homework.assign": ["session_id", "sections"],
   "homework.section.upsert": ["id", "session_id", "kind", "title", "description"],
@@ -24,7 +24,7 @@ const payloadFields = {
 const requiredFields = {
   "attendance.set": ["session_id", "student_id", "status"], "test.create": ["id", "class_id", "name", "date"],
   "test.update": ["id"], "test.delete": ["id"], "score.set": ["test_id", "student_id", "value"],
-  "slip.set": ["session_id", "student_id", "stars", "note"], "slip.send": ["session_id", "student_ids"],
+    "slip.set": ["session_id", "student_id", "criteria", "comment", "note"], "slip.send": ["session_id", "student_ids"],
   "homework.assign": ["session_id", "sections"], "homework.section.upsert": ["id", "session_id", "kind", "title", "description"],
   "homework.section.delete": ["id"], "homework.grade.set": ["section_id", "student_id", "level"],
   "conflict.resolve": ["conflict_id", "choice"],

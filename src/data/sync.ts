@@ -6,6 +6,7 @@ import { hydrateStore } from "./store";
 import { setRejectedCommands, setSaveStatus } from "./saveStatus";
 import { logoutLockKey } from "./outbox";
 import { classFromApi, reportBatchFromApi, reportFromApi } from "./api/mapping";
+import { starsFromCriteria } from "./slip";
 const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
 export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_BASE_URL || defaultBase, getToken: () => getToken() });
 let running: Promise<void> | null = null;
@@ -27,7 +28,7 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
     case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };
       case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, archived: item.archived, version: item.version };
     case "score": return { id: `${item.test_id}:${item.student_id}`, testId: item.test_id, studentId: item.student_id, value: item.value, version: item.version };
-    case "slip": return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, stars: item.stars, note: item.note, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at };
+      case "slip": { const scale = item.scale ?? (item.criteria == null ? 3 : 5); const criteria = item.criteria ?? null; return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, criteria, comment: item.comment ?? null, scale, stars: scale === 5 && criteria !== null ? starsFromCriteria(criteria) : item.stars ?? null, note: item.note ?? "", status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at }; }
     case "homework_section": return { id: item.id, sessionId: item.session_id, kind: item.kind, title: item.title, description: item.description, version: item.version };
     case "homework_grade": return { sectionId: item.section_id, studentId: item.student_id, level: item.level ?? null, version: item.version };
     case "report_batch": return reportBatchFromApi(item as unknown as ApiReportBatch);

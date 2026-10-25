@@ -65,7 +65,7 @@ export function scheduleText(weekdays: number[], time: string): string {
 /** Điểm gọn như "7,5"; null = "Chưa có điểm". */
 export const scoreText = formatScore;
 
-export const starText: Record<StarLevel, string> = {
+export const starText: Partial<Record<StarLevel, string>> = {
   1: "1 sao",
   2: "2 sao",
   3: "3 sao",

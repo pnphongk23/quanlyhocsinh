@@ -27,8 +27,8 @@ const FILES: Record<MascotPose, string> = {
 };
 
 /** Tư thế theo mức sao nhận xét; chưa chọn sao thì Mít đang chờ. */
-export function starPose(level: 1 | 2 | 3 | null): MascotPose {
-  return level === null ? "cho" : (`sao-${level}` as MascotPose);
+export function starPose(level: number | null): MascotPose {
+  return level === null ? "cho" : (`sao-${Math.max(1, Math.min(3, Math.round(level * 3 / 5)))}` as MascotPose);
 }
 
 /** Tỉ lệ rộng/cao của ảnh 1x (256 px cạnh dài), để chừa chỗ trước khi ảnh tải xong. */

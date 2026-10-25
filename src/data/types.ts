@@ -63,7 +63,8 @@ export interface Score {
   value: number | null;
 }
 
-export type StarLevel = 1 | 2 | 3;
+export type StarLevel = 0 | 1 | 2 | 3 | 4 | 5;
+export type SlipScale = 3 | 5;
 
 export interface Comment {
   id: string;
@@ -71,7 +72,13 @@ export interface Comment {
   studentId: string;
   /** Phiếu luôn thuộc đúng một buổi học. */
   sessionId: string;
-  /** null = chưa chọn sao (chưa gửi được). */
+  /** Bitmask tiêu chí mới (0..31); null cho phiếu cũ thang 3. */
+  criteria?: number | null;
+  /** Câu nhận xét riêng; null = dùng câu mặc định theo sao. */
+  comment?: string | null;
+  /** Thang phiếu; phiếu cũ mặc định là thang 3. */
+  scale?: SlipScale;
+  /** Sao hiển thị: client tính từ criteria hoặc giữ nguyên giá trị cũ thang 3. */
   stars: StarLevel | null;
   /** Ghi chú tự do, không bắt buộc. */
   note: string;
