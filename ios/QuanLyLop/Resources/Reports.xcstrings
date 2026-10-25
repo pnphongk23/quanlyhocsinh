@@ -638,6 +638,105 @@
           }
         }
       }
+    },
+    "reports.delete.action": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xoá báo cáo"
+          }
+        }
+      }
+    },
+    "reports.menu.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tuỳ chọn báo cáo"
+          }
+        }
+      }
+    },
+    "reports.delete.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xoá báo cáo này?"
+          }
+        }
+      }
+    },
+    "reports.delete.confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xoá báo cáo"
+          }
+        }
+      }
+    },
+    "reports.delete.keep": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữ báo cáo"
+          }
+        }
+      }
+    },
+    "reports.delete.message.draft": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo %@ là bản nháp. Xoá sẽ bỏ báo cáo của mọi học sinh trong đợt này."
+          }
+        }
+      }
+    },
+    "reports.delete.message.published": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo %@ đã phát hành. Xoá sẽ bỏ báo cáo của mọi học sinh trong đợt này, phụ huynh sẽ không còn thấy báo cáo này nữa."
+          }
+        }
+      }
+    },
+    "reports.delete.offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cần có mạng để xoá báo cáo. Kết nối mạng rồi thử lại."
+          }
+        }
+      }
+    },
+    "reports.error.delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không xoá được báo cáo. Thử lại sau."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
