@@ -33,9 +33,8 @@ struct TestsTabView: View {
         .background(AppColors.background.ignoresSafeArea())
         .overlay(alignment: .bottomTrailing) {
             if data.canWriteScores {
-                Button { showingCreate = true } label: { TeacherFab() }
+                Button { showingCreate = true } label: { TeacherFab(title: String(localized: "scores.fab.newTest")) }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(String(localized: "feature.scores.bai.moi"))
                     .accessibilityIdentifier("test.new")
                     .padding(.trailing, TeacherMetrics.fabTrailingInset)
                     .padding(.bottom, TeacherMetrics.fabBottomInset)

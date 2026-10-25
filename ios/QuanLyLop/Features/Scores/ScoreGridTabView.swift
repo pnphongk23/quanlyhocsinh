@@ -41,26 +41,27 @@ struct ScoreGridTabView: View {
                 if tests.isEmpty {
                     emptyState
                 } else {
-                    if data.canWriteScores { newButton }
                     tableCard
                 }
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, TeacherMetrics.screenPaddingTop)
-            .padding(.bottom, TeacherMetrics.contentGap * 2)
+            .padding(.bottom, data.canWriteScores ? TeacherMetrics.fabContentInset : TeacherMetrics.contentGap * 2)
         }
         .background(AppColors.background.ignoresSafeArea())
+        .overlay(alignment: .bottomTrailing) {
+            if data.canWriteScores {
+                Button { showingCreate = true } label: { TeacherFab(title: String(localized: "scores.fab.newTest")) }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("test.new")
+                    .padding(.trailing, TeacherMetrics.fabTrailingInset)
+                    .padding(.bottom, TeacherMetrics.fabBottomInset)
+            }
+        }
         .navigationDestination(isPresented: $showingCreate) {
             TestEditorView(data: data, classID: classID)
         }
         .task { await data.configure(auth: auth) }
-    }
-
-    private var newButton: some View {
-        HStack {
-            Spacer(minLength: 0)
-            AppButton(title: String(localized: "feature.scores.bai.kiem.tra.moi"), variant: .secondary) { showingCreate = true }
-        }
     }
 
     /// Both columns size every row from `Grid`, so a name and its scores share one baseline.

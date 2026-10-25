@@ -12,6 +12,9 @@ enum TeacherMetrics {
     static let tabBarHeight: CGFloat = 64
     static let contentGap: CGFloat = 12
     static let fabSize: CGFloat = 56
+    /// Horizontal padding and icon-to-text gap of a floating button that carries a label.
+    static let fabLabelPadding: CGFloat = 20
+    static let fabLabelGap: CGFloat = 8
     /// Space a list leaves at its end so the floating button never covers the last row.
     static let fabContentInset: CGFloat = 96
     static let fabTrailingInset: CGFloat = 20
@@ -234,15 +237,34 @@ struct TeacherIconButton: View {
 // MARK: - Floating action button (`fab.module.css`)
 
 struct TeacherFab: View {
+    /// Optional label: the button becomes a capsule showing "+ title" instead of a bare circle.
+    var title: String?
+
+    private let shadowColor = Color(red: 35 / 255, green: 71 / 255, blue: 230 / 255, opacity: 0.35)
+
     var body: some View {
-        Image(systemName: "plus")
-            .font(.system(size: 26, weight: .regular))
+        if let title {
+            HStack(spacing: TeacherMetrics.fabLabelGap) {
+                Image(systemName: "plus")
+                    .font(.system(size: 22, weight: .regular))
+                Text(title)
+                    .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 24))
+            }
             .foregroundStyle(AppColors.onPrimary)
-            .frame(width: TeacherMetrics.fabSize, height: TeacherMetrics.fabSize)
-            .background(AppColors.primary, in: Circle())
-            .shadow(color: Color(red: 35 / 255, green: 71 / 255, blue: 230 / 255, opacity: 0.35),
-                    radius: 16, x: 0, y: 6)
-            .accessibilityLabel(String(localized: "feature.classes.them"))
+            .padding(.horizontal, TeacherMetrics.fabLabelPadding)
+            .frame(height: TeacherMetrics.fabSize)
+            .background(AppColors.primary, in: Capsule())
+            .shadow(color: shadowColor, radius: 16, x: 0, y: 6)
+            .accessibilityElement(children: .combine)
+        } else {
+            Image(systemName: "plus")
+                .font(.system(size: 26, weight: .regular))
+                .foregroundStyle(AppColors.onPrimary)
+                .frame(width: TeacherMetrics.fabSize, height: TeacherMetrics.fabSize)
+                .background(AppColors.primary, in: Circle())
+                .shadow(color: shadowColor, radius: 16, x: 0, y: 6)
+                .accessibilityLabel(String(localized: "feature.classes.them"))
+        }
     }
 }
 

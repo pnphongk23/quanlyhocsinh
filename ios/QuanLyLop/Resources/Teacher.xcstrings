@@ -1,6 +1,13 @@
 {
   "sourceLanguage" : "vi",
   "strings" : {
+    "scores.fab.newTest" : {
+      "comment" : "Nhãn nút nổi tạo bài kiểm tra ở tab Điểm và tab Bài kiểm tra.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bài mới" } }
+      }
+    },
     "scores.assignDefault.button" : {
       "comment" : "Nút ở màn nhập điểm một bài: đặt điểm mặc định cho cả lớp.",
       "extractionState" : "manual",
