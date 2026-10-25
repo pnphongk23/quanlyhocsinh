@@ -458,6 +458,17 @@ describe('report batches by session range', () => {
     const staffCursor = await sync('snapshot', f.ws.token, admin);
     const guardianCursor = await sync('snapshot', f.guardianA, f.guardianAMembership);
 
+    const scoreInRange = async () => {
+      const range = (await db.prepare('SELECT from_key FROM report_batches WHERE id=?').bind(batchId).first<any>())!;
+      const testId = await insertTest(f.ws.workspaceId, f.classId, f.ws.userId, range.from_key.slice(0, 10));
+      const now = new Date().toISOString();
+      await db.prepare(`INSERT INTO scores(workspace_id,class_id,test_id,student_id,value,version,created_at,updated_at)
+        VALUES(?,?,?,?,5,1,?,?)`).bind(f.ws.workspaceId, f.classId, testId, f.students.a, now, now).run();
+      return (await db.prepare("SELECT count(*) n FROM reports WHERE batch_id=? AND status='published' AND needs_republish=1").bind(batchId).first<any>())!.n as number;
+    };
+    expect(await scoreInRange()).toBeGreaterThan(0);
+    await db.prepare('UPDATE reports SET needs_republish=0 WHERE batch_id=?').bind(batchId).run();
+
     const del = (token: string, id = batchId) => call(`/v1/report-batches/${id}`, { method: 'DELETE' }, token);
     expect((await del(f.guardianA)).status).toBe(403);
     expect((await del(f.teacherOther)).status).toBeGreaterThanOrEqual(403);
@@ -497,13 +508,8 @@ describe('report batches by session range', () => {
     await expect(db.prepare(`INSERT INTO report_publications(id,workspace_id,class_id,student_id,report_id,batch_id,month,publication_no,snapshot,published_by,published_at)
       SELECT ?,workspace_id,class_id,student_id,report_id,batch_id,month,98,'{}',published_by,published_at FROM report_publications WHERE batch_id=? LIMIT 1`)
       .bind(crypto.randomUUID(), batchId).run()).rejects.toThrow(/report_batch_deleted/);
-    const before = (await db.prepare("SELECT max(seq) m FROM change_log").first<any>())!.m;
-    await db.prepare("UPDATE reports SET needs_republish=0 WHERE batch_id=?").bind(batchId).run();
-    await db.prepare("UPDATE tests SET date=date WHERE class_id=?").bind(f.classId).run();
-    await db.prepare("UPDATE tests SET archived=archived WHERE class_id=?").bind(f.classId).run();
-    const touched = await db.prepare("SELECT count(*) n FROM reports WHERE batch_id=? AND needs_republish=1").bind(batchId).first<any>();
-    expect(touched!.n).toBe(0);
-    expect(before).toBeGreaterThan(0);
+    const flag = await scoreInRange();
+    expect(flag).toBe(0);
     const clientId = crypto.randomUUID();
     expect((await create('s1', 's2', f.ws.token, { id: clientId })).status).toBe(201);
     expect((await del(f.ws.token, clientId)).status).toBe(200);
