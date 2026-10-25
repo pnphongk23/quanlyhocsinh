@@ -211,7 +211,7 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual([classes.count,students.count,sessions.count,attendance.count,tests.count,scores.count,
                         slips.count,sections.count,grades.count,reports.count,publications.count], Array(repeating: 1, count: 11))
         XCTAssertEqual(sessions.first?.sessionNumber, 8)
-        XCTAssertEqual(tests.first?.name, "Fixture")
+        XCTAssertEqual(tests.first?.name, "Bài mẫu")
         XCTAssertEqual(publications.first?.snapshot.homework.first?.excellent, 4)
     }
     /// Pull value wins over an optimistic local cell, even at the same `version` (`-1` placeholder):
