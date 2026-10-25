@@ -1,6 +1,6 @@
 # Đặc tả: App quản lý lớp tiếng Anh
 
-Cập nhật: 2026-10-25 · Giáo viên xoá được báo cáo (nháp và đã phát hành, xoá mềm, có xác nhận). Bỏ hẳn điểm tối đa của bài kiểm tra: điểm 0..1000 bước 0,5, so sánh theo % so với bài trước; thêm nút "Gán điểm mặc định" (15) ở màn nhập điểm. Gửi phiếu nhận xét và lưu nhận xét chung của báo cáo cần có mạng, không xếp hàng; bản đầu chỉ tải PDF, tải ảnh để Làm sau. Trước đó 2026-10-24: Báo cáo do giáo viên tự thêm theo khoảng buổi (không theo tháng), xem trước trong popup; quên mật khẩu tự phục vụ qua link gửi email đã lưu trong tài khoản; trạng thái lưu hiện "Đã lưu"/"Chờ đồng bộ". Trước đó 2026-10-23: Phụ huynh được tự đăng ký bằng SĐT chưa khai cho học sinh; app báo "chưa có con nào được liên kết" và tự liên kết khi giáo viên khai số sau. Luồng mời đã gỡ hẳn. Các quyết định trước: đặt lại mật khẩu thủ công; PBKDF2 30.000 vòng; điểm bước 0,5; cảnh báo vắng và cách đánh số buổi theo prototype; lịch lặp áp dụng từ ngày mai khi buổi hôm nay đã có dữ liệu; PDF/ảnh tạo trên thiết bị, báo cáo xem từ bản chụp dữ liệu; mascot Mít là lớp trang trí; FCM, Cloudflare Worker + D1, iOS native dùng chung API với PWA/web, triển khai staging và phạm vi Bản đầu ở mục 8. Bài giảng, role tuỳ chỉnh, nhân sự, học phí và báo cáo điểm ngoài Bản đầu.
+Cập nhật: 2026-10-25 · Nhận xét theo 5 tiêu chí (mỗi tiêu chí đạt = 1 sao, 0–5, mặc định 5), câu mặc định theo số sao sửa được trên từng phiếu. Bỏ số buổi ở mọi nơi (hiện theo ngày); báo cáo thêm theo tháng. Giáo viên xoá được báo cáo (nháp và đã phát hành, xoá mềm, có xác nhận). Bỏ hẳn điểm tối đa của bài kiểm tra: điểm 0..1000 bước 0,5, so sánh theo % so với bài trước; thêm nút "Gán điểm mặc định" (15) ở màn nhập điểm. Gửi phiếu nhận xét và lưu nhận xét chung của báo cáo cần có mạng, không xếp hàng; bản đầu chỉ tải PDF, tải ảnh để Làm sau. Trước đó 2026-10-24: Báo cáo do giáo viên tự thêm theo khoảng buổi (không theo tháng), xem trước trong popup; quên mật khẩu tự phục vụ qua link gửi email đã lưu trong tài khoản; trạng thái lưu hiện "Đã lưu"/"Chờ đồng bộ". Trước đó 2026-10-23: Phụ huynh được tự đăng ký bằng SĐT chưa khai cho học sinh; app báo "chưa có con nào được liên kết" và tự liên kết khi giáo viên khai số sau. Luồng mời đã gỡ hẳn. Các quyết định trước: đặt lại mật khẩu thủ công; PBKDF2 30.000 vòng; điểm bước 0,5; cảnh báo vắng và cách đánh số buổi theo prototype; lịch lặp áp dụng từ ngày mai khi buổi hôm nay đã có dữ liệu; PDF/ảnh tạo trên thiết bị, báo cáo xem từ bản chụp dữ liệu; mascot Mít là lớp trang trí; FCM, Cloudflare Worker + D1, iOS native dùng chung API với PWA/web, triển khai staging và phạm vi Bản đầu ở mục 8. Bài giảng, role tuỳ chỉnh, nhân sự, học phí và báo cáo điểm ngoài Bản đầu.
 
 ## 1. Tổng quan
 
@@ -48,28 +48,34 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
 - Sửa điểm có ghi lịch sử.
 
 **Nhận xét và báo cáo**
-- Nhận xét sau buổi theo sao (đã chốt 2026-10-19): mỗi em mỗi buổi chọn một trong ba mức, mỗi mức có câu mẫu cố định, giáo viên không sửa câu mẫu:
-  - 3 sao: "Con hoàn thành 3 sao 🌟🌟🌟. Tập trung, tích cực học tập. Ghi bài đầy đủ, hiểu bài!"
-  - 2 sao: "Con hoàn thành 2 sao 🌟🌟. Ghi bài đầy đủ, tham gia hoạt động học tập. Còn mất trật tự."
-  - 1 sao: "Con chỉ đạt 1 sao 🌟. Chưa tập trung, nói chuyện làm việc riêng. Đã ghi chép bài đầy đủ."
-  - Kèm ô Ghi chú tự do, không bắt buộc. Phải chọn mức sao mới gửi được. Câu mẫu tự do cũ bỏ.
-- Phiếu buổi học (đã chốt 2026-10-19, đổi bố cục 2026-10-20): mỗi em mỗi buổi một phiếu gồm mức sao, câu mẫu, ghi chú và kết quả chấm BTVN buổi trước. Nút "Gửi phiếu cả lớp" ở tab Nhận xét gửi một lần mọi phiếu đã chọn sao, kèm kết quả BTVN đã chấm; phụ huynh nhận một thông báo cho mỗi buổi. Kết quả chấm BTVN đi theo phiếu, không gửi riêng.
+- Nhận xét sau buổi theo tiêu chí và sao (đã chốt 2026-10-25, thay thang 3 sao cũ): mỗi em mỗi buổi có 5 tiêu chí, mỗi tiêu chí đạt = 1 sao, số sao = số tiêu chí đạt (0–5). Phiếu mới mặc định đạt cả 5 tiêu chí (5 sao); giáo viên bỏ tích tiêu chí em chưa đạt. Năm tiêu chí:
+  - Chú ý nghe giảng; Ghi chép đầy đủ; Tham gia hoạt động sôi nổi; Không mất trật tự; Hoàn thành bài tập về nhà.
+- Câu nhận xét mặc định theo số sao, tự điền vào phiếu; giáo viên sửa được câu trên từng phiếu (chỉ phiếu đó):
+  - 5 sao: "Con học rất tốt, chăm chỉ, tích cực tham gia phát biểu"
+  - 4 sao: "Con học tốt, làm bài đầy đủ nhưng hơi trầm"
+  - 3 sao: "Con học tốt, nhưng còn hơi mất tập trung, nói tự do"
+  - 0–2 sao: "Con chưa tích cực tham gia hoạt động, cần tập trung hơn"
+  - Đổi tiêu chí làm đổi số sao: nếu giáo viên chưa sửa câu thì câu tự đổi theo mức mới; đã sửa thì giữ câu đã sửa (có nút "Dùng câu mặc định").
+  - Kèm ô Ghi chú tự do, không bắt buộc. Phụ huynh thấy số sao (x/5), câu nhận xét và ghi chú; không thấy danh sách tiêu chí.
+  - Phiếu cũ theo thang 3 sao giữ nguyên số sao và câu đã lưu (hiện theo thang cũ x/3); không quy đổi.
+- Phiếu buổi học (đã chốt 2026-10-19, đổi bố cục 2026-10-20): mỗi em mỗi buổi một phiếu gồm mức sao, câu mẫu, ghi chú và kết quả chấm BTVN buổi trước. Nút "Gửi phiếu cả lớp" ở tab Nhận xét gửi một lần mọi phiếu chưa gửi, kèm kết quả BTVN đã chấm; phụ huynh nhận một thông báo cho mỗi buổi. Kết quả chấm BTVN đi theo phiếu, không gửi riêng.
 - Màn buổi học có 3 tab ngang hàng: Điểm danh, Nhận xét, Bài tập về nhà (đã chốt 2026-10-20).
-  - Tab Nhận xét: danh sách học sinh (mức sao, trạng thái phiếu, tóm tắt kết quả BTVN buổi trước), bộ lọc Tất cả / Chưa chọn sao / Chưa gửi, nút Gửi phiếu cả lớp. Chạm vào một em: trên mobile mở bottom sheet để chọn sao, xem câu mẫu, nhập ghi chú; chấm BTVN không làm ở đây.
+  - Tab Nhận xét: danh sách học sinh (mức sao, trạng thái phiếu, tóm tắt kết quả BTVN buổi trước), bộ lọc Tất cả / Chưa gửi, nút Gửi phiếu cả lớp. Chạm vào một em: trên mobile mở bottom sheet để tích tiêu chí (ra số sao), xem và sửa câu nhận xét, nhập ghi chú; chấm BTVN không làm ở đây.
   - Tab Bài tập về nhà: hai phần "Bài tập buổi trước" (chấm) và "Bài tập hôm nay" (giao, thêm, sửa, xoá phần), mặc định mở "Bài tập buổi trước". Chấm theo từng phần: chọn một phần rồi chấm cả lớp trong một danh sách, mỗi em 3 mức, có thao tác đánh dấu cả lớp.
 - Nhận xét sau buổi chỉ gửi cho phụ huynh khi giáo viên bấm gửi.
 - Sau khi gửi, giáo viên vẫn sửa được phiếu (mức sao, ghi chú, chấm BTVN); phụ huynh thấy bản sửa ngay, không có bước gửi lại (đã chốt 2026-10-19).
 - Gửi phiếu khi em còn phần BTVN chưa chấm: được gửi, hộp xác nhận nhắc số phần chưa chấm; phụ huynh thấy "Chưa chấm" cho tới khi giáo viên chấm (đã chốt 2026-10-19).
 - Phiếu của một buổi chỉ gồm học sinh đang học vào ngày đó (ngày vào lớp ≤ ngày buổi ≤ ngày rời lớp); phiếu cũ của em đã nghỉ vẫn giữ (đã chốt 2026-10-19).
 - Báo cáo chỉ phụ huynh thấy sau khi giáo viên phát hành.
-- Nội dung báo cáo: chuyên cần, điểm từng bài, số buổi đạt 3/2/1 sao, kết quả BTVN theo từng phần (số lần Hoàn thành tốt / Hoàn thành / Chưa hoàn thành), nhận xét chung. BTVN không quy ra điểm. Có bản nháp, cho phép phát hành lại.
-- Kỳ báo cáo (đã chốt 2026-10-24, thay kỳ tháng/3 tháng): giáo viên tự thêm báo cáo ở tab Báo cáo của lớp, không có bộ chọn tháng. Bấm "Thêm báo cáo" → chọn buổi bắt đầu và buổi kết thúc (mỗi buổi hiện số và ngày; mặc định từ Buổi 1 tới buổi đã diễn ra gần nhất). Một lần thêm tạo báo cáo cho cả lớp: mỗi học sinh đang học trong khoảng đó một bản nháp riêng để viết nhận xét chung, xem trước, phát hành từng em hoặc cả lớp, phát hành lại. Dữ liệu (chuyên cần, điểm, sao, BTVN) tính trong các buổi thuộc khoảng đã chọn; buổi hủy bỏ qua. Các báo cáo được phép trùng khoảng. Tên báo cáo hiện theo khoảng, ví dụ "Buổi 1–8 · 01/10–24/10".
+- Nội dung báo cáo: chuyên cần, điểm từng bài, số buổi theo số sao (5 sao … 0 sao; phiếu cũ thang 3 sao đếm riêng theo thang cũ), kết quả BTVN theo từng phần (số lần Hoàn thành tốt / Hoàn thành / Chưa hoàn thành), nhận xét chung. BTVN không quy ra điểm. Có bản nháp, cho phép phát hành lại.
+- Kỳ báo cáo theo tháng (đã chốt 2026-10-25, thay khoảng buổi của 2026-10-24): giáo viên tự thêm báo cáo ở tab Báo cáo của lớp. Bấm "Thêm báo cáo" → chọn một tháng (mặc định tháng hiện tại). Một lần thêm tạo báo cáo cho cả lớp: mỗi học sinh đang học trong tháng đó một bản nháp riêng để viết nhận xét chung, xem trước, phát hành từng em hoặc cả lớp, phát hành lại. Dữ liệu (chuyên cần, điểm, sao, BTVN) tính trong các buổi thuộc tháng đã chọn; buổi hủy bỏ qua. Được thêm nhiều báo cáo cùng tháng. Tên báo cáo theo tháng, ví dụ "Tháng 10/2026". Báo cáo đã tạo theo khoảng buổi trước đây giữ nguyên tên cũ.
 - Xem trước báo cáo mở trong popup (hộp thoại trên desktop, sheet toàn màn trên mobile), không hiện nối bên dưới danh sách.
 - Xoá báo cáo (đã chốt 2026-10-25): ở tab Báo cáo, giáo viên xoá được một báo cáo (một lần thêm, gồm bản của mọi học sinh), kể cả báo cáo nháp lẫn đã phát hành. Hỏi xác nhận trước khi xoá; báo cáo đã phát hành thì hộp xác nhận nói rõ phụ huynh sẽ không còn thấy. Xoá mềm (ẩn khỏi giáo viên và phụ huynh, không xoá cứng dữ liệu), cần có mạng, không xếp hàng.
 
 **Bài tập về nhà (BTVN)** (đã chốt 2026-10-19)
 - Mỗi buổi học có hoặc không có BTVN. BTVN có 0..4 phần, mỗi loại tối đa một phần: Luyện từ vựng, Luyện đọc, Luyện nói, Bài tập. Mỗi phần có tiêu đề và mô tả (không bắt buộc), không có tệp đính kèm.
 - BTVN giao ở buổi N, chấm ở buổi kế tiếp của lớp (buổi N+1, bỏ qua buổi đã hủy). Buổi N+1 bị hủy thì buổi chấm tự chuyển sang buổi chưa hủy tiếp theo; lịch chưa có buổi nào sau N thì hiện "Chưa có buổi chấm".
+- Không hiện số buổi ở BTVN (đã chốt 2026-10-25): dùng "Bài tập buổi trước" / "Bài tập hôm nay", hoặc kèm ngày (ví dụ "BTVN ngày 21/10"); N, N+1 chỉ là cách gọi trong spec.
 - Sửa tiêu đề, mô tả phần BTVN lúc nào cũng được, phụ huynh thấy ngay. Chỉ xoá được phần chưa được chấm cho em nào (đã chốt 2026-10-19). Ở tab Bài tập về nhà của buổi N+1: phần "Bài tập buổi trước" là BTVN của buổi N để chấm, phần "Bài tập hôm nay" là BTVN giao mới.
 - Chấm từng học sinh theo từng phần, ba mức: Hoàn thành tốt, Hoàn thành, Chưa hoàn thành. Ô chưa chấm để trống ("Chưa chấm"). Em vắng buổi giao bài vẫn chấm như bình thường.
 - Phụ huynh thấy đề BTVN ngay khi giáo viên lưu (không cần bấm gửi). Kết quả chấm chỉ hiện cho phụ huynh khi giáo viên gửi.
@@ -143,10 +149,10 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | | Sửa, xoá (lưu trữ) bài kiểm tra | ✓ |
 | | Nhập điểm, bảng điểm cả lớp | ✓ |
 | | Sửa điểm có lịch sử | ✗ |
-| Nhận xét | Nhận xét sau buổi theo 3 mức sao + ghi chú, gửi phụ huynh | ◐ mobile, ✗ web |
+| Nhận xét | Nhận xét sau buổi theo 5 tiêu chí (0–5 sao), câu mặc định sửa được + ghi chú, gửi phụ huynh | ◐ mobile, ✗ web |
 | BTVN | Giao BTVN theo phần (tiêu đề, mô tả), chấm từng em từng phần 3 mức | ✗ |
 | | Nhận xét tổng hợp theo kỳ | ✗ |
-| Báo cáo | Thêm báo cáo theo khoảng buổi (mặc định từ Buổi 1), danh sách báo cáo của lớp, xem em nào đủ dữ liệu | ✓ |
+| Báo cáo | Thêm báo cáo theo tháng, danh sách báo cáo của lớp, xem em nào đủ dữ liệu | ✓ |
 | | Xem trước trong popup, phát hành, phát hành lại; tạo PDF trên thiết bị khi bấm tải | ◐ |
 | Phụ huynh | Nhập SĐT dùng để phụ huynh đăng ký và đăng nhập; hệ thống tự liên kết tài khoản khớp SĐT | ◐ |
 | Tài khoản | Giáo viên đăng ký workspace; phụ huynh tự đăng ký SĐT + mật khẩu, đổi mật khẩu, lưu email, quên mật khẩu qua link gửi email đã lưu, ngôn ngữ, cài đặt tài khoản | ✗ |
@@ -173,7 +179,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | BTVN | Xem đề BTVN ngay khi giao; xem kết quả chấm sau khi giáo viên gửi | ✗ |
 | | Nhận xét tổng hợp theo kỳ | ✗ |
 | Bài giảng | Xem bài giảng của buổi con đã học, nếu role phụ huynh được bật | ✗ |
-| Báo cáo | Danh sách báo cáo đã phát hành của con (theo khoảng buổi), xem từ bản chụp khi phát hành, tạo PDF trên thiết bị khi bấm tải và chia sẻ | ✓ |
+| Báo cáo | Danh sách báo cáo đã phát hành của con (theo tháng), xem từ bản chụp khi phát hành, tạo PDF trên thiết bị khi bấm tải và chia sẻ | ✓ |
 | Học phí | Xem phiếu học phí theo tháng, lịch sử đã thu (thiết kế trước) | ✗ |
 | Cài đặt | Hồ sơ, Việt/Anh, thông báo, đổi mật khẩu, đăng xuất | ◐ |
 
@@ -214,11 +220,11 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Lớp: tạo, sửa, lưu trữ lớp; không có thang điểm của lớp hay của bài.
 - Học sinh: thêm (kèm SĐT phụ huynh), sửa SĐT trên hồ sơ (gỡ liên kết phụ huynh cũ), đánh dấu nghỉ, giữ lịch sử; hồ sơ cơ bản.
 - Buổi học: tự sinh theo lịch lặp của lớp; hủy buổi bằng 1 nút; sửa lịch lặp của lớp. Giữ buổi đã diễn ra, buổi hủy, buổi lẻ và buổi hôm nay đã có dữ liệu; nếu buổi hôm nay đã có dữ liệu thì áp lịch mới từ ngày mai. Không sinh thêm buổi vào ngày đã có buổi của lớp (đã chốt 2026-10-22). Thêm buổi lẻ ngoài lịch lặp; màn Buổi học chia "buổi hiện tại" và "các buổi đã qua"; tab Lịch xem theo ngày và theo tháng (đã chốt 2026-10-18).
-- Điểm danh: 4 trạng thái, sửa sau lưu; cảnh báo khi hai buổi đã diễn ra gần nhất liên tiếp là Vắng (Có phép/Muộn không tính, buổi hủy bỏ qua, chỉ học sinh đang học; đã chốt 2026-10-22). Đánh số mọi buổi chưa hủy, kể cả buổi sắp tới; buổi hủy không số.
+- Điểm danh: 4 trạng thái, sửa sau lưu; cảnh báo khi hai buổi đã diễn ra gần nhất liên tiếp là Vắng (Có phép/Muộn không tính, buổi hủy bỏ qua, chỉ học sinh đang học; đã chốt 2026-10-22). Không đánh số buổi (đã chốt 2026-10-25): buổi học hiện bằng thứ và ngày, ví dụ "T3 · 21/10".
 - Điểm: tạo, sửa, xoá (lưu trữ) bài kiểm tra (tên, ngày); nhập điểm theo bước 0,5 trong 0..1000, nút "Gán điểm mặc định" (15, ghi đè, có xác nhận); ghi log sửa điểm trong DB.
-- Nhận xét sau buổi theo 3 mức sao + ghi chú, giáo viên bấm gửi.
+- Nhận xét sau buổi theo 5 tiêu chí (0–5 sao, mặc định 5), câu mặc định theo số sao sửa được trên từng phiếu + ghi chú, giáo viên bấm gửi.
 - BTVN: giao theo phần ở buổi N, chấm ở buổi N+1, phụ huynh xem đề và kết quả đã gửi.
-- Báo cáo do giáo viên tự thêm theo khoảng buổi (mặc định từ Buổi 1), xem trước trong popup (đã chốt 2026-10-24): xem trong app/web từ bản chụp dữ liệu lưu khi phát hành; có đếm sao và kết quả BTVN. Nút "Tải PDF" tạo file trên thiết bị khi bấm, không tải lên máy chủ. Xoá báo cáo (nháp hoặc đã phát hành, có xác nhận).
+- Báo cáo do giáo viên tự thêm theo tháng (đã chốt 2026-10-25), xem trước trong popup (đã chốt 2026-10-24): xem trong app/web từ bản chụp dữ liệu lưu khi phát hành; có đếm sao và kết quả BTVN. Nút "Tải PDF" tạo file trên thiết bị khi bấm, không tải lên máy chủ. Xoá báo cáo (nháp hoặc đã phát hành, có xác nhận).
 - Phụ huynh: xem điểm danh, điểm, nhận xét, BTVN, báo cáo của con; chuyển giữa các con.
 - Đăng nhập (đã chốt 2026-10-23): giáo viên tự đăng ký workspace bằng SĐT + mật khẩu, người tạo là Admin đầu tiên; phụ huynh được tự đăng ký SĐT + mật khẩu tự đặt cả khi chưa có học sinh khớp số. App báo "chưa có con nào được liên kết"; khi giáo viên khai SĐT sau, hệ thống tự liên kết học sinh trùng số. Tài khoản đã tồn tại có thể tạm không còn con sau khi SĐT bị đổi/gỡ. Giáo viên không quản lý mật khẩu; quên mật khẩu qua link gửi email đã lưu (đã chốt 2026-10-24), chưa có email thì người vận hành đặt lại thủ công. Người khác biết SĐT có thể đăng ký trước phụ huynh dự kiến; throttle theo IP, chấp nhận rủi ro tới phase OTP.
 - Hệ thống: phân quyền ở máy chủ, thông báo trong app và push bằng FCM (đã chốt 2026-10-21). Lược đồ dữ liệu có sẵn workspace, role, ma trận quyền và gán lớp ngay từ đầu (role mặc định cài sẵn); màn quản lý role và nhân sự làm sau.
