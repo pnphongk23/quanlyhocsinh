@@ -5,7 +5,7 @@ import { getStore } from "../store";
 import { commitState } from "../outbox";
 import { canAccessClass, requireClassAccess, requirePermission } from "./access";
 import { api } from "../sync";
-import { identityKey } from "../db";
+import { db, identityKey } from "../db";
 import { commitRemote, createOnce } from "./rest-cache";
 import { reportBatchFromApi, reportFromApi } from "../api/mapping";
 import { decodeServerReport, type ServerReport } from "../reportModel";
@@ -25,6 +25,45 @@ export const listReportBatches = (classId: string): ReportBatch[] =>
   canAccessClass(classId)
     ? getStore().reportBatches.filter((b) => b.classId === classId).sort(compareBatches)
     : [];
+
+/** Xoá mềm một đợt trên máy chủ rồi gỡ toàn bộ dữ liệu đợt khỏi cache máy hiện tại. */
+export async function deleteReportBatch(id: string): Promise<void> {
+  requirePermission("comments_reports", "write");
+  const batch = getReportBatch(id);
+  if (!batch) throw new Error("Không tìm thấy đợt báo cáo.");
+  requireClassAccess(batch.classId);
+  requireOnline("Xoá báo cáo");
+  const identity = identityKey();
+  try {
+    await call<{ id: string; deleted: true }>(`DELETE /report-batches/${id}`);
+  } catch (cause) {
+    if (!(cause instanceof ApiError && cause.status === 404)) {
+      throw new Error(reportErrorMessage(cause, "Không thể xoá báo cáo."));
+    }
+  }
+  if (identityKey() !== identity) return;
+
+  const cachedReports = await db.reports.where("identity").equals(identity).and((report) => report.batch_id === id).toArray();
+  const reportIds = new Set([
+    ...getStore().reports.filter((report) => report.batchId === id).map((report) => report.id),
+    ...cachedReports.map((report) => report.id),
+  ]);
+  await db.transaction("rw", [db.reportBatches, db.reports, db.reportPublications], async () => {
+    await db.reportBatches.where("identity").equals(identity).and((row) => row.id === id).delete();
+    await db.reports.where("identity").equals(identity).and((row) => row.batch_id === id).delete();
+    await db.reportPublications.where("identity").equals(identity)
+      .and((publication) => publication.batch_id === id || reportIds.has(publication.report_id))
+      .delete();
+  });
+  if (identityKey() !== identity) return;
+  commitState("report-batch-delete", id, (draft) => {
+    draft.reportBatches = draft.reportBatches.filter((item) => item.id !== id);
+    draft.reports = draft.reports.filter((item) => item.batchId !== id);
+    draft.reportPublications = draft.reportPublications.filter(
+      (publication) => publication.batch_id !== id && !reportIds.has(publication.report_id),
+    );
+  });
+}
 
 export function getReportBatch(id: string): ReportBatch | null {
   const batch = getStore().reportBatches.find((b) => b.id === id) ?? null;

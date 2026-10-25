@@ -106,10 +106,11 @@ describe("tạo đợt báo cáo theo khoảng buổi", () => {
 
 describe("nhận xét, xem trước và phát hành theo đợt", () => {
   const draft = (id: string, studentId: string, patch: object = {}) => ({ id, classId: "c1", studentId, batchId: "b1", month: "2026-10", status: "draft", needsRepublish: false, generalComment: "", publishedAt: null, ...patch });
-  const withBatch = (reports: object[]) => openStore({
+  const withBatch = (reports: object[], reportPublications: object[] = []) => openStore({
     students: [{ id: "st1", classId: "c1", name: "An", parentPhone: "", enrolledAt: "2026-09-01", leftAt: null, status: "active" }, { id: "st2", classId: "c1", name: "Bình", parentPhone: "", enrolledAt: "2026-09-01", leftAt: null, status: "active" }],
     reportBatches: [{ id: "b1", classId: "c1", fromSessionId: "s1", toSessionId: "s3", fromKey: "2026-10-01 18:00", toKey: "2026-10-08 18:00" }],
     reports,
+    reportPublications,
   });
 
   it("lưu nhận xét bằng PUT /reports/:id và nhận cờ phát hành lại của máy chủ", async () => {
@@ -212,5 +213,52 @@ describe("nhận xét, xem trước và phát hành theo đợt", () => {
     await reports.saveReportComment("r1", "x");
     await reports.publishReport("r1");
     expect(calls.map((c) => c.endpoint).filter((e) => /\/reports\/\d{4}-\d{2}/.test(e) || /report-preview/.test(e))).toEqual([]);
+  });
+
+  it("xoá đợt bằng DELETE trực tiếp rồi gỡ batch, reports và publications khỏi cache", async () => {
+    const publications = [{ id: "r2-1", report_id: "r2", batch_id: "b1", class_id: "c1", student_id: "st2", month: "2026-10", publication_no: 1, published_at: "2026-10-12T00:00:00Z", snapshot: {} }];
+    await withBatch([draft("r1", "st1"), draft("r2", "st2", { status: "published" })], publications);
+    const identity = identityKey();
+    await db.reportBatches.put({ key: `${identity}|report_batch|b1`, identity, entity: "report_batch", id: "b1", class_id: "c1", from_session_id: "s1", to_session_id: "s3", from_key: "2026-10-01 18:00", to_key: "2026-10-08 18:00" } as never);
+    await db.reports.bulkPut(["r1", "r2"].map((id) => ({ key: `${identity}|report|${id}`, identity, entity: "report", id, class_id: "c1", student_id: id === "r1" ? "st1" : "st2", batch_id: "b1", month: "2026-10" }) as never));
+    await db.reportPublications.put({ key: `${identity}|report_publication|r2-1`, identity, entity: "report_publication", ...publications[0] } as never);
+    const { deleteReportBatch } = await import("../data/repositories/reports");
+    const { getStore } = await import("../data/store");
+    await mockApi((endpoint) => { expect(endpoint).toBe("DELETE /report-batches/b1"); return { id: "b1", deleted: true }; });
+
+    await deleteReportBatch("b1");
+
+    expect(calls).toEqual([{ endpoint: "DELETE /report-batches/b1", body: undefined }]);
+    expect(getStore().reportBatches).toEqual([]);
+    expect(getStore().reports).toEqual([]);
+    expect(getStore().reportPublications).toEqual([]);
+    expect(await db.reportBatches.count()).toBe(0);
+    expect(await db.reports.count()).toBe(0);
+    expect(await db.reportPublications.count()).toBe(0);
+  });
+
+  it("coi 404 là đã xoá và gỡ dữ liệu cục bộ", async () => {
+    await withBatch([draft("r1", "st1")]);
+    const identity = identityKey();
+    await db.reportBatches.put({ key: `${identity}|report_batch|b1`, identity, entity: "report_batch", id: "b1", class_id: "c1", from_session_id: "s1", to_session_id: "s3", from_key: "2026-10-01 18:00", to_key: "2026-10-08 18:00" } as never);
+    const { deleteReportBatch } = await import("../data/repositories/reports");
+    const { getStore } = await import("../data/store");
+    await mockApi(() => { throw new ApiError(404, { code: "not_found", message: "gone", request_id: "r" }); });
+
+    await expect(deleteReportBatch("b1")).resolves.toBeUndefined();
+
+    expect(getStore().reportBatches).toEqual([]);
+    expect(await db.reportBatches.count()).toBe(0);
+  });
+
+  it("offline thì khoá việc xoá và không gọi máy chủ", async () => {
+    await withBatch([draft("r1", "st1")]);
+    const { deleteReportBatch } = await import("../data/repositories/reports");
+    await mockApi(() => undefined);
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+
+    await expect(deleteReportBatch("b1")).rejects.toThrow("Xoá báo cáo cần kết nối mạng.");
+
+    expect(calls).toHaveLength(0);
   });
 });

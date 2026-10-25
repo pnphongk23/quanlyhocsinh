@@ -25,6 +25,33 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("report_batch qua đồng bộ", () => {
+  it("xoá đợt qua REST và xoá batch, report, publication trên thiết bị khác khi pull", async () => {
+    const A = await bootDevice(server, "tA", teacherMe);
+    const B = await bootDevice(server, "tB", teacherMe);
+    server.put("report_batch", { id: "b1", class_id: "c1", from_session_id: "x1", to_session_id: "x3", from_key: "2020-01-06 09:00", to_key: "2020-01-20 09:00" });
+    server.put("report", { id: "r1", class_id: "c1", student_id: "s1", batch_id: "b1", month: "2020-01", status: "published", general_comment: "Tốt", needs_republish: false, publication_count: 1, published_at: "2020-01-21T00:00:00Z" });
+    server.put("report_publication", { id: "r1-1", report_id: "r1", batch_id: "b1", class_id: "c1", student_id: "s1", month: "2020-01", publication_no: 1, published_at: "2020-01-21T00:00:00Z", snapshot: {} });
+
+    await Promise.all([A.syncNow(), B.syncNow()]);
+    await Promise.all([A.hydrateStore(), B.hydrateStore()]);
+    expect(B.getStore().reportBatches.map((batch) => batch.id)).toEqual(["b1"]);
+    expect(B.getStore().reports.map((report) => report.id)).toEqual(["r1"]);
+    expect(B.getStore().reportPublications.map((publication) => publication.id)).toEqual(["r1-1"]);
+
+    const reports = await import("../data/repositories/reports");
+    await reports.deleteReportBatch("b1");
+    expect(server.requests.some((request) => request.method === "DELETE" && request.path === "/report-batches/b1")).toBe(true);
+    await B.syncNow();
+    await B.hydrateStore();
+
+    expect(B.getStore().reportBatches).toEqual([]);
+    expect(B.getStore().reports).toEqual([]);
+    expect(B.getStore().reportPublications).toEqual([]);
+    expect(await B.db.reportBatches.count()).toBe(0);
+    expect(await B.db.reports.count()).toBe(0);
+    expect(await B.db.reportPublications.count()).toBe(0);
+  });
+
   it("tạo đợt ở máy A thì máy B kéo về đợt và bản nháp có batchId, phát hành cả lớp cũng về B; phụ huynh không nhận đợt", async () => {
     const A = await bootDevice(server, "tA", teacherMe);
     const reports = await import("../data/repositories/reports");

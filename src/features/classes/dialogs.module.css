@@ -102,6 +102,12 @@
   background: var(--color-bg);
 }
 
+.menuItem:disabled {
+  color: var(--color-muted);
+  opacity: var(--state-disabled-opacity);
+  cursor: not-allowed;
+}
+
 .menuItem > span:first-child {
   flex: none;
   display: flex;

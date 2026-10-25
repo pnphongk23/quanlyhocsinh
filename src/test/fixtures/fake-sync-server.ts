@@ -139,8 +139,27 @@ export function createFakeServer() {
   /** Báo cáo theo đợt: tạo đợt (idempotent theo `id`), xem trước, lưu nhận xét, phát hành, danh sách và bản phát hành của phụ huynh. */
   const publications = new Map<string, Row>();
   const keyOfSession = (session: Row) => `${session.date} ${session.start_time}`;
-  function reportRoutes(path: string, method: string, query: Record<string, string>, body: Row, scope: Scope): Response | null {
-    const createBatch = path.match(/^\/classes\/([^/]+)\/report-batches$/);
+    function reportRoutes(path: string, method: string, query: Record<string, string>, body: Row, scope: Scope): Response | null {
+      const deleteBatch = path.match(/^\/report-batches\/([^/]+)$/);
+      if (deleteBatch && method === "DELETE") {
+        const batchId = deleteBatch[1];
+        const reportIds = new Set([...table("report").values()].filter((report) => report.batch_id === batchId).map((report) => report.id));
+        const removedPublications = new Set<string>();
+        for (const publication of table("report_publication").values()) {
+          if (publication.batch_id === batchId || reportIds.has(publication.report_id)) removedPublications.add(publication.id);
+        }
+        for (const [key, publication] of publications) {
+          if (publication.batch_id === batchId || reportIds.has(publication.report_id)) {
+            removedPublications.add(publication.id);
+            publications.delete(key);
+          }
+        }
+        for (const publicationId of removedPublications) remove("report_publication", publicationId);
+        for (const reportId of reportIds) remove("report", reportId);
+        remove("report_batch", batchId);
+        return json({ id: batchId, deleted: true });
+      }
+      const createBatch = path.match(/^\/classes\/([^/]+)\/report-batches$/);
     if (createBatch && method === "POST") {
       const from = table("class_session").get(body.from_session_id), to = table("class_session").get(body.to_session_id);
       if (!from || !to) return apiError(404, "not_found");
@@ -174,7 +193,8 @@ export function createFakeServer() {
     const publish = (report: Row, at: string) => {
       const no = report.publication_count + 1;
       const next = put("report", { ...report, status: "published", needs_republish: false, publication_count: no, published_at: at });
-      publications.set(`${report.id}|${no}`, { id: `${report.id}-${no}`, report_id: report.id, batch_id: report.batch_id, class_id: report.class_id, student_id: report.student_id, month: report.month, publication_no: no, published_at: at, snapshot: snapshotOf(report) });
+        const publication = put("report_publication", { id: `${report.id}-${no}`, report_id: report.id, batch_id: report.batch_id, class_id: report.class_id, student_id: report.student_id, month: report.month, publication_no: no, published_at: at, snapshot: snapshotOf(report) });
+        publications.set(`${report.id}|${no}`, publication);
       return { next, no };
     };
     const publishOne = path.match(/^\/reports\/([^/]+)\/publish$/);
