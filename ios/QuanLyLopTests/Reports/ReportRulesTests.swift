@@ -262,4 +262,11 @@ final class ReportRulesTests: XCTestCase {
         XCTAssertNil(ReportRules.draftAfterSave(draft: "A", saved: "A"))
         XCTAssertNil(ReportRules.draftAfterSave(draft: nil, saved: "A"))
     }
+
+    func testEmptyBatchShowsLoadingOrFailureBeforeEmpty() {
+        XCTAssertEqual(ReportRules.emptyDetail(loading: true, loadError: nil), .loading)
+        XCTAssertEqual(ReportRules.emptyDetail(loading: true, loadError: "x"), .loading)
+        XCTAssertEqual(ReportRules.emptyDetail(loading: false, loadError: "lỗi"), .failed("lỗi"))
+        XCTAssertEqual(ReportRules.emptyDetail(loading: false, loadError: nil), .empty)
+    }
 }

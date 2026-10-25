@@ -183,6 +183,19 @@ enum ReportRangeRules {
 enum ReportRules {
     static let republishNote = String(localized: "feature.reports.iem.co.cap.nhat.can.phat.hanh.lai")
 
+    /// What a batch with no student rows shows: a load in flight or a failed load comes before "empty".
+    enum EmptyDetail: Equatable {
+        case loading
+        case failed(String)
+        case empty
+    }
+
+    static func emptyDetail(loading: Bool, loadError: String?) -> EmptyDetail {
+        if loading { return .loading }
+        if let loadError { return .failed(loadError) }
+        return .empty
+    }
+
     /// The draft of a general comment once `saved` has been stored: dropped only while it still equals
     /// what was saved, so text typed during a slow save is kept for the next save.
     static func draftAfterSave(draft: String?, saved: String) -> String? {

@@ -11,6 +11,7 @@ struct ReportBatchDetailView: View {
     @State private var message: String?
     @State private var error: String?
     @State private var loadError: String?
+    @State private var loadingDetail = true
     @State private var skipped: [BatchPublishResponse.Skipped] = []
     @State private var publishing = false
     @State private var commentController = AppSaveController()
@@ -60,8 +61,15 @@ struct ReportBatchDetailView: View {
                 } else if batch == nil {
                     AppEmptyState(title: String(localized: "reports.detail.missing", table: "Reports"))
                 } else if rows.isEmpty {
-                    AppEmptyState(title: String(localized: "reports.detail.empty.title", table: "Reports"),
-                                  description: String(localized: "reports.detail.empty.hint", table: "Reports"))
+                    switch ReportRules.emptyDetail(loading: loadingDetail, loadError: loadError) {
+                    case .loading:
+                        HStack { Spacer(); AppSpinner(); Spacer() }.padding(.top, AppMetrics.sectionGap)
+                    case .failed(let message):
+                        AppErrorState(message: message) { Task { await reloadDetail() } }
+                    case .empty:
+                        AppEmptyState(title: String(localized: "reports.detail.empty.title", table: "Reports"),
+                                      description: String(localized: "reports.detail.empty.hint", table: "Reports"))
+                    }
                 } else {
                     VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
                         summaryLine(summary)
@@ -85,7 +93,7 @@ struct ReportBatchDetailView: View {
         .navigationTitle(range?.label ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom) { publishBar(summary) }
-        .task { loadError = await data.loadBatchDetail(batchID: batchID)?.message }
+        .task { await reloadDetail() }
         .fullScreenCover(item: $preview) { target in
             ReportPreviewScreen(target: target, data: data, className: klass?.name ?? "") { number in
                 message = String(localized: "feature.reports.a.phat.hanh.bao.cao")
@@ -93,6 +101,14 @@ struct ReportBatchDetailView: View {
                 _ = number
             }
         }
+    }
+
+    /// Reads the batch from the server; a failure stays visible, with a retry, even when no row exists yet.
+    private func reloadDetail() async {
+        loadingDetail = true
+        loadError = nil
+        loadError = await data.loadBatchDetail(batchID: batchID)?.message
+        loadingDetail = false
     }
 
     private func summaryLine(_ summary: (total: Int, ready: Int, missing: Int, published: Int, publishable: Int)) -> some View {
@@ -120,7 +136,7 @@ struct ReportBatchDetailView: View {
                 Text(skippedLine(item)).appText(AppText.muted).foregroundStyle(AppColors.muted)
             }
         }
-        if let loadError { TeacherErrorBanner(message: loadError) }
+        if let loadError { TeacherErrorBanner(message: loadError) { Task { await reloadDetail() } } }
         if let error { TeacherErrorBanner(message: error) }
     }
 
@@ -260,7 +276,7 @@ struct ReportBatchDetailView: View {
             }
             // Rows left out (and the ones just published) show what the server holds now, not the
             // state from before the call.
-            loadError = await data.loadBatchDetail(batchID: batchID)?.message
+            await reloadDetail()
             publishing = false
         }
     }
