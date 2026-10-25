@@ -73,6 +73,26 @@ final class SlipRulesTests: XCTestCase {
         XCTAssertEqual(SlipRules.commentLength(" abc "), 3)
     }
 
+    /// The worker counts UTF-16 code units (`string.length`), so the app must too.
+    func testCommentLengthIsInUTF16UnitsLikeTheWorker() {
+        let emoji = "\u{1F600}"
+        XCTAssertEqual(SlipRules.commentLength(emoji), 2)
+        XCTAssertFalse(SlipRules.isCommentTooLong(String(repeating: emoji, count: 150)))
+        XCTAssertTrue(SlipRules.isCommentTooLong(String(repeating: emoji, count: 150) + "a"))
+        XCTAssertTrue(SlipRules.isCommentTooLong(String(repeating: emoji, count: 151)))
+        XCTAssertFalse(SlipRules.isCommentTooLong(String(repeating: emoji, count: 149) + "ab"))
+    }
+
+    func testVietnameseCountsDifferByNormalizationForm() {
+        let composed = "\u{1EAF}"
+        let decomposed = "a\u{0306}\u{0301}"
+        XCTAssertEqual(SlipRules.commentLength(composed), 1)
+        XCTAssertEqual(SlipRules.commentLength(decomposed), 3)
+        XCTAssertFalse(SlipRules.isCommentTooLong(String(repeating: composed, count: 300)))
+        XCTAssertFalse(SlipRules.isCommentTooLong(String(repeating: decomposed, count: 100)))
+        XCTAssertTrue(SlipRules.isCommentTooLong(String(repeating: decomposed, count: 101)))
+    }
+
     func testAnyTextTheTeacherEntersOrPastesIsKeptAndFlaggedWhenTooLong() {
         // Replacing a full sentence by a paste only one character longer must not be undone.
         let replaced = String(repeating: "b", count: SlipRules.maxCommentLength + 1)

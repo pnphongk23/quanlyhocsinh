@@ -46,9 +46,10 @@ enum SlipRules {
         return trimmed
     }
 
-    /// Length the server counts: the sentence is saved trimmed.
+    /// Length the server counts: UTF-16 code units of the trimmed sentence (`comment.trim().length` in the
+    /// worker), not characters, so an emoji is 2 and a decomposed Vietnamese letter is 2 or 3.
     static func commentLength(_ text: String) -> Int {
-        text.trimmingCharacters(in: .whitespacesAndNewlines).count
+        text.trimmingCharacters(in: .whitespacesAndNewlines).utf16.count
     }
 
     static func isCommentTooLong(_ text: String) -> Bool { commentLength(text) > maxCommentLength }
