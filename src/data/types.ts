@@ -82,6 +82,8 @@ export interface Comment {
   stars: StarLevel | null;
   /** Ghi chú tự do, không bắt buộc. */
   note: string;
+  /** BTVN do giáo viên tích/bỏ tích bằng tay; false cho mặc định tự tính. */
+  hwManual: boolean;
   /** sent = phụ huynh đã thấy; draft = nháp (có thể đang chờ mạng). */
   status: "draft" | "sent";
   /** Đã bấm gửi lúc mất mạng: sẽ tự gửi khi có mạng. */

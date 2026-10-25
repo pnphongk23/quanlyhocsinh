@@ -3,6 +3,7 @@ import type { CommandPayloads } from "../data/api/types";
 import { createFakeServer } from "./fixtures/fake-sync-server";
 import { bootDevice, meFor, staffMembership } from "./fixtures/device";
 import { todayISO } from "../shared/date";
+import { generatedSlipSentence } from "../data/slip";
 
 process.env.TZ = "Asia/Ho_Chi_Minh";
 
@@ -13,7 +14,7 @@ const payloadFields = {
   "test.update": ["id", "name", "date"],
   "test.delete": ["id"],
   "score.set": ["test_id", "student_id", "value"],
-    "slip.set": ["session_id", "student_id", "criteria", "comment", "note"],
+    "slip.set": ["session_id", "student_id", "criteria", "comment", "note", "hw_manual"],
   "slip.send": ["session_id", "student_ids"],
   "homework.assign": ["session_id", "sections"],
   "homework.section.upsert": ["id", "session_id", "kind", "title", "description"],
@@ -24,7 +25,7 @@ const payloadFields = {
 const requiredFields = {
   "attendance.set": ["session_id", "student_id", "status"], "test.create": ["id", "class_id", "name", "date"],
   "test.update": ["id"], "test.delete": ["id"], "score.set": ["test_id", "student_id", "value"],
-    "slip.set": ["session_id", "student_id", "criteria", "comment", "note"], "slip.send": ["session_id", "student_ids"],
+      "slip.set": ["session_id", "student_id", "comment", "note"], "slip.send": ["session_id", "student_ids"],
   "homework.assign": ["session_id", "sections"], "homework.section.upsert": ["id", "session_id", "kind", "title", "description"],
   "homework.section.delete": ["id"], "homework.grade.set": ["section_id", "student_id", "level"],
   "conflict.resolve": ["conflict_id", "choice"],
@@ -46,16 +47,16 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("repository command payload contracts", () => {
-  it("keeps slip comments longer than 300 characters in the outgoing payload", async () => {
+  it("generates the slip comment from criteria and ignores caller-supplied text", async () => {
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
     const { saveSessionCommentDurable } = await import("../data/repositories/comments");
     const longComment = "Nhận xét ".repeat(40);
 
-    await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 31, comment: longComment, note: "" });
-    await d.syncNow();
+      await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 31, comment: longComment, note: "" });
+      await d.syncNow();
 
-    expect(server.rows.get("slip")?.get("session-1|s1")?.comment).toBe(longComment);
+      expect(server.rows.get("slip")?.get("session-1|s1")?.comment).toBe(generatedSlipSentence(31));
   });
 
   it.each(["2026-10-24T17:30:00.000Z", "2026-10-24T23:59:00.000Z"])(
@@ -87,17 +88,23 @@ describe("repository command payload contracts", () => {
       import("../data/repositories/homework"),
     ]);
   await tests.createTestDurable({ classId: "c1", name: "New", date: "2026-10-20" });
-    await tests.updateTestDurable("test-1", { name: "Quiz updated" });
-    await scores.saveScoreDurable({ testId: "test-1", studentId: "s1", value: 7 });
-    await attendance.saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "present", note: "", lateAt: null });
-    await comments.saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", stars: 3, note: "" });
-    await comments.sendSessionTicketsDurable("session-1", ["s1"]);
+      await tests.updateTestDurable("test-1", { name: "Quiz updated" });
+      await scores.saveScoreDurable({ testId: "test-1", studentId: "s1", value: 7 });
+      await attendance.saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "present", note: "", lateAt: null });
+      await comments.sendSessionTicketsDurable("session-1", ["s1"]);
+        await comments.saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", stars: 3, note: "" });
+        await d.syncNow();
+        await comments.saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 15, note: "Ghi chú tay", hwManual: true });
     const section = await homework.saveHomeworkSectionDurable({ sessionId: "session-1", kind: "vocabulary", title: "Words" });
     await homework.setHomeworkGradeDurable(section.id, "s1", "done");
     await homework.setHomeworkGradeDurable(section.id, "s1", null);
     await homework.deleteHomeworkSectionDurable(section.id);
     await tests.deleteTestDurable("test-1");
-    await d.syncNow();
+      await d.syncNow();
+
+      const slipCommands = emitted.filter((command) => command.type === "slip.set");
+      expect(slipCommands[0].payload).not.toHaveProperty("hw_manual");
+      expect(slipCommands[1].payload).toHaveProperty("hw_manual", true);
 
     const sentTypes = new Set(emitted.map((command) => command.type));
     expect([...sentTypes]).toEqual(expect.arrayContaining([
@@ -108,5 +115,70 @@ describe("repository command payload contracts", () => {
       for (const key of requiredFields[command.type]) expect(Object.hasOwn(command.payload, key), `${command.type} missing ${String(key)}`).toBe(true);
       for (const key of Object.keys(command.payload)) expect(payloadFields[command.type], `${command.type} unexpected ${key}`).toContain(key);
     }
+  });
+
+  it("keeps comment while editing note and regenerates it when criteria changes", async () => {
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { saveSessionCommentDurable } = await import("../data/repositories/comments");
+    const { getStore } = await import("../data/store");
+
+    const initial = await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 31, comment: "caller text", note: "first" });
+    await d.syncNow();
+    const noteEdit = await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", note: "second" });
+    await d.syncNow();
+    const criteriaEdit = await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 15, comment: "also ignored", note: "second" });
+    await d.syncNow();
+
+    expect(initial.comment).toBe(generatedSlipSentence(31));
+    expect(noteEdit.comment).toBe(initial.comment);
+    expect(criteriaEdit.comment).toBe(generatedSlipSentence(15));
+    expect(getStore().comments[0]).toMatchObject({ comment: generatedSlipSentence(15), note: "second" });
+    expect(server.rows.get("slip")?.get("session-1|s1")?.comment).toBe(generatedSlipSentence(15));
+    expect(server.hooks.pushBatches.flat().find((command) => command.type === "slip.set" && command.payload.note === "second")?.payload).not.toHaveProperty("criteria");
+  });
+
+  it("keeps a legacy hand-written comment when only note changes", async () => {
+    server.put("slip", { session_id: "session-1", student_id: "s1", criteria: 31, comment: "Câu tay cũ", note: "old", status: "sent", sent_at: null });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { saveSessionCommentDurable } = await import("../data/repositories/comments");
+
+    const saved = await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", note: "Ghi chú mới" });
+    await d.syncNow();
+
+    expect(saved.comment).toBe("Câu tay cũ");
+    expect(server.rows.get("slip")?.get("session-1|s1")?.comment).toBe("Câu tay cũ");
+  });
+
+  it("maps hw_manual 0, 1, and missing to false, true, and false", async () => {
+    server.put("slip", { session_id: "session-1", student_id: "s1", criteria: 31, comment: "old", note: "", status: "sent", sent_at: null, hw_manual: 0 });
+    server.put("slip", { session_id: "session-1", student_id: "s2", criteria: 31, comment: "old", note: "", status: "sent", sent_at: null, hw_manual: 1 });
+    server.put("slip", { session_id: "session-1", student_id: "s3", criteria: 31, comment: "old", note: "", status: "sent", sent_at: null });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { getStore } = await import("../data/store");
+
+    expect(getStore().comments.map(({ studentId, hwManual }) => [studentId, hwManual])).toEqual([["s1", false], ["s2", true], ["s3", false]]);
+  });
+
+  it("rejects a non-boolean hw_manual in the fake sync server", async () => {
+    const response = await server.fetch("http://fake.local/v1/sync/push", {
+      method: "POST",
+      headers: { Authorization: "Bearer t", "Content-Type": "application/json" },
+      body: JSON.stringify({ commands: [{ id: "bad-hw-manual", type: "slip.set", payload: { session_id: "session-1", student_id: "s1", criteria: 31, comment: null, note: "", hw_manual: 1 } }] }),
+    });
+
+    expect((await response.json() as any).results[0]).toMatchObject({ status: "rejected", error: { code: "invalid_hw_manual" } });
+  });
+
+  it("does not expose criteria or hw_manual in guardian snapshots", async () => {
+    server.put("slip", { session_id: "session-1", student_id: "s1", criteria: 31, comment: "generated", note: "", status: "sent", sent_at: null, hw_manual: true });
+    server.tokens.set("parent", { membershipId: "m-parent", studentIds: new Set(["s1"]) });
+    const response = await server.fetch("http://fake.local/v1/sync/snapshot/slip", { headers: { Authorization: "Bearer parent" } });
+    const slip = (await response.json() as any).items[0];
+
+    expect(slip).not.toHaveProperty("criteria");
+    expect(slip).not.toHaveProperty("hw_manual");
   });
 });

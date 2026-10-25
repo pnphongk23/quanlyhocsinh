@@ -33,7 +33,7 @@ function row(
   const who = student(name);
   return {
     student: who,
-      comment: options.status === "sent" || options.status === "draft" || options.status === "queued" ? ({ id: name, classId: "6a", studentId: name, sessionId: "session", criteria: 31, comment: null, scale: 5, stars: options.stars ?? 5, note: "", status: options.status === "sent" ? "sent" : "draft", sendQueued: options.status === "queued", sentAt: options.sentAt ?? null, updatedAt: "", createdAt: "" }) : null,
+        comment: options.status === "sent" || options.status === "draft" || options.status === "queued" ? ({ id: name, classId: "6a", studentId: name, sessionId: "session", criteria: 31, comment: null, scale: 5, stars: options.stars ?? 5, note: "", hwManual: false, status: options.status === "sent" ? "sent" : "draft", sendQueued: options.status === "queued", sentAt: options.sentAt ?? null, updatedAt: "", createdAt: "" }) : null,
       stars: options.stars ?? null,
       attended: options.attended ?? false,
     status: options.status ?? (options.stars ? "draft" : "none"),

@@ -17,7 +17,7 @@ beforeEach(async () => {
   const session = seed.sessions.find((item) => item.id === "6a-session-7")!;
   seed.comments = [{
     id: `${session.id}:6a-student-0`, classId: "6a", sessionId: session.id,
-    studentId: "6a-student-0", stars: 3, note: "", status: "draft",
+      studentId: "6a-student-0", stars: 3, note: "", hwManual: false, status: "draft",
     sendQueued: false, sentAt: null, updatedAt: "2026-10-14", createdAt: "2026-10-14",
   }];
   replaceStore(seed);

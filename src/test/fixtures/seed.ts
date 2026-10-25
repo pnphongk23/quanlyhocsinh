@@ -34,9 +34,9 @@ export function createSeed(): StoreState {
     for (const [index, stars] of [3,2,1,3].entries()) {
       const sessionIndex = index + 4;
       const sentAt = `${dates[sessionIndex]}T13:14:00.000Z`;
-        state.comments.push({id:`fixture-comment-${index}`,classId:"6a",studentId:"6a-student-1",sessionId:`6a-session-${sessionIndex}`,criteria:null,comment:null,scale:3,stars:stars as 1|2|3,note:"Ghi chú kiểm thử.",status:"sent",sendQueued:false,sentAt,updatedAt:sentAt,createdAt:sentAt});
+          state.comments.push({id:`fixture-comment-${index}`,classId:"6a",studentId:"6a-student-1",sessionId:`6a-session-${sessionIndex}`,criteria:null,comment:null,scale:3,stars:stars as 1|2|3,note:"Ghi chú kiểm thử.",hwManual:false,status:"sent",sendQueued:false,sentAt,updatedAt:sentAt,createdAt:sentAt});
     }
-      state.comments.push({id:"fixture-comment-class-2",classId:"6a",studentId:"6a-student-2",sessionId:"6a-session-7",criteria:null,comment:null,scale:3,stars:2,note:"Phiếu kiểm thử.",status:"sent",sendQueued:false,sentAt:"2026-10-14T13:14:00.000Z",updatedAt:"2026-10-14T13:14:00.000Z",createdAt:"2026-10-14T13:14:00.000Z"});
+        state.comments.push({id:"fixture-comment-class-2",classId:"6a",studentId:"6a-student-2",sessionId:"6a-session-7",criteria:null,comment:null,scale:3,stars:2,note:"Phiếu kiểm thử.",hwManual:false,status:"sent",sendQueued:false,sentAt:"2026-10-14T13:14:00.000Z",updatedAt:"2026-10-14T13:14:00.000Z",createdAt:"2026-10-14T13:14:00.000Z"});
     state.homeworkSections.push({id:"fixture-hw-vocab",sessionId:"6a-session-6",kind:"vocabulary",title:"Từ vựng kiểm thử",description:""},{id:"fixture-hw-exercise",sessionId:"6a-session-6",kind:"exercise",title:"Bài tập kiểm thử",description:""});
     state.homeworkSections.push({id:"fixture-hw-next-vocab",sessionId:"6a-session-7",kind:"vocabulary",title:"Từ vựng ngày 19/10",description:""},{id:"fixture-hw-next-exercise",sessionId:"6a-session-7",kind:"exercise",title:"Bài tập ngày 19/10",description:""});
   const grade=(sectionId:string, studentIds:string[],level:HomeworkGrade["level"])=>studentIds.forEach(studentId=>state.homeworkGrades.push({sectionId,studentId,level}));
