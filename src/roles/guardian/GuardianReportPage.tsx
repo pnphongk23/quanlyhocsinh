@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ApiError } from "../../data/api/client";
 import { formatScore } from "../../data/scoreFormat";
 import {
   getChildReport,
@@ -10,6 +11,7 @@ import {
 import { Button, Card, EmptyState, PageHeader, Spinner } from "../../shared/ui";
 import { motionClass } from "../../shared/motion";
 import { useGuardianContext } from "./guardianContext";
+import { useStore } from "../../data/store";
 import { longDayMonth } from "./guardianFormat";
 import GuardianIcon from "./GuardianIcon";
 import { ChildEmpty, GuardianPill, StarRow, useBackTarget } from "./guardianUi";
@@ -152,29 +154,74 @@ function ReportDetail({
   const [report, setReport] = useState<ChildReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [removed, setRemoved] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const reportRef = useRef<ChildReport | null>(null);
+  const checking = useRef(false);
+  const store = useStore();
+  const storeRows = useRef({ reports: store.reports, reportBatches: store.reportBatches, reportPublications: store.reportPublications });
+  reportRef.current = report;
+
+  const load = useCallback(async (initial = false) => {
+    if (checking.current) return;
+    checking.current = true;
+    if (initial) { setLoading(true); setLoadError(""); }
+    try {
+      const value = await getChildReport(studentId, reportId, publicationNo);
+      if (value === null) {
+        reportRef.current = null;
+        setReport(null);
+        setRemoved(true);
+      } else {
+        reportRef.current = value;
+        setReport(value);
+        setRemoved(false);
+      }
+      setLoadError("");
+    } catch (cause) {
+      if (cause instanceof ApiError && [404, 410].includes(cause.status)) {
+        reportRef.current = null;
+        setReport(null);
+        setRemoved(true);
+        setLoadError("");
+      } else if (!reportRef.current) {
+        setLoadError(cause instanceof Error ? cause.message : "Không đọc được báo cáo của con.");
+      }
+    } finally {
+      checking.current = false;
+      setLoading(false);
+    }
+  }, [studentId, reportId, publicationNo]);
+
+  useEffect(() => { void load(true); }, [load, attempt]);
 
   useEffect(() => {
-    let current = true;
-    setLoading(true);
-    setLoadError("");
-    getChildReport(studentId, reportId, publicationNo).then(
-      (value) => {
-        if (!current) return;
-        setReport(value);
-        setLoading(false);
-      },
-      (cause) => {
-        if (!current) return;
-        setReport(null);
-        setLoading(false);
-        setLoadError(cause instanceof Error ? cause.message : "Không đọc được báo cáo của con.");
-      },
-    );
+    const checkWhenVisible = () => { if (document.visibilityState === "visible") void load(); };
+    window.addEventListener("focus", checkWhenVisible);
+    document.addEventListener("visibilitychange", checkWhenVisible);
     return () => {
-      current = false;
+      window.removeEventListener("focus", checkWhenVisible);
+      document.removeEventListener("visibilitychange", checkWhenVisible);
     };
-  }, [studentId, reportId, publicationNo, attempt]);
+  }, [load]);
+
+  useEffect(() => {
+    const previous = storeRows.current;
+    const changed = previous.reports !== store.reports || previous.reportBatches !== store.reportBatches || previous.reportPublications !== store.reportPublications;
+    storeRows.current = { reports: store.reports, reportBatches: store.reportBatches, reportPublications: store.reportPublications };
+    if (changed && reportRef.current) void load();
+  }, [store.reports, store.reportBatches, store.reportPublications, load]);
+
+  if (removed) {
+    return (
+      <main className={g.page}>
+        <PageHeader backTo="/ph/bao-cao" eyebrow={childName} title="Báo cáo" />
+        <ChildEmpty title="Báo cáo này không còn">
+          <Link to="/ph/bao-cao">Quay lại danh sách báo cáo</Link>
+        </ChildEmpty>
+      </main>
+    );
+  }
 
   if (loading || loadError || !report) {
     return (
@@ -187,12 +234,12 @@ function ReportDetail({
             <p className={g.error} role="alert">
               {loadError}
             </p>
-            <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
+              <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
               Thử lại
             </Button>
           </>
         ) : (
-          <ChildEmpty title="Chưa có báo cáo này">
+            <ChildEmpty title="Báo cáo này không còn">
             <p>Báo cáo hiện ở đây sau khi cô phát hành cho phụ huynh.</p>
           </ChildEmpty>
         )}

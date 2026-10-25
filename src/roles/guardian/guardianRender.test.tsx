@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { ReactElement } from "react";
 import { MEMBER_IDS } from "../../data/defaults";
+import { ApiError } from "../../data/api/client";
 import { createSeed } from "../../data/seed";
 import { getStore, replaceStore } from "../../data/store";
 import { switchRole } from "../../data/repositories/access";
@@ -593,6 +594,46 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
     expect(text).not.toContain("Điểm có cập nhật, cần phát hành lại");
   });
 
+  it("ẩn báo cáo và PDF sau khi lần kiểm tra lại trả 404", async () => {
+    seedGuardian();
+    let reads = 0;
+    const spy = await mockApi(() => {
+      reads += 1;
+      if (reads === 1) return { student_id: "6a-student-1", published_at: "2026-10-25T09:00:00Z", snapshot };
+      throw new ApiError(404, { code: "not_found", message: "not found", request_id: "fake" });
+    });
+    renderAt("/ph/bao-cao/r-new/1");
+    expect(await screen.findByText("Điểm từng bài")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Tải PDF về máy" })).toBeVisible();
+
+    window.dispatchEvent(new Event("focus"));
+
+    expect(await screen.findByText("Báo cáo này không còn")).toBeVisible();
+    expect(spy).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Điểm từng bài")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Tải PDF về máy" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Quay lại danh sách báo cáo" })).toHaveAttribute("href", "/ph/bao-cao");
+  });
+
+  it("giữ báo cáo đang xem khi lần kiểm tra lại gặp lỗi mạng", async () => {
+    seedGuardian();
+    let reads = 0;
+    const spy = await mockApi(() => {
+      reads += 1;
+      if (reads === 1) return { student_id: "6a-student-1", published_at: "2026-10-25T09:00:00Z", snapshot };
+      throw new TypeError("network");
+    });
+    renderAt("/ph/bao-cao/r-new/1");
+    expect(await screen.findByText("Điểm từng bài")).toBeVisible();
+
+    window.dispatchEvent(new Event("focus"));
+
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Điểm từng bài")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Tải PDF về máy" })).toBeVisible();
+    expect(screen.queryByText("Báo cáo này không còn")).toBeNull();
+  });
+
   it("cờ cập nhật hiện khi báo cáo đã đồng bộ về máy có cờ phát hành lại", async () => {
     seedGuardian();
     const state = createSeed();
@@ -608,7 +649,7 @@ describe("PH · Báo cáo theo khoảng buổi (ảnh 10)", () => {
     seedGuardian();
     await mockApi(() => ({ student_id: "6a-student-2", published_at: "2026-10-25T09:00:00Z", snapshot }));
     renderAt("/ph/bao-cao/r-other/1");
-    expect(await screen.findByText("Chưa có báo cáo này")).toBeVisible();
+    expect(await screen.findByText("Báo cáo này không còn")).toBeVisible();
     expect(document.body.textContent).not.toContain("Con học tập chăm chỉ.");
     cleanup();
     await mockApi(() => ({ student_id: "6a-student-1", published_at: null, snapshot: { month: "2026-10", attendance: {} } }));

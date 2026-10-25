@@ -534,12 +534,10 @@ export async function getChildReport(studentId: string, reportId: string, public
   if (typeof navigator !== "undefined" && !navigator.onLine) throw new Error("Xem báo cáo cần kết nối mạng.");
   let row: { student_id: string; published_at: string | null; snapshot: unknown } | null;
   try {
-    row = await remote("Không đọc được báo cáo của con.", () =>
-      api.request(`GET /reports/${reportId}/publications/${publicationNo}` as never) as Promise<{ student_id: string; published_at: string | null; snapshot: unknown }>,
-    );
+    row = await api.request(`GET /reports/${reportId}/publications/${publicationNo}` as never) as { student_id: string; published_at: string | null; snapshot: unknown };
   } catch (cause) {
-    if (cause instanceof Error && cause.message === GUARDIAN_PERMISSION_ERROR) return null;
-    throw cause;
+    if (cause instanceof ApiError && [403, 404, 410].includes(cause.status)) return null;
+    throw new Error(guardianErrorMessage(cause, "Không đọc được báo cáo của con."));
   }
   if (!row || row.student_id !== student.id) return null;
   const decoded = decodeServerReport(row.snapshot, student, reportId);
