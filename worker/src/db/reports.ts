@@ -396,6 +396,7 @@ async function publishStatements(
   };
 }
 
+const isBatchDeleted = (error: unknown) => String(error).includes("report_batch_deleted");
 const concurrentPublish = () =>
   new ApiError(409, "conflict", "Conflict.", { reason: "concurrent_publish" });
 
@@ -408,6 +409,7 @@ export async function publishReport(db: D1Database, i: Identity, reportId: strin
   try {
     await db.batch(statements);
   } catch (error) {
+    if (isBatchDeleted(error)) throw notFound();
     if (isConstraintError(error)) throw concurrentPublish();
     throw error;
   }
@@ -445,6 +447,7 @@ export async function publishBatch(db: D1Database, i: Identity, batchId: string)
     try {
       await db.batch(statements);
     } catch (error) {
+      if (isBatchDeleted(error)) throw notFound();
       if (isConstraintError(error)) throw concurrentPublish();
       throw error;
     }

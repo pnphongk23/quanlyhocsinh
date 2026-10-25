@@ -494,6 +494,16 @@ describe('report batches by session range', () => {
     expect((await db.prepare('SELECT count(*) n FROM reports WHERE batch_id=?').bind(batchId).first<any>())!.n).toBeGreaterThan(0);
     expect((await db.prepare('SELECT count(*) n FROM report_publications WHERE batch_id=?').bind(batchId).first<any>())!.n).toBeGreaterThan(0);
 
+    await expect(db.prepare(`INSERT INTO report_publications(id,workspace_id,class_id,student_id,report_id,batch_id,month,publication_no,snapshot,published_by,published_at)
+      SELECT ?,workspace_id,class_id,student_id,report_id,batch_id,month,98,'{}',published_by,published_at FROM report_publications WHERE batch_id=? LIMIT 1`)
+      .bind(crypto.randomUUID(), batchId).run()).rejects.toThrow(/report_batch_deleted/);
+    const before = (await db.prepare("SELECT max(seq) m FROM change_log").first<any>())!.m;
+    await db.prepare("UPDATE reports SET needs_republish=0 WHERE batch_id=?").bind(batchId).run();
+    await db.prepare("UPDATE tests SET date=date WHERE class_id=?").bind(f.classId).run();
+    await db.prepare("UPDATE tests SET archived=archived WHERE class_id=?").bind(f.classId).run();
+    const touched = await db.prepare("SELECT count(*) n FROM reports WHERE batch_id=? AND needs_republish=1").bind(batchId).first<any>();
+    expect(touched!.n).toBe(0);
+    expect(before).toBeGreaterThan(0);
     const clientId = crypto.randomUUID();
     expect((await create('s1', 's2', f.ws.token, { id: clientId })).status).toBe(201);
     expect((await del(f.ws.token, clientId)).status).toBe(200);

@@ -14,6 +14,7 @@ async function downgradeToMonthlyReports() {
   const oldIndex = queriesOf('0001_schema.sql').find((q) => /CREATE INDEX reports_class_month/.test(q))!;
   await db.batch([
     db.prepare('PRAGMA defer_foreign_keys = true'),
+    db.prepare('DROP TRIGGER IF EXISTS report_publications_batch_alive'),
     ...created.map((name) => db.prepare(`DROP TRIGGER ${name}`)),
     db.prepare(oldTable.replace(/CREATE TABLE reports\s*\(/, 'CREATE TABLE reports_old (')),
     db.prepare(`INSERT INTO reports_old SELECT id, workspace_id, class_id, student_id, month, status, general_comment,
