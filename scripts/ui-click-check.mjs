@@ -53,7 +53,7 @@ async function setup(page, role, data = entities) {
     if (entity) {
       const table = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "slips", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report_batch: "reportBatches", report: "reports", report_publication: "reportPublications" })[entity] ?? entity + "s";
       return route.fulfill({ json: { items: data[table] ?? [], next_after: null } });
-    }
+  }
     if (url.pathname === "/v1/sync/pull") return route.fulfill({ json: { cursor: 0, epoch: 1, has_more: false, upserts: {}, deleted: [] } });
     if (url.pathname === "/v1/sync/push" && route.request().method() === "POST") {
       const body = route.request().postDataJSON();
@@ -136,6 +136,30 @@ async function test(title, viewport, role, route, action, data = entities) {
 
 const mobile = { width: 390, height: 844 };
 const desktop = { width: 1280, height: 900 };
+const stickyScoreViewports = [
+  { width: 1440, height: 900 },
+  { width: 1280, height: 800 },
+];
+const stickyScoreStudents = Array.from({ length: 10 }, (_, index) => ({
+  id: `sticky-score-student-${index + 1}`,
+  class_id: "demo-6a",
+  name: `Học sinh ${index + 1}`,
+  enrolled_at: "2026-01-01",
+  left_at: null,
+  status: "active",
+  version: 1,
+}));
+const stickyScoreEntities = {
+  ...entities,
+  students: stickyScoreStudents,
+  scores: stickyScoreStudents.map((student) => ({
+    test_id: "demo-test",
+    student_id: student.id,
+    value: 10,
+    updated_at: "2026-10-20T10:00:00Z",
+    version: 1,
+  })),
+};
 const longScoreStudents = Array.from({ length: 24 }, (_, index) => ({
   id: `long-score-student-${index + 1}`,
   class_id: "demo-6a",
@@ -375,6 +399,60 @@ try {
       await dialog.waitFor({ state: "hidden" });
       return hit + "; option selected and backdrop closed on second open";
     });
+  }
+  for (const viewport of stickyScoreViewports) {
+    await test("test scores / sticky save 10 students at top and bottom", viewport, "staff", "/lop/demo-6a/bai-kiem-tra/demo-test", async (page) => {
+      const rows = page.locator('div[class^="_studentRow_"]');
+      if (await rows.count() !== 10) throw new Error(`expected 10 visible student rows, found ${await rows.count()}`);
+      await rows.last().evaluate((element) => {
+        let parent = element.parentElement;
+        while (parent) {
+          if (parent.scrollHeight > parent.clientHeight + 2) {
+            parent.scrollTop = 0;
+            break;
+          }
+          parent = parent.parentElement;
+        }
+        window.scrollTo(0, 0);
+      });
+      const topMetrics = await page.evaluate(() => {
+        const row = document.querySelectorAll('div[class^="_studentRow_"]')[9];
+        let scrollParent = row?.parentElement ?? null;
+        while (scrollParent && scrollParent.scrollHeight <= scrollParent.clientHeight + 2) scrollParent = scrollParent.parentElement;
+        const save = document.querySelector('[class*=desktopSaveRow]');
+        const button = [...(save?.querySelectorAll("button") ?? [])].find((item) => item.textContent?.includes("Lưu điểm"));
+        const rowBox = row?.getBoundingClientRect();
+        const footerBox = save?.getBoundingClientRect();
+        const buttonBox = button?.getBoundingClientRect();
+        return { scrollTop: scrollParent?.scrollTop, rowTop: rowBox?.top, rowBottom: rowBox?.bottom, footerTop: footerBox?.top, footerBottom: footerBox?.bottom, buttonTop: buttonBox?.top, buttonBottom: buttonBox?.bottom, statusVisible: save?.textContent?.includes("Chưa có thay đổi để lưu"), height: innerHeight };
+      });
+      if (!topMetrics.buttonTop || topMetrics.buttonTop < 0 || topMetrics.buttonBottom > topMetrics.height || !topMetrics.statusVisible) throw new Error("save button or no-change status is not visible at the top");
+      await rows.last().evaluate((element) => {
+        let parent = element.parentElement;
+        while (parent) {
+          if (parent.scrollHeight > parent.clientHeight + 2) {
+            parent.scrollTop = parent.scrollHeight;
+            break;
+          }
+          parent = parent.parentElement;
+        }
+      });
+      await page.waitForTimeout(50);
+      const bottomMetrics = await page.evaluate(() => {
+        const row = document.querySelectorAll('div[class^="_studentRow_"]')[9];
+        let scrollParent = row?.parentElement ?? null;
+        while (scrollParent && scrollParent.scrollHeight <= scrollParent.clientHeight + 2) scrollParent = scrollParent.parentElement;
+        const footer = document.querySelector('[class*=desktopSaveRow]');
+        const rowBox = row?.getBoundingClientRect();
+        const footerBox = footer?.getBoundingClientRect();
+        return { scrollTop: scrollParent?.scrollTop, rowBottom: rowBox?.bottom, footerTop: footerBox?.top, footerHeight: footerBox?.height };
+      });
+      const bottomClearance = (bottomMetrics.footerTop ?? 0) - (bottomMetrics.rowBottom ?? 0);
+      if ((bottomMetrics.scrollTop ?? 0) <= 0 || !bottomMetrics.rowBottom || !bottomMetrics.footerTop || bottomClearance + 1 < (bottomMetrics.footerHeight ?? 0)) {
+        throw new Error(`last row overlaps save bar after scrolling: ${JSON.stringify({ topMetrics, bottomMetrics })}`);
+      }
+      return `at top: scrollTop=${topMetrics.scrollTop}, row=${topMetrics.rowTop?.toFixed(1)}..${topMetrics.rowBottom?.toFixed(1)}, bar=${topMetrics.footerTop?.toFixed(1)}..${topMetrics.footerBottom?.toFixed(1)}; at bottom: scrollTop=${bottomMetrics.scrollTop}, row bottom=${bottomMetrics.rowBottom.toFixed(1)}, bar top=${bottomMetrics.footerTop.toFixed(1)}, clearance=${bottomClearance.toFixed(1)}, bar height=${bottomMetrics.footerHeight?.toFixed(1)}`;
+    }, stickyScoreEntities);
   }
   await test("desktop sidebar class selector popover", desktop, "staff", "/lop", async (page) => {
     const trigger = page.locator('[aria-haspopup="listbox"],[aria-haspopup="dialog"]').first();

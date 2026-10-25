@@ -260,6 +260,11 @@
   flex-direction: column;
   gap: var(--space-8);
 }
+@media (min-width: 1024px) {
+  .studentList {
+    padding-bottom: calc(var(--score-save-footer-height, 0px) + var(--space-8));
+  }
+}
 .studentRow {
   display: flex;
   flex-direction: column;

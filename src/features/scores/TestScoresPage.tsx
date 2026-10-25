@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import {
   Link,
   useNavigate,
@@ -62,6 +62,7 @@ export default function TestScoresPage() {
   const { classId = "", testId = "" } = useParams();
   useStore();
   const access = useAccess();
+  const canWrite = access.can("scores", "write");
   const { status, markUnsaved, clearStatus, setStatus } = useSaveStatus();
   const classItem = getClass(classId);
   const test = listTests(classId).find((item) => item.id === testId);
@@ -107,6 +108,7 @@ export default function TestScoresPage() {
   const invalidTotal = students.filter((student) =>
     isInvalidDraft({ value: typedValues[student.id] }),
   ).length;
+  const invalidCount = invalidTotal;
   const action = useSaveAction({
     baseline: storedValues,
     value: typedValues,
@@ -122,6 +124,7 @@ export default function TestScoresPage() {
   const focusRef = useRef<HTMLInputElement>(null);
   const removeLock = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const desktopSaveRef = useRef<HTMLDivElement>(null);
   const focusMatched = students.some(
     (student) => student.id === focusStudentId,
   );
@@ -135,8 +138,30 @@ export default function TestScoresPage() {
     if (leaveAfterDelete && !dirty) navigate(listPath);
   }, [dirty, leaveAfterDelete, listPath, navigate]);
 
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const saveBar = desktopSaveRef.current;
+    if (!desktop || !canWrite || !list || !saveBar) return;
+
+    const updateClearance = () => {
+      list.style.setProperty(
+        "--score-save-footer-height",
+        `${saveBar.getBoundingClientRect().height}px`,
+      );
+    };
+    updateClearance();
+    if (typeof ResizeObserver === "undefined") {
+      return () => list.style.removeProperty("--score-save-footer-height");
+    }
+    const observer = new ResizeObserver(updateClearance);
+    observer.observe(saveBar);
+    return () => {
+      observer.disconnect();
+      list.style.removeProperty("--score-save-footer-height");
+    };
+  }, [desktop, canWrite, status, error, invalidCount]);
+
   if (!access.can("scores", "read")) return <NoAccess what="bảng điểm" />;
-  const canWrite = access.can("scores", "write");
 
   const valueFor = draftValue;
   const change = (studentId: string, patch: Partial<ScoreDraft>) => {
@@ -211,9 +236,6 @@ export default function TestScoresPage() {
       </EmptyState>
     );
 
-  const invalidCount = students.filter((student) =>
-      isInvalidDraft(valueFor(student.id)),
-  ).length;
   // Mọi ô đều trống nghĩa là bài chưa có điểm nào: xoá hẳn thay vì lưu trữ.
   const hasScores = listScores(testId).some(
     (score) => score.value !== null && score.value !== undefined,
@@ -387,7 +409,7 @@ export default function TestScoresPage() {
       </div>
       {canWrite &&
         (desktop ? (
-          <div className={s.desktopSaveRow}>
+          <div className={s.desktopSaveRow} ref={desktopSaveRef}>
             <SaveBarContent
               status={status}
               error={error}
