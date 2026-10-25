@@ -206,7 +206,6 @@ function slipValues(p:Row,row:Row|null):Row {
     if (p.comment!==null && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
     comment=p.comment===null ? null : p.comment.trim();
     if (comment==='') comment=null;
-    if (comment!==null && comment.length>300) throw validationError(undefined,'invalid_comment');
   }
   if (p.criteria!==undefined) {
     if (typeof p.criteria!=='number' || !Number.isInteger(p.criteria) || p.criteria<0 || p.criteria>CRITERIA_MASK) throw validationError(undefined,'invalid_criteria');

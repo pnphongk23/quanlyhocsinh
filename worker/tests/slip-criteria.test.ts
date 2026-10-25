@@ -43,8 +43,10 @@ describe('slip criteria', () => {
     expect(await f.row(f.s[0]!)).toMatchObject({ stars: 5, comment: null });
     for (const bad of [32, -1, 1.5, '3', null])
       expect((await set({ criteria: bad }, 4)).body.results[0].error.details.reason).toBe('invalid_criteria');
-    for (const bad of [7, 'x'.repeat(301)])
-      expect((await set({ criteria: 31, comment: bad }, 4)).body.results[0].error.details.reason).toBe('invalid_comment');
+    expect((await set({ criteria: 31, comment: 7 }, 4)).body.results[0].error.details.reason).toBe('invalid_comment');
+    const long = 'Con rất cố gắng. '.repeat(400);
+    expect((await set({ criteria: 31, comment: long }, 4)).body.results[0].status).toBe('applied');
+    expect((await f.row(f.s[0]!)).comment).toBe(long.trim());
     expect((await set({}, 4)).body.results[0].error.details.reason).toBe('criteria_required');
   });
 
