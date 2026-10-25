@@ -1,5 +1,7 @@
 import type { Attendance, Session, StarLevel, Student } from "./types";
 
+import { todayISO } from "../shared/date";
+
 /**
  * Câu mẫu cố định theo mức sao (spec mục 4 "Nhận xét và báo cáo").
  * Giáo viên không sửa câu mẫu; máy khách chỉ hiện câu theo `stars`.
@@ -26,13 +28,8 @@ export function orderScoreGridStudents<T extends Pick<Student, "status">>(
   );
 }
 
-export function isFutureSession(date: string, today = new Date()): boolean {
-  const todayISO = [
-    today.getFullYear(),
-    String(today.getMonth() + 1).padStart(2, "0"),
-    String(today.getDate()).padStart(2, "0"),
-  ].join("-");
-  return date > todayISO;
+export function isFutureSession(date: string, today = todayISO()): boolean {
+  return date > today;
 }
 
 export function attendanceRate(

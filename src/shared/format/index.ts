@@ -1,4 +1,5 @@
 import { normalizeWeekdays } from "../weekdays";
+export { dateISO, todayISO } from "../date";
 
 function asDate(value: string | Date): Date {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -17,14 +18,6 @@ export const formatTime = (value: string | Date) =>
     minute: "2-digit",
   }).format(asDate(value));
 export { formatScore } from "../../data/scoreFormat";
-export function todayISO(): string {
-  const now = new Date();
-  return [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("-");
-}
 export const weekdayNames = [
   "Chủ nhật",
   "Thứ Hai",

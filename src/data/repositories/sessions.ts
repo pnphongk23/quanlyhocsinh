@@ -1,4 +1,4 @@
-import { todayISO } from "../../shared/format";
+import { dateISO, todayISO } from "../../shared/date";
 import type { Class, Session } from "../types";
 import { getStore } from "../store";
 import { commitState } from "../outbox";
@@ -112,7 +112,7 @@ export function previewScheduleChange(classId: string, next: Schedule, today = l
     return date;
   })
     .filter((date) => weekdays.includes(isoWeekday(date)))
-    .map((date) => ({ date: date.toISOString().slice(0, 10), time: next.time }))
+    .map((date) => ({ date: dateISO(date), time: next.time }))
     .filter((session) => !existingDates.has(session.date));
 
   return { toRemove, toAdd, kept, retimed };

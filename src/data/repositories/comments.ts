@@ -7,6 +7,7 @@ import type { SyncCommand } from "../api/types";
 import { runDurably, type WritePlan } from "./durable";
 import { scheduleSync } from "../sync";
 import { db, getCacheIdentity, identityKey, stored } from "../db";
+import { todayISO } from "../../shared/date";
 const key=(sessionId:string,studentId:string)=>`${sessionId}:${studentId}`;
 export const listComments=(classId:string):Comment[]=>getStore().comments.filter(c=>c.classId===classId);
 export function listSessionComments(sessionId:string):Comment[]{return getStore().comments.filter(c=>c.sessionId===sessionId);}
@@ -15,7 +16,7 @@ function planComment(input:{sessionId:string;studentId:string;stars:StarLevel|nu
 /** Chờ ghi bền; ghi lỗi ⇒ ném lỗi gốc và phiếu trở lại như trước. */
 export const saveSessionCommentDurable=(input:{sessionId:string;studentId:string;stars:StarLevel|null;note?:string}):Promise<Comment>=>runDurably(planComment(input));
 export interface SendTicketsResult { sent:string[];skipped:string[];queued:boolean;ungraded:UngradedHomeworkNotice; }
-function planSendTickets(sessionId:string,studentIds?:string[]):WritePlan<SendTicketsResult> {requirePermission("comments_reports","write");const session=requireSessionAccess(sessionId);if(session.date>new Date().toISOString().slice(0,10))throw new Error("Chỉ gửi phiếu từ ngày học.");const requested=studentIds??getStore().students.filter(s=>s.classId===session.classId&&s.status==="active").map(s=>s.id);const sent:string[]=[],skipped:string[]=[];const previous:Comment[]=[];for(const studentId of requested){const comment=getSessionComment(sessionId,studentId);if(!comment||comment.stars===null||comment.status==="sent"){skipped.push(studentId);continue;}sent.push(studentId);previous.push(comment);}
+function planSendTickets(sessionId:string,studentIds?:string[]):WritePlan<SendTicketsResult> {requirePermission("comments_reports","write");const session=requireSessionAccess(sessionId);if(session.date>todayISO())throw new Error("Chỉ gửi phiếu từ ngày học.");const requested=studentIds??getStore().students.filter(s=>s.classId===session.classId&&s.status==="active").map(s=>s.id);const sent:string[]=[],skipped:string[]=[];const previous:Comment[]=[];for(const studentId of requested){const comment=getSessionComment(sessionId,studentId);if(!comment||comment.stars===null||comment.status==="sent"){skipped.push(studentId);continue;}sent.push(studentId);previous.push(comment);}
   if(sent.length&&(typeof navigator==="undefined"||!navigator.onLine))throw new Error("Cần có mạng để gửi phiếu.");
   const membership=getCacheIdentity();if(sent.length&&!membership)throw new Error("Đăng nhập để gửi phiếu.");
   const identity=identityKey();const cmd={id:crypto.randomUUID(),type:"slip.send",payload:{session_id:sessionId,student_ids:sent},created_at:new Date().toISOString()} as SyncCommand;

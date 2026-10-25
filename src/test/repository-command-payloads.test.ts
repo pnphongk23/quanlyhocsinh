@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CommandPayloads } from "../data/api/types";
 import { createFakeServer } from "./fixtures/fake-sync-server";
 import { bootDevice, meFor, staffMembership } from "./fixtures/device";
+import { todayISO } from "../shared/date";
+
+process.env.TZ = "Asia/Ho_Chi_Minh";
 
 type RequiredKeys<T> = { [K in keyof T]-?: {} extends Pick<T, K> ? never : K }[keyof T];
 const payloadFields = {
@@ -40,9 +43,26 @@ beforeEach(() => {
   server.put("class_session", { id: "session-1", class_id: "c1", date: "2026-10-20", start_time: "09:00", origin: "manual", status: "held" });
   server.put("test", { id: "test-1", class_id: "c1", name: "Quiz", date: "2026-10-20", max: 10, archived: false });
 });
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("repository command payload contracts", () => {
+  it.each(["2026-10-24T17:30:00.000Z", "2026-10-24T23:59:00.000Z"])(
+    "cho điểm danh ngày 25/10 và chặn ngày 26/10 tại %s",
+    async (instant) => {
+      server.put("class_session", { id: "session-1", class_id: "c1", date: "2026-10-25", start_time: "09:00", origin: "manual", status: "planned" });
+      server.put("class_session", { id: "session-future", class_id: "c1", date: "2026-10-26", start_time: "09:00", origin: "manual", status: "planned" });
+      const d = await bootDevice(server, "t", me);
+      await d.syncNow();
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date(instant));
+      expect(todayISO()).toBe("2026-10-25");
+      const { saveAttendanceDurable } = await import("../data/repositories/attendance");
+
+      await expect(saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "present", note: "", lateAt: null })).resolves.toMatchObject({ sessionId: "session-1" });
+      expect(() => saveAttendanceDurable({ sessionId: "session-future", studentId: "s1", status: "present", note: "", lateAt: null })).toThrow("Chưa thể điểm danh");
+    },
+  );
+
   it("emits all repository command payloads with the required CommandPayloads fields", async () => {
     const d = await bootDevice(server, "t", me);
     const emitted: Array<{ type: keyof CommandPayloads; payload: Record<string, unknown> }> = [];

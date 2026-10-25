@@ -3,6 +3,7 @@ import { createSeed } from "../../test/fixtures/seed";
 import { buildTicketRows, ungradedHomeworkNotice } from "../../data/homework";
 import type { StoreState } from "../../data/types";
 import { buildTodayAgenda } from "./todayModel";
+import { dateISO } from "../../shared/date";
 
 let state: StoreState;
 beforeEach(() => {
@@ -52,7 +53,7 @@ describe("khối Hôm nay", () => {
     const before = plannedDate("6a-session-8");
     const day = new Date(before + "T12:00:00");
     day.setDate(day.getDate() - 1);
-    const today = day.toISOString().slice(0, 10);
+    const today = dateISO(day);
     const agenda = buildTodayAgenda(state, today);
     expect(agenda.entries).toHaveLength(0);
     expect(agenda.next!.session.date > today).toBe(true);

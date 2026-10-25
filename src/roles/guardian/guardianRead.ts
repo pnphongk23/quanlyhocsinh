@@ -10,6 +10,7 @@ import {
 } from "../../data/repositories/guardian";
 import { sessionNumber } from "../../data/repositories/sessions";
 import { compareSessions } from "../../data/homework";
+import { todayISO } from "../../shared/date";
 import type { Session, StarLevel, Student, Test } from "../../data/types";
 import type { AttendanceStatus } from "./guardianFormat";
 
@@ -59,7 +60,7 @@ export function childMonths(studentId: string): string[] {
 
 /** Tháng đang xem: tháng có buổi gần nhất, chưa có buổi nào thì tháng hiện tại. */
 export function defaultChildMonth(studentId: string): string {
-  return childMonths(studentId)[0] ?? new Date().toISOString().slice(0, 7);
+  return childMonths(studentId)[0] ?? todayISO().slice(0, 7);
 }
 
 export interface ChildAttendanceRow {

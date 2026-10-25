@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import { readFile } from "node:fs/promises";
 import { afterEach, expect, it, vi } from "vitest";
+import { todayISO } from "../shared/date";
 
 type DemoConfig = { api: string; phone: string; password: string; classId?: string };
 
@@ -81,7 +82,7 @@ it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
       const memberships = getSession()?.me.memberships.filter((membership) => membership.status === "active") ?? [];
       console.log(`STAGING_SMOKE active_memberships=${memberships.length}`);
     let chosen: { membershipId: string; sessionId: string; studentId: string; eligible: boolean } | undefined;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayISO();
 
     for (const membership of memberships) {
         await switchMembership(membership.id);

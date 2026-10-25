@@ -15,6 +15,7 @@ import {
 } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
 import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
+import { todayISO } from "../../shared/date";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import {
@@ -69,7 +70,7 @@ export default function SessionDetailPage() {
   const klass = getSessionClass(sessionId);
   const session = getSession(sessionId);
   const future = session
-    ? session.date > new Date().toISOString().slice(0, 10)
+    ? session.date > todayISO()
     : false;
   const canWrite = access.can("sessions_attendance", "write");
   const [searchParams, setSearchParams] = useSearchParams();

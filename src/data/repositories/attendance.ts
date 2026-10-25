@@ -3,12 +3,13 @@ import { getStore } from "../store";
 import { commitState, persistCommand } from "../outbox";
 import { requirePermission, requireSessionAccess } from "./access";
 import type { SyncCommand } from "../api/types";
+import { todayISO } from "../../shared/date";
 import { composePlans, runDurably, type WritePlan } from "./durable";
 const make = (input: Omit<Attendance,"id">): Attendance => ({...input,id:`${input.sessionId}:${input.studentId}`});
 export const listAttendance = (sessionId: string): Attendance[] => getStore().attendance.filter((a)=>a.sessionId===sessionId);
 function planAttendance(input: Omit<Attendance,"id">): WritePlan<Attendance> {
   requirePermission("sessions_attendance","write"); const session=requireSessionAccess(input.sessionId);
-  if(session.date>new Date().toISOString().slice(0,10)) throw new Error("Chưa thể điểm danh buổi chưa diễn ra.");
+  if(session.date>todayISO()) throw new Error("Chưa thể điểm danh buổi chưa diễn ra.");
   if(session.status==="cancelled") throw new Error("Không thể điểm danh buổi đã huỷ.");
   if(input.status!=="late"&&input.lateAt) throw new Error("Giờ đến muộn chỉ dùng khi trạng thái Muộn.");
   const item=make(input), old=getStore().attendance.find(a=>a.id===item.id);
