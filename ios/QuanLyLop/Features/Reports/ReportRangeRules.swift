@@ -183,6 +183,12 @@ enum ReportRangeRules {
 enum ReportRules {
     static let republishNote = String(localized: "feature.reports.iem.co.cap.nhat.can.phat.hanh.lai")
 
+    /// The draft of a general comment once `saved` has been stored: dropped only while it still equals
+    /// what was saved, so text typed during a slow save is kept for the next save.
+    static func draftAfterSave(draft: String?, saved: String) -> String? {
+        draft == saved ? nil : draft
+    }
+
     static func attendanceDetail(_ attendance: AttendanceSummary) -> String {
         [
             attendance.late > 0 ? String.localizedStringWithFormat(String(localized: "feature.reports.muon"), String(describing: attendance.late)) : "",

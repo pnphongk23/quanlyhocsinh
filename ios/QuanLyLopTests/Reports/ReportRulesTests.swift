@@ -255,4 +255,11 @@ final class ReportRulesTests: XCTestCase {
         XCTAssertEqual(ReportRules.publishAllLabel(2), "Phát hành 2 báo cáo")
         XCTAssertEqual(ReportRules.publishAllLabel(0), "Phát hành báo cáo")
     }
+
+    func testDraftIsDroppedOnlyWhileItStillEqualsTheSavedComment() {
+        // Typed A, tapped save, then typed on to AB while the PUT of A was in flight.
+        XCTAssertEqual(ReportRules.draftAfterSave(draft: "AB", saved: "A"), "AB")
+        XCTAssertNil(ReportRules.draftAfterSave(draft: "A", saved: "A"))
+        XCTAssertNil(ReportRules.draftAfterSave(draft: nil, saved: "A"))
+    }
 }

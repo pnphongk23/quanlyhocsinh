@@ -216,7 +216,7 @@ struct ReportBatchDetailView: View {
                     if let failure = await data.saveReportComment(reportID: row.id, comment: value) {
                         throw I4SaveFailure(message: failure)
                     }
-                    drafts[row.id] = nil
+                    drafts[row.id] = ReportRules.draftAfterSave(draft: drafts[row.id], saved: value)
                 }
             } else {
                 Text(value.isEmpty ? String(localized: "feature.reports.chua.co.nhan.xet.chung") : value)
