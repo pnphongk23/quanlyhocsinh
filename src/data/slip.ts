@@ -28,6 +28,28 @@ export function starsFromCriteria(criteria: number): StarLevel {
   return count as StarLevel;
 }
 
+const SLIP_CRITERION_SENTENCES = {
+  "Chú ý nghe giảng": { achieved: "chú ý nghe giảng", unachieved: "chưa chú ý nghe giảng" },
+  "Ghi chép đầy đủ": { achieved: "ghi bài đầy đủ", unachieved: "chưa ghi bài đầy đủ" },
+  "Tham gia hoạt động sôi nổi": { achieved: "tích cực tham gia các hoạt động trong lớp", unachieved: "chưa tích cực tham gia hoạt động" },
+  "Không mất trật tự": { achieved: "ngồi học ngoan ngoãn, không mất trật tự", unachieved: "còn mất trật tự" },
+  "Hoàn thành bài tập về nhà": { achieved: "hoàn thành tốt bài tập về nhà", unachieved: "chưa hoàn thành bài tập về nhà" },
+} satisfies Record<(typeof SLIP_CRITERIA)[number], { achieved: string; unachieved: string }>;
+
+function joinSlipPhrases(phrases: readonly string[]): string {
+  if (phrases.length < 2) return phrases.join("");
+  return `${phrases.slice(0, -1).join(", ")} và ${phrases.at(-1)}`;
+}
+
+/** Tạo câu nhận xét theo bitmask tiêu chí, theo đúng thứ tự SLIP_CRITERIA. */
+export function generatedSlipSentence(criteria: number): string {
+  starsFromCriteria(criteria); // Validate the shared 5-bit mask.
+  const achieved = SLIP_CRITERIA.flatMap((criterion, index) => (criteria & (1 << index)) !== 0 ? [SLIP_CRITERION_SENTENCES[criterion].achieved] : []);
+  const unachieved = SLIP_CRITERIA.flatMap((criterion, index) => (criteria & (1 << index)) === 0 ? [SLIP_CRITERION_SENTENCES[criterion].unachieved] : []);
+  if (achieved.length === 0) return `Con ${joinSlipPhrases(unachieved)}.`;
+  return `Con ${joinSlipPhrases(achieved)}${unachieved.length ? `, nhưng ${joinSlipPhrases(unachieved)}` : ""}.`;
+}
+
 export function defaultSlipComment(stars: StarLevel): string {
   return DEFAULT_SLIP_COMMENTS[stars];
 }
