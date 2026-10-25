@@ -122,6 +122,51 @@ final class GuardianDeletedReportTests: XCTestCase {
         XCTAssertTrue(cached.isEmpty)
     }
 
+    /// The refresh and the background sync open their own stores on the same file.
+    func testRemovalCommittedThroughAnotherStoreOnTheSameFileBlocksALateFetchedWrite() async throws {
+        let path = NSTemporaryDirectory() + "core-\(UUID().uuidString).sqlite"
+        defer { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: path + suffix) } }
+        let refreshStore = try SQLiteStore(path: path, scope: scope)
+        let syncStore = try SQLiteStore(path: path, scope: scope)
+        try await syncStore.installSnapshot([:], position: SyncPosition(cursor: 0, epoch: 1))
+        let student = Student(id: "st1", classId: "c1", name: "Trần Gia Bảo", parentPhone: nil,
+                              enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
+        try await syncStore.write(student, forKey: RecordKey(entity: "student", k1: student.id).storageKey, enqueueing: nil)
+        let pub = try publication(report: "r-late")
+        let key = RecordKey(entity: "report_publication", k1: pub.id).storageKey
+
+        // The response has arrived, then the sync commits the removal, then the refresh writes.
+        try await syncStore.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                           deleted: [RecordKey(entity: "report_publication", k1: pub.id)]))
+        let written = try await refreshStore.writeFetched(pub, forKey: key)
+
+        XCTAssertFalse(written)
+        for store in [refreshStore, syncStore] {
+            let cached = try await cachedReportIDs(store)
+            XCTAssertTrue(cached.isEmpty)
+            let dashboard = try await GuardianRepository.dashboard(from: store)
+            XCTAssertTrue(dashboard.children.flatMap(\.publishedReports).isEmpty)
+        }
+    }
+
+    func testRemovalThroughAnotherStoreAlsoRemovesWhatWasFetchedJustBefore() async throws {
+        let path = NSTemporaryDirectory() + "core-\(UUID().uuidString).sqlite"
+        defer { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: path + suffix) } }
+        let refreshStore = try SQLiteStore(path: path, scope: scope)
+        let syncStore = try SQLiteStore(path: path, scope: scope)
+        try await syncStore.installSnapshot([:], position: SyncPosition(cursor: 0, epoch: 1))
+        let pub = try publication(report: "r-early")
+        let key = RecordKey(entity: "report_publication", k1: pub.id).storageKey
+
+        let written = try await refreshStore.writeFetched(pub, forKey: key)
+        try await syncStore.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                           deleted: [RecordKey(entity: "report_publication", k1: pub.id)]))
+
+        XCTAssertTrue(written)
+        let cached = try await cachedReportIDs(refreshStore)
+        XCTAssertTrue(cached.isEmpty)
+    }
+
     func testAnUpsertAfterADeletionLiftsTheMarkSoTheRecordCanBeCachedAgain() async throws {
         let store = try await store(reports: [])
         let pub = try publication(report: "r-back")

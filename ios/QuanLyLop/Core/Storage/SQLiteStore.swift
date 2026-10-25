@@ -46,22 +46,6 @@ private final class SQLiteConnection: @unchecked Sendable {
     }
 }
 
-/// Records a sync removed, shared by every store instance of a scope: a request that was already in flight
-/// when the removal landed must not write the record back. A later sync upsert of the same key lifts the mark.
-final class DeletedRecordMarks: @unchecked Sendable {
-    static let shared = DeletedRecordMarks()
-    private let lock = NSLock()
-    private var marks = Set<String>()
-
-    private func mark(_ scope: CacheScope, _ key: String) -> String { scope.storageKey + "|" + key }
-    func insert(_ scope: CacheScope, key: String) { lock.lock(); marks.insert(mark(scope, key)); lock.unlock() }
-    func remove(_ scope: CacheScope, key: String) { lock.lock(); marks.remove(mark(scope, key)); lock.unlock() }
-    func contains(_ scope: CacheScope, anyOf keys: [String]) -> Bool {
-        lock.lock(); defer { lock.unlock() }
-        return keys.contains { marks.contains(mark(scope, $0)) }
-    }
-}
-
 actor SQLiteStore: LocalStore {
     nonisolated let scope: CacheScope
     private let db: SQLiteConnection
@@ -81,6 +65,9 @@ actor SQLiteStore: LocalStore {
             try db.execute("CREATE TABLE IF NOT EXISTS commands(seq INTEGER PRIMARY KEY AUTOINCREMENT, scope TEXT NOT NULL, id TEXT NOT NULL, record_key TEXT NOT NULL, kind TEXT NOT NULL, json TEXT NOT NULL, local_json TEXT NOT NULL, created_at REAL NOT NULL, state TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, next_attempt REAL NOT NULL DEFAULT 0, error TEXT, UNIQUE(scope,id))")
             try db.execute("CREATE INDEX IF NOT EXISTS commands_scope_order ON commands(scope,created_at,seq)")
             try db.execute("CREATE TABLE IF NOT EXISTS meta(scope TEXT PRIMARY KEY, cursor INTEGER NOT NULL, epoch INTEGER NOT NULL)")
+            // Keys a sync removed: written in the same transaction as the DELETE, so a late request made through
+            // another connection to this file cannot put a removed record back (see `writeFetched`).
+            try db.execute("CREATE TABLE IF NOT EXISTS removed(scope TEXT NOT NULL, key TEXT NOT NULL, PRIMARY KEY(scope,key))")
             try db.execute("PRAGMA user_version=1")
             // An interrupted request is replayed with the same UUID, never coalesced.
             try db.execute("UPDATE commands SET state='pending' WHERE scope=? AND state='sending'", [scope.storageKey])
@@ -323,22 +310,17 @@ actor SQLiteStore: LocalStore {
     func apply(_ page: PullPage) throws {
         try transaction {
             for (entity, values) in page.upserts where SyncEntity.allowed.contains(entity) {
-                for value in values { try upsert(entity: entity, value: value) }
+                for value in values {
+                    try upsert(entity: entity, value: value)
+                    let key = try Self.recordKey(entity: entity, value: value)
+                    try db.execute("DELETE FROM removed WHERE scope=? AND key=?", [scope.storageKey, key.storageKey])
+                }
             }
             for key in page.deleted where SyncEntity.allowed.contains(key.entity) {
                 try db.execute("DELETE FROM records WHERE scope=? AND key=?", [scope.storageKey,key.storageKey])
+                try db.execute("INSERT OR IGNORE INTO removed(scope,key) VALUES(?,?)", [scope.storageKey, key.storageKey])
             }
             try setPosition(SyncPosition(cursor: page.cursor, epoch: page.epoch))
-        }
-        for (entity, values) in page.upserts where SyncEntity.allowed.contains(entity) {
-            for value in values {
-                if let key = try? Self.recordKey(entity: entity, value: value) {
-                    DeletedRecordMarks.shared.remove(scope, key: key.storageKey)
-                }
-            }
-        }
-        for key in page.deleted where SyncEntity.allowed.contains(key.entity) {
-            DeletedRecordMarks.shared.insert(scope, key: key.storageKey)
         }
     }
 
@@ -346,9 +328,17 @@ actor SQLiteStore: LocalStore {
     /// it belongs to (`guarding` lists those keys). Returns false when the write was skipped.
     @discardableResult
     func writeFetched<Value: Encodable & Sendable>(_ value: Value, forKey key: String, guarding owners: [String] = []) throws -> Bool {
-        if DeletedRecordMarks.shared.contains(scope, anyOf: [key] + owners) { return false }
-        try write(value, forKey: key)
-        return true
+        let json = try encode(value)
+        let tree = try JSONDecoder().decode(JSONValue.self, from: Data(json.utf8))
+        let entity = (try? JSONDecoder().decode([String].self, from: Data(key.utf8)))?.first ?? "local"
+        return try transaction {
+            for guarded in [key] + owners {
+                if try !db.execute("SELECT 1 FROM removed WHERE scope=? AND key=?", [scope.storageKey, guarded]).isEmpty { return false }
+            }
+            try db.execute("INSERT INTO records(scope,key,entity,version,json) VALUES(?,?,?,?,?) ON CONFLICT(scope,key) DO UPDATE SET json=excluded.json,version=excluded.version,entity=excluded.entity",
+                [scope.storageKey, key, entity, String(tree["version"]?.int ?? 0), json])
+            return true
+        }
     }
     private func setPosition(_ position: SyncPosition) throws {
         try db.execute("INSERT INTO meta(scope,cursor,epoch) VALUES(?,?,?) ON CONFLICT(scope) DO UPDATE SET cursor=excluded.cursor,epoch=excluded.epoch", [scope.storageKey,String(position.cursor),String(position.epoch)])
@@ -356,6 +346,7 @@ actor SQLiteStore: LocalStore {
     func resetCache() throws {
         try transaction {
             try db.execute("DELETE FROM records WHERE scope=?", [scope.storageKey])
+            try db.execute("DELETE FROM removed WHERE scope=?", [scope.storageKey])
             try db.execute("DELETE FROM meta WHERE scope=?", [scope.storageKey])
         }
     }
@@ -365,6 +356,7 @@ actor SQLiteStore: LocalStore {
             let userPrefix = "\(scope.userId.utf8.count):\(scope.userId)"
             for scopeKey in rows.compactMap({ $0["scope"] }).filter({ $0.hasPrefix(userPrefix) }) {
                 try db.execute("DELETE FROM records WHERE scope=?", [scopeKey])
+                try db.execute("DELETE FROM removed WHERE scope=?", [scopeKey])
                 try db.execute("DELETE FROM meta WHERE scope=?", [scopeKey])
             }
         }
@@ -372,6 +364,7 @@ actor SQLiteStore: LocalStore {
     func installSnapshot(_ records: [String: [JSONValue]], position: SyncPosition) throws {
         try transaction {
             try db.execute("DELETE FROM records WHERE scope=?", [scope.storageKey])
+            try db.execute("DELETE FROM removed WHERE scope=?", [scope.storageKey])
             for (entity, values) in records where SyncEntity.allowed.contains(entity) {
                 for value in values { try upsert(entity: entity, value: value) }
             }
