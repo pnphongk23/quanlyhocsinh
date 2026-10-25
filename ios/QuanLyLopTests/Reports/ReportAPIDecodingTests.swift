@@ -67,6 +67,12 @@ final class ReportAPIDecodingTests: XCTestCase {
          "from_key":"2026-09-01 00:00","to_key":"2026-09-30 23:59","version":1}
         """)
         XCTAssertNil(batch.fromSessionId)
+        XCTAssertNil(batch.month)
+        let monthly = try decode(ReportBatchItem.self, """
+        {"id":"b1","class_id":"c1","month":"2026-10","from_session_id":null,"to_session_id":null,
+         "from_number":null,"to_number":null,"from_key":"2026-10-01 00:00","to_key":"2026-10-31 23:59"}
+        """)
+        XCTAssertEqual(monthly.month, "2026-10")
     }
 
     func testPreviewDecodesTheSnapshotWithRangeAndMissing() throws {
@@ -75,11 +81,13 @@ final class ReportAPIDecodingTests: XCTestCase {
          "range":{"from_key":"2026-10-01 18:00","to_key":"2026-10-24 18:00","from_number":1,"to_number":8,"label":"Buổi 1–8 · 01/10–24/10"},
          "missing":["comment","score:t1"],
          "attendance":{"present":5,"late":1,"excused":1,"absent":1,"held_sessions":8},
-         "stars":{"three":4,"two":3,"one":1},
+         "stars":{"three":4,"two":3,"one":1,"stars5":{"s5":6,"s4":2,"s3":1,"s2":0,"s1":0,"s0":1}},
          "homework":[{"kind":"vocabulary","excellent":4,"done":3,"not_done":1}],
          "tests":[{"test_id":"t1","name":"Kiểm tra","date":"2026-10-07","max":15,"value":null}]}
         """)
-        XCTAssertEqual(snapshot.range?.label, "Buổi 1–8 · 01/10–24/10")
+        XCTAssertEqual(snapshot.range.map(ReportRangeRules.label(of:)), "01/10–24/10")
+        XCTAssertEqual(snapshot.stars.stars5, Stars5Summary(s5: 6, s4: 2, s3: 1, s2: 0, s1: 0, s0: 1))
+        XCTAssertEqual(snapshot.stars.legacyTotal, 8)
         XCTAssertEqual(snapshot.missing, ["comment", "score:t1"])
         XCTAssertFalse(snapshot.ready)
         XCTAssertNil(snapshot.tests.first?.value)
@@ -114,14 +122,11 @@ final class ReportAPIDecodingTests: XCTestCase {
                        ReportFailure.from(APIFailure.missingToken, fallback: "x"))
     }
 
-    func testRangeErrorsAreReadFromDetailsReason() {
-        func failure(_ reason: String) -> ReportFailure {
-            let error = APIError(code: "validation_error", message: nil,
-                                 details: .object(["reason": .string(reason)]), requestId: nil)
-            return ReportFailure.from(APIFailure.server(status: 422, error: error, retryAfter: nil), fallback: "fallback")
-        }
-        XCTAssertEqual(failure("invalid_range").message, ReportRangeProblem.order.message)
-        XCTAssertEqual(failure("session_cancelled").message, ReportRangeProblem.cancelled.message)
-        XCTAssertNotEqual(failure("other").message, ReportRangeProblem.order.message)
+    func testABadMonthIsAnsweredWithTheMonthMessageNotTheFallback() {
+        let error = APIError(code: "validation_error", message: nil,
+                             details: .object(["reason": .string("must_be_month")]), requestId: nil)
+        let failure = ReportFailure.from(APIFailure.server(status: 422, error: error, retryAfter: nil), fallback: "fallback")
+        XCTAssertNotEqual(failure.message, "fallback")
+        XCTAssertTrue(failure.message.contains("Tháng"))
     }
 }

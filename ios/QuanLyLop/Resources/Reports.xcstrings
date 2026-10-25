@@ -1,6 +1,61 @@
 {
   "sourceLanguage": "vi",
   "strings": {
+    "guardian.homework.resultOnDate": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kết quả BTVN ngày %@"
+          }
+        }
+      }
+    },
+    "guardian.stars.a11y": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d sao"
+          }
+        }
+      }
+    },
+    "guardian.stars.outOf": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d/%2$d sao"
+          }
+        }
+      }
+    },
+    "guardian.ticket.cancelled": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · Đã huỷ"
+          }
+        }
+      }
+    },
+    "guardian.ticket.gradedAt": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cô chấm ở buổi %@"
+          }
+        }
+      }
+    },
     "reports.add.create": {
       "extractionState": "manual",
       "localizations": {
@@ -12,24 +67,24 @@
         }
       }
     },
-    "reports.add.from": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi bắt đầu"
-          }
-        }
-      }
-    },
     "reports.add.hint": {
       "extractionState": "manual",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Báo cáo được tạo nháp cho mọi em có học trong khoảng này. Buổi đã hủy không tính."
+            "value": "Chọn tháng. Báo cáo được tạo nháp cho mọi em có học trong tháng đó. Buổi đã hủy không tính."
+          }
+        }
+      }
+    },
+    "reports.add.month": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tháng"
           }
         }
       }
@@ -45,24 +100,79 @@
         }
       }
     },
-    "reports.add.to": {
+    "reports.delete.action": {
       "extractionState": "manual",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buổi kết thúc"
+            "value": "Xoá báo cáo"
           }
         }
       }
     },
-    "reports.choice": {
+    "reports.delete.confirm": {
       "extractionState": "manual",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buổi %lld · %@"
+            "value": "Xoá báo cáo"
+          }
+        }
+      }
+    },
+    "reports.delete.keep": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữ báo cáo"
+          }
+        }
+      }
+    },
+    "reports.delete.message.draft": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo %@ là bản nháp. Xoá sẽ bỏ báo cáo của mọi học sinh trong đợt này."
+          }
+        }
+      }
+    },
+    "reports.delete.message.published": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Báo cáo %@ đã phát hành. Xoá sẽ bỏ báo cáo của mọi học sinh trong đợt này, phụ huynh sẽ không còn thấy báo cáo này nữa."
+          }
+        }
+      }
+    },
+    "reports.delete.offline": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cần có mạng để xoá báo cáo. Kết nối mạng rồi thử lại."
+          }
+        }
+      }
+    },
+    "reports.delete.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xoá báo cáo này?"
           }
         }
       }
@@ -177,6 +287,17 @@
         }
       }
     },
+    "reports.error.delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không xoá được báo cáo. Thử lại sau."
+          }
+        }
+      }
+    },
     "reports.error.forbidden": {
       "extractionState": "manual",
       "localizations": {
@@ -271,7 +392,18 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Khoảng buổi không hợp lệ. Kiểm tra lại buổi bắt đầu và kết thúc."
+            "value": "Tháng không hợp lệ. Hãy chọn lại tháng."
+          }
+        }
+      }
+    },
+    "reports.error.sessionsForbidden": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vai trò của bạn không xem được danh sách buổi học nên chưa thể thêm báo cáo. Liên hệ Admin để được cấp quyền Điểm danh."
           }
         }
       }
@@ -392,18 +524,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Thêm báo cáo để chọn khoảng buổi và tạo nháp cho cả lớp."
-          }
-        }
-      }
-    },
-    "reports.list.empty.noHeld": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Báo cáo cần ít nhất một buổi đã diễn ra."
+            "value": "Thêm báo cáo để chọn tháng và tạo nháp cho cả lớp."
           }
         }
       }
@@ -426,6 +547,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Báo cáo"
+          }
+        }
+      }
+    },
+    "reports.menu.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tuỳ chọn báo cáo"
           }
         }
       }
@@ -459,6 +591,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "điểm"
+          }
+        }
+      }
+    },
+    "reports.month.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tháng %1$d/%2$d"
           }
         }
       }
@@ -529,72 +672,6 @@
         }
       }
     },
-    "reports.problem.cancelled": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Không chọn buổi đã hủy."
-          }
-        }
-      }
-    },
-    "reports.problem.notInClass": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chọn buổi thuộc lớp này."
-          }
-        }
-      }
-    },
-    "reports.problem.order": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi bắt đầu phải trước hoặc cùng buổi kết thúc."
-          }
-        }
-      }
-    },
-    "reports.range.single": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi %lld"
-          }
-        }
-      }
-    },
-    "reports.range.span": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buổi %1$lld–%2$lld"
-          }
-        }
-      }
-    },
-    "reports.range.withDates": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@"
-          }
-        }
-      }
-    },
     "reports.stars.none": {
       "extractionState": "manual",
       "localizations": {
@@ -617,6 +694,17 @@
         }
       }
     },
+    "reports.suggestion.five": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gợi ý theo phiếu 5 sao: Trong đợt này con có %1$lld phiếu, trong đó %2$lld phiếu 4–5 sao."
+          }
+        }
+      }
+    },
     "reports.tests.none": {
       "extractionState": "manual",
       "localizations": {
@@ -628,145 +716,35 @@
         }
       }
     },
-    "reports.error.sessionsForbidden": {
+    "reports.pdf.stars5": {
       "extractionState": "manual",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vai trò của bạn không xem được danh sách buổi học nên chưa thể thêm báo cáo. Liên hệ Admin để được cấp quyền Điểm danh."
+            "value": "5 sao: %1$lld buổi · 4 sao: %2$lld · 3 sao: %3$lld · 2 sao: %4$lld · 1 sao: %5$lld · 0 sao: %6$lld"
           }
         }
       }
     },
-    "reports.delete.action": {
+    "reports.stars.legacyTitle": {
       "extractionState": "manual",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Xoá báo cáo"
+            "value": "Phiếu cũ (thang 3 sao)"
           }
         }
       }
     },
-    "reports.menu.label": {
+    "reports.stars.zero": {
       "extractionState": "manual",
       "localizations": {
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tuỳ chọn báo cáo"
-          }
-        }
-      }
-    },
-    "reports.delete.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Xoá báo cáo này?"
-          }
-        }
-      }
-    },
-    "reports.delete.confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Xoá báo cáo"
-          }
-        }
-      }
-    },
-    "reports.delete.keep": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Giữ báo cáo"
-          }
-        }
-      }
-    },
-    "reports.delete.message.draft": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Báo cáo %@ là bản nháp. Xoá sẽ bỏ báo cáo của mọi học sinh trong đợt này."
-          }
-        }
-      }
-    },
-    "reports.delete.message.published": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Báo cáo %@ đã phát hành. Xoá sẽ bỏ báo cáo của mọi học sinh trong đợt này, phụ huynh sẽ không còn thấy báo cáo này nữa."
-          }
-        }
-      }
-    },
-    "reports.delete.offline": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cần có mạng để xoá báo cáo. Kết nối mạng rồi thử lại."
-          }
-        }
-      }
-    },
-    "reports.error.delete": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Không xoá được báo cáo. Thử lại sau."
-          }
-        }
-      }
-    },
-    "guardian.homework.resultOnDate": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kết quả BTVN ngày %@"
-          }
-        }
-      }
-    },
-    "guardian.ticket.cancelled": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · Đã huỷ"
-          }
-        }
-      }
-    },
-    "guardian.ticket.gradedAt": {
-      "extractionState": "manual",
-      "localizations": {
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cô chấm ở buổi %@"
+            "value": "0 sao"
           }
         }
       }

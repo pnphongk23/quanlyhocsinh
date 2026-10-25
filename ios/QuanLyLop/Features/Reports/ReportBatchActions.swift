@@ -8,13 +8,12 @@ extension I4FeatureStore {
         let skipped: [BatchPublishResponse.Skipped]
     }
 
-    /// Creates the batch with a client-made `requestID`; sending the same id again returns the same batch.
-    func createBatch(classID: String, fromSessionID: String, toSessionID: String,
-                     requestID: String) async -> Result<String, ReportFailure> {
+    /// Creates the batch of a month ("YYYY-MM") with a client-made `requestID`; sending the same id again returns the same batch.
+    func createBatch(classID: String, month: String, requestID: String) async -> Result<String, ReportFailure> {
         let fallback = String(localized: "reports.error.create", table: "Reports")
         guard let api else { return .failure(ReportFailure(message: fallback)) }
         do {
-            let body = ["id": requestID, "from_session_id": fromSessionID, "to_session_id": toSessionID]
+            let body = ["id": requestID, "month": month]
             let endpoint = try APIEndpoint.json(method: .post, path: "classes/\(classID)/report-batches", body: body)
             let response = try await api.send(endpoint, as: CreateReportBatchResponse.self)
             try await cacheBatch(response.batch, classID: classID)

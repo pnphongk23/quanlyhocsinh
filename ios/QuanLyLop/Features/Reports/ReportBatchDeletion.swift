@@ -36,7 +36,7 @@ enum ReportDeletionRules {
 extension I4FeatureStore {
     func deletionTarget(batchID: String) -> ReportDeletionTarget? {
         guard let batch = batch(id: batchID) else { return nil }
-        let label = ReportRangeRules.resolve(batch, sessions: reportSessions(in: batch.classId)).label
+        let label = ReportRangeRules.resolve(batch).label
         return ReportDeletionTarget(batchID: batchID, rangeLabel: label,
                                     published: ReportDeletionRules.isPublished(reports(batchID: batchID)))
     }

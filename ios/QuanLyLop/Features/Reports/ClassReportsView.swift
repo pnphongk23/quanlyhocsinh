@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Tab "Báo cáo" of a class: the report batches (each one a session range), newest first, and the
-/// button that adds one. There is no month or period picker.
+/// Tab "Báo cáo" of a class: the report batches (each one a month, or an older session range), newest
+/// first, and the button that adds one.
 struct ClassReportsView: View {
     let classID: String
     @ObservedObject var data: I4FeatureStore
@@ -20,9 +20,7 @@ struct ClassReportsView: View {
         _error = State(initialValue: seedError)
     }
 
-    private var sessions: [ClassSession] { data.reportSessions(in: classID) }
     private var batches: [ReportBatch] { data.batches(in: classID) }
-    private var hasHeldSession: Bool { ReportRangeRules.defaultRange(sessions, classID: classID) != nil }
 
     var body: some View {
         TeacherScroll { content }
@@ -88,13 +86,11 @@ struct ClassReportsView: View {
     private var emptyState: some View {
         AppEmptyState(
             title: String(localized: "reports.list.empty.title", table: "Reports"),
-            description: hasHeldSession
-                ? String(localized: "reports.list.empty.hint", table: "Reports")
-                : String(localized: "reports.list.empty.noHeld", table: "Reports"))
+            description: String(localized: "reports.list.empty.hint", table: "Reports"))
     }
 
     private func batchRow(_ batch: ReportBatch) -> some View {
-        let range = ReportRangeRules.resolve(batch, sessions: sessions)
+        let range = ReportRangeRules.resolve(batch)
         let counts = ReportRangeRules.counts(data.reports(batchID: batch.id))
         return HStack(spacing: 0) {
             Button { openBatchID = batch.id } label: {
@@ -147,41 +143,32 @@ struct ClassReportsView: View {
     @ViewBuilder private var addBar: some View {
         if data.canReadCommentsReports, data.canWriteCommentsReports, data.isReady {
             TeacherPinnedBar {
-                if let reason = data.sessionListFailure[classID], !data.hasFullSessions(classID) {
-                    Text(reason)
-                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
-                        .foregroundStyle(AppColors.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .accessibilityIdentifier("reports.add.blocked")
-                }
                 AppButton(title: String(localized: "reports.list.add", table: "Reports"), size: .large) {
                     adding = true
                 }
-                .disabled(!hasHeldSession || !data.hasFullSessions(classID))
                 .accessibilityIdentifier("reports.add")
             }
         }
     }
 }
 
-/// Picks the first and last session of a new batch. Cancelled sessions have no number and are not offered.
+/// Picks the month of a new batch; the current month is chosen first. Several batches of one month are allowed.
 struct AddReportBatchSheet: View {
+    static let monthCount = 12
+
     let classID: String
     @ObservedObject var data: I4FeatureStore
     let created: (String) -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var fromID = ""
-    @State private var toID = ""
+    @State private var month = ReportRangeRules.monthKey(.now)
     @State private var requestID = UUID().uuidString.lowercased()
     @State private var controller = AppSaveController()
 
-    private var choices: [ReportSessionChoice] {
-        ReportRangeRules.choices(data.reportSessions(in: classID), classID: classID)
-    }
-
-    private var problem: ReportRangeProblem? {
-        guard !fromID.isEmpty, !toID.isEmpty else { return .notInClass }
-        return ReportRangeRules.problem(data.reportSessions(in: classID), classID: classID, from: fromID, to: toID)
+    /// The current month and the ones before it, newest first.
+    static func monthChoices(now: Date = .now, calendar: Calendar = .current) -> [String] {
+        (0..<monthCount).compactMap { offset in
+            calendar.date(byAdding: .month, value: -offset, to: now).map { ReportRangeRules.monthKey($0, calendar: calendar) }
+        }
     }
 
     var body: some View {
@@ -189,11 +176,7 @@ struct AddReportBatchSheet: View {
             VStack(alignment: .leading, spacing: AppMetrics.cardPaddingHorizontal) {
                 Text(String(localized: "reports.add.hint", table: "Reports"))
                     .appText(AppText.muted).foregroundStyle(AppColors.muted)
-                picker(String(localized: "reports.add.from", table: "Reports"), selection: $fromID, id: "reports.add.from")
-                picker(String(localized: "reports.add.to", table: "Reports"), selection: $toID, id: "reports.add.to")
-                if let problem, !fromID.isEmpty, !toID.isEmpty {
-                    Text(problem.message).appText(AppText.muted).foregroundStyle(AppColors.error)
-                }
+                monthPicker
                 if let message = (controller.error as? I4SaveFailure)?.message {
                     TeacherErrorBanner(message: message)
                 }
@@ -201,37 +184,30 @@ struct AddReportBatchSheet: View {
             .padding(.bottom, AppMetrics.cardPaddingHorizontal)
         } footer: {
             AppSaveButton(title: String(localized: "reports.add.create", table: "Reports"), controller: controller,
-                          isEnabled: problem == nil, identifier: "reports.add.create", onSuccess: {}) {
-                let result = await data.createBatch(classID: classID, fromSessionID: fromID, toSessionID: toID,
-                                                    requestID: requestID)
+                          identifier: "reports.add.create", onSuccess: {}) {
+                let result = await data.createBatch(classID: classID, month: month, requestID: requestID)
                 switch result {
                 case .success(let batchID): created(batchID)
                 case .failure(let failure): throw I4SaveFailure(message: failure.message)
                 }
             }
         } close: { dismiss() }
-        .onAppear(perform: applyDefault)
-        // A new range needs a new id: the same id with another range is refused by the server.
-        .onChange(of: fromID) { _, _ in requestID = UUID().uuidString.lowercased() }
-        .onChange(of: toID) { _, _ in requestID = UUID().uuidString.lowercased() }
+        // Another month needs another id: the same id with another month is refused by the server.
+        .onChange(of: month) { _, _ in requestID = UUID().uuidString.lowercased() }
     }
 
-    private func applyDefault() {
-        guard fromID.isEmpty, let range = ReportRangeRules.defaultRange(data.reportSessions(in: classID), classID: classID) else { return }
-        fromID = range.from.id
-        toID = range.to.id
-    }
-
-    private func picker(_ title: String, selection: Binding<String>, id: String) -> some View {
+    private var monthPicker: some View {
         VStack(alignment: .leading, spacing: AppMetrics.fieldGap) {
-            Text(title).appText(AppText.label).foregroundStyle(AppColors.text)
+            Text(String(localized: "reports.add.month", table: "Reports")).appText(AppText.label).foregroundStyle(AppColors.text)
             Menu {
-                Picker(title, selection: selection) {
-                    ForEach(choices) { choice in Text(choice.label).tag(choice.id) }
+                Picker(String(localized: "reports.add.month", table: "Reports"), selection: $month) {
+                    ForEach(Self.monthChoices(), id: \.self) { choice in
+                        Text(ReportRangeRules.monthTitle(choice) ?? choice).tag(choice)
+                    }
                 }
             } label: {
                 HStack(spacing: AppMetrics.saveFeedbackGap) {
-                    Text(choices.first { $0.id == selection.wrappedValue }?.label ?? "")
+                    Text(ReportRangeRules.monthTitle(month) ?? month)
                         .appText(AppText.body).foregroundStyle(AppColors.text)
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.up.chevron.down")
@@ -243,7 +219,7 @@ struct AddReportBatchSheet: View {
                 .overlay(RoundedRectangle(cornerRadius: AppRadius.control)
                     .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
             }
-            .accessibilityIdentifier(id)
+            .accessibilityIdentifier("reports.add.month")
         }
     }
 }

@@ -1,42 +1,10 @@
 import Foundation
 
-/// Text of a session range: "Buổi 1–8 · 01/10–24/10", or the dates alone when the numbers are unknown.
-struct ReportRangeLabels: Equatable {
-    let label: String
-    let sessionsLabel: String
-    let datesLabel: String
-}
-
 struct ResolvedReportRange: Equatable {
     let fromKey: String
     let toKey: String
-    let fromNumber: Int?
-    let toNumber: Int?
-    let labels: ReportRangeLabels
-    var label: String { labels.label }
-}
-
-/// One selectable session in the add-report sheet.
-struct ReportSessionChoice: Identifiable, Equatable {
-    let session: ClassSession
-    let number: Int
-    var id: String { session.id }
-    var label: String {
-        String.localizedStringWithFormat(String(localized: "reports.choice", table: "Reports"),
-                                         number, ReportRangeRules.dayMonth(session.date))
-    }
-}
-
-enum ReportRangeProblem: Equatable {
-    case notInClass, cancelled, order
-
-    var message: String {
-        switch self {
-        case .notInClass: String(localized: "reports.problem.notInClass", table: "Reports")
-        case .cancelled: String(localized: "reports.problem.cancelled", table: "Reports")
-        case .order: String(localized: "reports.problem.order", table: "Reports")
-        }
-    }
+    /// "Tháng 10/2026" for a monthly batch, otherwise the dates alone ("01/10–24/10").
+    let label: String
 }
 
 struct ReportBatchCounts: Equatable {
@@ -80,7 +48,7 @@ enum ReportRangeRules {
     /// "YYYY-MM-DD HH:MM", the same key the server stores in `from_key` / `to_key`.
     static func key(_ session: ClassSession) -> String { "\(session.date) \(session.startTime)" }
 
-    /// Non-cancelled sessions of the class in time order; the number of a session is its position + 1.
+    /// Non-cancelled sessions of the class in time order.
     static func counted(_ sessions: [ClassSession], classID: String) -> [ClassSession] {
         sessions.filter { $0.classId == classID && $0.status != .cancelled }
             .sorted { key($0) < key($1) }
@@ -94,65 +62,45 @@ enum ReportRangeRules {
         return "\(parts[2])/\(parts[1])"
     }
 
-    static func choices(_ sessions: [ClassSession], classID: String) -> [ReportSessionChoice] {
-        counted(sessions, classID: classID).enumerated().map {
-            ReportSessionChoice(session: $0.element, number: $0.offset + 1)
-        }
+    /// "2026-10" → "Tháng 10/2026"; nil when the text is not a month.
+    static func monthTitle(_ month: String) -> String? {
+        let parts = month.split(separator: "-")
+        guard parts.count == 2, parts[0].count == 4, let year = Int(parts[0]), let number = Int(parts[1]),
+              (1...12).contains(number) else { return nil }
+        return String.localizedStringWithFormat(String(localized: "reports.month.title", table: "Reports"), number, year)
     }
 
-    /// From the first session to the latest held session; nil while no session has been held.
-    static func defaultRange(_ sessions: [ClassSession], classID: String) -> (from: ClassSession, to: ClassSession)? {
-        let list = counted(sessions, classID: classID)
-        guard let first = list.first, let last = list.last(where: { $0.status == .held }) else { return nil }
-        return (first, last)
+    /// "YYYY-MM" for a Date in the calendar the app shows dates in.
+    static func monthKey(_ date: Date, calendar: Calendar = .current) -> String {
+        let parts = calendar.dateComponents([.year, .month], from: date)
+        return String(format: "%04d-%02d", parts.year ?? 1970, parts.month ?? 1)
     }
 
-    static func labels(fromKey: String, toKey: String, fromNumber: Int?, toNumber: Int?) -> ReportRangeLabels {
+    /// A month batch starts at 00:00 on day 1 and ends at 23:59 inside the same month.
+    private static func monthOfWholeMonthKeys(fromKey: String, toKey: String) -> String? {
+        guard fromKey.hasSuffix(" 00:00"), toKey.hasSuffix(" 23:59"), fromKey.count >= 7, toKey.count >= 7,
+              fromKey.prefix(7) == toKey.prefix(7) else { return nil }
+        return String(fromKey.prefix(7))
+    }
+
+    /// Name of a range. The stored `month` of a batch wins; keys that span one whole month name the same
+    /// month; anything else shows its dates, never a session count.
+    static func label(fromKey: String, toKey: String, month: String? = nil) -> String {
+        if let month, let title = monthTitle(month) { return title }
+        if let whole = monthOfWholeMonthKeys(fromKey: fromKey, toKey: toKey), let title = monthTitle(whole) { return title }
         let from = dayMonth(fromKey)
         let to = dayMonth(toKey)
-        let dates = fromKey.prefix(10) == toKey.prefix(10) ? from : "\(from)–\(to)"
-        var sessionsLabel = ""
-        if let fromNumber, let toNumber {
-            sessionsLabel = fromNumber == toNumber
-                ? String.localizedStringWithFormat(String(localized: "reports.range.single", table: "Reports"), fromNumber)
-                : String.localizedStringWithFormat(String(localized: "reports.range.span", table: "Reports"), fromNumber, toNumber)
-        }
-        let label = sessionsLabel.isEmpty ? dates
-            : String.localizedStringWithFormat(String(localized: "reports.range.withDates", table: "Reports"), sessionsLabel, dates)
-        return ReportRangeLabels(label: label, sessionsLabel: sessionsLabel, datesLabel: dates)
+        return fromKey.prefix(10) == toKey.prefix(10) ? from : "\(from)–\(to)"
     }
 
-    /// Range of a stored batch. Numbers follow the class's current numbering; a batch migrated
-    /// from a month, or one whose edge session was cancelled, has dates only.
-    static func resolve(_ batch: ReportBatch, sessions: [ClassSession]) -> ResolvedReportRange {
-        let list = counted(sessions, classID: batch.classId)
-        func number(_ id: String?) -> Int? {
-            guard let id, let index = list.firstIndex(where: { $0.id == id }) else { return nil }
-            return index + 1
-        }
-        let from = number(batch.fromSessionId)
-        let to = number(batch.toSessionId)
-        let complete = from != nil && to != nil
-        return ResolvedReportRange(
-            fromKey: batch.fromKey, toKey: batch.toKey,
-            fromNumber: complete ? from : nil, toNumber: complete ? to : nil,
-            labels: labels(fromKey: batch.fromKey, toKey: batch.toKey,
-                           fromNumber: complete ? from : nil, toNumber: complete ? to : nil))
+    static func resolve(_ batch: ReportBatch) -> ResolvedReportRange {
+        ResolvedReportRange(fromKey: batch.fromKey, toKey: batch.toKey,
+                            label: label(fromKey: batch.fromKey, toKey: batch.toKey, month: batch.month))
     }
 
-    /// Label of a snapshot: the server's text first, then the key-based fallback.
+    /// Label of a snapshot, computed from its keys: the server's text may still carry session numbers.
     static func label(of range: ReportRange) -> String {
-        if let text = range.label, !text.isEmpty { return text }
-        return labels(fromKey: range.fromKey, toKey: range.toKey,
-                      fromNumber: range.fromNumber, toNumber: range.toNumber).label
-    }
-
-    static func problem(_ sessions: [ClassSession], classID: String, from: String, to: String) -> ReportRangeProblem? {
-        guard let start = sessions.first(where: { $0.id == from }), let end = sessions.first(where: { $0.id == to }),
-              start.classId == classID, end.classId == classID else { return .notInClass }
-        if start.status == .cancelled || end.status == .cancelled { return .cancelled }
-        if key(start) > key(end) { return .order }
-        return nil
+        label(fromKey: range.fromKey, toKey: range.toKey)
     }
 
     /// Newest last session first, as the server lists them.
@@ -248,12 +196,25 @@ enum ReportRules {
         let sentSlips = slips.filter { $0.studentId == student.id && $0.status == .sent }
         let sentSessionIDs = Set(sentSlips.map(\.sessionId))
         var three = 0, two = 0, one = 0, ticketCount = 0
+        var stars5 = Stars5Summary()
         for slip in sentSlips where sessionIDs.contains(slip.sessionId) {
             guard let stars = slip.stars else { continue }
-            switch stars {
-            case .three: three += 1
-            case .two: two += 1
-            case .one: one += 1
+            if slip.isLegacy {
+                switch stars {
+                case 3: three += 1
+                case 2: two += 1
+                case 1: one += 1
+                default: continue
+                }
+            } else {
+                switch stars {
+                case 5...: stars5.s5 += 1
+                case 4: stars5.s4 += 1
+                case 3: stars5.s3 += 1
+                case 2: stars5.s2 += 1
+                case 1: stars5.s1 += 1
+                default: stars5.s0 += 1
+                }
             }
             ticketCount += 1
         }
@@ -296,17 +257,17 @@ enum ReportRules {
         let snapshot = ReportSnapshot(
             studentId: student.id,
             batchId: batchID,
-            range: ReportRange(fromKey: range.fromKey, toKey: range.toKey, fromNumber: range.fromNumber,
-                               toNumber: range.toNumber, label: range.label),
+            range: ReportRange(fromKey: range.fromKey, toKey: range.toKey),
             attendance: AttendanceSummary(present: count(.present), late: count(.late), excused: count(.excused),
                                          absent: count(.absent), heldSessions: rangeSessions.count),
             tests: rangeTests,
-            stars: StarsSummary(three: three, two: two, one: one),
+            stars: StarsSummary(three: three, two: two, one: one, stars5: stars5),
             homework: homework,
             generalComment: comment,
             ready: missing.isEmpty)
         return StudentReportContent(student: student, snapshot: snapshot, ticketCount: ticketCount,
-                                    missing: missing, suggestion: suggestion(three: three, two: two, one: one))
+                                    missing: missing,
+                                    suggestion: suggestion(StarsSummary(three: three, two: two, one: one, stars5: stars5)))
     }
 
     /// Content of one student's report as the server computed it (`GET /reports/{id}/preview`): the
@@ -319,13 +280,20 @@ enum ReportRules {
         }
         let stars = snapshot.stars
         return StudentReportContent(student: student, snapshot: snapshot,
-                                    ticketCount: stars.three + stars.two + stars.one, missing: reasons,
-                                    suggestion: suggestion(three: stars.three, two: stars.two, one: stars.one))
+                                    ticketCount: stars.legacyTotal + stars.stars5.total, missing: reasons,
+                                    suggestion: suggestion(stars))
     }
 
-    static func suggestion(three: Int, two: Int, one: Int) -> String? {
-        guard three + two + one > 0 else { return nil }
-        return String.localizedStringWithFormat(String(localized: "reports.suggestion", table: "Reports"), three, two, one)
+    /// General-comment hint: the 5-star tally when there is one, the old scale's otherwise.
+    static func suggestion(_ stars: StarsSummary) -> String? {
+        let five = stars.stars5
+        if five.total > 0 {
+            return String.localizedStringWithFormat(String(localized: "reports.suggestion.five", table: "Reports"),
+                                                    five.total, five.s5 + five.s4)
+        }
+        guard stars.legacyTotal > 0 else { return nil }
+        return String.localizedStringWithFormat(String(localized: "reports.suggestion", table: "Reports"),
+                                                stars.three, stars.two, stars.one)
     }
 
     /// Status pill of one student in the review list.

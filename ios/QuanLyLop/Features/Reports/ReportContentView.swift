@@ -1,12 +1,12 @@
 import SwiftUI
 
 /// The report as the parent receives it, drawn from a snapshot: attendance, scores per test (no
-/// average), 3/2/1-star counts, homework per part and the general comment.
+/// average), star counts (5-criteria slips, old 3-star slips apart), homework per part and the general comment.
 struct ReportContentView: View {
     let snapshot: ReportSnapshot
     let comment: String
 
-    private var starTotal: Int { snapshot.stars.three + snapshot.stars.two + snapshot.stars.one }
+    private var starTotal: Int { snapshot.stars.stars5.total + snapshot.stars.legacyTotal }
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
@@ -46,7 +46,7 @@ struct ReportContentView: View {
 
     private var starsBlock: some View {
         let stars = snapshot.stars
-        let maxCount = max(1, stars.three, stars.two, stars.one)
+        let maxCount = max(1, stars.stars5.descending.map(\.count).max() ?? 0, stars.three, stars.two, stars.one)
         return AppSection(title: String(localized: "feature.reports.nhan.xet.theo.sao")) {
             card {
                 note(String.localizedStringWithFormat(String(localized: "feature.reports.buoi.co.phieu"), String(describing: starTotal)), size: 15)
@@ -54,9 +54,17 @@ struct ReportContentView: View {
                 if starTotal == 0 {
                     note(String(localized: "reports.stars.none", table: "Reports"))
                 } else {
-                    starRow(3, count: stars.three, maxCount: maxCount)
-                    starRow(2, count: stars.two, maxCount: maxCount)
-                    starRow(1, count: stars.one, maxCount: maxCount)
+                    if stars.stars5.total > 0 {
+                        ForEach(stars.stars5.descending, id: \.stars) { starRow($0.stars, count: $0.count, maxCount: maxCount) }
+                    }
+                    if stars.legacyTotal > 0 {
+                        if stars.stars5.total > 0 {
+                            note(String(localized: "reports.stars.legacyTitle", table: "Reports"), size: 13)
+                        }
+                        starRow(3, count: stars.three, maxCount: maxCount)
+                        starRow(2, count: stars.two, maxCount: maxCount)
+                        starRow(1, count: stars.one, maxCount: maxCount)
+                    }
                 }
             }
         }
@@ -64,8 +72,9 @@ struct ReportContentView: View {
 
     private func starRow(_ level: Int, count: Int, maxCount: Int) -> some View {
         HStack(spacing: TeacherMetrics.contentGap) {
-            Text(String(repeating: "★", count: level))
+            Text(level == 0 ? String(localized: "reports.stars.zero", table: "Reports") : String(repeating: "★", count: level))
                 .font(.system(size: 20)).foregroundStyle(I4Style.starBar).lineLimit(1)
+                .frame(minWidth: TeacherMetrics.starCountMinWidth * 3, alignment: .leading)
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule().fill(AppColors.divider)

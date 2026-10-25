@@ -1,6 +1,6 @@
 import Foundation
 
-/// Responses of the report-batch endpoints (`contract-changes.md`, report batches by session range).
+/// Responses of the report-batch endpoints (report batches by month).
 struct ReportBatchItem: Decodable, Sendable {
     let id: String
     let classId: String
@@ -8,6 +8,8 @@ struct ReportBatchItem: Decodable, Sendable {
     let toSessionId: String?
     let fromKey: String
     let toKey: String
+    /// "YYYY-MM" for a monthly batch; nil for an older session-range batch.
+    let month: String?
 }
 
 extension KeyedDecodingContainer {
@@ -112,12 +114,6 @@ struct ReportFailure: Error, Equatable {
                 return ReportFailure(message: notReady(error.details?["missing"]))
             }
             // The server answers 422 `validation_error`; what went wrong is in `details.reason`.
-            if status == 422, error.details?["reason"]?.string == "invalid_range" {
-                return ReportFailure(message: ReportRangeProblem.order.message)
-            }
-            if status == 422, error.details?["reason"]?.string == "session_cancelled" {
-                return ReportFailure(message: ReportRangeProblem.cancelled.message)
-            }
             if status == 422 { return ReportFailure(message: String(localized: "reports.error.range", table: "Reports")) }
             if status == 403 { return ReportFailure(message: String(localized: "reports.error.forbidden", table: "Reports")) }
             if status == 404 { return ReportFailure(message: String(localized: "reports.error.notFound", table: "Reports")) }

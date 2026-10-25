@@ -35,10 +35,7 @@ final class ReportRemoteLoadingTests: XCTestCase {
 
         XCTAssertNil(failure)
         XCTAssertTrue(data.hasFullSessions("c1"))
-        let range = ReportRangeRules.defaultRange(data.reportSessions(in: "c1"), classID: "c1")
-        XCTAssertEqual(range?.from.id, "s2")
-        XCTAssertEqual(range?.to.id, "s3")
-        XCTAssertEqual(ReportRangeRules.choices(data.reportSessions(in: "c1"), classID: "c1").map(\.number), [1, 2])
+        XCTAssertEqual(ReportRangeRules.counted(data.reportSessions(in: "c1"), classID: "c1").map(\.id), ["s2", "s3"])
     }
 
     func testBatchesAndTheirReportsAreCachedWithRestFlags() async throws {

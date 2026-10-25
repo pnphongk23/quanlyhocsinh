@@ -24,7 +24,7 @@ struct ReportBatchDetailView: View {
     private var klass: Classroom? { data.classes.first { $0.id == classID } }
 
     private var range: ResolvedReportRange? {
-        batch.map { ReportRangeRules.resolve($0, sessions: data.reportSessions(in: $0.classId)) }
+        batch.map { ReportRangeRules.resolve($0) }
     }
 
     private struct Row: Identifiable {

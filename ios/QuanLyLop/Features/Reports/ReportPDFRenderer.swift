@@ -28,7 +28,14 @@ enum I4PDFRenderer {
 
             let stars = snapshot.stars
             cursor.heading(String(localized: "feature.reports.nhan.xet.theo.sao"))
-            cursor.text(String.localizedStringWithFormat(String(localized: "feature.reports.buoi.buoi.buoi.tinh.tren.phieu.a.gui"), String(describing: (stars.three)), String(describing: (stars.two)), String(describing: (stars.one))))
+            let five = stars.stars5
+            if five.total > 0 {
+                cursor.text(String.localizedStringWithFormat(String(localized: "reports.pdf.stars5", table: "Reports"),
+                                                             five.s5, five.s4, five.s3, five.s2, five.s1, five.s0))
+            }
+            if stars.legacyTotal > 0 || five.total == 0 {
+                cursor.text(String.localizedStringWithFormat(String(localized: "feature.reports.buoi.buoi.buoi.tinh.tren.phieu.a.gui"), String(describing: (stars.three)), String(describing: (stars.two)), String(describing: (stars.one))))
+            }
 
             cursor.heading(String(localized: "feature.reports.bai.tap.ve.nha"))
             if snapshot.homework.isEmpty {

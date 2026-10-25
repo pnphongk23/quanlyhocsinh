@@ -27,8 +27,7 @@ final class ReportPDFLocalTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: url), Data("%PDF-1.7 fixture".utf8))
     }
 
-    private func snapshot(range: ReportRange? = ReportRange(fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00",
-                                                           fromNumber: 1, toNumber: 8, label: "Buổi 1–8 · 01/10–24/10"),
+    private func snapshot(range: ReportRange? = ReportRange(fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00"),
                           month: String? = nil) -> ReportSnapshot {
         ReportSnapshot(studentId: "student-1", month: month, range: range,
                        attendance: AttendanceSummary(present: 5, late: 1, excused: 0, absent: 0, heldSessions: 6),

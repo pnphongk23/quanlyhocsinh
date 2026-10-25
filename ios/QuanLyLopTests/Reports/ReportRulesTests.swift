@@ -25,8 +25,10 @@ final class ReportRulesTests: XCTestCase {
                    version: 1, updatedAt: "2026-10-05T11:00:00.000Z")
     }
 
-    private func slip(_ session: String, _ stars: Stars?, sent: Bool) -> SessionSlip {
-        SessionSlip(sessionId: session, studentId: "stu", stars: stars, note: "",
+    /// `legacy` makes an old three-star slip; otherwise `stars` criteria are met on a five-criteria slip.
+    private func slip(_ session: String, _ stars: Int?, legacy: Bool = false, sent: Bool) -> SessionSlip {
+        SessionSlip(sessionId: session, studentId: "stu", stars: stars,
+                    criteria: legacy ? nil : stars.map { (1 << $0) - 1 }, scale: legacy ? 3 : 5, note: "",
                     status: sent ? .sent : .draft, sentAt: sent ? "2026-10-12T11:00:00.000Z" : nil,
                     version: 1, updatedAt: "2026-10-12T11:00:00.000Z")
     }
@@ -39,21 +41,22 @@ final class ReportRulesTests: XCTestCase {
         Score(testId: test, studentId: "stu", value: value, version: 1, updatedAt: "2026-10-07")
     }
 
-    private func batch(from: String? = "s1", to: String? = "s2",
+    private func batch(month: String? = nil, from: String? = "s1", to: String? = "s2",
                        fromKey: String = "2026-10-05 18:00", toKey: String = "2026-10-12 18:00") -> ReportBatch {
-        ReportBatch(id: "b", classId: "c", fromSessionId: from, toSessionId: to, fromKey: fromKey, toKey: toKey, version: 1)
+        ReportBatch(id: "b", classId: "c", month: month, fromSessionId: from, toSessionId: to, fromKey: fromKey,
+                    toKey: toKey, version: 1)
     }
 
     private func build(student: Student? = nil, range: ResolvedReportRange? = nil, tests: [TestDefinition]? = nil,
                        scores: [Score]? = nil, comment: String = "") -> StudentReportContent? {
         ReportRules.build(
-            student: student ?? self.student(), range: range ?? ReportRangeRules.resolve(batch(), sessions: sessions),
+            student: student ?? self.student(), range: range ?? ReportRangeRules.resolve(batch()),
             batchID: "b", sessions: sessions,
             attendance: [attendance("s1", .present), attendance("s2", .late), attendance("s0", .absent)],
             tests: tests ?? [test("t1", "Từ vựng", "2026-10-07"), test("t2", "Nghe", "2026-10-14")],
             scores: scores ?? [score("t1", 12)],
-            slips: [slip("s1", .three, sent: true), slip("s2", .two, sent: true), slip("s0", .one, sent: true),
-                    slip("s4", .three, sent: false)],
+            slips: [slip("s1", 3, legacy: true, sent: true), slip("s2", 4, sent: true), slip("s0", 1, legacy: true, sent: true),
+                    slip("s4", 5, sent: false)],
             sections: [
                 HomeworkSection(id: "v", classId: "c", sessionId: "s1", kind: .vocabulary, title: "U6", description: "", version: 1),
                 HomeworkSection(id: "e", classId: "c", sessionId: "s2", kind: .exercise, title: "WB", description: "", version: 1)
@@ -65,65 +68,53 @@ final class ReportRulesTests: XCTestCase {
             generalComment: comment)
     }
 
-    // MARK: Default range and choices
-
-    func testDefaultRangeRunsFromFirstSessionToLatestHeldSession() throws {
-        let range = try XCTUnwrap(ReportRangeRules.defaultRange(sessions, classID: "c"))
-        XCTAssertEqual(range.from.id, "s0")
-        XCTAssertEqual(range.to.id, "s2")
-    }
-
-    func testDefaultRangeIsNilBeforeAnySessionIsHeld() {
-        let planned = [session("p1", "2026-10-05", .planned), session("p2", "2026-10-12", .planned)]
-        XCTAssertNil(ReportRangeRules.defaultRange(planned, classID: "c"))
-        XCTAssertNil(ReportRangeRules.defaultRange([], classID: "c"))
-    }
-
-    func testCancelledSessionsAreNotChoicesAndDoNotTakeANumber() {
-        let choices = ReportRangeRules.choices(sessions, classID: "c")
-        XCTAssertEqual(choices.map(\.id), ["s0", "s1", "s2", "s4"])
-        XCTAssertEqual(choices.map(\.number), [1, 2, 3, 4])
-        XCTAssertEqual(choices.last?.label, "Buổi 4 · 26/10")
-    }
-
-    func testRangeProblems() {
-        XCTAssertNil(ReportRangeRules.problem(sessions, classID: "c", from: "s0", to: "s0"))
-        XCTAssertEqual(ReportRangeRules.problem(sessions, classID: "c", from: "s2", to: "s1"), .order)
-        XCTAssertEqual(ReportRangeRules.problem(sessions, classID: "c", from: "s0", to: "s3"), .cancelled)
-        XCTAssertEqual(ReportRangeRules.problem(sessions, classID: "c", from: "s0", to: "nope"), .notInClass)
-        XCTAssertEqual(ReportRangeRules.problem(sessions, classID: "other", from: "s0", to: "s1"), .notInClass)
-    }
-
     // MARK: Range naming
 
-    func testRangeNameWithSessionNumbers() {
-        let labels = ReportRangeRules.labels(fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00", fromNumber: 1, toNumber: 8)
-        XCTAssertEqual(labels.label, "Buổi 1–8 · 01/10–24/10")
-        XCTAssertEqual(labels.sessionsLabel, "Buổi 1–8")
-        XCTAssertEqual(labels.datesLabel, "01/10–24/10")
-        XCTAssertEqual(ReportRangeRules.labels(fromKey: "2026-10-14 18:00", toKey: "2026-10-14 18:00", fromNumber: 8, toNumber: 8).label,
-                       "Buổi 8 · 14/10")
+    func testMonthlyBatchIsNamedByItsMonth() {
+        let monthly = batch(month: "2026-10", from: nil, to: nil, fromKey: "2026-10-01 00:00", toKey: "2026-10-31 23:59")
+        XCTAssertEqual(ReportRangeRules.resolve(monthly).label, "Tháng 10/2026")
+        XCTAssertEqual(ReportRangeRules.monthTitle("2026-01"), "Tháng 1/2026")
+        XCTAssertNil(ReportRangeRules.monthTitle("2026-13"))
+        XCTAssertNil(ReportRangeRules.monthTitle("October"))
     }
 
-    func testRangeNameIsDatesOnlyWithoutNumbers() {
-        XCTAssertEqual(ReportRangeRules.labels(fromKey: "2026-10-01 00:00", toKey: "2026-10-31 23:59", fromNumber: nil, toNumber: nil).label,
-                       "01/10–31/10")
-        // A batch migrated from a month has no session ids, so no numbers either.
+    func testSeveralBatchesOfOneMonthShareTheName() {
+        let first = batch(month: "2026-10", from: nil, to: nil, fromKey: "2026-10-01 00:00", toKey: "2026-10-31 23:59")
+        let second = ReportBatch(id: "b2", classId: "c", month: "2026-10", fromSessionId: nil, toSessionId: nil,
+                                 fromKey: "2026-10-01 00:00", toKey: "2026-10-31 23:59", version: 1)
+        XCTAssertEqual(ReportRangeRules.resolve(first).label, ReportRangeRules.resolve(second).label)
+    }
+
+    func testOlderRangeBatchesShowDatesNeverSessionNumbers() {
+        XCTAssertEqual(ReportRangeRules.resolve(batch()).label, "05/10–12/10")
+        XCTAssertEqual(ReportRangeRules.resolve(batch(from: "s1", to: "s1", toKey: "2026-10-05 18:00")).label, "05/10")
+    }
+
+    func testBatchWithoutMonthButWholeMonthKeysIsStillNamedByMonth() {
         let migrated = batch(from: nil, to: nil, fromKey: "2026-10-01 00:00", toKey: "2026-10-31 23:59")
-        XCTAssertEqual(ReportRangeRules.resolve(migrated, sessions: sessions).label, "01/10–31/10")
+        XCTAssertEqual(ReportRangeRules.resolve(migrated).label, "Tháng 10/2026")
     }
 
-    func testResolvedRangeUsesCurrentNumbersAndDropsThemWhenAnEdgeIsCancelled() {
-        XCTAssertEqual(ReportRangeRules.resolve(batch(), sessions: sessions).label, "Buổi 2–3 · 05/10–12/10")
-        XCTAssertEqual(ReportRangeRules.resolve(batch(to: "s3"), sessions: sessions).label, "05/10–12/10")
+    func testSnapshotLabelIsComputedFromKeysIgnoringTheServerText() {
+        XCTAssertEqual(ReportRangeRules.label(of: ReportRange(fromKey: "2026-10-01 18:00", toKey: "2026-10-24 18:00")),
+                       "01/10–24/10")
+        XCTAssertEqual(ReportRangeRules.label(of: ReportRange(fromKey: "2026-10-01 00:00", toKey: "2026-10-31 23:59")),
+                       "Tháng 10/2026")
+        let decoded = try? WireJSON.decoder().decode(ReportRange.self, from: Data("""
+        {"from_key":"2026-10-01 18:00","to_key":"2026-10-24 18:00","from_number":1,"to_number":8,"label":"Buổi 1–8 · 01/10–24/10"}
+        """.utf8))
+        XCTAssertEqual(decoded.map(ReportRangeRules.label(of:)), "01/10–24/10")
     }
 
-    func testSnapshotLabelPrefersTheServerText() {
-        XCTAssertEqual(ReportRangeRules.label(of: ReportRange(fromKey: "a", toKey: "b", label: "Buổi 1–8 · 01/10–24/10")),
-                       "Buổi 1–8 · 01/10–24/10")
-        XCTAssertEqual(ReportRangeRules.label(of: ReportRange(fromKey: "2026-10-01 18:00", toKey: "2026-10-02 18:00",
-                                                               fromNumber: 1, toNumber: 2)),
-                       "Buổi 1–2 · 01/10–02/10")
+    func testMonthChoicesStartAtTheCurrentMonthAndGoBack() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 2, day: 10))!
+        let choices = AddReportBatchSheet.monthChoices(now: now, calendar: calendar)
+        XCTAssertEqual(choices.count, AddReportBatchSheet.monthCount)
+        XCTAssertEqual(choices.first, "2026-02")
+        XCTAssertEqual(choices[2], "2025-12")
+        XCTAssertEqual(ReportRangeRules.monthKey(now, calendar: calendar), "2026-02")
     }
 
     func testBatchesAreListedNewestFirst() {
@@ -136,7 +127,7 @@ final class ReportRulesTests: XCTestCase {
     // MARK: Content of a range
 
     func testBuildsOnlyTheSessionsOfTheRangeAndSkipsCancelledOnes() throws {
-        let range = ReportRangeRules.resolve(batch(to: "s4", toKey: "2026-10-26 18:00"), sessions: sessions)
+        let range = ReportRangeRules.resolve(batch(to: "s4", toKey: "2026-10-26 18:00"))
         let report = try XCTUnwrap(build(range: range))
         // s1, s2 and s4 are in the range; s3 is cancelled and s0 is before it.
         XCTAssertEqual(report.snapshot.attendance.heldSessions, 3)
@@ -151,15 +142,15 @@ final class ReportRulesTests: XCTestCase {
         XCTAssertEqual(report.attendanceCount, 2)
         XCTAssertEqual(report.snapshot.tests.map(\.name), ["Từ vựng"])
         XCTAssertEqual(report.gradedTestCount, 1)
-        // s0's slip is before the range and s4's is not sent.
-        XCTAssertEqual(report.snapshot.stars, StarsSummary(three: 1, two: 1, one: 0))
+        // s0's slip is before the range and s4's is not sent. The old slip of s1 is counted apart from s2's 4 stars.
+        XCTAssertEqual(report.snapshot.stars,
+                       StarsSummary(three: 1, two: 0, one: 0, stars5: Stars5Summary(s4: 1)))
         XCTAssertEqual(report.ticketCount, 2)
         XCTAssertEqual(report.snapshot.homework, [HomeworkSummary(kind: .vocabulary, excellent: 1, done: 0, notDone: 0)])
         XCTAssertEqual(report.missing, ["Thiếu nhận xét chung"])
-        XCTAssertEqual(report.snapshot.range?.label, "Buổi 2–3 · 05/10–12/10")
+        XCTAssertEqual(report.snapshot.range, ReportRange(fromKey: "2026-10-05 18:00", toKey: "2026-10-12 18:00"))
         XCTAssertEqual(report.snapshot.batchId, "b")
-        XCTAssertEqual(report.suggestion,
-                       "Gợi ý theo số buổi 3/2/1 sao của đợt: Trong đợt này con có 1 buổi 3 sao, 1 buổi 2 sao, 0 buổi 1 sao.")
+        XCTAssertEqual(report.suggestion, "Gợi ý theo phiếu 5 sao: Trong đợt này con có 1 phiếu, trong đó 1 phiếu 4–5 sao.")
     }
 
     func testReadyNeedsEveryScoreAndTheGeneralComment() throws {
