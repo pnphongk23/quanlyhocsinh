@@ -1,4 +1,4 @@
-import type { StarLevel } from "./types";
+import type { HomeworkGrade, StarLevel } from "./types";
 
 export const SLIP_CRITERIA = [
   "Chú ý nghe giảng",
@@ -52,4 +52,21 @@ export function generatedSlipSentence(criteria: number): string {
 
 export function defaultSlipComment(stars: StarLevel): string {
   return DEFAULT_SLIP_COMMENTS[stars];
+}
+
+/** Ghép câu nhận xét và ghi chú theo nội dung phiếu phụ huynh nhìn thấy. */
+export function slipDisplayText(comment: string | null, note: string | null): string {
+  const trimmedNote = note?.trim() ?? "";
+  if (!comment) return trimmedNote;
+  return trimmedNote ? `${comment}\n${trimmedNote}` : comment;
+}
+
+/** Tự tích tiêu chí BTVN nếu không có mục nào chưa hoàn thành, trừ khi giáo viên đã chọn tay. */
+export function shouldCheckHomeworkCriterion(
+  previousGrades: readonly HomeworkGrade[] | null,
+  hwManual: boolean,
+  currentChecked: boolean,
+): boolean {
+  if (hwManual) return currentChecked;
+  return !previousGrades?.some((grade) => grade.level === "not_done");
 }

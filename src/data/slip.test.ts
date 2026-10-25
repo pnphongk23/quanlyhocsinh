@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SLIP_COMMENTS, SLIP_CRITERIA, defaultSlipComment, generatedSlipSentence, starsFromCriteria } from "./slip";
+import { DEFAULT_SLIP_COMMENTS, SLIP_CRITERIA, defaultSlipComment, generatedSlipSentence, shouldCheckHomeworkCriterion, slipDisplayText, starsFromCriteria } from "./slip";
 
 describe("five-criterion slips", () => {
   it("counts criterion bits from zero through five stars", () => {
@@ -29,5 +29,42 @@ describe("five-criterion slips", () => {
     [0, "Con chưa chú ý nghe giảng, chưa ghi bài đầy đủ, chưa tích cực tham gia hoạt động, còn mất trật tự và chưa hoàn thành bài tập về nhà."],
   ] as const)("generates sentence for criteria bitmask %i", (criteria, sentence) => {
     expect(generatedSlipSentence(criteria)).toBe(sentence);
+  });
+
+  it.each([
+    ["câu và ghi chú", "Câu nhận xét", "  Ghi chú  ", "Câu nhận xét\nGhi chú"],
+    ["chỉ câu khi ghi chú rỗng", "Câu nhận xét", "  \n ", "Câu nhận xét"],
+    ["chỉ ghi chú khi câu rỗng", "", " Ghi chú ", "Ghi chú"],
+    ["chỉ ghi chú khi câu null", null, " Ghi chú ", "Ghi chú"],
+    ["chuỗi rỗng khi cả hai rỗng", "", "  ", ""],
+    ["chuỗi rỗng khi cả hai null", null, null, ""],
+  ] as const)("ghép nội dung phiếu: %s", (_case, comment, note, expected) => {
+    expect(slipDisplayText(comment, note)).toBe(expected);
+  });
+
+  it("tự tích BTVN khi không giao hoặc chưa có kết quả chấm", () => {
+    expect(shouldCheckHomeworkCriterion(null, false, false)).toBe(true);
+    expect(shouldCheckHomeworkCriterion([], false, false)).toBe(true);
+  });
+
+  it("tự tích BTVN khi tất cả mục đã chấm đều đạt", () => {
+    expect(shouldCheckHomeworkCriterion([
+      { sectionId: "vocabulary", studentId: "student", level: "excellent" },
+      { sectionId: "reading", studentId: "student", level: "done" },
+    ], false, false)).toBe(true);
+  });
+
+  it("bỏ tích BTVN nếu có mục chưa hoàn thành", () => {
+    expect(shouldCheckHomeworkCriterion([
+      { sectionId: "vocabulary", studentId: "student", level: "done" },
+      { sectionId: "reading", studentId: "student", level: "not_done" },
+    ], false, true)).toBe(false);
+  });
+
+  it("giữ lựa chọn hiện tại khi BTVN được chỉnh tay", () => {
+    expect(shouldCheckHomeworkCriterion(null, true, true)).toBe(true);
+    expect(shouldCheckHomeworkCriterion([
+      { sectionId: "reading", studentId: "student", level: "not_done" },
+    ], true, false)).toBe(false);
   });
 });
