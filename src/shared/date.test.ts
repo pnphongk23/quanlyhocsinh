@@ -23,20 +23,20 @@ vi.mock("../data/repositories/guardian", async (importOriginal) => {
 afterEach(() => vi.useRealTimers());
 
 describe("ngày lịch địa phương", () => {
-  it.each(["2026-10-24T17:30:00.000Z", "2026-10-24T23:59:00.000Z"])(
-    "giữ ngày 25/10 tại mốc %s",
+  it.each(["2026-10-31T17:30:00.000Z", "2026-10-31T23:59:00.000Z"])(
+    "giữ ngày 01/11 tại mốc %s",
     (instant) => {
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(new Date(instant));
 
-      expect(todayISO()).toBe("2026-10-25");
-      expect(isFutureSession("2026-10-25")).toBe(false);
-      expect(isFutureSession("2026-10-26")).toBe(true);
+      expect(todayISO()).toBe("2026-11-01");
+      expect(isFutureSession("2026-11-01")).toBe(false);
+      expect(isFutureSession("2026-11-02")).toBe(true);
       replaceStore(createSeed());
-      expect(defaultChildMonth("linked-child")).toBe("2026-10");
+      expect(defaultChildMonth("linked-child")).toBe("2026-11");
 
-      const localMidnight = new Date(2026, 9, 25);
-      expect(dateISO(localMidnight)).toBe("2026-10-25");
+      const localMidnight = new Date(2026, 10, 1);
+      expect(dateISO(localMidnight)).toBe("2026-11-01");
     },
   );
 });

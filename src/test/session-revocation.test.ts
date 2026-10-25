@@ -80,6 +80,37 @@ describe("membership revocation", () => {
     expect(getStore().classes).toEqual([]);
   });
 
+  it("does not reselect the sole membership rejected by sync pull", async () => {
+    const { api, syncNow } = await import("../data/sync");
+    const { activateSession, getSession } = await import("../data/auth/session");
+    const a = membership("membership-a", "workspace-a");
+    const idA = "user-revoked:workspace-a:membership-a";
+    await db.meta.put({ key: idA, identity: idA, cursor: 1, epoch: 1 });
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    await activateSession("fixture-token", user, me("membership-a", [a]) as never, "membership-a");
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    let pullRequests = 0;
+    let membershipSwitches = 0;
+    vi.spyOn(api, "request").mockImplementation((async (endpoint: string) => {
+      if (endpoint === "GET /sync/pull") {
+        pullRequests += 1;
+        throw new ApiError(403, { code: "membership_inactive", message: "Denied", request_id: "fixture" });
+      }
+      if (endpoint === "GET /me") return me(null, membershipSwitches === 0 ? [a] : []);
+      if (endpoint === "PUT /session/membership") {
+        membershipSwitches += 1;
+        return { active_membership_id: "membership-a", device_registration_cleared: true };
+      }
+      throw new Error(`Unexpected fake endpoint: ${endpoint}`);
+    }) as never);
+
+    await syncNow();
+
+    expect(pullRequests).toBe(1);
+    expect(membershipSwitches).toBe(0);
+    expect(getSession()?.activeMembershipId).toBeNull();
+  });
+
   it("hides the cache once the background GET /me is rejected and shows the fallback only after confirmation", async () => {
     const { api } = await import("../data/sync");
     const { activateSession, getSession, initializeSession } = await import("../data/auth/session");

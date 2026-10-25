@@ -89,7 +89,7 @@ export async function invalidateActiveMembership(): Promise<void> {
     if (me.memberships.length === 0) { await clearSession(); return; }
     const active = me.memberships.find((membership) => membership.id === me.active_membership_id && membership.status === "active");
     const activeMemberships = me.memberships.filter((membership) => membership.status === "active");
-    if (!active && activeMemberships.length === 1) {
+    if (!active && activeMemberships.length === 1 && activeMemberships[0].id !== previous.activeMembershipId) {
       await updateMe(me);
       return;
     }
