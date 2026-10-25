@@ -141,6 +141,17 @@ describe('slip criteria', () => {
     expect(await f.row(student)).toMatchObject({criteria:15,stars:4,comment:generateSlipComment(15),hw_manual:0,status:'sent'});
   });
 
+  it('does not rewrite a legacy three-star next-session slip when homework is graded', async () => {
+    const f=await setup(),student=f.s[0]!;
+    const next=await insertSession(f.a.workspaceId,f.cls,'2099-01-01',f.a.userId),section=uid();
+    await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading'}),
+      command('slip.set',{session_id:next,student_id:student,stars:3,note:''})]);
+    const grade=await f.send([command('homework.grade.set',{section_id:section,student_id:student,level:'not_done'})]);
+    expect(grade.body.results[0].status).toBe('applied');
+    expect(await db.prepare('SELECT stars,scale,criteria,comment,version FROM session_comments WHERE session_id=? AND student_id=?').bind(next,student).first<any>())
+      .toMatchObject({stars:3,scale:3,criteria:null,comment:null,version:1});
+  });
+
   it('does not create a default slip when attendance changed after it was read', async () => {
     const f = await setup();
     const student = f.s[0]!;
