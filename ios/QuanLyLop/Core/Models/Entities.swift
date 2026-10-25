@@ -110,15 +110,51 @@ struct Score: Codable, Sendable, Equatable {
     let updatedAt: String
 }
 
+/// A session comment slip. Scale 5 slips carry the criteria bitmask (bit 0..4 in spec order) and stars equal
+/// the number of criteria met; scale 3 slips predate the criteria and keep their 1...3 stars and old sentence.
 struct SessionSlip: Codable, Sendable, Equatable {
+    static let legacyScale = 3
+    static let currentScale = 5
+
     let sessionId: String
     let studentId: String
-    let stars: Stars?
+    let stars: Int?
+    let criteria: Int?
+    /// Teacher-edited sentence; nil means "follow the default sentence for the stars".
+    let comment: String?
+    let scale: Int
     let note: String
     let status: SlipStatus
     let sentAt: String?
     let version: Int
     let updatedAt: String
+
+    init(sessionId: String, studentId: String, stars: Int?, criteria: Int? = nil, comment: String? = nil,
+         scale: Int? = nil, note: String, status: SlipStatus, sentAt: String?, version: Int, updatedAt: String) {
+        self.sessionId = sessionId; self.studentId = studentId; self.stars = stars
+        self.criteria = criteria; self.comment = comment
+        self.scale = scale ?? (criteria == nil ? Self.legacyScale : Self.currentScale)
+        self.note = note; self.status = status; self.sentAt = sentAt; self.version = version
+        self.updatedAt = updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        studentId = try c.decode(String.self, forKey: .studentId)
+        stars = try c.decodeIfPresent(Int.self, forKey: .stars)
+        criteria = try c.decodeIfPresent(Int.self, forKey: .criteria)
+        comment = try c.decodeIfPresent(String.self, forKey: .comment)
+        scale = try c.decodeIfPresent(Int.self, forKey: .scale) ?? Self.legacyScale
+        note = try c.decode(String.self, forKey: .note)
+        status = try c.decode(SlipStatus.self, forKey: .status)
+        sentAt = try c.decodeIfPresent(String.self, forKey: .sentAt)
+        version = try c.decode(Int.self, forKey: .version)
+        updatedAt = try c.decode(String.self, forKey: .updatedAt)
+    }
+
+    var isLegacy: Bool { scale == Self.legacyScale }
+    var legacyStars: Stars? { stars.flatMap(Stars.init(rawValue:)) }
 }
 
 struct HomeworkSection: Codable, Sendable, Equatable {
@@ -163,10 +199,12 @@ struct StudentReport: Codable, Sendable, Equatable {
     }
 }
 
-/// A report batch (đợt): one session range of one class. Session ids are nil for batches migrated from months.
+/// A report batch (đợt) of one class: one calendar month (`month` "YYYY-MM"), or an older session range
+/// (`month` nil). Session ids are nil for monthly batches and for ones migrated from months.
 struct ReportBatch: Codable, Sendable, Equatable {
     let id: String
     let classId: String
+    var month: String? = nil
     let fromSessionId: String?
     let toSessionId: String?
     let fromKey: String
@@ -193,13 +231,10 @@ struct ReportPublication: Codable, Sendable, Equatable {
     }
 }
 
-/// Session range printed on a report; `label` is the server's text ("Buổi 1–8 · 01/10–24/10").
+/// Period printed on a report. The server's own `label` and any session numbers are ignored on decode.
 struct ReportRange: Codable, Sendable, Equatable {
     let fromKey: String
     let toKey: String
-    var fromNumber: Int?
-    var toNumber: Int?
-    var label: String?
 }
 
 struct ReportSnapshot: Codable, Sendable, Equatable {
@@ -240,10 +275,34 @@ struct ReportTest: Codable, Sendable, Equatable {
     let value: Double?
 }
 
+/// Scale-5 counts of sent slips by stars.
+struct Stars5Summary: Codable, Sendable, Equatable {
+    var s5 = 0, s4 = 0, s3 = 0, s2 = 0, s1 = 0, s0 = 0
+    var total: Int { s5 + s4 + s3 + s2 + s1 + s0 }
+    /// Counts from `s5` down to `s0`.
+    var descending: [(stars: Int, count: Int)] { [(5, s5), (4, s4), (3, s3), (2, s2), (1, s1), (0, s0)] }
+}
+
+/// `three/two/one` count only old scale-3 slips; `stars5` counts the 5-criteria slips (absent in old caches).
 struct StarsSummary: Codable, Sendable, Equatable {
     let three: Int
     let two: Int
     let one: Int
+    let stars5: Stars5Summary
+
+    init(three: Int, two: Int, one: Int, stars5: Stars5Summary = Stars5Summary()) {
+        self.three = three; self.two = two; self.one = one; self.stars5 = stars5
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        three = try c.decode(Int.self, forKey: .three)
+        two = try c.decode(Int.self, forKey: .two)
+        one = try c.decode(Int.self, forKey: .one)
+        stars5 = try c.decodeIfPresent(Stars5Summary.self, forKey: .stars5) ?? Stars5Summary()
+    }
+
+    var legacyTotal: Int { three + two + one }
 }
 
 struct HomeworkSummary: Codable, Sendable, Equatable {

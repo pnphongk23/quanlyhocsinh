@@ -295,6 +295,126 @@
       "localizations" : {
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "T2 · 19/10" } }
       }
+    },
+    "slip.criterion.listen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chú ý nghe giảng" } }
+      }
+    },
+    "slip.criterion.notes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Ghi chép đầy đủ" } }
+      }
+    },
+    "slip.criterion.participate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tham gia hoạt động sôi nổi" } }
+      }
+    },
+    "slip.criterion.quiet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không mất trật tự" } }
+      }
+    },
+    "slip.criterion.homework" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hoàn thành bài tập về nhà" } }
+      }
+    },
+    "slip.default.five" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Con học rất tốt, chăm chỉ, tích cực tham gia phát biểu" } }
+      }
+    },
+    "slip.default.four" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Con học tốt, làm bài đầy đủ nhưng hơi trầm" } }
+      }
+    },
+    "slip.default.three" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Con học tốt, nhưng còn hơi mất tập trung, nói tự do" } }
+      }
+    },
+    "slip.default.low" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Con chưa tích cực tham gia hoạt động, cần tập trung hơn" } }
+      }
+    },
+    "comments.card.stars" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%1$d/%2$d sao" } }
+      }
+    },
+    "comments.card.defaultSlip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa mở phiếu · gửi kèm phiếu 5 sao mặc định" } }
+      }
+    },
+    "comments.card.noSlip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có phiếu" } }
+      }
+    },
+    "comments.send.skippedStat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có phiếu" } }
+      }
+    },
+    "comments.send.skipped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không gửi phiếu cho em vắng, có phép hoặc chưa điểm danh: %@. Mở phiếu của em để gửi riêng." } }
+      }
+    },
+    "comments.send.nothing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có phiếu nào để gửi." } }
+      }
+    },
+    "slip.sheet.criteria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tiêu chí" } }
+      }
+    },
+    "slip.sheet.stars" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%d/5 sao" } }
+      }
+    },
+    "slip.sheet.comment" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Câu nhận xét" } }
+      }
+    },
+    "slip.sheet.useDefault" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Dùng câu mặc định" } }
+      }
+    },
+    "slip.sheet.legacy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Phiếu cũ chấm theo thang 3 sao, giữ nguyên." } }
+      }
     }
   },
   "version" : "1.0"

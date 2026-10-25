@@ -5,16 +5,15 @@ import XCTest
 /// does not outlive the failure.
 @MainActor
 final class CommentSheetTests: XCTestCase {
-    func testStarPickerListsThreeStarsFirst() {
-        XCTAssertEqual(CommentsRules.starPickerOrder, [.three, .two, .one])
-        XCTAssertEqual(Set(CommentsRules.starPickerOrder), Set(Stars.allCases))
-    }
-
     func testMascotPoseFollowsTheChosenStars() {
         XCTAssertEqual(MascotPose.forStars(nil), .cho)
-        XCTAssertEqual(MascotPose.forStars(.one), .sao1)
-        XCTAssertEqual(MascotPose.forStars(.two), .sao2)
-        XCTAssertEqual(MascotPose.forStars(.three), .sao3)
+        XCTAssertEqual(MascotPose.forStars(1), .sao1)
+        XCTAssertEqual(MascotPose.forStars(2), .sao2)
+        XCTAssertEqual(MascotPose.forStars(3), .sao3)
+        // Levels with no pose of their own borrow the nearest one, and never crash.
+        XCTAssertEqual(MascotPose.forStars(0), .sao1)
+        XCTAssertEqual(MascotPose.forStars(4), .sao3)
+        XCTAssertEqual(MascotPose.forStars(5), .sao3)
         for pose in [MascotPose.sao1, .sao2, .sao3] {
             XCTAssertNotNil(MascotImage.image(for: pose), "\(pose.fileName).webp must be in the app bundle")
         }

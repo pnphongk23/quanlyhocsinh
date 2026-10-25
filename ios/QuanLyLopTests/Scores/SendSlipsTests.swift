@@ -7,6 +7,7 @@ final class SendSlipsTests: XCTestCase {
 
     private func slip(_ studentID: String, stars: Int, note: String) -> JSONValue {
         .object(["session_id": .string("session"), "student_id": .string(studentID), "stars": .number(Double(stars)),
+                 "criteria": .number(Double((1 << stars) - 1)), "comment": .null, "scale": .number(5),
                  "note": .string(note), "status": .string("draft"), "sent_at": .null,
                  "version": .number(1), "updated_at": .string("2026-10-25T10:00:00.000Z")])
     }
@@ -38,7 +39,7 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(slips.count, 2)
         XCTAssertTrue(slips.allSatisfy { $0.status != .sent && $0.sentAt == nil })
         XCTAssertEqual(slips.first { $0.studentId == "a" }?.note, "Tốt")
-        XCTAssertEqual(slips.first { $0.studentId == "b" }?.stars, .two)
+        XCTAssertEqual(slips.first { $0.studentId == "b" }?.stars, 2)
     }
 
     func testFailedPushAfterSyncStillLeavesNoCommand() async throws {
@@ -83,10 +84,37 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(data.slip(sessionID: "session", studentID: "a")?.status, .sent)
         let skipped = data.slip(sessionID: "session", studentID: "b")
         XCTAssertEqual(skipped?.status, .draft)
-        XCTAssertEqual(skipped?.stars, .two)
+        XCTAssertEqual(skipped?.stars, 2)
         XCTAssertNil(skipped?.sentAt)
         let pending = try await store.pendingCommands()
         XCTAssertTrue(pending.isEmpty)
+    }
+
+    func testStudentsWithoutASlipAreSentAndNotAttendedIsNotAnError() async throws {
+        let store = try await seededStore()
+        let api = SlipPushAPI(mode: .notAttended)
+        let data = I4FeatureStore(store: store, api: api)
+        await data.refresh()
+
+        let outcome = await data.sendSlips(sessionID: "session", studentIDs: ["a", "b", "c", "d"])
+
+        XCTAssertEqual(outcome, .sent(3))
+        XCTAssertEqual(api.pushedStudentIDs, ["a", "b", "c", "d"])
+        XCTAssertNil(data.slip(sessionID: "session", studentID: "d"))
+        XCTAssertEqual(data.slip(sessionID: "session", studentID: "a")?.status, .sent)
+        let pending = try await store.pendingCommands()
+        XCTAssertTrue(pending.isEmpty)
+    }
+
+    func testAServerSkipForAnotherReasonStillCountsAsNotSent() async throws {
+        let store = try await seededStore()
+        let api = SlipPushAPI(mode: .sentOnlyA)
+        let data = I4FeatureStore(store: store, api: api)
+        await data.refresh()
+
+        let outcome = await data.sendSlips(sessionID: "session", studentIDs: ["a", "b"])
+
+        XCTAssertEqual(outcome, .partial(sent: 1, notSent: 1))
     }
 
     func testReopeningTheStoreDropsALeftoverSlipSendAndForcesAResnapshot() async throws {
@@ -102,7 +130,7 @@ final class SendSlipsTests: XCTestCase {
             let leftover = PendingCommand(recordKey: slipKey, baseVersion: 1, kind: "slip.send",
                                           payload: .object(["session_id": .string("session"),
                                                             "student_ids": .array([.string("a")])]))
-            let row = SessionSlip(sessionId: "session", studentId: "a", stars: .three, note: "Tốt", status: .sent,
+            let row = SessionSlip(sessionId: "session", studentId: "a", stars: 3, note: "Tốt", status: .sent,
                                   sentAt: "2026-10-25T10:00:00.000Z", version: 1, updatedAt: "2026-10-25T10:00:00.000Z")
             try await first.write(row, forKey: slipKey, enqueueing: leftover)
             let queued = try await first.pendingCommands()
@@ -119,15 +147,17 @@ final class SendSlipsTests: XCTestCase {
 
 /// Answers the sync endpoints and one `slip.send` push; `pushedCommandTypes` shows what reached the wire.
 private final class SlipPushAPI: APIClient, @unchecked Sendable {
-    enum Mode { case offline, pushFails, sentAll, sentOnlyA }
+    enum Mode { case offline, pushFails, sentAll, sentOnlyA, notAttended }
 
     let baseURL = URL(string: "https://fixture.invalid/v1")!
     private let mode: Mode
     private let lock = NSLock()
     private var types: [String] = []
+    private var studentIDs: [String] = []
 
     init(mode: Mode) { self.mode = mode }
 
+    var pushedStudentIDs: [String] { lock.lock(); defer { lock.unlock() }; return studentIDs }
     var pushedCommandTypes: [String] { lock.lock(); defer { lock.unlock() }; return types }
 
     func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
@@ -141,8 +171,15 @@ private final class SlipPushAPI: APIClient, @unchecked Sendable {
             lock.withLock { types.append(contentsOf: sentTypes) }
             if mode == .pushFails { throw APIFailure.offline }
             let id = commands.compactMap { $0["id"] as? String }.first ?? ""
-            let sent = mode == .sentAll ? "[\"a\",\"b\"]" : "[\"a\"]"
-            let skipped = mode == .sentAll ? "[]" : "[{\"student_id\":\"b\",\"reason\":\"stars_required\"}]"
+            let payload = commands.first?["payload"] as? [String: Any]
+            lock.withLock { studentIDs = payload?["student_ids"] as? [String] ?? [] }
+            let sent: String
+            let skipped: String
+            switch mode {
+            case .sentAll: (sent, skipped) = ("[\"a\",\"b\"]", "[]")
+            case .notAttended: (sent, skipped) = ("[\"a\",\"b\",\"c\"]", "[{\"student_id\":\"d\",\"reason\":\"not_attended\"}]")
+            default: (sent, skipped) = ("[\"a\"]", "[{\"student_id\":\"b\",\"reason\":\"slip_locked\"}]")
+            }
             json = "{\"epoch\":1,\"cursor\":1,\"results\":[{\"id\":\"\(id)\",\"status\":\"applied\",\"sent\":\(sent),\"skipped\":\(skipped)}]}"
         case "sync/pull":
             json = "{\"cursor\":1,\"epoch\":1,\"has_more\":false,\"server_time\":\"fixture\",\"upserts\":{},\"deleted\":[]}"

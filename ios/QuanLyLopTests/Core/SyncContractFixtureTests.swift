@@ -22,7 +22,7 @@ final class SyncContractFixtureTests: XCTestCase {
         XCTAssertEqual(try decoded(Attendance.self, "attendance").first?.lateAt, "18:10")
         XCTAssertEqual(try decoded(TestDefinition.self, "test").first?.name, "Kiểm tra 15 phút")
         XCTAssertEqual(try decoded(Score.self, "score").first?.value, 12.5)
-        XCTAssertEqual(try decoded(SessionSlip.self, "slip").first?.stars, .three)
+        XCTAssertEqual(try decoded(SessionSlip.self, "slip").first?.stars, 3)
         XCTAssertEqual(try decoded(HomeworkSection.self, "homework_section").first?.kind, .vocabulary)
         XCTAssertEqual(try decoded(HomeworkGrade.self, "homework_grade").first?.level, .excellent)
         XCTAssertEqual(try decoded(StudentReport.self, "report").first?.publicationCount, 1)

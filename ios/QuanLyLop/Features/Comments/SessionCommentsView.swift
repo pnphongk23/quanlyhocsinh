@@ -36,6 +36,7 @@ struct SessionCommentsView: View {
             I4TicketRow(
                 student: student,
                 slip: data.slip(sessionID: sessionID, studentID: student.id),
+                attendance: data.attendance(sessionID: sessionID, studentID: student.id)?.status,
                 previousHomework: HomeworkRules.summary(sections: sections, grades: data.grades,
                                                         studentID: student.id),
                 previousDate: previous?.date,
@@ -44,7 +45,7 @@ struct SessionCommentsView: View {
         }
     }
 
-    private var counts: (all: Int, none: Int, unsent: Int) { CommentsRules.counts(rows) }
+    private var counts: (all: Int, unsent: Int) { CommentsRules.counts(rows) }
     private var visibleRows: [I4TicketRow] { CommentsRules.filtered(rows, filter) }
     private var sendableRows: [I4TicketRow] { CommentsRules.sendable(rows) }
 
@@ -168,17 +169,22 @@ struct SessionCommentsView: View {
 
     @ViewBuilder
     private func starsLine(_ row: I4TicketRow) -> some View {
-        if let stars = row.stars {
-            HStack(spacing: 2) {
-                Text(String(repeating: "★", count: stars.rawValue))
+        if let slip = row.slip, let stars = slip.stars {
+            HStack(spacing: 8) {
+                Text(String(repeating: "★", count: stars))
                     .font(.system(size: 16))
                     .foregroundStyle(I4Style.star)
+                Text(String.localizedStringWithFormat(String(localized: "comments.card.stars", table: "Teacher"),
+                                                      stars, slip.scale))
+                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                    .foregroundStyle(AppColors.muted)
             }
             .frame(minHeight: 20)
         } else {
-            Text(String(localized: "feature.comments.chua.chon.sao"))
-                .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                .foregroundStyle(AppColors.warning)
+            Text(String(localized: row.getsDefaultSlip ? "comments.card.defaultSlip" : "comments.card.noSlip",
+                        table: "Teacher"))
+                .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
+                .foregroundStyle(AppColors.muted)
                 .frame(minHeight: 20)
         }
     }
@@ -210,14 +216,14 @@ struct SessionCommentsView: View {
 
     private var sendDialog: some View {
         let ungraded = CommentsRules.ungradedNotice(rows)
-        let skipped = rows.filter { $0.stars == nil }
+        let skipped = CommentsRules.withoutSlip(rows.filter { !$0.isSent })
         let previousLabel = CommentsRules.previousLabel(date: rows.first?.previousDate)
         return I4Dialog(title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.buoi"), sessionInline), content: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     statCard(value: "\(sendableRows.count)", label: String(localized: "feature.comments.ticketsToSend"),
                              foreground: AppColors.primaryInk, background: AppColors.primarySoft)
-                    statCard(value: "\(skipped.count)", label: String(localized: "feature.comments.studentsWithoutStars"),
+                    statCard(value: "\(skipped.count)", label: String(localized: "comments.send.skippedStat", table: "Teacher"),
                              foreground: AppColors.warning, background: AppColors.warningSoft)
                 }
                 if ungraded.parts > 0 {
@@ -230,7 +236,7 @@ struct SessionCommentsView: View {
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                     .foregroundStyle(AppColors.muted)
                 if !skipped.isEmpty {
-                    warningText(String.localizedStringWithFormat(String(localized: "feature.comments.chua.gui.uoc.chon.sao.roi.gui.lai.sau"), String(describing: (skipped.map(\.student.name).joined(separator: ", ")))))
+                    warningText(String.localizedStringWithFormat(String(localized: "comments.send.skipped", table: "Teacher"), skipped.map(\.student.name).joined(separator: ", ")))
                 }
                 if let sendError {
                     Text(sendError)
@@ -328,12 +334,9 @@ struct SessionCommentsView: View {
             saveStatusSource: saveStatusSource,
             onClose: { self.target = nil },
             onGoHomework: { self.target = nil },
-            onSave: { stars, note in
-                  if let failure = await data.saveSlip(sessionID: target.session.id, student: target.student,
-                                                       stars: stars, note: note) {
-                      return failure
-                  }
-                  return nil
+            onSave: { grading, note in
+                await data.saveSlip(sessionID: target.session.id, student: target.student,
+                                    grading: grading, note: note)
             }
         )
     }
@@ -357,9 +360,12 @@ struct I4TicketSheet: View {
     let saveStatusSource: AppSaveStatusSource?
     let onClose: () -> Void
     let onGoHomework: () -> Void
-    let onSave: (Stars?, String) async -> String?
+    let onSave: (I4FeatureStore.SlipGrading, String) async -> String?
 
-    @State private var stars: Stars?
+    /// Criteria met; a new slip starts with all five.
+    @State private var criteria: Int
+    /// The edited sentence; nil while the sentence follows the stars.
+    @State private var commentOverride: String?
     @State private var note: String = ""
     @State private var error: String?
     @State private var saveController = AppSaveController()
@@ -369,7 +375,7 @@ struct I4TicketSheet: View {
          previousDate: String?, sections: [HomeworkSection], grades: [HomeworkGrade],
          canWrite: Bool, saveStatusSource: AppSaveStatusSource?,
          onClose: @escaping () -> Void, onGoHomework: @escaping () -> Void,
-         onSave: @escaping (Stars?, String) async -> String?) {
+         onSave: @escaping (I4FeatureStore.SlipGrading, String) async -> String?) {
         self.session = session
         self.student = student
         self.slip = slip
@@ -381,9 +387,16 @@ struct I4TicketSheet: View {
         self.onClose = onClose
         self.onGoHomework = onGoHomework
         self.onSave = onSave
-        _stars = State(initialValue: slip?.stars)
+        let current = slip.flatMap { $0.isLegacy ? nil : $0 }
+        _criteria = State(initialValue: current?.criteria ?? SlipRules.allCriteria)
+        _commentOverride = State(initialValue: current?.comment)
         _note = State(initialValue: slip?.note ?? "")
     }
+
+    /// An old three-star slip keeps its stars and sentence; only its note can change.
+    private var isLegacy: Bool { slip?.isLegacy == true && slip?.stars != nil }
+    private var stars: Int { SlipRules.stars(criteria: criteria) }
+    private var defaultSentence: String { SlipRules.defaultSentence(stars: stars) }
 
     private var badge: (label: String, tone: AppPill.Tone) {
         if slip?.status == .sent { return (String(localized: "feature.comments.a.gui"), .success) }
@@ -401,8 +414,12 @@ struct I4TicketSheet: View {
                             .foregroundStyle(AppColors.success)
                             .frame(maxWidth: .infinity)
                     }
-                    starPicker
-                    templateBox
+                    if isLegacy {
+                        legacyBox
+                    } else {
+                        criteriaList
+                        commentBox
+                    }
                     noteField
                     homeworkBlock
                     if let error {
@@ -463,38 +480,112 @@ struct I4TicketSheet: View {
         }
     }
 
-    private var starPicker: some View {
-        HStack(spacing: 8) {
-            ForEach(CommentsRules.starPickerOrder, id: \.self) { option in
-                Button { if canWrite { stars = option; error = nil } } label: {
-                    Text(String(repeating: "★", count: option.rawValue))
-                          .font(.system(size: 16))
-                          .foregroundStyle(I4Style.star)
-                          .frame(maxWidth: .infinity, minHeight: TeacherMetrics.rowMinHeight)
-                          .background(stars == option ? AppState.selectedBg : AppColors.background,
-                                      in: RoundedRectangle(cornerRadius: AppRadius.button))
+    private var criteriaList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(String(localized: "slip.sheet.criteria", table: "Teacher"))
+                    .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+                    .foregroundStyle(AppColors.text)
+                Spacer(minLength: 0)
+                Text(String(repeating: "★", count: stars))
+                    .font(.system(size: 16))
+                    .foregroundStyle(I4Style.star)
+                Text(String.localizedStringWithFormat(String(localized: "slip.sheet.stars", table: "Teacher"), stars))
+                    .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                    .foregroundStyle(AppColors.text)
+                    .accessibilityIdentifier("comment.stars")
+            }
+            ForEach(0..<SlipRules.criteriaCount, id: \.self) { index in
+                let met = SlipRules.isMet(criteria, index: index)
+                Button { if canWrite { criteria = SlipRules.toggled(criteria, index: index); error = nil } } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: met ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 22))
+                            .foregroundStyle(met ? AppColors.primaryInk : AppColors.placeholder)
+                        Text(SlipRules.criterionTitle(index))
+                            .appText(AppTextStyle(size: 16, weight: .regular, lineHeight: 24))
+                            .foregroundStyle(AppColors.text)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+                    .frame(maxWidth: .infinity, minHeight: TeacherMetrics.rowMinHeight, alignment: .leading)
+                    .background(met ? AppState.selectedBg : AppColors.background,
+                                in: RoundedRectangle(cornerRadius: AppRadius.button))
                 }
                 .buttonStyle(.plain)
                 .disabled(!canWrite)
-                .accessibilityLabel("\(option.rawValue) sao")
-                .accessibilityIdentifier("comment.rating.\(option.rawValue)")
-                .accessibilityAddTraits(stars == option ? [.isSelected] : [])
+                .accessibilityIdentifier("comment.criterion.\(index)")
+                .accessibilityAddTraits(met ? [.isSelected] : [])
             }
         }
     }
 
-    private var templateBox: some View {
-        HStack(spacing: 12) {
-            AppMascot(pose: .forStars(stars), height: AppMetrics.ticketMascot)
-            Text(stars?.template ?? String(localized: "feature.comments.chon.muc.sao.e.xem.cau.mau.gui.phu.huynh"))
-                .appText(AppTextStyle(size: 16, weight: .regular, lineHeight: 24.8))
+    private var commentText: Binding<String> {
+        Binding(get: { commentOverride ?? defaultSentence }, set: { commentOverride = $0 })
+    }
+
+    private var showsUseDefault: Bool {
+        guard let commentOverride else { return false }
+        return commentOverride != defaultSentence
+    }
+
+    private var commentBox: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(String(localized: "slip.sheet.comment", table: "Teacher"))
+                .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
                 .foregroundStyle(AppColors.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(alignment: .top, spacing: 12) {
+                AppMascot(pose: .forStars(stars), height: AppMetrics.ticketMascot)
+                TextField(String(localized: "slip.sheet.comment", table: "Teacher"), text: commentText, axis: .vertical)
+                    .lineLimit(2...6)
+                    .font(.system(size: 16))
+                    .foregroundStyle(AppColors.text)
+                    .focused($noteFocused)
+                    .disabled(!canWrite)
+                    .accessibilityIdentifier("comment.sentence")
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
+            if canWrite && showsUseDefault {
+                Button { commentOverride = nil } label: {
+                    Text(String(localized: "slip.sheet.useDefault", table: "Teacher"))
+                        .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
+                        .foregroundStyle(AppColors.primaryInk)
+                        .frame(minHeight: AppMetrics.tap)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("comment.useDefault")
+            }
         }
-        .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
+    }
+
+    private var legacyBox: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(String(repeating: "★", count: slip?.stars ?? 0))
+                    .font(.system(size: 16))
+                    .foregroundStyle(I4Style.star)
+                Text(String.localizedStringWithFormat(String(localized: "comments.card.stars", table: "Teacher"),
+                                                      slip?.stars ?? 0, slip?.scale ?? SessionSlip.legacyScale))
+                    .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                    .foregroundStyle(AppColors.text)
+            }
+            HStack(spacing: 12) {
+                AppMascot(pose: .forStars(slip?.stars), height: AppMetrics.ticketMascot)
+                Text(slip.map(SlipRules.sentence(for:)) ?? "")
+                    .appText(AppTextStyle(size: 16, weight: .regular, lineHeight: 24.8))
+                    .foregroundStyle(AppColors.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
+            Text(String(localized: "slip.sheet.legacy", table: "Teacher"))
+                .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                .foregroundStyle(AppColors.muted)
+        }
     }
 
     private var noteField: some View {
@@ -572,9 +663,11 @@ struct I4TicketSheet: View {
     }
 
     private func save() async throws {
-        let stars = self.stars
         let note = self.note
-        if let failure = await onSave(stars, note) {
+        let grading: I4FeatureStore.SlipGrading = isLegacy
+            ? .legacy
+            : .criteria(criteria, comment: commentOverride.flatMap { SlipRules.normalizedComment($0, stars: stars) })
+        if let failure = await onSave(grading, note) {
             error = failure
             throw I4SaveFailure(message: failure)
         }

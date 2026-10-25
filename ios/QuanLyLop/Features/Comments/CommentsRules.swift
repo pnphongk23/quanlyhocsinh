@@ -1,13 +1,12 @@
 import Foundation
 
-/// Filter pills of the comment tab (`TICKET_FILTERS`).
+/// Filter pills of the comment tab.
 enum TicketFilter: String, CaseIterable {
-    case all, none, unsent
+    case all, unsent
 
     var label: String {
         switch self {
         case .all: String(localized: "feature.comments.tat.ca")
-        case .none: String(localized: "feature.comments.chua.chon.sao")
         case .unsent: String(localized: "feature.comments.chua.gui")
         }
     }
@@ -17,25 +16,33 @@ enum TicketFilter: String, CaseIterable {
 struct I4TicketRow: Identifiable {
     let student: Student
     let slip: SessionSlip?
+    let attendance: AttendanceStatus?
     let previousHomework: I4HomeworkSummary
     /// Date of the session before this one, when there is one.
     let previousDate: String?
     /// Whether the session before this one had homework sections at all.
     let previousHadSections: Bool
 
+    init(student: Student, slip: SessionSlip?, attendance: AttendanceStatus? = nil,
+         previousHomework: I4HomeworkSummary, previousDate: String?, previousHadSections: Bool) {
+        self.student = student; self.slip = slip; self.attendance = attendance
+        self.previousHomework = previousHomework; self.previousDate = previousDate
+        self.previousHadSections = previousHadSections
+    }
+
     var id: String { student.id }
-    var stars: Stars? { slip?.stars }
+    var stars: Int? { slip?.stars }
     var isSent: Bool { slip?.status == .sent }
+    /// Marked present or late: the only students who get a default slip when the class is sent.
+    var attended: Bool { attendance == .present || attendance == .late }
+    /// No slip yet, but sending the class will create the default five-star one.
+    var getsDefaultSlip: Bool { slip == nil && attended }
 }
 
 enum CommentsRules {
-    /// Buttons of the star picker, left to right: best level first.
-    static let starPickerOrder: [Stars] = [.three, .two, .one]
-
     static func matches(_ row: I4TicketRow, _ filter: TicketFilter) -> Bool {
         switch filter {
         case .all: true
-        case .none: row.stars == nil
         case .unsent: !row.isSent
         }
     }
@@ -44,21 +51,26 @@ enum CommentsRules {
         rows.filter { matches($0, filter) }
     }
 
-    static func counts(_ rows: [I4TicketRow]) -> (all: Int, none: Int, unsent: Int) {
-        (rows.count, rows.filter { $0.stars == nil }.count, rows.filter { !$0.isSent }.count)
+    static func counts(_ rows: [I4TicketRow]) -> (all: Int, unsent: Int) {
+        (rows.count, rows.filter { !$0.isSent }.count)
     }
 
-    static func filterLabel(_ filter: TicketFilter, _ counts: (all: Int, none: Int, unsent: Int)) -> String {
+    static func filterLabel(_ filter: TicketFilter, _ counts: (all: Int, unsent: Int)) -> String {
         switch filter {
         case .all: String.localizedStringWithFormat(String(localized: "feature.comments.tat.ca.9c49d886"), String(describing: (counts.all)))
-        case .none: String.localizedStringWithFormat(String(localized: "feature.comments.chua.chon.sao.c7aef4ad"), String(describing: (counts.none)))
         case .unsent: String.localizedStringWithFormat(String(localized: "feature.comments.chua.gui.52c3c8f7"), String(describing: (counts.unsent)))
         }
     }
 
-    /// Starred, not yet sent: what the "Gửi phiếu cả lớp" button will send.
+    /// What "Gửi phiếu cả lớp" sends: every unsent slip, plus a default slip for each student present or late
+    /// who has none. Absent, excused or not-yet-marked students without a slip are left out.
     static func sendable(_ rows: [I4TicketRow]) -> [I4TicketRow] {
-        rows.filter { $0.stars != nil && !$0.isSent }
+        rows.filter { !$0.isSent && ($0.slip != nil || $0.attended) }
+    }
+
+    /// Unsent students the class send leaves out because they have no slip and did not attend.
+    static func withoutSlip(_ rows: [I4TicketRow]) -> [I4TicketRow] {
+        rows.filter { $0.slip == nil && !$0.attended }
     }
 
     enum SendAvailability: Equatable {

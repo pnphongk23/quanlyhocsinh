@@ -296,20 +296,40 @@ final class I4FeatureStore: ObservableObject {
 
     // MARK: - Session slips (comments)
 
-    func saveSlip(sessionID: String, student: Student, stars: Stars?, note: String) async -> String? {
+    /// What the teacher chose on a slip: the five criteria with an optional edited sentence, or only a note
+    /// on an old three-star slip (those keep their stars and sentence).
+    enum SlipGrading: Equatable {
+        case criteria(Int, comment: String?)
+        case legacy
+    }
+
+    func saveSlip(sessionID: String, student: Student, grading: SlipGrading, note: String) async -> String? {
         guard let store else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
         let old = slip(sessionID: sessionID, studentID: student.id)
-        let row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: stars, note: note,
-                              status: old?.status ?? .draft, sentAt: old?.sentAt,
-                              version: old?.version ?? 0, updatedAt: Self.now)
-        let payload = object([
+        var fields: [String: JSONValue] = [
             "session_id": .string(sessionID),
             "student_id": .string(student.id),
-            "stars": stars.map { .number(Double($0.rawValue)) } ?? .null,
             "note": .string(note)
-        ])
+        ]
+        let row: SessionSlip
+        switch grading {
+        case .criteria(let criteria, let comment):
+            let bits = criteria & SlipRules.allCriteria
+            fields["criteria"] = .number(Double(bits))
+            fields["comment"] = comment.map { .string($0) } ?? .null
+            row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: SlipRules.stars(criteria: bits),
+                              criteria: bits, comment: comment, scale: SessionSlip.currentScale, note: note,
+                              status: old?.status ?? .draft, sentAt: old?.sentAt,
+                              version: old?.version ?? 0, updatedAt: Self.now)
+        case .legacy:
+            guard let old, let stars = old.stars else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+            fields["stars"] = .number(Double(stars))
+            row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: stars, criteria: old.criteria,
+                              comment: old.comment, scale: old.scale, note: note, status: old.status,
+                              sentAt: old.sentAt, version: old.version, updatedAt: Self.now)
+        }
         let command = PendingCommand(recordKey: key("slip", sessionID, student.id),
-                                     baseVersion: old?.version ?? 0, kind: "slip.set", payload: payload)
+                                     baseVersion: old?.version ?? 0, kind: "slip.set", payload: object(fields))
         do {
             try await store.write(row, forKey: command.recordKey, enqueueing: command)
             await syncIfNeeded()
@@ -325,29 +345,30 @@ final class I4FeatureStore: ObservableObject {
         case failed(String)
     }
 
-    /// Sends every starred, not-yet-sent slip of the session and waits for the server's answer.
+    /// Sends the given students' slips and waits for the server's answer. A student without a slip gets the
+    /// default five-star slip from the server, which only does so for students marked present or late; the
+    /// others come back as skipped with `not_attended`, which is expected and not an error.
     /// The `slip.send` command goes straight to the server and is never written to the outbox, so an
     /// unconfirmed send leaves nothing behind that could be replayed later; the slips stay as they were.
     /// The local state follows what the server reports as `sent` and `skipped`.
     func sendSlips(sessionID: String, studentIDs: [String]) async -> SendOutcome {
         guard let api, let store else { return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu")) }
         let failure = SendOutcome.failed(String(localized: "comments.send.failed", table: "Teacher"))
-        // Edits still waiting in the outbox must reach the server first, or it would send older stars and notes.
+        // Edits still waiting in the outbox must reach the server first, or it would send older criteria and notes.
         guard await syncIfNeeded() else { return failure }
         await refresh()
-        let chosen = slips(sessionID: sessionID).filter {
-            studentIDs.contains($0.studentId) && $0.stars != nil && $0.status != .sent
-        }
-        guard let first = chosen.first else { return .failed(String(localized: "feature.scores.chon.sao.cho.it.nhat.mot.hoc.sinh")) }
-        let slipKeys = Set(chosen.map { key("slip", sessionID, $0.studentId) })
+        let chosen = studentIDs.filter { id in slip(sessionID: sessionID, studentID: id)?.status != .sent }
+        guard !chosen.isEmpty else { return .failed(String(localized: "comments.send.nothing", table: "Teacher")) }
+        let slipKeys = Set(chosen.map { key("slip", sessionID, $0) })
         let waiting = (try? await store.pendingCommands()) ?? []
         if waiting.contains(where: { slipKeys.contains($0.recordKey) }) { return failure }
 
         let payload = object([
             "session_id": .string(sessionID),
-            "student_ids": .array(chosen.map { JSONValue.string($0.studentId) })
+            "student_ids": .array(chosen.map { JSONValue.string($0) })
         ])
-        let command = SyncCommand(id: UUID(), type: "slip.send", baseVersion: first.version, createdAt: .now, payload: payload)
+        let baseVersion = chosen.compactMap { slip(sessionID: sessionID, studentID: $0)?.version }.first ?? 0
+        let command = SyncCommand(id: UUID(), type: "slip.send", baseVersion: baseVersion, createdAt: .now, payload: payload)
         let request = PushRequest(membershipId: store.scope.membershipId, deviceId: deviceID, commands: [command])
         let result: CommandResult?
         do {
@@ -365,16 +386,26 @@ final class I4FeatureStore: ObservableObject {
         }
 
         let sentIDs = Set(result.sent ?? [])
-        for slip in chosen where sentIDs.contains(slip.studentId) {
-            let row = SessionSlip(sessionId: slip.sessionId, studentId: slip.studentId, stars: slip.stars, note: slip.note,
+        for id in chosen where sentIDs.contains(id) {
+            guard let slip = slip(sessionID: sessionID, studentID: id) else { continue }
+            let row = SessionSlip(sessionId: slip.sessionId, studentId: slip.studentId, stars: slip.stars,
+                                  criteria: slip.criteria, comment: slip.comment, scale: slip.scale, note: slip.note,
                                   status: .sent, sentAt: Self.now, version: slip.version, updatedAt: Self.now)
-            try? await store.write(row, forKey: key("slip", sessionID, slip.studentId), enqueueing: nil)
+            try? await store.write(row, forKey: key("slip", sessionID, id), enqueueing: nil)
         }
+        // Slips the server created from the default are picked up by this pull.
         await syncIfNeeded()
         await refresh()
-        let notSent = chosen.count - chosen.filter { sentIDs.contains($0.studentId) }.count
-        return notSent == 0 ? .sent(chosen.count) : .partial(sent: chosen.count - notSent, notSent: notSent)
+        let notAttended = Set((result.skipped ?? []).compactMap { entry in
+            entry["reason"]?.string == Self.notAttendedReason ? entry["student_id"]?.string : nil
+        })
+        let notSent = chosen.filter { !sentIDs.contains($0) && !notAttended.contains($0) }.count
+        let sentCount = chosen.filter { sentIDs.contains($0) }.count
+        return notSent == 0 ? .sent(sentCount) : .partial(sent: sentCount, notSent: notSent)
     }
+
+    /// Why the server leaves out a student without a slip who was not marked present or late.
+    static let notAttendedReason = "not_attended"
 
     // MARK: - Homework
 

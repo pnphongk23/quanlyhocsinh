@@ -8,13 +8,14 @@ enum MascotPose: String, CaseIterable, Sendable {
     case dangTai = "dang-tai"
     case sao1 = "sao-1", sao2 = "sao-2", sao3 = "sao-3"
 
-    /// Pose for a star level; no level yet means Mít is waiting (`starPose` of the web).
-    static func forStars(_ stars: Stars?) -> MascotPose {
-        switch stars {
-        case .one: .sao1
-        case .two: .sao2
-        case .three: .sao3
-        case nil: .cho
+    /// Pose for a star level; no level yet means Mít is waiting. Mít only has poses for 1...3 stars, so other
+    /// levels borrow the nearest one until a pose for each of 0...5 is chosen.
+    static func forStars(_ stars: Int?) -> MascotPose {
+        guard let stars else { return .cho }
+        switch min(max(stars, 1), 3) {
+        case 1: return .sao1
+        case 2: return .sao2
+        default: return .sao3
         }
     }
 
