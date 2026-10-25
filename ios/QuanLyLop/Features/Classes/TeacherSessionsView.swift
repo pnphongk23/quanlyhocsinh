@@ -32,7 +32,7 @@ struct TeacherSessionsView: View {
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, 4)
-            .padding(.bottom, 96)
+            .padding(.bottom, TeacherMetrics.fabContentInset)
         }
         .background(AppColors.background.ignoresSafeArea())
         .overlay(alignment: .bottomTrailing) {
@@ -40,8 +40,8 @@ struct TeacherSessionsView: View {
                 Button { showingAdd = true } label: { TeacherFab() }
                     .buttonStyle(.plain)
                     .accessibilityLabel(String(localized: "feature.classes.them.buoi"))
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 16)
+                    .padding(.trailing, TeacherMetrics.fabTrailingInset)
+                    .padding(.bottom, TeacherMetrics.fabBottomInset)
             }
         }
         .sheet(isPresented: $showingAdd) {

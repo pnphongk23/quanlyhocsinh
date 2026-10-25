@@ -12,6 +12,10 @@ enum TeacherMetrics {
     static let tabBarHeight: CGFloat = 64
     static let contentGap: CGFloat = 12
     static let fabSize: CGFloat = 56
+    /// Space a list leaves at its end so the floating button never covers the last row.
+    static let fabContentInset: CGFloat = 96
+    static let fabTrailingInset: CGFloat = 20
+    static let fabBottomInset: CGFloat = 16
     static let cardPadding: CGFloat = 16
     static let rowMinHeight: CGFloat = 56
     static let listGap: CGFloat = 8

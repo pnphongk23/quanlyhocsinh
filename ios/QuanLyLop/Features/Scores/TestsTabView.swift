@@ -28,7 +28,7 @@ struct TestsTabView: View {
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, TeacherMetrics.screenPaddingTop)
-            .padding(.bottom, 96)
+            .padding(.bottom, TeacherMetrics.fabContentInset)
         }
         .background(AppColors.background.ignoresSafeArea())
         .overlay(alignment: .bottomTrailing) {
@@ -37,8 +37,8 @@ struct TestsTabView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(String(localized: "feature.scores.bai.moi"))
                     .accessibilityIdentifier("test.new")
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 16)
+                    .padding(.trailing, TeacherMetrics.fabTrailingInset)
+                    .padding(.bottom, TeacherMetrics.fabBottomInset)
             }
         }
         .navigationDestination(isPresented: $showingCreate) {
