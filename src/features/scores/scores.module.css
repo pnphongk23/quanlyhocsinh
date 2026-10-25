@@ -366,11 +366,17 @@
   color: var(--color-muted);
 }
 .desktopSaveRow {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-12);
+  margin-top: auto;
+  padding: var(--space-8) 0;
+  background: var(--color-bg);
 }
 /* Desktop: banner lỗi một dòng riêng; nút Lưu theo nội dung (min 96), căn phải */
 .desktopSaveRow > .errorBanner {

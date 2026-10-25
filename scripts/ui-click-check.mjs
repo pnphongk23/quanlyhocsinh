@@ -10,7 +10,7 @@ const failureShots = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/w
 const results = [];
 let server;
 
-async function seed(page, role) {
+async function seed(page, role, data = entities) {
   const session = sessionFor(role);
   await page.addInitScript((value) => localStorage.setItem("qlh.session.v1", JSON.stringify(value)), session);
   await page.goto(base + "/dang-nhap", { waitUntil: "domcontentloaded" });
@@ -37,22 +37,22 @@ async function seed(page, role) {
       tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
     });
     db.close();
-  }, { role, identity, entities });
+  }, { role, identity, entities: data });
 }
 
-async function setup(page, role) {
+async function setup(page, role, data = entities) {
   page.setDefaultTimeout(6000);
     await page.route("**/v1/**", async (route) => {
       const request = route.request();
       const url = new URL(request.url());
       if (url.pathname.endsWith("/me")) return route.fulfill({ json: sessionFor(role).me });
-      const writeResponse = mockWriteResponse(request, entities);
+      const writeResponse = mockWriteResponse(request, data);
       if (writeResponse) return route.fulfill({ json: writeResponse });
       if (url.pathname === "/v1/sync/snapshot") return route.fulfill({ json: { cursor: 0, epoch: 1, entities: ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report", "report_publication"] } });
     const entity = url.pathname.match(/\/v1\/sync\/snapshot\/([^/]+)$/)?.[1];
     if (entity) {
       const table = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "slips", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report: "reports", report_publication: "reportPublications" })[entity] ?? entity + "s";
-      return route.fulfill({ json: { items: entities[table] ?? [], next_after: null } });
+      return route.fulfill({ json: { items: data[table] ?? [], next_after: null } });
     }
     if (url.pathname === "/v1/sync/pull") return route.fulfill({ json: { cursor: 0, epoch: 1, has_more: false, upserts: {}, deleted: [] } });
     if (url.pathname === "/v1/sync/push" && route.request().method() === "POST") {
@@ -61,7 +61,7 @@ async function setup(page, role) {
     }
     return route.fulfill({ status: 200, json: {} });
   });
-  await seed(page, role);
+  await seed(page, role, data);
 }
 
 async function topAtCenter(locator) {
@@ -117,11 +117,11 @@ async function click(locator, label) {
   return label + " hit " + hit.tag + "." + hit.className;
 }
 
-async function test(title, viewport, role, route, action) {
+async function test(title, viewport, role, route, action, data = entities) {
   const context = await browser.newContext({ viewport, deviceScaleFactor: viewport.width <= 430 ? 2 : 1, isMobile: viewport.width <= 430, hasTouch: viewport.width <= 430 });
   const page = await context.newPage();
   try {
-    await setup(page, role);
+    await setup(page, role, data);
     await page.goto(base + route, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => document.body.innerText.trim().length > 10, null, { timeout: 10000 });
     const detail = await action(page);
@@ -135,7 +135,27 @@ async function test(title, viewport, role, route, action) {
 }
 
 const mobile = { width: 390, height: 844 };
-const desktop = { width: 1440, height: 900 };
+const desktop = { width: 1280, height: 900 };
+const longScoreStudents = Array.from({ length: 24 }, (_, index) => ({
+  id: `long-score-student-${index + 1}`,
+  class_id: "demo-6a",
+  name: `Học sinh ${index + 1}`,
+  enrolled_at: "2026-01-01",
+  left_at: null,
+  status: "active",
+  version: 1,
+}));
+const longScoreEntities = {
+  ...entities,
+  students: longScoreStudents,
+  scores: longScoreStudents.map((student) => ({
+    test_id: "demo-test",
+    student_id: student.id,
+    value: 10,
+    updated_at: "2026-10-20T10:00:00Z",
+    version: 1,
+  })),
+};
 let browser;
 try {
   let executablePath;
@@ -144,9 +164,13 @@ try {
   server = spawn("npm", ["run", "dev", "--", "--host", "127.0.0.1", "--port", "5191", "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("Vite did not start on 5191")), 45000);
-    const ready = (chunk) => { if (/127\.0\.0\.1:5191/.test(String(chunk))) { clearTimeout(timer); resolve(); } };
+    let output = "";
+    const ready = (chunk) => {
+      output += String(chunk);
+      if (/127\.0\.0\.1:5191/.test(output)) { clearTimeout(timer); resolve(); }
+    };
     server.stdout.on("data", ready); server.stderr.on("data", ready);
-    server.once("exit", () => { clearTimeout(timer); reject(new Error("Vite exited before ready")); });
+    server.once("exit", () => { clearTimeout(timer); reject(new Error("Vite exited before ready: " + output.trim())); });
   });
   for (const viewport of [mobile, desktop]) {
     for (const item of ["Sửa lớp", "Sửa lịch học", "Lưu trữ lớp"]) await test("class menu / " + item, viewport, "staff", "/lop/demo-6a/buoi-hoc", async (page) => {
@@ -211,6 +235,30 @@ try {
         await page.waitForFunction(() => [...document.querySelectorAll('input[aria-label^="Điểm Học sinh"]')].length === 8 && [...document.querySelectorAll('input[aria-label^="Điểm Học sinh"]')].every((input) => input.value === "15"));
         return hit + "; confirmation accepted and visible scores set to 15";
       });
+      await test("test scores / sticky save with long list", viewport, "staff", "/lop/demo-6a/bai-kiem-tra/demo-test", async (page) => {
+        const saveButton = page.getByRole("button", { name: "Lưu điểm", exact: true });
+        const footer = page.locator("[class*=desktopSaveRow], [class*=actionFooter]").first();
+        const rows = page.locator('div[class^="_studentRow_"]');
+        if (await rows.count() !== 24) throw new Error(`expected 24 visible student rows, found ${await rows.count()}`);
+        const saveBox = await saveButton.boundingBox();
+        const viewportHeight = await page.evaluate(() => innerHeight);
+        if (!saveBox || saveBox.y < 0 || saveBox.y + saveBox.height > viewportHeight) throw new Error("save button is outside the viewport before scrolling");
+        const lastRow = rows.last();
+        await lastRow.evaluate((element) => {
+          let parent = element.parentElement;
+          while (parent) {
+            if (parent.scrollHeight > parent.clientHeight + 2) {
+              parent.scrollTop = parent.scrollHeight;
+              break;
+            }
+            parent = parent.parentElement;
+          }
+          window.scrollTo(0, document.documentElement.scrollHeight);
+        });
+        const [rowBox, footerBox] = await Promise.all([lastRow.boundingBox(), footer.boundingBox()]);
+        if (!rowBox || !footerBox || rowBox.bottom > footerBox.top + 1) throw new Error("last student row is obscured by the sticky save bar");
+        return `save button visible; last row clears sticky bar at ${viewport.width}px`;
+      }, longScoreEntities);
     }
   for (const item of ["Sửa", "Xoá"]) await test("desktop test row menu / " + item, desktop, "staff", "/lop/demo-6a/bai-kiem-tra", async (page) => {
     await click(page.locator('button[aria-label="Thêm tùy chọn Kiểm tra giữa kỳ"]'), "open test row menu");
