@@ -56,6 +56,7 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
   - 3 sao: "Con học tốt, nhưng còn hơi mất tập trung, nói tự do"
   - 0–2 sao: "Con chưa tích cực tham gia hoạt động, cần tập trung hơn"
   - Đổi tiêu chí làm đổi số sao: nếu giáo viên chưa sửa câu thì câu tự đổi theo mức mới; đã sửa thì giữ câu đã sửa (có nút "Dùng câu mặc định").
+  - Câu nhận xét không giới hạn số ký tự (không có bộ đếm ký tự).
   - Kèm ô Ghi chú tự do, không bắt buộc. Phụ huynh thấy số sao (x/5), câu nhận xét và ghi chú; không thấy danh sách tiêu chí.
   - Phiếu cũ theo thang 3 sao giữ nguyên số sao và câu đã lưu (hiện theo thang cũ x/3); không quy đổi.
 - Phiếu buổi học (đã chốt 2026-10-19, đổi bố cục 2026-10-20): mỗi em mỗi buổi một phiếu gồm mức sao, câu mẫu, ghi chú và kết quả chấm BTVN buổi trước. Nút "Gửi phiếu cả lớp" ở tab Nhận xét gửi một lần mọi phiếu chưa gửi, kèm kết quả BTVN đã chấm; em Có mặt/Muộn chưa có phiếu được gửi phiếu mặc định 5 sao, em Vắng/Có phép/chưa điểm danh thì bỏ qua trừ khi giáo viên tự mở phiếu em đó và gửi (đã chốt 2026-10-25); phụ huynh nhận một thông báo cho mỗi buổi. Kết quả chấm BTVN đi theo phiếu, không gửi riêng.
