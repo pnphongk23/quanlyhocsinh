@@ -1,6 +1,6 @@
 import type { Score } from "../types";
 import { getStore } from "../store";
-import { commitState, persistCommand } from "../outbox";
+import { commitState, persistCommand, persistScoreCommands } from "../outbox";
 import { requirePermission, requireClassAccess } from "./access";
 import type { SyncCommand } from "../api/types";
 import { runDurably, type WritePlan } from "./durable";
@@ -23,3 +23,22 @@ function planScore(input:Omit<Score,"id">):WritePlan<Score> {
 }
 /** Chờ ghi bền; ghi lỗi ⇒ ném lỗi gốc và bộ nhớ về như trước. */
 export const saveScoreDurable = (input:Omit<Score,"id">):Promise<Score> => runDurably(planScore(input));
+export async function assignDefaultScoreDurable(testId: string, studentIds: string[], value = 15): Promise<Score[]> {
+  const uniqueIds = [...new Set(studentIds)];
+  const planned = uniqueIds.map((studentId) => planScore({ testId, studentId, value }));
+  const changes = planned.map((plan) => plan.result).filter((item) => getStore().scores.find((score) => score.id === item.id)?.value !== value);
+  if (!changes.length) return [];
+  const previous = changes.map((item) => getStore().scores.find((score) => score.id === item.id)).filter((item): item is Score => Boolean(item));
+  const startedAt = Date.now();
+  const commands = changes.map((item, index) => {
+    const old = previous.find((score) => score.id === item.id);
+    const payload = { test_id: item.testId, student_id: item.studentId, value: item.value };
+    const createdAt = new Date(startedAt + index).toISOString();
+    const command = { id: crypto.randomUUID(), type: "score.set", payload, base_version: (old as any)?.version ?? 0, created_at: createdAt } as SyncCommand;
+    return { parts: [item.testId, item.studentId], wireRecord: { ...payload, version: (old as any)?.version ?? 0, updated_at: command.created_at }, command };
+  });
+  const rollback = () => commitState("scores", testId, (draft) => { draft.scores = draft.scores.filter((score) => !changes.some((item) => item.id === score.id)).concat(previous); });
+  commitState("scores", testId, (draft) => { draft.scores = draft.scores.filter((score) => !changes.some((item) => item.id === score.id)).concat(changes); });
+  try { await persistScoreCommands(commands); } catch (error) { rollback(); throw error; }
+  return changes;
+}

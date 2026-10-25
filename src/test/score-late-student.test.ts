@@ -37,6 +37,53 @@ describe("score for a student enrolled after the test date", () => {
     await d.syncNow();
     expect(() => scores.saveScoreDurable({ testId: "t1", studentId: "gone", value: 7 })).toThrow("Học sinh không thuộc bài kiểm tra này.");
   });
+
+  it("assigns the default to the supplied visible students, overwrites, and queues offline", async () => {
+    const d = await bootDevice(server, "t", me);
+    const scores = await import("../data/repositories/scores");
+    await d.syncNow();
+    await scores.saveScoreDurable({ testId: "t1", studentId: "old", value: 4 });
+    await d.syncNow();
+    const originalOnline = Object.getOwnPropertyDescriptor(navigator, "onLine");
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    try {
+      await scores.assignDefaultScoreDurable("t1", ["old", "new"]);
+      expect(d.getStore().scores.filter((score: any) => score.testId === "t1").map((score: any) => score.value)).toEqual([15, 15]);
+      expect((await d.db.outbox.toArray()).filter((row: any) => row.type === "score.set")).toHaveLength(2);
+      expect(await scores.assignDefaultScoreDurable("t1", ["old", "new"])).toEqual([]);
+      expect((await d.db.outbox.toArray()).filter((row: any) => row.type === "score.set")).toHaveLength(2);
+      expect(serverScore("gone")).toBeUndefined();
+      expect(d.getStore().scores.some((score: any) => score.studentId === "outside")).toBe(false);
+    } finally {
+      if (originalOnline) Object.defineProperty(navigator, "onLine", originalOnline);
+      else delete (navigator as any).onLine;
+    }
+  });
+
+  it("rolls back every local score when the atomic durable transaction fails", async () => {
+    const d = await bootDevice(server, "t", me);
+    const scores = await import("../data/repositories/scores");
+    await d.syncNow();
+    vi.spyOn(d.db.scores, "put").mockRejectedValueOnce(new Error("disk"));
+    await expect(scores.assignDefaultScoreDurable("t1", ["old", "new"])).rejects.toThrow("Không lưu được vào bộ nhớ trên thiết bị.");
+    expect(d.getStore().scores.filter((score: any) => score.testId === "t1")).toEqual([]);
+    expect((await d.db.outbox.toArray()).filter((row: any) => row.type === "score.set")).toEqual([]);
+  });
+
+  it("pushes a default assignment for more than 50 students in ordered batches", async () => {
+    for (let i = 0; i < 53; i++) server.put("student", { id: `bulk-${String(i).padStart(2, "0")}`, class_id: "c1", name: `Bulk ${i}`, enrolled_at: "2026-09-01", left_at: null, status: "active" });
+    const d = await bootDevice(server, "t", me);
+    const scores = await import("../data/repositories/scores");
+    await d.syncNow();
+    await scores.assignDefaultScoreDurable("t1", Array.from({ length: 53 }, (_, i) => `bulk-${String(i).padStart(2, "0")}`));
+    await d.syncNow();
+    const pushes = server.requests.filter((request) => request.path === "/sync/push");
+    expect(pushes.length).toBe(2);
+    expect(server.hooks.pushBatches.map((batch) => batch.length)).toEqual([50, 3]);
+    expect(server.hooks.pushBatches.flat().map((command: any) => command.payload.student_id)).toEqual(Array.from({ length: 53 }, (_, i) => `bulk-${String(i).padStart(2, "0")}`));
+    expect(await d.db.outbox.count()).toBe(0);
+    expect(Array.from({ length: 53 }, (_, i) => serverScore(`bulk-${String(i).padStart(2, "0")}`)?.value)).toEqual(Array(53).fill(15));
+  });
 });
 
 describe("rejected commands", () => {

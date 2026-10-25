@@ -19,7 +19,7 @@ export function createFakeServer() {
   const log: Array<{ seq: number; entity: string; item?: Row; gone?: { k1: string; k2: string } }> = [];
   const tokens = new Map<string, Scope>();
   const requests: TracedRequest[] = [];
-  const hooks = { failEntity: null as string | null, hold: null as ((req: TracedRequest) => Promise<void> | void) | null, latencyMs: 0, pushDoneAt: [] as number[], afterPull: null as (() => void) | null, respond: null as ((req: TracedRequest) => { status: number; code: string } | undefined) | null, onSnapshotPage: null as ((entity: string) => void) | null, rejectCommand: null as ((command: Row) => string | undefined) | null };
+  const hooks = { failEntity: null as string | null, hold: null as ((req: TracedRequest) => Promise<void> | void) | null, latencyMs: 0, pushDoneAt: [] as number[], pushBatches: [] as Row[][], afterPull: null as (() => void) | null, respond: null as ((req: TracedRequest) => { status: number; code: string } | undefined) | null, onSnapshotPage: null as ((entity: string) => void) | null, rejectCommand: null as ((command: Row) => string | undefined) | null };
   const table = (entity: string) => { let t = rows.get(entity); if (!t) rows.set(entity, t = new Map()); return t; };
 
   const put = (entity: string, item: Row): Row => {
@@ -100,9 +100,10 @@ export function createFakeServer() {
       hooks.afterPull?.();
       return response;
     }
-      if (path === "/sync/push") {
-        const body = JSON.parse(String(init.body));
-        if (body.commands.length > 50) return apiError(422, "validation_error");
+        if (path === "/sync/push") {
+          const body = JSON.parse(String(init.body));
+          if (body.commands.length > 50) return apiError(422, "validation_error");
+          hooks.pushBatches.push(body.commands);
         const results = body.commands.map((command: Row) => {
           const required: Record<string, string[]> = { "attendance.set": ["session_id", "student_id", "status"], "test.create": ["id", "class_id", "name", "date"], "test.update": ["id"], "test.delete": ["id"], "score.set": ["test_id", "student_id", "value"], "slip.set": ["session_id", "student_id", "stars", "note"], "slip.send": ["session_id", "student_ids"], "homework.assign": ["session_id", "sections"], "homework.section.upsert": ["id", "session_id", "kind", "title", "description"], "homework.section.delete": ["id"], "homework.grade.set": ["section_id", "student_id", "level"], "conflict.resolve": ["conflict_id", "choice"] };
           if ((required[command.type] ?? []).some((key) => !Object.hasOwn(command.payload, key))) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "missing_required_field", request_id: "fake" } };

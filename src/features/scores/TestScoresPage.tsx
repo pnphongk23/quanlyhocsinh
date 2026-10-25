@@ -9,7 +9,7 @@ import { useStore } from "../../data/store";
 import { getClass, listClasses } from "../../data/repositories/classes";
 import { listStudents } from "../../data/repositories/students";
 import { deleteTestDurable, listTests, updateTestDurable } from "../../data/repositories/tests";
-import { listScores, saveScoreDurable } from "../../data/repositories/scores";
+import { assignDefaultScoreDurable, listScores, saveScoreDurable } from "../../data/repositories/scores";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import { useSaveAction, type SaveAction } from "../../shared/hooks/useSaveAction";
 import { useSavedPeek, useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
@@ -65,12 +65,15 @@ export default function TestScoresPage() {
   const { status, markUnsaved, clearStatus, setStatus } = useSaveStatus();
   const classItem = getClass(classId);
   const test = listTests(classId).find((item) => item.id === testId);
-  const students = listStudents(classId, false);
+  const students = listStudents(classId, false).filter((student) => !test || !student.leftAt || student.leftAt >= test.date);
   const [drafts, setDrafts] = useState<ClassScoreDrafts>({});
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDefault, setConfirmDefault] = useState(false);
+  const [defaultBusy, setDefaultBusy] = useState(false);
+  const [defaultError, setDefaultError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [leaveAfterDelete, setLeaveAfterDelete] = useState(false);
   const listPath = `/lop/${classId}/bai-kiem-tra`;
@@ -230,6 +233,17 @@ export default function TestScoresPage() {
     discardDrafts();
     setLeaveAfterDelete(true);
   };
+  const assignDefault = async () => {
+    setDefaultBusy(true);
+    setDefaultError("");
+    try {
+      await assignDefaultScoreDurable(testId, students.map((student) => student.id));
+      discardDrafts();
+      setConfirmDefault(false);
+    } catch (cause) {
+      setDefaultError(cause instanceof Error ? cause.message : "Không thể gán điểm mặc định.");
+    } finally { setDefaultBusy(false); }
+  };
 
   return (
     <section className={s.page}>
@@ -310,6 +324,16 @@ export default function TestScoresPage() {
         <span className={s.colStudent}>Học sinh</span>
         <span className={s.colScore}>Điểm</span>
       </div>
+      {canWrite && (
+        <Button
+          variant="secondary"
+          size="md"
+          disabled={!students.length || defaultBusy}
+          onClick={() => { setDefaultError(""); setConfirmDefault(true); }}
+        >
+          Gán điểm mặc định
+        </Button>
+      )}
       <div className={s.studentList} ref={listRef}>
         {students.map((student, index) => {
           const draft = valueFor(student.id);
@@ -400,6 +424,17 @@ export default function TestScoresPage() {
       {editing && (
         <EditTestModal test={test} onClose={() => setEditing(false)} />
       )}
+      <ConfirmDialog
+        open={confirmDefault}
+        title="Gán điểm mặc định?"
+        message="Đặt 15 điểm cho mọi học sinh đang hiện trong bảng này, ghi đè cả điểm đã nhập và bản nháp chưa lưu."
+        error={defaultError}
+        actions={[
+          { label: "Gán 15 điểm", busy: defaultBusy, onClick: () => void assignDefault() },
+          { label: "Huỷ", variant: "neutral", disabled: defaultBusy, onClick: () => setConfirmDefault(false) },
+        ]}
+        onDismiss={() => { if (!defaultBusy) setConfirmDefault(false); }}
+      />
       <ConfirmDialog
         open={confirmDelete}
         title={hasScores ? "Lưu trữ bài kiểm tra?" : "Xoá bài kiểm tra?"}

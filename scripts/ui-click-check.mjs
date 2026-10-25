@@ -182,13 +182,29 @@ try {
         await page.locator('[role="dialog"]').filter({ hasText: "Huỷ buổi học" }).waitFor({ state: "visible" });
         return hit + "; cancel confirmation opened";
       });
-    else await test("session menu / cancel", viewport, "staff", "/lop/demo-6a/buoi-hoc/demo-future", async (page) => {
+      else await test("session menu / cancel", viewport, "staff", "/lop/demo-6a/buoi-hoc/demo-future", async (page) => {
       await click(page.getByRole("button", { name: "Tuỳ chọn buổi học" }), "open session menu");
       const hit = await click(page.getByRole("button", { name: "Huỷ buổi", exact: true }), "cancel session");
         await page.locator('[role="dialog"]').waitFor({ state: "visible" });
       return hit + "; confirmation opened";
-    });
-  }
+      });
+      await test("test scores / assign default score", viewport, "staff", "/lop/demo-6a/bai-kiem-tra/demo-test", async (page) => {
+        await click(page.getByRole("button", { name: "Gán điểm mặc định", exact: true }), "assign default score");
+        const dialog = page.getByRole("dialog", { name: "Gán điểm mặc định?" });
+        await dialog.waitFor({ state: "visible" });
+        if (!(await dialog.innerText()).includes("ghi đè cả điểm đã nhập")) throw new Error("confirmation does not explain overwrite");
+        await click(dialog.getByRole("button", { name: "Huỷ", exact: true }), "cancel default score");
+        await dialog.waitFor({ state: "detached" });
+        if (await page.getByRole("textbox", { name: "Điểm Học sinh 1" }).inputValue() !== "0") throw new Error("cancel changed a score");
+        await click(page.getByRole("button", { name: "Gán điểm mặc định", exact: true }), "reopen default score");
+        await dialog.waitFor({ state: "visible" });
+        const hit = await click(dialog.getByRole("button", { name: "Gán 15 điểm", exact: true }), "confirm default score");
+        await page.getByRole("dialog", { name: "Gán điểm mặc định?" }).waitFor({ state: "detached" });
+        await page.getByRole("textbox", { name: "Điểm Học sinh 1" }).waitFor({ state: "visible" });
+        if (await page.getByRole("textbox", { name: /Điểm Học sinh/ }).evaluateAll((inputs) => inputs.some((input) => input.value !== "15"))) throw new Error("not every visible score became 15");
+        return hit + "; confirmation accepted and visible scores set to 15";
+      });
+    }
   for (const item of ["Sửa", "Xoá"]) await test("desktop test row menu / " + item, desktop, "staff", "/lop/demo-6a/bai-kiem-tra", async (page) => {
     await click(page.locator('button[aria-label="Thêm tùy chọn Kiểm tra giữa kỳ"]'), "open test row menu");
     const hit = await click(page.getByRole("menuitem", { name: item, exact: true }), item);
