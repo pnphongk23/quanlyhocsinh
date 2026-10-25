@@ -1,6 +1,6 @@
 # Đặc tả: App quản lý lớp tiếng Anh
 
-Cập nhật: 2026-10-25 · Gửi phiếu nhận xét và lưu nhận xét chung của báo cáo cần có mạng, không xếp hàng; bản đầu chỉ tải PDF, tải ảnh để Làm sau. Trước đó 2026-10-24: Báo cáo do giáo viên tự thêm theo khoảng buổi (không theo tháng), xem trước trong popup; quên mật khẩu tự phục vụ qua link gửi email đã lưu trong tài khoản; trạng thái lưu hiện "Đã lưu"/"Chờ đồng bộ". Trước đó 2026-10-23: Phụ huynh được tự đăng ký bằng SĐT chưa khai cho học sinh; app báo "chưa có con nào được liên kết" và tự liên kết khi giáo viên khai số sau. Luồng mời đã gỡ hẳn. Các quyết định trước: đặt lại mật khẩu thủ công; PBKDF2 30.000 vòng; điểm bước 0,5; cảnh báo vắng và cách đánh số buổi theo prototype; lịch lặp áp dụng từ ngày mai khi buổi hôm nay đã có dữ liệu; PDF/ảnh tạo trên thiết bị, báo cáo xem từ bản chụp dữ liệu; mascot Mít là lớp trang trí; FCM, Cloudflare Worker + D1, iOS native dùng chung API với PWA/web, triển khai staging và phạm vi Bản đầu ở mục 8. Bài giảng, role tuỳ chỉnh, nhân sự, học phí và báo cáo điểm ngoài Bản đầu.
+Cập nhật: 2026-10-25 · Bỏ hẳn điểm tối đa của bài kiểm tra: điểm 0..1000 bước 0,5, so sánh theo % so với bài trước; thêm nút "Gán điểm mặc định" (15) ở màn nhập điểm. Gửi phiếu nhận xét và lưu nhận xét chung của báo cáo cần có mạng, không xếp hàng; bản đầu chỉ tải PDF, tải ảnh để Làm sau. Trước đó 2026-10-24: Báo cáo do giáo viên tự thêm theo khoảng buổi (không theo tháng), xem trước trong popup; quên mật khẩu tự phục vụ qua link gửi email đã lưu trong tài khoản; trạng thái lưu hiện "Đã lưu"/"Chờ đồng bộ". Trước đó 2026-10-23: Phụ huynh được tự đăng ký bằng SĐT chưa khai cho học sinh; app báo "chưa có con nào được liên kết" và tự liên kết khi giáo viên khai số sau. Luồng mời đã gỡ hẳn. Các quyết định trước: đặt lại mật khẩu thủ công; PBKDF2 30.000 vòng; điểm bước 0,5; cảnh báo vắng và cách đánh số buổi theo prototype; lịch lặp áp dụng từ ngày mai khi buổi hôm nay đã có dữ liệu; PDF/ảnh tạo trên thiết bị, báo cáo xem từ bản chụp dữ liệu; mascot Mít là lớp trang trí; FCM, Cloudflare Worker + D1, iOS native dùng chung API với PWA/web, triển khai staging và phạm vi Bản đầu ở mục 8. Bài giảng, role tuỳ chỉnh, nhân sự, học phí và báo cáo điểm ngoài Bản đầu.
 
 ## 1. Tổng quan
 
@@ -40,8 +40,8 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
 
 **Điểm**
 - Không có trạng thái "Vắng thi" (đã chốt 2026-10-19). Mỗi học sinh ở mỗi bài chỉ có điểm hoặc "Chưa có điểm"; em vắng buổi kiểm tra cũng là "Chưa có điểm". "Chưa có điểm" chỉ là trạng thái của ô điểm.
-- Điểm tối đa theo từng bài kiểm tra (đã chốt 2026-10-20): số nguyên 1..1000, mặc định 15 khi tạo bài, sửa được ở form tạo bài. Điểm cho phép số lẻ theo bước 0,5 trong khoảng 0..điểm tối đa (đã chốt 2026-10-22). Lớp không còn thang điểm chung. Dữ liệu cũ (seed, localStorage) giữ điểm tối đa 10, không migrate.
-- Sửa bài kiểm tra (đã chốt 2026-10-20): tên, ngày, điểm tối đa; không cho hạ điểm tối đa xuống dưới điểm cao nhất đã nhập của bài đó.
+- Bài kiểm tra không có điểm tối đa (đã chốt 2026-10-25, thay quy tắc điểm tối đa 2026-10-20): tạo và sửa bài chỉ có tên và ngày. Điểm là số từ 0 đến 1000, cho phép số lẻ theo bước 0,5. Báo cáo chỉ hiện điểm, không hiện "/điểm tối đa". Dữ liệu điểm tối đa cũ bị bỏ hẳn (xoá cột trên máy chủ). Màn nhập điểm của một bài có nút "Gán điểm mặc định": hỏi xác nhận rồi đặt điểm 15 cho mọi học sinh đang hiện trong bảng điểm bài đó, ghi đè cả điểm đã nhập; mỗi thay đổi lưu và ghi log như sửa điểm thường, ghi được khi mất mạng.
+- Sửa bài kiểm tra (đã chốt 2026-10-20, bỏ điểm tối đa 2026-10-25): tên, ngày.
 - Xoá bài kiểm tra (đã chốt 2026-10-20): chưa có điểm nào (mọi ô là "Chưa có điểm") thì xoá hẳn; đã có điểm (kể cả 0) thì lưu trữ bằng cờ "archived", không xoá cứng. Bài lưu trữ ẩn khỏi bảng điểm, nhập điểm, báo cáo và app phụ huynh, không tính vào đâu; chưa có màn khôi phục. Hộp xác nhận nói rõ sẽ xoá hay lưu trữ. Cần quyền nhóm Điểm mức Sửa và quyền vào lớp như tạo bài.
 - Học sinh vào lớp sau ngày của bài kiểm tra (đã chốt 2026-10-24): vẫn hiện trong bảng điểm bài đó và được nhập điểm (kiểm tra bù); ô để trống là "Chưa có điểm", không tính vào đâu. Đã có điểm thì báo cáo và app phụ huynh tính bài đó cho em như mọi bài khác, không loại theo ngày vào lớp.
 - Sửa điểm sau khi đã phát hành báo cáo: phụ huynh thấy điểm mới ngay; báo cáo đã phát hành ghi chú "điểm có cập nhật, cần phát hành lại" (đã chốt).
@@ -106,8 +106,8 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
 - (Team đề xuất) Phiếu học phí theo tháng mỗi học sinh; ghi nhận thu (số tiền, ngày, tiền mặt/chuyển khoản, ghi chú; nhiều lần); trạng thái Chưa thu / Thu một phần / Đã thu đủ; công nợ = tổng còn thiếu các tháng trước; gửi thông báo học phí cho phụ huynh (từng em hoặc cả lớp, cần mạng); số tiền đổi sau khi gửi (sửa điểm danh) → ghi "Số tiền đã thay đổi, cần gửi lại". Tháng chưa hết hiện "Tạm tính". Chỉ Admin. Role khác Admin, kể cả giáo viên của lớp, không xem được học phí của học viên (đã chốt 2026-10-18). Không có gói học phí trả trước theo số buổi (đã chốt 2026-10-18). Phụ huynh xem phiếu và lịch sử thu (chỉ thiết kế ở Claude Design).
 
 **Báo cáo điểm** (đề xuất, chờ duyệt)
-- Báo cáo điểm từng học viên (đã chốt 2026-10-20): mỗi em các bài theo ngày (điểm / điểm tối đa của bài, hoặc "Chưa có điểm"), xu hướng (biểu đồ đường chuẩn hoá theo điểm tối đa của từng bài), chênh lệch bài gần nhất so với bài có điểm trước đó tính theo % thang điểm, hiện dạng "+13%" / "−7%". So sánh giữa các bài luôn theo % thang điểm (score/max) vì mỗi bài có điểm tối đa riêng. Không có điểm trung bình.
-- (Team đề xuất) Báo cáo tổng hợp lớp cho giáo viên: tiến độ nhập điểm từng bài (đã có điểm / chưa có điểm), danh sách "Cần chú ý" chỉ còn hai lý do (đã chốt 2026-10-20): (a) từ 2 bài chưa có điểm trở lên; (b) bài gần nhất giảm từ 20% thang điểm trở lên so với bài có điểm trước đó. Không còn lý do trung bình dưới 5, khối phân bố học sinh theo dải trung bình bỏ hẳn. KHÔNG hiện trung bình lớp hay trung bình từng bài (theo quy tắc 3.1).
+- Báo cáo điểm từng học viên (đã chốt 2026-10-20): mỗi em các bài theo ngày (điểm của bài, hoặc "Chưa có điểm"), xu hướng (biểu đồ đường theo điểm thô), chênh lệch bài gần nhất so với bài có điểm trước đó tính theo % của điểm bài trước: (điểm mới − điểm trước) / điểm trước, hiện dạng "+13%" / "−7%"; bài trước 0 điểm thì không hiện % (đã chốt 2026-10-25). Không có điểm trung bình.
+- (Team đề xuất) Báo cáo tổng hợp lớp cho giáo viên: tiến độ nhập điểm từng bài (đã có điểm / chưa có điểm), danh sách "Cần chú ý" chỉ còn hai lý do (đã chốt 2026-10-20): (a) từ 2 bài chưa có điểm trở lên; (b) bài gần nhất giảm từ 20% trở lên so với điểm bài có điểm trước đó (tính như trên; bài trước 0 điểm thì không xét, đã chốt 2026-10-25). Không còn lý do trung bình dưới 5, khối phân bố học sinh theo dải trung bình bỏ hẳn. KHÔNG hiện trung bình lớp hay trung bình từng bài (theo quy tắc 3.1).
 
 **Tài khoản** (đã chốt 2026-10-23)
 - Xác thực bằng SĐT + mật khẩu, không SMS hay OTP trong MVP. Luồng mời đã gỡ hẳn; không có link hoặc mã QR chung của lớp, màn duyệt yêu cầu hay mã đăng ký.
@@ -138,7 +138,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | Điểm danh | Điểm danh theo buổi | ✓ |
 | | Ghi chú giờ đến muộn, sửa sau lưu, cảnh báo khi rời màn còn nhập dở chưa bấm Lưu | ✗ |
 | | Lịch sử điểm danh, cảnh báo vắng 2 buổi liên tiếp | ◐ |
-| Điểm số | Tạo bài kiểm tra (tên, ngày, điểm tối đa — mặc định 15; bỏ hệ số) | ✓ |
+| Điểm số | Tạo bài kiểm tra (tên, ngày; không có điểm tối đa, bỏ hệ số); nút "Gán điểm mặc định" (15) khi nhập điểm | ✓ |
 | | Sửa, xoá (lưu trữ) bài kiểm tra | ✓ |
 | | Nhập điểm, bảng điểm cả lớp | ✓ |
 | | Sửa điểm có lịch sử | ✗ |
@@ -183,7 +183,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 | Phân quyền | Quyền theo role và phạm vi (lớp được gán, con được liên kết theo SĐT), kiểm tra ở máy chủ. Phụ huynh chỉ thấy con được liên kết. Dữ liệu mỗi lớp tách biệt. |
 | Tài khoản | Giáo viên tự đăng ký workspace; phụ huynh tự đăng ký SĐT + mật khẩu tự đặt kể cả khi chưa có hồ sơ học sinh khớp; app báo "chưa có con nào được liên kết". Khi giáo viên khai SĐT sau, hệ thống tự liên kết; nếu giáo viên đổi/gỡ số, tài khoản có thể tạm không còn con. Giáo viên không quản lý mật khẩu; quên mật khẩu qua link gửi tới email đã lưu trong tài khoản (đã chốt 2026-10-24), chưa có email thì người vận hành đặt lại thủ công. Chấp nhận rủi ro người biết SĐT đăng ký trước phụ huynh dự kiến; throttle theo IP. (đã chốt 2026-10-23) |
 | Dữ liệu | Giữ lịch sử khi nghỉ hoặc chuyển lớp; lịch sử sửa điểm và điểm danh. |
-| Tính toán | Mỗi bài kiểm tra có điểm tối đa riêng; so sánh giữa các bài theo % thang điểm (score/max); bài chưa có điểm không tính vào đâu. |
+| Tính toán | Bài kiểm tra không có điểm tối đa; so sánh giữa các bài theo % so với điểm bài trước; bài chưa có điểm không tính vào đâu. |
 | Thông báo | Thông báo trong app và push bằng FCM cho iOS native (qua APNs, SDK Firebase Messaging) và PWA/web (FCM web token), đã chốt 2026-10-21. Chỉ gửi khi giáo viên bấm gửi phiếu buổi học, phát hành báo cáo, lưu đề BTVN hoặc có điểm mới; sửa phiếu/kết quả chấm đã gửi không phát push riêng. Gộp thông báo điểm theo phụ huynh + học sinh + bài kiểm tra, gửi sau 5 phút không nhập thêm; BTVN gộp các phần trong một lần giao, sửa nội dung đề đã giao không phát push mới (đã chốt 2026-10-21). Push chỉ có tiêu đề và mã tham chiếu, không chứa nội dung nhận xét, điểm chi tiết hay mức sao; mở app phải tải dữ liệu qua API có phân quyền (đã chốt 2026-10-21). Thông báo quan trọng gửi thêm qua Zalo hoặc SMS (kênh thông báo, không dùng để đăng nhập; làm sau). Đổi vai trò, đăng xuất, đổi tài khoản cần mạng và máy chủ xác nhận đã gỡ đăng ký nhận push của đúng phiên đó trước khi máy đổi danh tính; push đã hiện trên thiết bị trước lúc xác nhận thì không thu hồi từ xa được. |
 | Báo cáo | Khi phát hành, máy chủ lưu bản chụp dữ liệu để xem trong app/web; có bản nháp và phát hành lại. Nút "Tải PDF" tạo file ngay trên thiết bị khi bấm, không tải lên máy chủ. |
 | Song ngữ | Giao diện, lỗi, thông báo, ngày tháng, PDF. |
@@ -210,11 +210,11 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 ## 8. Phạm vi
 
 **Bản đầu**
-- Lớp: tạo, sửa, lưu trữ lớp; điểm tối đa khai theo từng bài kiểm tra (mặc định 15, sửa được), không còn thang điểm cố định của lớp.
+- Lớp: tạo, sửa, lưu trữ lớp; không có thang điểm của lớp hay của bài.
 - Học sinh: thêm (kèm SĐT phụ huynh), sửa SĐT trên hồ sơ (gỡ liên kết phụ huynh cũ), đánh dấu nghỉ, giữ lịch sử; hồ sơ cơ bản.
 - Buổi học: tự sinh theo lịch lặp của lớp; hủy buổi bằng 1 nút; sửa lịch lặp của lớp. Giữ buổi đã diễn ra, buổi hủy, buổi lẻ và buổi hôm nay đã có dữ liệu; nếu buổi hôm nay đã có dữ liệu thì áp lịch mới từ ngày mai. Không sinh thêm buổi vào ngày đã có buổi của lớp (đã chốt 2026-10-22). Thêm buổi lẻ ngoài lịch lặp; màn Buổi học chia "buổi hiện tại" và "các buổi đã qua"; tab Lịch xem theo ngày và theo tháng (đã chốt 2026-10-18).
 - Điểm danh: 4 trạng thái, sửa sau lưu; cảnh báo khi hai buổi đã diễn ra gần nhất liên tiếp là Vắng (Có phép/Muộn không tính, buổi hủy bỏ qua, chỉ học sinh đang học; đã chốt 2026-10-22). Đánh số mọi buổi chưa hủy, kể cả buổi sắp tới; buổi hủy không số.
-- Điểm: tạo, sửa, xoá (lưu trữ) bài kiểm tra với điểm tối đa riêng mặc định 15; nhập điểm theo bước 0,5 trong 0..max; ghi log sửa điểm trong DB.
+- Điểm: tạo, sửa, xoá (lưu trữ) bài kiểm tra (tên, ngày); nhập điểm theo bước 0,5 trong 0..1000, nút "Gán điểm mặc định" (15, ghi đè, có xác nhận); ghi log sửa điểm trong DB.
 - Nhận xét sau buổi theo 3 mức sao + ghi chú, giáo viên bấm gửi.
 - BTVN: giao theo phần ở buổi N, chấm ở buổi N+1, phụ huynh xem đề và kết quả đã gửi.
 - Báo cáo do giáo viên tự thêm theo khoảng buổi (mặc định từ Buổi 1), xem trước trong popup (đã chốt 2026-10-24): xem trong app/web từ bản chụp dữ liệu lưu khi phát hành; có đếm sao và kết quả BTVN. Nút "Tải PDF" tạo file trên thiết bị khi bấm, không tải lên máy chủ.
