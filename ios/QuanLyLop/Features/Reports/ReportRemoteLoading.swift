@@ -61,9 +61,16 @@ extension I4FeatureStore {
     func loadClassReports(classID: String) async -> ReportFailure? {
         let fallback = String(localized: "reports.error.load", table: "Reports")
         guard let api, store != nil else { return nil }
+        // The session list needs the attendance permission, the batches only the report one: a refused
+        // or failed session list must not hide the batches, it only blocks picking a new range.
         do {
             let list = try await ReportRemote.sessions(api: api, classID: classID)
             fullSessions[classID] = SessionNumbering.numbered(list)
+            sessionListFailure[classID] = nil
+        } catch {
+            sessionListFailure[classID] = Self.sessionListMessage(error, fallback: fallback)
+        }
+        do {
             let items = try await ReportRemote.batches(api: api, classID: classID)
             let rowsByBatch = try await withThrowingTaskGroup(of: (String, [ReportBatchRow]).self) { group in
                 for item in items {
@@ -82,6 +89,13 @@ extension I4FeatureStore {
         } catch {
             return ReportFailure.from(error, fallback: fallback)
         }
+    }
+
+    private static func sessionListMessage(_ error: Error, fallback: String) -> String {
+        if case .server(let status, _, _)? = error as? APIFailure, status == 403 {
+            return String(localized: "reports.error.sessionsForbidden", table: "Reports")
+        }
+        return ReportFailure.from(error, fallback: fallback).message
     }
 
     /// Reloads one batch: the report rows as the server holds them now and the server's own readiness

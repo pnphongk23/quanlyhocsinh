@@ -131,6 +131,13 @@ struct ClassReportsView: View {
     @ViewBuilder private var addBar: some View {
         if data.canReadCommentsReports, data.canWriteCommentsReports, data.isReady {
             TeacherPinnedBar {
+                if let reason = data.sessionListFailure[classID], !data.hasFullSessions(classID) {
+                    Text(reason)
+                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                        .foregroundStyle(AppColors.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("reports.add.blocked")
+                }
                 AppButton(title: String(localized: "reports.list.add", table: "Reports"), size: .large) {
                     adding = true
                 }

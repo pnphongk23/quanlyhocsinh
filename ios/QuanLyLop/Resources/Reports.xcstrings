@@ -627,6 +627,17 @@
           }
         }
       }
+    },
+    "reports.error.sessionsForbidden": {
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vai trò của bạn không xem được danh sách buổi học nên chưa thể thêm báo cáo. Liên hệ Admin để được cấp quyền Điểm danh."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

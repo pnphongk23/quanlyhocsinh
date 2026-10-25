@@ -83,6 +83,31 @@ final class ReportRemoteLoadingTests: XCTestCase {
         XCTAssertFalse(data.hasFullSessions("c1"))
     }
 
+    func testBatchesStillLoadWhenTheRoleCannotReadSessions() async throws {
+        let api = RouteAPI(
+            route: { endpoint in
+                switch endpoint.path {
+                case "classes/c1/report-batches":
+                    return """
+                    {"items":[{"id":"b1","class_id":"c1","from_session_id":null,"to_session_id":null,"from_key":"2026-01-05 18:00",
+                               "to_key":"2026-01-30 18:00","counts":{"total":0,"draft":0,"published":0,"needs_republish":0}}]}
+                    """
+                case "report-batches/b1/reports":
+                    return "{\"batch\":{\"id\":\"b1\",\"class_id\":\"c1\",\"from_session_id\":null,\"to_session_id\":null,\"from_key\":\"2026-01-05 18:00\",\"to_key\":\"2026-01-30 18:00\"},\"items\":[]}"
+                default: return nil
+                }
+            },
+            failures: ["classes/c1/sessions": 403])
+        let data = I4FeatureStore(store: try store(), api: api)
+
+        let failure = await data.loadClassReports(classID: "c1")
+
+        XCTAssertNil(failure)
+        XCTAssertEqual(data.batches(in: "c1").map(\.id), ["b1"])
+        XCTAssertFalse(data.hasFullSessions("c1"))
+        XCTAssertEqual(data.sessionListFailure["c1"], String(localized: "reports.error.sessionsForbidden", table: "Reports"))
+    }
+
     func testBatchDetailKeepsServerPreviewReadiness() async throws {
         let api = RouteAPI { endpoint in
             switch endpoint.path {
@@ -116,10 +141,19 @@ final class ReportRemoteLoadingTests: XCTestCase {
 struct RouteAPI: APIClient {
     let baseURL = URL(string: "https://fixture.invalid/v1")!
     let route: @Sendable (APIEndpoint) -> String?
+    /// Paths answered with a server error of this status (e.g. 403 for a missing permission).
+    let failures: [String: Int]
 
-    init(route: @escaping @Sendable (APIEndpoint) -> String?) { self.route = route }
+    init(route: @escaping @Sendable (APIEndpoint) -> String?, failures: [String: Int] = [:]) {
+        self.route = route
+        self.failures = failures
+    }
 
     func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+        if let status = failures[endpoint.path] {
+            throw APIFailure.server(status: status, error: APIError(code: "forbidden", message: nil, details: nil, requestId: nil),
+                                    retryAfter: nil)
+        }
         guard let json = route(endpoint) else { throw APIFailure.offline }
         do { return try WireJSON.decoder().decode(type, from: Data(json.utf8)) }
         catch { throw APIFailure.decoding }

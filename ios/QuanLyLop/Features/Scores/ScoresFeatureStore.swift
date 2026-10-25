@@ -20,6 +20,9 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var hiddenSectionIDs: Set<String> = []
     /// Complete session list per class from the server; the sync cache only holds a window around today.
     @Published var fullSessions: [String: [ClassSession]] = [:]
+    /// Why a class's full session list could not be read (no attendance permission, offline), by class id.
+    /// While set, a new report range cannot be picked, but the batches still load.
+    @Published var sessionListFailure: [String: String] = [:]
     /// Server previews of reports (`missing` and `ready` as the server computes them), by report id.
     @Published var previews: [String: ReportSnapshot] = [:]
     @Published private(set) var canReadScores = false
