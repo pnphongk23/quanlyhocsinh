@@ -107,7 +107,10 @@ export async function listNotifications(
            OR EXISTS (SELECT 1 FROM tests t
                        WHERE t.workspace_id = n.workspace_id
                          AND t.id = n.test_id
-                         AND t.archived = 0))`;
+                         AND t.archived = 0))
+      AND (n.kind <> 'report_published'
+           OR NOT EXISTS (SELECT 1 FROM reports r JOIN report_batches b ON b.id = r.batch_id
+                           WHERE r.id = n.report_id AND b.deleted_at IS NOT NULL))`;
   if (before !== null) {
     sql += ' AND n.id < ?';
     binds.push(before);

@@ -37,6 +37,8 @@ function visibility(i:Identity,name:string):string {
   const guardian=i.scopeKind==='linked_students';
   const studentKey=name==='student' ? 'id' : ['attendance','score','slip','homework_grade','report','report_publication'].includes(name) ? 'student_id' : undefined;
   const clauses=[scope(i,'e',name==='class',studentKey)];
+  if (name==='report_batch') clauses.push('e.deleted_at IS NULL');
+  if (name==='report'||name==='report_publication') clauses.push('NOT EXISTS(SELECT 1 FROM report_batches rb WHERE rb.id=e.batch_id AND rb.deleted_at IS NOT NULL)');
   if (guardian) {
     if (name==='test') clauses.push('e.archived=0');
     if (name==='score') clauses.push('parent.archived=0');

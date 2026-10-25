@@ -3,6 +3,7 @@ import type { AppEnv } from "../types";
 import { ApiError, notFound, validationError } from "../lib/errors";
 import {
   createReportBatch,
+  deleteReportBatch,
   getPublication,
   listBatchReports,
   listClassReportBatches,
@@ -54,6 +55,9 @@ reportsRoutes.get("/report-batches/:id/reports", async (c) => {
 });
 reportsRoutes.post("/report-batches/:id/publish", async (c) =>
   c.json(await publishBatch(c.env.DB, c.get("identity"), c.req.param("id"))),
+);
+reportsRoutes.delete("/report-batches/:id", async (c) =>
+  c.json(await deleteReportBatch(c.env.DB, c.get("identity"), c.req.param("id"))),
 );
 reportsRoutes.get("/reports/:id/preview", async (c) =>
   c.json(

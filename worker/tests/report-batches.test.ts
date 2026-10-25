@@ -447,4 +447,58 @@ describe('report batches by session range', () => {
     expect(guardian.body.entities).toContain('report_publication');
     expect((await sync('snapshot/report_batch', f.guardianA, f.guardianAMembership)).status).toBeGreaterThanOrEqual(400);
   });
+  it('soft-deletes a whole batch and hides it from staff, guardians, sync and the inbox', async () => {
+    const sync = (path: string, token: string, membershipId: string, extra = '') =>
+      call(`/v1/sync/${path}${path.includes('?') ? '&' : '?'}membership_id=${membershipId}${extra}`, {}, token);
+    const admin = f.ws.membershipId;
+    const list = await call(`/v1/students/${f.students.a}/reports?limit=50`, {}, f.guardianA);
+    const { batch_id: batchId, report_id: reportId } = list.body.items[0];
+    const inbox = async () => (await call('/v1/notifications', {}, f.guardianA)).body.items as any[];
+    expect((await inbox()).some((n) => n.report_id === reportId)).toBe(true);
+    const staffCursor = await sync('snapshot', f.ws.token, admin);
+    const guardianCursor = await sync('snapshot', f.guardianA, f.guardianAMembership);
+
+    const del = (token: string, id = batchId) => call(`/v1/report-batches/${id}`, { method: 'DELETE' }, token);
+    expect((await del(f.guardianA)).status).toBe(403);
+    expect((await del(f.teacherOther)).status).toBeGreaterThanOrEqual(403);
+    expect((await del(f.otherWorkspace)).status).toBe(404);
+    expect((await del(f.ws.token, NIL)).status).toBe(404);
+    expect(await del(f.teacher)).toMatchObject({ status: 200, body: { id: batchId, deleted: true } });
+    expect(await del(f.ws.token)).toMatchObject({ status: 200, body: { id: batchId, deleted: true } });
+
+    expect((await batchesOf()).some((b) => b.id === batchId)).toBe(false);
+    expect((await call(`/v1/report-batches/${batchId}/reports`, {}, f.ws.token)).status).toBe(404);
+    expect((await call(`/v1/reports/${reportId}/preview`, {}, f.ws.token)).status).toBe(404);
+    expect((await call(`/v1/reports/${reportId}`, put({ general_comment: 'x' }), f.ws.token)).status).toBe(404);
+    expect((await call(`/v1/reports/${reportId}/publish`, post({}), f.ws.token)).status).toBe(404);
+    expect((await call(`/v1/report-batches/${batchId}/publish`, post({}), f.ws.token)).status).toBe(404);
+    for (const token of [f.ws.token, f.guardianA]) {
+      expect((await call(`/v1/reports/${reportId}/publications/1`, {}, token)).status).toBe(404);
+      const rows = (await call(`/v1/students/${f.students.a}/reports?limit=50`, {}, token)).body.items as any[];
+      expect(rows.some((r) => r.batch_id === batchId)).toBe(false);
+    }
+    expect((await inbox()).some((n) => n.report_id === reportId)).toBe(false);
+
+    for (const [name, token, membership] of [['report_batch', f.ws.token, admin], ['report', f.ws.token, admin],
+      ['report_publication', f.ws.token, admin], ['report_publication', f.guardianA, f.guardianAMembership]] as const) {
+      const rows = (await sync(`snapshot/${name}`, token, membership, '&limit=300')).body.items as any[];
+      expect(rows.some((r) => (name === 'report_batch' ? r.id === batchId : r.batch_id === batchId))).toBe(false);
+    }
+    const staffPull = await sync('pull', f.ws.token, admin, `&cursor=${staffCursor.body.cursor}&epoch=${staffCursor.body.epoch}&limit=300`);
+    const gone = (staffPull.body.deleted as any[]).map((d) => d.entity);
+    expect(gone).toEqual(expect.arrayContaining(['report_batch', 'report', 'report_publication']));
+    expect((staffPull.body.deleted as any[]).find((d) => d.entity === 'report_batch').k1).toBe(batchId);
+    const guardianPull = await sync('pull', f.guardianA, f.guardianAMembership,
+      `&cursor=${guardianCursor.body.cursor}&epoch=${guardianCursor.body.epoch}&limit=300`);
+    expect((guardianPull.body.deleted as any[]).some((d) => d.entity === 'report_publication')).toBe(true);
+    expect((await db.prepare('SELECT count(*) n FROM reports WHERE batch_id=?').bind(batchId).first<any>())!.n).toBeGreaterThan(0);
+    expect((await db.prepare('SELECT count(*) n FROM report_publications WHERE batch_id=?').bind(batchId).first<any>())!.n).toBeGreaterThan(0);
+
+    const clientId = crypto.randomUUID();
+    expect((await create('s1', 's2', f.ws.token, { id: clientId })).status).toBe(201);
+    expect((await del(f.ws.token, clientId)).status).toBe(200);
+    const replay = await create('s1', 's2', f.ws.token, { id: clientId });
+    expect(replay.status).toBe(409);
+    expect(replay.body.error.code).toBe('id_conflict');
+  });
 });

@@ -72,11 +72,12 @@ export async function createReportBatch(
   if (!from || !to) throw notFound();
   if (clientId) {
     const owner = await db
-      .prepare("SELECT workspace_id,class_id,from_session_id,to_session_id FROM report_batches WHERE id=?")
+      .prepare("SELECT workspace_id,class_id,from_session_id,to_session_id,deleted_at FROM report_batches WHERE id=?")
       .bind(clientId)
       .first<Row>();
     if (owner) {
       if (
+        owner.deleted_at !== null ||
         owner.workspace_id !== i.workspaceId ||
         owner.class_id !== classId ||
         owner.from_session_id !== from.id ||
@@ -145,7 +146,7 @@ export async function listClassReportBatches(db: D1Database, i: Identity, classI
   requireAccess(i, "comments_reports", "read", { classId });
   if (i.scopeKind === "linked_students") throw forbidden();
   const { results } = await db
-    .prepare(`${BATCH_SELECT} WHERE b.workspace_id=? AND b.class_id=? ORDER BY b.to_key DESC,b.from_key DESC,b.id`)
+    .prepare(`${BATCH_SELECT} WHERE b.workspace_id=? AND b.class_id=? AND b.deleted_at IS NULL ORDER BY b.to_key DESC,b.from_key DESC,b.id`)
     .bind(i.workspaceId, classId)
     .all<Row>();
   return results.map(mapBatch);
@@ -153,7 +154,7 @@ export async function listClassReportBatches(db: D1Database, i: Identity, classI
 
 export async function listBatchReports(db: D1Database, i: Identity, batchId: string) {
   const batch = await db
-    .prepare("SELECT class_id FROM report_batches WHERE workspace_id=? AND id=?")
+    .prepare("SELECT class_id FROM report_batches WHERE workspace_id=? AND id=? AND deleted_at IS NULL")
     .bind(i.workspaceId, batchId)
     .first<{ class_id: string }>();
   if (!batch) throw notFound();
@@ -176,7 +177,7 @@ async function loadReport(db: D1Database, i: Identity, reportId: string, level: 
   const report = await db
     .prepare(
       `SELECT id,class_id,student_id,batch_id,month,status,general_comment,publication_count
-      FROM reports WHERE workspace_id=? AND id=?`,
+      FROM reports WHERE workspace_id=? AND id=? AND ${LIVE_BATCH}`,
     )
     .bind(i.workspaceId, reportId)
     .first<ReportRow>();
@@ -189,6 +190,8 @@ async function loadReport(db: D1Database, i: Identity, reportId: string, level: 
   return report;
 }
 
+const LIVE_BATCH = "NOT EXISTS (SELECT 1 FROM report_batches b WHERE b.id=reports.batch_id AND b.deleted_at IS NOT NULL)";
+const LIVE_BATCH_R = "NOT EXISTS (SELECT 1 FROM report_batches b WHERE b.id=r.batch_id AND b.deleted_at IS NOT NULL)";
 const SESSION_IN_RANGE = "(s.date||' '||s.start_time)>=? AND (s.date||' '||s.start_time)<=?";
 
 async function buildBatchPreview(db: D1Database, workspaceId: string, report: ReportRow) {
@@ -413,7 +416,7 @@ export async function publishReport(db: D1Database, i: Identity, reportId: strin
 
 export async function publishBatch(db: D1Database, i: Identity, batchId: string) {
   const batch = await db
-    .prepare("SELECT class_id FROM report_batches WHERE workspace_id=? AND id=?")
+    .prepare("SELECT class_id FROM report_batches WHERE workspace_id=? AND id=? AND deleted_at IS NULL")
     .bind(i.workspaceId, batchId)
     .first<{ class_id: string }>();
   if (!batch) throw notFound();
@@ -461,7 +464,7 @@ export async function listClassReports(
     .prepare(
       `SELECT r.id AS report_id, r.batch_id, r.student_id, r.month, r.status, r.needs_republish,
       r.publication_count, r.published_at, r.version FROM reports r
-    WHERE r.workspace_id=? AND r.class_id=? AND r.month=? ORDER BY r.student_id, r.batch_id`,
+    WHERE r.workspace_id=? AND r.class_id=? AND r.month=? AND ${LIVE_BATCH_R} ORDER BY r.student_id, r.batch_id`,
     )
     .bind(i.workspaceId, classId, month)
     .all();
@@ -518,7 +521,7 @@ export async function previewReport(
     db
       .prepare(
         `SELECT r.general_comment FROM reports r JOIN report_batches b ON b.id=r.batch_id
-      WHERE r.workspace_id=? AND r.student_id=? AND r.month=? ORDER BY b.to_key DESC,r.id LIMIT 1`,
+      WHERE r.workspace_id=? AND r.student_id=? AND r.month=? AND b.deleted_at IS NULL ORDER BY b.to_key DESC,r.id LIMIT 1`,
       )
       .bind(i.workspaceId, studentId, month)
       .first<{ general_comment: string }>(),
@@ -600,7 +603,7 @@ export async function listStudentReports(
     .prepare(
       `SELECT r.id AS report_id,r.batch_id,r.student_id,r.month,r.status,r.needs_republish,r.publication_count,r.published_at,r.version,
       b.from_key,b.to_key,${sessionNumberSql("from_session_id")} AS from_number,${sessionNumberSql("to_session_id")} AS to_number
-    FROM reports r JOIN report_batches b ON b.id=r.batch_id WHERE r.workspace_id=? AND r.student_id=? ${guardian ? "AND r.status='published'" : ""}
+    FROM reports r JOIN report_batches b ON b.id=r.batch_id WHERE b.deleted_at IS NULL AND r.workspace_id=? AND r.student_id=? ${guardian ? "AND r.status='published'" : ""}
     ${cursor ? "AND (b.to_key < ? OR (b.to_key = ? AND r.id > ?))" : ""} ORDER BY b.to_key DESC, r.id LIMIT ?`,
     )
     .bind(
@@ -670,7 +673,8 @@ export async function getPublication(
   const row = await db
     .prepare(
       `SELECT p.id,p.workspace_id,p.class_id,p.student_id,p.report_id,p.batch_id,p.month,p.publication_no,p.snapshot,p.published_by,p.published_at
-      FROM report_publications p WHERE p.workspace_id=? AND p.report_id=? AND p.publication_no=?`,
+      FROM report_publications p WHERE p.workspace_id=? AND p.report_id=? AND p.publication_no=?
+      AND NOT EXISTS (SELECT 1 FROM report_batches b WHERE b.id=p.batch_id AND b.deleted_at IS NOT NULL)`,
     )
     .bind(i.workspaceId, reportId, no)
     .first<PublicationRow>();
@@ -681,4 +685,37 @@ export async function getPublication(
   });
   if (i.scopeKind === "linked_students" && !row.published_at) return null;
   return { ...row, snapshot: JSON.parse(row.snapshot) };
+}
+
+/** Xoá mềm cả đợt: ẩn đợt, báo cáo và bản phát hành khỏi giáo viên và phụ huynh; gọi lại là no-op. */
+export async function deleteReportBatch(db: D1Database, i: Identity, batchId: string) {
+  const batch = await db
+    .prepare("SELECT class_id,deleted_at FROM report_batches WHERE workspace_id=? AND id=?")
+    .bind(i.workspaceId, batchId)
+    .first<{ class_id: string; deleted_at: string | null }>();
+  if (!batch) throw notFound();
+  requireAccess(i, "comments_reports", "write", { classId: batch.class_id });
+  if (i.scopeKind === "linked_students") throw forbidden();
+  if (batch.deleted_at) return { id: batchId, deleted: true };
+  const now = new Date().toISOString(),
+    at = Math.floor(Date.now() / 1000);
+  const log = (entity: string, table: string, k2: string) =>
+    db
+      .prepare(
+        `INSERT INTO change_log(workspace_id,entity,k1,k2,op,class_id,student_id,created_at)
+        SELECT workspace_id,'${entity}',id,${k2},'upsert',class_id,student_id,? FROM ${table}
+        WHERE workspace_id=? AND batch_id=?`,
+      )
+      .bind(at, i.workspaceId, batchId);
+  await db.batch([
+    db
+      .prepare(
+        `UPDATE report_batches SET deleted_at=?,deleted_by=?,version=version+1
+        WHERE workspace_id=? AND id=? AND deleted_at IS NULL`,
+      )
+      .bind(now, i.userId, i.workspaceId, batchId),
+    log("report", "reports", "''"),
+    log("report_publication", "report_publications", "''"),
+  ]);
+  return { id: batchId, deleted: true };
 }
