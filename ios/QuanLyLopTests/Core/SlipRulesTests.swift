@@ -102,4 +102,50 @@ final class SlipRulesTests: XCTestCase {
         let old = try WireJSON.decoder().decode(ReportBatch.self, from: Data(#"{"id":"b","class_id":"c","from_session_id":"x","to_session_id":"y","from_number":1,"to_number":8,"from_key":"2026-10-01 18:00","to_key":"2026-10-24 18:00","version":1}"#.utf8))
         XCTAssertNil(old.month)
     }
+
+    // MARK: - Generated sentence
+
+    func testGeneratedSentenceForFiveStars() {
+        XCTAssertEqual(SlipRules.generatedSentence(criteria: 0b11111),
+                       "Con chú ý nghe giảng, ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp, ngồi học ngoan ngoãn, không mất trật tự và hoàn thành tốt bài tập về nhà.")
+    }
+
+    func testGeneratedSentenceMissingQuiet() {
+        XCTAssertEqual(SlipRules.generatedSentence(criteria: 0b10111),
+                       "Con chú ý nghe giảng, ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp và hoàn thành tốt bài tập về nhà, nhưng còn mất trật tự.")
+    }
+
+    func testGeneratedSentenceWithNothingMetListsOnlyUnmet() {
+        XCTAssertEqual(SlipRules.generatedSentence(criteria: 0),
+                       "Con chưa chú ý nghe giảng, chưa ghi bài đầy đủ, chưa tích cực tham gia hoạt động, còn mất trật tự và chưa hoàn thành bài tập về nhà.")
+    }
+
+    func testGeneratedSentenceTwoMetThreeUnmet() {
+        XCTAssertEqual(SlipRules.generatedSentence(criteria: 0b00011),
+                       "Con chú ý nghe giảng và ghi bài đầy đủ, nhưng chưa tích cực tham gia hoạt động, còn mất trật tự và chưa hoàn thành bài tập về nhà.")
+    }
+
+    func testGeneratedSentenceOneMetFourUnmet() {
+        XCTAssertEqual(SlipRules.generatedSentence(criteria: 0b00100),
+                       "Con tích cực tham gia các hoạt động trong lớp, nhưng chưa chú ý nghe giảng, chưa ghi bài đầy đủ, còn mất trật tự và chưa hoàn thành bài tập về nhà.")
+    }
+
+    func testGeneratedSentenceFourMetOneUnmetEachCriterion() {
+        let unmet = ["chưa chú ý nghe giảng", "chưa ghi bài đầy đủ", "chưa tích cực tham gia hoạt động",
+                     "còn mất trật tự", "chưa hoàn thành bài tập về nhà"]
+        for index in 0..<5 {
+            let sentence = SlipRules.generatedSentence(criteria: SlipRules.allCriteria & ~(1 << index))
+            XCTAssertTrue(sentence.hasSuffix(", nhưng \(unmet[index])."), sentence)
+        }
+    }
+
+    func testGeneratedSentenceShapeForEveryMask() {
+        for mask in 0...SlipRules.allCriteria {
+            let sentence = SlipRules.generatedSentence(criteria: mask)
+            XCTAssertTrue(sentence.hasPrefix("Con "), sentence)
+            XCTAssertTrue(sentence.hasSuffix("."), sentence)
+            XCTAssertEqual(sentence.contains("nhưng"), mask != 0 && mask != SlipRules.allCriteria, sentence)
+        }
+        XCTAssertEqual(SlipRules.generatedSentence(criteria: 0b111111), SlipRules.generatedSentence(criteria: 0b11111))
+    }
 }

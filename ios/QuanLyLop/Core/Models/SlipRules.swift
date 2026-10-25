@@ -20,6 +20,42 @@ enum SlipRules {
 
     static func toggled(_ criteria: Int, index: Int) -> Int { (criteria ^ (1 << index)) & allCriteria }
 
+    /// Spec phrases (met, unmet) per criterion, in criterion order. Fixed Vietnamese text of the generated sentence.
+    private static let autoPhrases: [(met: String, unmet: String)] = [
+        ("chú ý nghe giảng", "chưa chú ý nghe giảng"),
+        ("ghi bài đầy đủ", "chưa ghi bài đầy đủ"),
+        ("tích cực tham gia các hoạt động trong lớp", "chưa tích cực tham gia hoạt động"),
+        ("ngồi học ngoan ngoãn, không mất trật tự", "còn mất trật tự"),
+        ("hoàn thành tốt bài tập về nhà", "chưa hoàn thành bài tập về nhà"),
+    ]
+
+    /// Items joined as "a, b và c": a comma between all but the last two, "và" before the last.
+    private static func joined(_ items: [String]) -> String {
+        guard items.count > 1, let last = items.last else { return items.first ?? "" }
+        return items.dropLast().joined(separator: ", ") + " " + "và" + " " + last
+    }
+
+    /// The sentence generated from the ticked criteria (bit 0...4 in spec order): "Con", the met criteria first,
+    /// then the unmet ones after ", nhưng", ending with a full stop. With nothing met only the unmet ones are listed.
+    /// Replaces `defaultSentence(stars:)` once the sheet follows the criteria.
+    static func generatedSentence(criteria: Int) -> String {
+        var met: [String] = []
+        var unmet: [String] = []
+        for (index, phrase) in autoPhrases.enumerated() {
+            if isMet(criteria, index: index) { met.append(phrase.met) } else { unmet.append(phrase.unmet) }
+        }
+        var sentence = "Con "
+        if met.isEmpty {
+            sentence += joined(unmet)
+        } else if unmet.isEmpty {
+            sentence += joined(met)
+        } else {
+            sentence += joined(met) + ", " + "nhưng" + " " + joined(unmet)
+        }
+        return sentence + "."
+    }
+
+    /// Old star-based sentence; goes away when the sheet moves to `generatedSentence(criteria:)`.
     static func defaultSentence(stars: Int) -> String {
         let key = switch stars {
         case 5...: "slip.default.five"
