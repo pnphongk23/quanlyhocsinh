@@ -68,7 +68,7 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
 - Phiếu của một buổi chỉ gồm học sinh đang học vào ngày đó (ngày vào lớp ≤ ngày buổi ≤ ngày rời lớp); phiếu cũ của em đã nghỉ vẫn giữ (đã chốt 2026-10-19).
 - Báo cáo chỉ phụ huynh thấy sau khi giáo viên phát hành.
 - Nội dung báo cáo: chuyên cần, điểm từng bài, số buổi theo số sao (5 sao … 0 sao; phiếu cũ thang 3 sao đếm riêng theo thang cũ), kết quả BTVN theo từng phần (số lần Hoàn thành tốt / Hoàn thành / Chưa hoàn thành), nhận xét chung. BTVN không quy ra điểm. Có bản nháp, cho phép phát hành lại.
-- Kỳ báo cáo theo tháng (đã chốt 2026-10-25, thay khoảng buổi của 2026-10-24): giáo viên tự thêm báo cáo ở tab Báo cáo của lớp. Bấm "Thêm báo cáo" → chọn một tháng (mặc định tháng hiện tại). Một lần thêm tạo báo cáo cho cả lớp: mỗi học sinh đang học trong tháng đó một bản nháp riêng để viết nhận xét chung, xem trước, phát hành từng em hoặc cả lớp, phát hành lại. Dữ liệu (chuyên cần, điểm, sao, BTVN) tính trong các buổi thuộc tháng đã chọn; buổi hủy bỏ qua. Được thêm nhiều báo cáo cùng tháng. Tên báo cáo theo tháng, ví dụ "Tháng 10/2026". Báo cáo đã tạo theo khoảng buổi trước đây giữ nguyên tên cũ.
+- Kỳ báo cáo theo tháng (đã chốt 2026-10-25, thay khoảng buổi của 2026-10-24): giáo viên tự thêm báo cáo ở tab Báo cáo của lớp. Bấm "Thêm báo cáo" → chọn một tháng (mặc định tháng hiện tại). Một lần thêm tạo báo cáo cho cả lớp: mỗi học sinh đang học trong tháng đó một bản nháp riêng để viết nhận xét chung, xem trước, phát hành từng em hoặc cả lớp, phát hành lại. Dữ liệu (chuyên cần, điểm, sao, BTVN) tính trong các buổi thuộc tháng đã chọn; buổi hủy bỏ qua. Được thêm nhiều báo cáo cùng tháng. Tên báo cáo theo tháng, ví dụ "Tháng 10/2026". Báo cáo đã tạo theo khoảng buổi trước đây giữ nguyên tên cũ, kể cả số buổi (ví dụ "Buổi 1–8"); đây là ngoại lệ duy nhất của quy tắc không đánh số buổi (đã chốt 2026-10-25).
 - Xem trước báo cáo mở trong popup (hộp thoại trên desktop, sheet toàn màn trên mobile), không hiện nối bên dưới danh sách.
 - Xoá báo cáo (đã chốt 2026-10-25): ở tab Báo cáo, giáo viên xoá được một báo cáo (một lần thêm, gồm bản của mọi học sinh), kể cả báo cáo nháp lẫn đã phát hành. Hỏi xác nhận trước khi xoá; báo cáo đã phát hành thì hộp xác nhận nói rõ phụ huynh sẽ không còn thấy. Xoá mềm (ẩn khỏi giáo viên và phụ huynh, không xoá cứng dữ liệu), cần có mạng, không xếp hàng.
 
@@ -232,7 +232,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Chạy hai client dùng chung backend và API: app iOS native (SwiftUI) và PWA/web mobile; giao diện tiếng Việt. Android sau.
 - Bản web desktop cho giáo viên (đã chốt 2026-10-21): phần Chi tiết lớp gồm các tab Buổi học (điểm danh, nhận xét, bài tập về nhà), Bài kiểm tra, Điểm, Học sinh, Báo cáo, kèm đăng nhập và đăng ký workspace; deploy web lên Cloudflare Pages staging.
 - Deploy: Cloudflare, chỉ môi trường staging; chưa đụng production (đã chốt 2026-10-21).
-- Mascot Mít là lớp trang trí bổ sung cho đăng nhập, màn trống, thành công và lỗi; không đổi luồng hay nghiệp vụ. Chi tiết: `plans/20261021-mvp/design/mascot-v2/` (đã chốt 2026-10-22).
+- Mascot Mít là lớp trang trí bổ sung cho đăng nhập, màn trống, thành công và lỗi; không đổi luồng hay nghiệp vụ. Chi tiết: `plans/20261021-mvp/design/mascot-v2/` (đã chốt 2026-10-22). Mỗi mức sao 0–5 của phiếu nhận xét có một dáng Mít riêng (thêm dáng 0, 4, 5 sao; đã chốt 2026-10-25).
 
 **Làm sau**
 - Dời buổi, học bù (buổi lẻ đã làm ở bản đầu; dời một buổi sang ngày khác chưa làm); thêm học sinh từ lớp khác, chuyển lớp, hồ sơ học sinh chi tiết.
