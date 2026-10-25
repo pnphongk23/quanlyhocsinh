@@ -39,9 +39,26 @@ enum SlipRules {
     }
 
     /// What to send as `comment`: nil when the text is empty or still the default for these stars.
+    /// Never shortens the text: a sentence over `maxCommentLength` is refused by `isCommentTooLong` before it gets here.
     static func normalizedComment(_ text: String, stars: Int) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed == defaultSentence(stars: stars) { return nil }
-        return String(trimmed.prefix(maxCommentLength))
+        return trimmed
+    }
+
+    /// Length the server counts: the sentence is saved trimmed.
+    static func commentLength(_ text: String) -> Int {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
+
+    static func isCommentTooLong(_ text: String) -> Bool { commentLength(text) > maxCommentLength }
+
+    /// The text field after an edit. Typing never goes past the limit (the extra character is refused); a paste of
+    /// several characters is kept whole even when it goes over, so the teacher can shorten it; an over-limit text
+    /// can only get shorter until it fits.
+    static func acceptingCommentEdit(from old: String, to new: String) -> String {
+        if new.count <= maxCommentLength { return new }
+        if old.count > maxCommentLength { return new.count <= old.count ? new : old }
+        return new.count - old.count > 1 ? new : old
     }
 }

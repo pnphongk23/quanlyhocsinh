@@ -440,7 +440,8 @@ struct I4TicketSheet: View {
           .safeAreaInset(edge: .bottom, spacing: 0) {
               if canWrite {
                   TeacherPinnedBar {
-                      AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController, identifier: "comment.save") {
+                      AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController,
+                                      isEnabled: isLegacy || !commentTooLong, identifier: "comment.save") {
                           try await save()
                       }
                   }
@@ -521,8 +522,11 @@ struct I4TicketSheet: View {
     }
 
     private var commentText: Binding<String> {
-        Binding(get: { commentOverride ?? defaultSentence }, set: { commentOverride = $0 })
+        Binding(get: { commentOverride ?? defaultSentence },
+                set: { commentOverride = SlipRules.acceptingCommentEdit(from: commentOverride ?? defaultSentence, to: $0) })
     }
+
+    private var commentTooLong: Bool { SlipRules.isCommentTooLong(commentOverride ?? defaultSentence) }
 
     private var showsUseDefault: Bool {
         guard let commentOverride else { return false }
@@ -547,6 +551,9 @@ struct I4TicketSheet: View {
             .padding(TeacherMetrics.commentBoxPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
+            if canWrite {
+                commentCounter
+            }
             if canWrite && showsUseDefault {
                 Button { commentOverride = nil } label: {
                     Text(String(localized: "slip.sheet.useDefault", table: "Teacher"))
@@ -557,6 +564,23 @@ struct I4TicketSheet: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("comment.useDefault")
             }
+        }
+    }
+
+    private var commentCounter: some View {
+        let length = SlipRules.commentLength(commentOverride ?? defaultSentence)
+        return VStack(alignment: .leading, spacing: TeacherMetrics.sheetSectionGap) {
+            if commentTooLong {
+                Text(String.localizedStringWithFormat(String(localized: "slip.sheet.commentTooLong", table: "Teacher"), SlipRules.maxCommentLength))
+                    .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
+                    .foregroundStyle(AppColors.error)
+                    .accessibilityIdentifier("comment.tooLong")
+            }
+            Text(String.localizedStringWithFormat(String(localized: "slip.sheet.commentCounter", table: "Teacher"), length, SlipRules.maxCommentLength))
+                .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                .foregroundStyle(commentTooLong ? AppColors.error : AppColors.muted)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .accessibilityIdentifier("comment.counter")
         }
     }
 
@@ -663,6 +687,11 @@ struct I4TicketSheet: View {
     }
 
     private func save() async throws {
+        if commentTooLong, !isLegacy {
+            let message = String.localizedStringWithFormat(String(localized: "slip.sheet.commentTooLong", table: "Teacher"), SlipRules.maxCommentLength)
+            error = message
+            throw I4SaveFailure(message: message)
+        }
         let note = self.note
         let grading: I4FeatureStore.SlipGrading = isLegacy
             ? .legacy

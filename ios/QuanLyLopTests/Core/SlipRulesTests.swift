@@ -57,8 +57,42 @@ final class SlipRulesTests: XCTestCase {
         // The default of another star count is an edit.
         XCTAssertEqual(SlipRules.normalizedComment(SlipRules.defaultSentence(stars: 4), stars: 5),
                        SlipRules.defaultSentence(stars: 4))
-        XCTAssertEqual(SlipRules.normalizedComment(String(repeating: "a", count: 400), stars: 5)?.count,
-                       SlipRules.maxCommentLength)
+    }
+
+    func testNormalizedCommentNeverCutsALongSentence() {
+        let long = String(repeating: "a", count: 400)
+        XCTAssertEqual(SlipRules.normalizedComment(long, stars: 5), long)
+        XCTAssertTrue(SlipRules.isCommentTooLong(long))
+    }
+
+    func testCommentLengthCountsTheTrimmedSentenceAgainstTheLimit() {
+        let atLimit = String(repeating: "a", count: SlipRules.maxCommentLength)
+        XCTAssertFalse(SlipRules.isCommentTooLong(atLimit))
+        XCTAssertFalse(SlipRules.isCommentTooLong("  \(atLimit)\n"))
+        XCTAssertTrue(SlipRules.isCommentTooLong(atLimit + "a"))
+        XCTAssertEqual(SlipRules.commentLength(" abc "), 3)
+    }
+
+    func testTypingStopsAtTheLimit() {
+        let full = String(repeating: "a", count: SlipRules.maxCommentLength)
+        XCTAssertEqual(SlipRules.acceptingCommentEdit(from: "ab", to: "abc"), "abc")
+        XCTAssertEqual(SlipRules.acceptingCommentEdit(from: String(full.dropLast()), to: full), full)
+        XCTAssertEqual(SlipRules.acceptingCommentEdit(from: full, to: full + "b"), full)
+        XCTAssertEqual(SlipRules.acceptingCommentEdit(from: full, to: String(full.dropLast())), String(full.dropLast()))
+    }
+
+    func testPastingOverTheLimitKeepsTheWholeTextUntilItIsShortened() {
+        let pasted = String(repeating: "b", count: 340)
+        let kept = SlipRules.acceptingCommentEdit(from: "Con ngoan", to: pasted)
+        XCTAssertEqual(kept, pasted)
+        XCTAssertTrue(SlipRules.isCommentTooLong(kept))
+        // More typing is refused while over the limit; deleting is allowed, down to a text that fits.
+        XCTAssertEqual(SlipRules.acceptingCommentEdit(from: kept, to: kept + "c"), kept)
+        let shorter = String(kept.dropLast(10))
+        XCTAssertEqual(SlipRules.acceptingCommentEdit(from: kept, to: shorter), shorter)
+        let fits = String(kept.prefix(SlipRules.maxCommentLength))
+        XCTAssertEqual(SlipRules.acceptingCommentEdit(from: shorter, to: fits), fits)
+        XCTAssertFalse(SlipRules.isCommentTooLong(fits))
     }
 
     func testOldSlipDecodesAsScaleThreeAndKeepsItsOldSentence() throws {
