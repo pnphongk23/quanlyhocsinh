@@ -52,13 +52,4 @@ enum SlipRules {
     }
 
     static func isCommentTooLong(_ text: String) -> Bool { commentLength(text) > maxCommentLength }
-
-    /// The text field after an edit. Typing never goes past the limit (the extra character is refused); a paste of
-    /// several characters is kept whole even when it goes over, so the teacher can shorten it; an over-limit text
-    /// can only get shorter until it fits.
-    static func acceptingCommentEdit(from old: String, to new: String) -> String {
-        if new.count <= maxCommentLength { return new }
-        if old.count > maxCommentLength { return new.count <= old.count ? new : old }
-        return new.count - old.count > 1 ? new : old
-    }
 }

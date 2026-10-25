@@ -522,8 +522,7 @@ struct I4TicketSheet: View {
     }
 
     private var commentText: Binding<String> {
-        Binding(get: { commentOverride ?? defaultSentence },
-                set: { commentOverride = SlipRules.acceptingCommentEdit(from: commentOverride ?? defaultSentence, to: $0) })
+        Binding(get: { commentOverride ?? defaultSentence }, set: { commentOverride = $0 })
     }
 
     private var commentTooLong: Bool { SlipRules.isCommentTooLong(commentOverride ?? defaultSentence) }
