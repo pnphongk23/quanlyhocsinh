@@ -117,7 +117,7 @@ final class ReportRulesTests: XCTestCase {
                        "Tháng 10/2026")
     }
 
-    func testMonthChoicesStartAtTheCurrentMonthAndGoBack() {
+    @MainActor func testMonthChoicesStartAtTheCurrentMonthAndGoBack() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh")!
         let now = calendar.date(from: DateComponents(year: 2026, month: 2, day: 10))!

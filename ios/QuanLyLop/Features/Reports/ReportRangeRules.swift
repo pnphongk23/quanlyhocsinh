@@ -70,7 +70,7 @@ enum ReportRangeRules {
         let parts = month.split(separator: "-")
         guard parts.count == 2, parts[0].count == 4, let year = Int(parts[0]), let number = Int(parts[1]),
               (1...12).contains(number) else { return nil }
-        return String.localizedStringWithFormat(String(localized: "reports.month.title", table: "Reports"), number, year)
+        return String.localizedStringWithFormat(String(localized: "reports.month.title", table: "Reports"), number, String(year))
     }
 
     /// "YYYY-MM" for a Date in the calendar the app shows dates in.
