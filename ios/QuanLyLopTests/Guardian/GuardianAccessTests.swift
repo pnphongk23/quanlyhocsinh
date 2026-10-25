@@ -43,7 +43,7 @@ final class GuardianAccessTests: XCTestCase {
 
     func testMonthlyScoresExcludeArchivedTestsAndOtherStudents() throws {
         var child = try fixture(sent: true)
-        let archived = try TestDefinition(id: "archived", classId: "class", name: "Ẩn", date: "2026-10-10", maxScore: 15, archived: true)
+        let archived = TestDefinition(id: "archived", classId: "class", name: "Ẩn", date: "2026-10-10", archived: true)
         let otherStudentScore = Score(testId: "test", studentId: "other-child", value: 15, version: 1, updatedAt: "")
         child = GuardianChildData(student: child.student, className: child.className, sessions: child.sessions,
             attendances: child.attendances, tests: child.tests + [archived], scores: child.scores + [otherStudentScore],
@@ -177,7 +177,7 @@ final class GuardianAccessTests: XCTestCase {
             origin: .recurring, status: .planned, version: 1, sessionNumber: 3)
         let cancelled = ClassSession(id: "cancelled-session", classId: "class", date: "2026-10-22", startTime: "18:00",
             origin: .manual, isMakeup: true, status: .cancelled, note: nil, version: 1)
-        let test = try TestDefinition(id: "test", classId: "class", name: "Bài kiểm tra", date: "2026-10-16", maxScore: 15)
+        let test = TestDefinition(id: "test", classId: "class", name: "Bài kiểm tra", date: "2026-10-16")
         let section = HomeworkSection(id: "section", classId: "class", sessionId: first.id, kind: .vocabulary,
             title: "Từ vựng", description: "Ôn bài", version: 1)
         let nextSection = HomeworkSection(id: "next-section", classId: "class", sessionId: second.id, kind: .reading,

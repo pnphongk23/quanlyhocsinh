@@ -132,11 +132,7 @@ struct ScoreGridTabView: View {
                         .foregroundStyle(AppColors.text)
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
-                    Text(String.localizedStringWithFormat(
-                        String(localized: "feature.scores.ngay.thang.iem"),
-                        String(describing: I4Format.dayMonth(test.date)),
-                        String(describing: test.maxScore)
-                    ))
+                    Text(I4Format.dayMonth(test.date))
                         .appText(AppTextStyle(size: 12, weight: .regular, lineHeight: 18))
                         .foregroundStyle(AppColors.muted)
                         .lineLimit(2)

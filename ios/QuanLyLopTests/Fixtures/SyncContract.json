@@ -6,7 +6,7 @@
     {"id":"session-2","class_id":"class-1","date":"2026-10-09","start_time":"18:00","origin":"manual","is_makeup":true,"status":"planned","version":1}
   ],
   "attendance": [{"session_id":"session-1","student_id":"student-1","status":"late","note":"","late_at":"18:10","version":2,"updated_at":"2026-10-02T11:30:00.000Z"}],
-  "test": [{"id":"test-1","class_id":"class-1","name":"Kiểm tra 15 phút","date":"2026-10-05","max":15,"archived":false,"version":1}],
+  "test": [{"id":"test-1","class_id":"class-1","name":"Kiểm tra 15 phút","date":"2026-10-05","archived":false,"version":1}],
   "score": [{"test_id":"test-1","student_id":"student-1","value":12.5,"version":1,"updated_at":"2026-10-05T11:00:00.000Z"}],
   "slip": [{"session_id":"session-1","student_id":"student-1","stars":3,"note":"Tốt","status":"sent","sent_at":"2026-10-02T12:00:00.000Z","version":2,"updated_at":"2026-10-02T12:00:00.000Z"}],
   "homework_section": [{"id":"section-1","class_id":"class-1","session_id":"session-1","kind":"vocabulary","title":"Từ vựng","description":"","version":1}],

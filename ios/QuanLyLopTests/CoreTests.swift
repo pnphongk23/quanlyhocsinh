@@ -10,20 +10,16 @@ final class CoreTests: XCTestCase {
         PendingCommand(id: id, recordKey: key, baseVersion: version, kind: kind,
             payload: .object(["test_id": .string("test"), "student_id": .string("student"), "value": .number(12.5)]), createdAt: time)
     }
-    func testMaxScoreAndNullableScores() throws {
-        let test = try TestDefinition(id: "test", classId: "class", name: "Fixture", date: "2026-10-21")
-        XCTAssertEqual(test.maxScore, 15)
-        try test.validate(score: 0); try test.validate(score: nil); try test.validate(score: 15)
-        XCTAssertThrowsError(try test.validate(score: 15.1))
+    func testTestHasNoMaximumAndIgnoresALegacyMaxKey() throws {
+        let test = TestDefinition(id: "test", classId: "class", name: "Fixture", date: "2026-10-21")
+        try test.validate(score: 0); try test.validate(score: nil); try test.validate(score: 1000)
+        XCTAssertThrowsError(try test.validate(score: 1000.5))
         XCTAssertThrowsError(try test.validate(score: -.infinity))
-        XCTAssertThrowsError(try test.validateNewMaximum(10, highestScore: 12.5))
-        XCTAssertThrowsError(try TestDefinition(id: "t", classId: "c", name: "", date: "", maxScore: 0))
-        XCTAssertThrowsError(try TestDefinition(id: "t", classId: "c", name: "", date: "", maxScore: 1001))
         let wire = try WireJSON.value(test)
-        XCTAssertEqual(wire["max"], .number(15)); XCTAssertNil(wire["max_score"])
+        XCTAssertNil(wire["max"]); XCTAssertNil(wire["max_score"])
         XCTAssertEqual(try WireJSON.decode(TestDefinition.self, from: wire), test)
-        let absentMax = Data(#"{"id":"t","class_id":"c","name":"Fixture","date":"2026-10-21","version":1,"archived":false}"#.utf8)
-        XCTAssertEqual(try WireJSON.decoder().decode(TestDefinition.self, from: absentMax).maxScore, 15)
+        let legacy = Data(#"{"id":"test","class_id":"class","name":"Fixture","date":"2026-10-21","max":10,"version":1,"archived":false}"#.utf8)
+        XCTAssertEqual(try WireJSON.decoder().decode(TestDefinition.self, from: legacy), test)
     }
     func testSessionNumberComesOnlyFromServer() throws {
         let base = #"{"id":"s","class_id":"c","date":"2026-10-21","start_time":"18:00","origin":"recurring","is_makeup":false,"status":"planned","version":1,"session_number":37}"#
@@ -215,7 +211,7 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual([classes.count,students.count,sessions.count,attendance.count,tests.count,scores.count,
                         slips.count,sections.count,grades.count,reports.count,publications.count], Array(repeating: 1, count: 11))
         XCTAssertEqual(sessions.first?.sessionNumber, 8)
-        XCTAssertEqual(tests.first?.maxScore, 15)
+        XCTAssertEqual(tests.first?.name, "Fixture")
         XCTAssertEqual(publications.first?.snapshot.homework.first?.excellent, 4)
     }
     /// Pull value wins over an optimistic local cell, even at the same `version` (`-1` placeholder):

@@ -43,10 +43,10 @@ enum GuardianDemo {
             attendance("bao-7", .present), attendance("bao-8", .excused)
         ]
         let tests = [
-            try? TestDefinition(id: "test-speaking", classId: classA, name: String(localized: "feature.guardian.noi"), date: "2026-10-12", maxScore: 10),
-            try? TestDefinition(id: "test-listening", classId: classA, name: "Nghe", date: "2026-10-07", maxScore: 10),
-            try? TestDefinition(id: "test-grammar", classId: classA, name: String(localized: "feature.guardian.ngu.phap"), date: "2026-10-05", maxScore: 10)
-        ].compactMap { $0 }
+            TestDefinition(id: "test-speaking", classId: classA, name: String(localized: "feature.guardian.noi"), date: "2026-10-12"),
+            TestDefinition(id: "test-listening", classId: classA, name: "Nghe", date: "2026-10-07"),
+            TestDefinition(id: "test-grammar", classId: classA, name: String(localized: "feature.guardian.ngu.phap"), date: "2026-10-05")
+        ]
         let scores = [
             Score(testId: "test-speaking", studentId: bao.id, value: 10, version: 1, updatedAt: "2026-10-12T11:00:00.000Z"),
             Score(testId: "test-listening", studentId: bao.id, value: 9, version: 1, updatedAt: "2026-10-07T11:00:00.000Z"),
@@ -85,9 +85,9 @@ enum GuardianDemo {
             // Thứ tự bài kiểm tra trong báo cáo theo thứ tự giáo viên đã tạo (ảnh 10 của P1):
             // Ngữ pháp, Nghe, Nói — không sắp lại theo ngày như tab Điểm số.
             tests: [
-                ReportTest(testId: "test-grammar", name: String(localized: "feature.guardian.ngu.phap"), date: "2026-10-05", max: 10, value: 8),
-                ReportTest(testId: "test-listening", name: "Nghe", date: "2026-10-07", max: 10, value: 9),
-                ReportTest(testId: "test-speaking", name: String(localized: "feature.guardian.noi"), date: "2026-10-12", max: 10, value: 10)
+                ReportTest(testId: "test-grammar", name: String(localized: "feature.guardian.ngu.phap"), date: "2026-10-05", value: 8),
+                ReportTest(testId: "test-listening", name: "Nghe", date: "2026-10-07", value: 9),
+                ReportTest(testId: "test-speaking", name: String(localized: "feature.guardian.noi"), date: "2026-10-12", value: 10)
             ],
             stars: StarsSummary(three: 2, two: 1, one: 1),
             homework: [

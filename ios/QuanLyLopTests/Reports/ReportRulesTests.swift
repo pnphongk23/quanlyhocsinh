@@ -31,8 +31,8 @@ final class ReportRulesTests: XCTestCase {
                     version: 1, updatedAt: "2026-10-12T11:00:00.000Z")
     }
 
-    private func test(_ id: String, _ name: String, _ date: String, max: Int = 15) -> TestDefinition {
-        try! TestDefinition(id: id, classId: "c", name: name, date: date, maxScore: max)
+    private func test(_ id: String, _ name: String, _ date: String) -> TestDefinition {
+        TestDefinition(id: id, classId: "c", name: name, date: date)
     }
 
     private func score(_ test: String, _ value: Double?) -> Score {
@@ -50,7 +50,7 @@ final class ReportRulesTests: XCTestCase {
             student: student ?? self.student(), range: range ?? ReportRangeRules.resolve(batch(), sessions: sessions),
             batchID: "b", sessions: sessions,
             attendance: [attendance("s1", .present), attendance("s2", .late), attendance("s0", .absent)],
-            tests: tests ?? [test("t1", "Từ vựng", "2026-10-07"), test("t2", "Nghe", "2026-10-14", max: 100)],
+            tests: tests ?? [test("t1", "Từ vựng", "2026-10-07"), test("t2", "Nghe", "2026-10-14")],
             scores: scores ?? [score("t1", 12)],
             slips: [slip("s1", .three, sent: true), slip("s2", .two, sent: true), slip("s0", .one, sent: true),
                     slip("s4", .three, sent: false)],

@@ -1,6 +1,41 @@
 {
   "sourceLanguage" : "vi",
   "strings" : {
+    "scores.assignDefault.button" : {
+      "comment" : "Nút ở màn nhập điểm một bài: đặt điểm mặc định cho cả lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gán điểm mặc định" } }
+      }
+    },
+    "scores.assignDefault.title" : {
+      "comment" : "Tiêu đề hộp xác nhận gán điểm mặc định.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gán điểm 15 cho cả lớp?" } }
+      }
+    },
+    "scores.assignDefault.message" : {
+      "comment" : "Nội dung hộp xác nhận gán điểm mặc định; nói rõ ghi đè điểm đã nhập.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Mọi học sinh đang hiện trong bài này sẽ được đặt 15 điểm. Điểm đã nhập sẽ bị ghi đè." } }
+      }
+    },
+    "scores.assignDefault.confirm" : {
+      "comment" : "Nút xác nhận gán điểm mặc định.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gán 15 điểm" } }
+      }
+    },
+    "scores.invalid.range" : {
+      "comment" : "Lỗi khi điểm nhập ngoài khoảng cho phép.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm từ 0 đến 1000, theo bước 0,5" } }
+      }
+    },
     "homework.grading.header" : {
       "comment" : "Tiêu đề mục danh sách chấm bài của tab Bài tập về nhà.",
       "extractionState" : "manual",

@@ -324,7 +324,7 @@ struct GuardianReportView: View {
                                     .foregroundStyle(AppColors.muted)
                             }
                             Spacer(minLength: 0)
-                              Text(row.value.map { "\(GuardianFormat.scoreText($0))/\(row.max)" } ?? String(localized: "feature.guardian.noScore"))
+                              Text(row.value.map { GuardianFormat.scoreText($0) } ?? String(localized: "feature.guardian.noScore"))
                                 .appDynamicText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                                 .foregroundStyle(AppColors.text)
                         }

@@ -32,7 +32,7 @@ final class ReportPDFLocalTests: XCTestCase {
                           month: String? = nil) -> ReportSnapshot {
         ReportSnapshot(studentId: "student-1", month: month, range: range,
                        attendance: AttendanceSummary(present: 5, late: 1, excused: 0, absent: 0, heldSessions: 6),
-                       tests: [ReportTest(testId: "test-1", name: "Bài kiểm tra", date: "2026-10-15", max: 15, value: 12)],
+                       tests: [ReportTest(testId: "test-1", name: "Bài kiểm tra", date: "2026-10-15", value: 12)],
                        stars: StarsSummary(three: 3, two: 2, one: 1),
                        homework: [HomeworkSummary(kind: .vocabulary, excellent: 2, done: 1, notDone: 0)],
                        generalComment: "Nhận xét chung", ready: true)

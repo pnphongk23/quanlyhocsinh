@@ -23,26 +23,28 @@ struct TestsTabView: View {
                 if tests.isEmpty {
                     emptyState
                 } else {
-                    if data.canWriteScores { newButton }
                     list
                 }
             }
             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             .padding(.top, TeacherMetrics.screenPaddingTop)
-            .padding(.bottom, TeacherMetrics.contentGap * 2)
+            .padding(.bottom, 96)
         }
         .background(AppColors.background.ignoresSafeArea())
+        .overlay(alignment: .bottomTrailing) {
+            if data.canWriteScores {
+                Button { showingCreate = true } label: { TeacherFab() }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(String(localized: "feature.scores.bai.moi"))
+                    .accessibilityIdentifier("test.new")
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 16)
+            }
+        }
         .navigationDestination(isPresented: $showingCreate) {
             TestEditorView(data: data, classID: classID)
         }
         .task { await data.configure(auth: auth) }
-    }
-
-    private var newButton: some View {
-        HStack {
-            Spacer(minLength: 0)
-            AppButton(title: String(localized: "feature.scores.bai.moi"), variant: .secondary) { showingCreate = true }
-        }
     }
 
     private var list: some View {
@@ -65,7 +67,7 @@ struct TestsTabView: View {
                     .appText(AppTextStyle(size: 18, weight: .bold, lineHeight: 27))
                     .foregroundStyle(AppColors.text)
                     .lineLimit(1)
-                Text(String.localizedStringWithFormat(String(localized: "feature.scores.ngay.thang.iem"), String(describing: (I4Format.dayMonthLong(test.date))), String(describing: (test.maxScore))))
+                Text(I4Format.dayMonthLong(test.date))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
             }
@@ -126,6 +128,7 @@ struct TestScoresView: View {
     @State private var error: String?
     @State private var showingEdit = false
     @State private var deletion: TestDeletion?
+    @State private var confirmingAssignDefault = false
     @State private var focusStudentID: String?
     @State private var saveController = AppSaveController()
     @State private var saveStatusSource: AppSaveStatusSource?
@@ -156,7 +159,7 @@ struct TestScoresView: View {
 
     private var invalidCount: Int {
         guard let test else { return 0 }
-        return values.values.filter { ScoreRules.isInvalid($0, max: test.maxScore) }.count
+        return values.values.filter { ScoreRules.isInvalid($0) }.count
     }
 
     private var dirty: Bool {
@@ -219,6 +222,7 @@ struct TestScoresView: View {
                     if let failure = saveController.error {
                         I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
                     }
+                    if data.canWriteScores && !students.isEmpty { assignDefaultButton }
                     columns
                     studentList(test)
                 }
@@ -230,6 +234,16 @@ struct TestScoresView: View {
         }
         .sheet(isPresented: $showingEdit) {
             TestFormSheet(data: data, classID: classID, existing: test)
+        }
+        .confirmationDialog(String(localized: "scores.assignDefault.title", table: "Teacher"),
+                            isPresented: $confirmingAssignDefault, titleVisibility: .visible) {
+            Button(String(localized: "scores.assignDefault.confirm", table: "Teacher"), role: .destructive) {
+                Task { await assignDefault(test) }
+            }
+            .accessibilityIdentifier("test.assignDefault.confirm")
+            Button(String(localized: "students.leave.cancel", table: "Teacher"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "scores.assignDefault.message", table: "Teacher"))
         }
         .confirmationDialog(deletion?.title ?? "", isPresented: deletionBinding,
                             titleVisibility: .visible, presenting: deletion) { mode in
@@ -246,6 +260,24 @@ struct TestScoresView: View {
         }
     }
 
+    private var assignDefaultButton: some View {
+        AppButton(title: String(localized: "scores.assignDefault.button", table: "Teacher"), variant: .secondary) {
+            confirmingAssignDefault = true
+        }
+        .accessibilityIdentifier("test.assignDefault")
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    private func assignDefault(_ test: TestDefinition) async {
+        if let failure = await data.assignDefaultScore(test: test, students: students) {
+            error = failure
+            return
+        }
+        error = nil
+        drafts.removeAll()
+        await saveStatusSource?.refresh()
+    }
+
     private var deletionBinding: Binding<Bool> {
         Binding(get: { deletion != nil }, set: { if !$0 { deletion = nil } })
     }
@@ -256,7 +288,7 @@ struct TestScoresView: View {
                 Text(test.name)
                     .appText(AppTextStyle(size: 18, weight: .bold, lineHeight: 27))
                     .foregroundStyle(AppColors.text)
-                Text(String.localizedStringWithFormat(String(localized: "feature.scores.ngay.thang.iem"), String(describing: (I4Format.dayMonthLong(test.date))), String(describing: (test.maxScore))))
+                Text(I4Format.dayMonthLong(test.date))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.muted)
             }
@@ -298,7 +330,7 @@ struct TestScoresView: View {
 
     private func row(_ student: Student, test: TestDefinition) -> some View {
         let raw = values[student.id] ?? ""
-        let invalid = ScoreRules.isInvalid(raw, max: test.maxScore)
+        let invalid = ScoreRules.isInvalid(raw)
         let missing = ScoreRules.isEmpty(raw)
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
@@ -321,7 +353,7 @@ struct TestScoresView: View {
             if invalid {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.triangle").font(.system(size: 13))
-                    Text(String.localizedStringWithFormat(String(localized: "feature.scores.iem.tu.0.en"), String(describing: (test.maxScore))))
+                    Text(String(localized: "scores.invalid.range", table: "Teacher"))
                         .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                 }
                 .foregroundStyle(AppColors.error)
@@ -440,7 +472,6 @@ struct TestEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var date = I4Format.todayISO()
-    @State private var max = "15"
     @State private var error: String?
     @State private var saveController = AppSaveController()
     @State private var saveStatusSource: AppSaveStatusSource?
@@ -451,10 +482,6 @@ struct TestEditorView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, placeholder: String(localized: "feature.scores.vi.du.unit.6.test"), identifier: "test.name")
                     dateField
-                    AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad, identifier: "test.maxScore")
-                    Text(String(localized: "feature.scores.moi.bai.co.thang.iem.rieng.mac.inh.15.sua.uoc.lu"))
-                        .appText(AppText.muted)
-                        .foregroundStyle(AppColors.muted)
                     if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                     if let failure = saveController.error {
                         I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
@@ -541,12 +568,7 @@ struct TestEditorView: View {
             error = message
             throw I4SaveFailure(message: message)
         }
-        guard let maximum = Int(max.trimmingCharacters(in: .whitespaces)) else {
-            let message = String(localized: "feature.scores.iem.toi.a.phai.tu.1.en.1000")
-            error = message
-            throw I4SaveFailure(message: message)
-        }
-        if let failure = await data.saveTest(name: trimmed, date: date, max: maximum) {
+        if let failure = await data.saveTest(name: trimmed, date: date) {
             error = failure
             throw I4SaveFailure(message: failure)
         }
@@ -564,7 +586,6 @@ struct TestFormSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var date: String
-    @State private var max: String
     @State private var error: String?
     @State private var saveController = AppSaveController()
     @State private var saveStatusSource: AppSaveStatusSource?
@@ -575,7 +596,6 @@ struct TestFormSheet: View {
         self.existing = existing
         _name = State(initialValue: existing.name)
         _date = State(initialValue: existing.date)
-        _max = State(initialValue: String(existing.maxScore))
     }
 
     var body: some View {
@@ -583,7 +603,6 @@ struct TestFormSheet: View {
             VStack(spacing: 14) {
                 AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, identifier: "test.name")
                 AppTextField(label: String(localized: "feature.scores.ngay.kiem.tra"), text: $date, placeholder: "YYYY-MM-DD")
-                AppTextField(label: String(localized: "feature.scores.iem.toi.a"), text: $max, keyboard: .numberPad, identifier: "test.maxScore")
                 if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                 if let failure = saveController.error {
                     I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
@@ -630,12 +649,7 @@ struct TestFormSheet: View {
             error = message
             throw I4SaveFailure(message: message)
         }
-        guard let maximum = Int(max.trimmingCharacters(in: .whitespaces)) else {
-            let message = String(localized: "feature.scores.iem.toi.a.phai.tu.1.en.1000")
-            error = message
-            throw I4SaveFailure(message: message)
-        }
-        if let failure = await data.saveTest(name: trimmed, date: date, max: maximum, existing: existing) {
+        if let failure = await data.saveTest(name: trimmed, date: date, existing: existing) {
             error = failure
             throw I4SaveFailure(message: failure)
         }

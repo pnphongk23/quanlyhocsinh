@@ -222,7 +222,7 @@ enum ReportRules {
             }
             .sorted { $0.date < $1.date }
             .map { test in
-                ReportTest(testId: test.id, name: test.name, date: test.date, max: test.maxScore,
+                ReportTest(testId: test.id, name: test.name, date: test.date,
                            value: scores.first { $0.testId == test.id && $0.studentId == student.id }?.value)
             }
 

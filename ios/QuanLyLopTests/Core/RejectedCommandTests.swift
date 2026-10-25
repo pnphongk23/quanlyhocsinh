@@ -28,7 +28,7 @@ final class RejectedCommandTests: XCTestCase {
         try await store.write(serverScore(12.5), forKey: key, enqueueing: command)
         _ = try await store.claimBatch(now: now)
         try await store.acknowledge([CommandResult(id: command.id, status: .rejected,
-            error: APIError(code: "score_above_max", message: nil, details: nil, requestId: nil))])
+            error: APIError(code: "validation_error", message: nil, details: nil, requestId: nil))])
         let shown = try await store.read(Score.self, forKey: key)
         XCTAssertEqual(shown, serverScore(14), "a rejected edit must not stay visible as the cell's value")
         let rejected = try await store.rejectedCommandCount()
@@ -52,7 +52,7 @@ final class RejectedCommandTests: XCTestCase {
         try await store.write(serverScore(12.5), forKey: key, enqueueing: first)
         _ = try await store.claimBatch(now: now)
         try await store.acknowledge([CommandResult(id: first.id, status: .rejected,
-            error: APIError(code: "score_above_max", message: nil, details: nil, requestId: nil))])
+            error: APIError(code: "validation_error", message: nil, details: nil, requestId: nil))])
         let before = try await store.rejectedCommandCount()
         XCTAssertEqual(before, 1)
 

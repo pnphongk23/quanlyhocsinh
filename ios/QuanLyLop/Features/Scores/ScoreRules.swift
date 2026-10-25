@@ -2,13 +2,20 @@ import Foundation
 
 /// Score rules that the views and tests share (`TestScoresPage.tsx`, spec mục 4 "Điểm").
 enum ScoreRules {
-    /// A typed value outside 0…max (an empty box is not an error).
-    static func isInvalid(_ raw: String, max: Int) -> Bool {
+    static let maximum = 1000.0
+
+    /// A score the server accepts: 0…1000 in steps of 0,5.
+    static func isInvalid(_ value: Double) -> Bool {
+        guard value.isFinite, value >= 0, value <= maximum else { return true }
+        return abs(value * 2 - (value * 2).rounded()) > 1e-9
+    }
+
+    /// A typed value outside the allowed scores (an empty box is not an error).
+    static func isInvalid(_ raw: String) -> Bool {
         let trimmed = raw.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty { return false }
         guard let value = Double(trimmed.replacingOccurrences(of: ",", with: ".")) else { return true }
-        guard value.isFinite, value >= 0, value <= Double(max) else { return true }
-        return abs(value * 2 - (value * 2).rounded()) > 1e-9
+        return isInvalid(value)
     }
 
     /// Text shown in a score field: localized decimal separator without trailing zeroes.

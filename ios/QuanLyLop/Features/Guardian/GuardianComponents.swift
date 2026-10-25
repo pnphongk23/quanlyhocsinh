@@ -465,7 +465,7 @@ struct GuardianScoreRows: View {
                             .foregroundStyle(AppColors.muted)
                     }
                     Spacer(minLength: 0)
-                    Text(row.value == nil ? String(localized: "feature.guardian.noScore") : "\(GuardianFormat.scoreText(row.value))/\(row.test.maxScore)")
+                    Text(row.value == nil ? String(localized: "feature.guardian.noScore") : GuardianFormat.scoreText(row.value))
                         .appDynamicText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5))
                         .foregroundStyle(AppColors.text)
                 }

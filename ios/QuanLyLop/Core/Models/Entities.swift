@@ -66,36 +66,30 @@ struct ClassSession: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-enum ModelError: Error { case invalidMaxScore, scoreOutsideRange }
+enum ModelError: Error { case scoreOutsideRange }
 struct TestDefinition: Codable, Sendable, Equatable, Identifiable {
     let id: String
     let classId: String
     let name: String
     let date: String
-    let maxScore: Int
     let archived: Bool
     let version: Int
-    enum CodingKeys: String, CodingKey { case id, classId, name, date, archived, version; case maxScore = "max" }
-    init(id: String, classId: String, name: String, date: String, maxScore: Int = 15,
-         archived: Bool = false, version: Int = 1) throws {
-        guard (1...1000).contains(maxScore) else { throw ModelError.invalidMaxScore }
+    enum CodingKeys: String, CodingKey { case id, classId, name, date, archived, version }
+    init(id: String, classId: String, name: String, date: String,
+         archived: Bool = false, version: Int = 1) {
         self.id = id; self.classId = classId; self.name = name; self.date = date
-        self.maxScore = maxScore; self.archived = archived; self.version = version
+        self.archived = archived; self.version = version
     }
+    /// Rows saved before the maximum was dropped still carry a `max` key; it is ignored here.
     init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        try self.init(id: c.decode(String.self, forKey: .id), classId: c.decode(String.self, forKey: .classId),
-            name: c.decode(String.self, forKey: .name), date: c.decode(String.self, forKey: .date),
-            maxScore: c.decodeIfPresent(Int.self, forKey: .maxScore) ?? 15,
-            archived: c.decodeIfPresent(Bool.self, forKey: .archived) ?? false,
-            version: c.decodeIfPresent(Int.self, forKey: .version) ?? 1)
+        self.init(id: try c.decode(String.self, forKey: .id), classId: try c.decode(String.self, forKey: .classId),
+            name: try c.decode(String.self, forKey: .name), date: try c.decode(String.self, forKey: .date),
+            archived: try c.decodeIfPresent(Bool.self, forKey: .archived) ?? false,
+            version: try c.decodeIfPresent(Int.self, forKey: .version) ?? 1)
     }
     func validate(score: Double?) throws {
-        if let score, !score.isFinite || !(0...Double(maxScore)).contains(score) { throw ModelError.scoreOutsideRange }
-    }
-    func validateNewMaximum(_ maximum: Int, highestScore: Double?) throws {
-        guard (1...1000).contains(maximum) else { throw ModelError.invalidMaxScore }
-        if let highestScore, highestScore > Double(maximum) { throw ModelError.scoreOutsideRange }
+        if let score, ScoreRules.isInvalid(score) { throw ModelError.scoreOutsideRange }
     }
 }
 
@@ -264,7 +258,6 @@ struct ReportTest: Codable, Sendable, Equatable {
     let testId: String
     let name: String
     let date: String
-    let max: Int
     let value: Double?
 }
 

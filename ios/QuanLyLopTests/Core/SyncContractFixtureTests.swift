@@ -21,7 +21,7 @@ final class SyncContractFixtureTests: XCTestCase {
         XCTAssertEqual(sessions.map(\.status), [.held, .planned])
         XCTAssertEqual(sessions.map(\.sessionNumber), [nil, nil])
         XCTAssertEqual(try decoded(Attendance.self, "attendance").first?.lateAt, "18:10")
-        XCTAssertEqual(try decoded(TestDefinition.self, "test").first?.maxScore, 15)
+        XCTAssertEqual(try decoded(TestDefinition.self, "test").first?.name, "Kiểm tra 15 phút")
         XCTAssertEqual(try decoded(Score.self, "score").first?.value, 12.5)
         XCTAssertEqual(try decoded(SessionSlip.self, "slip").first?.stars, .three)
         XCTAssertEqual(try decoded(HomeworkSection.self, "homework_section").first?.kind, .vocabulary)

@@ -46,7 +46,7 @@ enum I4PDFRenderer {
                 cursor.text(String(localized: "reports.tests.none", table: "Reports"), muted: true)
             } else {
                 for test in snapshot.tests {
-                      let value = test.value.map { "\(I4Format.score($0))/\(test.max)" } ?? String(localized: "feature.reports.noScore")
+                      let value = test.value.map { I4Format.score($0) } ?? String(localized: "feature.reports.noScore")
                     cursor.text("\(test.name) · \(I4Format.date(test.date)): \(value)")
                 }
             }

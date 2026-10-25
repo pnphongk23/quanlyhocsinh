@@ -127,7 +127,7 @@ struct ReportContentView: View {
                             note(I4Format.date(test.date), size: 13)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        Text(test.value.map { "\(I4Format.score($0))/\(test.max)" } ?? String(localized: "feature.reports.noScore"))
+                        Text(test.value.map { I4Format.score($0) } ?? String(localized: "feature.reports.noScore"))
                             .appText(AppTextStyle(size: 15, weight: .bold, lineHeight: 22.5)).foregroundStyle(AppColors.text)
                     }
                     .frame(minHeight: AppMetrics.tap)

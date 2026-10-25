@@ -183,28 +183,52 @@ final class I4FeatureStore: ObservableObject {
 
     /// Saves every changed score of one test. Returns the first validation error, if any.
     func saveScores(test: TestDefinition, values: [String: String]) async -> String? {
-        guard let store else { return String(localized: "feature.scores.khong.luu.uoc.iem") }
+        guard store != nil else { return String(localized: "feature.scores.khong.luu.uoc.iem") }
+        for (studentID, raw) in values {
+            guard students.contains(where: { $0.id == studentID }) else { continue }
+            if ScoreRules.isInvalid(raw) { return String(localized: "scores.invalid.range", table: "Teacher") }
+        }
         for (studentID, raw) in values {
             guard let student = students.first(where: { $0.id == studentID }) else { continue }
-            if ScoreRules.isInvalid(raw, max: test.maxScore) {
-                return String.localizedStringWithFormat(String(localized: "feature.scores.iem.phai.tu.0.en"), String(describing: (test.maxScore)))
+            guard await writeScore(test: test, student: student, value: Self.parseScore(raw)) else {
+                return String(localized: "feature.scores.khong.luu.uoc.iem")
             }
-            let parsed = Self.parseScore(raw)
-            let old = score(testID: test.id, studentID: student.id)
-            if old?.value == parsed { continue }
-            if old == nil && parsed == nil { continue }
-            let row = Score(testId: test.id, studentId: student.id, value: parsed,
-                            version: old?.version ?? 0, updatedAt: Self.now)
-            let command = PendingCommand(recordKey: key("score", test.id, student.id),
-                                         baseVersion: old?.version ?? 0,
-                                         kind: "score.set",
-                                         payload: scorePayload(test: test, student: student, value: parsed))
-            do { try await store.write(row, forKey: command.recordKey, enqueueing: command) }
-            catch { return String(localized: "feature.scores.khong.luu.uoc.iem") }
         }
         await syncIfNeeded()
         await refresh()
         return nil
+    }
+
+    /// Value the "Gán điểm mặc định" button writes for every student.
+    static let defaultScore = 15.0
+
+    /// Sets the default score for each given student, overwriting what was entered. Every change is
+    /// queued like a normal score edit; the sync engine pushes the queue in batches of 50.
+    func assignDefaultScore(test: TestDefinition, students targets: [Student]) async -> String? {
+        guard store != nil else { return String(localized: "feature.scores.khong.luu.uoc.iem") }
+        for student in targets {
+            guard await writeScore(test: test, student: student, value: Self.defaultScore) else {
+                return String(localized: "feature.scores.khong.luu.uoc.iem")
+            }
+        }
+        await syncIfNeeded()
+        await refresh()
+        return nil
+    }
+
+    /// Queues one score change; false when the local write fails. Unchanged values are skipped.
+    private func writeScore(test: TestDefinition, student: Student, value: Double?) async -> Bool {
+        guard let store else { return false }
+        let old = score(testID: test.id, studentID: student.id)
+        if old?.value == value { return true }
+        let row = Score(testId: test.id, studentId: student.id, value: value,
+                        version: old?.version ?? 0, updatedAt: Self.now)
+        let command = PendingCommand(recordKey: key("score", test.id, student.id),
+                                     baseVersion: old?.version ?? 0,
+                                     kind: "score.set",
+                                     payload: scorePayload(test: test, student: student, value: value))
+        do { try await store.write(row, forKey: command.recordKey, enqueueing: command); return true }
+        catch { return false }
     }
 
     static func parseScore(_ raw: String) -> Double? {
@@ -222,23 +246,21 @@ final class I4FeatureStore: ObservableObject {
         ])
     }
 
-    func saveTest(name: String, date: String, max: Int, existing: TestDefinition? = nil) async -> String? {
+    func saveTest(name: String, date: String, existing: TestDefinition? = nil) async -> String? {
         guard let store else { return String(localized: "feature.scores.khong.luu.uoc.bai.kiem.tra") }
         do {
             if let existing {
-                let highest = scores.filter { $0.testId == existing.id }.compactMap(\.value).max()
-                try existing.validateNewMaximum(max, highestScore: highest)
-                let row = try TestDefinition(id: existing.id, classId: existing.classId, name: name,
-                                             date: date, maxScore: max, archived: false,
-                                             version: existing.version)
-                let payload = testUpdatePayload(row, name: name, date: date, max: max)
+                let row = TestDefinition(id: existing.id, classId: existing.classId, name: name,
+                                         date: date, archived: false, version: existing.version)
+                let payload = object(["id": .string(row.id), "name": .string(name), "date": .string(date)])
                 let command = PendingCommand(recordKey: key("test", row.id), baseVersion: existing.version,
                                              kind: "test.update", payload: payload)
                 try await store.write(row, forKey: command.recordKey, enqueueing: command)
             } else {
                 let id = UUID().uuidString.lowercased()
-                let row = try TestDefinition(id: id, classId: classID, name: name, date: date, maxScore: max)
-                let payload = testCreatePayload(id: id, name: name, date: date, max: max)
+                let row = TestDefinition(id: id, classId: classID, name: name, date: date)
+                let payload = object(["id": .string(id), "class_id": .string(classID),
+                                      "name": .string(name), "date": .string(date)])
                 let command = PendingCommand(recordKey: key("test", id), baseVersion: 0,
                                              kind: "test.create", payload: payload)
                 try await store.write(row, forKey: command.recordKey, enqueueing: command)
@@ -246,32 +268,9 @@ final class I4FeatureStore: ObservableObject {
             await syncIfNeeded()
             await refresh()
             return nil
-        } catch ModelError.invalidMaxScore {
-            return String(localized: "feature.scores.iem.toi.a.phai.tu.1.en.1000")
-        } catch ModelError.scoreOutsideRange {
-            return String(localized: "feature.scores.khong.ha.uoc.iem.toi.a.xuong.duoi.iem.cao.nhat.a")
         } catch {
             return String(localized: "feature.scores.khong.luu.uoc.bai.kiem.tra")
         }
-    }
-
-    private func testUpdatePayload(_ row: TestDefinition, name: String, date: String, max: Int) -> JSONValue {
-        object([
-            "id": .string(row.id),
-            "name": .string(name),
-            "date": .string(date),
-            "max": .number(Double(max))
-        ])
-    }
-
-    private func testCreatePayload(id: String, name: String, date: String, max: Int) -> JSONValue {
-        object([
-            "id": .string(id),
-            "class_id": .string(classID),
-            "name": .string(name),
-            "date": .string(date),
-            "max": .number(Double(max))
-        ])
     }
 
     /// The server decides physical deletion versus archiving; hide the row either way.
@@ -280,8 +279,8 @@ final class I4FeatureStore: ObservableObject {
         guard let store else { return String(localized: "feature.scores.khong.xoa.uoc.bai.kiem.tra") }
         let hasScores = scores.contains { $0.testId == test.id && $0.value != nil }
         do {
-            let row = try TestDefinition(id: test.id, classId: test.classId, name: test.name, date: test.date,
-                                         maxScore: test.maxScore, archived: true, version: test.version)
+            let row = TestDefinition(id: test.id, classId: test.classId, name: test.name, date: test.date,
+                                     archived: true, version: test.version)
             let payload = object(["id": .string(test.id)])
             let command = PendingCommand(recordKey: key("test", test.id), baseVersion: test.version,
                                          kind: "test.delete", payload: payload)
