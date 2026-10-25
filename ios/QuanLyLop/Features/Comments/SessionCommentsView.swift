@@ -481,7 +481,7 @@ struct I4TicketSheet: View {
     }
 
     private var criteriaList: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: TeacherMetrics.sheetSectionGap) {
             HStack {
                 Text(String(localized: "slip.sheet.criteria", table: "Teacher"))
                     .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
@@ -498,7 +498,7 @@ struct I4TicketSheet: View {
             ForEach(0..<SlipRules.criteriaCount, id: \.self) { index in
                 let met = SlipRules.isMet(criteria, index: index)
                 Button { if canWrite { criteria = SlipRules.toggled(criteria, index: index); error = nil } } label: {
-                    HStack(spacing: 12) {
+                    HStack(spacing: TeacherMetrics.criterionRowGap) {
                         Image(systemName: met ? "checkmark.circle.fill" : "circle")
                             .font(.system(size: 22))
                             .foregroundStyle(met ? AppColors.primaryInk : AppColors.placeholder)
@@ -544,7 +544,7 @@ struct I4TicketSheet: View {
                     .disabled(!canWrite)
                     .accessibilityIdentifier("comment.sentence")
             }
-            .padding(12)
+            .padding(TeacherMetrics.commentBoxPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.button))
             if canWrite && showsUseDefault {

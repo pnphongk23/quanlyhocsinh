@@ -256,7 +256,7 @@ struct GuardianReportView: View {
                     GuardianStars(level: level, size: 16)
                 }
             }
-            .frame(width: 100, alignment: .leading)
+            .frame(width: GuardianMetrics.starLabelWidth, alignment: .leading)
             GeometryReader { proxy in
                 Capsule()
                     .fill(AppColors.background)

@@ -31,6 +31,11 @@ extension View {
 
 // MARK: - Màu riêng của màn phụ huynh (`guardian.module.css`)
 
+enum GuardianMetrics {
+    /// Column left of a star-distribution bar: holds up to three stars or the "0 stars" text.
+    static let starLabelWidth: CGFloat = 100
+}
+
 enum GuardianColors {
     /// `.stars`, `.barFill`, `.star` — `#E5A50A`.
     static let star = Color(.sRGB, red: 229 / 255, green: 165 / 255, blue: 10 / 255, opacity: 1)

@@ -35,6 +35,10 @@ enum TeacherMetrics {
     static let starBarHeight: CGFloat = 10
     static let starCountMinWidth: CGFloat = 60
     static let starRowMinHeight: CGFloat = 32
+    /// Slip sheet: gap between a block's title and its rows, gap inside a criterion row, padding of the sentence box.
+    static let sheetSectionGap: CGFloat = 8
+    static let criterionRowGap: CGFloat = 12
+    static let commentBoxPadding: CGFloat = 12
 }
 
 /// Prototype date labels (`src/shared/format/index.ts`) in the same `vi-VN` shapes.
