@@ -787,7 +787,7 @@ struct I4TicketSheet: View {
     private func save() async throws {
         let note = self.note
         let grading = SlipRules.grading(isLegacy: isLegacy, hasSlip: slip != nil, criteria: criteria,
-                                        criteriaTouched: criteriaTouched, homeworkTouched: homeworkTouched,
+                                        criteriaTouched: criteriaTouched || criteria != slip?.criteria, homeworkTouched: homeworkTouched,
                                         sentence: sentenceEdited && !sentence.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? sentence : nil)
         if let failure = await onSave(grading, note) {
             error = failure

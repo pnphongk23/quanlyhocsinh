@@ -31,16 +31,14 @@ struct PendingCommand: Codable, Sendable, Equatable, Identifiable {
         self.kind = kind; self.payload = payload; self.createdAt = createdAt
     }
     /// The command that takes the place of a never-sent `previous` for the same cell. A `slip.set` carries only the
-    /// fields its edit touched, so what the earlier edit set and this one does not mention is kept; a criteria edit
-    /// without a sentence drops the earlier hand-written sentence, because the server rewrites it from the criteria.
+    /// fields its edit touched, so what the earlier edit set and this one does not mention is kept: a note-only
+    /// edit keeps the queued criteria and sentence, and a criteria edit (which always brings its own sentence)
+    /// replaces the queued criteria and sentence while the note stays.
     func merged(over previous: PendingCommand) -> PendingCommand {
-        guard kind == "slip.set", case .object(var fields) = payload, case .object(let earlier) = previous.payload else { return self }
-        var combined = earlier
+        guard kind == "slip.set", case .object(let fields) = payload, case .object(var combined) = previous.payload else { return self }
         for (name, value) in fields { combined[name] = value }
-        if fields["criteria"] != nil, fields["comment"] == nil { combined["comment"] = nil }
-        fields = combined
         return PendingCommand(id: id, recordKey: recordKey, baseVersion: baseVersion, kind: kind,
-                              payload: .object(fields), createdAt: createdAt)
+                              payload: .object(combined), createdAt: createdAt)
     }
 
     /// An `attendance.set` queued before attendance had three states may say "excused" and carry an arrival time and

@@ -49,7 +49,7 @@ final class SendSlipsTests: XCTestCase {
         let student = Student(id: "a", classId: "c", name: "Em a", parentPhone: nil, enrolledAt: "2026-09-01",
                               leftAt: nil, status: .active, version: 1)
         let failure = await data.saveSlip(sessionID: "session", student: student,
-                                          grading: .criteria(0b01111, comment: nil, hwManual: hwManual), note: "")
+                                          grading: .criteria(0b01111, comment: SlipRules.generatedSentence(criteria: 0b01111), hwManual: hwManual), note: "")
         XCTAssertNil(failure)
         let command = try await store.pendingCommands().first { $0.kind == "slip.set" }
         return (try XCTUnwrap(command).payload, data.slip(sessionID: "session", studentID: "a"))
@@ -104,11 +104,13 @@ final class SendSlipsTests: XCTestCase {
     func testNilHwManualKeepsAHandSetFlag() async throws {
         let (store, data) = try await seededWithHandSentence()
         let failure = await data.saveSlip(sessionID: "session", student: studentA,
-                                          grading: .criteria(0b00111, comment: nil, hwManual: nil), note: "Cũ")
+                                          grading: .criteria(0b00111, comment: SlipRules.generatedSentence(criteria: 0b00111), hwManual: nil), note: "Cũ")
         XCTAssertNil(failure)
         let command = try await store.pendingCommands().first { $0.kind == "slip.set" }
         guard case .object(let fields) = try XCTUnwrap(command).payload else { return XCTFail("payload is not an object") }
         XCTAssertNil(fields["hw_manual"])
+        XCTAssertEqual(fields["comment"], .string(SlipRules.generatedSentence(criteria: 0b00111)),
+                       "criteria never go without a sentence, or the server answers comment_required")
         XCTAssertTrue(try XCTUnwrap(data.slip(sessionID: "session", studentID: "a")).hwManual)
     }
 
@@ -140,6 +142,102 @@ final class SendSlipsTests: XCTestCase {
         let pending = try await store.pendingCommands()
         XCTAssertTrue(pending.isEmpty)
         XCTAssertTrue(data.slips(sessionID: "session").allSatisfy { $0.status == .sent })
+    }
+
+    // MARK: - Client-written sentences
+
+    private func session(_ id: String, date: String, status: String = "planned") -> JSONValue {
+        .object(["id": .string(id), "class_id": .string("c"), "date": .string(date), "start_time": .string("18:00"),
+                 "origin": .string("recurring"), "is_makeup": .bool(false), "status": .string(status), "note": .null,
+                 "version": .number(1)])
+    }
+
+    private func part(_ id: String, session: String) -> JSONValue {
+        .object(["id": .string(id), "class_id": .string("c"), "session_id": .string(session), "kind": .string("vocabulary"),
+                 "title": .string("Từ vựng"), "description": .string(""), "version": .number(1)])
+    }
+
+    private func attendance(_ student: String, _ status: String, session: String = "session") -> JSONValue {
+        .object(["session_id": .string(session), "student_id": .string(student), "status": .string(status),
+                 "version": .number(1), "updated_at": .string("2026-10-25T10:00:00.000Z")])
+    }
+
+    private func grade(_ section: String, _ student: String, _ level: String) -> JSONValue {
+        .object(["section_id": .string(section), "student_id": .string(student), "level": .string(level),
+                 "version": .number(1), "updated_at": .string("2026-10-25T10:00:00.000Z")])
+    }
+
+    func testSlipSendCarriesAGeneratedDefaultForEachPresentStudentWithoutASlip() async throws {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
+            "class_session": [session("before", date: "2026-10-19"), session("session", date: "2026-10-26")],
+            "homework_section": [part("p", session: "before")],
+            "homework_grade": [grade("p", "b", "not_done")],
+            "attendance": [attendance("b", "late"), attendance("c", "absent"), attendance("a", "present")],
+            "slip": [slip("a", stars: 3, note: "Tốt")]
+        ], deleted: []))
+        let api = SlipPushAPI(mode: .sentAll)
+        let data = I4FeatureStore(store: store, api: api)
+        await data.refresh()
+
+        _ = await data.sendSlips(sessionID: "session", studentIDs: ["a", "b", "c"])
+
+        let defaults = try XCTUnwrap(api.pushedDefaults)
+        XCTAssertEqual(defaults.count, 1, "a has a slip, c was absent")
+        XCTAssertEqual(defaults.first?["student_id"] as? String, "b")
+        XCTAssertEqual(defaults.first?["criteria"] as? Int, 15, "homework not done last session")
+        XCTAssertEqual(defaults.first?["comment"] as? String, SlipRules.generatedSentence(criteria: 15))
+    }
+
+    func testGradingHomeworkAgainRewritesTheNextSessionsDraftSlipAndSkipsSentOrHandSetOnes() async throws {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        func draft(_ student: String, status: String = "draft", hwManual: Int = 0) -> JSONValue {
+            guard case .object(var fields) = slip(student, stars: 5, note: "Ghi chú \(student)") else { fatalError() }
+            fields["status"] = .string(status); fields["hw_manual"] = .number(Double(hwManual))
+            fields["criteria"] = .number(31); fields["session_id"] = .string("next")
+            return .object(fields)
+        }
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
+            "class_session": [session("before", date: "2026-10-19"), session("cancelled", date: "2026-10-22", status: "cancelled"),
+                              session("next", date: "2026-10-26")],
+            "homework_section": [part("p", session: "before")],
+            "slip": [draft("a"), draft("b", status: "sent"), draft("c", hwManual: 1)]
+        ], deleted: []))
+        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .offline))
+        await data.refresh()
+        let section = try XCTUnwrap(data.sections(sessionID: "before").first)
+
+        for id in ["a", "b", "c"] {
+            let student = Student(id: id, classId: "c", name: id, parentPhone: nil, enrolledAt: "2026-09-01", leftAt: nil,
+                                  status: .active, version: 1)
+            await data.grade(section, student: student, level: .notDone)
+        }
+
+        let commands = try await store.pendingCommands().filter { $0.kind == "slip.set" }
+        XCTAssertEqual(commands.count, 1, "only the draft slip that follows the grades is rewritten")
+        guard case .object(let fields) = try XCTUnwrap(commands.first).payload else { return XCTFail("payload is not an object") }
+        XCTAssertEqual(fields["session_id"], .string("next"), "the cancelled session in between is skipped")
+        XCTAssertEqual(fields["student_id"], .string("a"))
+        XCTAssertEqual(fields["criteria"], .number(15))
+        XCTAssertEqual(fields["comment"], .string(SlipRules.generatedSentence(criteria: 15)))
+        XCTAssertEqual(fields["note"], .string("Ghi chú a"))
+        XCTAssertNil(fields["hw_manual"], "the flag is left as it is")
+    }
+
+    func testAssignAllDefaultsWritesCriteriaWithTheirSentenceAndClearsTheManualFlag() async throws {
+        let (store, data) = try await seededWithHandSentence()
+        let plan = CommentsRules.DefaultSlip(studentID: "a", criteria: SlipRules.allCriteria, note: "Cũ")
+        let failure = await data.saveDefaultSlips(sessionID: "session", slips: [plan])
+        XCTAssertNil(failure)
+        let command = try await store.pendingCommands().first { $0.kind == "slip.set" }
+        guard case .object(let fields) = try XCTUnwrap(command).payload else { return XCTFail("payload is not an object") }
+        XCTAssertEqual(fields["criteria"], .number(31))
+        XCTAssertEqual(fields["comment"], .string(SlipRules.generatedSentence(criteria: 31)))
+        XCTAssertEqual(fields["hw_manual"], .bool(false))
+        XCTAssertEqual(fields["note"], .string("Cũ"))
+        let row = try XCTUnwrap(data.slip(sessionID: "session", studentID: "a"))
+        XCTAssertFalse(row.hwManual)
+        XCTAssertEqual(row.comment, SlipRules.generatedSentence(criteria: 31))
     }
 
     func testSkippedSlipsStayUnsentAndAreCounted() async throws {
@@ -224,9 +322,11 @@ private final class SlipPushAPI: APIClient, @unchecked Sendable {
     private let lock = NSLock()
     private var types: [String] = []
     private var studentIDs: [String] = []
+    private var defaults: [[String: Any]]?
 
     init(mode: Mode) { self.mode = mode }
 
+    var pushedDefaults: [[String: Any]]? { lock.lock(); defer { lock.unlock() }; return defaults }
     var pushedStudentIDs: [String] { lock.lock(); defer { lock.unlock() }; return studentIDs }
     var pushedCommandTypes: [String] { lock.lock(); defer { lock.unlock() }; return types }
 
@@ -242,7 +342,10 @@ private final class SlipPushAPI: APIClient, @unchecked Sendable {
             if mode == .pushFails { throw APIFailure.offline }
             let id = commands.compactMap { $0["id"] as? String }.first ?? ""
             let payload = commands.first?["payload"] as? [String: Any]
-            lock.withLock { studentIDs = payload?["student_ids"] as? [String] ?? [] }
+            lock.withLock {
+                studentIDs = payload?["student_ids"] as? [String] ?? []
+                defaults = payload?["defaults"] as? [[String: Any]]
+            }
             let sent: String
             let skipped: String
             switch mode {

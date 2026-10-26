@@ -156,16 +156,17 @@ final class SlipRulesTests: XCTestCase {
 
     // MARK: - Hand-editable sentence
 
-    func testSavePayloadChoosesWhichOfCriteriaAndSentenceGoOut() {
+    func testSavePayloadAlwaysPairsCriteriaWithASentence() {
         func grading(touched: Bool, sentence: String?, hasSlip: Bool = true, legacy: Bool = false) -> I4FeatureStore.SlipGrading {
             SlipRules.grading(isLegacy: legacy, hasSlip: hasSlip, criteria: 15, criteriaTouched: touched,
                               homeworkTouched: false, sentence: sentence)
         }
-        XCTAssertEqual(grading(touched: true, sentence: nil), .criteria(15, comment: nil))
+        XCTAssertEqual(grading(touched: true, sentence: nil), .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)),
+                       "a toggled criterion brings its generated sentence")
         XCTAssertEqual(grading(touched: false, sentence: "Con ngoan."), .criteria(15, comment: "Con ngoan."))
         XCTAssertEqual(grading(touched: true, sentence: "Con ngoan."), .criteria(15, comment: "Con ngoan."))
         XCTAssertEqual(grading(touched: false, sentence: nil), .noteOnly)
-        XCTAssertEqual(grading(touched: false, sentence: nil, hasSlip: false), .criteria(15, comment: nil))
+        XCTAssertEqual(grading(touched: false, sentence: nil, hasSlip: false), .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)))
         XCTAssertEqual(grading(touched: true, sentence: nil, legacy: true), .legacy)
     }
 

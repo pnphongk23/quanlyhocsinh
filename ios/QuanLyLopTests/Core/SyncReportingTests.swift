@@ -143,18 +143,19 @@ final class SyncReportingTests: XCTestCase {
         return fields
     }
 
-    func testToggleAfterAHandEditedSentenceDropsTheOldSentenceFromTheQueuedCommand() async throws {
+    func testToggleAfterAHandEditedSentenceReplacesCriteriaAndSentenceInTheQueuedCommand() async throws {
         let fields = try await claimedSlipFields([
-            ["criteria": .number(31), "comment": .string("Con học rất tốt.")],
-            ["criteria": .number(15)]
+            ["criteria": .number(31), "comment": .string("Con học rất tốt."), "note": .string("Ghi chú")],
+            ["criteria": .number(15), "comment": .string(SlipRules.generatedSentence(criteria: 15))]
         ])
         XCTAssertEqual(fields["criteria"], .number(15))
-        XCTAssertNil(fields["comment"], "the server rewrites the sentence from the criteria")
+        XCTAssertEqual(fields["comment"], .string(SlipRules.generatedSentence(criteria: 15)))
+        XCTAssertEqual(fields["note"], .string("Ghi chú"), "the note stays separate")
     }
 
     func testHandEditAfterAToggleKeepsTheCriteriaAndTheSentence() async throws {
         let fields = try await claimedSlipFields([
-            ["criteria": .number(15)],
+            ["criteria": .number(15), "comment": .string(SlipRules.generatedSentence(criteria: 15))],
             ["criteria": .number(15), "comment": .string("Con học rất tốt.")]
         ])
         XCTAssertEqual(fields["criteria"], .number(15))

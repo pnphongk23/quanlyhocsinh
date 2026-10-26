@@ -71,13 +71,14 @@ extension SlipRules {
         return generatedSentence(criteria: openingCriteria)
     }
 
-    /// What a save sends. A toggled criterion sends the criteria alone, so the server rewrites the sentence; a
-    /// hand-written sentence goes with the criteria it was written for; a note-only change sends neither.
+    /// What a save sends. Criteria always go with their sentence: the hand-written one, else the generated one. A
+    /// note-only change sends neither.
     static func grading(isLegacy: Bool, hasSlip: Bool, criteria: Int, criteriaTouched: Bool, homeworkTouched: Bool,
                         sentence: String?) -> I4FeatureStore.SlipGrading {
         if isLegacy { return .legacy }
         if hasSlip, !criteriaTouched, sentence == nil { return .noteOnly }
-        return .criteria(criteria, comment: sentence, hwManual: homeworkTouched ? true : nil)
+        return .criteria(criteria, comment: sentence ?? generatedSentence(criteria: criteria),
+                         hwManual: homeworkTouched ? true : nil)
     }
 }
 

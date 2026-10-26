@@ -72,6 +72,22 @@ enum CommentsRules {
         let studentID: String
         let criteria: Int
         let note: String
+        /// Always written from the criteria; the server stores what it is given.
+        var comment: String { SlipRules.generatedSentence(criteria: criteria) }
+    }
+
+    /// The default slips `slip.send` carries: each student with no slip (or an old unscored draft) who was present
+    /// or late, with the criteria their homework result gives.
+    static func sendDefaults(studentIDs: [String], slip: (String) -> SessionSlip?, attendance: (String) -> AttendanceStatus?,
+                             sections: [HomeworkSection], grades: [HomeworkGrade]) -> [DefaultSlip] {
+        studentIDs.compactMap { id in
+            let existing = slip(id)
+            let needsDefault = existing == nil || (existing?.isLegacy == true && existing?.stars == nil)
+            guard needsDefault, attendance(id) == .present || attendance(id) == .late else { return nil }
+            return DefaultSlip(studentID: id,
+                               criteria: HomeworkRules.openingCriteria(slip: nil, sections: sections, grades: grades, studentID: id),
+                               note: existing?.note ?? "")
+        }
     }
 
     /// "Gán tất cả mặc định": every slip the class send would send (so never a sent one) gets all five criteria,

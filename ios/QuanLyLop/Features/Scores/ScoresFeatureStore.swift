@@ -298,12 +298,12 @@ final class I4FeatureStore: ObservableObject {
 
     // MARK: - Session slips (comments)
 
-    /// What the teacher chose on a slip: the five criteria with an optional hand-written sentence (nil: generated), or only a note
+    /// What the teacher chose on a slip: the five criteria with their sentence (generated, or hand-written), or only a note
     /// on an old three-star slip (those keep their stars and sentence).
     enum SlipGrading: Equatable {
         /// `hwManual` is nil when the teacher did not touch the homework criterion: the slip keeps its flag and
         /// `slip.set` does not send one.
-        case criteria(Int, comment: String?, hwManual: Bool? = nil)
+        case criteria(Int, comment: String, hwManual: Bool? = nil)
         /// Only the note changed on a five-criteria slip: the criteria, stars and stored sentence stay as saved.
         case noteOnly
         case legacy
@@ -322,8 +322,8 @@ final class I4FeatureStore: ObservableObject {
         case .criteria(let criteria, let comment, let hwManual):
             let bits = criteria & SlipRules.allCriteria
             fields["criteria"] = .number(Double(bits))
-            // No sentence is sent unless the teacher wrote one: the server writes it from the criteria.
-            if let comment { fields["comment"] = .string(comment) }
+            // The server only stores the sentence, so every criteria write carries one.
+            fields["comment"] = .string(comment)
             if let hwManual { fields["hw_manual"] = .bool(hwManual) }
             row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: SlipRules.stars(criteria: bits),
                               criteria: bits, comment: comment, scale: SessionSlip.currentScale,
@@ -352,13 +352,13 @@ final class I4FeatureStore: ObservableObject {
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
     }
 
-    /// Writes each default slip through `saveSlip`, so it queues offline like any edit: all criteria as given, the
-    /// homework flag back to following the grades, and no sentence so it is written again from the criteria.
+    /// Writes each default slip through `saveSlip`, so it queues offline like any edit: the criteria as given, the
+    /// sentence generated from them, and the homework flag back to following the grades.
     func saveDefaultSlips(sessionID: String, slips: [CommentsRules.DefaultSlip]) async -> String? {
         for plan in slips {
             guard let student = students.first(where: { $0.id == plan.studentID }) else { continue }
             if let failure = await saveSlip(sessionID: sessionID, student: student,
-                                            grading: .criteria(plan.criteria, comment: nil, hwManual: false),
+                                            grading: .criteria(plan.criteria, comment: plan.comment, hwManual: false),
                                             note: plan.note) { return failure }
         }
         return nil
@@ -389,10 +389,19 @@ final class I4FeatureStore: ObservableObject {
         let waiting = (try? await store.pendingCommands()) ?? []
         if waiting.contains(where: { slipKeys.contains($0.recordKey) }) { return failure }
 
-        let payload = object([
+        var fields: [String: JSONValue] = [
             "session_id": .string(sessionID),
             "student_ids": .array(chosen.map { JSONValue.string($0) })
-        ])
+        ]
+        // A student without a slip who was present or late gets a default one; the server only stores the sentence.
+        let defaults = sendDefaults(sessionID: sessionID, studentIDs: chosen)
+        if !defaults.isEmpty {
+            fields["defaults"] = .array(defaults.map {
+                .object(["student_id": .string($0.studentID), "criteria": .number(Double($0.criteria)),
+                         "comment": .string($0.comment)])
+            })
+        }
+        let payload = object(fields)
         let baseVersion = chosen.compactMap { slip(sessionID: sessionID, studentID: $0)?.version }.first ?? 0
         let command = SyncCommand(id: UUID(), type: "slip.send", baseVersion: baseVersion, createdAt: .now, payload: payload)
         let request = PushRequest(membershipId: store.scope.membershipId, deviceId: deviceID, commands: [command])
@@ -429,6 +438,16 @@ final class I4FeatureStore: ObservableObject {
         let notSent = chosen.filter { !sentIDs.contains($0) && !notAttended.contains($0) }.count
         let sentCount = chosen.filter { sentIDs.contains($0) }.count
         return notSent == 0 ? .sent(sentCount) : .partial(sent: sentCount, notSent: notSent)
+    }
+
+    private func sendDefaults(sessionID: String, studentIDs: [String]) -> [CommentsRules.DefaultSlip] {
+        guard let session = session(id: sessionID) else { return [] }
+        let previous = HomeworkRules.previousSession(sessions(in: session.classId), before: session)
+        return CommentsRules.sendDefaults(
+            studentIDs: studentIDs,
+            slip: { slip(sessionID: sessionID, studentID: $0) },
+            attendance: { attendance(sessionID: sessionID, studentID: $0)?.status },
+            sections: previous.map { sections(sessionID: $0.id) } ?? [], grades: grades)
     }
 
     /// Why the server leaves out a student without a slip who was not marked present or late.
@@ -508,9 +527,24 @@ final class I4FeatureStore: ObservableObject {
                                      payload: payload)
         do {
             try await store.write(row, forKey: command.recordKey, enqueueing: command)
+            await refresh()
+            await regradeNextSessionSlip(of: section, student: student)
             await syncIfNeeded()
             await refresh()
         } catch { errorMessage = String(localized: "feature.scores.khong.luu.uoc.ket.qua.cham") }
+    }
+
+    /// The server no longer recomputes a slip when homework is graded again, so the app does: the student's draft
+    /// slip in the next session that was not hand-set follows the new result, with its sentence written again.
+    private func regradeNextSessionSlip(of section: HomeworkSection, student: Student) async {
+        guard let graded = session(id: section.sessionId),
+              let next = HomeworkRules.gradingPlan(sessions(in: graded.classId), after: graded).session,
+              let change = HomeworkRules.regradedSlip(slip: slip(sessionID: next.id, studentID: student.id),
+                                                      sections: sections(sessionID: graded.id), grades: grades,
+                                                      studentID: student.id) else { return }
+        _ = await saveSlip(sessionID: next.id, student: student,
+                           grading: .criteria(change.criteria, comment: change.comment),
+                           note: slip(sessionID: next.id, studentID: student.id)?.note ?? "")
     }
 
     /// Marks one level for every student of the session in a single list action.

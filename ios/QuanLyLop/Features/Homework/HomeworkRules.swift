@@ -77,6 +77,18 @@ enum HomeworkRules {
         return homeworkCriterionMet(sections: sections, grades: grades, studentID: studentID) ? saved | bit : saved & ~bit
     }
 
+    /// A draft five-criteria slip whose homework flag is not hand-set follows last session's grades. Returns the
+    /// criteria and sentence to save when grading moved the homework criterion; nil when nothing changes (a sent
+    /// slip, a hand-set flag, an old three-star slip, or a result that leaves the criterion as it is).
+    static func regradedSlip(slip: SessionSlip?, sections: [HomeworkSection], grades: [HomeworkGrade],
+                             studentID: String) -> (criteria: Int, comment: String)? {
+        guard let slip, !slip.isLegacy, slip.status == .draft, !slip.hwManual, let saved = slip.criteria else { return nil }
+        let bit = 1 << (SlipRules.criteriaCount - 1)
+        let met = homeworkCriterionMet(sections: sections, grades: grades, studentID: studentID)
+        let updated = met ? saved | bit : saved & ~bit
+        return updated == saved ? nil : (updated, SlipRules.generatedSentence(criteria: updated))
+    }
+
     static func progress(sections: [HomeworkSection], grades: [HomeworkGrade], students: [Student]) -> [I4SectionProgress] {
         sections.map { section in
             let graded = students.filter { student in

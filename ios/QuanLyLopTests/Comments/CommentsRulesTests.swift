@@ -39,6 +39,51 @@ final class CommentsRulesTests: XCTestCase {
         ])
     }
 
+    func testDefaultSlipSentenceIsGeneratedFromItsCriteria() {
+        let plan = CommentsRules.DefaultSlip(studentID: "a", criteria: 0b01111, note: "")
+        XCTAssertEqual(plan.comment, SlipRules.generatedSentence(criteria: 0b01111))
+        XCTAssertFalse(plan.comment.isEmpty)
+    }
+
+    func testSendDefaultsCoverOnlyPresentOrLateStudentsWithoutAScoredSlip() {
+        let draft = SessionSlip(sessionId: "s", studentId: "d", stars: 3, criteria: 7, note: "", status: .draft, sentAt: nil,
+                                version: 1, updatedAt: "2026-10-19T11:00:00.000Z")
+        let unscored = SessionSlip(sessionId: "s", studentId: "e", stars: nil, note: "Cũ", status: .draft, sentAt: nil,
+                                   version: 1, updatedAt: "2026-10-19T11:00:00.000Z")
+        let slips = ["d": draft, "e": unscored]
+        let attendance: [String: AttendanceStatus] = ["a": .present, "b": .late, "c": .absent, "d": .present, "e": .present]
+        let part = HomeworkSection(id: "p", classId: "c", sessionId: "before", kind: .vocabulary, title: "Từ vựng",
+                                   description: "", version: 1)
+        let notDone = HomeworkGrade(sectionId: "p", studentId: "b", level: .notDone, version: 1,
+                                    updatedAt: "2026-10-25T10:00:00.000Z")
+        let plans = CommentsRules.sendDefaults(studentIDs: ["a", "b", "c", "d", "e", "f"], slip: { slips[$0] },
+                                               attendance: { attendance[$0] }, sections: [part], grades: [notDone])
+        XCTAssertEqual(plans.map(\.studentID), ["a", "b", "e"], "no slip or an unscored one, present or late only")
+        XCTAssertEqual(plans.map(\.criteria), [31, 15, 31], "homework follows last session's grades")
+        XCTAssertTrue(plans.allSatisfy { !$0.comment.isEmpty })
+    }
+
+    func testRegradedSlipFollowsOnlyAnUnsentNotHandSetFiveCriteriaSlip() {
+        let section = HomeworkSection(id: "p", classId: "c", sessionId: "before", kind: .vocabulary, title: "Từ vựng",
+                                      description: "", version: 1)
+        let notDone = HomeworkGrade(sectionId: "p", studentId: "a", level: .notDone, version: 1,
+                                    updatedAt: "2026-10-25T10:00:00.000Z")
+        func slip(criteria: Int = 31, status: SlipStatus = .draft, hwManual: Bool = false) -> SessionSlip {
+            SessionSlip(sessionId: "s", studentId: "a", stars: SlipRules.stars(criteria: criteria), criteria: criteria,
+                        hwManual: hwManual, note: "", status: status, sentAt: nil, version: 1,
+                        updatedAt: "2026-10-25T10:00:00.000Z")
+        }
+        let change = HomeworkRules.regradedSlip(slip: slip(), sections: [section], grades: [notDone], studentID: "a")
+        XCTAssertEqual(change?.criteria, 15)
+        XCTAssertEqual(change?.comment, SlipRules.generatedSentence(criteria: 15))
+        XCTAssertEqual(HomeworkRules.regradedSlip(slip: slip(criteria: 15), sections: [section], grades: [], studentID: "a")?.criteria, 31)
+        XCTAssertNil(HomeworkRules.regradedSlip(slip: slip(status: .sent), sections: [section], grades: [notDone], studentID: "a"))
+        XCTAssertNil(HomeworkRules.regradedSlip(slip: slip(hwManual: true), sections: [section], grades: [notDone], studentID: "a"))
+        XCTAssertNil(HomeworkRules.regradedSlip(slip: nil, sections: [section], grades: [notDone], studentID: "a"))
+        XCTAssertNil(HomeworkRules.regradedSlip(slip: slip(criteria: 15), sections: [section], grades: [notDone], studentID: "a"),
+                     "nothing moved, so a hand-written sentence stays")
+    }
+
     func testDefaultSlipKeepsTheNote() {
         let slip = SessionSlip(sessionId: "s", studentId: "b", stars: 2, criteria: 3, note: "Nhắc con ghi bài",
                                status: .draft, sentAt: nil, version: 1, updatedAt: "2026-10-19T11:00:00.000Z")
