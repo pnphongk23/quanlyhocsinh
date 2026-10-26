@@ -89,3 +89,6 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 - CMT-026 (một phiếu mở tay) chưa chạy trên iOS.
 
 - Lượt 67e9e31 (workspace QA iOS sạch, lớp `QA-iOS-A`): thêm buổi lẻ (27/10 18:00) hiện "Đã lưu" và buổi xuất hiện; sửa buổi lẻ đổi ngày 27→30/10 hiện "Đã lưu", buổi rời khỏi ngày cũ. Không thấy "Lỗi lưu". Chưa thử đổi giờ và va chạm buổi trùng (`session_exists`). Ảnh qa-reg1/21..28.
+
+## Tốc độ Gán/Gửi phiếu (67e9e31, lớp 5 em)
+- Đo bằng Maestro trừ ~3 s khởi động: Gán ≈ 6 s, Gửi ≈ 5 s (bản 0593443: >5 s và >12 s). Kết quả đúng: 5 phiếu 5/5 rồi 5 "Đã gửi", nút (0). Ảnh qa-reg1/30-32. Số đo thô (gồm các lần bấm và hộp thoại), không phải đo từng khung hình.
