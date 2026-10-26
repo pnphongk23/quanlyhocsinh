@@ -16,7 +16,7 @@ const types = new Set(['attendance.set','score.set','slip.set','homework.grade.s
 const groups: Record<string, PermGroup> = { attendance:'sessions_attendance',score:'scores',
   slip:'comments_reports',homework_grade:'comments_reports' };
 const cells: Record<string, { table: string; key: string; fields: string[]; parent: string }> = {
-  attendance: {table:'attendance',key:'session_id',fields:['status','note','late_at'],parent:'class_sessions'},
+  attendance: {table:'attendance',key:'session_id',fields:['status'],parent:'class_sessions'},
   score: {table:'scores',key:'test_id',fields:['value'],parent:'tests'},
   slip: {table:'session_comments',key:'session_id',fields:['stars','scale','criteria','comment','note','hw_manual'],parent:'class_sessions'},
   homework_grade: {table:'homework_grades',key:'section_id',fields:['level'],parent:'homework_sections'},
@@ -239,9 +239,8 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
   if (entity==='score' && parent.archived) throw notFound();
   let values:Row;
   if (entity==='attendance') {
-    const status=memberOf(p.status,['present','late','excused','absent']),late=p.late_at ?? null;
-    if (late!==null && (status!=='late' || typeof late!=='string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(late))) throw validationError(undefined,'invalid_late_at');
-    values={status,note:text(p.note,500,''),late_at:late};
+      const status=memberOf(p.status,['present','late','absent']);
+      values={status};
   } else if (entity==='score') {
     if (p.value!==null && (typeof p.value!=='number' || !Number.isFinite(p.value) || p.value<0 || p.value>1000)) throw validationError(undefined,'invalid_score');
     if (p.value!==null && !Number.isInteger(p.value*2)) throw validationError(undefined,'invalid_score_step');

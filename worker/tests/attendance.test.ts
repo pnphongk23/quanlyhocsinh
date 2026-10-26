@@ -67,7 +67,9 @@ describe('attendance read API', () => {
     }
     const parentBySession = await call(`/v1/sessions/${firstSession}/attendance`, {}, parentToken);
     expect(parentBySession.body.items).toHaveLength(1);
-    expect(parentBySession.body.items[0]).toMatchObject({ student_id: firstStudent, status: 'late', late_at: '18:12' });
+      expect(parentBySession.body.items[0]).toMatchObject({ student_id: firstStudent, status: 'late' });
+      expect(parentBySession.body.items[0]).not.toHaveProperty('note');
+      expect(parentBySession.body.items[0]).not.toHaveProperty('late_at');
     expect((await call(`/v1/students/${firstStudent}/attendance?from=2000-01-01&to=2099-12-31&limit=1`, {}, parentToken)).body)
       .toMatchObject({ items: [{ session_id: firstSession, date: today, status: 'late' }] });
     expect((await call(`/v1/students/${firstStudent}/attendance?from=2000-01-01&to=2099-12-31&limit=1`, {}, parentToken)).body.next_cursor).toBeTruthy();
@@ -77,19 +79,31 @@ describe('attendance read API', () => {
     expect((await call(`/v1/sessions/${firstSession}/attendance`, {}, other.token)).status).toBe(404);
     expect((await call(`/v1/sessions/${firstSession}/attendance`)).status).toBe(401);
 
+      const rejected = await pushCommands(owner.token, owner.membershipId, [syncCommand('attendance.set',
+        { session_id: firstSession, student_id: firstStudent, status: 'excused' }, 1)]);
+      expect(rejected.body.results[0].error.details.reason).toBe('invalid_value');
+      const unchanged = await db.prepare('SELECT status, note, late_at, version FROM attendance WHERE session_id=? AND student_id=?')
+        .bind(firstSession, firstStudent).first<any>();
+      expect(unchanged).toMatchObject({ status: 'late', note: 'Arrived late', late_at: '18:12', version: 1 });
+
       const pushed = await pushCommands(owner.token, owner.membershipId, [syncCommand('attendance.set',
-        { session_id: firstSession, student_id: firstStudent, status: 'excused', note: 'Changed' }, 1)]);
-      expect(pushed.status).toBe(200);
-      expect(pushed.body.results).toEqual([expect.objectContaining({ status: 'applied', version: 2 })]);
-    const history = await db.prepare('SELECT old_status, new_status, changed_by FROM attendance_history WHERE session_id = ? AND student_id = ?')
-      .bind(firstSession, firstStudent).first<{ old_status: string; new_status: string; changed_by: string }>();
-      expect(history).toMatchObject({ old_status: 'late', new_status: 'excused', changed_by: owner.userId });
+        { session_id: firstSession, student_id: firstStudent, status: 'late', note: 'Ignored', late_at: '20:20' }, 1)]);
+      expect(pushed.body.results).toEqual([expect.objectContaining({ status: 'applied', version: 1, noop: true })]);
+      const history = await db.prepare('SELECT old_status, new_status, changed_by FROM attendance_history WHERE session_id = ? AND student_id = ?')
+        .bind(firstSession, firstStudent).first<{ old_status: string; new_status: string; changed_by: string }>();
+      expect(history).toBeNull();
+      expect((await db.prepare('SELECT note, late_at FROM attendance WHERE session_id=? AND student_id=?')
+        .bind(firstSession, firstStudent).first<any>())).toMatchObject({ note: 'Arrived late', late_at: '18:12' });
       const stale = await pushCommands(owner.token, owner.membershipId, [syncCommand('attendance.set',
         { session_id: firstSession, student_id: firstStudent, status: 'absent' }, 1)]);
-      expect(stale.body.results).toEqual([expect.objectContaining({ status: 'applied', version: 3 })]);
+      expect(stale.body.results).toEqual([expect.objectContaining({ status: 'applied', version: 2 })]);
       const finalCell = await db.prepare('SELECT status, version FROM attendance WHERE session_id = ? AND student_id = ?')
         .bind(firstSession, firstStudent).first<{ status: string; version: number }>();
-      expect(finalCell).toMatchObject({ status: 'absent', version: 3 });
+      expect(finalCell).toMatchObject({ status: 'absent', version: 2 });
+      expect((await db.prepare('SELECT old_status, new_status FROM attendance_history WHERE session_id=? AND student_id=?')
+        .bind(firstSession, firstStudent).first<any>())).toMatchObject({ old_status: 'late', new_status: 'absent' });
+      expect((await db.prepare('SELECT note, late_at FROM attendance WHERE session_id=? AND student_id=?')
+        .bind(firstSession, firstStudent).first<any>())).toMatchObject({ note: 'Arrived late', late_at: '18:12' });
       const statuses = await db.prepare('SELECT DISTINCT status FROM attendance WHERE workspace_id = ?')
         .bind(owner.workspaceId).all<{ status: string }>();
       expect(statuses.results.map((row) => row.status).sort()).toEqual(['absent', 'late', 'present']);

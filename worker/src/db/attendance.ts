@@ -4,8 +4,8 @@ import { notFound, validationError } from '../lib/errors';
 import { isDate } from './classes';
 
 type AttendanceRow = {
-  session_id: string; student_id: string; status: 'present' | 'late' | 'excused' | 'absent';
-  note: string; late_at: string | null; version: number; updated_at: string; date?: string; start_time?: string;
+  session_id: string; student_id: string; status: 'present' | 'late' | 'absent';
+  version: number; updated_at: string; date?: string; start_time?: string;
 };
 
 export async function getSessionAttendance(db: D1Database, identity: Identity, sessionId: string) {
@@ -20,7 +20,7 @@ export async function getSessionAttendance(db: D1Database, identity: Identity, s
     guard = ` AND a.student_id IN (${identity.linkedStudentIds.map(() => '?').join(',')})`;
     args.push(...identity.linkedStudentIds);
   }
-  const { results } = await db.prepare(`SELECT a.session_id, a.student_id, a.status, a.note, a.late_at,
+    const { results } = await db.prepare(`SELECT a.session_id, a.student_id, a.status,
       a.version, a.updated_at FROM attendance a
       WHERE a.workspace_id = ? AND a.session_id = ?${guard} ORDER BY a.student_id`)
     .bind(...args).all<AttendanceRow>();
@@ -42,7 +42,7 @@ export async function getStudentAttendance(db: D1Database, identity: Identity, s
       input.cursor.date, input.cursor.start_time, input.cursor.session_id);
   }
   args.push(input.limit + 1);
-  const { results } = await db.prepare(`SELECT a.session_id, a.student_id, a.status, a.note, a.late_at,
+    const { results } = await db.prepare(`SELECT a.session_id, a.student_id, a.status,
       a.version, a.updated_at, cs.date, cs.start_time
       FROM attendance a JOIN class_sessions cs ON cs.id = a.session_id AND cs.workspace_id = a.workspace_id
       WHERE a.workspace_id = ? AND a.student_id = ? AND cs.date >= ? AND cs.date <= ?${after}
