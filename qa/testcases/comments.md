@@ -38,7 +38,7 @@ Phạm vi: spec 51–63, 218 (cập nhật theo spec 2026-10-26, main 34bdf69: 5
 - Tiền điều kiện + dữ liệu: HS-1..2 đã gửi; HS-3 sửa còn 4 sao chưa gửi; HS-4 giữ mặc định 5 sao chưa gửi.
 - Các bước:
   1. Bấm "Gửi phiếu cả lớp", xác nhận.
-- Kết quả mong đợi: Mọi phiếu chưa gửi (HS-3, HS-4 kể cả phiếu mặc định 5 sao chưa sửa) chuyển sang đã gửi; phiếu đã gửi không bị gửi lại. Em Có mặt/Muộn chưa có phiếu cũng được gửi phiếu mặc định (5 sao, có câu tự sinh không rỗng, do app gửi `defaults`); xem TC-CMT-021.
+- Kết quả mong đợi: Mọi phiếu chưa gửi (HS-3, HS-4 kể cả phiếu mặc định 5 sao chưa sửa) chuyển sang đã gửi; phiếu đã gửi không bị gửi lại. Em chưa có phiếu không được gửi (bỏ tự gửi 5 sao, brief 97); xem TC-CMT-021.
 - Flow tự động: (chưa gán)
 
 ### TC-CMT-004 · Danh sách Nhận xét và bộ lọc Tất cả / Chưa gửi
@@ -254,18 +254,18 @@ Phạm vi: spec 51–63, 218 (cập nhật theo spec 2026-10-26, main 34bdf69: 5
 - Kết quả mong đợi: Chỉ HS-1 (nháp, thang 5, chưa gửi, không trong hàng đợi gửi, `hw_manual` tắt): N+1 tự bỏ tích BTVN (4 sao, câu có "chưa hoàn thành bài tập về nhà", do app sinh); bước 4 tích lại và câu đổi theo. HS-2 giữ lựa chọn tay; HS-3 đã gửi và HS-4 đang chờ gửi không đổi; N+2 không bị đổi (chỉ "buổi kế" tức buổi không huỷ đầu tiên sau N). Buổi N+1 bị huỷ thì buổi kế là N+2. Offline: việc tự sửa nằm trong hàng đợi, đồng bộ khi có mạng, không lỗi "Máy chủ từ chối" (kiểu WEB-009). Server không tự sửa nữa: mở phiếu trên thiết bị chưa chạy client mới không có bước tự đổi.
 - Flow tự động: web: `qa/maestro/web/slip-homework-regrade.mjs` (cần sửa cho N+2, hàng đợi gửi, HS-2/HS-4); iOS: chưa gán (cần fixture BTVN buổi trước, xem `qa/maestro/ios/fixtures-brief96.md`)
 
-### TC-CMT-021 · "Gửi phiếu cả lớp": em chưa có phiếu nhận phiếu mặc định có câu (defaults)
+### TC-CMT-021 · "Gửi phiếu cả lớp": chỉ gửi phiếu đã có và chưa gửi; số trên nút = số phiếu đó
 - Vai: Giáo viên (kiểm lại với Phụ huynh)
 - Nền tảng: Cả hai
 - Ưu tiên: P0
-- Nguồn spec: docs/spec.md:58 (dòng "Phiếu buổi học"), docs/contract C8 v2 mục 3
-- Tiền điều kiện + dữ liệu: Buổi hôm nay; HS-1 Có mặt chưa có phiếu; HS-2 Muộn chưa có phiếu; HS-3 Vắng chưa có phiếu; HS-4 chưa điểm danh; HS-5 đã có phiếu nháp 4 sao; HS-6 phiếu thang 3 sao cũ chưa gửi (nếu có); buổi trước có BTVN, HS-1 chấm "Chưa hoàn thành".
+- Nguồn spec: docs/spec.md:62 (đã chốt 2026-10-26, thay quy tắc gửi phiếu mặc định 5 sao), brief 97
+- Tiền điều kiện + dữ liệu: Buổi hôm nay có HS-1 phiếu nháp (đã mở/lưu), HS-2 chưa có phiếu (Có mặt), HS-3 chưa có phiếu (Vắng), HS-4 chưa điểm danh và chưa có phiếu, HS-5 đã gửi. Fixture tạo bằng API: `qa/maestro/web/fixture-brief97-api.mjs`.
 - Các bước:
-  1. Bấm "Gửi phiếu cả lớp", xem hộp xác nhận (số phiếu và số em bỏ qua), xác nhận.
-  2. Đọc phiếu đã gửi của HS-1, HS-2, HS-5 và kết quả HS-3, HS-4.
-  3. Phụ huynh của HS-1 mở nhận xét.
-- Kết quả mong đợi: Hộp xác nhận đúng số (HS-3, HS-4 bỏ qua) rồi đóng khi gửi xong (không treo như IOS-001). HS-1, HS-2 có phiếu 5 sao hoặc theo chấm BTVN (HS-1 có câu "chưa hoàn thành bài tập về nhà"), câu không rỗng do app sinh; HS-5 gửi nguyên 4 sao; HS-6 (nếu có) nhận phiếu mặc định như em chưa có phiếu hoặc bị bỏ qua có lý do rõ (đối chiếu spec; không rõ thì hỏi GL). HS-3/HS-4 không có phiếu. Phụ huynh thấy x/5 và đoạn nhận xét.
-- Flow tự động: (chưa gán) web: bổ sung vào `brief91-teacher-smoke.mjs`
+  1. Đọc số trên nút "Gửi phiếu cả lớp (n)" và hộp xác nhận (số phiếu, số em chưa có phiếu).
+  2. Xác nhận gửi; đọc danh sách.
+  3. Phụ huynh của HS-1 mở nhận xét; phụ huynh HS-2 không thấy phiếu.
+- Kết quả mong đợi: n chỉ đếm phiếu đã có, chưa gửi (HS-1 → n=1); n=0 thì nút khoá. Hộp ghi "1 phiếu sẽ gửi", "3 em chưa có phiếu" (bỏ qua). Sau gửi chỉ HS-1 "Đã gửi"; HS-2/3/4 vẫn "Chưa nhận xét", không có phiếu. Hộp đóng khi gửi xong (không treo, không giữ số cũ). Client không gửi `defaults`. Phụ huynh HS-1 thấy phiếu, HS-2 không.
+- Flow tự động: web: `qa/maestro/web/brief97-web.mjs` (CMT-021, CMT-026); iOS: maestro thủ công theo `qa/maestro/ios/fixtures-brief96.md`
 
 ### TC-CMT-022 · "Gán tất cả mặc định": xác nhận, đưa phiếu chưa gửi về mặc định, giữ phần gõ thêm
 - Vai: Giáo viên
@@ -280,7 +280,8 @@ Phạm vi: spec 51–63, 218 (cập nhật theo spec 2026-10-26, main 34bdf69: 5
   4. Mở lại HS-1: tích tay BTVN còn giữ không; đổi chấm buổi trước.
   5. Lặp bước 3 khi mất mạng; bật mạng lại.
 - Kết quả mong đợi: Có hộp xác nhận; Huỷ không đổi gì. Xác nhận: HS-1, HS-2 tích đủ 5 tiêu chí theo quy tắc (BTVN theo chấm: HS-1 bỏ tích vì "Chưa hoàn thành"; `hw_manual` tắt), câu tự sinh lại, ghi đè câu sửa tay, `QA-gõ thêm` giữ. HS-3 (đã gửi) và HS-4 (chờ gửi) không đổi. Sau đó đổi chấm buổi trước thì HS-1 tự theo chấm (vì đã bỏ chọn tay). Mất mạng: ghi được, hiện "Đã lưu trên máy", đồng bộ khi có mạng, không lỗi từ chối.
-- Flow tự động: (chưa gán)
+- Bổ sung brief 97: em chưa có phiếu (kể cả chưa điểm danh hoặc Vắng) cũng được tạo phiếu mặc định: hộp xác nhận ghi đúng số phiếu sẽ gán (cả em chưa có phiếu); sau khi gán thẻ hiện 5 sao + "Nháp", nút "Gửi phiếu cả lớp" đếm đủ các em và gửi được. Bấm lại khi mọi phiếu đã gửi: "0 phiếu", phiếu đã gửi không đổi.
+- Flow tự động: web: `qa/maestro/web/brief97-web.mjs` (CMT-022); iOS: chưa gán
 
 ### TC-CMT-023 · Nhãn BTVN: "Buổi trước chưa có BTVN" khi buổi trước không giao; tiêu chí vẫn mặc định tích
 - Vai: Giáo viên
@@ -294,3 +295,38 @@ Phạm vi: spec 51–63, 218 (cập nhật theo spec 2026-10-26, main 34bdf69: 5
   3. Giáo viên bỏ tích tay tiêu chí BTVN của HS-1.
 - Kết quả mong đợi: HS-1: nhãn "Buổi trước chưa có BTVN" (không phải "Theo chấm BTVN"), tiêu chí mặc định tích. HS-2/HS-3: nhãn "Theo chấm BTVN". Bước 3 đổi được; app iOS đã thấy cùng trạng thái này trên màn thật (ảnh `plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/42-homework-tab.png` hiện "Buổi trước không giao BTVN" ở tab BTVN).
 - Flow tự động: (chưa gán)
+
+### TC-CMT-024 · Em chưa có phiếu: thẻ không hiện sao, ghi "Chưa nhận xét"; mở phiếu ra mặc định chưa lưu
+- Vai: Giáo viên
+- Nền tảng: Cả hai
+- Ưu tiên: P0
+- Nguồn spec: docs/spec.md:65 (đã chốt 2026-10-26), brief 97
+- Tiền điều kiện + dữ liệu: Buổi hôm nay chưa điểm danh, chưa có phiếu nào (giống ảnh người dùng); 3 học sinh.
+- Các bước:
+  1. Mở tab Nhận xét; đọc thẻ từng em và nút "Gửi phiếu cả lớp".
+  2. Mở phiếu một em.
+- Kết quả mong đợi: Không thẻ nào có sao, cả 3 ghi "Chưa nhận xét"; nút "Gửi phiếu cả lớp (0)" bị khoá. Mở phiếu ra phiếu mới mặc định 5 tiêu chí, trạng thái "Chưa lưu" cho tới khi lưu (không phải lỗi).
+- Flow tự động: web: `qa/maestro/web/brief97-web.mjs`; iOS: chưa gán
+
+### TC-CMT-025 · Nhãn phiếu đã gửi chỉ ghi "Đã gửi", không giờ
+- Vai: Giáo viên
+- Nền tảng: Cả hai
+- Ưu tiên: P1
+- Nguồn spec: docs/spec.md:65 (người dùng thêm 2026-10-26), brief 97
+- Tiền điều kiện + dữ liệu: Buổi có phiếu đã gửi.
+- Các bước:
+  1. Gán mặc định, gửi cả lớp; đọc nhãn trên thẻ danh sách, phần đầu bottom sheet/editor.
+- Kết quả mong đợi: Nhãn là "Đã gửi", không kèm giờ gửi (không "Đã gửi · 22:14") ở danh sách và nơi khác của tab Nhận xét.
+- Flow tự động: web: `qa/maestro/web/brief97-web.mjs`; iOS: chưa gán
+
+### TC-CMT-026 · Một em mở phiếu tay, gửi cả lớp chỉ gửi em đó
+- Vai: Giáo viên
+- Nền tảng: Cả hai
+- Ưu tiên: P0
+- Nguồn spec: docs/spec.md:62, brief 97
+- Tiền điều kiện + dữ liệu: Buổi hôm nay, 3 em chưa có phiếu.
+- Các bước:
+  1. Mở phiếu HS-1, đổi một tiêu chí (bỏ tích rồi tích lại) để phiếu được lưu.
+  2. Đọc nút gửi cả lớp; bấm, xác nhận.
+- Kết quả mong đợi: Nút "(1)", hộp "1 phiếu sẽ gửi, 2 em chưa có phiếu"; sau gửi HS-1 "Đã gửi", HS-2/HS-3 vẫn "Chưa nhận xét".
+- Flow tự động: web: `qa/maestro/web/brief97-web.mjs`; iOS: chưa gán
