@@ -2,19 +2,18 @@
 
 ## 2026-10-26 · Brief 96 · Hợp đồng CHỐT (chưa code, chưa migration): câu sửa tay, kiểm tra SĐT, điểm danh 3 trạng thái
 
-### C8 · `slip.set` nhận `comment` sửa tay (phiếu thang 5)
-Không thêm cờ `comment_manual`. Quy tắc theo payload:
-| Payload | Kết quả |
-|---|---|
-| có `criteria`, KHÔNG có `comment` (hoặc `comment: null`, hoặc rỗng sau trim) | server tự sinh `comment` từ `criteria` (ghi đè câu cũ kể cả câu sửa tay) |
-| có `criteria` VÀ `comment` chuỗi không rỗng | lưu `comment` đúng như gửi (trim hai đầu), `stars` tính từ `criteria` |
-| chỉ có `comment` (không `criteria`) | lưu `comment`, giữ `criteria`/`stars` hiện có |
-| chỉ có `note` | giữ nguyên `comment` |
-- Client đổi tích tiêu chí: gửi `{criteria}` KHÔNG kèm `comment` (câu tự sinh lại). Giáo viên sửa tay: gửi `{criteria: <hiện tại>, comment: <câu sửa>}`. Client vẫn tự sinh cục bộ để hiện ngay/offline, cùng bộ ví dụ spec.
-- Chấm lại BTVN buổi trước tính lại phiếu NHÁP (`hw_manual=0`) như cũ: ghi đè câu sửa tay bằng câu tự sinh. Phiếu đã gửi không đổi.
-- Không có giới hạn độ dài. `comment` sai kiểu → `invalid_comment` (như cũ). Phiếu thang 3: như cũ (không nhận `comment`).
-- "Gán tất cả mặc định": client gửi từng `slip.set` `{criteria: 31 trừ bit BTVN theo chấm, hw_manual:false}` KHÔNG kèm `comment`; giữ `note`.
-- C9: máy chủ không đổi. "Buổi trước không giao BTVN" suy ra từ `homework_section` đã đồng bộ (buổi trước không có phần BTVN nào).
+### C8 v2 · Câu nhận xét do CLIENT sinh, máy chủ chỉ lưu (thay mọi bản C8 trước; spec 50003f7)
+Máy chủ không còn bộ sinh câu lúc chạy. Web và iOS sinh câu cùng một quy tắc (spec) và gửi lên.
+1. `slip.set` phiếu thang 5:
+   - có `criteria` ⇒ BẮT BUỘC kèm `comment` chuỗi không rỗng sau trim (câu client sinh hoặc giáo viên sửa tay). Lưu `comment` (đã trim), `stars` = số bit của `criteria`. Thiếu/`null`/rỗng ⇒ `validation_error` `details.reason = "comment_required"`. `comment` không phải chuỗi ⇒ `invalid_comment` (như cũ). Không giới hạn độ dài.
+   - chỉ có `comment` (không `criteria`) ⇒ lưu `comment`, giữ `criteria`/`stars`.
+   - chỉ có `note` ⇒ giữ nguyên `comment`. `hw_manual` như brief 94.
+   - phiếu thang 3: như cũ.
+2. Chấm lại BTVN: máy chủ KHÔNG còn tự sửa phiếu (bỏ tính lại bit 16/sao/câu phía server). Sau khi gửi `homework.grade.set` (cùng push hoặc sau), client tự tính lại và gửi `slip.set {criteria, comment}` (đúng `hw_manual` hiện có, không đổi cờ) cho phiếu NHÁP của em ở "buổi kế" khi phiếu đó `hw_manual=0`, thang 5, chưa gửi và chưa nằm trong hàng đợi gửi. "Buổi kế" = buổi không huỷ đầu tiên của cùng lớp sau buổi của phần BTVN vừa chấm, theo (date, start_time) tăng dần. Quy tắc bit 16 như spec (có "Chưa hoàn thành" ⇒ bỏ; đã chấm đều đạt ⇒ tích; chưa chấm/không giao ⇒ tích). Mỗi `slip.set` kèm `base_version` của phiếu như thường.
+3. Gửi phiếu cả lớp: `slip.send` payload `{session_id, student_ids, defaults?: [{student_id, criteria, comment}]}`. Em CHƯA có phiếu và Có mặt/Muộn: có mục trong `defaults` (`criteria` 0..31, `comment` chuỗi không rỗng) ⇒ máy chủ tạo phiếu thang 5 với giá trị đó (`hw_manual=0`) rồi gửi; không có mục ⇒ `skipped` `reason: "no_default"` (không tạo phiếu không có câu). Em vắng/chưa điểm danh chưa có phiếu: `skipped` `not_attended` như cũ. Em đã có phiếu: gửi nguyên phiếu, `defaults` bị bỏ qua. Phiếu nháp thang 3 cũ (stars null): cần mục trong `defaults`, nếu không `skipped` `no_default`. `defaults` sai dạng ⇒ `validation_error`.
+4. Phiếu thang 5 cũ có `comment` null: migration `0012` điền một lần `comment` theo `criteria` (32 câu cố định, sinh từ quy tắc spec, có backup, đếm trước/sau). Sau đó máy chủ không dựng câu khi đọc; phiếu thang 5 vẫn null (không nên còn) ⇒ phụ huynh nhận `comment` rỗng ghép `note`. Không đổi `version`.
+5. "Gán tất cả mặc định": client gửi từng `slip.set {criteria, comment, hw_manual:false}` (giữ `note`).
+6. C9: máy chủ không đổi. "Buổi trước không giao BTVN" suy ra từ `homework_section` đã đồng bộ.
 
 ### D13 · Kiểm tra SĐT (đăng nhập 2 bước)
 `POST /v1/auth/phone-check` (không cần auth) body `{phone}` (chuẩn hoá như login: `0…`, `+84…`, khoảng trắng).
