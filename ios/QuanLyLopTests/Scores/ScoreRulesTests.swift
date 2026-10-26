@@ -168,6 +168,7 @@ final class ScoreRulesTests: XCTestCase {
         XCTAssertNil(failure)
         let create = try await store.pendingCommands().first { $0.kind == "test.create" }
         XCTAssertEqual(create?.payload["class_id"], .string("c"))
+        XCTAssertEqual(data.createdTestID, create?.payload["id"]?.string, "the screen opens the new test's score entry")
         XCTAssertEqual(data.tests(in: "c").map(\.name).sorted(), ["Bài mới", "Unit 6"])
         XCTAssertTrue(data.tests(in: "a-first").isEmpty)
     }

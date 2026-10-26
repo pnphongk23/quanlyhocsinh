@@ -33,6 +33,8 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var canWriteCommentsReports = false
     @Published private(set) var isReady = false
     @Published var errorMessage: String?
+    /// The test just created, until the screen that created it has opened its score entry ("Tạo bài và nhập điểm").
+    @Published var createdTestID: String?
 
     /// Sessions whose `slip.send` is waiting for the server's answer.
     private(set) var sendingSessionIDs: Set<String> = []
@@ -274,6 +276,7 @@ final class I4FeatureStore: ObservableObject {
                 let command = PendingCommand(recordKey: key("test", id), baseVersion: 0,
                                              kind: "test.create", payload: payload)
                 try await store.write(row, forKey: command.recordKey, enqueueing: command)
+                createdTestID = id
             }
             await syncIfNeeded()
             await refresh()

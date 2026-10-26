@@ -7,6 +7,7 @@ struct ScoreGridTabView: View {
     @ObservedObject var data: I4FeatureStore
     @Environment(AuthModel.self) private var auth
     @State private var showingCreate = false
+    @State private var openedTestID: String?
 
     init(classID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.classID = classID
@@ -60,6 +61,14 @@ struct ScoreGridTabView: View {
         }
         .navigationDestination(isPresented: $showingCreate) {
             TestEditorView(data: data, classID: classID)
+        }
+        .navigationDestination(item: $openedTestID) { testID in
+            TestScoresView(classID: classID, testID: testID, data: data)
+        }
+        .onChange(of: showingCreate) { _, showing in
+            guard !showing, let created = data.createdTestID else { return }
+            data.createdTestID = nil
+            openedTestID = created
         }
         .task { await data.configure(auth: auth) }
     }
