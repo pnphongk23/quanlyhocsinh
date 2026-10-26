@@ -86,7 +86,8 @@ def compose(raw_path, shot, cfg, tokens, fonts_cache):
         fonts_cache[key] = load_font(cfg["fonts"], size, tcfg["weight"])
     font = fonts_cache[key]
     lead = float(tokens[tcfg["lineHeight"]])
-    lines = wrap(draw, shot["title"], font, cw * tcfg["maxWidthRatio"])
+    # A title carries its own line breaks ("\n") so a phrase is never split mid-way; wrap() only guards overlong lines.
+    lines = [w for part in shot["title"].split("\n") for w in wrap(draw, part, font, cw * tcfg["maxWidthRatio"])]
     y = px(tokens, tcfg["topSpace"]) * scale
     for line in lines:
         width = draw.textlength(line, font=font)
