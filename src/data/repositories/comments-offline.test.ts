@@ -175,4 +175,15 @@ describe("phiếu nhận xét khi mất mạng", () => {
     expect(created).toBeUndefined();
     expect(((await db.outbox.toArray()).find((row) => row.type === "slip.send")?.payload as { defaults?: unknown } | undefined)?.defaults).toBeUndefined();
   });
+
+  it("gửi cả lớp lần hai không xếp thêm lệnh cho phiếu đang chờ gửi", async () => {
+    const { saveSessionCommentDurable, sendSessionTicketsDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-6", studentId: "6a-student-0", criteria: 15, note: "" });
+    const first = await sendSessionTicketsDurable("6a-session-6", ["6a-student-0"]);
+    const second = await sendSessionTicketsDurable("6a-session-6", ["6a-student-0"]);
+    expect(first.sent).toEqual(["6a-student-0"]);
+    expect(second.sent).toEqual([]);
+    expect(second.skippedReasons).toContainEqual({ studentId: "6a-student-0", reason: "already_sent" });
+    expect((await db.outbox.toArray()).filter((row) => row.type === "slip.send")).toHaveLength(1);
+  });
 });

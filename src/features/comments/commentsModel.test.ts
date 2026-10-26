@@ -80,8 +80,8 @@ function row(
   });
 
   it("chỉ phiếu đã có và chưa gửi mới nằm trong nút gửi cả lớp", () => {
-      expect(sendableCount(rows)).toBe(2);
-    expect(sendableRows(rows).map((item) => item.student.id)).toEqual(["B", "C"]);
+      expect(sendableCount(rows)).toBe(1);
+    expect(sendableRows(rows).map((item) => item.student.id)).toEqual(["B"]);
     expect(unopenedRows(rows).map((item) => item.student.id)).toEqual(["D", "E"]);
     expect(sendableCount([row("A"), row("B")])).toBe(0);
   });
