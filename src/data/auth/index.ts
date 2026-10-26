@@ -3,7 +3,7 @@ import { api, clearMembershipCache, clearUserCache } from "../sync";
 import { activateSession, activateMembershipCache, clearSession, getSession, setActiveMembershipId, setSessionUserEmail, updateMe } from "./session";
 import { beginLogout, cancelLogout, clearLogoutLock } from "../outbox";
 import { getStore } from "../store";
-import { ApiError } from "../api/client";
+import { ApiError, type PhoneCheckNext } from "../api/client";
 import { rememberEmail } from "./rememberedEmail";
 
 export async function login(phone: string, password: string): Promise<{ activeMembershipId: string | null; membershipCount: number }> {
@@ -22,8 +22,12 @@ export async function registerTeacher(phone: string, password: string, displayNa
   const result = await api.request("POST /auth/register", { body: { phone, password, display_name: displayName, workspace_name: workspaceName, ...(email ? { email } : {}) } });
     const me = await api.request("GET /me", { authToken: result.token }); await clearLogoutLock(result.user.id); await activateSession(result.token, result.user, me, result.active_membership_id);
 }
-export async function registerParent(phone: string, password: string, displayName: string, email?: string): Promise<void> {
-  const result = await api.request("POST /auth/register-guardian", { body: { phone, password, display_name: displayName, ...(email ? { email } : {}) } });
+/** Bước 1 của đăng nhập: máy chủ cho biết số này đi tiếp đăng nhập, phụ huynh đặt mật khẩu hay đăng ký giáo viên. */
+export async function checkPhone(phone: string): Promise<PhoneCheckNext> {
+  return (await api.request("POST /auth/phone-check", { body: { phone }, anonymous: true })).next;
+}
+export async function registerParent(phone: string, password: string, displayName?: string, email?: string): Promise<void> {
+  const result = await api.request("POST /auth/register-guardian", { body: { phone, password, ...(displayName ? { display_name: displayName } : {}), ...(email ? { email } : {}) } });
     const me = await api.request("GET /me", { authToken: result.token });
     await clearLogoutLock(result.user.id);
     await activateSession(result.token, result.user, me, result.active_membership_id, true);

@@ -20,4 +20,10 @@ describe("guardian registration errors", () => {
       new ApiError(503, { code: "unavailable", message: "unavailable", request_id: "test" }),
     )).toBe("Không thể hoàn thành yêu cầu.");
   });
+
+  it("explains an undeclared parent phone", () => {
+    expect(registrationErrorMessage(
+      new ApiError(403, { code: "forbidden", message: "x", request_id: "test", details: { reason: "phone_not_declared" } }),
+    )).toBe("Số điện thoại này chưa được giáo viên khai cho học sinh nào.");
+  });
 });

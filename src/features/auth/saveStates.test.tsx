@@ -40,16 +40,21 @@ beforeEach(async () => {
 describe("save states of account forms", () => {
   it("login stays disabled until the phone and password are valid, then sends once while busy", async () => {
     request.mockImplementation(async (endpoint: string) => {
+      if (endpoint === "POST /auth/phone-check") return { next: "login" };
       if (endpoint === "POST /auth/login") return slow(sessionResponse());
       if (endpoint === "GET /me") return me();
       throw new Error(endpoint);
     });
     render(<Harness initial="/dang-nhap"/>);
+    const next = () => screen.getByRole("button", { name: "Tiếp tục" });
+    expect(next()).toBeDisabled();
+    type("Số điện thoại", "0900 000 001");
+    expect(next()).toBeEnabled();
+    fireEvent.click(next());
+    await screen.findByLabelText("Mật khẩu");
     const submit = () => screen.getByRole("button", { name: /^(Đăng nhập|Đang đăng nhập…)$/ });
     expect(submit()).toBeDisabled();
-    type("Số điện thoại", "900 000"); type("Mật khẩu", "secret");
-    expect(submit()).toBeDisabled();
-    type("Số điện thoại", "900 000 001");
+    type("Mật khẩu", "secret");
     expect(submit()).toBeEnabled();
     fireEvent.click(submit()); fireEvent.click(submit());
     await waitFor(() => expect(submit()).toHaveAttribute("aria-busy", "true"));

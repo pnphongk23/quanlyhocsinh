@@ -1,51 +1,52 @@
 import { useRef, useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { authFailureMessage, registerParent, registerTeacher } from "../../data/auth";
 import { ApiError } from "../../data/api/client";
+import { nationalPhoneDisplay } from "../../data/auth/phone";
 import { getSession } from "../../data/auth/session";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { Button, Icon, Segmented } from "../../shared/ui";
+import { Button, Icon } from "../../shared/ui";
 import { CheckRow, EmailField, PasswordField, PasswordStrength, PhoneField, emailFieldError, looksLikeEmail } from "./authUi";
 import s from "./auth.module.css";
-import r from "./registerGuardian.module.css";
 
 type RegisterRole = "teacher" | "guardian";
+
+/** Trạng thái điều hướng từ bước kiểm tra SĐT ở màn đăng nhập. */
+interface RegisterLocationState { phone?: string; role?: RegisterRole }
 
 export function registrationErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.error.code === "phone_registered") {
     return "Số điện thoại đã có tài khoản. Hãy đăng nhập.";
   }
+  if (error instanceof ApiError && error.status === 403 && error.error.details?.reason === "phone_not_declared") {
+    return "Số điện thoại này chưa được giáo viên khai cho học sinh nào.";
+  }
   return authFailureMessage(error);
 }
-
-const ROLE_OPTIONS = [
-  { value: "teacher", label: "Giáo viên" },
-  { value: "guardian", label: "Phụ huynh" },
-];
 
 const EMPTY_FORM = { name: "", workspaceName: "", phone: "", email: "", password: "", confirm: "" };
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const [role, setRole] = useState<RegisterRole>("teacher");
-  const [form, setForm] = useState(EMPTY_FORM);
+  const from = (useLocation().state ?? {}) as RegisterLocationState;
+  const guardian = from.role === "guardian" && Boolean(from.phone);
+  const [initialForm] = useState(() => ({ ...EMPTY_FORM, phone: from.phone ? nationalPhoneDisplay(from.phone) : "" }));
+  const [form, setForm] = useState(initialForm);
   const { name, workspaceName, phone, email, password, confirm } = form;
   const setField = (key: keyof typeof form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
   const registrationComplete = useRef(false);
-  const guardian = role === "guardian";
   const action = useSaveAction({
-    baseline: EMPTY_FORM,
+    baseline: initialForm,
     value: form,
     validate: (v) =>
-      Boolean(v.name.trim()) &&
-      (guardian || Boolean(v.workspaceName.trim())) &&
+      (guardian || (Boolean(v.name.trim()) && Boolean(v.workspaceName.trim()))) &&
       v.phone.replace(/\D/g, "").length === 9 &&
       (!v.email.trim() || looksLikeEmail(v.email)) &&
       v.password.length >= 8 &&
       v.password === v.confirm,
     save: async (v) => {
       const formattedPhone = `+84${v.phone.replace(/\D/g, "")}`;
-      if (guardian) await registerParent(formattedPhone, v.password, v.name.trim(), v.email.trim() || undefined);
+      if (guardian) await registerParent(formattedPhone, v.password);
       else await registerTeacher(formattedPhone, v.password, v.name.trim(), v.workspaceName.trim(), v.email.trim() || undefined);
       registrationComplete.current = true;
     },
@@ -73,37 +74,28 @@ export default function RegisterPage() {
           <Link to="/dang-nhap" className={s.backButton} aria-label="Quay lại đăng nhập"><Icon name="back" /></Link>
           <Link to="/dang-nhap" className={s.backLink}><Icon name="back" size={18} /> Quay lại đăng nhập</Link>
         </div>
-        <h1 className={s.title}>{guardian ? "Tạo tài khoản phụ huynh" : "Tạo không gian làm việc"}</h1>
-        <div className={r.roleSwitch}>
-          <span className={r.roleLabel}>Bạn đăng ký với vai trò</span>
-          <Segmented
-            label="Bạn đăng ký với vai trò"
-            options={ROLE_OPTIONS}
-            value={role}
-            onChange={(value) => setRole(value as RegisterRole)}
-          />
-        </div>
+        <h1 className={s.title}>{guardian ? "Đặt mật khẩu" : "Tạo không gian làm việc"}</h1>
         {error && <p className={`${s.banner} ${s.bannerError} ${s.bannerTop}`} role="alert">{error}</p>}
         <form className={s.form} onSubmit={submit} noValidate>
-          <div className={s.field}>
+          {!guardian && <div className={s.field}>
             <label htmlFor="register-name">Tên hiển thị</label>
             <div className={s.textBox}>
-              <input id="register-name" className={s.textInput} value={name} onChange={(event) => setField("name")(event.target.value)} autoComplete="name" placeholder={guardian ? "Mẹ của Minh Anh" : "Cô Lan"} />
+              <input id="register-name" className={s.textInput} value={name} onChange={(event) => setField("name")(event.target.value)} autoComplete="name" placeholder="Cô Lan" />
             </div>
-          </div>
+          </div>}
           {!guardian && <div className={s.field}>
             <label htmlFor="register-workspace">Tên không gian làm việc</label>
             <div className={s.textBox}>
               <input id="register-workspace" className={s.textInput} value={workspaceName} onChange={(event) => setField("workspaceName")(event.target.value)} autoComplete="organization" placeholder="Lớp của cô Lan" />
             </div>
           </div>}
-          <PhoneField value={phone} onChange={setField("phone")} id="register-phone" />
-          <EmailField label="Email (không bắt buộc)" value={email} onChange={setField("email")} id="register-email" errorText={emailError} hint={<p className={s.note}>Email chỉ dùng để lấy lại mật khẩu.</p>} />
+          <PhoneField value={phone} onChange={setField("phone")} id="register-phone" readOnly={guardian} />
+          {!guardian && <EmailField label="Email (không bắt buộc)" value={email} onChange={setField("email")} id="register-email" errorText={emailError} hint={<p className={s.note}>Email chỉ dùng để lấy lại mật khẩu.</p>} />}
           <PasswordField label="Mật khẩu" value={password} onChange={setField("password")} autoComplete="new-password" id="register-password" hint={<PasswordStrength password={password} />} />
           <div className={s.checks}><CheckRow ok={password.length >= 8}>Tối thiểu 8 ký tự</CheckRow></div>
           <PasswordField label="Nhập lại mật khẩu" value={confirm} onChange={setField("confirm")} autoComplete="new-password" id="register-confirm" error={mismatch} errorText={mismatch ? "Mật khẩu nhập lại không khớp." : undefined} />
-          <p className={s.note}>{guardian ? "Con sẽ tự hiện ở đây khi hồ sơ học sinh có đúng số điện thoại này. Chưa khớp hồ sơ nào thì bạn vẫn dùng được tài khoản." : "Người tạo là quản trị viên đầu tiên của không gian làm việc."}</p>
-          <Button type="submit" size="lg" block className={s.submitAction} disabled={!action.canSave} loading={loading} done={action.justSaved}>{guardian ? "Tạo tài khoản" : "Tạo không gian làm việc"}</Button>
+          <p className={s.note}>{guardian ? "Con sẽ tự hiện ở đây khi hồ sơ học sinh có đúng số điện thoại này." : "Người tạo là quản trị viên đầu tiên của không gian làm việc."}</p>
+          <Button type="submit" size="lg" block className={s.submitAction} disabled={!action.canSave} loading={loading} done={action.justSaved}>{guardian ? "Vào ứng dụng" : "Tạo không gian làm việc"}</Button>
         </form>
       </div>
     </main>

@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { authFailureMessage, login } from "../../data/auth";
+import { authFailureMessage, checkPhone, login } from "../../data/auth";
+import type { PhoneCheckNext } from "../../data/api/client";
+import { normalizePhone } from "../../data/auth/phone";
 import { getSession } from "../../data/auth/session";
 import { Button } from "../../shared/ui";
 import { Mascot } from "../../shared/ui/Mascot";
@@ -11,36 +13,84 @@ import s from "./auth.module.css";
 
 const landingPath = () => landingPathForSession(getSession());
 
-const EMPTY_LOGIN = { phone: "", password: "" };
+class InvalidPhoneError extends Error {}
+
+/** Lỗi bước nhập SĐT: sai định dạng (báo sau khi bấm Tiếp tục) hoặc lỗi máy chủ. */
+function phoneStepMessage(error: unknown): string {
+  return error instanceof InvalidPhoneError ? "Số điện thoại không hợp lệ." : authFailureMessage(error);
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState(EMPTY_LOGIN);
-  const phone = form.phone;
-  const password = form.password;
-  const action = useSaveAction({
-    baseline: EMPTY_LOGIN,
-    value: form,
-    validate: (v) => v.phone.replace(/\D/g, "").length === 9 && v.password.length > 0,
-    save: (v) => login(`+84${v.phone.replace(/\D/g, "")}`, v.password),
+  const [phoneInput, setPhoneInput] = useState("");
+  const [password, setPassword] = useState("");
+  // Số đã chuẩn hoá khi máy chủ xác nhận có tài khoản; có giá trị nghĩa là đang ở bước mật khẩu.
+  const [loginPhone, setLoginPhone] = useState<string | null>(null);
+  const checked = useRef<{ phone: string; next: PhoneCheckNext } | null>(null);
+
+  const phoneStep = useSaveAction({
+    baseline: "",
+    isEqual: () => false,
+    value: phoneInput,
+    validate: (v) => v.trim() !== "",
+    save: async (v) => {
+      const phone = normalizePhone(v);
+      if (!phone) throw new InvalidPhoneError();
+      checked.current = { phone, next: await checkPhone(phone) };
+    },
   });
-  const loading = action.saving;
-  const error = action.error ? authFailureMessage(action.error) : "";
+  const passwordStep = useSaveAction({
+    baseline: "",
+    value: password,
+    validate: (v) => v.length > 0,
+    save: (v) => login(loginPhone ?? "", v),
+  });
+
+  const loading = phoneStep.saving || passwordStep.saving;
+  const phoneError = phoneStep.error ? phoneStepMessage(phoneStep.error) : "";
+  const passwordError = passwordStep.error ? authFailureMessage(passwordStep.error) : "";
+  const error = loginPhone === null ? phoneError : passwordError;
   if (getSession() && !loading) return <Navigate to={landingPath()} replace />;
-  async function submit(event: FormEvent<HTMLFormElement>) {
+
+  async function submitPhone(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (await action.submit()) navigate(landingPath(), { replace: true });
+    if (!(await phoneStep.submit()) || !checked.current) return;
+    const { phone, next } = checked.current;
+    if (next === "login") setLoginPhone(phone);
+    else navigate("/dang-ky", { state: { phone, role: next === "guardian_setup" ? "guardian" : "teacher" } });
   }
+
+  async function submitPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (await passwordStep.submit()) navigate(landingPath(), { replace: true });
+  }
+
+  function changePhone() {
+    setLoginPhone(null);
+    setPassword("");
+    phoneStep.reset();
+    passwordStep.reset();
+  }
+
   return <main className={s.page}><div className={s.card}>
-    <div className={s.brand}><span className={s.logo} aria-hidden="true">L</span><p className={s.brandName}>Quản lý lớp tiếng Anh</p><Mascot pose="chao" size={72} className={s.brandMascot}/></div>
-    <h1 className={s.title}>Đăng nhập</h1><p className={s.description}>Dành cho giáo viên và phụ huynh.</p>
+    <div className={s.brand}><Mascot pose="chao" size={72} className={s.brandMascot}/></div>
+    <h1 className={s.title}>Đăng nhập</h1>
     {error && <p className={`${s.banner} ${s.bannerError} ${s.bannerTop}`} role="alert">{error}</p>}
-    <form className={s.form} onSubmit={submit} noValidate>
-      <PhoneField value={phone} onChange={(value) => setForm((f) => ({ ...f, phone: value }))} error={Boolean(error)} id="login-phone" />
-      <PasswordField label="Mật khẩu" value={password} onChange={(value) => setForm((f) => ({ ...f, password: value }))} error={Boolean(error)} autoComplete="current-password" id="login-password" />
-      <div className={s.forgotRow}><Link to={`/quen-mat-khau${phone ? `?sdt=+84${phone.replace(/\D/g, "")}` : ""}`} className={s.forgotLink}>Quên mật khẩu?</Link></div>
-      <Button type="submit" size="lg" block className={s.submitAction} disabled={!action.canSave} loading={loading} done={action.justSaved}>Đăng nhập</Button>
-    </form>
-      <div className={s.footerBlock}><p className={s.registerRow}>Chưa có tài khoản? · <Link to="/dang-ky" className={s.registerLink}>Tạo tài khoản</Link></p></div>
+    {loginPhone === null ? (
+      <form className={s.form} onSubmit={submitPhone} noValidate>
+        <PhoneField free value={phoneInput} onChange={setPhoneInput} error={Boolean(phoneError)} id="login-phone" />
+        <Button type="submit" size="lg" block className={s.submitAction} disabled={!phoneStep.canSave} loading={phoneStep.saving}>Tiếp tục</Button>
+      </form>
+    ) : (
+      <form className={s.form} onSubmit={submitPassword} noValidate>
+        <PhoneField free readOnly value={phoneInput} id="login-phone" />
+        <PasswordField label="Mật khẩu" value={password} onChange={setPassword} error={Boolean(passwordError)} autoComplete="current-password" id="login-password" />
+        <div className={s.forgotRow}>
+          <button type="button" className={s.forgotLink} onClick={changePhone}>Đổi số</button>
+          <Link to={`/quen-mat-khau?sdt=${encodeURIComponent(loginPhone)}`} className={s.forgotLink}>Quên mật khẩu?</Link>
+        </div>
+        <Button type="submit" size="lg" block className={s.submitAction} disabled={!passwordStep.canSave} loading={passwordStep.saving} done={passwordStep.justSaved}>Đăng nhập</Button>
+      </form>
+    )}
   </div></main>;
 }

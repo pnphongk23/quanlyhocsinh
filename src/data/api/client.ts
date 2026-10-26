@@ -1,11 +1,13 @@
 import type { ApiErrorBody, ApiClass, ApiStudent, ApiSession, ApiReport, LoginResponse, MeResponse, Page, PushRequest, PushResponse, PullResponse, SnapshotResponse, ReportPreview } from "./types";
+export type PhoneCheckNext = "login" | "guardian_setup" | "teacher_register";
 export interface ApiClientOptions { baseUrl: string; getToken: () => string | null; fetch?: typeof fetch }
 export interface RequestOptions<Body> { body?: Body; query?: Record<string, string | number | undefined>; signal?: AbortSignal; requestId?: string; authToken?: string; /** Public endpoint: never attach a stored Bearer token. */ anonymous?: boolean }
 type Endpoint<Response, Body = never> = { response: Response; body: Body };
 export type ApiEndpoints = {
   "POST /auth/login": Endpoint<LoginResponse, { phone: string; password: string; device_label?: string }>;
   "POST /auth/register": Endpoint<LoginResponse, { phone: string; password: string; display_name: string; workspace_name: string; email?: string }>;
-  "POST /auth/register-guardian": Endpoint<LoginResponse, { phone: string; password: string; display_name: string; email?: string }>;
+  "POST /auth/register-guardian": Endpoint<LoginResponse, { phone: string; password: string; display_name?: string; email?: string }>;
+  "POST /auth/phone-check": Endpoint<{ next: PhoneCheckNext }, { phone: string }>;
   "PUT /me/email": Endpoint<{ email: string | null }, { email: string | null; current_password: string }>;
   "POST /auth/password-reset/lookup": Endpoint<{ account: boolean; has_email: boolean; email_masked: string | null }, { phone: string }>;
   "POST /auth/password-reset/request": Endpoint<{ sent: true }, { phone: string; email: string }>;

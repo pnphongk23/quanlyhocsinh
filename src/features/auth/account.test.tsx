@@ -32,6 +32,7 @@ const memberships: MeResponse["memberships"] = [
 const user = { id: "user-1", phone: "+84900000001", display_name: "Cô Lan", must_change_password: false };
 let activeMembershipId: string | null = memberships[0].id;
 let registeredTeacher = false;
+let rejectLogin = false;
 let served: MeResponse["memberships"] = memberships;
 const me = (): MeResponse => ({ user, active_membership_id: activeMembershipId, memberships: served });
 const loginResponse = () => ({ token: "test-token", expires_at: "2099-01-01T00:00:00Z", user, memberships: served, active_membership_id: activeMembershipId });
@@ -44,9 +45,10 @@ function Harness({ initial = "/dang-nhap" }: { initial?: string }) {
 }
 
 beforeEach(async () => {
-  await clearSession(); served = memberships; activeMembershipId = memberships[0].id; registeredTeacher = false; request.mockReset(); clearUserCache.mockReset().mockResolvedValue(undefined); beginLogout.mockReset().mockResolvedValue(undefined); cancelLogout.mockReset().mockResolvedValue(undefined); clearLogoutLock.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
+  await clearSession(); served = memberships; activeMembershipId = memberships[0].id; registeredTeacher = false; rejectLogin = false; request.mockReset(); clearUserCache.mockReset().mockResolvedValue(undefined); beginLogout.mockReset().mockResolvedValue(undefined); cancelLogout.mockReset().mockResolvedValue(undefined); clearLogoutLock.mockReset().mockResolvedValue(undefined); pendingCommandCount.mockReset().mockResolvedValue(0);
   request.mockImplementation(async (endpoint: string, options?: { body?: { membership_id: string } }) => {
-    if (endpoint === "POST /auth/login") return loginResponse();
+    if (endpoint === "POST /auth/phone-check") return { next: "login" };
+    if (endpoint === "POST /auth/login") { if (rejectLogin) { rejectLogin = false; throw new ApiError(401, { code: "invalid_credentials", message: "Sai thông tin", request_id: "test" }); } return loginResponse(); }
     if (endpoint === "POST /auth/register") {
       activeMembershipId = memberships[0].id;
       registeredTeacher = true;
@@ -66,16 +68,22 @@ beforeEach(async () => {
   });
 });
 
+/** Bước 1 của đăng nhập: nhập SĐT, Tiếp tục, chờ ô mật khẩu. */
+async function enterPhone(value: string) {
+  fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value } });
+  fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+  await screen.findByLabelText("Mật khẩu");
+}
+
 describe("account and auth screens", () => {
   it("shows login errors and routes successful login to role selection", async () => {
-    request.mockImplementationOnce(async () => { throw new ApiError(401, { code: "invalid_credentials", message: "Sai thông tin", request_id: "test" }); });
+    rejectLogin = true;
     const { rerender } = render(<Harness/>);
-    fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "900 000 001" } });
+    await enterPhone("0900 000 001");
     fireEvent.change(screen.getByLabelText("Mật khẩu"), { target: { value: "correct horse" } });
     fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Số điện thoại hoặc mật khẩu chưa đúng.");
     rerender(<Harness/>);
-    fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "900 000 001" } });
     fireEvent.change(screen.getByLabelText("Mật khẩu"), { target: { value: "correct horse" } });
     fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
     expect(await screen.findByRole("heading", { name: "Chọn vai trò" })).toBeInTheDocument();
@@ -85,7 +93,7 @@ describe("account and auth screens", () => {
   async function loginAs(roles: MeResponse["memberships"], active: string | null) {
     served = roles; activeMembershipId = active;
     render(<Harness/>);
-    fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "900 000 001" } });
+    await enterPhone("0900 000 001");
     fireEvent.change(screen.getByLabelText("Mật khẩu"), { target: { value: "correct horse" } });
     fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
   }
@@ -124,6 +132,77 @@ describe("account and auth screens", () => {
     expect(screen.getByText(/có hơn một vai trò/)).toBeInTheDocument();
   });
 
+  it("login phone step has no app-name line, role copy or register links", () => {
+    render(<Harness/>);
+    expect(screen.queryByText("Quản lý lớp tiếng Anh")).toBeNull();
+    expect(screen.queryByText(/Dành cho giáo viên và phụ huynh/)).toBeNull();
+    expect(screen.queryByText(/Tạo tài khoản/)).toBeNull();
+    expect(screen.queryByLabelText("Mật khẩu")).toBeNull();
+  });
+
+  it.each(["0900000001", "+84 900 000 001", "84900000001", "(0900) 000-001"])("normalizes %s before asking the server", async (typed) => {
+    render(<Harness/>);
+    await enterPhone(typed);
+    expect(request).toHaveBeenCalledWith("POST /auth/phone-check", expect.objectContaining({ body: { phone: "+84900000001" } }));
+  });
+
+  it("reports a malformed phone only after Tiếp tục and does not call the server", async () => {
+    render(<Harness/>);
+    fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "12 34" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Số điện thoại không hợp lệ.");
+    expect(request).not.toHaveBeenCalledWith("POST /auth/phone-check", expect.anything());
+  });
+
+  it("shows the rate-limit message from the phone check", async () => {
+    request.mockImplementation(async (endpoint: string) => { if (endpoint === "POST /auth/phone-check") throw new ApiError(429, { code: "rate_limited", message: "x", request_id: "t" }); throw new Error(endpoint); });
+    render(<Harness/>);
+    fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "0900000001" } });
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("quá nhiều lần");
+  });
+
+  it("password step offers Đổi số back to the phone step and Quên mật khẩu with the number", async () => {
+    render(<Harness/>);
+    await enterPhone("0900 000 001");
+    expect(screen.getByRole("link", { name: "Quên mật khẩu?" })).toHaveAttribute("href", "/quen-mat-khau?sdt=%2B84900000001");
+    fireEvent.click(screen.getByRole("button", { name: "Đổi số" }));
+    expect(screen.queryByLabelText("Mật khẩu")).toBeNull();
+    expect(screen.getByRole("button", { name: "Tiếp tục" })).toBeInTheDocument();
+  });
+
+  it("a declared parent phone opens the set-password screen and registers as a guardian without a name", async () => {
+    request.mockImplementation(async (endpoint: string) => {
+      if (endpoint === "POST /auth/phone-check") return { next: "guardian_setup" };
+      if (endpoint === "POST /auth/register-guardian") return { ...loginResponse(), memberships: [memberships[1]], active_membership_id: memberships[1].id };
+      if (endpoint === "GET /me") return { user, active_membership_id: memberships[1].id, memberships: [memberships[1]] };
+      throw new Error(endpoint);
+    });
+    render(<Harness/>);
+    fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "0900 000 001" } });
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+    expect(await screen.findByRole("heading", { name: "Đặt mật khẩu" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Tên hiển thị")).toBeNull();
+    expect(screen.getByLabelText("Số điện thoại")).toHaveValue("900 000 001");
+    fireEvent.change(screen.getByLabelText("Mật khẩu"), { target: { value: "Matkhau!123" } });
+    fireEvent.change(screen.getByLabelText("Nhập lại mật khẩu"), { target: { value: "Matkhau!123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Vào ứng dụng" }));
+    expect(await screen.findByRole("heading", { name: "Khung phụ huynh" })).toBeInTheDocument();
+    const call = request.mock.calls.find(([name]) => name === "POST /auth/register-guardian");
+    expect(call?.[1].body).toEqual({ phone: "+84900000001", password: "Matkhau!123" });
+  });
+
+  it("an unknown phone opens teacher registration with the phone filled in", async () => {
+    request.mockImplementation(async (endpoint: string) => { if (endpoint === "POST /auth/phone-check") return { next: "teacher_register" }; throw new Error(endpoint); });
+    render(<Harness/>);
+    fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "+84 900 000 001" } });
+    fireEvent.click(screen.getByRole("button", { name: "Tiếp tục" }));
+    expect(await screen.findByRole("heading", { name: "Tạo không gian làm việc" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Số điện thoại")).toHaveValue("900 000 001");
+    expect(screen.queryByText("Phụ huynh")).toBeNull();
+  });
+
   it("registers a teacher through the workspace API", async () => {
     render(<Harness initial="/dang-ky"/>);
     fireEvent.change(screen.getByLabelText("Tên hiển thị"), { target: { value: "Cô Lan" } });
@@ -139,7 +218,7 @@ describe("account and auth screens", () => {
   it("switches membership online, updates password, and has no mandatory-change route", async () => {
     // Establish a session through the real login page before opening account routes.
     const { unmount } = render(<Harness/>);
-    fireEvent.change(screen.getByLabelText("Số điện thoại"), { target: { value: "900 000 001" } });
+    await enterPhone("0900 000 001");
     fireEvent.change(screen.getByLabelText("Mật khẩu"), { target: { value: "x" } });
     fireEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
     expect(await screen.findByRole("heading", { name: "Chọn vai trò" })).toBeInTheDocument(); unmount();

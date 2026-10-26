@@ -12,6 +12,7 @@ export function PhoneField({
   error = false,
   label = "Số điện thoại",
   id,
+  free = false,
 }: {
   value: string;
   onChange?: (value: string) => void;
@@ -20,6 +21,8 @@ export function PhoneField({
   error?: boolean;
   label?: string;
   id?: string;
+  /** Gõ tự do (0…, +84…, có khoảng trắng), không tiền tố và không giới hạn ký tự; chuẩn hoá khi gửi. */
+  free?: boolean;
 }) {
   const generated = useId();
   const inputId = id ?? generated;
@@ -36,12 +39,16 @@ export function PhoneField({
           .filter(Boolean)
           .join(" ")}
       >
-        <span className={s.prefix}>+84</span>
+        {!free && <span className={s.prefix}>+84</span>}
         <input
           id={inputId}
           className={s.phoneInput}
           value={value}
           onChange={(event) => {
+            if (free) {
+              onChange?.(event.target.value);
+              return;
+            }
             const digits = event.target.value
               .replace(/[^\d]/g, "")
               .replace(/^84/, "")
@@ -49,9 +56,10 @@ export function PhoneField({
               .slice(0, 9);
             onChange?.(digits.match(/\d{1,3}/g)?.join(" ") ?? "");
           }}
-          inputMode="numeric"
-          autoComplete="tel-national"
-          placeholder="900 000 001"
+          type={free ? "tel" : "text"}
+          inputMode={free ? "tel" : "numeric"}
+          autoComplete={free ? "tel" : "tel-national"}
+          placeholder={free ? "0900 000 001" : "900 000 001"}
           disabled={disabled}
           readOnly={readOnly}
           aria-invalid={error || undefined}
