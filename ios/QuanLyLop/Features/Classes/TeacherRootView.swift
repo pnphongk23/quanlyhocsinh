@@ -149,8 +149,8 @@ struct TeacherClassListView: View {
     @ObservedObject var i4Data: I4FeatureStore
 
     private var classes: [Classroom] { data.classes }
-    private var todaySession: ClassSession? {
-        data.sessions.first { $0.date == today && $0.status == .planned }
+    private var todaySessions: [ClassSession] {
+        TeacherFeatureData.todaySessions(data.sessions, classes: data.classes, today: today)
     }
     private var unfinishedSessions: [ClassSession] { data.unfinishedAttendanceSessions(today: today) }
     private var today: String { TeacherFormat.todayISO() }
@@ -224,8 +224,14 @@ struct TeacherClassListView: View {
 
     private var todaySection: some View {
         AppSection(title: String(localized: "classes.today.title", table: "Teacher")) {
-            if let session = todaySession, let klass = data.classroom(id: session.classId) {
-                todayCard(session: session, classroom: klass)
+            if !todaySessions.isEmpty {
+                VStack(spacing: TeacherMetrics.listGap) {
+                    ForEach(todaySessions) { session in
+                        if let klass = data.classroom(id: session.classId) {
+                            todayCard(session: session, classroom: klass)
+                        }
+                    }
+                }
             } else {
                 AppEmptyState(title: String(localized: "classes.today.empty", table: "Teacher"), size: .compact)
             }
@@ -243,7 +249,7 @@ struct TeacherClassListView: View {
     private func todayCard(session: ClassSession, classroom: Classroom) -> some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(String.localizedStringWithFormat(String(localized: "feature.classes.hom.nay.7aac3196"), String(describing: (classroom.startTime ?? session.startTime))))
+                Text(String.localizedStringWithFormat(String(localized: "feature.classes.hom.nay.7aac3196"), String(describing: session.startTime)))
                     .appText(AppText.muted)
                     .foregroundStyle(AppColors.onPrimary)
                 Text("\(classroom.name) · \(TeacherFeatureData.sessionPrefix(session))")
@@ -252,12 +258,17 @@ struct TeacherClassListView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             TeacherLink(route: .session(classID: classroom.id, sessionID: session.id)) {
-                Text(String(localized: "feature.classes.iem.danh"))
-                    .appText(AppText.buttonSmall)
-                    .foregroundStyle(AppColors.primaryInk)
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: AppMetrics.tap)
-                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
+                if session.status == .held {
+                    TeacherStatusPill(text: String(localized: "feature.classes.a.iem.danh"), tone: .success)
+                        .frame(minHeight: AppMetrics.tap)
+                } else {
+                    Text(String(localized: "feature.classes.iem.danh"))
+                        .appText(AppText.buttonSmall)
+                        .foregroundStyle(AppColors.primaryInk)
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: AppMetrics.tap)
+                        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
+                }
             }
         }
         .padding(.horizontal, 16)

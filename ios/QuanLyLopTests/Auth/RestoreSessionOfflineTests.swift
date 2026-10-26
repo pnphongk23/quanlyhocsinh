@@ -67,6 +67,31 @@ final class RestoreSessionOfflineTests: XCTestCase {
         XCTAssertEqual(pendingCount, 1)
     }
 
+    func testLogoutClearsTokenAndCachedIdentitySoReopeningShowsLogin() async throws {
+        let cache = MemoryIdentityStore(fixtureIdentity())
+        let token = InMemoryTokenStore(token: "fixture-session")
+        let api = AuthFixtureAPI(meResults: [.failure(.offline)])
+        let model = makeModel(api: api, token: token, cache: cache, store: try SQLiteStore(path: ":memory:", scope: scope), online: true)
+        await model.restoreSession()
+        XCTAssertEqual(model.screen, .main)
+
+        await model.logout()
+
+        XCTAssertEqual(model.screen, .login)
+        XCTAssertNil(model.identity)
+        let savedToken = await token.token()
+        let cachedIdentity = await cache.load()
+        XCTAssertNil(savedToken)
+        XCTAssertNil(cachedIdentity)
+
+        // A fresh launch finds neither token nor identity, so it cannot restore the old session.
+        let reopened = makeModel(api: AuthFixtureAPI(meResults: []), token: token, cache: cache,
+                                 store: try SQLiteStore(path: ":memory:", scope: scope), online: true)
+        await reopened.restoreSession()
+        XCTAssertEqual(reopened.screen, .login)
+        XCTAssertNil(reopened.identity)
+    }
+
     func testNetworkFailureWithoutCachedIdentityShowsLogin() async throws {
         let cache = MemoryIdentityStore(nil)
         let token = InMemoryTokenStore(token: "fixture-session")
@@ -110,6 +135,7 @@ private actor AuthFixtureAPI: APIClient {
     init(meResults: [Result<Data, APIFailure>]) { self.meResults = meResults }
 
     func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+        if endpoint.path == "auth/logout" { return try WireJSON.decoder().decode(type, from: Data("{}".utf8)) }
         guard endpoint.path == "me" else { throw APIFailure.offline }
         calls += 1
         guard !meResults.isEmpty else { throw APIFailure.offline }

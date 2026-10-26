@@ -375,6 +375,16 @@ final class TeacherFeatureData {
         (first.date, first.startTime) < (second.date, second.startTime)
     }
 
+    /// `buildTodayAgenda` entries of `todayModel.ts`: every non-cancelled session of an active class
+    /// today, held ones included, ordered by the session start time then class name.
+    static func todaySessions(_ sessions: [ClassSession], classes: [Classroom], today: String) -> [ClassSession] {
+        let active = Dictionary(uniqueKeysWithValues: classes.filter { $0.status == .active }.map { ($0.id, $0) })
+        func name(_ session: ClassSession) -> String { active[session.classId]?.name ?? "" }
+        return sessions
+            .filter { $0.date == today && $0.status != .cancelled && active[$0.classId] != nil }
+            .sorted { ($0.startTime, name($0)) < ($1.startTime, name($1)) }
+    }
+
     static func nextPlannedSessions(_ sessions: [ClassSession], today: String) -> [ClassSession] {
         sessions.filter { $0.status == .planned && $0.date >= today }.sorted(by: sessionOrder)
     }

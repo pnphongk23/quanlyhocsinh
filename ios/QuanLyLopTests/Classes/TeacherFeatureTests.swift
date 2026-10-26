@@ -153,6 +153,34 @@ final class TeacherFeatureTests: XCTestCase {
         ).isEmpty)
     }
 
+    func testTodayListsHeldAndPlannedSessionsOfEveryOpenClassByTime() {
+        let classes = [
+            Classroom(id: "a", name: "Lớp A", status: .active, weekdays: nil, startTime: "18:00", version: 1),
+            Classroom(id: "b", name: "Lớp B", status: .active, weekdays: nil, startTime: "17:30", version: 1),
+            Classroom(id: "old", name: "Lớp cũ", status: .archived, weekdays: nil, startTime: "16:00", version: 1),
+        ]
+        let sessions = [
+            ClassSession(id: "a-held", classId: "a", date: "2026-10-27", startTime: "18:00", origin: .recurring, status: .held, version: 1),
+            ClassSession(id: "b-planned", classId: "b", date: "2026-10-27", startTime: "17:30", origin: .recurring, status: .planned, version: 1),
+            ClassSession(id: "a-cancelled", classId: "a", date: "2026-10-27", startTime: "19:00", origin: .manual, status: .cancelled, version: 1),
+            ClassSession(id: "old-planned", classId: "old", date: "2026-10-27", startTime: "16:00", origin: .recurring, status: .planned, version: 1),
+            ClassSession(id: "a-tomorrow", classId: "a", date: "2026-10-28", startTime: "18:00", origin: .recurring, status: .planned, version: 1),
+        ]
+
+        XCTAssertEqual(TeacherFeatureData.todaySessions(sessions, classes: classes, today: "2026-10-27").map(\.id),
+                       ["b-planned", "a-held"])
+    }
+
+    func testTodayKeepsTwoSessionsOfTheSameClassOnTheSameDay() {
+        let classes = [Classroom(id: "a", name: "Lớp A", status: .active, weekdays: nil, startTime: "18:00", version: 1)]
+        let sessions = [
+            ClassSession(id: "late", classId: "a", date: "2026-10-27", startTime: "20:00", origin: .manual, status: .planned, version: 1),
+            ClassSession(id: "first", classId: "a", date: "2026-10-27", startTime: "18:00", origin: .recurring, status: .held, version: 1),
+        ]
+
+        XCTAssertEqual(TeacherFeatureData.todaySessions(sessions, classes: classes, today: "2026-10-27").count, 2)
+    }
+
     // MARK: - Fixtures
 
     private func session(id: String, date: String, status: SessionStatus) -> ClassSession {
