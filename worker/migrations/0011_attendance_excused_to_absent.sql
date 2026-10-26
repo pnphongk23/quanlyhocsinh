@@ -57,6 +57,4 @@ SET status = 'absent',
     updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
 WHERE status = 'excused';
 
--- Rollback: rebuild attendance with the original CHECK (status = 'late' OR late_at IS NULL),
--- then restore 'excused' for rows identified from attendance_history. The original
--- status cannot be recovered from the current attendance row alone.
+-- Rollback: restore from a D1 export captured before applying this migration.

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { PASSWORD, call, db, fakePhone, login, post, put, registerWorkspace } from './helpers';
+import { PASSWORD, call, db, fakePhone, insertClass, insertStudent, login, post, put, registerWorkspace } from './helpers';
 
 beforeEach(async () => {
   await db.prepare("DELETE FROM auth_throttle WHERE key LIKE 'register:ip:%'").run();
@@ -44,8 +44,12 @@ describe('account email', () => {
     expect(guardian.status).toBe(422);
     expect(guardian.body.error.details.fields).toEqual({ email: 'invalid_email' });
 
-    const guardianOk = await call('/v1/auth/register-guardian', {
-      ...post({ phone: fakePhone(), password: PASSWORD, email: 'PH@Example.com' }),
+      const guardianPhone = fakePhone();
+      const owner = await registerWorkspace(fakePhone(), 'Declared guardian email');
+      const classId = await insertClass(owner.workspaceId, 'Class', owner.userId);
+      await insertStudent(owner.workspaceId, classId, 'Child', guardianPhone, owner.userId);
+      const guardianOk = await call('/v1/auth/register-guardian', {
+        ...post({ phone: guardianPhone, password: PASSWORD, email: 'PH@Example.com' }),
       headers: { 'cf-connecting-ip': nextIp() },
     });
     expect(guardianOk.status).toBe(201);

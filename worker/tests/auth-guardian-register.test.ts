@@ -73,16 +73,13 @@ describe('guardian self registration', () => {
     expect((await call(`/v1/students/${childB}`, {}, guardianToken)).body.error.code).toBe('not_found');
   });
 
-  it('allows an unlinked account, then adds a guardian membership when a teacher adds the child', async () => {
+  it('rejects undeclared numbers, then registers when a teacher declares the child number', async () => {
     const phone = fakePhone();
-    const registered = await registerGuardian(phone, '198.51.100.44');
-    expect(registered.status).toBe(201);
-    expect(registered.body.memberships).toEqual([]);
-    expect(registered.body.active_membership_id).toBeNull();
-    expect((await call('/v1/me', {}, registered.body.token)).body.memberships).toEqual([]);
-    expect((await call('/v1/classes', {}, registered.body.token)).body.error)
-      .toMatchObject({ code: 'forbidden', details: { reason: 'membership_required' } });
-    expect((await login(phone)).body.memberships).toEqual([]);
+    const rejected = await registerGuardian(phone, '198.51.100.44');
+    expect(rejected.status).toBe(403);
+    expect(rejected.body.error).toMatchObject({ code: 'forbidden', details: { reason: 'phone_not_declared' } });
+    expect(await db.prepare('SELECT COUNT(*) AS count FROM users WHERE phone=?').bind(phone).first<any>())
+      .toMatchObject({ count: 0 });
 
     const teacher = await registerWorkspaceAtIp(fakePhone(), 'Later child workspace', '198.51.100.45');
     const classId = await insertClass(teacher.workspaceId, 'Class', teacher.userId);
@@ -90,10 +87,9 @@ describe('guardian self registration', () => {
       name: 'New child', parent_phone: phone, enrolled_at: '2026-10-21',
     }), teacher.token);
     expect(created.status).toBe(201);
-    const me = await call('/v1/me', {}, registered.body.token);
-    expect(me.body.memberships).toHaveLength(1);
-    expect((await call('/v1/session/membership', put({ membership_id: me.body.memberships[0].id }), registered.body.token)).status)
-      .toBe(200);
+    const registered = await registerGuardian(phone, '198.51.100.44');
+    expect(registered.status).toBe(201);
+    expect(registered.body.memberships).toHaveLength(1);
     expect((await call(`/v1/students/${created.body.id}`, {}, registered.body.token)).status).toBe(200);
   });
 
@@ -103,10 +99,11 @@ describe('guardian self registration', () => {
     const teacher = await registerWorkspaceAtIp(fakePhone(), 'Phone change workspace', '198.51.100.46');
     const classId = await insertClass(teacher.workspaceId, 'Class', teacher.userId);
     const studentId = await insertStudent(teacher.workspaceId, classId, 'Child', oldPhone, teacher.userId);
+    await insertStudent(teacher.workspaceId, classId, 'New guardian child', newPhone, teacher.userId);
     const oldGuardian = await registerGuardian(oldPhone, '198.51.100.47');
     const newGuardian = await registerGuardian(newPhone, '198.51.100.48');
     const oldMembershipId = oldGuardian.body.memberships[0].id as string;
-    const newMembershipId = newGuardian.body.memberships.length === 0 ? null : newGuardian.body.memberships[0].id;
+    const newMembershipId = newGuardian.body.memberships[0].id as string;
     const oldSession = await db.prepare('SELECT id FROM auth_sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
       .bind(oldGuardian.body.user.id).first<{ id: string }>();
     expect(oldSession).not.toBeNull();
@@ -126,15 +123,18 @@ describe('guardian self registration', () => {
 
     const newMe = await call('/v1/me', {}, newGuardian.body.token);
     expect(newMe.body.memberships).toHaveLength(1);
-    expect(newMembershipId).toBeNull();
+    expect(newMembershipId).not.toBeNull();
     expect((await call('/v1/session/membership', put({ membership_id: newMe.body.memberships[0].id }), newGuardian.body.token)).status)
       .toBe(200);
     expect((await call(`/v1/students/${studentId}`, {}, newGuardian.body.token)).status).toBe(200);
   });
 
-  it('rejects duplicate phones and weak passwords', async () => {
-    const phone = fakePhone();
-    await registerGuardian(phone, '198.51.100.49');
+    it('rejects duplicate phones and weak passwords', async () => {
+      const phone = fakePhone();
+      const teacher = await registerWorkspaceAtIp(fakePhone(), 'Duplicate phone workspace', '198.51.100.56');
+      const classId = await insertClass(teacher.workspaceId, 'Class', teacher.userId);
+      await insertStudent(teacher.workspaceId, classId, 'Child', phone, teacher.userId);
+      await registerGuardian(phone, '198.51.100.49');
     expect((await registerGuardian(phone, '198.51.100.50')).body.error)
       .toMatchObject({ code: 'conflict', details: { reason: 'phone_registered' } });
     expect((await call('/v1/auth/register-guardian', {
@@ -144,9 +144,9 @@ describe('guardian self registration', () => {
   });
 
   it('throttles guardian registration and workspace creation with Retry-After', async () => {
-    const ip = '198.51.100.52';
-    for (let index = 0; index < 5; index += 1) {
-      expect((await registerGuardian(fakePhone(), ip)).status).toBe(201);
+      const ip = '198.51.100.52';
+      for (let index = 0; index < 5; index += 1) {
+      expect((await registerGuardian(fakePhone(), ip)).status).toBe(403);
     }
     const throttledGuardian = await registerGuardian(fakePhone(), ip);
     expect(throttledGuardian.status).toBe(429);
@@ -166,7 +166,7 @@ describe('guardian self registration', () => {
     const guardianResults = await Promise.all(
       Array.from({ length: 8 }, () => registerGuardian(fakePhone(), guardianIp)),
     );
-    expect(guardianResults.filter((result) => result.status === 201)).toHaveLength(5);
+    expect(guardianResults.filter((result) => result.status === 403)).toHaveLength(5);
     expect(guardianResults.filter((result) => result.status === 429)).toHaveLength(3);
 
     const owner = await registerWorkspaceAtIp(fakePhone(), 'Concurrent workspace owner', '198.51.100.55');

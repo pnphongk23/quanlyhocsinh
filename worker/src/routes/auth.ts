@@ -12,12 +12,15 @@ import {
   createSession,
   findActiveMembership,
   findUserByPhone,
+  hasGuardianPhoneDeclaration,
   getMe,
   getUserById,
   getUserPhone,
   listActiveMemberships,
   loginIpKey,
   loginPhoneKey,
+  phoneCheckIpKey,
+  phoneCheckPhoneKey,
   logoutSession,
   newRoleIdMap,
   refundThrottle,
@@ -59,6 +62,7 @@ import {
   ApiError,
   accountDisabled,
   conflict,
+  forbidden,
   invalidCredentials,
   notFound,
   rateLimited,
@@ -74,6 +78,8 @@ import { requireAuth } from '../middleware/auth';
 export const authRoutes = new Hono<AppEnv>();
 
 const WORKSPACE_CREATE_POLICY = { limit: 5, windowMs: 60 * 60 * 1000 } as const;
+const PHONE_CHECK_IP_POLICY = { limit: 30, windowMs: 15 * 60 * 1000 } as const;
+const PHONE_CHECK_PHONE_POLICY = { limit: 10, windowMs: 15 * 60 * 1000 } as const;
 
 function requirePassword(value: unknown, field = 'password'): string {
   if (typeof value !== 'string' || value === '') {
@@ -111,6 +117,27 @@ async function reserveResetThrottle(db: D1Database, ip: string, phone: string): 
     throw rateLimited(phoneReservation.retryAfterSeconds);
   }
 }
+
+async function reservePhoneCheckThrottle(db: D1Database, ip: string, phone: string): Promise<void> {
+  const ipKey = phoneCheckIpKey(ip);
+  const ipReservation = await consumeThrottle(db, ipKey, PHONE_CHECK_IP_POLICY);
+  if (!ipReservation.allowed) throw rateLimited(ipReservation.retryAfterSeconds);
+  const phoneReservation = await consumeThrottle(db, phoneCheckPhoneKey(phone), PHONE_CHECK_PHONE_POLICY);
+  if (!phoneReservation.allowed) {
+    await refundThrottle(db, ipKey);
+    throw rateLimited(phoneReservation.retryAfterSeconds);
+  }
+}
+
+authRoutes.post('/auth/phone-check', async (c) => {
+  const db = c.env.DB;
+  const body = await readJsonObject(c.req.raw);
+  const phone = normalizePhone(body.phone);
+  if (phone === null) throw validationError({ phone: 'invalid_phone' });
+  await reservePhoneCheckThrottle(db, getClientIp(c.req.raw), phone);
+  if (await findUserByPhone(db, phone)) return c.json({ next: 'login' });
+  return c.json({ next: await hasGuardianPhoneDeclaration(db, phone) ? 'guardian_setup' : 'teacher_register' });
+});
 
 authRoutes.post('/auth/register', async (c) => {
   const db = c.env.DB;
@@ -209,11 +236,12 @@ authRoutes.post('/auth/register-guardian', async (c) => {
   const password = requirePassword(body.password);
   assertPassword(password, phone);
   const displayName = optionalDisplayName(body);
-  const email = optionalEmail(body.email);
+    const email = optionalEmail(body.email);
 
-  if (await findUserByPhone(db, phone)) throw conflict('phone_registered');
+    if (await findUserByPhone(db, phone)) throw conflict('phone_registered');
+    if (!(await hasGuardianPhoneDeclaration(db, phone))) throw forbidden({ reason: 'phone_not_declared' });
 
-  const iterations = resolveIterations(c.env.PBKDF2_ITERATIONS);
+    const iterations = resolveIterations(c.env.PBKDF2_ITERATIONS);
   const passwordHash = await hashPassword(password, iterations);
   const { token, tokenHashPromise } = newSessionToken();
   const tokenHash = await tokenHashPromise;

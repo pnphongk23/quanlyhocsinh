@@ -120,13 +120,13 @@ describe('sync commands and recovery',()=>{
     expect(r.body.results.map((x:any)=>x.status)).toEqual(['applied','rejected','applied']);
     expect(await db.prepare('SELECT name FROM tests WHERE id=?').bind(test).first<any>()).toMatchObject({name:'T'});
   });
-  it('validates expiration, ahead/missing versions, attendance dates, enrollment and late time',async()=>{
+  it('validates expiration, ahead/missing versions, attendance dates and enrollment',async()=>{
     const f=await setup(),future=await insertSession(f.a.workspaceId,f.cls,'2099-01-01',f.a.userId);
     const payload={session_id:f.ses,student_id:f.s1,status:'present'};
     const expired=command('attendance.set',payload);expired.created_at='2000-01-01T00:00:00.000Z';
-    const r=await f.send([expired,command('attendance.set',{...payload,session_id:future}),command('attendance.set',{...payload,late_at:'18:00'}),
+    const r=await f.send([expired,command('attendance.set',{...payload,session_id:future}),command('attendance.set',{...payload,status:'excused'}),
       command('score.set',{test_id:f.test,student_id:f.s1,value:1},1)]);
-    expect(r.body.results.map((x:any)=>x.error.details?.reason ?? x.error.code)).toEqual(['command_expired','session_not_started','invalid_late_at','not_found']);
+    expect(r.body.results.map((x:any)=>x.error.details?.reason ?? x.error.code)).toEqual(['command_expired','session_not_started','invalid_value','not_found']);
     await f.send([command('attendance.set',payload)]);
     expect((await f.send([command('attendance.set',payload,2)])).body.results[0].error.details.reason).toBe('base_version_ahead');
     await db.prepare("UPDATE students SET enrolled_at='2099-01-01' WHERE id=?").bind(f.s1).run();

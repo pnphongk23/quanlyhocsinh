@@ -502,21 +502,28 @@ export interface RegisterGuardianInput {
   expiresAt: string;
 }
 
+async function guardianWorkspacesForPhone(db: D1Database, phone: string) {
+  const { results } = await db.prepare(
+    `SELECT DISTINCT r.workspace_id, r.id AS role_id
+       FROM students s
+       JOIN roles r ON r.workspace_id = s.workspace_id AND r.system_key = 'guardian'
+      WHERE s.parent_phone = ?
+      ORDER BY r.workspace_id`,
+  ).bind(phone).all<{ workspace_id: string; role_id: string }>();
+  return results;
+}
+
+export async function hasGuardianPhoneDeclaration(db: D1Database, phone: string): Promise<boolean> {
+  return (await guardianWorkspacesForPhone(db, phone)).length > 0;
+}
+
 /** Tạo tài khoản phụ huynh và liên kết mọi hồ sơ đã khai số điện thoại này. */
 export async function registerGuardian(
   db: D1Database,
   input: RegisterGuardianInput,
 ): Promise<void> {
-  const { results: workspaces } = await db
-    .prepare(
-      `SELECT DISTINCT r.workspace_id, r.id AS role_id
-         FROM students s
-         JOIN roles r ON r.workspace_id = s.workspace_id AND r.system_key = 'guardian'
-        WHERE s.parent_phone = ?
-        ORDER BY r.workspace_id`,
-    )
-    .bind(input.phone)
-    .all<{ workspace_id: string; role_id: string }>();
+  const workspaces = await guardianWorkspacesForPhone(db, input.phone);
+  if (!workspaces.length) throw forbidden({ reason: 'phone_not_declared' });
   const membershipIds = new Map(workspaces.map((row) => [row.workspace_id, crypto.randomUUID()]));
   const activeMembershipId = workspaces.length === 1 ? membershipIds.get(workspaces[0]!.workspace_id)! : null;
 
@@ -902,6 +909,14 @@ export function loginIpKey(ip: string): string {
 
 export function registerIpKey(ip: string): string {
   return `register:ip:${ip}`;
+}
+
+export function phoneCheckIpKey(ip: string): string {
+  return `phone-check:ip:${ip}`;
+}
+
+export function phoneCheckPhoneKey(phone: string): string {
+  return `phone-check:phone:${phone}`;
 }
 
 export function workspaceCreateKey(userId: string): string {
