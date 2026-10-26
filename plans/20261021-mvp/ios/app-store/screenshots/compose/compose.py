@@ -124,7 +124,8 @@ def compose(raw_path, shot, cfg, tokens, fonts_cache):
             mh = int(ch * cfg["mascot"]["heightRatio"])
             mascot = mascot.resize((round(mascot.width * mh / mascot.height), mh), Image.LANCZOS)
             mx = x0 + outer[0] - round(mascot.width * (1 - cfg["mascot"]["overlapRatio"]))
-            my = y0 + outer[1] - mh
+            # "mascotAt" (0..1 of the phone height) moves Mít up, for a screen whose bottom edge holds a tab bar.
+            my = y0 + round(outer[1] * shot["mascotAt"]) - mh // 2 if "mascotAt" in shot else y0 + outer[1] - mh
             canvas.alpha_composite(mascot, (min(mx, cw - mascot.width), my))
         else:
             print(f"THIẾU mascot: {shot['mascot']}", file=sys.stderr)

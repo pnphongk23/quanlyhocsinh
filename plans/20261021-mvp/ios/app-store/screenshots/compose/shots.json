@@ -71,7 +71,8 @@
       "prefix": "06",
       "slug": "phu-huynh",
       "title": "Phụ huynh\nxem phiếu ngay",
-      "mascot": "mit-khen@2x.webp"
+      "mascot": "mit-khen@2x.webp",
+      "mascotAt": 0.72
     }
   ],
   "contactSheet": {
