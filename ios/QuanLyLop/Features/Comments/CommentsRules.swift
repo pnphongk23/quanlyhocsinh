@@ -68,6 +68,23 @@ enum CommentsRules {
         rows.filter { !$0.isSent && ($0.slip != nil || $0.attended) }
     }
 
+    struct DefaultSlip: Equatable {
+        let studentID: String
+        let criteria: Int
+        let note: String
+    }
+
+    /// "Gán tất cả mặc định": every slip the class send would send (so never a sent one) gets all five criteria,
+    /// with homework following last session's grades, a regenerated sentence and its own note kept.
+    static func defaultSlips(_ rows: [I4TicketRow], sections: [HomeworkSection], grades: [HomeworkGrade]) -> [DefaultSlip] {
+        sendable(rows).map {
+            DefaultSlip(studentID: $0.student.id,
+                        criteria: HomeworkRules.openingCriteria(slip: nil, sections: sections, grades: grades,
+                                                                studentID: $0.student.id),
+                        note: $0.slip?.note ?? "")
+        }
+    }
+
     /// Unsent students the class send leaves out because they have no slip and did not attend.
     static func withoutSlip(_ rows: [I4TicketRow]) -> [I4TicketRow] {
         rows.filter { $0.slip == nil && !$0.attended }

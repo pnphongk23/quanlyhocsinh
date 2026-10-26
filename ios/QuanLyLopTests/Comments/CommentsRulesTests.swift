@@ -21,6 +21,33 @@ final class CommentsRulesTests: XCTestCase {
                            previousDate: "2026-10-14", previousHadSections: true)
     }
 
+    func testDefaultSlipsCoverOnlyWhatTheClassSendWouldSendAndFollowHomeworkGrades() {
+        let part = HomeworkSection(id: "p", classId: "c", sessionId: "before", kind: .vocabulary, title: "Từ vựng",
+                                   description: "", version: 1)
+        let notDone = HomeworkGrade(sectionId: "p", studentId: "b", level: .notDone, version: 1,
+                                    updatedAt: "2026-10-25T10:00:00.000Z")
+        let rows = [
+            row("a", "An", stars: 5, sent: true),
+            row("b", "Bình", stars: 2, sent: false),
+            row("c", "Chi", stars: nil, sent: false, attendance: .present),
+            row("d", "Dũng", stars: nil, sent: false, attendance: .absent),
+        ]
+        let plans = CommentsRules.defaultSlips(rows, sections: [part], grades: [notDone])
+        XCTAssertEqual(plans, [
+            .init(studentID: "b", criteria: SlipRules.allCriteria & ~(1 << 4), note: ""),
+            .init(studentID: "c", criteria: SlipRules.allCriteria, note: ""),
+        ])
+    }
+
+    func testDefaultSlipKeepsTheNote() {
+        let slip = SessionSlip(sessionId: "s", studentId: "b", stars: 2, criteria: 3, note: "Nhắc con ghi bài",
+                               status: .draft, sentAt: nil, version: 1, updatedAt: "2026-10-19T11:00:00.000Z")
+        let row = I4TicketRow(student: student("b", "Bình"), slip: slip,
+                              previousHomework: I4HomeworkSummary(total: 0, graded: 0),
+                              previousDate: nil, previousHadSections: false)
+        XCTAssertEqual(CommentsRules.defaultSlips([row], sections: [], grades: []).first?.note, "Nhắc con ghi bài")
+    }
+
     func testCountsAndLabelsOfTheTwoFilters() {
         let rows = [
             row("a", "An", stars: 5, sent: true, graded: 2, total: 2),

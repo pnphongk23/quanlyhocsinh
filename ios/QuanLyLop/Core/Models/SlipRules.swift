@@ -101,5 +101,10 @@ enum SlipSheetText {
     static func sendDialogNote(homeworkSuffix: String) -> String {
         "Phụ huynh nhận **một thông báo** cho buổi này, gồm sao và nhận xét\(homeworkSuffix)"
     }
+    static let defaultsButton = "Gán tất cả mặc định"
+    static let defaultsConfirm = "Gán"
+    static let defaultsCancel = "Quay lại"
+    static func defaultsTitle(count: Int) -> String { "Gán mặc định cho \(count) phiếu?" }
+    static let defaultsBody = "Mỗi phiếu chưa gửi được tích đủ 5 tiêu chí (BTVN theo điểm chấm), câu nhận xét tự sinh lại. Ghi chú riêng được giữ. Phiếu đã gửi không đổi."
     static let unsaved = "Chưa lưu"
 }

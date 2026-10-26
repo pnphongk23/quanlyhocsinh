@@ -10,6 +10,9 @@ struct SessionCommentsView: View {
     @State private var showingSend = false
     @State private var sendError: String?
     @State private var sendController = AppSaveController()
+    @State private var showingDefaults = false
+    @State private var defaultsController = AppSaveController()
+    @State private var defaultsError: String?
     @State private var saveStatusSource: AppSaveStatusSource?
 
     init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
@@ -71,6 +74,7 @@ struct SessionCommentsView: View {
         }
         .overlay {
             if showingSend { sendDialog }
+            if showingDefaults { defaultsDialog }
         }
         .task {
             await data.configure(auth: auth)
@@ -197,6 +201,9 @@ struct SessionCommentsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityIdentifier("comment.sendClass.disabledReason")
             }
+            AppButton(title: SlipSheetText.defaultsButton, variant: .neutral, size: .large) { showingDefaults = true }
+                .disabled(defaultSlipCount == 0)
+                .accessibilityIdentifier("comment.assignDefaults")
             AppButton(
                 title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),
                 systemImage: "paperplane",
@@ -205,6 +212,44 @@ struct SessionCommentsView: View {
                 .disabled(sendAvailability != .ready)
                 .accessibilityIdentifier("comment.sendClass")
         }
+    }
+
+    private var defaultSlipCount: Int { sendableRows.count }
+
+    private var defaultsDialog: some View {
+        I4Dialog(title: SlipSheetText.defaultsTitle(count: defaultSlipCount), content: {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(SlipSheetText.defaultsBody)
+                    .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
+                    .foregroundStyle(AppColors.muted)
+                if let defaultsError {
+                    Text(defaultsError)
+                        .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                        .foregroundStyle(AppColors.error)
+                }
+            }
+        }, actions: {
+            VStack(spacing: 8) {
+                AppSaveButton(title: SlipSheetText.defaultsConfirm, controller: defaultsController, identifier: "comment.assignDefaults.confirm",
+                              onSuccess: { closeDefaults() }) { try await assignDefaults() }
+                AppButton(title: SlipSheetText.defaultsCancel, variant: .neutral, size: .large) { closeDefaults() }
+            }
+        }, dismiss: { closeDefaults() })
+    }
+
+    private func closeDefaults() {
+        showingDefaults = false
+        defaultsError = nil
+    }
+
+    private func assignDefaults() async throws {
+        let slips = CommentsRules.defaultSlips(rows, sections: previousSession.map { data.sections(sessionID: $0.id) } ?? [],
+                                               grades: data.grades)
+        if let failure = await data.saveDefaultSlips(sessionID: sessionID, slips: slips) {
+            defaultsError = failure
+            throw I4SaveFailure(message: failure)
+        }
+        await saveStatusSource?.refresh()
     }
 
     private var sendDialog: some View {

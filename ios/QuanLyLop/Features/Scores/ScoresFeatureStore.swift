@@ -352,6 +352,18 @@ final class I4FeatureStore: ObservableObject {
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
     }
 
+    /// Writes each default slip through `saveSlip`, so it queues offline like any edit: all criteria as given, the
+    /// homework flag back to following the grades, and no sentence so it is written again from the criteria.
+    func saveDefaultSlips(sessionID: String, slips: [CommentsRules.DefaultSlip]) async -> String? {
+        for plan in slips {
+            guard let student = students.first(where: { $0.id == plan.studentID }) else { continue }
+            if let failure = await saveSlip(sessionID: sessionID, student: student,
+                                            grading: .criteria(plan.criteria, comment: nil, hwManual: false),
+                                            note: plan.note) { return failure }
+        }
+        return nil
+    }
+
     enum SendOutcome: Equatable {
         case sent(Int)
         /// The server sent some slips and left others out (stars removed, or already sent elsewhere).
