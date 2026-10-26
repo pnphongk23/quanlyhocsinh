@@ -536,3 +536,16 @@ struct AppSpinner: View {
             .accessibilityLabel(Text("design.loading"))
     }
 }
+
+/// Fixed Vietnamese text of the two-step sign-in, kept outside the string tables with the other new copy.
+enum LoginText {
+    static let next = "Tiếp tục"
+    static let invalidPhone = "Số điện thoại chưa đúng. Nhập số di động 10 chữ số, ví dụ 0900 000 001."
+    static let rateLimited = "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau ít phút."
+    static let changePhone = "Đổi số điện thoại"
+    static let guardianSetupTitle = "Đặt mật khẩu"
+    static let guardianSetupDescription = "Số này đã được giáo viên khai cho học sinh. Đặt mật khẩu để vào ứng dụng."
+    static let guardianSetupSubmit = "Vào ứng dụng"
+    static let phoneNotDeclared = "Số này chưa được giáo viên khai cho học sinh nào. Hãy nhờ giáo viên thêm số vào hồ sơ học sinh."
+}
+

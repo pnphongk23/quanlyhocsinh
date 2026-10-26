@@ -72,7 +72,13 @@ struct RegistrationRequest: Encodable, Sendable {
 struct GuardianRegistrationRequest: Encodable, Sendable {
     let phone: String
     let password: String
-    let displayName: String
+}
+
+struct PhoneCheckRequest: Encodable, Sendable { let phone: String }
+
+struct PhoneCheckResult: Decodable, Sendable {
+    enum Next: String, Decodable, Sendable { case login, guardianSetup = "guardian_setup", teacherRegister = "teacher_register" }
+    let next: Next
 }
 
 struct PasswordChangeRequest: Encodable, Sendable {
@@ -89,6 +95,7 @@ enum AuthValidationError: Error, Equatable {
     case passwordLength
     case passwordMismatch
     case samePassword
+    case invalidPhone
 }
 
 enum AuthValidation {
@@ -102,10 +109,8 @@ enum AuthValidation {
         try validatePassword(password, confirmation: confirmation, phone: phone)
     }
 
-    static func validateGuardianRegistration(name: String, phone: String,
-                                             password: String, confirmation: String) throws {
-        guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !phone.isEmpty,
-              !password.isEmpty, !confirmation.isEmpty else { throw AuthValidationError.missingField }
+    static func validateGuardianSetup(phone: String, password: String, confirmation: String) throws {
+        guard !phone.isEmpty, !password.isEmpty, !confirmation.isEmpty else { throw AuthValidationError.missingField }
         try validatePassword(password, confirmation: confirmation, phone: phone)
     }
 
@@ -132,13 +137,19 @@ extension AppConfiguration {
 final class AuthModel {
       enum Screen: Equatable { case loading, login, register, guardianRegister, forgot, forcedPassword, chooseRole, main, settings, changePassword }
 
-    private(set) var screen: Screen = .loading
+    private(set) var screen: Screen = .loading {
+        didSet { if screen != .login { loginStep = .phone } }
+    }
     private(set) var session: AuthSession?
     private(set) var identity: CurrentIdentity?
     private(set) var isLocked = false
     private(set) var logoutBlock: LogoutBlock?
     private(set) var message: String?
     private(set) var recoveryPhone = ""
+    enum LoginStep: Equatable { case phone, password }
+    private(set) var loginStep: LoginStep = .phone
+    /// The number the server accepted at step one, in the domestic form `0900000001`.
+    private(set) var loginPhone = ""
     private(set) var recoveryIsTeacher = false
 #if DEBUG
     /// Screenshot harness only: makes `logout()` report pending commands.
@@ -213,6 +224,37 @@ final class AuthModel {
         membership.role.scopeKind == .linkedStudents ? String(localized: "feature.auth.phu.huynh") : membership.workspace.name
     }
 
+    /// Step one of sign-in: asks the server what the number is. `login` asks for the password, `guardian_setup`
+    /// lets a guardian whose number a teacher declared choose a first password, `teacher_register` opens workspace
+    /// registration with the number filled in.
+    func checkPhone(_ input: String) async throws {
+        message = nil
+        guard let phone = AuthFormat.normalizedPhone(input) else {
+            message = LoginText.invalidPhone
+            throw AuthValidationError.invalidPhone
+        }
+        do {
+            let endpoint = try APIEndpoint.json(method: .post, path: "auth/phone-check", body: PhoneCheckRequest(phone: phone),
+                                                requiresAuthentication: false)
+            let result = try await api.send(endpoint, as: PhoneCheckResult.self)
+            loginPhone = phone
+            switch result.next {
+            case .login: loginStep = .password
+            case .guardianSetup: screen = .guardianRegister
+            case .teacherRegister: screen = .register
+            }
+        } catch {
+            message = Self.userMessage(error)
+            throw error
+        }
+    }
+
+    /// Back to the phone box from the password step or the guardian and teacher screens.
+    func changePhone() {
+        loginStep = .phone
+        show(.login)
+    }
+
     func login(phone: String, password: String) async throws {
         message = nil; isLocked = false
         do {
@@ -258,13 +300,12 @@ final class AuthModel {
         } catch { message = Self.userMessage(error); throw error }
     }
 
-    func registerGuardian(name: String, phone: String, password: String, confirmation: String) async throws {
+    /// A guardian whose number a teacher declared sets a first password and goes straight into the app.
+    func setUpGuardian(password: String, confirmation: String) async throws {
         message = nil
         do {
-            try AuthValidation.validateGuardianRegistration(name: name, phone: phone,
-                                                            password: password, confirmation: confirmation)
-            let request = GuardianRegistrationRequest(phone: domesticPhone(phone), password: password,
-                                                       displayName: name.trimmingCharacters(in: .whitespacesAndNewlines))
+            try AuthValidation.validateGuardianSetup(phone: loginPhone, password: password, confirmation: confirmation)
+            let request = GuardianRegistrationRequest(phone: domesticPhone(loginPhone), password: password)
             let endpoint = try APIEndpoint.json(method: .post, path: "auth/register-guardian",
                                                 body: request, requiresAuthentication: false)
               let result = try await api.send(endpoint, as: AuthSession.self)
@@ -279,6 +320,13 @@ final class AuthModel {
                 screen = .main
             }
         } catch {
+            if let failure = error as? APIFailure, case .server(let status, let detail, _) = failure,
+               status == 403, detail.details?["reason"]?.string == "phone_not_declared" {
+                loginStep = .phone
+                screen = .login
+                message = LoginText.phoneNotDeclared
+                throw error
+            }
             message = Self.userMessage(error)
             throw error
         }
@@ -581,7 +629,8 @@ final class AuthModel {
 
     private static func userMessage(_ error: Error) -> String {
         if let apiError = error as? APIFailure,
-           case .server(_, let detail, _) = apiError {
+           case .server(let status, let detail, _) = apiError {
+            if status == 429 { return LoginText.rateLimited }
               if detail.code == "invalid_credentials" { return AuthCopy.invalidCredentials }
             return detail.localizedMessage
         }
@@ -591,6 +640,7 @@ final class AuthModel {
             case .passwordLength: return AuthCopy.passwordTooShort
             case .passwordMismatch: return AuthCopy.passwordMismatch
             case .samePassword: return AuthCopy.sameAsCurrent
+            case .invalidPhone: return LoginText.invalidPhone
             }
         }
         return String(localized: "feature.auth.khong.the.ket.noi.dich.vu.vui.long.thu.lai")

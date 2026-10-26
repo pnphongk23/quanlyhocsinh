@@ -64,6 +64,20 @@ enum AuthFormat {
         return "\(digits.prefix(3)) \(digits.dropFirst(3).prefix(3)) \(digits.suffix(3))"
     }
 
+    /// What the sign-in phone box accepts: `0900 000 001`, `+84 900 000 001`, `84900000001`, with spaces, dots,
+    /// dashes or brackets between digits. Returns the domestic form `0900000001`, or nil when it is not a mobile
+    /// number of nine digits after the country or trunk prefix.
+    static func normalizedPhone(_ raw: String) -> String? {
+        let compact = raw.filter { !$0.isWhitespace && !"-().".contains($0) }
+        var rest = Substring(compact)
+        if rest.hasPrefix("+84") { rest = rest.dropFirst(3) }
+        else if rest.hasPrefix("84"), rest.count == 11 { rest = rest.dropFirst(2) }
+        else if rest.hasPrefix("0"), rest.count == 10 { rest = rest.dropFirst(1) }
+        else { return nil }
+        guard rest.count == 9, rest.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        return "0" + rest
+    }
+
     static func national(_ raw: String) -> String {
         var digits = raw.filter(\.isNumber)
         if digits.hasPrefix("84") { digits = String(digits.dropFirst(2)) }

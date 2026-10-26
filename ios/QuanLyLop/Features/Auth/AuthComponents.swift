@@ -89,22 +89,6 @@ struct AuthPage<Content: View>: View {
     }
 }
 
-/// `.brand` + `.logo` + `.brandName`.
-struct AuthBrand: View {
-    var body: some View {
-        HStack(spacing: 12) {
-            Text("L")
-                .font(AppFont.font(size: 24, weight: .bold))
-                .foregroundStyle(AppColors.onPrimary)
-                .frame(width: 56, height: 56)
-                .background(AppColors.primary, in: RoundedRectangle(cornerRadius: 16))
-            Text(String(localized: "feature.auth.quan.ly.lop.tieng.anh"))
-                .appText(AuthText.noteStrong)
-                .foregroundStyle(AppColors.text)
-        }
-    }
-}
-
 /// `.title` (34 / 700, margin-top 30).
 struct AuthTitle: View {
     let text: String
@@ -209,21 +193,6 @@ struct AuthNote: View {
             .appText(AuthText.note)
             .foregroundStyle(AppColors.muted)
             .padding(.top, topPadding)
-    }
-}
-
-/// `.hintCard`: `--color-neutral-soft`, radius 12, 15 / 1.5, bold lead-in.
-struct AuthHintCard: View {
-    let lead: String
-    let text: String
-    var body: some View {
-        (Text(lead).font(AppFont.font(size: 15, weight: .bold)) + Text(text))
-            .appText(AuthText.note)
-            .foregroundStyle(AppColors.text)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppColors.neutralSoft, in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -405,6 +374,37 @@ struct AuthPhoneField: View {
             index = end
         }
         return parts.joined(separator: " ")
+    }
+}
+
+/// The sign-in phone box: no length limit while typing and no grouping; `0…`, `+84…` and spaces are all
+/// accepted and checked when the button is tapped (`AuthFormat.normalizedPhone`).
+struct AuthLoginPhoneField: View {
+    let label: String
+    @Binding var text: String
+    var readOnly = false
+    var hasError = false
+    var identifier: String? = nil
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label).appText(AuthText.fieldLabel).foregroundStyle(AppColors.text)
+            TextField("", text: $text, prompt: Text("0900 000 001").foregroundStyle(AppColors.placeholder))
+                .appText(AuthText.input)
+                .foregroundStyle(readOnly ? AppColors.muted : AppColors.text)
+                .tint(AppColors.primary)
+                .keyboardType(.phonePad)
+                .textContentType(.telephoneNumber)
+                .focused($focused)
+                .disabled(readOnly)
+                .padding(.horizontal, 16)
+                .frame(height: 56)
+                .background(readOnly ? AppColors.neutralSoft : AppColors.surface,
+                            in: RoundedRectangle(cornerRadius: AppRadius.control))
+                .overlay(boxBorder(focused: focused, readOnly: readOnly, hasError: hasError))
+                .accessibilityIdentifier(identifier ?? "auth.phone")
+        }
     }
 }
 

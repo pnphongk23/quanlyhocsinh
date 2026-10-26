@@ -8,62 +8,61 @@ struct AuthLoginView: View {
     @State private var password = ""
     @State private var saveController = AppSaveController()
 
+    private var onPasswordStep: Bool { model.loginStep == .password }
+
     var body: some View {
         AuthPage {
-            AuthBrand()
             AuthTitle(text: String(localized: "feature.auth.ang.nhap"))
-            AuthDescription(text: String(localized: "feature.auth.danh.cho.giao.vien.va.phu.huynh"))
             if model.isLocked {
                 AuthBanner(text: AuthCopy.loginLocked, tone: .warning)
             } else if let message = model.message {
                 AuthBanner(text: message, tone: .error)
             }
             VStack(spacing: 20) {
-                AuthPhoneField(label: String(localized: "feature.auth.so.ien.thoai"), digits: $phone,
-                               disabled: model.isLocked,
-                               hasError: model.message != nil && !model.isLocked,
-                               identifier: "login.phone")
-                AuthPasswordField(label: String(localized: "feature.auth.mat.khau"), value: $password,
-                                  hasError: model.message != nil && !model.isLocked,
-                                  disabled: model.isLocked,
-                                  identifier: "login.password")
-                HStack {
-                    Spacer(minLength: 0)
-                    Button(String(localized: "feature.auth.quen.mat.khau")) {
-                        model.showForgotPassword(phone: phone,
-                                                 isTeacher: model.activeMembership?.role.scopeKind == .workspace)
-                    }
-                    .appText(AuthText.link)
-                    .foregroundStyle(AppColors.primary)
-                }
-                  AppSaveButton(title: String(localized: "feature.auth.ang.nhap"), controller: saveController,
-                                isEnabled: !model.isLocked, identifier: "login.submit") {
-                      try await model.login(phone: phone, password: password)
-                  }
+                if onPasswordStep { passwordStep } else { phoneStep }
             }
             .padding(.top, 24)
-
-            VStack(spacing: 16) {
-              Button { model.show(.register) } label: {
-                    (Text(String(localized: "feature.auth.chua.co.khong.gian.lam.viec")).foregroundStyle(AppColors.muted)
-                     + Text(String(localized: "feature.auth.ang.ky.cho.giao.vien")).foregroundStyle(AppColors.primary))
-                        .appText(AuthText.note)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .multilineTextAlignment(.center)
-              }
-              .buttonStyle(.plain)
-              .accessibilityIdentifier("login.registerTeacher")
-              Button { model.show(.guardianRegister) } label: {
-                  Text(String(localized: "auth.guardian.registerLink", table: "Guardian"))
-                      .appText(AuthText.noteStrong)
-                      .foregroundStyle(AppColors.primary)
-                      .frame(maxWidth: .infinity, alignment: .center)
-              }
-              .buttonStyle(.plain)
-                  AuthHintCard(lead: String(localized: "feature.auth.phu.huynh.c87f8d0d"), text: String(localized: "feature.auth.phu.huynh.dung.so.trong.ho.so.hoc.sinh"))
-            }
-            .padding(.top, 32)
             Spacer(minLength: 0)
+        }
+    }
+
+    private var phoneStep: some View {
+        Group {
+            AuthLoginPhoneField(label: String(localized: "feature.auth.so.ien.thoai"), text: $phone,
+                                hasError: model.message != nil, identifier: "login.phone")
+            AppSaveButton(title: LoginText.next, controller: saveController, identifier: "login.next") {
+                try await model.checkPhone(phone)
+            }
+        }
+    }
+
+    private var passwordStep: some View {
+        Group {
+            AuthLoginPhoneField(label: String(localized: "feature.auth.so.ien.thoai"),
+                                text: .constant(AuthFormat.phone(model.loginPhone)), readOnly: true,
+                                identifier: "login.phone")
+            Button(LoginText.changePhone) { password = ""; model.changePhone() }
+                .appText(AuthText.link)
+                .foregroundStyle(AppColors.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("login.changePhone")
+            AuthPasswordField(label: String(localized: "feature.auth.mat.khau"), value: $password,
+                              hasError: model.message != nil && !model.isLocked,
+                              disabled: model.isLocked,
+                              identifier: "login.password")
+            HStack {
+                Spacer(minLength: 0)
+                Button(String(localized: "feature.auth.quen.mat.khau")) {
+                    model.showForgotPassword(phone: model.loginPhone,
+                                             isTeacher: model.activeMembership?.role.scopeKind == .workspace)
+                }
+                .appText(AuthText.link)
+                .foregroundStyle(AppColors.primary)
+            }
+            AppSaveButton(title: String(localized: "feature.auth.ang.nhap"), controller: saveController,
+                          isEnabled: !model.isLocked, identifier: "login.submit") {
+                try await model.login(phone: model.loginPhone, password: password)
+            }
         }
     }
 }
@@ -74,10 +73,15 @@ struct AuthRegisterView: View {
     let model: AuthModel
     @State private var name = ""
     @State private var workspace = ""
-    @State private var phone = ""
+    @State private var phone: String
     @State private var password = ""
     @State private var confirmation = ""
     @State private var saveController = AppSaveController()
+
+    init(model: AuthModel) {
+        self.model = model
+        _phone = State(initialValue: AuthFormat.national(model.loginPhone))
+    }
 
     private var mismatch: Bool { !confirmation.isEmpty && confirmation != password }
     private var blocked: Bool {
@@ -88,7 +92,7 @@ struct AuthRegisterView: View {
 
     var body: some View {
         AuthPage {
-            AuthBackButton { model.show(.login) }
+            AuthBackButton { model.changePhone() }
             AuthTitle(text: String(localized: "feature.auth.tao.khong.gian.lam.viec"))
             if let message = model.message { AuthBanner(text: message, tone: .error) }
             VStack(spacing: 20) {
@@ -290,35 +294,26 @@ struct AuthRolePickerView: View {
     }
 }
 
+/// A guardian whose number a teacher declared sets a first password (`phone-check` said `guardian_setup`).
 struct AuthGuardianRegisterView: View {
     let model: AuthModel
-    @State private var name = ""
-    @State private var phone = ""
     @State private var password = ""
     @State private var confirmation = ""
     @State private var saveController = AppSaveController()
 
     private var mismatch: Bool { !confirmation.isEmpty && confirmation != password }
-    private var disabled: Bool {
-        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || phone.isEmpty ||
-        password.count < 8 || confirmation.isEmpty || mismatch
-    }
+    private var disabled: Bool { password.count < 8 || confirmation.isEmpty || mismatch }
 
     var body: some View {
         AuthPage {
-            AuthBackButton { model.show(.login) }
-            AuthTitle(text: String(localized: "auth.guardian.registerTitle", table: "Guardian"))
-            AuthDescription(text: String(localized: "auth.guardian.registerDescription", table: "Guardian"))
-            if let message = model.message {
-                AuthBanner(text: message, tone: .error)
-            } else if let error = saveController.error {
-                AuthBanner(text: String(describing: error), tone: .error)
-            }
+            AuthBackButton { model.changePhone() }
+            AuthTitle(text: LoginText.guardianSetupTitle)
+            AuthDescription(text: LoginText.guardianSetupDescription)
+            if let message = model.message { AuthBanner(text: message, tone: .error) }
             VStack(spacing: AppMetrics.buttonPaddingMedium) {
-                AuthTextField(label: String(localized: "feature.auth.ten.hien.thi"), text: $name,
-                              placeholder: String(localized: "feature.auth.co.lan"), identifier: "guardian.register.name")
-                AuthPhoneField(label: String(localized: "feature.auth.so.ien.thoai"), digits: $phone,
-                               identifier: "guardian.register.phone")
+                AuthLoginPhoneField(label: String(localized: "feature.auth.so.ien.thoai"),
+                                    text: .constant(AuthFormat.phone(model.loginPhone)), readOnly: true,
+                                    identifier: "guardian.register.phone")
                 AuthPasswordField(label: String(localized: "feature.auth.mat.khau"), value: $password,
                                   autoComplete: .newPassword, identifier: "guardian.register.password",
                                   strengthPassword: password)
@@ -327,11 +322,9 @@ struct AuthGuardianRegisterView: View {
                                   autoComplete: .newPassword, hasError: mismatch,
                                   errorText: mismatch ? AuthCopy.passwordMismatch : nil,
                                   identifier: "guardian.register.confirm")
-                AppSaveButton(title: String(localized: "auth.guardian.createAccount", table: "Guardian"),
-                              controller: saveController, isEnabled: !disabled,
+                AppSaveButton(title: LoginText.guardianSetupSubmit, controller: saveController, isEnabled: !disabled,
                               identifier: "guardian.register.submit") {
-                    try await model.registerGuardian(name: name, phone: phone,
-                                                     password: password, confirmation: confirmation)
+                    try await model.setUpGuardian(password: password, confirmation: confirmation)
                 }
             }
             .padding(.top, AppMetrics.buttonHeightMedium / 2)
