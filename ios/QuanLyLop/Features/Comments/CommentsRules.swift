@@ -132,12 +132,7 @@ enum CommentsRules {
     }
 
     static func badge(_ row: I4TicketRow) -> (label: String, tone: AppPill.Tone) {
-        if row.isSent {
-            if let time = I4Format.time(row.slip?.sentAt) {
-                return (String.localizedStringWithFormat(String(localized: "feature.comments.a.gui.4c29c834"), String(describing: (time))), .success)
-            }
-            return (String(localized: "feature.comments.a.gui"), .success)
-        }
+        if row.isSent { return (String(localized: "feature.comments.a.gui"), .success) }
         return (String(localized: "feature.comments.chua.gui"), .neutral)
     }
 

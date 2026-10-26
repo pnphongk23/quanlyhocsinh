@@ -187,8 +187,7 @@ final class CommentsRulesTests: XCTestCase {
     }
 
     func testBadgeCopyFollowsSlipStatus() {
-        let time = I4Format.time("2026-10-19T11:00:00.000Z") ?? ""
-        XCTAssertEqual(CommentsRules.badge(row("a", "An", stars: 5, sent: true)).label, "Đã gửi · \(time)")
+        XCTAssertEqual(CommentsRules.badge(row("a", "An", stars: 5, sent: true)).label, "Đã gửi")
         XCTAssertEqual(CommentsRules.badge(row("a", "An", stars: 5, sent: true)).tone, .success)
         XCTAssertEqual(CommentsRules.badge(row("b", "Bình", stars: nil, sent: false)).label, "Chưa gửi")
         XCTAssertEqual(CommentsRules.badge(row("b", "Bình", stars: nil, sent: false)).tone, .neutral)
