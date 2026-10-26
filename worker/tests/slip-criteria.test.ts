@@ -152,6 +152,20 @@ describe('slip criteria', () => {
       .toMatchObject({stars:3,scale:3,criteria:null,comment:null,version:1});
   });
 
+  it('keeps sent five-criteria slips unchanged when prior homework is regraded', async () => {
+    const f=await setup(),student=f.s[0]!;
+    const next=await insertSession(f.a.workspaceId,f.cls,'2099-01-01',f.a.userId),section=uid();
+    await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading'}),
+      command('slip.set',{session_id:next,student_id:student,criteria:31,note:''})]);
+    const sent=await f.send([command('slip.send',{session_id:next,student_ids:[student]})]);
+    expect(sent.body.results[0].sent).toEqual([student]);
+    const regrade=(level:string)=>f.send([command('homework.grade.set',{section_id:section,student_id:student,level})]);
+    expect((await regrade('done')).body.results[0].status).toBe('applied');
+    expect((await regrade('not_done')).body.results[0].status).toBe('applied');
+    expect(await db.prepare('SELECT criteria,stars,comment,version,status,hw_manual FROM session_comments WHERE session_id=? AND student_id=?').bind(next,student).first<any>())
+      .toMatchObject({criteria:31,stars:5,comment:generateSlipComment(31),version:2,status:'sent',hw_manual:0});
+  });
+
   it('does not create a default slip when attendance changed after it was read', async () => {
     const f = await setup();
     const student = f.s[0]!;

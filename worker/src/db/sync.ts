@@ -283,9 +283,9 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
         AND (n.date>source.date OR (n.date=source.date AND n.start_time>source.start_time))
         WHERE source.workspace_id=? AND source.id=? ORDER BY n.date,n.start_time LIMIT 1`,i.workspaceId,parent.session_id);
       if (next) {
-          const slip=await one(db,'SELECT criteria,scale,hw_manual,version FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?',i.workspaceId,next.id,p.student_id);
-          if (slip && slip.scale===5 && slip.hw_manual===0) {
-            first.sql+=` AND EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=? AND hw_manual=0 AND scale=5)`;
+          const slip=await one(db,'SELECT criteria,scale,hw_manual,status,version FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?',i.workspaceId,next.id,p.student_id);
+          if (slip && slip.status==='draft' && slip.scale===5 && slip.hw_manual===0) {
+            first.sql+=` AND EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=? AND hw_manual=0 AND scale=5 AND status='draft')`;
             first.args.push(i.workspaceId,next.id,p.student_id,slip.version);
             const grades=await db.prepare(`SELECT hs.id section_id,hg.level FROM homework_sections hs LEFT JOIN homework_grades hg
               ON hg.workspace_id=hs.workspace_id AND hg.section_id=hs.id AND hg.student_id=?
@@ -293,7 +293,7 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
             const hasIncomplete=grades.results.some(g=>g.section_id===p.section_id ? values.level==='not_done' : g.level==='not_done');
             const criteria=hasIncomplete ? slip.criteria & ~16 : slip.criteria | 16;
             if (criteria!==slip.criteria) rest.push(q(`UPDATE session_comments SET criteria=?,stars=?,comment=?,version=version+1,updated_at=?,updated_by=?
-              WHERE workspace_id=? AND session_id=? AND student_id=? AND version=? AND hw_manual=0 AND scale=5 AND ${ack(c)}`,
+              WHERE workspace_id=? AND session_id=? AND student_id=? AND version=? AND hw_manual=0 AND scale=5 AND status='draft' AND ${ack(c)}`,
               criteria,bits(criteria),generateSlipComment(criteria),now,i.userId,i.workspaceId,next.id,p.student_id,slip.version));
           }
       }
