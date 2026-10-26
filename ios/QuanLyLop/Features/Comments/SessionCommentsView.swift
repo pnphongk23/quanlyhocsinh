@@ -180,8 +180,7 @@ struct SessionCommentsView: View {
             }
             .frame(minHeight: 20)
         } else {
-            Text(String(localized: row.getsDefaultSlip ? "comments.card.defaultSlip" : "comments.card.noSlip",
-                        table: "Teacher"))
+            Text(CommentsRules.starsCaption(row) ?? "")
                 .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
                 .foregroundStyle(AppColors.muted)
                 .frame(minHeight: 20)
@@ -216,7 +215,7 @@ struct SessionCommentsView: View {
         }
     }
 
-    private var defaultSlipCount: Int { sendableRows.count }
+    private var defaultSlipCount: Int { rows.filter { !$0.isSent }.count }
 
     private var defaultsDialog: some View {
         I4Dialog(title: SlipSheetText.defaultsTitle(count: defaultSlipCount), content: {
@@ -278,7 +277,7 @@ struct SessionCommentsView: View {
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                     .foregroundStyle(AppColors.muted)
                 if !skipped.isEmpty {
-                    warningText(String.localizedStringWithFormat(String(localized: "comments.send.skipped", table: "Teacher"), skipped.map(\.student.name).joined(separator: ", ")))
+                    warningText(SlipSheetText.withoutSlipNote(names: skipped.map(\.student.name).joined(separator: ", ")))
                 }
                 if let sendError {
                     Text(sendError)

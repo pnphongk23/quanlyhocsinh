@@ -33,10 +33,6 @@ struct I4TicketRow: Identifiable {
     var id: String { student.id }
     var stars: Int? { slip?.stars }
     var isSent: Bool { slip?.status == .sent }
-    /// Marked present or late: the only students who get a default slip when the class is sent.
-    var attended: Bool { attendance == .present || attendance == .late }
-    /// No slip yet, but sending the class will create the default five-star one.
-    var getsDefaultSlip: Bool { slip == nil && attended }
 }
 
 enum CommentsRules {
@@ -45,6 +41,12 @@ enum CommentsRules {
         case .all: true
         case .unsent: !row.isSent
         }
+    }
+
+    /// What the student card says under the name when the slip has no stars: a student with no slip (or an old
+    /// unscored draft) has nothing to show yet.
+    static func starsCaption(_ row: I4TicketRow) -> String? {
+        row.stars == nil ? SlipSheetText.notCommented : nil
     }
 
     static func filtered(_ rows: [I4TicketRow], _ filter: TicketFilter) -> [I4TicketRow] {
@@ -62,10 +64,10 @@ enum CommentsRules {
         }
     }
 
-    /// What "Gửi phiếu cả lớp" sends: every unsent slip, plus a default slip for each student present or late
-    /// who has none. Absent or not-yet-marked students without a slip are left out.
+    /// What "Gửi phiếu cả lớp" sends: the slips that exist and are not sent yet. A student with no slip has
+    /// nothing to send, whatever their attendance.
     static func sendable(_ rows: [I4TicketRow]) -> [I4TicketRow] {
-        rows.filter { !$0.isSent && ($0.slip != nil || $0.attended) }
+        rows.filter { !$0.isSent && $0.slip != nil }
     }
 
     struct DefaultSlip: Equatable {
@@ -76,27 +78,23 @@ enum CommentsRules {
         var comment: String { SlipRules.generatedSentence(criteria: criteria) }
     }
 
-    /// The default slips `slip.send` carries: each student with no slip (or an old unscored draft) who was present
-    /// or late, with the criteria their homework result gives.
-    static func sendDefaults(studentIDs: [String], slip: (String) -> SessionSlip?, attendance: (String) -> AttendanceStatus?,
+    /// The default slips `slip.send` carries: only an old unscored draft, which has no stars to send. A student
+    /// with no slip gets nothing here, whatever their attendance.
+    static func sendDefaults(studentIDs: [String], slip: (String) -> SessionSlip?,
                              sections: [HomeworkSection], grades: [HomeworkGrade]) -> [DefaultSlip] {
         studentIDs.compactMap { id in
-            let existing = slip(id)
-            // An old unscored draft needs its default whatever the attendance; having no slip at all needs a present
-            // or late student.
-            let unscored = existing?.isLegacy == true && existing?.stars == nil
-            let attended = attendance(id) == .present || attendance(id) == .late
-            guard unscored || (existing == nil && attended) else { return nil }
+            guard let existing = slip(id), existing.isLegacy, existing.stars == nil else { return nil }
             return DefaultSlip(studentID: id,
                                criteria: HomeworkRules.openingCriteria(slip: nil, sections: sections, grades: grades, studentID: id),
-                               note: existing?.note ?? "")
+                               note: existing.note)
         }
     }
 
-    /// "Gán tất cả mặc định": every slip the class send would send (so never a sent one) gets all five criteria,
-    /// with homework following last session's grades, a regenerated sentence and its own note kept.
+    /// "Gán tất cả mặc định": every slip that is not sent gets all five criteria, and every student without a
+    /// slip (absent or not marked too) gets a new one. Homework follows last session's grades, the sentence is
+    /// regenerated and a slip's own note is kept.
     static func defaultSlips(_ rows: [I4TicketRow], sections: [HomeworkSection], grades: [HomeworkGrade]) -> [DefaultSlip] {
-        sendable(rows).map {
+        rows.filter { !$0.isSent }.map {
             DefaultSlip(studentID: $0.student.id,
                         criteria: HomeworkRules.openingCriteria(slip: nil, sections: sections, grades: grades,
                                                                 studentID: $0.student.id),
@@ -104,9 +102,9 @@ enum CommentsRules {
         }
     }
 
-    /// Unsent students the class send leaves out because they have no slip and did not attend.
+    /// Unsent students the class send leaves out because they have no slip.
     static func withoutSlip(_ rows: [I4TicketRow]) -> [I4TicketRow] {
-        rows.filter { $0.slip == nil && !$0.attended }
+        rows.filter { $0.slip == nil }
     }
 
     enum SendAvailability: Equatable {

@@ -167,7 +167,7 @@ final class SendSlipsTests: XCTestCase {
                  "version": .number(1), "updated_at": .string("2026-10-25T10:00:00.000Z")])
     }
 
-    func testSlipSendCarriesAGeneratedDefaultForEachPresentStudentWithoutASlip() async throws {
+    func testSlipSendCarriesNoDefaultForStudentsWithoutASlip() async throws {
         let store = try SQLiteStore(path: ":memory:", scope: scope)
         try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
             "class_session": [session("before", date: "2026-10-19"), session("session", date: "2026-10-26")],
@@ -182,11 +182,7 @@ final class SendSlipsTests: XCTestCase {
 
         _ = await data.sendSlips(sessionID: "session", studentIDs: ["a", "b", "c"])
 
-        let defaults = try XCTUnwrap(api.pushedDefaults)
-        XCTAssertEqual(defaults.count, 1, "a has a slip, c was absent")
-        XCTAssertEqual(defaults.first?["student_id"] as? String, "b")
-        XCTAssertEqual(defaults.first?["criteria"] as? Int, 15, "homework not done last session")
-        XCTAssertEqual(defaults.first?["comment"] as? String, SlipRules.generatedSentence(criteria: 15))
+        XCTAssertNil(api.pushedDefaults, "b was present and c absent, but neither has a slip")
     }
 
     func testGradingHomeworkAgainRewritesTheNextSessionsDraftSlipAndSkipsSentOrHandSetOnes() async throws {
@@ -290,20 +286,29 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertTrue(pending.isEmpty)
     }
 
-    func testStudentsWithoutASlipAreSentAndNotAttendedIsNotAnError() async throws {
+    func testAssignAllDefaultsCreatesASlipForAStudentWithNoSlipAndNoAttendance() async throws {
         let store = try await seededStore()
-        let api = SlipPushAPI(mode: .notAttended)
-        let data = I4FeatureStore(store: store, api: api)
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
+            "student": [.object(["id": .string("z"), "class_id": .string("c"), "name": .string("Em z"), "parent_phone": .null,
+                                 "enrolled_at": .string("2026-09-01"), "left_at": .null, "status": .string("active"),
+                                 "version": .number(1)])]], deleted: []))
+        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .offline))
         await data.refresh()
+        XCTAssertNil(data.slip(sessionID: "session", studentID: "z"))
 
-        let outcome = await data.sendSlips(sessionID: "session", studentIDs: ["a", "b", "c", "d"])
+        let failure = await data.saveDefaultSlips(
+            sessionID: "session", slips: [CommentsRules.DefaultSlip(studentID: "z", criteria: SlipRules.allCriteria, note: "")])
 
-        XCTAssertEqual(outcome, .sent(3))
-        XCTAssertEqual(api.pushedStudentIDs, ["a", "b", "c", "d"])
-        XCTAssertNil(data.slip(sessionID: "session", studentID: "d"))
-        XCTAssertEqual(data.slip(sessionID: "session", studentID: "a")?.status, .sent)
-        let pending = try await store.pendingCommands()
-        XCTAssertTrue(pending.isEmpty)
+        XCTAssertNil(failure)
+        let command = try await store.pendingCommands().first { $0.kind == "slip.set" }
+        guard case .object(let fields) = try XCTUnwrap(command).payload else { return XCTFail("payload is not an object") }
+        XCTAssertEqual(fields["student_id"], .string("z"))
+        XCTAssertEqual(fields["criteria"], .number(31))
+        XCTAssertEqual(fields["comment"], .string(SlipRules.generatedSentence(criteria: 31)))
+        XCTAssertEqual(fields["hw_manual"], .bool(false))
+        let row = try XCTUnwrap(data.slip(sessionID: "session", studentID: "z"))
+        XCTAssertEqual(row.status, .draft)
+        XCTAssertEqual(row.stars, 5)
     }
 
     func testAServerSkipForAnotherReasonStillCountsAsNotSent() async throws {
@@ -347,7 +352,7 @@ final class SendSlipsTests: XCTestCase {
 
 /// Answers the sync endpoints and one `slip.send` push; `pushedCommandTypes` shows what reached the wire.
 private final class SlipPushAPI: APIClient, @unchecked Sendable {
-    enum Mode { case offline, pushFails, sentAll, slowSentAll, sentOnlyA, notAttended }
+    enum Mode { case offline, pushFails, sentAll, slowSentAll, sentOnlyA }
 
     let baseURL = URL(string: "https://fixture.invalid/v1")!
     private let mode: Mode
@@ -383,7 +388,6 @@ private final class SlipPushAPI: APIClient, @unchecked Sendable {
             let skipped: String
             switch mode {
             case .sentAll, .slowSentAll: (sent, skipped) = ("[\"a\",\"b\"]", "[]")
-            case .notAttended: (sent, skipped) = ("[\"a\",\"b\",\"c\"]", "[{\"student_id\":\"d\",\"reason\":\"not_attended\"}]")
             default: (sent, skipped) = ("[\"a\"]", "[{\"student_id\":\"b\",\"reason\":\"slip_locked\"}]")
             }
             json = "{\"epoch\":1,\"cursor\":1,\"results\":[{\"id\":\"\(id)\",\"status\":\"applied\",\"sent\":\(sent),\"skipped\":\(skipped)}]}"

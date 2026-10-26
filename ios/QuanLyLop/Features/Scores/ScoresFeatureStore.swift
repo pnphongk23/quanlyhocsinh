@@ -379,9 +379,8 @@ final class I4FeatureStore: ObservableObject {
         case failed(String)
     }
 
-    /// Sends the given students' slips and waits for the server's answer. A student without a slip gets the
-    /// default five-star slip from the server, which only does so for students marked present or late; the
-    /// others come back as skipped with `not_attended`, which is expected and not an error.
+    /// Sends the given students' slips and waits for the server's answer. Only slips that exist are sent; a
+    /// student without one is never asked for. An old unscored draft carries its default sentence along.
     /// The `slip.send` command goes straight to the server and is never written to the outbox, so an
     /// unconfirmed send leaves nothing behind that could be replayed later; the slips stay as they were.
     /// The local state follows what the server reports as `sent` and `skipped`.
@@ -403,7 +402,7 @@ final class I4FeatureStore: ObservableObject {
             "session_id": .string(sessionID),
             "student_ids": .array(chosen.map { JSONValue.string($0) })
         ]
-        // A student without a slip who was present or late gets a default one; the server only stores the sentence.
+        // An old unscored draft has no stars to send, so it carries the default; the server only stores the sentence.
         let defaults = sendDefaults(sessionID: sessionID, studentIDs: chosen)
         if !defaults.isEmpty {
             fields["defaults"] = .array(defaults.map {
@@ -439,13 +438,10 @@ final class I4FeatureStore: ObservableObject {
                                   status: .sent, sentAt: Self.now, version: slip.version, updatedAt: Self.now)
             try? await store.write(row, forKey: key("slip", sessionID, id), enqueueing: nil)
         }
-        // Slips the server created from the default are picked up by this pull.
+        // Slips the server scored from a default are picked up by this pull.
         await syncIfNeeded()
         await refresh()
-        let notAttended = Set((result.skipped ?? []).compactMap { entry in
-            entry["reason"]?.string == Self.notAttendedReason ? entry["student_id"]?.string : nil
-        })
-        let notSent = chosen.filter { !sentIDs.contains($0) && !notAttended.contains($0) }.count
+        let notSent = chosen.filter { !sentIDs.contains($0) }.count
         let sentCount = chosen.filter { sentIDs.contains($0) }.count
         return notSent == 0 ? .sent(sentCount) : .partial(sent: sentCount, notSent: notSent)
     }
@@ -456,12 +452,8 @@ final class I4FeatureStore: ObservableObject {
         return CommentsRules.sendDefaults(
             studentIDs: studentIDs,
             slip: { slip(sessionID: sessionID, studentID: $0) },
-            attendance: { attendance(sessionID: sessionID, studentID: $0)?.status },
             sections: previous.map { sections(sessionID: $0.id) } ?? [], grades: grades)
     }
-
-    /// Why the server leaves out a student without a slip who was not marked present or late.
-    static let notAttendedReason = "not_attended"
 
     // MARK: - Homework
 

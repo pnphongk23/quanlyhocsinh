@@ -106,6 +106,12 @@ enum SlipSheetText {
     static let defaultsConfirm = "Gán"
     static let defaultsCancel = "Quay lại"
     static func defaultsTitle(count: Int) -> String { "Gán mặc định cho \(count) phiếu?" }
-    static let defaultsBody = "Mỗi phiếu chưa gửi được tích đủ 5 tiêu chí (BTVN theo điểm chấm), câu nhận xét tự sinh lại. Ghi chú riêng được giữ. Phiếu đã gửi không đổi."
+    static let defaultsBody = "Mỗi phiếu chưa gửi được tích đủ 5 tiêu chí (BTVN theo điểm chấm), câu nhận xét tự sinh lại; em chưa có phiếu (kể cả vắng hoặc chưa điểm danh) được tạo phiếu mới. Ghi chú riêng được giữ. Phiếu đã gửi không đổi."
     static let unsaved = "Chưa lưu"
+    /// The student card line while the student has no slip: no stars, nothing to send yet.
+    static let notCommented = "Chưa nhận xét"
+    /// The send-class dialog's note about students it leaves out because they have no slip.
+    static func withoutSlipNote(names: String) -> String {
+        "Chưa có phiếu nên không gửi: \(names). Mở phiếu của em để nhận xét rồi gửi riêng, hoặc gán mặc định."
+    }
 }
