@@ -140,4 +140,12 @@ final class SlipRulesTests: XCTestCase {
         XCTAssertEqual(try WireJSON.decoder().decode(SessionSlip.self, from: data), slip)
         XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("\"hw_manual\":true"))
     }
+
+    func testAParentSlipWithoutNoteDecodes() throws {
+        let slip = try decodeSlip(#"{"session_id":"s","student_id":"a","stars":4,"comment":"Con chú ý nghe giảng.\nGhi thêm","scale":5,"status":"sent","sent_at":null,"version":1,"updated_at":"2026-10-26T10:00:00.000Z"}"#)
+        XCTAssertEqual(slip.note, "")
+        XCTAssertNil(slip.criteria)
+        XCTAssertFalse(slip.hwManual)
+        XCTAssertEqual(SlipRules.sentence(for: slip), "Con chú ý nghe giảng.\nGhi thêm", "the merged paragraph is shown whole")
+    }
 }

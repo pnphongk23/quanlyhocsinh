@@ -304,6 +304,8 @@ final class I4FeatureStore: ObservableObject {
         /// `hwManual` is nil when the teacher did not touch the homework criterion: the slip keeps its flag and
         /// `slip.set` does not send one.
         case criteria(Int, comment: String?, hwManual: Bool? = nil)
+        /// Only the note changed on a five-criteria slip: the criteria, stars and stored sentence stay as saved.
+        case noteOnly
         case legacy
     }
 
@@ -327,6 +329,11 @@ final class I4FeatureStore: ObservableObject {
                               hwManual: hwManual ?? old?.hwManual ?? false, note: note,
                               status: old?.status ?? .draft, sentAt: old?.sentAt,
                               version: old?.version ?? 0, updatedAt: Self.now)
+        case .noteOnly:
+            guard let old else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+            row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: old.stars, criteria: old.criteria,
+                              comment: old.comment, scale: old.scale, hwManual: old.hwManual, note: note,
+                              status: old.status, sentAt: old.sentAt, version: old.version, updatedAt: Self.now)
         case .legacy:
             guard let old, let stars = old.stars else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
             fields["stars"] = .number(Double(stars))

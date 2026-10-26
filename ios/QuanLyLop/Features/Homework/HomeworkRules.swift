@@ -62,6 +62,21 @@ enum HomeworkRules {
         return !grades.contains { ids.contains($0.sectionId) && $0.studentId == studentID && $0.level == .notDone }
     }
 
+    /// The criteria a slip sheet opens with. A new slip starts with all five and follows last session's grades for
+    /// homework; an unsent slip whose homework flag is not hand-set follows the grades too; a sent slip, or one with a
+    /// hand-set flag, keeps exactly what was saved until the teacher changes it.
+    static func openingCriteria(slip: SessionSlip?, sections: [HomeworkSection], grades: [HomeworkGrade],
+                                studentID: String) -> Int {
+        let bit = 1 << (SlipRules.criteriaCount - 1)
+        guard let slip, !slip.isLegacy else {
+            return homeworkCriterionMet(sections: sections, grades: grades, studentID: studentID)
+                ? SlipRules.allCriteria : SlipRules.allCriteria & ~bit
+        }
+        let saved = slip.criteria ?? SlipRules.allCriteria
+        if slip.status == .sent || slip.hwManual { return saved }
+        return homeworkCriterionMet(sections: sections, grades: grades, studentID: studentID) ? saved | bit : saved & ~bit
+    }
+
     static func progress(sections: [HomeworkSection], grades: [HomeworkGrade], students: [Student]) -> [I4SectionProgress] {
         sections.map { section in
             let graded = students.filter { student in

@@ -366,6 +366,8 @@ struct I4TicketSheet: View {
     @State private var criteria: Int
     /// The teacher set the homework criterion by hand on this open sheet.
     @State private var homeworkTouched = false
+    /// The teacher ticked or unticked a criterion on this open sheet; until then a save only changes the note.
+    @State private var criteriaTouched = false
     @State private var note: String = ""
     @State private var error: String?
     @State private var saveController = AppSaveController()
@@ -387,19 +389,13 @@ struct I4TicketSheet: View {
         self.onClose = onClose
         self.onGoHomework = onGoHomework
         self.onSave = onSave
-        let current = slip.flatMap { $0.isLegacy ? nil : $0 }
-        var bits = current?.criteria ?? SlipRules.allCriteria
-        let homeworkMet = HomeworkRules.homeworkCriterionMet(
-            sections: sections, grades: grades, studentID: student.id,
-            manual: current?.hwManual == true ? SlipRules.isMet(bits, index: Self.homeworkIndex) : nil)
-        bits = homeworkMet ? bits | Self.homeworkBit : bits & ~Self.homeworkBit
+        let bits = HomeworkRules.openingCriteria(slip: slip, sections: sections, grades: grades, studentID: student.id)
         initialCriteria = bits
         _criteria = State(initialValue: bits)
         _note = State(initialValue: slip?.note ?? "")
     }
 
     private static let homeworkIndex = SlipRules.criteriaCount - 1
-    private static let homeworkBit = 1 << homeworkIndex
     private let initialCriteria: Int
 
     /// An old three-star slip keeps its stars and sentence; only its note can change.
@@ -549,6 +545,7 @@ struct I4TicketSheet: View {
         return Button {
             guard canWrite else { return }
             criteria = SlipRules.toggled(criteria, index: index)
+            criteriaTouched = true
             if isHomework { homeworkTouched = true }
             error = nil
         } label: {
@@ -595,6 +592,13 @@ struct I4TicketSheet: View {
     /// The sentence generated from the ticked criteria; it follows every tick and is never edited by hand.
     private var generatedSentence: String { SlipRules.generatedSentence(criteria: criteria) }
 
+    /// Until a criterion is touched the slip shows its saved sentence (an old hand-written one included);
+    /// after that the sentence follows the ticks.
+    private var shownSentence: String {
+        if !criteriaTouched, let stored = slip?.comment, !isLegacy { return stored }
+        return generatedSentence
+    }
+
     private var mergedComment: some View {
         VStack(alignment: .leading, spacing: TeacherMetrics.sheetSectionGap) {
             Text(SlipSheetText.commentTitle)
@@ -605,7 +609,7 @@ struct I4TicketSheet: View {
                     Text(SlipSheetText.autoLabel)
                         .appText(AppText.caption)
                         .foregroundStyle(AppColors.muted)
-                    Text(generatedSentence)
+                    Text(shownSentence)
                         .appText(AppText.chip)
                         .foregroundStyle(AppColors.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -740,7 +744,9 @@ struct I4TicketSheet: View {
         let note = self.note
         let grading: I4FeatureStore.SlipGrading = isLegacy
             ? .legacy
-            : .criteria(criteria, comment: generatedSentence, hwManual: homeworkTouched ? true : nil)
+            : (slip != nil && !criteriaTouched
+               ? .noteOnly
+               : .criteria(criteria, comment: generatedSentence, hwManual: homeworkTouched ? true : nil))
         if let failure = await onSave(grading, note) {
             error = failure
             throw I4SaveFailure(message: failure)

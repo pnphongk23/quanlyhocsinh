@@ -187,4 +187,31 @@ final class HomeworkRulesTests: XCTestCase {
         XCTAssertTrue(criterion(notDone, manual: true))
         XCTAssertFalse(criterion([grade("v", "a", .excellent)], manual: false))
     }
+
+    // MARK: - Opening criteria
+
+    private func slip(criteria: Int, status: SlipStatus, hwManual: Bool = false) -> SessionSlip {
+        SessionSlip(sessionId: "s", studentId: "a", stars: 4, criteria: criteria, hwManual: hwManual, note: "",
+                    status: status, sentAt: nil, version: 1, updatedAt: "2026-10-26T10:00:00.000Z")
+    }
+
+    func testASentSlipKeepsItsSavedCriteriaWhenHomeworkIsGradedAgain() {
+        let allDone = [grade("v", "a", .done), grade("r", "a", .done)]
+        let sent = slip(criteria: 0b01111, status: .sent)
+        XCTAssertEqual(HomeworkRules.openingCriteria(slip: sent, sections: parts, grades: allDone, studentID: "a"), 0b01111)
+    }
+
+    func testAnUnsentSlipFollowsTheGradesUnlessTheFlagIsHandSet() {
+        let notDone = [grade("v", "a", .notDone)]
+        let draft = slip(criteria: 0b11111, status: .draft)
+        XCTAssertEqual(HomeworkRules.openingCriteria(slip: draft, sections: parts, grades: notDone, studentID: "a"), 0b01111)
+        let manual = slip(criteria: 0b11111, status: .draft, hwManual: true)
+        XCTAssertEqual(HomeworkRules.openingCriteria(slip: manual, sections: parts, grades: notDone, studentID: "a"), 0b11111)
+    }
+
+    func testANewSlipStartsWithAllFiveOrFollowsTheGrades() {
+        XCTAssertEqual(HomeworkRules.openingCriteria(slip: nil, sections: parts, grades: [], studentID: "a"), 0b11111)
+        XCTAssertEqual(HomeworkRules.openingCriteria(slip: nil, sections: parts, grades: [grade("v", "a", .notDone)],
+                                                     studentID: "a"), 0b01111)
+    }
 }

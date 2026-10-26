@@ -156,7 +156,8 @@ struct SessionSlip: Codable, Sendable, Equatable {
         } else {
             hwManual = (try c.decodeIfPresent(Int.self, forKey: .hwManual) ?? 0) != 0
         }
-        note = try c.decode(String.self, forKey: .note)
+        // A parent no longer receives `note`: the server folds it into `comment`.
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
         status = try c.decode(SlipStatus.self, forKey: .status)
         sentAt = try c.decodeIfPresent(String.self, forKey: .sentAt)
         version = try c.decode(Int.self, forKey: .version)

@@ -69,6 +69,49 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(saved.slip?.hwManual, false)
     }
 
+    /// A saved slip for student "a" with a hand-written sentence and a hand-set homework flag.
+    private func seededWithHandSentence() async throws -> (SQLiteStore, I4FeatureStore) {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        guard case .object(var fields) = slip("a", stars: 4, note: "Cũ") else { throw APIFailure.offline }
+        fields["comment"] = .string("Con tiến bộ rõ")
+        fields["hw_manual"] = .number(1)
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "fixture",
+                                       upserts: ["slip": [.object(fields)]], deleted: []))
+        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .offline))
+        await data.refresh()
+        return (store, data)
+    }
+
+    private let studentA = Student(id: "a", classId: "c", name: "Em a", parentPhone: nil, enrolledAt: "2026-09-01",
+                                   leftAt: nil, status: .active, version: 1)
+
+    func testSavingOnlyTheNoteKeepsTheHandSentenceAndSendsNoCriteria() async throws {
+        let (store, data) = try await seededWithHandSentence()
+        let failure = await data.saveSlip(sessionID: "session", student: studentA, grading: .noteOnly, note: "Mới")
+        XCTAssertNil(failure)
+        let command = try await store.pendingCommands().first { $0.kind == "slip.set" }
+        guard case .object(let fields) = try XCTUnwrap(command).payload else { return XCTFail("payload is not an object") }
+        XCTAssertEqual(fields["note"], .string("Mới"))
+        XCTAssertNil(fields["criteria"])
+        XCTAssertNil(fields["comment"])
+        XCTAssertNil(fields["hw_manual"])
+        let row = try XCTUnwrap(data.slip(sessionID: "session", studentID: "a"))
+        XCTAssertEqual(row.comment, "Con tiến bộ rõ")
+        XCTAssertEqual(row.criteria, 0b1111)
+        XCTAssertTrue(row.hwManual)
+    }
+
+    func testNilHwManualKeepsAHandSetFlag() async throws {
+        let (store, data) = try await seededWithHandSentence()
+        let failure = await data.saveSlip(sessionID: "session", student: studentA,
+                                          grading: .criteria(0b00111, comment: nil, hwManual: nil), note: "Cũ")
+        XCTAssertNil(failure)
+        let command = try await store.pendingCommands().first { $0.kind == "slip.set" }
+        guard case .object(let fields) = try XCTUnwrap(command).payload else { return XCTFail("payload is not an object") }
+        XCTAssertNil(fields["hw_manual"])
+        XCTAssertTrue(try XCTUnwrap(data.slip(sessionID: "session", studentID: "a")).hwManual)
+    }
+
     func testFailedPushAfterSyncStillLeavesNoCommand() async throws {
         let store = try await seededStore()
         let api = SlipPushAPI(mode: .pushFails)
