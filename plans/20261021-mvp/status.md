@@ -419,3 +419,4 @@ Tạm thời CHỈ review và sửa phần `design/prototype` liên quan spec MV
 - 2026-10-25: web fb4bdc4 lên staging (Pages ef8fa5fb, bundle BaSRV_pY; GL curl khớp sha, sw no-cache; rollback 345490c3). iOS 86e31a7 bỏ giới hạn 300 (245 pass/2 skip), HEAD để người dùng rebuild.
 - 2026-10-26: người dùng thay toàn bộ domain lead. Archive 2a962f0e (backend), 4a98689d (web), 82fbee2a (iOS), 20829c3e (QA). Lead mới (brief 95): backend Tiêu Hà 39d623ae, web Chu Du 7c66b269, iOS Lỗ Túc 6a3d4b70, QA Bàng Thống 9c4cfb05.
 - 2026-10-26 00:25 · Backend brief 94: migration 0010 + Worker 06d82e19 (từ 9849f08) lên staging; GL xác nhận: version 100%, /v1/health 200, backup pre-0010 có 93 phiếu (chmod 600). Chờ người dùng: phiếu đã gửi có tính lại theo chấm BTVN (A/B); chọn mock mobile grid/wrap.
+- 2026-10-26 · Backend: quyết định B (phiếu đã gửi giữ nguyên khi chấm lại BTVN) deploy Worker 0cb6f168 từ 20c266f; GL gate tsc+187/187; GL xác nhận version 100% + /v1/health 200.
