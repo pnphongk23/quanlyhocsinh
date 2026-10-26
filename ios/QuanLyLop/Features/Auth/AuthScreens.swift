@@ -6,7 +6,9 @@ struct AuthLoginView: View {
     let model: AuthModel
     @State private var phone = ""
     @State private var password = ""
-    @State private var saveController = AppSaveController()
+    // One controller per step: the phone step's "saved" hold must not show on the password step's button.
+    @State private var phoneController = AppSaveController()
+    @State private var loginController = AppSaveController()
 
     private var onPasswordStep: Bool { model.loginStep == .password }
 
@@ -30,7 +32,7 @@ struct AuthLoginView: View {
         Group {
             AuthLoginPhoneField(label: String(localized: "feature.auth.so.ien.thoai"), text: $phone,
                                 hasError: model.message != nil, identifier: "login.phone")
-            AppSaveButton(title: LoginText.next, controller: saveController,
+            AppSaveButton(title: LoginText.next, controller: phoneController,
                           isEnabled: model.phoneCheckLockedUntil == nil, identifier: "login.next") {
                 try await model.checkPhone(phone)
             }
@@ -61,7 +63,7 @@ struct AuthLoginView: View {
                 .appText(AuthText.link)
                 .foregroundStyle(AppColors.primary)
             }
-            AppSaveButton(title: String(localized: "feature.auth.ang.nhap"), controller: saveController,
+            AppSaveButton(title: String(localized: "feature.auth.ang.nhap"), controller: loginController,
                           isEnabled: !model.isLocked, identifier: "login.submit") {
                 try await model.login(phone: model.loginPhone, password: password)
             }
