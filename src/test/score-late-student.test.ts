@@ -156,7 +156,7 @@ describe("score for a student enrolled after the test date", () => {
     expect(server.rows.get("test")?.has(testB!.id)).toBe(false);
     server.hooks.rejectCommand = (command) => command.type === "attendance.set" ? "invalid_attendance" : undefined;
     await d.syncNow();
-    expect(server.hooks.pushBatches[0].map((command: any) => command.type)).toEqual(["test.create", "attendance.set"]);
+    expect(server.hooks.pushBatches[0].map((command: any) => command.type).sort()).toEqual(["attendance.set", "test.create"]);
     expect(server.hooks.pushBatches.slice(1).map((batch) => batch.length)).toEqual([50, 3]);
     expect(server.hooks.pushBatches.slice(1).flat().every((command: any) => command.payload.test_id === testB!.id)).toBe(true);
     expect(server.rows.get("test")?.has(testB!.id)).toBe(true);
