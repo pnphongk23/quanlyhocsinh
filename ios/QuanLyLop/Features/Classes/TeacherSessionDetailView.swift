@@ -20,8 +20,8 @@ struct TeacherSessionDetailView: View {
 
     private let tabs = [
         TeacherTextTabs.Item(id: "diem-danh", label: String(localized: "feature.classes.iem.danh")),
-        TeacherTextTabs.Item(id: "nhan-xet", label: String(localized: "feature.classes.nhan.xet")),
         TeacherTextTabs.Item(id: "btvn", label: String(localized: "feature.classes.bai.tap.ve.nha")),
+        TeacherTextTabs.Item(id: "nhan-xet", label: String(localized: "feature.classes.nhan.xet")),
     ]
 
     var body: some View {
