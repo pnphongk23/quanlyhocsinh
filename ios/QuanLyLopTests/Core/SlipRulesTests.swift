@@ -141,6 +141,13 @@ final class SlipRulesTests: XCTestCase {
         XCTAssertTrue(String(decoding: data, as: UTF8.self).contains("\"hw_manual\":true"))
     }
 
+    func testHomeworkChipSaysSoWhenLastSessionHadNoHomework() {
+        XCTAssertEqual(SlipSheetText.homeworkChipNote(previousSectionCount: 0), "Buổi trước chưa có BTVN")
+        XCTAssertEqual(SlipSheetText.homeworkChipNote(previousSectionCount: 2), "Theo chấm BTVN")
+        let none = HomeworkRules.openingCriteria(slip: nil, sections: [], grades: [], studentID: "a")
+        XCTAssertTrue(SlipRules.isMet(none, index: 4), "the criterion stays ticked")
+    }
+
     func testAParentSlipWithoutNoteDecodes() throws {
         let slip = try decodeSlip(#"{"session_id":"s","student_id":"a","stars":4,"comment":"Con chú ý nghe giảng.\nGhi thêm","scale":5,"status":"sent","sent_at":null,"version":1,"updated_at":"2026-10-26T10:00:00.000Z"}"#)
         XCTAssertEqual(slip.note, "")

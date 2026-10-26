@@ -568,7 +568,7 @@ struct I4TicketSheet: View {
                     .minimumScaleFactor(0.85)
                 if isHomework {
                     Spacer(minLength: 0)
-                    if !homeworkIsManual { AppPill(title: SlipSheetText.followsGrades, tone: .neutral) }
+                    if !homeworkIsManual { AppPill(title: SlipSheetText.homeworkChipNote(previousSectionCount: sections.count), tone: .neutral) }
                 }
             }
             .foregroundStyle(met ? AppState.selectedFg : AppColors.muted)
@@ -606,9 +606,6 @@ struct I4TicketSheet: View {
                 .foregroundStyle(AppColors.text)
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(SlipSheetText.autoLabel)
-                        .appText(AppText.caption)
-                        .foregroundStyle(AppColors.muted)
                     Text(shownSentence)
                         .appText(AppText.chip)
                         .foregroundStyle(AppColors.text)

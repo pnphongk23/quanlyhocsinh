@@ -72,8 +72,12 @@ enum SlipSheetText {
         canWrite ? "\(stars)/5 sao · bấm tiêu chí để đổi" : "\(stars)/5 sao"
     }
     static let followsGrades = "Theo chấm BTVN"
+    static let noPreviousHomework = "Buổi trước chưa có BTVN"
+    /// The note on the homework chip: it follows last session's grades, unless there was nothing to grade.
+    static func homeworkChipNote(previousSectionCount: Int) -> String {
+        previousSectionCount == 0 ? noPreviousHomework : followsGrades
+    }
     static let commentTitle = "Nhận xét gửi phụ huynh"
-    static let autoLabel = "Tự sinh theo tiêu chí"
     static let notePlaceholder = "Thêm nhận xét riêng (không bắt buộc)…"
     static let unsaved = "Chưa lưu"
 }
