@@ -30,7 +30,8 @@ struct AuthLoginView: View {
         Group {
             AuthLoginPhoneField(label: String(localized: "feature.auth.so.ien.thoai"), text: $phone,
                                 hasError: model.message != nil, identifier: "login.phone")
-            AppSaveButton(title: LoginText.next, controller: saveController, identifier: "login.next") {
+            AppSaveButton(title: LoginText.next, controller: saveController,
+                          isEnabled: model.phoneCheckLockedUntil == nil, identifier: "login.next") {
                 try await model.checkPhone(phone)
             }
         }
@@ -44,7 +45,8 @@ struct AuthLoginView: View {
             Button(LoginText.changePhone) { password = ""; model.changePhone() }
                 .appText(AuthText.link)
                 .foregroundStyle(AppColors.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: AppMetrics.tap, alignment: .leading)
+                .contentShape(Rectangle())
                 .accessibilityIdentifier("login.changePhone")
             AuthPasswordField(label: String(localized: "feature.auth.mat.khau"), value: $password,
                               hasError: model.message != nil && !model.isLocked,

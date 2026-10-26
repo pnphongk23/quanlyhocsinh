@@ -541,7 +541,13 @@ struct AppSpinner: View {
 enum LoginText {
     static let next = "Tiếp tục"
     static let invalidPhone = "Số điện thoại chưa đúng. Nhập số di động 10 chữ số, ví dụ 0900 000 001."
-    static let rateLimited = "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau ít phút."
+    /// "30 giây", "2 phút": the wait the server asked for, rounded up to whole minutes from one minute on.
+    static func wait(seconds: Int) -> String {
+        seconds < 60 ? "\(max(seconds, 1)) giây" : "\((seconds + 59) / 60) phút"
+    }
+    static func rateLimited(seconds: Int) -> String {
+        "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau \(wait(seconds: seconds))."
+    }
     static let changePhone = "Đổi số điện thoại"
     static let guardianSetupTitle = "Đặt mật khẩu"
     static let guardianSetupDescription = "Số này đã được giáo viên khai cho học sinh. Đặt mật khẩu để vào ứng dụng."

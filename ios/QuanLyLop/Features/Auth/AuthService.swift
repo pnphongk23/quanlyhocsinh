@@ -244,8 +244,35 @@ final class AuthModel {
             case .teacherRegister: screen = .register
             }
         } catch {
+            if let failure = error as? APIFailure, case .server(let status, let detail, let retryAfter) = failure {
+                if status == 429 {
+                    let seconds = max(Int((retryAfter ?? 60).rounded(.up)), 1)
+                    lockPhoneCheck(seconds: seconds)
+                    message = LoginText.rateLimited(seconds: seconds)
+                    throw error
+                }
+                if status == 422, detail.details?["fields"]?["phone"]?.string == "invalid_phone" {
+                    message = LoginText.invalidPhone
+                    throw error
+                }
+            }
             message = Self.userMessage(error)
             throw error
+        }
+    }
+
+    /// While set, the server asked to wait before another phone check; the Tiếp tục button stays locked until then.
+    private(set) var phoneCheckLockedUntil: Date?
+    private var phoneCheckUnlock: Task<Void, Never>?
+
+    private func lockPhoneCheck(seconds: Int) {
+        phoneCheckLockedUntil = Date().addingTimeInterval(TimeInterval(seconds))
+        phoneCheckUnlock?.cancel()
+        phoneCheckUnlock = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)
+            guard !Task.isCancelled else { return }
+            self?.phoneCheckLockedUntil = nil
+            self?.message = nil
         }
     }
 
@@ -630,7 +657,7 @@ final class AuthModel {
     private static func userMessage(_ error: Error) -> String {
         if let apiError = error as? APIFailure,
            case .server(let status, let detail, _) = apiError {
-            if status == 429 { return LoginText.rateLimited }
+            if status == 429 { return LoginText.rateLimited(seconds: 60) }
               if detail.code == "invalid_credentials" { return AuthCopy.invalidCredentials }
             return detail.localizedMessage
         }

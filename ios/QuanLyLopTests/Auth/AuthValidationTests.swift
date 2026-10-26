@@ -140,13 +140,26 @@ final class AuthValidationTests: XCTestCase {
     }
 
     func testRateLimitedPhoneCheckShowsAQuietMessageAndStaysOnTheFirstStep() async throws {
-        let api = PhoneCheckAPI(response: .failure(status: 429, code: "rate_limited", details: nil))
+        let api = PhoneCheckAPI(response: .failure(status: 429, code: "rate_limited", details: nil), retryAfter: 90)
         let model = try model(api)
         await model.restoreSession()
         do { try await model.checkPhone("0900000001"); XCTFail("expected a failure") } catch {}
-        XCTAssertEqual(model.message, LoginText.rateLimited)
+        XCTAssertEqual(model.message, LoginText.rateLimited(seconds: 90))
+        XCTAssertNotNil(model.phoneCheckLockedUntil, "the Tiếp tục button stays locked for the Retry-After")
+        XCTAssertEqual(LoginText.wait(seconds: 90), "2 phút")
+        XCTAssertEqual(LoginText.wait(seconds: 30), "30 giây")
         XCTAssertEqual(model.loginStep, .phone)
         XCTAssertEqual(model.screen, .login)
+    }
+
+    func testServerSideInvalidPhoneShowsTheFormatMessage() async throws {
+        let fields: JSONValue = .object(["fields": .object(["phone": .string("invalid_phone")])])
+        let api = PhoneCheckAPI(response: .failure(status: 422, code: "validation_error", details: fields))
+        let model = try model(api)
+        await model.restoreSession()
+        do { try await model.checkPhone("0900000001"); XCTFail("expected a failure") } catch {}
+        XCTAssertEqual(model.message, LoginText.invalidPhone)
+        XCTAssertNil(model.phoneCheckLockedUntil)
     }
 
     func testUndeclaredGuardianNumberGoesBackToThePhoneStepWithAnExplanation() async throws {
@@ -170,7 +183,10 @@ private actor PhoneCheckAPI: APIClient {
     private let registerFailure: (Int, String, JSONValue?)?
     private(set) var sentPhones: [String] = []
 
-    init(response: Response, registerFailure: (Int, String, JSONValue?)? = nil) {
+    private let retryAfter: TimeInterval?
+
+    init(response: Response, registerFailure: (Int, String, JSONValue?)? = nil, retryAfter: TimeInterval? = nil) {
+        self.retryAfter = retryAfter
         self.response = response
         self.registerFailure = registerFailure
     }
@@ -185,7 +201,7 @@ private actor PhoneCheckAPI: APIClient {
             case .next(let next): return try WireJSON.decoder().decode(type, from: Data(#"{"next":"\#(next)"}"#.utf8))
             case .failure(let status, let code, let details):
                 throw APIFailure.server(status: status, error: APIError(code: code, message: nil, details: details, requestId: nil),
-                                        retryAfter: 60)
+                                        retryAfter: retryAfter)
             }
         case "auth/register-guardian":
             if let (status, code, details) = registerFailure {
