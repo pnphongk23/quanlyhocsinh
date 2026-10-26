@@ -9,6 +9,8 @@ struct SessionCommentsView: View {
     @State private var target: TicketTarget?
     @State private var showingSend = false
     @State private var sendError: String?
+    /// Rows as they were when the send started; the dialog keeps its counts until it closes.
+    @State private var sendingRows: [I4TicketRow]?
     @State private var sendController = AppSaveController()
     @State private var showingDefaults = false
     @State private var defaultsController = AppSaveController()
@@ -253,13 +255,15 @@ struct SessionCommentsView: View {
     }
 
     private var sendDialog: some View {
-        let ungraded = CommentsRules.ungradedNotice(rows)
-        let skipped = CommentsRules.withoutSlip(rows.filter { !$0.isSent })
+        let shownRows = sendingRows ?? rows
+        let sendableCount = CommentsRules.sendable(shownRows).count
+        let ungraded = CommentsRules.ungradedNotice(shownRows)
+        let skipped = CommentsRules.withoutSlip(shownRows.filter { !$0.isSent })
         let previousLabel = CommentsRules.previousLabel(date: rows.first?.previousDate)
         return I4Dialog(title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.buoi"), sessionInline), content: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
-                    statCard(value: "\(sendableRows.count)", label: String(localized: "feature.comments.ticketsToSend"),
+                    statCard(value: "\(sendableCount)", label: String(localized: "feature.comments.ticketsToSend"),
                              foreground: AppColors.primaryInk, background: AppColors.primarySoft)
                     statCard(value: "\(skipped.count)", label: String(localized: "comments.send.skippedStat", table: "Teacher"),
                              foreground: AppColors.warning, background: AppColors.warningSoft)
@@ -286,7 +290,7 @@ struct SessionCommentsView: View {
             VStack(spacing: 8) {
                 AppSaveButton(
                     title: sendError == nil
-                        ? String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu"), String(describing: (sendableRows.count)))
+                        ? String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu"), String(describing: sendableCount))
                         : String(localized: "comments.send.retry", table: "Teacher"),
                     controller: sendController,
                     onSuccess: { closeSend() }
@@ -301,6 +305,7 @@ struct SessionCommentsView: View {
     private func closeSend() {
         showingSend = false
         sendError = nil
+        sendingRows = nil
     }
 
     private func statCard(value: String, label: String, foreground: Color, background: Color) -> some View {
@@ -342,6 +347,7 @@ struct SessionCommentsView: View {
             throw I4SaveFailure(message: message)
         }
         let ids = sendableRows.map(\.student.id)
+        sendingRows = rows
         let outcome = await data.sendSlips(sessionID: sessionID, studentIDs: ids)
         switch outcome {
         case .sent:
@@ -350,10 +356,12 @@ struct SessionCommentsView: View {
         case .partial(_, let notSent):
             let message = String.localizedStringWithFormat(String(localized: "comments.send.partial", table: "Teacher"), notSent)
             sendError = message
+            sendingRows = nil
             await saveStatusSource?.refresh()
             throw I4SaveFailure(message: message)
         case .failed(let message):
             sendError = message
+            sendingRows = nil
             throw I4SaveFailure(message: message)
         }
     }
