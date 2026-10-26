@@ -67,8 +67,8 @@ export interface CommandPayloads {
   "test.update": { id: string; name?: string; date?: string };
   "test.delete": { id: string };
   "score.set": { test_id: string; student_id: string; value: number | null };
-  "slip.set": { session_id: string; student_id: string; criteria?: number; comment: string | null; note: string; stars?: StarLevel; hw_manual?: boolean };
-  "slip.send": { session_id: string; student_ids: string[] };
+  "slip.set": { session_id: string; student_id: string; criteria?: number; comment?: string | null; note: string; stars?: StarLevel; hw_manual?: boolean };
+  "slip.send": { session_id: string; student_ids: string[]; defaults?: Array<{ student_id: string; criteria: number; comment: string }> };
   "homework.assign": { session_id: string; sections: { id: string; kind: HomeworkKind; title: string; description: string }[] };
   "homework.section.upsert": { id: string; session_id: string; kind: HomeworkKind; title: string; description: string };
   "homework.section.delete": { id: string };

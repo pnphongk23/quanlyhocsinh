@@ -1,6 +1,7 @@
 import type {
   Attendance,
   Comment,
+  HomeworkGrade,
   HomeworkKind,
   HomeworkLevel,
   HomeworkSection,
@@ -113,6 +114,27 @@ export function previousHomeworkSession(
   for (let index = before.length - 1; index >= 0; index--)
     if (before[index].status !== "cancelled") return before[index];
   return null;
+}
+
+/**
+ * Các phần BTVN buổi trước đã chấm của một em (bỏ phần chưa chấm). `override` thay
+ * kết quả của một ô để tính trước khi ghi.
+ */
+export function previousHomeworkGrades(
+  state: StoreState,
+  sessionId: string,
+  studentId: string,
+  override?: { sectionId: string; level: HomeworkLevel | null },
+): HomeworkGrade[] {
+  const giving = previousHomeworkSession(state.sessions, sessionId);
+  if (!giving) return [];
+  return homeworkSectionsFor(state, giving.id).flatMap((section) => {
+    const level =
+      override && override.sectionId === section.id
+        ? override.level
+        : homeworkGradeLevel(state, section.id, studentId);
+    return level === null ? [] : [{ sectionId: section.id, studentId, level }];
+  });
 }
 
 /** Học sinh đang học vào ngày của buổi: vào lớp ≤ ngày buổi ≤ rời lớp. */

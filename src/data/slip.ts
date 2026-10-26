@@ -70,3 +70,18 @@ export function shouldCheckHomeworkCriterion(
   if (hwManual) return currentChecked;
   return !previousGrades?.some((grade) => grade.level === "not_done");
 }
+
+/** Đặt bit "Hoàn thành BTVN" (bit 4) theo kết quả chấm BTVN buổi trước, trừ khi giáo viên đã chọn tay. */
+export function criteriaWithHomework(
+  criteria: number,
+  previousGrades: readonly HomeworkGrade[] | null,
+  hwManual: boolean,
+): number {
+  const checked = shouldCheckHomeworkCriterion(previousGrades, hwManual, (criteria & (1 << 4)) !== 0);
+  return (criteria & ~(1 << 4)) | (checked ? 1 << 4 : 0);
+}
+
+/** Tiêu chí mặc định của một phiếu: đủ năm tiêu chí, BTVN theo chấm buổi trước. */
+export function defaultSlipCriteria(previousGrades: readonly HomeworkGrade[] | null): number {
+  return criteriaWithHomework(31, previousGrades, false);
+}

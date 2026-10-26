@@ -16,6 +16,8 @@ const keyOf = (entity: string, item: Row): string[] => {
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 const apiError = (status: number, code: string, details?: Record<string, unknown>) => json({ error: { code, message: code, ...(details ? { details } : {}), request_id: "fake" } }, status);
 
+const generatedStars = (criteria: number): number => criteria.toString(2).split("1").length - 1;
+
 export function createFakeServer() {
   const rows = new Map<string, Map<string, Row>>();
   const log: Array<{ seq: number; entity: string; item?: Row; gone?: { k1: string; k2: string } }> = [];
@@ -53,7 +55,7 @@ export function createFakeServer() {
 
   function apply(command: Row): Row {
     const p = command.payload;
-    let skipped: Array<{ student_id: string; reason: "not_attended" }> | undefined;
+    let skipped: Array<{ student_id: string; reason: "not_attended" | "no_default" }> | undefined;
     if (command.type === "score.set" && p.value !== null) {
       if (!Number.isFinite(p.value) || p.value < 0 || p.value > 1000) return { id: command.id, status: "rejected", error: { code: "invalid_score", message: "invalid_score", request_id: "fake" } };
       if (Math.round(p.value * 2) !== p.value * 2) return { id: command.id, status: "rejected", error: { code: "invalid_score_step", message: "invalid_score_step", request_id: "fake" } };
@@ -62,6 +64,7 @@ export function createFakeServer() {
         if (p.criteria !== undefined && (!Number.isInteger(p.criteria) || p.criteria < 0 || p.criteria > 31)) return { id: command.id, status: "rejected", error: { code: "invalid_criteria", message: "invalid_criteria", request_id: "fake" } };
         if (p.comment !== undefined && p.comment !== null && typeof p.comment !== "string") return { id: command.id, status: "rejected", error: { code: "invalid_comment", message: "invalid_comment", request_id: "fake" } };
         if (p.hw_manual !== undefined && typeof p.hw_manual !== "boolean") return { id: command.id, status: "rejected", error: { code: "invalid_hw_manual", message: "invalid_hw_manual", request_id: "fake" } };
+        if (p.criteria !== undefined && !(typeof p.comment === "string" && p.comment.trim())) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "comment_required", request_id: "fake" } };
     }
     switch (command.type) {
       case "attendance.set": if (!["present", "late", "absent"].includes(p.status)) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "invalid_status", request_id: "fake" } }; put("attendance", { session_id: p.session_id, student_id: p.student_id, status: p.status }); break;
@@ -69,8 +72,8 @@ export function createFakeServer() {
         case "test.update": { const current = table("test").get(p.id); if (!current) return { id: command.id, status: "rejected", error: { code: "not_found", message: "not_found", request_id: "fake" } }; const { max: _oldMax, ...withoutMax } = current; const { max: _ignoredMax, ...patch } = p; put("test", { ...withoutMax, ...patch }); break; }
       case "test.delete": { const current = table("test").get(p.id); if (current?.archived) put("test", { ...current, archived: true }); else remove("test", p.id); break; }
         case "score.set": put("score", { test_id: p.test_id, student_id: p.student_id, value: p.value }); break;
-          case "slip.set": { const previous = table("slip").get(`${p.session_id}|${p.student_id}`); const hasCriteria = p.criteria !== undefined; const criteria = hasCriteria ? p.criteria : previous?.criteria ?? null; const comment = hasCriteria ? generatedSlipSentence(criteria) : previous?.comment ?? (typeof p.comment === "string" && !p.comment.trim() ? null : p.comment ?? null); put("slip", { session_id: p.session_id, student_id: p.student_id, ...(criteria === null ? { stars: p.stars ?? previous?.stars, scale: 3 } : { criteria, comment, scale: 5 }), note: p.note ?? previous?.note ?? "", hw_manual: p.hw_manual ?? previous?.hw_manual ?? false, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); break; }
-        case "slip.send": for (const studentId of p.student_ids) { const current = table("slip").get(`${p.session_id}|${studentId}`); if (current) put("slip", { ...current, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); else { const attendance = table("attendance").get(`${p.session_id}|${studentId}`); if (attendance?.status === "present" || attendance?.status === "late") put("slip", { session_id: p.session_id, student_id: studentId, criteria: 31, comment: "Con học rất tốt, chăm chỉ, tích cực tham gia phát biểu", scale: 5, stars: 5, note: "", status: "sent", sent_at: "2026-10-23T00:00:00Z" }); else (skipped ??= []).push({ student_id: studentId, reason: "not_attended" }); } } break;
+          case "slip.set": { const previous = table("slip").get(`${p.session_id}|${p.student_id}`); const hasCriteria = p.criteria !== undefined; const criteria = hasCriteria ? p.criteria : previous?.criteria ?? null; const comment = typeof p.comment === "string" && p.comment.trim() ? p.comment.trim() : previous?.comment ?? null; put("slip", { session_id: p.session_id, student_id: p.student_id, ...(criteria === null ? { stars: p.stars ?? previous?.stars, scale: 3 } : { criteria, comment, scale: 5 }), note: p.note ?? previous?.note ?? "", hw_manual: p.hw_manual ?? previous?.hw_manual ?? false, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); break; }
+        case "slip.send": for (const studentId of p.student_ids) { const current = table("slip").get(`${p.session_id}|${studentId}`); if (current) put("slip", { ...current, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); else { const attendance = table("attendance").get(`${p.session_id}|${studentId}`); const fallback = (p.defaults ?? []).find((item: Row) => item.student_id === studentId); if (attendance?.status === "present" || attendance?.status === "late") { if (fallback) put("slip", { session_id: p.session_id, student_id: studentId, criteria: fallback.criteria, comment: fallback.comment, scale: 5, stars: generatedStars(fallback.criteria), note: "", hw_manual: false, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); else (skipped ??= []).push({ student_id: studentId, reason: "no_default" }); } else (skipped ??= []).push({ student_id: studentId, reason: "not_attended" }); } } break;
       case "homework.assign": for (const s of p.sections) put("homework_section", { ...s, class_id: "class-1", session_id: p.session_id }); break;
       case "homework.section.upsert": { const session = table("class_session").get(p.session_id); put("homework_section", { ...p, class_id: session?.class_id ?? "class-1" }); break; }
       case "homework.section.delete": remove("homework_section", p.id); break;

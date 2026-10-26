@@ -15,7 +15,7 @@ const payloadFields = {
   "test.delete": ["id"],
   "score.set": ["test_id", "student_id", "value"],
     "slip.set": ["session_id", "student_id", "criteria", "comment", "note", "hw_manual"],
-  "slip.send": ["session_id", "student_ids"],
+  "slip.send": ["session_id", "student_ids", "defaults"],
   "homework.assign": ["session_id", "sections"],
   "homework.section.upsert": ["id", "session_id", "kind", "title", "description"],
   "homework.section.delete": ["id"],
@@ -25,7 +25,7 @@ const payloadFields = {
 const requiredFields = {
   "attendance.set": ["session_id", "student_id", "status"], "test.create": ["id", "class_id", "name", "date"],
   "test.update": ["id"], "test.delete": ["id"], "score.set": ["test_id", "student_id", "value"],
-      "slip.set": ["session_id", "student_id", "comment", "note"], "slip.send": ["session_id", "student_ids"],
+      "slip.set": ["session_id", "student_id", "note"], "slip.send": ["session_id", "student_ids"],
   "homework.assign": ["session_id", "sections"], "homework.section.upsert": ["id", "session_id", "kind", "title", "description"],
   "homework.section.delete": ["id"], "homework.grade.set": ["section_id", "student_id", "level"],
   "conflict.resolve": ["conflict_id", "choice"],
@@ -47,7 +47,7 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe("repository command payload contracts", () => {
-  it("generates the slip comment from criteria and ignores caller-supplied text", async () => {
+  it("stores the caller-supplied slip comment (hand-edited sentence) with the criteria", async () => {
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
     const { saveSessionCommentDurable } = await import("../data/repositories/comments");
@@ -56,7 +56,7 @@ describe("repository command payload contracts", () => {
       await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 31, comment: longComment, note: "" });
       await d.syncNow();
 
-      expect(server.rows.get("slip")?.get("session-1|s1")?.comment).toBe(generatedSlipSentence(31));
+      expect(server.rows.get("slip")?.get("session-1|s1")?.comment).toBe(longComment.trim());
   });
 
   it.each(["2026-10-24T17:30:00.000Z", "2026-10-24T23:59:00.000Z"])(
@@ -128,7 +128,7 @@ describe("repository command payload contracts", () => {
     expect(Object.keys(sent?.payload ?? {}).sort()).toEqual(["session_id", "status", "student_id"]);
   });
 
-  it("keeps comment while editing note and regenerates it when criteria changes", async () => {
+  it("keeps a hand-edited comment while editing note, and a toggled criterion regenerates it", async () => {
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
     const { saveSessionCommentDurable } = await import("../data/repositories/comments");
@@ -138,10 +138,10 @@ describe("repository command payload contracts", () => {
     await d.syncNow();
     const noteEdit = await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", note: "second" });
     await d.syncNow();
-    const criteriaEdit = await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 15, comment: "also ignored", note: "second" });
+    const criteriaEdit = await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 15, note: "second" });
     await d.syncNow();
 
-    expect(initial.comment).toBe(generatedSlipSentence(31));
+    expect(initial.comment).toBe("caller text");
     expect(noteEdit.comment).toBe(initial.comment);
     expect(criteriaEdit.comment).toBe(generatedSlipSentence(15));
     expect(getStore().comments[0]).toMatchObject({ comment: generatedSlipSentence(15), note: "second" });
@@ -171,6 +171,68 @@ describe("repository command payload contracts", () => {
     const { getStore } = await import("../data/store");
 
     expect(getStore().comments.map(({ studentId, hwManual }) => [studentId, hwManual])).toEqual([["s1", false], ["s2", true], ["s3", false]]);
+  });
+
+  it("hand-edit followed by a criteria toggle reaches the server as the regenerated sentence", async () => {
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { saveSessionCommentDurable } = await import("../data/repositories/comments");
+    await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 31, comment: "Câu sửa tay", note: "" });
+    await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 15 });
+    await d.syncNow();
+    expect(server.rows.get("slip")?.get("session-1|s1")?.comment).toBe(generatedSlipSentence(15));
+    for (const command of server.hooks.pushBatches.flat().filter((item) => item.type === "slip.set" && (item.payload as any).criteria !== undefined)) {
+      expect((command.payload as any).comment, "criteria always travels with a non-empty comment").toBeTruthy();
+    }
+  });
+
+  it("rejects scale-5 criteria without a comment in the fake sync server", async () => {
+    const response = await server.fetch("http://fake.local/v1/sync/push", {
+      method: "POST",
+      headers: { Authorization: "Bearer t", "Content-Type": "application/json" },
+      body: JSON.stringify({ commands: [{ id: "no-comment", type: "slip.set", payload: { session_id: "session-1", student_id: "s1", criteria: 31, note: "" } }] }),
+    });
+    expect((await response.json() as any).results[0]).toMatchObject({ status: "rejected", error: { message: "comment_required" } });
+  });
+
+  it("slip.send carries client-generated defaults for students without a slip", async () => {
+    server.put("attendance", { session_id: "session-1", student_id: "s1", status: "present" });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { sendSessionTicketsDurable } = await import("../data/repositories/comments");
+    await sendSessionTicketsDurable("session-1", ["s1"]);
+    await d.syncNow();
+    const send = server.hooks.pushBatches.flat().find((command) => command.type === "slip.send");
+    expect((send?.payload as any).defaults).toEqual([expect.objectContaining({ student_id: "s1", criteria: expect.any(Number), comment: expect.stringMatching(/\S/) })]);
+    expect(server.rows.get("slip")?.get("session-1|s1")).toMatchObject({ status: "sent" });
+  });
+
+  it("assign-all-defaults rewrites unsent slips to the full default and clears the manual homework choice", async () => {
+    server.put("attendance", { session_id: "session-1", student_id: "s1", status: "present" });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { saveSessionCommentDurable, assignDefaultSlipsDurable } = await import("../data/repositories/comments");
+    await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 3, hwManual: true, note: "giữ" });
+    const changed = await assignDefaultSlipsDurable("session-1");
+    await d.syncNow();
+    expect(changed).toBe(1);
+    expect(server.rows.get("slip")?.get("session-1|s1")).toMatchObject({ criteria: 31, note: "giữ", comment: generatedSlipSentence(31) });
+    const row = server.rows.get("slip")?.get("session-1|s1");
+    expect(row?.hw_manual).toBeFalsy();
+  });
+
+  it("regrading homework enqueues slip.set with criteria and comment for the next session's draft", async () => {
+    server.put("class_session", { id: "session-2", class_id: "c1", date: "2026-10-22", start_time: "09:00", origin: "manual", status: "held" });
+    server.put("slip", { session_id: "session-2", student_id: "s1", criteria: 31, comment: generatedSlipSentence(31), scale: 5, stars: 5, note: "", hw_manual: false, status: "draft", sent_at: null });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const homework = await import("../data/repositories/homework");
+    const section = await homework.saveHomeworkSectionDurable({ sessionId: "session-1", kind: "vocabulary", title: "Words" });
+    await homework.setHomeworkGradeDurable(section.id, "s1", "not_done");
+    await d.syncNow();
+    const row = server.rows.get("slip")?.get("session-2|s1");
+    expect(row?.criteria).toBe(15);
+    expect(row?.comment).toBe(generatedSlipSentence(15));
   });
 
   it("rejects a non-boolean hw_manual in the fake sync server", async () => {

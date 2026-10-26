@@ -171,6 +171,6 @@ describe("phiếu nhận xét khi mất mạng", () => {
     expect(result.skipped).toContain("6a-student-0");
     expect(result.skippedReasons).toContainEqual({ studentId: "6a-student-0", reason: "not_attended" });
     const created = getStore().comments.find((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-1");
-    expect(created).toMatchObject({ criteria: 31, stars: 5, scale: 5, comment: null, sendQueued: true });
+    expect(created).toMatchObject({ criteria: 31, stars: 5, scale: 5, comment: expect.any(String), sendQueued: true });
   });
 });

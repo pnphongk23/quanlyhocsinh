@@ -1,6 +1,6 @@
 import type { TicketRow, TicketStatus } from "../../data/homework";
 import type { HomeworkSummary } from "../../data/homework";
-import { shouldCheckHomeworkCriterion } from "../../data/slip";
+import { criteriaWithHomework } from "../../data/slip";
 import type { HomeworkGrade, SlipScale } from "../../data/types";
 import { formatTime } from "../../shared/format";
 
@@ -21,12 +21,7 @@ export function criteriaWithHomeworkResult(
   scale: SlipScale,
 ): number {
   if (sent || scale === 3) return criteria;
-  const checked = shouldCheckHomeworkCriterion(
-    previousGrades,
-    hwManual,
-    (criteria & (1 << 4)) !== 0,
-  );
-  return (criteria & ~(1 << 4)) | (checked ? 1 << 4 : 0);
+  return criteriaWithHomework(criteria, previousGrades, hwManual);
 }
 
 /** A slip that is sent or already queued to send must not be rewritten by a later homework regrade. */

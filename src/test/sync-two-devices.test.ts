@@ -64,8 +64,8 @@ describe("two devices on one workspace", () => {
     expect(B.getStore().tests.map((t) => t.name)).toEqual(["Quiz 1"]);
 
     // 3) Slip and homework from A, picked up by the 60 s tick.
-    await outbox(A, "o6", "slip.set", { session_id: "x2", student_id: "s1", criteria: 31, comment: null, note: "Tốt" });
-    await outbox(A, "o7", "slip.set", { session_id: "x2", student_id: "s2", criteria: 1, comment: null, note: "Cần cố gắng" });
+    await outbox(A, "o6", "slip.set", { session_id: "x2", student_id: "s1", criteria: 31, comment: "Con học tốt.", note: "Tốt" });
+    await outbox(A, "o7", "slip.set", { session_id: "x2", student_id: "s2", criteria: 1, comment: "Con cần cố gắng thêm.", note: "Cần cố gắng" });
     await outbox(A, "o8", "homework.assign", { session_id: "x2", sections: [{ id: "h1", kind: "reading", title: "Bài đọc", description: "" }] });
     await outbox(A, "o9", "homework.grade.set", { section_id: "h1", student_id: "s1", level: "done" });
     await outbox(A, "o10", "homework.grade.set", { section_id: "h1", student_id: "s2", level: "not_done" });
