@@ -62,12 +62,14 @@ extension TeacherScreenshotTests {
                                     updatedAt: "2026-10-25T10:00:00.000Z")
         let longNote = (1...6).map { "Dòng \($0): em tập trung hơn ở phần nghe, cần luyện thêm phát âm cuối từ." }
             .joined(separator: "\n")
-        let states: [(name: String, slip: SessionSlip, sections: [HomeworkSection], grades: [HomeworkGrade])] = [
+        let states: [(name: String, slip: SessionSlip?, sections: [HomeworkSection], grades: [HomeworkGrade])] = [
             ("slip-5-stars", slip(0b11111, hwManual: true), [], []),
             ("slip-4-stars-missing-order", slip(0b10111, hwManual: true), [], []),
             ("slip-0-stars", slip(0, hwManual: true), [], []),
             ("slip-homework-auto", slip(0b11111), [previousPart], [notDone]),
-            ("slip-long-note", slip(0b10111, hwManual: true, note: longNote), [], [])
+            ("slip-long-note", slip(0b10111, hwManual: true, note: longNote), [], []),
+            // A slip that was never saved has unsaved changes, so the footer shows "Chưa lưu".
+            ("slip-unsaved", nil, [previousPart], [notDone])
         ]
         let folder = URL(fileURLWithPath: directory, isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
