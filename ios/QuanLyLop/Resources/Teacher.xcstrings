@@ -356,6 +356,24 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "%1$d/%2$d sao" } }
       }
     },
+    "classes.session.exists" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã có buổi vào ngày và giờ này" } }
+      }
+    },
+    "classes.session.datePast" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không sửa được buổi đã qua ngày" } }
+      }
+    },
+    "classes.session.versionConflict" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Buổi học đã được thay đổi ở nơi khác. Đóng rồi mở lại để xem bản mới nhất." } }
+      }
+    },
     "comments.card.defaultSlip" : {
       "extractionState" : "manual",
       "localizations" : {

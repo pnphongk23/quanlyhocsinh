@@ -32,6 +32,41 @@ struct TeacherSessionRequest: Encodable {
     let note: String
 }
 
+/// The day, time and error text of the one-off session form. Days and times are written by the device calendar
+/// (or the given zone), never by UTC, so a session picked after midnight keeps its day.
+enum TeacherSessionForm {
+    private static func calendar(_ timeZone: TimeZone) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return calendar
+    }
+
+    /// `yyyy-MM-dd`.
+    static func day(_ date: Date, timeZone: TimeZone = .current) -> String {
+        let parts = calendar(timeZone).dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    /// `HH:mm` on a 24-hour clock whatever the device locale.
+    static func time(_ date: Date, timeZone: TimeZone = .current) -> String {
+        let parts = calendar(timeZone).dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+    }
+
+    /// What the form says for a failed save, from the reason the server gives (`details.reason`, or the code).
+    static func message(for error: Error) -> String {
+        if case APIFailure.server(_, let apiError, _) = error {
+            switch apiError.details?["reason"]?.string ?? apiError.code {
+            case "session_exists": return String(localized: "classes.session.exists", table: "Teacher")
+            case "date_in_past": return String(localized: "classes.session.datePast", table: "Teacher")
+            case "version_conflict": return String(localized: "classes.session.versionConflict", table: "Teacher")
+            default: break
+            }
+        }
+        return String(localized: "feature.classes.khong.luu.uoc.buoi.hoc.hay.kiem.tra.thong.tin.va")
+    }
+}
+
 @MainActor
 @Observable
 final class TeacherFeatureData {
@@ -61,6 +96,12 @@ final class TeacherFeatureData {
     private var observer: Task<Void, Never>?
 
     init() {}
+
+    /// Runs the screens' writes against a given store and API, without a signed-in session (tests).
+    init(store: SQLiteStore, api: any APIClient) {
+        self.store = store
+        self.api = api
+    }
 
     /// Screenshot/preview harness only: fills the observable with synthetic records so the
     /// teacher screens can be rendered without a session. No runtime path calls this.
@@ -187,6 +228,16 @@ final class TeacherFeatureData {
 
     func addOneOffSession(id: String, classID: String, date: String, time: String, makeup: Bool, note: String = "") async throws {
         let value = try await send(.post, path: "classes/\(classID)/sessions", body: TeacherSessionRequest(id: id.lowercased(), date: date, startTime: time, isMakeup: makeup, note: note), as: ClassSession.self)
+        try await cache(value, entity: "class_session")
+        await refresh()
+    }
+
+    /// Edits a one-off session that has not been held: the server checks the version, the day and the clash.
+    func updateOneOffSession(_ session: ClassSession, date: String, time: String, note: String) async throws {
+        struct Request: Encodable { let date: String; let startTime: String; let note: String; let baseVersion: Int }
+        let value = try await send(.patch, path: "sessions/\(session.id)",
+                                   body: Request(date: date, startTime: time, note: note, baseVersion: session.version),
+                                   as: ClassSession.self)
         try await cache(value, entity: "class_session")
         await refresh()
     }
@@ -353,7 +404,7 @@ final class TeacherFeatureData {
         return level == .write || (!write && level == .read)
     }
 
-    static var todayString: String { Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash)) }
+    static var todayString: String { TeacherSessionForm.day(.now) }
 
     static func student(_ student: Student, isEnrolledOn date: String) -> Bool {
         student.enrolledAt <= date && (student.leftAt == nil || student.leftAt! >= date)

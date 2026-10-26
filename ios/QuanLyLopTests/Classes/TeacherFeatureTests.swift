@@ -173,3 +173,96 @@ final class TeacherFeatureTests: XCTestCase {
         ], previewStudents: students, previewSessions: sessions, previewAttendance: attendance)
     }
 }
+
+@MainActor
+final class OneOffSessionFormTests: XCTestCase {
+    private let scope = CacheScope(userId: "teacher-user", workspaceId: "workspace", membershipId: "teacher")
+    private let vietnam = TimeZone(identifier: "Asia/Ho_Chi_Minh")!
+
+    private func date(_ iso: String) throws -> Date {
+        try XCTUnwrap(ISO8601DateFormatter().date(from: iso))
+    }
+
+    func testDayKeepsTheVietnamDateBetweenMidnightAndSevenInTheMorning() throws {
+        // 00:30 and 06:59 in Ho Chi Minh City are still the previous day in UTC.
+        XCTAssertEqual(TeacherSessionForm.day(try date("2026-10-26T17:30:00Z"), timeZone: vietnam), "2026-10-27")
+        XCTAssertEqual(TeacherSessionForm.day(try date("2026-10-26T23:59:00Z"), timeZone: vietnam), "2026-10-27")
+        XCTAssertEqual(TeacherSessionForm.day(try date("2026-10-27T16:59:00Z"), timeZone: vietnam), "2026-10-27")
+        XCTAssertEqual(TeacherSessionForm.day(try date("2026-10-27T17:00:00Z"), timeZone: vietnam), "2026-10-28")
+    }
+
+    func testTimeIsTwentyFourHourWhateverTheLocale() throws {
+        XCTAssertEqual(TeacherSessionForm.time(try date("2026-10-27T11:05:00Z"), timeZone: vietnam), "18:05")
+        XCTAssertEqual(TeacherSessionForm.time(try date("2026-10-26T17:30:00Z"), timeZone: vietnam), "00:30")
+    }
+
+    private func failure(status: Int, code: String, reason: String?) -> APIFailure {
+        .server(status: status, error: APIError(code: code, message: nil,
+                                                details: reason.map { .object(["reason": .string($0)]) }, requestId: nil),
+                retryAfter: nil)
+    }
+
+    func testServerReasonsMapToTheirMessages() {
+        XCTAssertEqual(TeacherSessionForm.message(for: failure(status: 409, code: "conflict", reason: "session_exists")),
+                       "Đã có buổi vào ngày và giờ này")
+        XCTAssertEqual(TeacherSessionForm.message(for: failure(status: 422, code: "validation_error", reason: "date_in_past")),
+                       "Không sửa được buổi đã qua ngày")
+        XCTAssertTrue(TeacherSessionForm.message(for: failure(status: 409, code: "conflict", reason: "version_conflict"))
+            .contains("thay đổi ở nơi khác"))
+        let generic = TeacherSessionForm.message(for: failure(status: 409, code: "conflict", reason: "session_not_editable"))
+        XCTAssertEqual(generic, TeacherSessionForm.message(for: APIFailure.offline))
+        XCTAssertNotEqual(generic, "Đã có buổi vào ngày và giờ này")
+    }
+
+    func testEditingPatchesTheSessionWithItsVersionInsteadOfCreatingANewOne() async throws {
+        let api = SessionAPI()
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        let data = TeacherFeatureData(store: store, api: api)
+        let session = ClassSession(id: "11111111-1111-4111-8111-111111111111", classId: "c", date: "2026-10-30", startTime: "18:00",
+                                   origin: .manual, isMakeup: false, status: .planned, note: nil, version: 3)
+
+        try await data.updateOneOffSession(session, date: "2026-10-31", time: "19:30", note: "Học bù")
+
+        let request = try XCTUnwrap(api.requests.first)
+        XCTAssertEqual(api.requests.count, 1)
+        XCTAssertEqual(request.method, .patch)
+        XCTAssertEqual(request.path, "sessions/11111111-1111-4111-8111-111111111111")
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: request.body ?? Data()) as? [String: Any])
+        XCTAssertEqual(body["base_version"] as? Int, 3)
+        XCTAssertEqual(body["date"] as? String, "2026-10-31")
+        XCTAssertEqual(body["start_time"] as? String, "19:30")
+        XCTAssertEqual(body["note"] as? String, "Học bù")
+        XCTAssertEqual(data.session(id: session.id)?.version, 4, "the answer is cached")
+        XCTAssertEqual(data.session(id: session.id)?.date, "2026-10-31")
+    }
+
+    func testAddingStillPostsANewSession() async throws {
+        let api = SessionAPI()
+        let data = TeacherFeatureData(store: try SQLiteStore(path: ":memory:", scope: scope), api: api)
+        try await data.addOneOffSession(id: "22222222-2222-4222-8222-222222222222", classID: "c", date: "2026-10-31", time: "19:30",
+                                        makeup: false)
+        XCTAssertEqual(api.requests.map(\.method), [.post])
+        XCTAssertEqual(api.requests.first?.path, "classes/c/sessions")
+    }
+}
+
+/// Answers a session create or edit with the session the request describes, one version ahead.
+private final class SessionAPI: APIClient, @unchecked Sendable {
+    let baseURL = URL(string: "https://fixture.invalid/v1")!
+    private let lock = NSLock()
+    private var sent: [APIEndpoint] = []
+    var requests: [APIEndpoint] { lock.withLock { sent } }
+
+    func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+        lock.withLock { sent.append(endpoint) }
+        let body = try JSONSerialization.jsonObject(with: endpoint.body ?? Data()) as? [String: Any] ?? [:]
+        let id = endpoint.path.split(separator: "/").dropFirst().first.map(String.init).flatMap { endpoint.method == .patch ? $0 : nil }
+            ?? (body["id"] as? String ?? "x")
+        let version = ((body["base_version"] as? Int) ?? 0) + 1
+        let json = """
+        {"id":"\(id)","class_id":"c","date":"\(body["date"] as? String ?? "")","start_time":"\(body["start_time"] as? String ?? "")",\
+        "origin":"manual","is_makeup":false,"status":"planned","note":"\(body["note"] as? String ?? "")","version":\(version)}
+        """
+        return try WireJSON.decoder().decode(type, from: Data(json.utf8))
+    }
+}

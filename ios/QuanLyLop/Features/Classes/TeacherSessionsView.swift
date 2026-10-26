@@ -347,14 +347,19 @@ struct TeacherExtraSessionSheet: View {
 
     private func save() async throws {
         if operationID == nil { operationID = ClientGeneratedID() }
-        let day = date.formatted(.iso8601.year().month().day().dateSeparator(.dash))
-        let timeText = time.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
+        let day = TeacherSessionForm.day(date)
+        let timeText = TeacherSessionForm.time(time)
+        let text = note.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-              try await data.addOneOffSession(id: operationID!.rawValue, classID: classID, date: day, time: timeText,
-                                              makeup: false, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
-              error = nil
-          } catch {
-            self.error = String(localized: "feature.classes.khong.luu.uoc.buoi.hoc.hay.kiem.tra.thong.tin.va")
+            if let session {
+                try await data.updateOneOffSession(session, date: day, time: timeText, note: text)
+            } else {
+                try await data.addOneOffSession(id: operationID!.rawValue, classID: classID, date: day, time: timeText,
+                                                makeup: false, note: text)
+            }
+            error = nil
+        } catch {
+            self.error = TeacherSessionForm.message(for: error)
             throw error
         }
     }
