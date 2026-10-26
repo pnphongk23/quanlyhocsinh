@@ -114,10 +114,6 @@ export default function CommentsDesktop({
     setSearchParams(new URLSearchParams({ tab: "nhan-xet", student: studentId }));
   }
 
-  function goHomework(studentId: string) {
-    setSearchParams(new URLSearchParams({ tab: "btvn", from: studentId }));
-  }
-
   async function confirmSend() {
     try {
       await sendSessionTicketsDurable(
@@ -244,12 +240,11 @@ export default function CommentsDesktop({
         <section className={s.editorColumn}>
           {selected && selectedHomework ? (
             <TicketEditor
-              key={`${sessionId}:${selected.student.id}`}
-              session={session}
-              row={selected}
-              homework={selectedHomework}
-              readOnly={!canWrite}
-              onGoHomework={() => goHomework(selected.student.id)}
+                key={`${sessionId}:${selected.student.id}`}
+                session={session}
+                row={selected}
+                homework={selectedHomework}
+                readOnly={!canWrite}
             />
           ) : (
             <p className={d.muted14}>Chọn một em để soạn phiếu.</p>

@@ -1,41 +1,22 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  HOMEWORK_KIND_LABELS,
-  HOMEWORK_LEVEL_LABELS,
   type TicketRow,
 } from "../../data/homework";
 import { saveSessionCommentDurable } from "../../data/repositories/comments";
-import { listAttendance } from "../../data/repositories/attendance";
-import { defaultSlipComment, starsFromCriteria } from "../../data/slip";
+import { generatedSlipSentence, starsFromCriteria } from "../../data/slip";
 import type {
-  Attendance,
-  HomeworkLevel,
+  HomeworkGrade,
   Session,
   StarLevel,
 } from "../../data/types";
 import { useAccess } from "../../data/repositories/access";
-import { Button, EmptyState, Pill } from "../../shared/ui";
-import { Mascot, starPose } from "../../shared/ui/Mascot";
+import { Pill } from "../../shared/ui";
 import { readDraft, writeDraft } from "./draftStore";
 import type { SheetHomework } from "./CommentTicketSheet";
 import s from "./CommentsDesktop.module.css";
 import { SlipCriteriaFields } from "./SlipCriteriaFields";
-
-const LEVEL_CLASS: Record<HomeworkLevel, string> = {
-  excellent: s.levelExcellent,
-  done: s.levelDone,
-  not_done: s.levelNotDone,
-};
-
-/** Nhãn điểm danh của em trong buổi, cùng chữ với ảnh 04. */
-export function attendanceLabel(record: Attendance | undefined): string {
-  if (!record) return "Chưa điểm danh";
-  if (record.status === "late")
-    return `Có mặt${record.lateAt ? ` · Muộn ${record.lateAt}` : " · Muộn"}`;
-  if (record.status === "present") return "Có mặt";
-  if (record.status === "excused") return "Có phép";
-  return "Vắng";
-}
+import { initialsOf, criteriaWithHomeworkResult, hwManualAfterCriterionToggle, preserveLegacyComment } from "./commentsModel";
+import { sessionPrefix } from "../../data/repositories/sessions";
 
 function Star({ filled }: { filled: boolean }) {
   return (
@@ -74,163 +55,148 @@ export function desktopTicketLabel(row: TicketRow): string {
 }
 
 /**
- * Khung soạn phiếu nằm cạnh danh sách trên web (ảnh 04), thay cho bottom sheet
- * của mobile: chọn sao, câu mẫu cố định, ghi chú, BTVN buổi trước chỉ đọc.
- * Chọn sao lưu ngay (phụ huynh đã gửi thấy bản mới); ghi chú lưu khi rời ô.
+ * Phiếu trên desktop dùng cùng trường tiêu chí với mobile.
+ * Đổi tiêu chí lưu ngay; ghi chú lưu khi rời ô.
  */
 export default function TicketEditor({
   session,
   row,
   homework,
   readOnly = false,
-  onGoHomework,
 }: {
   session: Session;
   row: TicketRow;
   homework: SheetHomework;
   readOnly?: boolean;
-  onGoHomework: () => void;
 }) {
   const access = useAccess();
   const canWrite = access.can("comments_reports", "write") && !readOnly;
   const stored = readDraft(session.id, row.student.id);
-  const draft = useRef<{ criteria: number; comment: string | null; note: string }>({
-    criteria: stored?.criteria ?? row.comment?.criteria ?? (row.comment?.scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31),
-    comment: stored ? stored.comment : row.comment?.comment ?? null,
+  const scale = row.comment?.scale === 3 ? 3 : 5;
+  const previousGrades: HomeworkGrade[] = homework.sections.flatMap((section) => section.level === null ? [] : [{ sectionId: section.id, studentId: row.student.id, level: section.level }]);
+  const rawCriteria = stored?.criteria ?? row.comment?.criteria ?? (scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31);
+  const initialManual = stored?.hwManual ?? row.comment?.hwManual ?? false;
+  const initialCriteria = criteriaWithHomeworkResult(rawCriteria, previousGrades, initialManual, row.status === "sent", scale);
+  const storedComment = stored ? stored.comment : row.comment?.comment ?? null;
+  const legacyComment = scale === 3 || Boolean(storedComment && storedComment !== generatedSlipSentence(rawCriteria)) ? storedComment : null;
+  const draft = useRef<{ criteria: number; comment: string | null; note: string; hwManual: boolean }>({
+    criteria: initialCriteria,
+    comment: legacyComment,
     note: stored ? stored.note : (row.comment?.note ?? ""),
+    hwManual: initialManual,
   });
   const [criteria, setCriteria] = useState(draft.current.criteria);
   const [comment, setComment] = useState<string | null>(draft.current.comment);
   const [note, setNote] = useState(draft.current.note);
+  const [manualHomework, setManualHomework] = useState(draft.current.hwManual);
   const [error, setError] = useState("");
-  const attendance = listAttendance(session.id).find(
-    (record) => record.studentId === row.student.id,
-  );
-    const stars = starsFromCriteria(criteria);
-    const statusLabel = row.status === "sent" ? "Đã gửi" : "Nháp";
+  const [saving, setSaving] = useState(false);
+  const [unsaved, setUnsaved] = useState(canWrite && (!row.comment || Boolean(stored)));
+  const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
 
-    async function persist(next: { criteria: number; comment: string | null; note: string }) {
+  async function persist(next: { criteria: number; comment: string | null; note: string; hwManual: boolean }) {
+    setSaving(true);
     try {
       await saveSessionCommentDurable({
         sessionId: session.id,
         studentId: row.student.id,
-          criteria: next.criteria,
-          comment: next.comment,
+        criteria: next.criteria,
+        comment: next.comment,
         note: next.note,
+        hwManual: next.hwManual,
       });
       setError("");
+      setUnsaved(false);
     } catch (cause) {
+      setUnsaved(true);
       setError(
         cause instanceof Error ? cause.message : "Không lưu được phiếu nhận xét.",
       );
+    } finally {
+      setSaving(false);
     }
   }
 
-    function updateCriteria(next: number) {
-      if (!canWrite) return;
-      draft.current = { ...draft.current, criteria: next };
-      writeDraft(session.id, row.student.id, draft.current);
-      setCriteria(next);
-      setError("");
-      void persist(draft.current);
-    }
+  useEffect(() => {
+    if (scale === 3 || row.status === "sent" || manualHomework) return;
+    const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
+    if (next === criteria) return;
+    const nextNote = preserveLegacyComment(comment, note);
+    const nextComment = comment ? null : comment;
+    draft.current = { ...draft.current, criteria: next, note: nextNote, comment: nextComment };
+    writeDraft(session.id, row.student.id, draft.current);
+    setCriteria(next);
+    setComment(nextComment);
+    setNote(nextNote);
+    setUnsaved(true);
+    void persist(draft.current);
+  }, [gradeKey, criteria, comment, note, manualHomework, row.status, scale, session.id, row.student.id]);
 
-    function updateComment(value: string | null) {
-      draft.current = { ...draft.current, comment: value };
-      writeDraft(session.id, row.student.id, draft.current);
-      setComment(value);
-      setError("");
-    }
+  function updateCriteria(next: number, index: number) {
+    if (!canWrite) return;
+    const nextManual = hwManualAfterCriterionToggle(manualHomework, index);
+      const nextNote = preserveLegacyComment(scale === 5 ? comment : null, note);
+    const nextComment = scale === 5 && comment ? null : comment;
+    const nextValue = { criteria: next, comment: nextComment, note: nextNote, hwManual: nextManual };
+    draft.current = nextValue;
+    writeDraft(session.id, row.student.id, draft.current);
+    setCriteria(next);
+    setComment(nextComment);
+    setNote(nextNote);
+    setUnsaved(true);
+    if (nextManual !== manualHomework) setManualHomework(nextManual);
+    setError("");
+    void persist(nextValue);
+  }
 
   function changeNote(value: string) {
-    draft.current = { ...draft.current, note: value };
+    const nextNote = scale === 5 && comment ? preserveLegacyComment(comment, value) : value;
+    const nextComment = scale === 5 && comment ? null : comment;
+    draft.current = { ...draft.current, comment: nextComment, note: nextNote };
     writeDraft(session.id, row.student.id, draft.current);
-    setNote(value);
+    setComment(nextComment);
+    setNote(nextNote);
     setError("");
   }
 
   return (
     <div className={s.editor}>
       <div className={s.editorHead}>
-        <div>
+        <span className={s.avatar} aria-hidden="true">{initialsOf(row.student.name)}</span>
+        <div className={s.editorIdentity}>
           <h2 className={s.editorName}>{row.student.name}</h2>
-          <p className={s.editorMeta}>{attendanceLabel(attendance)}</p>
+          <p className={s.editorMeta}>{sessionPrefix(session)}</p>
         </div>
-        <Pill tone={row.status === "sent" ? "success" : "neutral"}>
-          {statusLabel}
+        <Pill tone={row.status === "sent" ? "success" : "neutral"} data-testid="slip-ticket-status">
+          {row.status === "sent" ? "Đã gửi" : "Chưa gửi"}
         </Pill>
       </div>
 
-        <SlipCriteriaFields criteria={criteria} comment={comment} disabled={!canWrite || row.comment?.scale === 3} onCriteriaChange={updateCriteria} onCommentChange={updateComment} onBlur={() => { if (canWrite) void persist(draft.current); }} />
-        <div className={s.templateBox}><Mascot pose={starPose(stars, row.comment?.scale ?? 5)} size={84} className={s.templateMascot} /><p className={s.templateText}>{stars}/{row.comment?.scale ?? 5} · {comment ?? defaultSlipComment(stars)}</p></div>
-
-      <label className={s.noteField} htmlFor="desktop-ticket-note">
-        <span className={s.fieldLabel}>
-          Ghi chú <span className={s.optional}>(không bắt buộc)</span>
-        </span>
-        <textarea
-          id="desktop-ticket-note"
-          className={s.noteInput}
-          value={note}
-          readOnly={!canWrite}
-          rows={2}
-          placeholder="Thêm lời nhắn riêng cho phụ huynh…"
-          onChange={(event) => changeNote(event.target.value)}
-          onBlur={() => {
-              if (canWrite) void persist(draft.current);
-          }}
-        />
-      </label>
-
-      <section className={s.homeworkBlock} aria-label="Kết quả bài tập về nhà">
-        <h3 className={s.homeworkTitle}>
-          Kết quả BTVN buổi trước{" "}
-          <span className={s.optional}>· chỉ đọc</span>
-        </h3>
-        {homework.sections.length ? (
-          <ul className={s.homeworkList}>
-            {homework.sections.map((section) => (
-              <li key={section.id} className={s.homeworkRow}>
-                <span>{HOMEWORK_KIND_LABELS[section.kind]}</span>
-                <span
-                  className={
-                    section.level
-                      ? LEVEL_CLASS[section.level]
-                      : s.levelNotGraded
-                  }
-                >
-                  {section.level
-                    ? HOMEWORK_LEVEL_LABELS[section.level]
-                    : "Chưa chấm"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState
-            size="compact"
-            title={
-              homework.state === "first"
-                ? "Bài tập buổi trước chưa có"
-                : "Buổi trước không giao BTVN"
-            }
-          />
-        )}
-        {canWrite && (
-          <Button variant="secondary" size="md" onClick={onGoHomework}>
-            Chấm ở tab Bài tập về nhà
-          </Button>
-        )}
-      </section>
+      <SlipCriteriaFields
+        criteria={criteria}
+        comment={comment}
+        note={note}
+        scale={scale}
+        previousGrades={previousGrades}
+        hwManual={manualHomework}
+        sent={row.status === "sent"}
+        disabled={!canWrite}
+        onCriteriaChange={updateCriteria}
+        onNoteChange={changeNote}
+        onNoteBlur={() => { if (canWrite) void persist(draft.current); }}
+      />
 
       {error && (
         <p role="alert" className={s.error}>
           {error}
         </p>
       )}
-      {row.status === "sent" && (
-        <p className={s.savedNote}>Phiếu đã gửi · sửa xong là phụ huynh thấy ngay</p>
-      )}
+      {canWrite && <div className={s.editorFooter}>
+        <span className={`${s.autosaveStatus} ${unsaved || saving ? s.autosavePending : s.autosaveSaved}`} data-testid="slip-save-status" aria-live="polite">
+          {saving ? "Đang lưu" : unsaved ? "Chưa lưu" : "Đã lưu trên máy"}
+        </span>
+      </div>}
+      {row.status === "sent" && <p className={s.savedNote}>Phiếu đã gửi · thay đổi được lưu ngay</p>}
     </div>
   );
 }

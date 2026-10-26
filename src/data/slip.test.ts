@@ -31,6 +31,11 @@ describe("five-criterion slips", () => {
     expect(generatedSlipSentence(criteria)).toBe(sentence);
   });
 
+  it("updates the generated sentence when a criterion is toggled", () => {
+    expect(generatedSlipSentence(31)).toContain("không mất trật tự");
+    expect(generatedSlipSentence(31 ^ (1 << 3))).toContain("nhưng còn mất trật tự");
+  });
+
   it.each([
     ["câu và ghi chú", "Câu nhận xét", "  Ghi chú  ", "Câu nhận xét\nGhi chú"],
     ["chỉ câu khi ghi chú rỗng", "Câu nhận xét", "  \n ", "Câu nhận xét"],

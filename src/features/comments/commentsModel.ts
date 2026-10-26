@@ -1,5 +1,7 @@
 import type { TicketRow, TicketStatus } from "../../data/homework";
 import type { HomeworkSummary } from "../../data/homework";
+import { shouldCheckHomeworkCriterion } from "../../data/slip";
+import type { HomeworkGrade, SlipScale } from "../../data/types";
 import { formatTime } from "../../shared/format";
 
 /**
@@ -9,6 +11,34 @@ import { formatTime } from "../../shared/format";
 export type TicketFilter = "all" | "unsent";
 
 export const TICKET_FILTERS: TicketFilter[] = ["all", "unsent"];
+
+/** Applies the previous homework result only to an unsent, non-legacy automatic slip. */
+export function criteriaWithHomeworkResult(
+  criteria: number,
+  previousGrades: readonly HomeworkGrade[] | null,
+  hwManual: boolean,
+  sent: boolean,
+  scale: SlipScale,
+): number {
+  if (sent || scale === 3) return criteria;
+  const checked = shouldCheckHomeworkCriterion(
+    previousGrades,
+    hwManual,
+    (criteria & (1 << 4)) !== 0,
+  );
+  return (criteria & ~(1 << 4)) | (checked ? 1 << 4 : 0);
+}
+
+/** Only toggling the homework chip opts the teacher into a manual BTVN value. */
+export function hwManualAfterCriterionToggle(current: boolean, index: number): boolean {
+  return index === 4 ? true : current;
+}
+
+/** Preserve legacy custom text and the note exactly when moving both into note storage. */
+export function preserveLegacyComment(comment: string | null, note: string): string {
+  if (!comment) return note;
+  return note ? `${comment}\n${note}` : comment;
+}
 
 export const TICKET_FILTER_LABELS: Record<TicketFilter, string> = {
   all: "Tất cả",

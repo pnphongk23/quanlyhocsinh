@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { HomeworkSummary, TicketRow } from "../../data/homework";
 import type { Student } from "../../data/types";
+import { starPose } from "../../shared/ui/Mascot";
 import {
   filterTicketRows,
   homeworkLine,
@@ -11,6 +12,9 @@ import {
   ticketBadge,
   ticketCounts,
   ticketFilterLabel,
+  criteriaWithHomeworkResult,
+  hwManualAfterCriterionToggle,
+  preserveLegacyComment,
 } from "./commentsModel";
 
 function student(name: string): Student {
@@ -146,5 +150,36 @@ describe("dòng tóm tắt BTVN buổi trước (ảnh 40, 45, 46)", () => {
           .previousHomework,
       ),
     ).toEqual({ text: "Buổi trước không giao BTVN", tone: "muted" });
+  });
+});
+
+describe("tiêu chí BTVN và Mít trên phiếu", () => {
+  const notDone = [{ sectionId: "reading", studentId: "student", level: "not_done" as const }];
+
+  it("tự tích khi kết quả đã chấm đều đạt hoặc chưa có phần chấm", () => {
+    expect(criteriaWithHomeworkResult(0, [], false, false, 5)).toBe(16);
+    expect(criteriaWithHomeworkResult(15, null, false, false, 5)).toBe(31);
+  });
+
+  it("tích tay BTVN bật hwManual, còn tiêu chí khác không bật", () => {
+    expect(hwManualAfterCriterionToggle(false, 4)).toBe(true);
+    expect(hwManualAfterCriterionToggle(false, 1)).toBe(false);
+    expect(criteriaWithHomeworkResult(16, notDone, true, false, 5)).toBe(16);
+  });
+
+  it("không tự đổi BTVN của phiếu đã gửi hoặc phiếu thang 3", () => {
+    expect(criteriaWithHomeworkResult(31, notDone, false, true, 5)).toBe(31);
+    expect(criteriaWithHomeworkResult(7, notDone, false, false, 3)).toBe(7);
+    expect(starPose(3, 3)).toBe("sao-3");
+  });
+
+  it("chọn đúng dáng Mít cho từng số sao thang 5", () => {
+    expect([0, 1, 2, 3, 4, 5].map((stars) => starPose(stars, 5))).toEqual([
+      "sao-0", "sao-1", "sao-2", "sao-3", "sao-4", "sao-5",
+    ]);
+  });
+
+  it("preserves legacy comment and note content when moving it into note storage", () => {
+    expect(preserveLegacyComment("Câu cũ", "  ghi chú  ")).toBe("Câu cũ\n  ghi chú  ");
   });
 });

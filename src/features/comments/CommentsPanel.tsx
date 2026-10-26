@@ -205,12 +205,6 @@ export default function CommentsPanel({
     });
   }
 
-  function goHomework(studentId: string) {
-    setSearchParams(
-      new URLSearchParams({ tab: "btvn", from: studentId }),
-    );
-  }
-
   async function confirmSend() {
     try {
       await sendSessionTicketsDurable(
@@ -422,7 +416,6 @@ export default function CommentsPanel({
           homework={sheetHomework}
           readOnly={!canWrite}
           onClose={closeStudent}
-          onGoHomework={() => goHomework(openRow.student.id)}
         />
       )}
 

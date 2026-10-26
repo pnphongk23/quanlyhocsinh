@@ -242,13 +242,13 @@
 .sheetTitleRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-8);
   min-width: 0;
 }
 
 .sheetTitleRow .avatar {
-  width: 44px;
-  height: 44px;
+  width: var(--tap);
+  height: var(--tap);
   font-size: var(--text-md);
 }
 
@@ -258,9 +258,9 @@
 }
 
 .sheetName {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
 }
 
 .sheetSub {
@@ -270,8 +270,51 @@
 
 .sheetBody {
   display: grid;
-  gap: 14px;
+  gap: var(--space-16);
   min-width: 0;
+}
+
+.saveFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.saveStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex: none;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.saveStatusPending {
+  color: var(--color-warning);
+}
+
+.saveStatusSaved {
+  color: var(--color-success);
+}
+
+.saveStatus::before {
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  content: "";
+}
+
+.saveFooter > button {
+  flex: 1;
+}
+
+@media (min-width: 1024px) {
+  .saveFooter > button {
+    flex: none;
+    min-width: var(--button-min-w-desktop);
+  }
 }
 
 .draftRow {

@@ -1,12 +1,68 @@
-.criteriaGroup {
+.ticketFields {
   display: grid;
+  gap: var(--space-16);
+  min-width: 0;
+}
+
+.starPanel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  min-width: 0;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-card);
+  background: var(--color-neutral-soft);
+}
+
+.mascotWrap {
+  display: grid;
+  place-items: center;
+  flex: none;
+  height: var(--empty-mascot-compact);
+}
+
+.starSummary {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.stars {
+  display: flex;
+  align-items: center;
   gap: var(--space-8);
+}
+
+.stars svg {
+  width: var(--text-xl);
+  height: var(--text-xl);
+  flex: none;
+}
+
+.starFilled {
+  fill: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.starEmpty {
+  fill: var(--color-border);
+  color: var(--color-border);
+}
+
+.starCount {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-lg);
+}
+
+.criteriaGroup {
   min-width: 0;
 }
 
 .criteriaList {
   display: grid;
-  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-8);
 }
 
 .criterion,
@@ -14,19 +70,45 @@
   display: flex;
   align-items: center;
   gap: var(--space-8);
+  min-width: 0;
   min-height: var(--tap);
-  padding: var(--space-4) var(--space-8);
-  border: 0;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-input-border);
   border-radius: var(--radius-chip);
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--color-surface);
+  color: var(--color-muted);
   text-align: left;
   font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.criterion:focus-visible,
+.criterionOn:focus-visible,
+.noteInput:focus-visible {
+  outline: var(--state-focus-ring);
+  outline-offset: 1px;
 }
 
 .criterionOn {
+  border-color: transparent;
   background: var(--state-selected-bg);
   color: var(--state-selected-fg);
+}
+
+.criterion:disabled,
+.criterionOn:disabled {
+  opacity: var(--state-disabled-opacity);
+  cursor: default;
+}
+
+.homeworkCriterion {
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+}
+
+.criterionLabel {
+  min-width: 0;
 }
 
 .checkbox {
@@ -36,69 +118,109 @@
   height: var(--tap-desktop);
   flex: none;
   border: 1px solid var(--color-input-border);
-  border-radius: var(--radius-chip);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
+  color: var(--color-primary);
   font-weight: var(--weight-bold);
 }
 
-.starCount {
-  margin: 0;
-  color: var(--color-primary-ink);
-  font-size: var(--text-md);
-  font-weight: var(--weight-bold);
+.criterionOn .checkbox {
+  border-color: transparent;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
-.commentField {
+.autoLabel {
+  margin-left: auto;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-soft);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.commentBlock {
   display: grid;
-  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+  min-width: 0;
 }
 
-.label {
-  font-size: var(--text-md);
+.commentContent {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+}
+
+.commentTitle {
+  grid-column: 1 / -1;
+  margin: 0 0 var(--space-8);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.generatedComment {
+  padding: var(--space-16);
+  background: var(--color-neutral-soft);
+}
+
+.generatedLabel {
+  margin: 0 0 var(--space-8);
+  color: var(--color-muted);
+  font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }
 
-.commentInput {
+.generatedText {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  white-space: pre-wrap;
+}
+
+.noteInput {
+  box-sizing: border-box;
   width: 100%;
   min-height: var(--control-h);
-  padding: var(--space-8) var(--space-12);
-  border: 1px solid var(--color-input-border);
-  border-radius: var(--radius-control);
+  padding: var(--space-16);
+  border: 0;
+  border-radius: 0;
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
+  line-height: var(--leading-base);
   resize: vertical;
 }
 
-.commentInput:focus-visible,
-.defaultButton:focus-visible {
-  outline: var(--state-focus-ring);
-  outline-offset: 1px;
-}
-
-.commentActions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8);
-  color: var(--color-muted);
-  font-size: var(--text-xs);
-}
-
-.defaultButton {
-  min-height: var(--tap-desktop);
-  padding: 0 var(--space-8);
-  border: 0;
-  border-radius: var(--radius-chip);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
-  font: inherit;
-  font-weight: var(--weight-semibold);
+.noteInput::placeholder {
+  color: var(--color-placeholder);
 }
 
 @media (max-width: 1023px) {
   .checkbox {
     width: var(--tap);
     height: var(--tap);
+  }
+}
+
+@media (min-width: 1024px) {
+  .ticketFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .starPanel,
+  .criteriaGroup {
+    grid-column: 1;
+  }
+
+  .commentBlock {
+    grid-column: 2;
+    grid-row: 1 / span 2;
   }
 }

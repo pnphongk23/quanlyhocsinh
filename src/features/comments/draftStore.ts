@@ -9,6 +9,7 @@ export interface TicketDraft {
   criteria: number;
   comment: string | null;
   note: string;
+  hwManual?: boolean;
 }
 
 const PREFIX = "comment-draft:";
@@ -41,7 +42,7 @@ export function readDraft(
       const criteria = Number.isInteger(record.criteria) && Number(record.criteria) >= 0 && Number(record.criteria) <= 31
         ? Number(record.criteria)
         : legacyStars === null ? 31 : (1 << legacyStars) - 1;
-      return { criteria, comment: typeof record.comment === "string" ? record.comment : null, note: typeof record.note === "string" ? record.note : "" };
+      return { criteria, comment: typeof record.comment === "string" ? record.comment : null, note: typeof record.note === "string" ? record.note : "", ...(typeof record.hwManual === "boolean" ? { hwManual: record.hwManual } : {}) };
   } catch {
     return null;
   }

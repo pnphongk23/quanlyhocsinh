@@ -185,7 +185,7 @@ describe("phiếu nhận xét: ghi bền lỗi", () => {
       "/lop/:classId/buoi-hoc/:sessionId",
       `/lop/6a/buoi-hoc/${sessionId}?tab=nhan-xet&student=6a-student-0`,
     );
-    const note = (await screen.findByLabelText(/Ghi chú/)) as HTMLTextAreaElement;
+      const note = (await screen.findByLabelText(/Thêm nhận xét riêng/)) as HTMLTextAreaElement;
     fireEvent.change(note, { target: { value: "Ghi chú thử" } });
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     expect(await screen.findByText(FAIL)).toBeInTheDocument();

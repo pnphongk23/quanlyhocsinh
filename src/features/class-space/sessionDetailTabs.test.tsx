@@ -123,7 +123,7 @@ describe("Màn buổi học có ba tab ở URL (ảnh 60/61)", () => {
       "/lop/6a/buoi-hoc/6a-session-7?tab=nhan-xet&student=6a-student-1",
     );
     expect(html).toContain('aria-label="Nhận xét Trần Gia Bảo"');
-    expect(html).toContain("Phụ huynh thấy thay đổi ngay");
+      expect(html).toContain("Phụ huynh sẽ thấy thay đổi sau khi lưu");
   });
 
   it("buổi chưa tới ngày chỉ xem: không có nút gửi phiếu", () => {
