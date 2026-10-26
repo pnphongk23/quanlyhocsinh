@@ -241,23 +241,51 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(row.comment, SlipRules.generatedSentence(criteria: 31))
     }
 
-    func testAssignAllDefaultsLeavesASentSlipEvenFromAnOlderPlan() async throws {
+    private func studentRecord(_ id: String) -> JSONValue {
+        .object(["id": .string(id), "class_id": .string("c"), "name": .string("Em \(id)"), "parent_phone": .null,
+                 "enrolled_at": .string("2026-09-01"), "left_at": .null, "status": .string("active"),
+                 "version": .number(1)])
+    }
+
+    /// Slips for "a" and "b" and the matching students, so a write is only held back by the guards under test.
+    private func seededRoster(api: SlipPushAPI) async throws -> (SQLiteStore, I4FeatureStore) {
         let store = try await seededStore()
-        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .sentAll))
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
+            "student": [studentRecord("a"), studentRecord("b")]], deleted: []))
+        let data = I4FeatureStore(store: store, api: api)
         await data.refresh()
+        return (store, data)
+    }
+
+    func testAssignAllDefaultsWritesADraftSlipOfTheSameRoster() async throws {
+        let (store, data) = try await seededRoster(api: SlipPushAPI(mode: .offline))
+        let failure = await data.saveDefaultSlips(sessionID: "session",
+                                                  slips: [CommentsRules.DefaultSlip(studentID: "b", criteria: 31, note: "Khá")])
+        XCTAssertNil(failure)
+        let pending = try await store.pendingCommands()
+        XCTAssertEqual(pending.filter { $0.kind == "slip.set" }.count, 1, "the draft is written; the guards below are what stop a sent one")
+        XCTAssertEqual(data.slip(sessionID: "session", studentID: "b")?.criteria, 31)
+    }
+
+    func testAssignAllDefaultsLeavesASentSlipEvenFromAnOlderPlan() async throws {
+        let (store, data) = try await seededRoster(api: SlipPushAPI(mode: .sentAll))
         let stalePlan = [CommentsRules.DefaultSlip(studentID: "a", criteria: 31, note: "")]
         _ = await data.sendSlips(sessionID: "session", studentIDs: ["a", "b"])
+        let before = try XCTUnwrap(data.slip(sessionID: "session", studentID: "a"))
         let failure = await data.saveDefaultSlips(sessionID: "session", slips: stalePlan)
         XCTAssertNil(failure)
         let pending = try await store.pendingCommands()
         XCTAssertFalse(pending.contains { $0.kind == "slip.set" }, "a sent slip is never rewritten")
-        XCTAssertEqual(data.slip(sessionID: "session", studentID: "a")?.status, .sent)
+        let after = try XCTUnwrap(data.slip(sessionID: "session", studentID: "a"))
+        XCTAssertEqual(after.status, .sent)
+        XCTAssertEqual(after.criteria, before.criteria)
+        XCTAssertEqual(after.comment, before.comment)
+        XCTAssertEqual(after.note, "Tốt")
+        XCTAssertNotEqual(after.criteria, 31)
     }
 
     func testAssignAllDefaultsWaitsOutASendInFlight() async throws {
-        let store = try await seededStore()
-        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .slowSentAll))
-        await data.refresh()
+        let (store, data) = try await seededRoster(api: SlipPushAPI(mode: .slowSentAll))
         let sending = Task { await data.sendSlips(sessionID: "session", studentIDs: ["a", "b"]) }
         while !data.sendingSessionIDs.contains("session") { await Task.yield() }
         let failure = await data.saveDefaultSlips(sessionID: "session",
@@ -286,29 +314,41 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertTrue(pending.isEmpty)
     }
 
-    func testAssignAllDefaultsCreatesASlipForAStudentWithNoSlipAndNoAttendance() async throws {
-        let store = try await seededStore()
-        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
-            "student": [.object(["id": .string("z"), "class_id": .string("c"), "name": .string("Em z"), "parent_phone": .null,
-                                 "enrolled_at": .string("2026-09-01"), "left_at": .null, "status": .string("active"),
-                                 "version": .number(1)])]], deleted: []))
-        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .offline))
+    func testAssignAllFromTheRealRosterCreatesSlipsForStudentsWithoutOneWhoWereAbsentOrNotMarked() async throws {
+        let (store, data) = try await seededRoster(api: SlipPushAPI(mode: .offline))
+        try await store.apply(PullPage(cursor: 3, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
+            "student": [studentRecord("z"), studentRecord("y")],
+            "attendance": [attendance("y", "absent")]], deleted: []))
         await data.refresh()
-        XCTAssertNil(data.slip(sessionID: "session", studentID: "z"))
+        let rows = data.students.map { student in
+            I4TicketRow(student: student, slip: data.slip(sessionID: "session", studentID: student.id),
+                        attendance: data.attendance(sessionID: "session", studentID: student.id)?.status,
+                        previousHomework: I4HomeworkSummary(total: 0, graded: 0), previousDate: nil, previousHadSections: false)
+        }
+        XCTAssertEqual(Set(rows.filter { $0.slip == nil }.map(\.student.id)), ["y", "z"])
+        XCTAssertEqual(CommentsRules.sendable(rows).count, 2, "only a and b can be sent before the assignment")
 
-        let failure = await data.saveDefaultSlips(
-            sessionID: "session", slips: [CommentsRules.DefaultSlip(studentID: "z", criteria: SlipRules.allCriteria, note: "")])
+        let plans = CommentsRules.defaultSlips(rows, sections: [], grades: [])
+        XCTAssertEqual(Set(plans.map(\.studentID)), ["a", "b", "y", "z"])
+        let failure = await data.saveDefaultSlips(sessionID: "session", slips: plans)
 
         XCTAssertNil(failure)
-        let command = try await store.pendingCommands().first { $0.kind == "slip.set" }
-        guard case .object(let fields) = try XCTUnwrap(command).payload else { return XCTFail("payload is not an object") }
-        XCTAssertEqual(fields["student_id"], .string("z"))
-        XCTAssertEqual(fields["criteria"], .number(31))
-        XCTAssertEqual(fields["comment"], .string(SlipRules.generatedSentence(criteria: 31)))
-        XCTAssertEqual(fields["hw_manual"], .bool(false))
-        let row = try XCTUnwrap(data.slip(sessionID: "session", studentID: "z"))
-        XCTAssertEqual(row.status, .draft)
-        XCTAssertEqual(row.stars, 5)
+        let commands = try await store.pendingCommands().filter { $0.kind == "slip.set" }
+        XCTAssertEqual(commands.count, 4)
+        for command in commands {
+            guard case .object(let fields) = command.payload else { return XCTFail("payload is not an object") }
+            XCTAssertEqual(fields["criteria"], .number(31))
+            XCTAssertEqual(fields["comment"], .string(SlipRules.generatedSentence(criteria: 31)))
+            XCTAssertEqual(fields["hw_manual"], .bool(false))
+        }
+        let created = ["y", "z"].compactMap { data.slip(sessionID: "session", studentID: $0) }
+        XCTAssertEqual(created.count, 2)
+        XCTAssertTrue(created.allSatisfy { $0.status == .draft && $0.stars == 5 })
+        let after = data.students.map { student in
+            I4TicketRow(student: student, slip: data.slip(sessionID: "session", studentID: student.id), attendance: nil,
+                        previousHomework: I4HomeworkSummary(total: 0, graded: 0), previousDate: nil, previousHadSections: false)
+        }
+        XCTAssertEqual(CommentsRules.sendable(after).count, 4)
     }
 
     func testAServerSkipForAnotherReasonStillCountsAsNotSent() async throws {
