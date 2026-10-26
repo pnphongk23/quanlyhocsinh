@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAccess } from "../../data/repositories/access";
 import { listClasses } from "../../data/repositories/classes";
 import {
@@ -12,7 +12,6 @@ import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import {
   Card,
   EmptyState,
-  Fab,
   Icon,
   Input,
   LinkButton,
@@ -34,7 +33,6 @@ export default function MembersPage() {
   useStore();
   const access = useAccess();
   const desktop = useIsDesktop();
-  const navigate = useNavigate();
   const [query, setQuery] = useState("");
 
   const members = listMembers();
@@ -49,7 +47,6 @@ export default function MembersPage() {
     matchesMember(member, role?.name ?? "", query),
   );
   const activeCount = members.filter((member) => member.status === "active").length;
-  const invitedCount = members.filter((member) => member.status === "invited").length;
   const disabledCount = members.filter((member) => member.status === "disabled").length;
 
   const roleLabel = (role: ReturnType<typeof roleById.get>): string =>
@@ -103,13 +100,13 @@ export default function MembersPage() {
       </div>
 
       <p className={s.stats} aria-label="Thống kê nhân sự">
-        {members.length} nhân sự · {activeCount} đang hoạt động · {invitedCount} đã mời ·{" "}
-        {disabledCount} vô hiệu hoá · {classes.length} lớp trong workspace
+        {members.length} nhân sự · {activeCount} đang hoạt động · {disabledCount}{" "}
+        vô hiệu hoá · {classes.length} lớp trong workspace
       </p>
 
       {members.length === 0 ? (
-        <EmptyState title="Chưa có nhân sự">
-          <p>Mời giáo viên hoặc trợ giảng bằng số điện thoại để bắt đầu.</p>
+        <EmptyState title="Chưa có nhân sự" mascot="cho">
+          <p>Danh sách nhân sự của workspace đang trống.</p>
         </EmptyState>
       ) : visible.length === 0 ? (
         <EmptyState title="Không tìm thấy nhân sự">
@@ -188,8 +185,6 @@ export default function MembersPage() {
           ))}
         </div>
       )}
-
-      <Fab label="Mời nhân sự" onClick={() => navigate("/nhan-su/moi")} />
     </main>
   );
 }

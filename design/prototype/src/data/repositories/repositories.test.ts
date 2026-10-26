@@ -81,7 +81,7 @@ describe("Repositories và hàng đợi", () => {
       expect(getStore()).toBe(before);
     });
   it("offline giữ hàng đợi, chặn đăng xuất và đồng bộ lại khi có mạng", () => {
-    login("teacher@example.test", "any");
+      login("+84 900 000 001", "colan-demo");
     vi.stubGlobal("navigator", { onLine: false });
     saveScore({ ...getStore().scores[0], value: 7 });
     vi.advanceTimersByTime(1600);

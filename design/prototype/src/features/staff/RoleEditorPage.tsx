@@ -157,7 +157,7 @@ export default function RoleEditorPage() {
           </div>
           <p className={s.notice}>
             Vai trò Admin là cố định: luôn có toàn quyền và thấy mọi lớp. Không sửa
-            được tên, loại hay ma trận quyền. Quản trị workspace (mời nhân sự, vai trò,
+            được tên, loại hay ma trận quyền. Quản trị workspace (vai trò,
             gán lớp, vô hiệu hoá) luôn chỉ Admin làm.
           </p>
         </Card>

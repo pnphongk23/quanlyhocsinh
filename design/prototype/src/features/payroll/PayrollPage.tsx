@@ -181,7 +181,7 @@ export default function PayrollPage() {
       )}
 
       {summaries.length === 0 ? (
-        <EmptyState title="Chưa có buổi nào trong tháng">
+        <EmptyState title="Chưa có buổi nào trong tháng" mascot="cho">
           <p>Bảng lương sẽ có khi tháng này có buổi dạy.</p>
         </EmptyState>
       ) : (

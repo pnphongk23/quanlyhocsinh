@@ -1,15 +1,15 @@
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAccess } from "../data/repositories/access";
-import { listClasses } from "../data/repositories/classes";
+import { getClass, listClasses } from "../data/repositories/classes";
 import { useStore } from "../data/store";
 import type { PermissionGroup } from "../data/types";
 import { features } from "../shared/features";
+import { currentWorkspaceName } from "../data/repositories/auth";
 import { useIsDesktop } from "../shared/hooks/useIsDesktop";
 import SaveStatus from "../shared/SaveStatus";
+import { PageTransition } from "../shared/motion";
 import { Icon, type IconName } from "../shared/ui";
 import s from "./shell.module.css";
-
-const WORKSPACE_NAME = "Lớp của cô Lan";
 
 /** Tabbar mobile giữ nguyên 3 mục, không đổi theo quyền. */
 const items: Array<{ to: string; label: string; icon: IconName }> = [
@@ -21,21 +21,24 @@ const items: Array<{ to: string; label: string; icon: IconName }> = [
 interface NavItem {
   to: string;
   label: string;
+  /** Mục con của "Lớp": chỉ hiện khi đã chọn lớp, thụt lề dưới "Lớp". */
+  child?: boolean;
   /** Đánh dấu active cho màn con cùng nhóm (vd. báo cáo điểm thuộc Điểm số). */
   match?: (pathname: string) => boolean;
 }
 
 /**
- * Lớp đang mở để gắn vào các lối vào theo lớp (Điểm danh, Điểm số, Học sinh,
- * Báo cáo). Ưu tiên lớp đang mở nếu vai trò hiện tại thấy được lớp đó.
+ * Lớp đang mở để gắn vào các mục con của "Lớp" (Điểm danh, Điểm số, Học sinh,
+ * Báo cáo). Chỉ lấy lớp đã chọn mà vai trò hiện tại thấy được; chưa chọn thì
+ * không có mục con.
  */
 function scopedClassId(
   currentClassId: string | null,
   visible: Array<{ id: string }>,
 ): string | null {
-  if (currentClassId && visible.some((klass) => klass.id === currentClassId))
-    return currentClassId;
-  return visible[0]?.id ?? null;
+  return currentClassId && visible.some((klass) => klass.id === currentClassId)
+    ? currentClassId
+    : null;
 }
 
 /** Lối vào desktop theo quyền: nhân sự không bao giờ thấy mục quản trị. */
@@ -47,31 +50,34 @@ export function desktopNav(
   classId: string | null,
 ): NavItem[] {
   const links: NavItem[] = [{ to: "/lop", label: "Lớp" }];
-  const classPath = (suffix: string) =>
-    classId ? `/lop/${classId}/${suffix}` : "/lop";
+  const classPath = (suffix: string) => `/lop/${classId}/${suffix}`;
 
-  if (can("sessions_attendance", "read"))
-    links.push({ to: classPath("diem-danh"), label: "Điểm danh" });
-  if (can("scores", "read"))
-    links.push({
-      to: classPath("diem"),
-      label: "Điểm số",
-      match: classId
-        ? (pathname) => pathname.startsWith(`/lop/${classId}/bao-cao-diem`)
-        : undefined,
-    });
-  if (can("students", "read"))
-    links.push({ to: classPath("hoc-sinh"), label: "Học sinh" });
-  if (can("comments_reports", "read"))
-    links.push({ to: classPath("bao-cao"), label: "Báo cáo" });
-  if (can("lectures", "read"))
+  if (classId) {
+    if (can("sessions_attendance", "read"))
+      links.push({ to: classPath("diem-danh"), label: "Điểm danh", child: true });
+    if (can("scores", "read"))
+      links.push({
+        to: classPath("diem"),
+        label: "Điểm số",
+        child: true,
+        match: (pathname) =>
+          pathname.startsWith(`/lop/${classId}/bao-cao-diem`),
+      });
+    if (can("students", "read"))
+      links.push({ to: classPath("hoc-sinh"), label: "Học sinh", child: true });
+    if (can("comments_reports", "read"))
+      links.push({ to: classPath("bao-cao"), label: "Báo cáo", child: true });
+  }
+  // Ngoài Bản đầu (spec mục 8): mỗi cờ tắt thì bỏ hẳn lối vào, code màn giữ.
+  if (features.lectures && can("lectures", "read"))
     links.push({ to: "/bai-giang", label: "Bài giảng" });
 
-  if (isAdmin) links.push({ to: "/phan-cong", label: "Phân công" });
+  if (features.staffing && isAdmin)
+    links.push({ to: "/phan-cong", label: "Phân công" });
 
   if (isStaff) {
-    links.push({ to: "/lich-day", label: "Lịch dạy" });
-    // Cờ Lương tắt thì bỏ hẳn lối vào, code màn Lương vẫn giữ.
+    if (features.staffing)
+      links.push({ to: "/lich-day", label: "Lịch dạy" });
     if (features.payroll) {
       if (isAdmin) links.push({ to: "/luong", label: "Lương" });
       else if (memberId)
@@ -79,11 +85,12 @@ export function desktopNav(
     }
   }
 
-  if (isAdmin) {
-    links.push({ to: "/hoc-phi", label: "Học phí" });
+  if (features.staffing && isAdmin) {
     links.push({ to: "/nhan-su", label: "Nhân sự" });
     links.push({ to: "/vai-tro", label: "Vai trò" });
   }
+  if (features.tuition && isAdmin)
+    links.push({ to: "/hoc-phi", label: "Học phí" });
 
   links.push({ to: "/cai-dat", label: "Cài đặt" });
   return links;
@@ -94,7 +101,13 @@ export function TeacherShell() {
   return desktop ? <DesktopShell /> : <MobileShell />;
 }
 
+/** Trang đi sâu trên mobile (/lop/:id/...): trượt ngang thay vì trượt lên. */
+function isDetailPath(pathname: string): boolean {
+  return pathname.split("/").filter(Boolean).length > 2;
+}
+
 function MobileShell() {
+  const { pathname } = useLocation();
   return (
     <div className={s.mobile}>
       <a className={s.skip} href="#noi-dung">
@@ -102,7 +115,7 @@ function MobileShell() {
       </a>
         <SaveStatus className={s.mobileSaveStatus} />
       <main id="noi-dung" className={s.content}>
-        <Outlet />
+        <PageTransition detail={isDetailPath(pathname)} />
       </main>
       <nav className={s.tabbar} aria-label="Điều hướng chính">
         {items.map((item) => (
@@ -127,6 +140,7 @@ function DesktopShell() {
   const access = useAccess();
   const { pathname } = useLocation();
   const classId = scopedClassId(state.currentClassId, listClasses());
+  const currentClass = classId ? getClass(classId) : undefined;
   const links = desktopNav(
     access.can,
     access.isAdmin,
@@ -134,6 +148,12 @@ function DesktopShell() {
     access.member?.id ?? null,
     classId,
   );
+  // Đúng một mục selected: mục con khớp route thì mục con, không thì "Lớp".
+  const path = pathname.replace(/\/$/, "");
+  const childMatch = links.some(
+    (item) => item.child && (path === item.to || item.match?.(path)),
+  );
+  const lopSelected = path.startsWith("/lop") && !childMatch;
   return (
     <div className={s.desktop}>
       <a className={s.skip} href="#noi-dung">
@@ -141,18 +161,34 @@ function DesktopShell() {
       </a>
       <aside className={s.sidebar}>
         <NavLink to="/lop" className={s.brand}>
-          {WORKSPACE_NAME}
+          {currentWorkspaceName()}
         </NavLink>
+        <div className={s.currentClass}>
+          <span className={s.currentClassLabel}>Đang xem lớp</span>
+          <span className={s.currentClassName}>
+            {currentClass?.name ?? "Chưa chọn lớp"}
+            <Icon name="chevron-down" size={14} />
+          </span>
+        </div>
         <nav className={s.sideNav} aria-label="Điều hướng chính">
           {links.map((item) => (
             <NavLink
               key={item.label}
               to={item.to}
-              end={item.to === "/lop"}
-              className={({ isActive }) =>
-                s.navItem +
-                (isActive || item.match?.(pathname) ? " " + s.navActive : "")
-              }
+              end={item.to === "/lop" || item.child}
+              className={({ isActive }) => {
+                if (item.to === "/lop")
+                  return (
+                    s.navItem +
+                    (lopSelected ? " " + s.navActive : "") +
+                    (childMatch ? " " + s.navGroupOpen : "")
+                  );
+                return (
+                  s.navItem +
+                  (item.child ? " " + s.navChild : "") +
+                  (isActive || item.match?.(pathname) ? " " + s.navActive : "")
+                );
+              }}
             >
               {item.label}
             </NavLink>
@@ -161,7 +197,7 @@ function DesktopShell() {
           <SaveStatus className={s.desktopSaveStatus} />
       </aside>
       <main id="noi-dung" className={s.content}>
-        <Outlet />
+        <PageTransition />
       </main>
     </div>
   );

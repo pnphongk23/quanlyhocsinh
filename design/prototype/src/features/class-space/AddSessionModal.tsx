@@ -3,9 +3,14 @@ import { createExtraSession, updateExtraSession } from "../../data/repositories/
 import { useAccess } from "../../data/repositories/access";
 import type { Session } from "../../data/types";
 import { todayISO } from "../../shared/format";
-import { Button, Sheet } from "../../shared/ui";
+import { useSaveAction, deepEqual } from "../../shared/hooks/useSaveAction";
+import { Button, Sheet, UnsavedChangesDialog } from "../../shared/ui";
 import SaveStatus from "../../shared/SaveStatus";
+import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 import s from "./sessions.module.css";
+
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 interface AddSessionModalProps {
   classId: string;
@@ -22,36 +27,65 @@ export default function AddSessionModal({
 }: AddSessionModalProps) {
   const today = todayISO();
   const access = useAccess();
-  const [date, setDate] = useState(session?.date ?? today);
-  const [time, setTime] = useState(session?.time ?? classTime);
-  const [note, setNote] = useState(session?.note ?? "");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
+  const initial = {
+    date: session?.date ?? today,
+    time: session?.time ?? classTime,
+    note: session?.note ?? "",
+  };
+  const [form, setForm] = useState(initial);
+  const action = useSaveAction({
+    // Tạo mới: giá trị mặc định đã hợp lệ nên chỉ cần hợp lệ là lưu được (baseline rỗng).
+    baseline: session ? initial : { date: "", time: "", note: "" },
+    value: form,
+    validate: (value) =>
+      TIME_PATTERN.test(value.time) &&
+      value.date !== "" &&
+      (value.date >= today || value.date === session?.date),
+    save: (value) => {
+      const note = value.note.trim();
+      if (session) {
+        updateExtraSession(session.id, { date: value.date, time: value.time, note });
+      } else {
+        createExtraSession({
+          classId,
+          date: value.date,
+          time: value.time,
+          note: note || undefined,
+        });
+      }
+    },
+  });
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
+  const guard = useUnsavedCloseGuard({ dirty: !deepEqual(form, initial), saving: action.saving, submit: action.submit }, { onClose: closeNow });
+  const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
 
   if (!access.can("sessions_attendance", "write")) return null;
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
-    setSaving(true);
-    try {
-      if (session) updateExtraSession(session.id, { date, time, note: note.trim() });
-      else createExtraSession({ classId, date, time, note: note.trim() || undefined });
-      onClose();
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không lưu được buổi học. Hãy kiểm tra thông tin và thử lại.",
-      );
-      setSaving(false);
-    }
+    if ((await action.submit()) && (await saved.peek())) onClose();
   }
+  const error = action.error
+    ? action.error instanceof Error && action.error.message !== "save_failed"
+      ? action.error.message
+      : "Không lưu được buổi học. Hãy kiểm tra thông tin và thử lại."
+    : "";
+  const close = closeNow;
+  const { date, time, note } = form;
+  const setDate = (next: string) => setForm((current) => ({ ...current, date: next }));
+  const setTime = (next: string) => setForm((current) => ({ ...current, time: next }));
+  const setNote = (next: string) => setForm((current) => ({ ...current, note: next }));
 
   return (
+    <>
     <Sheet
       open
-      onClose={onClose}
+      onClose={closeNow}
+      beforeClose={guard.beforeClose}
       title={session ? "Sửa buổi lẻ" : "Thêm buổi lẻ"}
     >
       <form className={s.form} onSubmit={submit}>
@@ -104,14 +138,16 @@ export default function AddSessionModal({
           {error && <p id="extra-session-error" className={s.error} role="alert">{error}</p>}
         </div>
         <div className={s.formActions}>
-          <Button type="submit" disabled={saving}>
-            {saving ? "Đang lưu…" : session ? "Lưu thay đổi" : "Lưu buổi học"}
+          <Button type="submit" disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
+            {session ? "Lưu thay đổi" : "Lưu buổi học"}
           </Button>
-          <Button variant="secondary" type="button" onClick={onClose}>
+          <Button variant="secondary" type="button" onClick={closeNow} disabled={action.saving}>
             Đóng
           </Button>
         </div>
       </form>
     </Sheet>
+    {confirmDialog}
+    </>
   );
 }

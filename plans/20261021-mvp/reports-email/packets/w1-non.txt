@@ -1,0 +1,1 @@
+Không sửa web/prototype/iOS/docs; không tạo migration 0005 (thuộc worker tài khoản); không deploy, không chạy wrangler d1 --remote; không push; không git add -A/stash/reset/checkout; không in env/printenv/set/ps/lsof; không in SĐT/email/token ra log.

@@ -146,3 +146,18 @@ export function monthOptionLabel(month: string): string {
 export function monthPeriodLabel(month: string): string {
   return `Tháng ${monthNumber(month)}`;
 }
+
+/**
+ * Tháng liền trước (delta = 1) hoặc liền sau (delta = -1) trong danh sách
+ * tháng có dữ liệu. Web chỉ cho chọn MỘT tháng (không có "3 tháng gần nhất");
+ * hết danh sách thì giữ nguyên tháng đang chọn.
+ */
+export function stepMonthChoice(
+  choices: string[],
+  current: string,
+  delta: number,
+): string {
+  const index = choices.indexOf(current);
+  if (index < 0) return current;
+  return choices[index + delta] ?? current;
+}

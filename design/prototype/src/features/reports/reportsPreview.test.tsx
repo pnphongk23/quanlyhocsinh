@@ -3,12 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { MEMBER_IDS, ROLE_IDS } from "../../data/defaults";
 import { publishReport, saveReportComment } from "../../data/repositories/reports";
+import { resolveRange } from "../../data/reportRange";
 import { createSeed } from "../../data/seed";
 import { getStore, replaceStore } from "../../data/store";
 import type { StoreState } from "../../data/types";
 import ReportPreview from "./ReportPreview";
 import ReportsPage from "./ReportsPage";
-import { buildMonthlyStudentReport, type MonthlyStudentReport } from "../../data/reportModel";
+import { buildRangeStudentReport, type PeriodStudentReport } from "../../data/reportModel";
 
 /** Bỏ các comment phân cách React chèn giữa hai text node khi render tĩnh. */
 const text = (html: string) => html.replace(/<!-- -->/g, "");
@@ -20,22 +21,30 @@ function renderMarkup(node: React.ReactElement): string {
   return text(renderToStaticMarkup(<RouterProvider router={router} />));
 }
 
-function renderPage(): string {
+/** Chi tiết đợt báo cáo mẫu (Buổi 5–8) khi `batch` có, danh sách đợt khi không. */
+function renderPage(batch: string | null = "6a-report-batch"): string {
   const router = createMemoryRouter(
     [{ path: "/lop/:classId/bao-cao", element: <ReportsPage /> }],
-    { initialEntries: ["/lop/6a/bao-cao"] },
+    {
+      initialEntries: [
+        batch ? `/lop/6a/bao-cao?dot=${batch}` : "/lop/6a/bao-cao",
+      ],
+    },
   );
   return text(renderToStaticMarkup(<RouterProvider router={router} />));
 }
 
-/** Báo cáo tháng 10 của một em dựng đúng bằng dữ liệu seed hiện tại. */
-function monthlyReport(state: StoreState, studentId: string): MonthlyStudentReport {
+/** Khoảng của đợt mẫu và báo cáo của một em dựng đúng bằng dữ liệu seed hiện tại. */
+function rangeReport(state: StoreState, studentId: string) {
   const student = state.students.find((item) => item.id === studentId);
-  if (!student) throw new Error("Thiếu học sinh seed");
+  const batch = state.reportBatches.find((item) => item.id === "6a-report-batch");
+  if (!student || !batch) throw new Error("Thiếu dữ liệu seed");
+  const range = resolveRange(state.sessions, batch);
+  if (!range) throw new Error("Khoảng buổi mẫu không hợp lệ");
   const record = state.reports.find(
-    (item) => item.studentId === studentId && item.month === "2026-10",
+    (item) => item.studentId === studentId && item.batchId === batch.id,
   );
-  const report = buildMonthlyStudentReport(student, "2026-10", {
+  const report: PeriodStudentReport | null = buildRangeStudentReport(student, range, {
     sessions: state.sessions,
     attendance: state.attendance,
     tests: state.tests,
@@ -45,8 +54,8 @@ function monthlyReport(state: StoreState, studentId: string): MonthlyStudentRepo
     homeworkGrades: state.homeworkGrades,
     generalComment: record?.generalComment ?? "",
   });
-  if (!report) throw new Error("Không dựng được báo cáo tháng");
-  return report;
+  if (!report) throw new Error("Không dựng được báo cáo");
+  return { report, range };
 }
 
 function seedStore(): StoreState {
@@ -55,22 +64,20 @@ function seedStore(): StoreState {
   return state;
 }
 
-describe("bản xem trước báo cáo tháng (ảnh 07)", () => {
+describe("bản xem trước báo cáo theo khoảng buổi (ảnh 07)", () => {
   it("có khối sao, bảng BTVN theo phần, điểm từng bài và nhận xét chung", () => {
     const state = seedStore();
+    const { report, range } = rangeReport(state, "6a-student-1");
     const html = renderMarkup(
       <ReportPreview
-        report={monthlyReport(state, "6a-student-1")}
+        report={report}
+        range={range}
         className="Tiếng Anh giao tiếp 6A"
-        published
-        canPublish
-        onPublish={() => {}}
-        onBack={() => {}}
       />,
     );
     // Tiêu đề + chuyên cần + số bài đã có điểm (không có trung bình).
-    expect(html).toContain("Báo cáo tháng 10");
-    expect(html).toContain("Xem trước · Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
+    expect(html).toContain("Báo cáo Buổi 5–8");
+    expect(html).toContain("05/10–14/10 · Trần Gia Bảo · Tiếng Anh giao tiếp 6A");
     expect(html).toContain("Chuyên cần");
     expect(html).toContain("Bài kiểm tra");
     expect(html).toContain("3/3 bài");
@@ -96,22 +103,26 @@ describe("bản xem trước báo cáo tháng (ảnh 07)", () => {
     );
     // Điểm từng bài dạng value/max + nhận xét chung.
     expect(html).toContain("Điểm từng bài");
-    expect(html).toContain("8.0/10");
-    expect(html).toContain("10.0/10");
+    expect(html).toContain("8/10");
+    expect(html).toContain("10/10");
     expect(html).toContain("Bài chưa có điểm cần chấm trước khi phát hành.");
     expect(html).toContain("Nhận xét chung");
     expect(html).toContain("Tháng này con tiến bộ ở kỹ năng nghe");
-    expect(html).toContain("Phát hành lại");
+    // Nút phát hành/in nằm ở chân popup, không nằm trong nội dung xem trước.
+    expect(html).not.toContain("Phát hành");
+    expect(html).not.toContain("Quay lại danh sách báo cáo");
     expect(html).not.toMatch(/vắng thi/i);
     expect(html).not.toContain("chưa nhập");
   });
 
   it("bài chưa có điểm hiện Chưa có điểm, không có Vắng thi", () => {
     const state = seedStore();
-    // Em 3 (Phạm Đức Dũng) chưa có điểm bài "Nói" trong tháng 10.
+    // Em 3 (Phạm Đức Dũng) chưa có điểm bài "Nói" trong đợt báo cáo.
+    const { report, range } = rangeReport(state, "6a-student-3");
     const html = renderMarkup(
       <ReportPreview
-        report={monthlyReport(state, "6a-student-3")}
+        report={report}
+        range={range}
         className="Tiếng Anh giao tiếp 6A"
       />,
     );
@@ -121,7 +132,7 @@ describe("bản xem trước báo cáo tháng (ảnh 07)", () => {
   });
 });
 
-describe("màn duyệt & phát hành báo cáo (ảnh 13)", () => {
+describe("màn đợt báo cáo: duyệt & phát hành (ảnh 13)", () => {
   it("hiện tình trạng sẵn sàng/thiếu dữ liệu và ô nhận xét chung, không còn nút Nhận xét", () => {
     seedStore();
     const html = renderPage();
@@ -131,8 +142,8 @@ describe("màn duyệt & phát hành báo cáo (ảnh 13)", () => {
     expect(html).toContain("Thiếu dữ liệu");
     expect(html).toContain("Thiếu nhận xét chung");
     expect(html).toContain("Đã phát hành · 12/10");
-    expect(html).toContain("Nhận xét chung của tháng");
-    expect(html).toContain('aria-label="Nhận xét chung của tháng"');
+    expect(html).toContain("Nhận xét chung của đợt");
+    expect(html).toContain('aria-label="Nhận xét chung của đợt"');
     // Không còn nút "Nhận xét" và khối "Nhận xét đã gửi" của bản cũ.
     expect(html).not.toMatch(/>\s*Nhận xét\s*</);
     expect(html).not.toContain("Nhận xét đã gửi");
@@ -148,9 +159,9 @@ describe("màn duyệt & phát hành báo cáo (ảnh 13)", () => {
     state.students.unshift(target);
     replaceStore(state);
 
-    const suggestion = monthlyReport(state, "6a-student-1").suggestion;
+    const suggestion = rangeReport(state, "6a-student-1").report.suggestion;
     expect(suggestion).toBe(
-      "Gợi ý theo số buổi 3/2/1 sao của tháng: Tháng này con có 2 buổi 3 sao, 1 buổi 2 sao, 1 buổi 1 sao.",
+      "Gợi ý theo số buổi 3/2/1 sao của đợt: Trong đợt này con có 2 buổi 3 sao, 1 buổi 2 sao, 1 buổi 1 sao.",
     );
     const html = renderPage();
     expect(html).toContain("Dùng gợi ý làm bản nháp");
@@ -172,10 +183,10 @@ describe("màn duyệt & phát hành báo cáo (ảnh 13)", () => {
     const state = seedStore();
     saveReportComment(
       "6a-student-0-report",
-      "Con chăm chỉ và tiến bộ đều trong tháng 10.",
+      "Con chăm chỉ và tiến bộ đều trong đợt này.",
     );
     const html = renderPage();
-    expect(html).toContain("Con chăm chỉ và tiến bộ đều trong tháng 10.");
+    expect(html).toContain("Con chăm chỉ và tiến bộ đều trong đợt này.");
     expect(html).toContain("<b>2/10</b> sẵn sàng");
     expect(html).not.toMatch(/vắng thi/i);
   });
@@ -188,7 +199,7 @@ describe("màn duyệt & phát hành báo cáo (ảnh 13)", () => {
     replaceStore(state);
 
     const html = renderPage();
-    expect(html).toContain("Nhận xét chung của tháng");
+    expect(html).toContain("Nhận xét chung của đợt");
     expect(html).not.toContain("Dùng gợi ý làm bản nháp");
     expect(html).not.toContain("Phát hành báo cáo");
     expect(html).not.toMatch(/>\s*Phát hành\s*</);

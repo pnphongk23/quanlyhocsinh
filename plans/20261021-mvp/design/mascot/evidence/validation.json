@@ -1,0 +1,112 @@
+{
+  "svg_count": 18,
+  "raw_bytes": 16788,
+  "gzip_bytes": 7726,
+  "folder_bytes": 1865227,
+  "mockup_html_count": 10,
+  "mockup_png_count": 10,
+  "decoded_png_count": 10,
+  "comparisons": [
+    {
+      "name": "nep-login",
+      "diff_bbox": [
+        295,
+        93,
+        343,
+        140
+      ],
+      "outside_overlay_changed_pixels": 0
+    },
+    {
+      "name": "nep-empty",
+      "diff_bbox": [
+        164,
+        309,
+        219,
+        358
+      ],
+      "outside_overlay_changed_pixels": 0
+    },
+    {
+      "name": "nep-sent",
+      "diff_bbox": [
+        294,
+        387,
+        357,
+        446
+      ],
+      "outside_overlay_changed_pixels": 0
+    },
+    {
+      "name": "nep-overview",
+      "diff_bbox": [
+        273,
+        115,
+        334,
+        173
+      ],
+      "outside_overlay_changed_pixels": 0
+    },
+    {
+      "name": "nep-published",
+      "diff_bbox": [
+        300,
+        21,
+        344,
+        62
+      ],
+      "outside_overlay_changed_pixels": 0
+    },
+    {
+      "name": "nep-error",
+      "diff_bbox": [
+        323,
+        6,
+        347,
+        28
+      ],
+      "outside_overlay_changed_pixels": 0
+    },
+    {
+      "name": "mam-login",
+      "diff_bbox": [
+        299,
+        93,
+        343,
+        141
+      ],
+      "outside_overlay_changed_pixels": 0
+    },
+    {
+      "name": "mam-empty",
+      "diff_bbox": [
+        164,
+        310,
+        218,
+        359
+      ],
+      "outside_overlay_changed_pixels": 0
+    },
+    {
+      "name": "nhip-login",
+      "diff_bbox": [
+        297,
+        93,
+        344,
+        142
+      ],
+      "outside_overlay_changed_pixels": 0
+    },
+    {
+      "name": "nhip-empty",
+      "diff_bbox": [
+        164,
+        317,
+        228,
+        358
+      ],
+      "outside_overlay_changed_pixels": 0
+    }
+  ],
+  "errors": []
+}

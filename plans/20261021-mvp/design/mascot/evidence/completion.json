@@ -1,0 +1,135 @@
+{
+  "attempts": 1,
+  "date": "2026-10-22",
+  "disk_before": 13486460928,
+  "scenes": [
+    {
+      "scenario": "login",
+      "route": "/dang-nhap",
+      "component": "design/prototype/src/features/auth/LoginPage.tsx",
+      "slot": {
+        "x": 286,
+        "y": 88,
+        "size": 64,
+        "clearance": 8
+      },
+      "obstruction_count": 0,
+      "baseline_sha256": "b5798d5bd1829369b0d8f43858ab906695a84308270281f22aa822b906769672",
+      "flag_response_patches": 2,
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "local fixture; proposed overlay separate"
+    },
+    {
+      "scenario": "empty",
+      "route": "/lop/6a/hoc-sinh",
+      "component": "design/prototype/src/features/students/StudentsPage.tsx",
+      "slot": {
+        "x": 155,
+        "y": 292,
+        "size": 80,
+        "clearance": 8
+      },
+      "obstruction_count": 0,
+      "baseline_sha256": "cb5185085c095bb33a03db0d973c0d6d6d3582b13d8bdeeb7f36f572df167e8b",
+      "flag_response_patches": 2,
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "local fixture; proposed overlay separate"
+    },
+    {
+      "scenario": "sent",
+      "route": "/lop/6a/buoi-hoc/6a-session-0?tab=nhan-xet",
+      "component": "design/prototype/src/features/comments/CommentsPanel.tsx",
+      "slot": {
+        "x": 286,
+        "y": 380,
+        "size": 80,
+        "clearance": 8
+      },
+      "obstruction_count": 0,
+      "baseline_sha256": "3497f2002d772304ffbf06b52de147cc5ba535dbcb78e8eb13d0d0dc25dc1b67",
+      "flag_response_patches": 2,
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "local fixture; proposed overlay separate"
+    },
+    {
+      "scenario": "overview",
+      "route": "/ph",
+      "component": "design/prototype/src/roles/guardian/GuardianOverviewPage.tsx",
+      "slot": {
+        "x": 262,
+        "y": 108,
+        "size": 80,
+        "clearance": 8
+      },
+      "obstruction_count": 0,
+      "baseline_sha256": "616f497a31a1f71ad021ab687974372e254b362a1c8a0bebd45974c53e0947fb",
+      "flag_response_patches": 2,
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "local fixture; proposed overlay separate"
+    },
+    {
+      "scenario": "published",
+      "route": "/ph/bao-cao",
+      "component": "design/prototype/src/roles/guardian/GuardianReportPage.tsx",
+      "slot": {
+        "x": 294,
+        "y": 16,
+        "size": 56,
+        "clearance": 8
+      },
+      "obstruction_count": 0,
+      "baseline_sha256": "1753c984525890a57262a3841aeb6d815bfeffb0017594c3c3fd5da7ccecb3b0",
+      "flag_response_patches": 2,
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "local fixture; proposed overlay separate"
+    },
+    {
+      "scenario": "error",
+      "route": "/lop/6a/buoi-hoc/6a-session-0",
+      "component": "design/prototype/src/features/attendance/AttendancePanel.tsx",
+      "slot": {
+        "x": 318,
+        "y": 2,
+        "size": 32,
+        "clearance": 8
+      },
+      "obstruction_count": 0,
+      "baseline_sha256": "a4a0e720324dfe6ab94f5b7413e2acaa395dd8e8021244d7d450600503d39320",
+      "flag_response_patches": 2,
+      "viewport": [
+        390,
+        844
+      ],
+      "state": "local fixture; proposed overlay separate"
+    }
+  ],
+  "failures": [],
+  "launch": "success",
+  "mockup_pngs": 10,
+  "gallery_rendered": true,
+  "reduced_motion": "Static SVG; no CSS animations",
+  "status": "DONE_WITH_CONCERNS",
+  "visual_self_check": "10 pairs inspected; overview neutral welcome verified; contact sheet/gallery/18poses inspected",
+  "limits": [
+    "Physical iPhone/Safari",
+    "VoiceOver",
+    "Large text/dark theme",
+    "Backend ACK"
+  ],
+  "folder_bytes_at_capture": 1272764
+}

@@ -1,0 +1,828 @@
+[
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F1-no-class",
+    "result": "PASS",
+    "evidence": "screenshot web-F1-no-class-390.png; Đến nội dung Xin chào, cô Lan Lớp của tôi CL Hôm nay · Thứ Bảy 24/10 09:00 Lớp 7B Buổi 1 Chưa điểm danh Điểm danh chưa xong › Việc còn dở Phiếu chưa gửi (8 em) Lớp 6A · Buổi 2 · 23"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F1 sidebar links",
+    "result": "SKIP",
+    "evidence": "mobile layout uses tab navigation rather than desktop sidebar"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F1-class-selected",
+    "result": "PASS",
+    "evidence": "screenshot web-F1-class-selected-390.png; Đến nội dung Lớp 6A Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Buổi hiện tại Buổi 3 · Thứ Ba, 27 tháng 10 17:00 Xem buổi Điểm danh mở vào ngày học. Sắp tới (1 buổi) Các buổi đã qu"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F1 sidebar links",
+    "result": "SKIP",
+    "evidence": "mobile layout uses tab navigation rather than desktop sidebar"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot web-F3-the-lop-selected-390.png; Đến nội dung Xin chào, cô Lan Lớp của tôi CL Hôm nay · Thứ Bảy 24/10 09:00 Lớp 7B Buổi 1 Chưa điểm danh Điểm danh chưa xong › Việc còn dở Phiếu chưa gửi (8 em) Lớp 6A · Buổi 2 · 23"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F5-class",
+    "result": "PASS",
+    "evidence": "screenshot web-F5-class-390.png; Đến nội dung Lớp 6A Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Buổi hiện tại Buổi 3 · Thứ Ba, 27 tháng 10 17:00 Xem buổi Điểm danh mở vào ngày học. Sắp tới (1 buổi) Các buổi đã qu"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F5 no breadcrumb",
+    "result": "PASS",
+    "evidence": "breadcrumb selectors=0"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F6-current-session",
+    "result": "PASS",
+    "evidence": "screenshot web-F6-current-session-390.png; Đến nội dung Lớp 6A Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Buổi hiện tại Buổi 3 · Thứ Ba, 27 tháng 10 17:00 Xem buổi Điểm danh mở vào ngày học. Sắp tới (1 buổi) Các buổi đã qu"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F6 upcoming single action",
+    "result": "SKIP",
+    "evidence": "mobile SessionsTab does not render the 'Buổi lẻ sắp tới' card"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F7-empty-filter",
+    "result": "PASS",
+    "evidence": "screenshot web-F7-empty-filter-390.png; Đến nội dung Lớp 6A Buổi 1 · 20/10 Điểm danh Nhận xét Bài tập về nhà Tất cả (8) Chưa chọn sao (0) Chưa gửi (0) Không có học sinh trong mục này Gửi phiếu cả lớp (0) Lớp Lịch Cài đặt"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F7 empty mascot",
+    "result": "PASS",
+    "evidence": "empty containers=2; mascot img=2"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "Selected chip token fill",
+    "result": "PASS",
+    "evidence": "token=#e8eefe; selected=[{\"text\":\"Chưa gửi (0)\",\"tag\":\"BUTTON\",\"role\":null,\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"borderWidths\":[\"0px\",\"0px\",\"0px\",\"0px\"],\"borderColors\":[\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\"],\"outline\":\"none\",\"focused\":true}]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F9 score keyboard",
+    "result": "SKIP",
+    "evidence": "contract covers desktop score-grid keyboard navigation"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F8 busy+spinner painted",
+    "result": "PASS",
+    "evidence": "aria-busy RAF frames=11; spinner RAF frames=11"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F8 pending pill",
+    "result": "PASS",
+    "evidence": "visible SaveStatus instance during delayed push"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F8 busy duration",
+    "result": "PASS",
+    "evidence": "aria-busy duration=407.9 ms (minimum 350)"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F8 accessible success",
+    "result": "PASS",
+    "evidence": "button name=Đã lưu"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F8 offline pill",
+    "result": "PASS",
+    "evidence": "visible offline SaveStatus instance; entered score retained"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F8 homework storage error retains editor/value",
+    "result": "PASS",
+    "evidence": "error=Lỗi lưu — vui lòng thử lại; editor=true; value retained=true; known behavior: src/data/repositories/homework.ts:8 catches persistCommand rejection"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F8 homework-section storage error keeps editor/value",
+    "result": "PASS",
+    "evidence": "visible error=true; editor=true; value retained=true; screenshot=F8-save-error-homework-section-390.png"
+  },
+  {
+    "target": "web",
+    "viewport": "390x844",
+    "item": "F8 ticket storage error keeps editor/value",
+    "result": "PASS",
+    "evidence": "visible error=true; editor=true; value retained=true; screenshot=F8-save-error-ticket-390.png"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F1-no-class",
+    "result": "PASS",
+    "evidence": "screenshot web-F1-no-class-1024.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Chưa chọn lớp ⌄ Lớp Cài đặt Học kỳ này · 3 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 09:00 Lớp 7B Buổi 1 Chưa điểm danh Điểm danh chư"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F1 sidebar links",
+    "result": "PASS",
+    "evidence": "links=[\"Lớp\",\"Cài đặt\"]; expected 2"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F1-class-selected",
+    "result": "PASS",
+    "evidence": "screenshot web-F1-class-selected-1024.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Lớp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Các buổi đã qua Bu"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F1 sidebar links",
+    "result": "PASS",
+    "evidence": "links=[\"Lớp\",\"Điểm danh\",\"Điểm số\",\"Học sinh\",\"Báo cáo\",\"Cài đặt\"]; expected 6"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot web-F3-the-lop-selected-1024.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Học kỳ này · 3 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 09:00 Lớp 7B Buổi 1 "
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F3 selected class card fill",
+    "result": "PASS",
+    "evidence": "card=1; computed={\"background\":\"rgb(232, 238, 254)\",\"border\":\"rgb(30, 67, 184)\",\"borderWidth\":\"0px\"}; token=rgb(232, 238, 254)"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F5-class",
+    "result": "PASS",
+    "evidence": "screenshot web-F5-class-1024.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Lớp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Các buổi đã qua Bu"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F5 no breadcrumb",
+    "result": "PASS",
+    "evidence": "breadcrumb selectors=0"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F6-current-session",
+    "result": "PASS",
+    "evidence": "screenshot web-F6-current-session-1024.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Lớp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Các buổi đã qua Bu"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F6 upcoming single action",
+    "result": "PASS",
+    "evidence": "'Xem buổi' actions=1"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F7-empty-filter",
+    "result": "PASS",
+    "evidence": "screenshot web-F7-empty-filter-1024.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Buổi 1 · Thứ Ba, 20 tháng 10 · 17:00 Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Đ"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F7 empty mascot",
+    "result": "PASS",
+    "evidence": "empty containers=3; mascot img=3"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "Selected segmented token fill",
+    "result": "PASS",
+    "evidence": "token=#e8eefe; selected=[{\"text\":\"Chưa gửi\",\"tag\":\"BUTTON\",\"role\":null,\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"borderWidths\":[\"0px\",\"0px\",\"0px\",\"0px\"],\"borderColors\":[\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\"],\"outline\":\"none\",\"focused\":true}]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F9 Enter/↓/↑ moves score cell ×20",
+    "result": "PASS",
+    "evidence": "cycles=20; focusLoss=0; ArrowDown unchanged=0; ArrowUp failedToReturn=0; Enter failedToMove=0; Chưa có bài kiểm tra flashes=0"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F8 busy+spinner painted",
+    "result": "PASS",
+    "evidence": "aria-busy RAF frames=12; spinner RAF frames=12"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F8 pending pill",
+    "result": "PASS",
+    "evidence": "visible SaveStatus instance during delayed push"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F8 busy duration",
+    "result": "PASS",
+    "evidence": "aria-busy duration=414.6 ms (minimum 350)"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F8 accessible success",
+    "result": "PASS",
+    "evidence": "button name=Đã lưu"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F8 offline pill",
+    "result": "PASS",
+    "evidence": "visible offline SaveStatus instance; entered score retained"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F8 homework storage error retains editor/value",
+    "result": "PASS",
+    "evidence": "error=Lỗi lưu — vui lòng thử lại; editor=true; value retained=true; known behavior: src/data/repositories/homework.ts:8 catches persistCommand rejection"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "F1 /lop sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":2,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "class page · Buổi học sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "attendance page sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1024x800",
+    "item": "session detail sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F1-no-class",
+    "result": "PASS",
+    "evidence": "screenshot web-F1-no-class-1280.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Chưa chọn lớp ⌄ Lớp Cài đặt Học kỳ này · 3 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 09:00 Lớp 7B Buổi 1 Chưa điểm danh Điểm danh chư"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F1 sidebar links",
+    "result": "PASS",
+    "evidence": "links=[\"Lớp\",\"Cài đặt\"]; expected 2"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F1-class-selected",
+    "result": "PASS",
+    "evidence": "screenshot web-F1-class-selected-1280.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Lớp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Các buổi đã qua Bu"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F1 sidebar links",
+    "result": "PASS",
+    "evidence": "links=[\"Lớp\",\"Điểm danh\",\"Điểm số\",\"Học sinh\",\"Báo cáo\",\"Cài đặt\"]; expected 6"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot web-F3-the-lop-selected-1280.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Học kỳ này · 3 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 09:00 Lớp 7B Buổi 1 "
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F3 selected class card fill",
+    "result": "PASS",
+    "evidence": "card=1; computed={\"background\":\"rgb(232, 238, 254)\",\"border\":\"rgb(30, 67, 184)\",\"borderWidth\":\"0px\"}; token=rgb(232, 238, 254)"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F5-class",
+    "result": "PASS",
+    "evidence": "screenshot web-F5-class-1280.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Lớp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Các buổi đã qua Bu"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F5 no breadcrumb",
+    "result": "PASS",
+    "evidence": "breadcrumb selectors=0"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F6-current-session",
+    "result": "PASS",
+    "evidence": "screenshot web-F6-current-session-1280.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Lớp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Các buổi đã qua Bu"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F6 upcoming single action",
+    "result": "PASS",
+    "evidence": "'Xem buổi' actions=1"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F7-empty-filter",
+    "result": "PASS",
+    "evidence": "screenshot web-F7-empty-filter-1280.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Buổi 1 · Thứ Ba, 20 tháng 10 · 17:00 Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Đ"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F7 empty mascot",
+    "result": "PASS",
+    "evidence": "empty containers=3; mascot img=3"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "Selected segmented token fill",
+    "result": "PASS",
+    "evidence": "token=#e8eefe; selected=[{\"text\":\"Chưa gửi\",\"tag\":\"BUTTON\",\"role\":null,\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"borderWidths\":[\"0px\",\"0px\",\"0px\",\"0px\"],\"borderColors\":[\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\"],\"outline\":\"none\",\"focused\":true}]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F9 Enter/↓/↑ moves score cell ×20",
+    "result": "PASS",
+    "evidence": "cycles=20; focusLoss=0; ArrowDown unchanged=0; ArrowUp failedToReturn=0; Enter failedToMove=0; Chưa có bài kiểm tra flashes=0"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 busy+spinner painted",
+    "result": "PASS",
+    "evidence": "aria-busy RAF frames=12; spinner RAF frames=12"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 pending pill",
+    "result": "PASS",
+    "evidence": "visible SaveStatus instance during delayed push"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 busy duration",
+    "result": "PASS",
+    "evidence": "aria-busy duration=414.0 ms (minimum 350)"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 accessible success",
+    "result": "PASS",
+    "evidence": "button name=Đã lưu"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 offline pill",
+    "result": "PASS",
+    "evidence": "visible offline SaveStatus instance; entered score retained"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 homework storage error retains editor/value",
+    "result": "PASS",
+    "evidence": "error=Lỗi lưu — vui lòng thử lại; editor=true; value retained=true; known behavior: src/data/repositories/homework.ts:8 catches persistCommand rejection"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 attendance storage error keeps editor/value",
+    "result": "PASS",
+    "evidence": "visible error=true; editor=true; value retained=true; screenshot=F8-save-error-attendance-1280.png"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 score-entry storage error keeps editor/value",
+    "result": "PASS",
+    "evidence": "visible error=true; editor=true; value retained=true; screenshot=F8-save-error-score-entry-1280.png"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 score-grid storage error keeps editor/value",
+    "result": "PASS",
+    "evidence": "visible error=true; editor=true; value retained=true; screenshot=F8-save-error-score-grid-1280.png"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 homework-grading storage error keeps editor/value",
+    "result": "PASS",
+    "evidence": "visible error=true; editor=true; value retained=true; screenshot=F8-save-error-homework-grading-1280.png"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F8 ticket storage error keeps editor/value",
+    "result": "PASS",
+    "evidence": "visible error=true; editor=true; value retained=true; screenshot=F8-save-error-ticket-1280.png"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "F1 /lop sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":2,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "class page · Buổi học sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "attendance page sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1280x800",
+    "item": "session detail sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F1-no-class",
+    "result": "PASS",
+    "evidence": "screenshot web-F1-no-class-1440.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Chưa chọn lớp ⌄ Lớp Cài đặt Học kỳ này · 3 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 09:00 Lớp 7B Buổi 1 Chưa điểm danh Điểm danh chư"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F1 sidebar links",
+    "result": "PASS",
+    "evidence": "links=[\"Lớp\",\"Cài đặt\"]; expected 2"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F1-class-selected",
+    "result": "PASS",
+    "evidence": "screenshot web-F1-class-selected-1440.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Lớp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Các buổi đã qua Bu"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F1 sidebar links",
+    "result": "PASS",
+    "evidence": "links=[\"Lớp\",\"Điểm danh\",\"Điểm số\",\"Học sinh\",\"Báo cáo\",\"Cài đặt\"]; expected 6"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot web-F3-the-lop-selected-1440.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Học kỳ này · 3 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 09:00 Lớp 7B Buổi 1 "
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F3 selected class card fill",
+    "result": "PASS",
+    "evidence": "card=1; computed={\"background\":\"rgb(232, 238, 254)\",\"border\":\"rgb(30, 67, 184)\",\"borderWidth\":\"0px\"}; token=rgb(232, 238, 254)"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F5-class",
+    "result": "PASS",
+    "evidence": "screenshot web-F5-class-1440.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Lớp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Các buổi đã qua Bu"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F5 no breadcrumb",
+    "result": "PASS",
+    "evidence": "breadcrumb selectors=0"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F6-current-session",
+    "result": "PASS",
+    "evidence": "screenshot web-F6-current-session-1440.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Lớp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Các buổi đã qua Bu"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F6 upcoming single action",
+    "result": "PASS",
+    "evidence": "'Xem buổi' actions=1"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F7-empty-filter",
+    "result": "PASS",
+    "evidence": "screenshot web-F7-empty-filter-1440.png; Đến nội dung Lớp của Cô Demo Đang xem lớp Lớp 6A ⌄ Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Buổi 1 · Thứ Ba, 20 tháng 10 · 17:00 Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Đ"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F7 empty mascot",
+    "result": "PASS",
+    "evidence": "empty containers=3; mascot img=3"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "Selected segmented token fill",
+    "result": "PASS",
+    "evidence": "token=#e8eefe; selected=[{\"text\":\"Chưa gửi\",\"tag\":\"BUTTON\",\"role\":null,\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"borderWidths\":[\"0px\",\"0px\",\"0px\",\"0px\"],\"borderColors\":[\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\",\"rgb(30, 67, 184)\"],\"outline\":\"none\",\"focused\":true}]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F9 Enter/↓/↑ moves score cell ×20",
+    "result": "PASS",
+    "evidence": "cycles=20; focusLoss=0; ArrowDown unchanged=0; ArrowUp failedToReturn=0; Enter failedToMove=0; Chưa có bài kiểm tra flashes=0"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F8 busy+spinner painted",
+    "result": "PASS",
+    "evidence": "aria-busy RAF frames=12; spinner RAF frames=12"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F8 pending pill",
+    "result": "PASS",
+    "evidence": "visible SaveStatus instance during delayed push"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F8 busy duration",
+    "result": "PASS",
+    "evidence": "aria-busy duration=406.4 ms (minimum 350)"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F8 accessible success",
+    "result": "PASS",
+    "evidence": "button name=Đã lưu"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F8 offline pill",
+    "result": "PASS",
+    "evidence": "visible offline SaveStatus instance; entered score retained"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F8 homework storage error retains editor/value",
+    "result": "PASS",
+    "evidence": "error=Lỗi lưu — vui lòng thử lại; editor=true; value retained=true; known behavior: src/data/repositories/homework.ts:8 catches persistCommand rejection"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "F1 /lop sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":2,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "class page · Buổi học sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "attendance page sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "web",
+    "viewport": "1440x900",
+    "item": "session detail sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  }
+]

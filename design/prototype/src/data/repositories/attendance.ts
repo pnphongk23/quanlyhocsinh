@@ -56,7 +56,7 @@ export function saveAttendanceBatch(
           before: { ...before },
           after: { ...item },
           changedAt: new Date().toISOString(),
-          actor: draft.auth?.email ?? "prototype",
+          actor: draft.auth?.phone ?? "prototype",
         });
         draft.attendance = draft.attendance.map((record) => record.id === item.id ? item : record);
       } else {

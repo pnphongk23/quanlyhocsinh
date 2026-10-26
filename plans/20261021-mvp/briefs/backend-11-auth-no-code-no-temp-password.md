@@ -1,0 +1,16 @@
+# backend-11: bỏ mã đăng ký + mật khẩu tạm phụ huynh, PBKDF2 vừa gói Free
+
+Worktree `/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-backend` (nhánh mvp-backend, HEAD 7a108f9), làm trong `worker/`. Đọc `AGENTS.md`, `plans/20261021-mvp/briefs/71-decisions-20261022.md` (mục Tài khoản). Dùng `srcwalk` thay rg/grep/cat.
+
+## Việc
+1. Bỏ hẳn `REGISTRATION_CODE`: `src/routes/auth.ts` (kiểm `registration_code`), `src/types.ts`, `vitest.config.ts`, `.dev.vars.example`, `README.md`, `wrangler.jsonc` nếu có, mọi test. `POST /auth/register` không nhận/không yêu cầu mã; trường `registration_code` trong body bị bỏ qua. Quét tìm "mã/lời mời/invite/code" còn sót trong worker.
+2. Bỏ `POST /students/{student_id}/guardian-credentials` (route + hàm db ở `src/db/auth.ts` ~dòng 830-870 + throttle/test liên quan + mục trong authz nếu code tham chiếu). Giữ cột và cờ `must_change_password` (vận hành có thể đặt lại thủ công = đặt cờ 1): login/me/đổi mật khẩu giữ nguyên hành vi cờ. Không thêm luồng phụ huynh lấy mật khẩu lần đầu (chờ người dùng).
+3. PBKDF2: đổi `DEFAULT_PBKDF2_ITERATIONS` trong `src/lib/crypto.ts` thành 30000. Giữ `MAX` 100000 chỉ cho cấu hình; `verifyPassword` PHẢI đọc số vòng từ chuỗi hash đã lưu (đã có: xác nhận) nên hash 100000 cũ vẫn đăng nhập được; khi đăng nhập thành công mà vòng khác cấu hình hiện tại (cả cao hơn lẫn thấp hơn) thì băm lại bằng cấu hình (`rehashPassword`, kiểm nó chạy cho cả hướng giảm). Test: hash 100000 vòng đăng nhập được và sau đó được thay bằng hash 30000; hash mới đăng ký là 30000. Nếu `wrangler.jsonc` đặt `PBKDF2_ITERATIONS` cho staging thì bỏ/đồng bộ về 30000 (lead sẽ đo và chốt, báo lại các chỗ đặt).
+4. Viết `plans/20261021-mvp/backend/runbook-reset-password.md` (thư mục chính `/Users/phamnhuphong/Git/quanlyhocsinh`): hướng dẫn ngắn đặt lại mật khẩu thủ công trên D1 staging bằng `wrangler d1 execute qlh-staging-db --remote --env staging`: cách sinh chuỗi hash `pbkdf2-sha256$30000$salt$hash` (đề xuất script nhỏ `worker/scripts/hash-password.mjs` đọc mật khẩu từ stdin, không từ argv, không in lại), UPDATE `users` theo SĐT (đặt `password_hash`, `must_change_password`, `password_changed_at`), thu hồi phiên (`sessions.revoked_at`), xoá bản ghi khoá/throttle nếu có. KHÔNG chứa mật khẩu thật. Thử script + câu SQL trên D1 CỤC BỘ (không remote) để xác nhận hash đăng nhập được qua test hoặc smoke cục bộ.
+
+## Ranh giới file
+Sở hữu: `src/routes/auth.ts`, `src/db/auth.ts`, `src/db/identity.ts`, `src/lib/crypto.ts`, `src/types.ts`, `vitest.config.ts`, `.dev.vars.example`, `README.md`, `wrangler.jsonc`, `scripts/`, `tests/auth*.ts`, `tests/helpers.ts` và test khác chỉ khi nhắc guardian-credentials/registration_code. KHÔNG đụng `src/db/sync*.ts`, `tests/sync*.ts`, `plans/.../api-spec.md|data-model.md|authz-matrix.md|stack-and-cpu.md` (lead sửa).
+
+## Xong khi
+`npm run typecheck` và `npm test` xanh (chỉ lỗi do file của worker khác mới được bỏ qua, nêu rõ). Không còn "REGISTRATION_CODE"/"registration_code"/"guardian-credentials" trong `worker/` (kể cả test, trừ test khẳng định route 404). Commit tập trung, conventional commit, không nhắc AI/plan/finding; không push. Không deploy, không đụng staging/secret. Không in SĐT/mật khẩu vào log.
+Kết thúc: `Status: DONE|DONE_WITH_CONCERNS|BLOCKED|NEEDS_CONTEXT`, 2 câu, danh sách route/mã lỗi/field đã đổi.

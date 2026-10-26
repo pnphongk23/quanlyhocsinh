@@ -1,4 +1,5 @@
 import type { HomeworkKind, HomeworkLevel, StarLevel } from "../../data/types";
+import { formatScore } from "../../data/scoreFormat";
 import {
   HOMEWORK_KIND_LABELS,
   HOMEWORK_LEVEL_LABELS,
@@ -9,7 +10,7 @@ import {
  *
  * Chữ lấy đúng ảnh chuẩn (plans/design-review/.../final): "Buổi 18 · Thứ Sáu
  * 16/10" (ảnh 08), "Buổi 18 · 16 tháng 10" (ảnh 14), "Chưa chấm", "Hoàn thành
- * tốt", "Chưa có buổi chấm". Điểm hiển thị dấu chấm (7.2) như ảnh 10/15.
+ * tốt", "Chưa có buổi chấm". Điểm dùng formatScore chung.
  */
 
 const WEEKDAYS = [
@@ -48,10 +49,22 @@ export function monthLabel(month: string): string {
   return `Tháng ${Number(month.slice(5, 7))}`;
 }
 
-/** Điểm theo dấu chấm như ảnh: "7.2"; null = "Chưa có điểm". */
-export function scoreText(value: number | null): string {
-  return value === null ? "Chưa có điểm" : value.toFixed(1);
+/** "Tháng 10/2026" */
+export function monthYearLabel(month: string): string {
+  return `Tháng ${Number(month.slice(5, 7))}/${month.slice(0, 4)}`;
 }
+
+/** "Thứ Ba, Thứ Năm · 18:00" từ ngày trong tuần của lớp (0 = Chủ nhật). */
+export function scheduleText(weekdays: number[], time: string): string {
+  const days = [...weekdays]
+    .sort((a, b) => (a || 7) - (b || 7))
+    .map((day) => WEEKDAYS[day])
+    .join(", ");
+  return [days, time].filter(Boolean).join(" · ");
+}
+
+/** Điểm gọn như "7,5"; null = "Chưa có điểm". */
+export const scoreText = formatScore;
 
 export const starText: Record<StarLevel, string> = {
   1: "1 sao",

@@ -47,7 +47,7 @@ const storage = {
 /** Đặt vai trò đang dùng thành một membership cụ thể (mặc định dữ liệu mẫu). */
 function actAs(memberId: string, mutate?: (state: StoreState) => void): void {
   const state = createSeed();
-  state.auth = { email: "scope@example.test", memberIds: [memberId] };
+  state.auth = { phone: "900000001", memberIds: [memberId] };
   state.activeMemberId = memberId;
   mutate?.(state);
   replaceStore(state);
@@ -144,7 +144,7 @@ describe("Phạm vi lớp: cô Lan chỉ có 6A", () => {
     );
     expect(() => archiveClass("ielts")).toThrow(CLASS_ACCESS_ERROR);
     expect(() =>
-      saveReport({ classId: "ielts", studentId: "ielts-student-0", month: "2026-10" }),
+      saveReport({ classId: "ielts", studentId: "ielts-student-0", batchId: "ielts-report-batch" }),
     ).toThrow(CLASS_ACCESS_ERROR);
     expect(() =>
       saveScore({
@@ -359,7 +359,7 @@ describe("Migration vẫn giữ phạm vi lớp", () => {
     const migrated = migrateStore(legacy);
     expect(migrated.sessionSubstitutes).toHaveLength(2);
     expect(Array.isArray(migrated.classStaff)).toBe(true);
-    migrated.auth = { email: "scope@example.test", memberIds: [MEMBER_IDS.lanTeacher] };
+      migrated.auth = { phone: "900000001", memberIds: [MEMBER_IDS.lanTeacher] };
     migrated.activeMemberId = MEMBER_IDS.lanTeacher;
     replaceStore(migrated);
     expect(getClass("ielts")).toBeUndefined();

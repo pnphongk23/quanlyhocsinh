@@ -1,12 +1,28 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getAuthSession, logout } from "../../data/repositories/auth";
-import { useAccess } from "../../data/repositories/access";
-import { roleDisplayKind } from "../../data/repositories/staff";
+import { listMyMemberships, switchRole, useAccess } from "../../data/repositories/access";
+import {
+  PASSWORD_ERRORS,
+  changePassword,
+  currentPhoneInput,
+  currentWorkspaceName,
+  getAuthSession,
+  logout,
+} from "../../data/repositories/auth";
+import { PASSWORD_MIN_LENGTH, formatPhone } from "../../data/authAccounts";
+import { landingPathFor } from "../../roles/guardian/roleLanding";
+import type { Member, Role } from "../../data/types";
 import { resetSeed } from "../../data/repositories/maintenance";
-import { usePendingCount } from "../../data/outbox";
-import { features } from "../../shared/features";
-import { Button, Card, Icon, Modal, PageHeader } from "../../shared/ui";
+import { scheduleSync, usePendingCount } from "../../data/outbox";
+import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { useOnline } from "../../shared/hooks/useOnline";
+import { useStore } from "../../data/store";
+import { Button, Icon, Modal } from "../../shared/ui";
+import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
+import { roleBadge } from "../auth/roleBadge";
+import a from "../auth/auth.module.css";
+import RecoveryEmailCard from "./RecoveryEmailCard";
 import s from "./settings.module.css";
 
 function initialsOf(name: string) {
@@ -19,187 +35,510 @@ function initialsOf(name: string) {
     .toLocaleUpperCase("vi-VN");
 }
 
+/** Nhãn lớp ngắn trong hồ sơ phụ huynh: "Tiếng Anh giao tiếp 6A" → "6A". */
+export function classShortLabel(name: string): string {
+  const matches = name.match(/\d+[A-Za-z]?/g);
+  return matches?.length ? matches[matches.length - 1] : name;
+}
+
+/**
+ * Cài đặt tài khoản (spec mục 4 "Tài khoản"): hồ sơ tên + SĐT chỉ đọc, đổi mật
+ * khẩu, đổi vai trò khi tài khoản có nhiều vai trò, đăng xuất. Đăng xuất bị
+ * chặn khi còn thay đổi chưa đồng bộ, kèm giải thích lý do (spec mục 5.3).
+ */
 export default function SettingsPage() {
-  const navigate = useNavigate();
-  const pending = usePendingCount();
-  const { member, role, isAdmin, can, multipleRoles } = useAccess();
+  const desktop = useIsDesktop();
+  return desktop ? <SettingsDesktop /> : <SettingsMobile />;
+}
+
+/** Dữ liệu dùng chung cho hai giao diện. */
+function useSettingsData() {
+  const state = useStore();
+  const { member, role, multipleRoles } = useAccess();
   const session = getAuthSession();
-  const [error, setError] = useState("");
-  const [confirm, setConfirm] = useState(false);
+  const phone = session ? formatPhone(session.phone) : "";
+  const memberships = listMyMemberships().filter(
+    (item) => item.member.status !== "disabled",
+  );
+  const name = member?.name ?? "";
 
-  const name = member?.name ?? session?.email ?? "Chưa đăng nhập";
-  const activeMemberId = member?.id ?? null;
-
-  const items: Array<{ to: string; label: string; hint: string }> = [];
-  if (multipleRoles)
-    items.push({
-      to: "/chon-vai-tro",
-      label: "Đổi vai trò",
-      hint: "Chọn vai trò khác đang có của bạn",
-    });
-  if (can("lectures", "read"))
-    items.push({
-      to: "/bai-giang",
-      label: "Bài giảng",
-      hint: "Thư viện bài giảng của workspace",
-    });
-  if (isAdmin) {
-    items.push({
-      to: "/nhan-su",
-      label: "Nhân sự",
-      hint: "Mời người, gán lớp, vô hiệu hoá tài khoản",
-    });
-    items.push({
-      to: "/vai-tro",
-      label: "Vai trò",
-      hint: "Tạo và sửa quyền theo nhóm tính năng",
-    });
-    items.push({
-      to: "/phan-cong",
-      label: "Phân công giảng dạy",
-      hint: "Gán giáo viên chính và trợ giảng cho từng lớp",
-    });
-    items.push({
-      to: "/lich-day",
-      label: "Lịch dạy",
-      hint: "Xem lịch dạy theo tuần của từng người",
-    });
-    // Cờ Lương tắt: không còn thẻ dẫn tới bảng lương.
-    if (features.payroll)
-      items.push({
-        to: "/luong",
-        label: "Lương",
-        hint: "Bảng lương theo tháng, đơn giá và điều chỉnh",
-      });
-    items.push({
-      to: "/hoc-phi",
-      label: "Học phí",
-      hint: "Phiếu học phí, ghi nhận thu và công nợ",
-    });
-  } else if (role?.kind === "staff") {
-    items.push({
-      to: "/lich-day",
-      label: "Lịch dạy của tôi",
-      hint: "Xem các buổi bạn dạy trong tuần",
-    });
-    if (activeMemberId && features.payroll)
-      items.push({
-        to: `/luong/${activeMemberId}`,
-        label: "Lương của tôi",
-        hint: "Xem bảng lương của bạn (chỉ đọc)",
-      });
+  /**
+   * Dòng phụ dưới tên: "Giáo viên · Lớp của cô Lan", "Phụ huynh · Minh Anh
+   * (6A), Gia Bảo (7B)" hoặc "Phụ huynh · Chưa liên kết con" (spec mục 4
+   * "Tài khoản": chưa khớp hồ sơ nào thì ghi rõ chưa có con).
+   */
+  function subtitleFor(item: Member, itemRole: Role): string {
+    if (itemRole.kind !== "guardian") return currentWorkspaceName();
+    const children = (item.studentIds ?? [])
+      .map((id) => {
+        const student = state.students.find((entry) => entry.id === id);
+        if (!student) return "";
+        // Đọc tên lớp theo hồ sơ của con: role phụ huynh không có quyền xem
+        // danh sách lớp (nhóm Lớp = Không) nên không dùng `listClasses`.
+        const klass = state.classes.find((entry) => entry.id === student.classId);
+        const shortName = student.name.split(/\s+/).slice(-2).join(" ");
+        return `${shortName} (${klass ? classShortLabel(klass.name) : "—"})`;
+      })
+      .filter(Boolean);
+    return children.length ? children.join(", ") : "Chưa liên kết con";
   }
 
+  const roleLine =
+    role && member ? `${roleBadge(role).label} · ${subtitleFor(member, role)}` : "";
+  return {
+    member,
+    role,
+    multipleRoles,
+    phone,
+    memberships,
+    name,
+    roleLine,
+    subtitleFor,
+  };
+}
+
+function SettingsMobile() {
+  const navigate = useNavigate();
+  const { member, role, multipleRoles, phone, memberships, name, roleLine } =
+    useSettingsData();
+  const pending = usePendingCount();
+  const online = useOnline();
+  const [blocked, setBlocked] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [error, setError] = useState("");
+
   function signOut() {
+    if (pending > 0) {
+      setBlocked(true);
+      return;
+    }
     try {
       logout();
       navigate("/dang-nhap", { replace: true });
     } catch (cause) {
-      setError((cause as Error).message);
-    }
-  }
-
-  function restoreSampleData() {
-    try {
-      resetSeed();
-      navigate("/dang-nhap", { replace: true });
-    } catch {
-      setError("Không thể đặt lại dữ liệu mẫu. Dữ liệu trên máy vẫn được giữ.");
-      setConfirm(false);
+      setError(cause instanceof Error ? cause.message : "Không thể đăng xuất.");
     }
   }
 
   return (
     <main className={s.page}>
-      <PageHeader eyebrow={name} title="Cài đặt" />
-
-      <Card className={s.profile} aria-label="Tài khoản đang dùng">
-        <div className={s.avatar} aria-hidden="true">
-          {initialsOf(name) || "GV"}
-        </div>
-        <div className={s.profileDetails}>
-          <strong>{name}</strong>
-          <p>{session?.email ?? "Chưa đăng nhập"}</p>
-          {role && (
-            <p className={s.currentRole}>
-              <span className={s.roleLabel}>Vai trò đang dùng</span>
-              <span>
-                {role.name} · {roleDisplayKind(role.kind)}
-              </span>
-            </p>
-          )}
-        </div>
-      </Card>
-
-      {items.length > 0 && (
-        <Card className={s.menu} aria-label="Quản lý">
-          {items.map((item) => (
-            <Link key={item.to} to={item.to} className={s.menuLink}>
-              <span className={s.menuText}>
-                <span className={s.menuLabel}>{item.label}</span>
-                <span className={s.menuHint}>{item.hint}</span>
-              </span>
-              <span className={s.menuChevron} aria-hidden="true">
-                <Icon name="chevron-right" />
-              </span>
-            </Link>
-          ))}
-        </Card>
+      <h1 className={s.pageTitle}>Cài đặt</h1>
+      {pending > 0 && (
+        <p className={s.banner} role="status">
+          {online
+            ? `Đang đồng bộ · ${pending} thay đổi chưa đồng bộ`
+            : `Đang ngoại tuyến · ${pending} thay đổi chưa đồng bộ`}
+        </p>
       )}
 
-      <Card className={s.account}>
-        <h2>Tài khoản</h2>
-        <p className={s.muted}>
-          Đăng xuất chỉ khả dụng khi không còn thay đổi chờ đồng bộ.
-        </p>
-        {pending > 0 && (
-          <div id="logout-reason" className={s.reason} role="status">
-            Chưa thể đăng xuất: còn {pending} thay đổi chưa đồng bộ. Giữ trang mở và
-            kết nối mạng để hoàn tất đồng bộ.
-          </div>
-        )}
-        {error && (
-          <p className={s.error} role="alert">
-            {error}
-          </p>
-        )}
-        <Button
-          variant="danger"
-          size="lg"
-          disabled={pending > 0}
-          aria-describedby={pending > 0 ? "logout-reason" : undefined}
-          onClick={signOut}
-        >
-          Đăng xuất
-        </Button>
-      </Card>
+      <section className={s.card} aria-label="Hồ sơ">
+        <div className={s.profileHead}>
+          <span className={s.avatar} aria-hidden="true">
+            {initialsOf(name) || "GV"}
+          </span>
+          <span className={s.profileText}>
+            <span className={s.profileName}>{name || "Chưa đăng nhập"}</span>
+            <span className={s.profileMeta}>{roleLine}</span>
+          </span>
+        </div>
+        <div className={s.row}>
+          <span className={s.rowLabel}>Tên hiển thị</span>
+          <span className={s.rowValue}>{name || "—"}</span>
+        </div>
+        <div className={s.row}>
+          <span className={s.rowLabel}>Số điện thoại</span>
+          <span className={s.rowValue}>
+            <span className={s.rowLock} aria-hidden="true">
+              <Icon name="lock" size={16} />
+            </span>
+            {phone || "—"}
+          </span>
+        </div>
+      </section>
 
-      <Card className={s.sampleData}>
-        <h2>Dữ liệu mẫu</h2>
-        <p className={s.muted}>
-          Khôi phục dữ liệu ban đầu trên thiết bị này. Thao tác này sẽ xoá các thay đổi
-          thử nghiệm.
+      <section className={s.card} aria-label="Tài khoản">
+        <Link to="/cai-dat/doi-mat-khau" className={s.menuRow}>
+          Đổi mật khẩu
+          <span className={s.rowLock} aria-hidden="true">
+            <Icon name="chevron-right" />
+          </span>
+        </Link>
+        {multipleRoles && (
+          <button
+            type="button"
+            className={s.menuRow}
+            onClick={() => navigate("/chon-vai-tro")}
+          >
+            Đổi vai trò
+            <span className={s.menuValue}>
+              {role ? roleBadge(role).label : "Chưa chọn"}
+              <Icon name="chevron-right" size={18} />
+            </span>
+          </button>
+        )}
+      </section>
+
+      <RecoveryEmailCard />
+
+      {error && (
+        <p className={a.banner + " " + a.bannerError} role="alert">
+          {error}
         </p>
-        <Button variant="secondary" onClick={() => setConfirm(true)}>
-          Đặt lại dữ liệu mẫu
-        </Button>
-      </Card>
+      )}
+
+      <button type="button" className={s.logout} onClick={signOut}>
+        Đăng xuất
+      </button>
+
+      <p className={s.sampleData}>
+        Dữ liệu mẫu của prototype ·{" "}
+        <button
+          type="button"
+          className={s.sampleDataButton}
+          onClick={() => setConfirmReset(true)}
+        >
+          Đặt lại
+        </button>
+      </p>
+
+      <LogoutBlocked
+        open={blocked}
+        onClose={() => setBlocked(false)}
+        pending={pending}
+        online={online}
+        sheet
+      />
 
       <Modal
         title="Đặt lại dữ liệu mẫu?"
-        open={confirm}
-        onClose={() => setConfirm(false)}
+        open={confirmReset}
+        onClose={() => setConfirmReset(false)}
       >
-        <div className={s.confirmation}>
-          <p>
-            Mọi thay đổi thử nghiệm trên máy này sẽ được thay bằng dữ liệu mẫu. Bạn sẽ
-            cần đăng nhập lại.
+        <div>
+          <p className={s.confirmText}>
+            Mọi thay đổi thử nghiệm trên máy này sẽ được thay bằng dữ liệu mẫu.
+            Bạn sẽ cần đăng nhập lại.
           </p>
-          <Button variant="danger" onClick={restoreSampleData}>
-            Đặt lại dữ liệu
-          </Button>
+          <div className={s.confirmActions}>
+            <button
+              type="button"
+              className={s.confirmPrimary}
+              onClick={() => {
+                try {
+                  resetSeed();
+                  navigate("/dang-nhap", { replace: true });
+                } catch {
+                  setConfirmReset(false);
+                }
+              }}
+            >
+              Đặt lại dữ liệu
+            </button>
+          </div>
         </div>
       </Modal>
     </main>
+  );
+}
+
+function SettingsDesktop() {
+  const navigate = useNavigate();
+  const {
+    member,
+    multipleRoles,
+    phone,
+    memberships,
+    name,
+    roleLine,
+    subtitleFor,
+  } = useSettingsData();
+  const pending = usePendingCount();
+  const online = useOnline();
+  const [blocked, setBlocked] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const mismatch = confirm.length > 0 && confirm !== next;
+  const passwordAction = useSaveAction({
+    baseline: { current: "", next: "", confirm: "" },
+    value: { current, next, confirm },
+    validate: (value) =>
+      Boolean(value.current) &&
+      value.next.length >= PASSWORD_MIN_LENGTH &&
+      value.confirm === value.next,
+    save: (value) => {
+      try {
+        changePassword(value.current, value.next, value.confirm);
+      } catch (cause) {
+        setSaved(false);
+        setError(cause instanceof Error ? cause.message : PASSWORD_ERRORS.wrong);
+        return false;
+      }
+    },
+  });
+  const invalid = !passwordAction.canSave;
+
+  async function savePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (await passwordAction.submit()) {
+      setSaved(true);
+      setError("");
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+    }
+  }
+
+  function signOut() {
+    if (pending > 0) {
+      setBlocked(true);
+      return;
+    }
+    try {
+      logout();
+      navigate("/dang-nhap", { replace: true });
+    } catch {
+      setBlocked(true);
+    }
+  }
+
+  return (
+    <main className={s.page}>
+      <header>
+        <p className={s.breadcrumb}>
+          <span>Cài đặt</span>
+          <span aria-hidden="true">/</span>
+          <span className={s.breadcrumbCurrent}>Tài khoản</span>
+        </p>
+        <h1 className={s.pageTitle}>Tài khoản của tôi</h1>
+      </header>
+
+      {pending > 0 && (
+        <p className={s.banner} role="status">
+          {online
+            ? `Đang đồng bộ · ${pending} thay đổi chưa đồng bộ`
+            : `Đang ngoại tuyến · ${pending} thay đổi chưa đồng bộ`}
+        </p>
+      )}
+
+      <div className={s.grid}>
+        <div className={s.column}>
+          <section className={s.card} aria-label="Hồ sơ">
+            <h2 className={s.cardHead}>Hồ sơ</h2>
+            <div className={s.profileHead}>
+              <span className={s.avatar} aria-hidden="true">
+                {initialsOf(name) || "GV"}
+              </span>
+              <span className={s.profileText}>
+                <span className={s.profileName}>{name || "Chưa đăng nhập"}</span>
+                <span className={s.profileMeta}>{roleLine}</span>
+              </span>
+            </div>
+            <div className={s.fieldBlock} style={{ marginTop: 16 }}>
+              <span className={s.fieldLabel}>Tên hiển thị</span>
+              <span className={s.readonlyBox}>
+                <span className={s.readonlyValue}>{name || "—"}</span>
+                <span className={s.readonlyTag}>
+                  <Icon name="lock" size={15} />
+                  Chỉ đọc
+                </span>
+              </span>
+            </div>
+            <div className={s.fieldBlock} style={{ marginBottom: 24 }}>
+              <span className={s.fieldLabel}>Số điện thoại</span>
+              <span className={s.readonlyBox}>
+                <span className={s.readonlyPrefix}>+84</span>
+                <span className={s.readonlyValue}>
+                  {currentPhoneInput() || "—"}
+                </span>
+                <span className={s.readonlyTag}>
+                  <Icon name="lock" size={15} />
+                  Chỉ đọc
+                </span>
+              </span>
+            </div>
+          </section>
+
+          {multipleRoles && (
+            <section className={s.card} aria-label="Vai trò">
+              <h2 className={s.cardHead}>Vai trò</h2>
+              <p className={s.roleNote}>
+                Tài khoản này có {memberships.length} vai trò. Đổi vai trò để vào
+                phần tương ứng.
+              </p>
+              <div className={s.roleList}>
+                {memberships.map(({ member: item, role: itemRole }) => {
+                  const badge = roleBadge(itemRole);
+                  const currentRole = item.id === member?.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={s.roleRow}
+                      onClick={() => {
+                        switchRole(item.id);
+                        navigate(landingPathFor(itemRole.kind), {
+                          replace: true,
+                        });
+                      }}
+                    >
+                      <span className={s.roleAvatar} aria-hidden="true">
+                        {badge.initials}
+                      </span>
+                      <span className={s.roleText}>
+                        <span className={s.roleName}>
+                          {badge.label}
+                          {currentRole ? " · đang dùng" : ""}
+                        </span>
+                        <span className={s.roleMeta}>
+                          {subtitleFor(item, itemRole)}
+                        </span>
+                      </span>
+                      <span className={s.roleChevron} aria-hidden="true">
+                        <Icon name="chevron-right" />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </div>
+
+        <div className={s.column}>
+          <RecoveryEmailCard />
+          <section className={s.card} aria-label="Đổi mật khẩu và đăng xuất">
+            <h2 className={s.cardHead}>Đổi mật khẩu</h2>
+            <form className={s.formBody} onSubmit={savePassword} noValidate>
+              <PasswordField
+                label="Mật khẩu hiện tại"
+                value={current}
+                onChange={(value) => {
+                  setCurrent(value);
+                  setSaved(false);
+                }}
+                autoComplete="current-password"
+                id="settings-current"
+              />
+              <PasswordField
+                label="Mật khẩu mới"
+                value={next}
+                onChange={(value) => {
+                  setNext(value);
+                  setSaved(false);
+                }}
+                autoComplete="new-password"
+                id="settings-new"
+                hint={<PasswordStrength password={next} />}
+              />
+              <PasswordField
+                label="Nhập lại mật khẩu mới"
+                value={confirm}
+                onChange={setConfirm}
+                autoComplete="new-password"
+                id="settings-confirm"
+                error={mismatch}
+                errorText={mismatch ? PASSWORD_ERRORS.mismatch : undefined}
+              />
+              <div className={a.checks}>
+                <CheckRow ok={next.length >= PASSWORD_MIN_LENGTH}>
+                  Tối thiểu {PASSWORD_MIN_LENGTH} ký tự
+                </CheckRow>
+              </div>
+              {error && (
+                <p className={a.fieldError} role="alert">
+                  {error}
+                </p>
+              )}
+              {saved && (
+                <p className={s.saved} role="status">
+                  Đã lưu mật khẩu mới.
+                </p>
+              )}
+              <div className={s.formFooter}>
+                <Button
+                  type="submit"
+                  size="md"
+                  disabled={invalid}
+                  loading={passwordAction.saving}
+                  done={passwordAction.justSaved}
+                >
+                  Lưu mật khẩu mới
+                </Button>
+              </div>
+            </form>
+            <div className={s.divider} />
+            <div className={s.logoutRow}>
+              <div>
+                <p className={s.logoutTitle}>Đăng xuất</p>
+                <p className={s.logoutHint}>
+                  Thoát khỏi tài khoản trên trình duyệt này.
+                </p>
+              </div>
+              <button type="button" className={s.logout} onClick={signOut}>
+                Đăng xuất
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <LogoutBlocked
+        open={blocked}
+        onClose={() => setBlocked(false)}
+        pending={pending}
+        online={online}
+      />
+    </main>
+  );
+}
+
+/** Hộp thoại/bottom sheet "Chưa thể đăng xuất" khi còn thay đổi chưa đồng bộ. */
+function LogoutBlocked({
+  open,
+  onClose,
+  pending,
+  online,
+  sheet = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  pending: number;
+  online: boolean;
+  sheet?: boolean;
+}) {
+  return (
+    <Modal title="Chưa thể đăng xuất" open={open} onClose={onClose} sheet={sheet}>
+      <div>
+        <p className={s.confirmText}>
+          Còn {pending} thay đổi chưa đồng bộ.{" "}
+          {online
+            ? "Hãy chờ đồng bộ xong rồi đăng xuất."
+            : "Máy đang ngoại tuyến, đăng xuất bây giờ sẽ làm mất dữ liệu. Hãy kết nối mạng để đồng bộ rồi thử lại."}
+        </p>
+        <div className={s.confirmActions}>
+          <button
+            type="button"
+            className={s.confirmSecondary}
+            onClick={onClose}
+          >
+            Đã hiểu
+          </button>
+          <button
+            type="button"
+            className={s.confirmPrimary}
+            onClick={() => {
+              scheduleSync();
+              onClose();
+            }}
+          >
+            Thử đồng bộ lại
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }

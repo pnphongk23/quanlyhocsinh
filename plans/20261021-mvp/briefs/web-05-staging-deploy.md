@@ -1,0 +1,21 @@
+# Việc W-5: kiểm thật bản web trên staging (đã deploy)
+
+Worker: `codex/gpt-6-luna`. Đọc `briefs/web-common-ui.md`, `briefs/74-decisions-20261022-b.md`, `web/w1-report.md`, `web/w3-report.md`, `web/w4-report.md`, `src/README.md` của worktree.
+Worktree: `/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web` (nhánh `mvp-web`). Thư mục chính chỉ đọc (ngoại lệ: báo cáo/ảnh của bạn ở `/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/`). Không push/merge/checkout/reset/stash; không `git add -A` (chỉ file của bạn; `plans/` của worktree untracked, đừng commit). Không sửa `design/prototype`. Không tạo agent. `srcwalk`. KHÔNG production: chỉ staging. Không in SĐT/mật khẩu/token (file `/tmp/qlh-staging-demo.txt` chỉ đọc bằng lệnh không in; lưu ý dòng API trong file ĐÃ có đuôi `/v1`).
+
+## File được sửa
+`public/_redirects` (SPA fallback), `public/_headers` nếu cần (không cache service worker), `.env.staging`/`vite.config.ts` (chỉ cấu hình build staging, không secret), `scripts/*`, `package.json` scripts (`build:staging`, `deploy:staging`), `src/**` CHỈ khi lỗi nhỏ phát hiện lúc kiểm (sửa tối thiểu, ghi rõ trong báo cáo; lỗi lớn thì báo, đừng sửa).
+
+## Cập nhật (lead đã làm bước 1 và 2)
+Lead đã tạo project Pages `qlh-staging-web`, deploy `dist` (build với `VITE_API_BASE_URL=https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1`) và kiểm: `https://qlh-staging-web.pages.dev/` 200, `/lop` 200 (SPA fallback), manifest và `sw.js` 200, preflight `OPTIONS /v1/auth/login` từ origin Pages 204 đúng `access-control-allow-origin`; JS ban đầu 147.483 byte gzip (build staging). Bạn bắt đầu từ bước 3; vẫn phải tự chạy lại `typecheck`/`test`/`build` và dán số ở báo cáo. Nếu cần deploy lại sau khi sửa lỗi nhỏ: `VITE_API_BASE_URL=... npm run build && wrangler pages deploy dist --project-name qlh-staging-web --branch main --commit-dirty=true`.
+
+## Làm
+1. Chạy `npm run typecheck`, `npm test`, `npm run build` (dán số). Đo JS ban đầu gzip theo `src/test/check-bundle.mjs` (≤ 200 KB; hiện ≈ 144 KB) và cả JS+CSS của trang đầu giáo viên sau đăng nhập (chunk staff tải lười).
+2. Cloudflare Pages: tạo project `qlh-staging-web` (kiểm trước `wrangler pages project list`; wrangler đã đăng nhập, không tự đăng nhập lại), nhánh production của project = `main` giả tạm, deploy `dist` bằng `wrangler pages deploy dist --project-name qlh-staging-web --branch main --commit-dirty=true`, build với `VITE_API_BASE_URL=https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1`. Ghi URL thật. Lead Backend đã thêm origin `https://qlh-staging-web.pages.dev` vào `ALLOWED_ORIGINS`: nếu Cloudflare cấp subdomain khác, DỪNG phần kiểm CORS và báo ngay URL thật để lead nhờ Backend thêm origin. Kiểm preflight `OPTIONS /v1/auth/login` từ origin Pages (204 + `access-control-allow-origin` đúng origin).
+3. Kiểm thật bằng Chrome (Chrome DevTools MCP hoặc playwright) trên URL Pages: đăng nhập giáo viên demo (đọc creds không in), chọn vai trò nếu có, xem danh sách lớp 6A, mở Chi tiết lớp 5 tab, mở một buổi đã diễn ra (3 tab), điểm danh một học sinh, kiểm dấu hiệu đã đồng bộ (pull lại / tải lại trang vẫn thấy), xem bài kiểm tra và bảng điểm (nhập thử 7,5 và 7,3: 7,3 phải bị từ chối), xem báo cáo tháng. Tắt mạng (DevTools offline) rồi điểm danh, bật mạng, kiểm đồng bộ. Kiểm service worker đăng ký và app shell mở được khi offline; cài đặt PWA (manifest hợp lệ). Console không lỗi đỏ.
+4. Ảnh bản thật trên dữ liệu staging (390×844 và 1360×934) cho Lớp, Chi tiết lớp (5 tab), Buổi học 3 tab, Bài kiểm tra, Điểm, Báo cáo, Lịch, Cài đặt, Đăng nhập; đặt cạnh ảnh prototype (`design/prototype` chạy `npm run dev` ở cổng khác 5173/5181; chỉ đọc); bảng khác biệt trong `plans/20261021-mvp/web/w5-report.md` (màn, khác gì, sửa/chưa, lý do; khác nội dung do dữ liệu staging khác seed prototype ghi riêng). Ảnh ở `plans/20261021-mvp/web/shots/w5/`. Không để lộ SĐT/mật khẩu trong ảnh (che nếu hiện).
+5. Phụ huynh: KHÔNG kiểm đợt này (màn phụ huynh và đăng ký phụ huynh làm sau theo prototype mới).
+6. Dọn: tắt mọi server dev; đóng tab; không để file creds trong repo.
+
+## Xong khi
+Lệnh + số liệu thật dán trong báo cáo; URL Pages hoạt động; danh sách lỗi/khác biệt tìm được, phân loại (đã sửa / cần worker khác / cần Backend). Commit file cấu hình của bạn. Kết thúc: Status + 2 câu.

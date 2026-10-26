@@ -35,6 +35,15 @@
   color: var(--color-muted);
 }
 
+.error {
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-button);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
 .actions {
   display: flex;
   flex-direction: column;

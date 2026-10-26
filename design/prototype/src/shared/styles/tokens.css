@@ -1,6 +1,15 @@
+/*
+ * Nguồn chuẩn design token cho web thật, prototype và (tài liệu) iOS.
+ * Sửa ở đây và tokens.json cùng lúc, rồi chép khối :root sang
+ * src/shared/styles/tokens.css (web) và design/prototype/src/shared/styles/tokens.css.
+ * Mốc khổ: mobile < 1024px, desktop >= 1024px (CSS var không dùng được trong @media).
+ * Cập nhật 2026-10-23: màu, bo góc, chuyển động giữ nguyên giá trị đã duyệt.
+ * Giá trị nằm ở tokens.json (cùng nội dung); bảng thay đổi ở README.md.
+ */
 :root {
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 
+  /* Màu (giữ nguyên) */
   --color-canvas: #eaecf1;
   --color-bg: #f6f7f9;
   --color-surface: #ffffff;
@@ -24,20 +33,167 @@
   --color-neutral-soft: #f0f2f5;
   --color-scrim: rgb(20 24 31 / 0.4);
 
+  /* Chữ: cỡ (px) theo reset.css/ui.module.css hiện có */
+  --text-xs: 12px;   /* nhãn tab dưới, chú thích */
+  --text-sm: 13px;   /* dòng phụ, meta */
+  --text-md: 14px;   /* bảng, nội dung phụ */
+  --text-base: 16px; /* thân */
+  --text-lg: 18px;   /* h2, tiêu đề thẻ/dialog */
+  --text-xl: 22px;   /* tiêu đề gọn */
+  --text-2xl: 26px;  /* h1 mobile */
+  --text-3xl: 30px;  /* h1 desktop */
+  --text-control: 15px; /* nút md, segment, mục điều hướng */
+  --leading-tight: 1.15;
+  --leading-base: 1.5;
+  --weight-regular: 400;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Khoảng cách: thang 4/8 (2 và 20 giữ cho chi tiết nhỏ và lề trang mobile) */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+
+  /* Khoảng cách theo vai trò (mobile; desktop ghi đè bên dưới) */
+  --page-x: var(--space-20);        /* lề ngang trang, header, tab lớp, danh sách */
+  --page-top: var(--space-12);
+  --title-gap: var(--space-16);     /* tiêu đề trang -> nội dung */
+  --section-gap: var(--space-24);   /* giữa khối trang */
+  --card-gap: var(--space-12);      /* giữa thẻ */
+  --card-pad: var(--space-16);      /* trong thẻ */
+  --page-gap: var(--space-12);      /* giữa các khối trong .page */
+  --page-bottom: var(--space-16);   /* đáy vùng nội dung, trước khi cộng --fab-pad */
+  --row-pad-y: var(--space-12);
+  --content-max: 1200px;
+  --form-max: 640px;
+  --guardian-max: 960px;
+
+  /* Bo góc (giữ nguyên) */
   --radius-card: 16px;
   --radius-row: 14px;
   --radius-control: 14px;
   --radius-button: 12px;
   --radius-chip: 10px;
+  --radius-sheet: 20px;
   --radius-pill: 999px;
 
+  /* Bóng */
+  --shadow-sm: 0 1px 2px rgb(20 24 31 / 0.12);
+  --shadow-menu: 0 8px 24px rgb(20 24 31 / 0.14);
+  --shadow-frame: 0 2px 10px rgb(20 24 31 / 0.06);
+  --shadow-fab: 0 6px 16px rgb(35 71 230 / 0.35);
+  --focus-ring: 0 0 0 3px var(--color-primary-soft);
+
+  /* Lớp chồng: chỉ dùng các mức này, không số tự do */
+  --z-raised: 1;     /* ô dính trong bảng, chỉ báo tab */
+  --z-sticky: 10;    /* header/thanh tab lớp dính */
+  --z-tabbar: 20;    /* thanh tab dưới, sidebar */
+  --z-fab: 30;
+  --z-menu: 40;      /* menu ⋯, dropdown */
+  --z-overlay: 100;  /* sheet, dialog, scrim */
+  --z-toast: 200;
+
+  /* Vùng bấm và kích thước */
+  --tap: 44px;              /* mobile tối thiểu */
+  --tap-desktop: 36px;
+  --control-h: 52px;        /* ô nhập */
+  --button-h-sm: 44px;
+  --button-h-md: 48px;
+  --button-h-lg: 52px;
+  --button-min-w-desktop: 96px;
   --sidebar-width: 248px;
   --tabbar-height: 64px;
-  --tap: 44px;
+
+  /* Safe-area (PWA standalone) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --tabbar-total: calc(var(--tabbar-height) + var(--safe-bottom));
+  --sticky-bottom: var(--tabbar-total); /* bottom của footer hành động dính, nằm trên tab dưới */
+
+  /* FAB: neo theo màn hình, nội dung cuộn phải chừa --fab-clearance ở đáy */
+  --fab-size: 56px;
+  --fab-inset: var(--space-16);
+  --fab-right: max(var(--page-x), var(--safe-right));
+  --fab-bottom: calc(var(--tabbar-total) + var(--fab-inset));
+  --fab-clearance: calc(var(--fab-size) + var(--fab-inset) * 2);
+  --fab-pad: 0px;                   /* đổi thành --fab-clearance khi trang có FAB */
+  --content-min-h: calc(100dvh - var(--tabbar-total) - var(--page-top) - var(--page-bottom)); /* chiều cao tối thiểu trang form để nút chính nằm sát đáy vùng nhìn thấy */
+
+  /* Chuyển động (giữ nguyên) */
+  --dur-press: 100ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 250ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
+
+  /* Trạng thái thành phần (bảng state contract: design/ux-v2/rules.md mục 6) */
+  --state-selected-bg: var(--color-primary-soft); /* đang chọn: nền, không viền */
+  --state-selected-fg: var(--color-primary-ink);
+  --state-hover-bg: var(--color-neutral-soft);
+  --state-pressed-bg: var(--color-border);
+  --state-focus-ring: var(--focus-ring);
+  --state-disabled-opacity: 0.5;                  /* thành phần không có nền riêng (hàng, thẻ, ô) */
+  --state-success-bg: var(--color-success-soft);
+  --state-success-fg: var(--color-success);
+  --state-error-bg: var(--color-error-soft);
+  --state-error-fg: var(--color-error);
+  --state-pending-bg: var(--color-warning-soft);  /* đã lưu trên máy, chờ đồng bộ */
+  --state-pending-fg: var(--color-warning);
+  --dur-loading-min: 400ms;   /* loading hiện tối thiểu (lưu cục bộ); trùng SAVE_MIN_VISIBLE_MS */
+  --dur-success-hold: 1600ms; /* giữ "Đã lưu"; trùng SAVE_SUCCESS_HOLD_MS */
+  --empty-mascot: 96px;
+  --empty-mascot-compact: 56px;
+
+  /* Bảng điểm: độ rộng cột và bước kéo */
+  --grid-col-name-min: 140px;
+  --grid-col-name-max: 280px;
+  --grid-col-test-max: 240px;
+  --grid-cell-input-min: 140px;
+  --grid-resize-step: 8px;
 
   font-family: var(--font-sans);
   color: var(--color-text);
   background: var(--color-bg);
   font-synthesis: none;
-  line-height: 1.5;
+  line-height: var(--leading-base);
+}
+
+/* Fab.tsx đặt data-has-fab trên <html> khi có FAB; vùng nội dung cộng --fab-pad vào padding đáy. */
+:root[data-has-fab] {
+  --fab-pad: var(--fab-clearance);
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --page-x: var(--space-32);
+    --page-top: 28px;
+    --page-bottom: 28px;
+    --page-gap: var(--space-20);
+    --title-gap: var(--space-24);
+    --section-gap: var(--space-32);
+    --card-gap: var(--space-16);
+    --card-pad: var(--space-20);
+    --tabbar-total: 0px;
+    --fab-right: var(--space-24);
+    --fab-bottom: var(--space-24);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-press: 1ms;
+    --dur-fast: 1ms;
+    --dur-base: 1ms;
+    --dur-slow: 1ms;
+  }
 }

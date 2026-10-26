@@ -1,7 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams } from "react-router-dom";
 import {
-  createStudent,
   listStudents,
   markStudentLeft,
   studentAbsenceWarning,
@@ -10,7 +9,8 @@ import {
 import { useAccess } from "../../data/repositories/access";
 import { useStore } from "../../data/store";
 import { formatDate, todayISO } from "../../shared/format";
-import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
+import { SaveStatus } from "../../shared/SaveStatus";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import {
   Button,
@@ -18,13 +18,15 @@ import {
   EmptyState,
   Fab,
   Icon,
-  Input,
   Modal,
   NoAccess,
   Pill,
   Sheet,
 } from "../../shared/ui";
+import AddStudentModal from "./AddStudentModal";
+import StudentsDesktop from "./StudentsDesktop";
 import s from "./students.module.css";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 
 export default function StudentsPage() {
   useStore();
@@ -36,39 +38,29 @@ export default function StudentsPage() {
   const absenceWarnings = active.filter((student) => studentAbsenceWarning(student.id)).length;
   const [adding, setAdding] = useState(false);
   const [leavingId, setLeavingId] = useState<string | null>(null);
+  const saved = useSavedPeek();
+  useEffect(() => saved.cancel, [saved, leavingId]);
   const [menuStudentId, setMenuStudentId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const save = useSaveStatus();
+  const markLeft = useSaveAction<string | null>({
+    baseline: null,
+    value: leavingId,
+    validate: (value) => value !== null,
+    save: doMarkLeft,
+  });
   if (!access.can("students", "read")) return <NoAccess what="học sinh" />;
   const canWrite = access.can("students", "write");
 
-  function addStudent(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    try {
-      createStudent({
-        classId,
-        name: String(data.get("name") ?? "").trim(),
-        parentPhone: String(data.get("phone") ?? "").trim(),
-        enrolledAt: todayISO(),
-      });
-      setAdding(false);
-      setError("");
-      save.clearStatus();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không thể lưu học sinh. Vui lòng thử lại.");
-      save.setStatus("error");
-    }
-  }
+  if (desktop) return <StudentsDesktop classId={classId} />;
 
-  function markLeft() {
+  async function doMarkLeft() {
     if (!leavingId) return;
     try {
       markStudentLeft(leavingId, todayISO());
-      setLeavingId(null);
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Không thể cập nhật trạng thái học sinh.");
+      throw cause;
     }
   }
 
@@ -89,24 +81,7 @@ export default function StudentsPage() {
 
       {error && <p role="alert" className={s.error}>{error}</p>}
       {students.length === 0 ? (
-          <Card><EmptyState title="Chưa có học sinh"><p>Thêm học sinh để bắt đầu quản lý lớp.</p></EmptyState></Card>
-      ) : desktop ? (
-        <Card className={s.tableWrap}>
-          <table className={s.table}>
-            <thead><tr><th>Học sinh</th><th>Phụ huynh</th><th>Chuyên cần</th><th>Trạng thái</th><th><span className={s.visuallyHidden}>Thao tác</span></th></tr></thead>
-            <tbody>{students.map((student) => {
-              const rate = studentAttendanceRate(student.id);
-              const { enrollment } = rowContent(student);
-              return <tr key={student.id}>
-                <td><strong>{student.name}</strong><small>{enrollment}</small></td>
-                <td>{student.parentPhone || "Chưa có số điện thoại phụ huynh"}</td>
-                <td>{rate === null ? "Chưa có dữ liệu" : `${Math.round(rate)}%`}</td>
-                <td><Pill tone={student.status === "left" ? "neutral" : "success"}>{student.status === "left" ? "Đã nghỉ" : "Đang học"}</Pill></td>
-                <td>{student.status === "active" && canWrite && <Button variant="secondary" onClick={() => { setLeavingId(student.id); setError(""); }}>Đánh dấu nghỉ</Button>}</td>
-              </tr>;
-            })}</tbody>
-          </table>
-        </Card>
+          <Card><EmptyState title="Chưa có học sinh" description="Thêm học sinh để bắt đầu quản lý lớp." /></Card>
       ) : (
         <div className={s.list}>{students.map((student) => {
           const { initials, enrollment } = rowContent(student);
@@ -137,22 +112,21 @@ export default function StudentsPage() {
         <Fab label="Thêm học sinh" onClick={() => { setAdding(true); setError(""); }} />
       )}
 
-      <Modal title="Thêm học sinh" open={adding} onClose={() => { setAdding(false); setError(""); save.clearStatus(); }}>
-        <form className={s.form} onSubmit={addStudent}>
-          <Input label="Họ và tên học sinh" name="name" autoComplete="name" onChange={save.markUnsaved} required />
-          <Input label="Số điện thoại phụ huynh (tuỳ chọn)" name="phone" type="tel" inputMode="tel" autoComplete="tel" onChange={save.markUnsaved} />
-          <p className={s.note}>Chỉ lưu số điện thoại trong hồ sơ. Chưa gửi lời mời hoặc tin nhắn.</p>
-          {error && <p role="alert" className={s.error}>{error}</p>}
-          <SaveStatus status={save.status} />
-          <Button size="lg" type="submit">Lưu học sinh</Button>
-        </form>
-      </Modal>
+      {adding && (
+        <AddStudentModal classId={classId} onClose={() => setAdding(false)} />
+      )}
 
       <Modal title="Đánh dấu học sinh đã nghỉ?" open={Boolean(leavingId)} onClose={() => setLeavingId(null)}>
         <div className={s.confirmation}>
           <p>Ngày nghỉ là hôm nay. Điểm và điểm danh cũ vẫn được giữ trong lịch sử lớp.</p>
           {error && <p role="alert" className={s.error}>{error}</p>}
-          <Button variant="danger" onClick={markLeft}>Xác nhận nghỉ học</Button>
+          <Button
+            variant="danger"
+            disabled={!markLeft.canSave}
+            loading={markLeft.saving}
+            done={markLeft.justSaved}
+            onClick={async () => { if ((await markLeft.submit()) && (await saved.peek())) setLeavingId(null); }}
+          >Xác nhận nghỉ học</Button>
         </div>
       </Modal>
 

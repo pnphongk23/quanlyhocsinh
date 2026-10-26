@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSeed } from "../seed";
-import { getStore, replaceStore } from "../store";
+import { getStore, replaceStore, updateStore } from "../store";
 import { MEMBER_IDS, ROLE_IDS } from "../defaults";
 import type { StoreState } from "../types";
+import { clearAuthAccounts, normalizePhone } from "../authAccounts";
+import { PHONE_TAKEN, registerGuardian, registerWorkspace } from "./auth";
+import { updateStudentPhone } from "./students";
 import { switchRole } from "./access";
 import { saveSessionComment } from "./comments";
 import { setHomeworkGrade } from "./homework";
@@ -12,7 +15,7 @@ import {
   GUARDIAN_PERMISSION_ERROR,
   STUDENT_ACCESS_ERROR,
   getChildHomework,
-  getChildMonthlyReport,
+  getChildReport,
   getChildOverview,
   getChildTicket,
   listChildTickets,
@@ -84,7 +87,7 @@ describe("Phạm vi phụ huynh", () => {
     expect(() => getChildOverview("6a-student-2", "2026-10")).toThrow(
       STUDENT_ACCESS_ERROR,
     );
-    expect(() => getChildMonthlyReport("6a-student-2", "2026-10")).toThrow(
+    expect(() => getChildReport("6a-student-2", "6a-student-2-report")).toThrow(
       STUDENT_ACCESS_ERROR,
     );
 
@@ -103,7 +106,7 @@ describe("Phạm vi phụ huynh", () => {
     expect(() => listChildTickets("6a-student-1")).toThrow(
       "Bạn không có quyền thực hiện thao tác này.",
     );
-    expect(() => getChildMonthlyReport("6a-student-1", "2026-10")).toThrow(
+    expect(() => getChildReport("6a-student-1", "6a-student-1-report")).toThrow(
       "Bạn không có quyền thực hiện thao tác này.",
     );
     // Tổng quan vẫn mở nhưng ẩn phần nhận xét.
@@ -318,6 +321,7 @@ describe("Tổng quan của con", () => {
         id: "6a-student-1-report-2026-09",
         classId: "6a",
         studentId: "6a-student-1",
+        batchId: "6a-report-batch",
         month: "2026-09",
         status: "published",
         needsRepublish: false,
@@ -337,6 +341,7 @@ describe("Tổng quan của con", () => {
         id: "6a-student-1-report-2026-09",
         classId: "6a",
         studentId: "6a-student-1",
+        batchId: "6a-report-batch",
         month: "2026-09",
         status: "published",
         needsRepublish: false,
@@ -371,7 +376,7 @@ describe("Tổng quan của con", () => {
 describe("Báo cáo tháng của con", () => {
   it("chỉ trả báo cáo đã phát hành, kèm nội dung báo cáo và nhận xét chung", () => {
     withStore();
-    const published = getChildMonthlyReport("6a-student-1", "2026-10")!;
+    const published = getChildReport("6a-student-1", "6a-student-1-report")!;
     expect(published.report).toMatchObject({
       id: "6a-student-1-report",
       status: "published",
@@ -387,7 +392,7 @@ describe("Báo cáo tháng của con", () => {
     expect(published.body.ready).toBe(true);
     expect(published.needsRepublish).toBe(false);
     // Báo cáo chưa phát hành thì phụ huynh không thấy.
-    expect(getChildMonthlyReport("6a-student-8", "2026-10")).toBeNull();
+    expect(getChildReport("6a-student-8", "6a-student-8-report")).toBeNull();
   });
 
   it("sửa điểm sau khi phát hành: phụ huynh thấy điểm mới và cờ cần phát hành lại", () => {
@@ -398,7 +403,7 @@ describe("Báo cáo tháng của con", () => {
     )!;
     saveScore({ ...score, value: 10 });
     actAsGuardian();
-    const report = getChildMonthlyReport("6a-student-1", "2026-10")!;
+    const report = getChildReport("6a-student-1", "6a-student-1-report")!;
     expect(report.needsRepublish).toBe(true);
     expect(
       report.body.tests.find(({ test }) => test.id === "6a-test-1")?.score?.value,
@@ -411,17 +416,17 @@ describe("Báo cáo tháng của con", () => {
     const draft = saveReport({
       classId: "6a",
       studentId: "6a-student-8",
-      month: "2026-10",
+      batchId: "6a-report-batch",
     });
     expect(draft.status).toBe("draft");
     saveReportComment(draft.id, "Con chăm chỉ và có tiến bộ.");
     actAsGuardian();
-    expect(getChildMonthlyReport("6a-student-8", "2026-10")).toBeNull();
+    expect(getChildReport("6a-student-8", "6a-student-8-report")).toBeNull();
 
     actAsTeacher();
     publishReport(draft.id);
     actAsGuardian();
-    const published = getChildMonthlyReport("6a-student-8", "2026-10")!;
+    const published = getChildReport("6a-student-8", "6a-student-8-report")!;
     expect(published.report.publishedAt).toBeTruthy();
     expect(published.body.generalComment).toBe(
       "Con chăm chỉ và có tiến bộ.",
@@ -438,7 +443,7 @@ describe("Báo cáo tháng của con", () => {
       )!;
       score.value = null;
     });
-    const report = getChildMonthlyReport("6a-student-1", "2026-10")!;
+    const report = getChildReport("6a-student-1", "6a-student-1-report")!;
     expect(report.body.tests.map(({ test }) => test.id)).toEqual([
       "6a-test-2",
       "6a-test-3",
@@ -450,7 +455,7 @@ describe("Báo cáo tháng của con", () => {
   it("báo cáo đã phát hành nhưng còn thiếu nhận xét chung thì báo thiếu", () => {
     withStore();
     // Báo cáo của 6a-student-1 đã có nhận xét chung; xoá để kiểm tra nhãn thiếu.
-    const published = getChildMonthlyReport("6a-student-1", "2026-10")!;
+    const published = getChildReport("6a-student-1", "6a-student-1-report")!;
     expect(published.body.missing).toEqual([]);
     withStore((state) => {
       const report = state.reports.find(
@@ -459,7 +464,169 @@ describe("Báo cáo tháng của con", () => {
       report.generalComment = "";
     });
     expect(
-      getChildMonthlyReport("6a-student-1", "2026-10")?.body.missing,
+      getChildReport("6a-student-1", "6a-student-1-report")?.body.missing,
     ).toEqual(["Thiếu nhận xét chung"]);
+  });
+});
+
+/**
+ * Đăng ký phụ huynh + liên kết con theo SĐT (spec mục 4 "Tài khoản", 74 mục 1):
+ * phụ huynh tự đặt mật khẩu, hệ thống tự liên kết mọi học sinh có `parentPhone`
+ * trùng SĐT sau `normalizePhone`, kể cả khi hồ sơ khai SĐT sau.
+ */
+describe("Đăng ký phụ huynh và liên kết con theo SĐT", () => {
+  const guardianPhone = "0900000005";
+  const guardianPassword = "matkhau123";
+
+  /** Đặt SĐT phụ huynh cho các học sinh được nêu, các em khác giữ nguyên. */
+  function setParentPhones(ids: string[], phone: string): void {
+    withStore((state) => {
+      state.students = state.students.map((student) =>
+        ids.includes(student.id) ? { ...student, parentPhone: phone } : student,
+      );
+    });
+  }
+
+  /** Đăng ký phụ huynh và trả về membership vừa tạo. */
+  function register(name = "Mẹ của Bảo") {
+    const session = registerGuardian({
+      name,
+      phone: guardianPhone,
+      password: guardianPassword,
+      confirmPassword: guardianPassword,
+    });
+    const member = getStore().members.find(
+      (item) => item.id === session.memberIds[0],
+    )!;
+    return { session, member };
+  }
+
+  /** Thêm một membership nhân sự vào phiên để kiểm tra phía giáo viên. */
+  function actAsAdmin(): void {
+    updateStore((draft) => {
+      const session = draft.auth!;
+      draft.auth = {
+        phone: session.phone,
+        memberIds: [...session.memberIds, MEMBER_IDS.lanAdmin],
+      };
+    });
+    switchRole(MEMBER_IDS.lanAdmin);
+  }
+
+  beforeEach(() => {
+    clearAuthAccounts();
+  });
+
+  it("SĐT khớp một con: tạo tài khoản, membership phụ huynh và đăng nhập luôn", () => {
+    setParentPhones(["6a-student-2"], guardianPhone);
+    const { session, member } = register();
+
+    expect(session.phone).toBe(normalizePhone(guardianPhone));
+    expect(member).toMatchObject({
+      name: "Mẹ của Bảo",
+      phone: guardianPhone,
+      roleId: ROLE_IDS.guardian,
+      classIds: [],
+      status: "active",
+    });
+    expect(member.studentIds).toEqual(["6a-student-2"]);
+    expect(getStore().auth).toEqual({
+      phone: normalizePhone(guardianPhone),
+      memberIds: [member.id],
+    });
+    expect(getStore().activeMemberId).toBe(member.id);
+    // Vào thẳng màn phụ huynh: chỉ thấy con vừa liên kết.
+    expect(listMyChildren().map((child) => child.student.id)).toEqual([
+      "6a-student-2",
+    ]);
+  });
+
+  it("SĐT khớp hai con: liên kết cả hai", () => {
+    setParentPhones(["6a-student-2", "6a-student-3"], guardianPhone);
+    const { member } = register();
+    expect(new Set(member.studentIds)).toEqual(
+      new Set(["6a-student-2", "6a-student-3"]),
+    );
+    expect(listMyChildren().map((child) => child.student.id).sort()).toEqual([
+      "6a-student-2",
+      "6a-student-3",
+    ]);
+  });
+
+  it("SĐT chưa khớp hồ sơ nào: vẫn tạo được tài khoản và chưa có con", () => {
+    withStore();
+    const { member } = register();
+    expect(member.studentIds).toEqual([]);
+    expect(listMyChildren()).toEqual([]);
+  });
+
+  it("SĐT đã có tài khoản: từ chối, không thêm membership (giáo viên và phụ huynh)", () => {
+    withStore();
+    const membersBefore = getStore().members.length;
+    const authBefore = getStore().auth;
+    expect(() =>
+      registerGuardian({
+        name: "Mẹ của Bảo",
+        phone: "0900000001",
+        password: guardianPassword,
+        confirmPassword: guardianPassword,
+      }),
+    ).toThrow(PHONE_TAKEN);
+    expect(() =>
+      registerWorkspace({
+        name: "Cô Mai",
+        workspaceName: "Lớp của cô Mai",
+        phone: "0900000002",
+        password: guardianPassword,
+        confirmPassword: guardianPassword,
+      }),
+    ).toThrow(PHONE_TAKEN);
+    expect(getStore().members.length).toBe(membersBefore);
+    // Bị từ chối thì không tạo tài khoản, không đổi phiên đăng nhập.
+    expect(getStore().auth).toEqual(authBefore);
+  });
+
+  it("giáo viên khai SĐT sau khi phụ huynh đăng ký: tự liên kết con", () => {
+    withStore();
+    const { member } = register();
+    expect(member.studentIds).toEqual([]);
+
+    actAsAdmin();
+    updateStudentPhone("6a-student-2", "0900 000 005");
+
+    switchRole(member.id);
+    expect(listMyChildren().map((child) => child.student.id)).toEqual([
+      "6a-student-2",
+    ]);
+  });
+
+  it("đổi SĐT hồ sơ: gỡ liên kết cũ và giữ tài khoản phụ huynh", () => {
+    setParentPhones(["6a-student-2"], guardianPhone);
+    const { member } = register();
+    expect(member.studentIds).toEqual(["6a-student-2"]);
+
+    actAsAdmin();
+    updateStudentPhone("6a-student-2", "0912345678");
+
+    switchRole(member.id);
+    expect(listMyChildren()).toEqual([]);
+    // Tài khoản phụ huynh vẫn còn, chỉ mất liên kết với con.
+    expect(
+      getStore().members.find((item) => item.id === member.id)?.status,
+    ).toBe("active");
+  });
+
+  it("phụ huynh không thấy con khác, kể cả khi biết mã học sinh", () => {
+    setParentPhones(["6a-student-2"], guardianPhone);
+    register();
+    expect(() => getChildOverview("6a-student-3", "2026-10")).toThrow(
+      STUDENT_ACCESS_ERROR,
+    );
+    expect(() => listChildTickets("6a-student-3")).toThrow(
+      STUDENT_ACCESS_ERROR,
+    );
+    expect(listMyChildren().map((child) => child.student.id)).toEqual([
+      "6a-student-2",
+    ]);
   });
 });

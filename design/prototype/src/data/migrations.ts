@@ -12,6 +12,7 @@ import type {
   PayRate,
   PayrollMonth,
   Report,
+  ReportBatch,
   Role,
   Score,
   Session,
@@ -23,8 +24,10 @@ import type {
   TuitionPayment,
 } from "./types";
 import { defaultMembers, defaultRoles, MEMBER_IDS, ROLE_IDS } from "./defaults";
+import { normalizePhone } from "./authAccounts";
 import { defaultStaffTuition } from "./staffTuitionDefaults";
 import { hydratePayrollState } from "./payroll";
+import { countedSessions } from "./reportRange";
 
 /** Adds schedule fields to sessions persisted by the earlier prototype. */
 export function migrateStoreSessions<T extends { classes: Class[]; sessions: unknown[] }>(
@@ -41,6 +44,26 @@ export function migrateStoreSessions<T extends { classes: Class[]; sessions: unk
 }
 
 type LegacyAuth = Partial<AuthSession> & { email?: string };
+
+/** Thành viên của bản cũ còn trạng thái "invited" và trường `invitedAt`. */
+type LegacyMember = Omit<Member, "status"> & {
+  status: Member["status"] | "invited";
+  invitedAt?: string | null;
+};
+
+/**
+ * Bỏ hẳn luồng mời (quyết định 2026-10-23 mục 1): thành viên còn ở trạng thái
+ * "invited" của bản cũ bị xoá, trường `invitedAt` bị bỏ khỏi mọi thành viên.
+ * Trạng thái còn lại chỉ là "active" | "disabled".
+ */
+export function migrateMembers(members: LegacyMember[]): Member[] {
+  return members
+    .filter((member) => member.status !== "invited")
+    .map(({ invitedAt: _invitedAt, ...member }) => ({
+      ...member,
+      status: member.status === "disabled" ? "disabled" : "active",
+    }));
+}
 
 /**
  * Bỏ trường `absent` khỏi điểm của bản cũ:
@@ -90,21 +113,91 @@ export function migrateComments(comments: unknown): Comment[] {
 }
 
 /**
- * Nâng báo cáo cũ: thêm `generalComment` (nhận xét chung của tháng) và
- * `publishedAt` (thời điểm phát hành) mà bản cũ chưa có.
+ * Đợt báo cáo suy ra cho báo cáo tháng cũ (chưa có `batchId`): từ buổi đã diễn
+ * ra đầu tiên đến buổi đã diễn ra cuối cùng của tháng đó. Tháng không có buổi
+ * nào thì không dựng được đợt (null).
  */
-export function migrateReports(reports: unknown): Report[] {
+function legacyBatchFor(
+  classId: string,
+  month: string,
+  sessions: Session[],
+): ReportBatch | null {
+  const held = countedSessions(sessions, classId).filter(
+    (session) => session.status === "held" && session.date.startsWith(month),
+  );
+  const first = held[0];
+  const last = held.at(-1);
+  if (!first || !last) return null;
+  return {
+    id: `legacy-${classId}-${month}`,
+    classId,
+    fromSessionId: first.id,
+    toSessionId: last.id,
+    createdAt: `${last.date}T23:59:59.000Z`,
+  };
+}
+
+/** Các đợt báo cáo: giữ đợt đã lưu, thêm đợt suy ra cho báo cáo tháng cũ. */
+export function migrateReportBatches(
+  batches: unknown,
+  reports: unknown,
+  sessions: Session[],
+): ReportBatch[] {
+  const result: ReportBatch[] = Array.isArray(batches)
+    ? (batches as Array<Partial<ReportBatch>>).flatMap((raw) =>
+        raw && raw.id && raw.classId && raw.fromSessionId && raw.toSessionId
+          ? [
+              {
+                id: raw.id,
+                classId: raw.classId,
+                fromSessionId: raw.fromSessionId,
+                toSessionId: raw.toSessionId,
+                createdAt: raw.createdAt ?? "1970-01-01T00:00:00.000Z",
+              },
+            ]
+          : [],
+      )
+    : [];
+  if (!Array.isArray(reports)) return result;
+  for (const raw of reports as Array<Partial<Report>>) {
+    if (!raw || raw.batchId || !raw.classId || !raw.month) continue;
+    const batch = legacyBatchFor(raw.classId, raw.month, sessions);
+    if (batch && !result.some((item) => item.id === batch.id)) result.push(batch);
+  }
+  return result;
+}
+
+/**
+ * Nâng báo cáo cũ: thêm `generalComment` (nhận xét chung) và `publishedAt`
+ * (thời điểm phát hành) mà bản cũ chưa có. Báo cáo tháng cũ chưa có `batchId`
+ * được gắn vào đợt suy ra từ tháng đó; tháng không có buổi nào thì bỏ bản đó.
+ */
+export function migrateReports(
+  reports: unknown,
+  batches: ReportBatch[] = [],
+  sessions: Session[] = [],
+): Report[] {
   if (!Array.isArray(reports)) return [];
   return (reports as Array<Partial<Report>>).flatMap((raw) => {
     if (!raw || typeof raw !== "object") return [];
-    if (!raw.classId || !raw.studentId || !raw.month) return [];
+    if (!raw.classId || !raw.studentId) return [];
+    const batchId =
+      raw.batchId ??
+      (raw.month ? legacyBatchFor(raw.classId, raw.month, sessions)?.id : undefined);
+    if (!batchId) return [];
+    const batch = batches.find((item) => item.id === batchId);
+    const month =
+      raw.month ??
+      sessions.find((item) => item.id === batch?.toSessionId)?.date.slice(0, 7);
+    if (!month) return [];
     const status = raw.status === "published" ? "published" : "draft";
     return [
       {
         id: raw.id ?? crypto.randomUUID(),
         classId: raw.classId,
         studentId: raw.studentId,
-        month: raw.month,
+        batchId,
+        month,
         status,
         needsRepublish: raw.needsRepublish === true,
         generalComment:
@@ -155,20 +248,27 @@ export function migrateStore(
     Array.isArray(data.roles) && data.roles.length
       ? (data.roles as Role[])
       : defaultRoles();
-  const members =
+  const rawMembers =
     Array.isArray(data.members) && data.members.length
-      ? (data.members as Member[])
+      ? (data.members as LegacyMember[])
       : defaultMembers();
+  const members = migrateMembers(rawMembers);
   const legacyAuth = data.auth as LegacyAuth | null | undefined;
   const memberIds =
-    legacyAuth && Array.isArray(legacyAuth.memberIds) && legacyAuth.memberIds.length
+    (legacyAuth && Array.isArray(legacyAuth.memberIds) && legacyAuth.memberIds.length
       ? legacyAuth.memberIds
       : members
           .filter((member) => member.name === members[0]?.name)
-          .map((member) => member.id);
-  const auth: AuthSession | null = legacyAuth
-    ? { email: legacyAuth.email ?? "", memberIds }
-    : null;
+          .map((member) => member.id)
+    // Thành viên đã bị xoá (ví dụ lời mời đang chờ của bản cũ) không còn
+    // trong phiên đăng nhập.
+    ).filter((id) => members.some((member) => member.id === id));
+  // Phiên cũ đăng nhập bằng email không còn hợp lệ: xác thực giờ bằng SĐT +
+  // mật khẩu (spec mục 4 "Tài khoản"), người dùng đăng nhập lại một lần.
+  const legacyPhone =
+    typeof legacyAuth?.phone === "string" ? normalizePhone(legacyAuth.phone) : "";
+  const auth: AuthSession | null =
+    legacyAuth && legacyPhone ? { phone: legacyPhone, memberIds } : null;
   const activeMemberId =
     typeof data.activeMemberId === "string"
       ? data.activeMemberId
@@ -177,6 +277,11 @@ export function migrateStore(
         : null;
   // Mảng nhân sự/lương/học phí: bản cũ chưa có thì điền dữ liệu mẫu, có rồi thì giữ nguyên.
   const staffTuition = defaultStaffTuition();
+  const reportBatches = migrateReportBatches(
+    data.reportBatches,
+    data.reports,
+    withSessions.sessions,
+  );
   const merged: StoreState = {
     ...(withSessions as unknown as StoreState),
     roles,
@@ -189,7 +294,8 @@ export function migrateStore(
       : [],
     scores: migrateScores(data.scores),
     comments: migrateComments(data.comments),
-    reports: migrateReports(data.reports),
+    reportBatches,
+    reports: migrateReports(data.reports, reportBatches, withSessions.sessions),
     // Bản cũ chưa có BTVN: bắt đầu rỗng; bản mới giữ nguyên (kể cả mảng rỗng).
     homeworkSections: Array.isArray(data.homeworkSections)
       ? (data.homeworkSections as HomeworkSection[])

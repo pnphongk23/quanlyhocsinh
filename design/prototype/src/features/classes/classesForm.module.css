@@ -55,8 +55,8 @@
 }
 
 .dayActive {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 .scaleNote {
@@ -100,9 +100,35 @@
   background: var(--color-bg);
 }
 
+.cancel {
+  display: none;
+}
+
 @media (min-width: 1024px) {
   .page {
     min-height: 0;
+    max-width: 640px;
+    margin-inline: auto;
+    width: 100%;
+  }
+
+  /* Form nằm trong thẻ ≤ 640px, căn giữa vùng nội dung */
+  .form {
+    flex: none;
+    padding: 20px;
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  .form .day,
+  .form .studentNoteText {
+    background: var(--color-bg);
+  }
+
+  /* Nút quay lại thẳng hàng với tiêu đề */
+  .page > header,
+  .page > header > div {
+    align-items: center;
   }
 
   .actions {
@@ -110,6 +136,36 @@
   }
 
   .stickyBar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 0;
     background: transparent;
+  }
+
+  .form .cancel {
+    display: inline-flex;
+    background: var(--color-bg);
+  }
+}
+
+/* Sửa lớp (modal): mobile chỉ nút chính tràn ngang, desktop Huỷ + Lưu căn phải */
+.modalActions {
+  display: grid;
+}
+
+.modalActions .cancel {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .modalActions .cancel {
+    display: inline-flex;
   }
 }

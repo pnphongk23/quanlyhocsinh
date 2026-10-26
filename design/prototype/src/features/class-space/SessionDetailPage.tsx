@@ -1,19 +1,18 @@
+import { features } from "../../shared/features";
+import { useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Link,
-  useBlocker,
   useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
 import { useAccess, canAccessClass } from "../../data/repositories/access";
 import {
-  cancelSession,
   getSession,
   getSessionClass,
   hasSession,
   sessionPrefix,
-  setSessionStatus,
 } from "../../data/repositories/sessions";
 import { listMembers, listRoles } from "../../data/repositories/staff";
 import {
@@ -32,6 +31,7 @@ import type {
 } from "../../data/types";
 import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
+import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import {
   Button,
   Card,
@@ -42,12 +42,17 @@ import {
   NoAccess,
   Pill,
   Segmented,
+  Sheet,
+  UnsavedChangesDialog,
 } from "../../shared/ui";
 import AttendancePanel from "../attendance/AttendancePanel";
 import CommentsPanel from "../comments/CommentsPanel";
 import HomeworkPanel from "../homework/HomeworkPanel";
 import SessionLecturesPanel from "../lectures/SessionLecturesPanel";
 import { ConfirmDialog } from "../classes/ConfirmDialog";
+import SessionDetailDesktop from "./SessionDetailDesktop";
+import AddSessionModal from "./AddSessionModal";
+import { useCancelSession } from "./useCancelSession";
 import s from "./sessionDetail.module.css";
 import st from "./sessionTeachers.module.css";
 
@@ -58,11 +63,12 @@ import st from "./sessionTeachers.module.css";
  */
 export type SessionTab = "diem-danh" | "nhan-xet" | "btvn";
 
-export const SESSION_TABS: ReadonlyArray<{ value: SessionTab; label: string }> = [
-  { value: "diem-danh", label: "Điểm danh" },
-  { value: "nhan-xet", label: "Nhận xét" },
-  { value: "btvn", label: "Bài tập về nhà" },
-];
+export const SESSION_TABS: ReadonlyArray<{ value: SessionTab; label: string }> =
+  [
+    { value: "diem-danh", label: "Điểm danh" },
+    { value: "nhan-xet", label: "Nhận xét" },
+    { value: "btvn", label: "Bài tập về nhà" },
+  ];
 
 export const DEFAULT_SESSION_TAB: SessionTab = "diem-danh";
 
@@ -143,6 +149,7 @@ function activeStaffMembers(): Member[] {
 
 export default function SessionDetailPage() {
   const state = useStore();
+  const desktop = useIsDesktop();
   const { classId = "", sessionId = "" } = useParams();
   const navigate = useNavigate();
   const access = useAccess();
@@ -152,21 +159,31 @@ export default function SessionDetailPage() {
   const canWrite = access.can("sessions_attendance", "write");
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = sessionTabOf(searchParams.get("tab"));
-  const [dirty, setDirty] = useState(false);
+  // Điểm danh và chấm/soạn BTVN: cả hai giữ nguyên khi đổi tab nên dirty là hợp của hai phần.
+  const [attendanceDirty, setDirty] = useState(false);
+  const [homeworkDirty, setHomeworkDirty] = useState(false);
+  const dirty = attendanceDirty || homeworkDirty;
+  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [error, setError] = useState("");
+  const cancelling = useCancelSession(() =>
+    navigate(`/lop/${classId}/buoi-hoc`),
+  );
   const [teacherModal, setTeacherModal] = useState(false);
   const [teacherError, setTeacherError] = useState("");
   const [confirmSub, setConfirmSub] = useState<SessionSubstitute | null>(null);
-  const saveRef = useRef<(() => void) | null>(null);
+  const leave = useSaveAndLeave();
+  const saveRef = useRef<(() => unknown) | null>(null);
+  const homeworkSaveRef = useRef<(() => unknown) | null>(null);
+  const [leaving, setLeaving] = useState(false);
   // Đổi tab trong cùng màn không phải rời màn: chỉ hỏi khi đổi đường dẫn.
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      dirty && currentLocation.pathname !== nextLocation.pathname,
-  );
+  const guard = useLeaveGuard(dirty);
   useEffect(() => {
     setDirty(false);
+    setHomeworkDirty(false);
     setError("");
+    setMenuOpen(false);
     setTeacherModal(false);
     setTeacherError("");
     setConfirmSub(null);
@@ -176,34 +193,11 @@ export default function SessionDetailPage() {
       <NoAccess what="buổi học này" />
     ) : (
       <EmptyState title="Không tìm thấy buổi học">
-        <LinkButton to={`/lop/${classId}/buoi-hoc`}>Về danh sách buổi</LinkButton>
+        <LinkButton to={`/lop/${classId}/buoi-hoc`}>
+          Về danh sách buổi
+        </LinkButton>
       </EmptyState>
     );
-
-  function cancel() {
-    if (!session) return;
-    try {
-      cancelSession(session.id);
-      setError("");
-      navigate(`/lop/${classId}/buoi-hoc`);
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Không hủy được buổi học.",
-      );
-    }
-  }
-
-  function restore() {
-    if (!session) return;
-    try {
-      setSessionStatus(session.id, "planned");
-      setError("");
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Không khôi phục được buổi học.",
-      );
-    }
-  }
 
   function openTab(next: SessionTab) {
     if (next === tab) return;
@@ -289,6 +283,103 @@ export default function SessionDetailPage() {
     }
   }
 
+  const cancelDialog = !cancelled && session.status === "planned" && (
+    <ConfirmDialog
+      open={confirmCancel}
+      title={`Huỷ buổi học ${formatDayMonth(session.date)}?`}
+      message="Buổi học sẽ được đánh dấu là đã huỷ. Không thể hoàn tác."
+      error={cancelling.error}
+      actions={[
+        {
+          label: "Huỷ buổi học",
+          variant: "danger",
+          busy: cancelling.busy,
+          onClick: () => void cancelling.run(session.id),
+        },
+        {
+          label: "Giữ buổi học",
+          variant: "neutral",
+          onClick: () => !cancelling.busy && setConfirmCancel(false),
+        },
+      ]}
+      onDismiss={() => !cancelling.busy && setConfirmCancel(false)}
+    />
+  );
+  const manualPlanned = session.origin === "manual" && session.status === "planned";
+  const editModal = editOpen && klass && (
+    <AddSessionModal
+      classId={classId}
+      classTime={klass.time}
+      session={session}
+      onClose={() => setEditOpen(false)}
+    />
+  );
+
+  const unsavedDialog = guard.blocked && (
+    <UnsavedChangesDialog
+      open
+      title="Chưa lưu thay đổi"
+      message="Bạn đang điểm danh hoặc chấm bài dở. Lưu trước khi rời màn này?"
+      saving={leaving}
+      done={leave.done}
+      onSave={() =>
+        leave.run(async () => {
+          setLeaving(true);
+          try {
+            // Bản mobile của BTVN chưa có hàm lưu để gọi từ đây: ở lại để người dùng bấm Lưu.
+            if (homeworkDirty && !homeworkSaveRef.current) {
+              guard.stay();
+              return false;
+            }
+            const results = [
+              await saveRef.current?.(),
+              await homeworkSaveRef.current?.(),
+            ];
+            return results.every((result) => result !== false);
+          } finally {
+            setLeaving(false);
+          }
+        }, guard.proceed)
+      }
+      onDiscard={() => {
+        leave.cancel();
+        guard.proceed();
+      }}
+      onStay={() => {
+        leave.cancel();
+        guard.stay();
+      }}
+    />
+  );
+
+  if (desktop && klass)
+    return (
+      <>
+        <SessionDetailDesktop
+          classId={classId}
+          klass={klass}
+          session={session}
+          tab={tab}
+          onTab={openTab}
+          canWrite={canWrite}
+          readOnly={future}
+          onDirtyChange={setDirty}
+          saveRef={saveRef}
+          onHomeworkDirtyChange={setHomeworkDirty}
+          homeworkSaveRef={homeworkSaveRef}
+          onCancel={() => {
+            setError("");
+            cancelling.clearError();
+            setConfirmCancel(true);
+          }}
+          onEdit={manualPlanned ? () => setEditOpen(true) : undefined}
+        />
+        {cancelDialog}
+        {editModal}
+        {unsavedDialog}
+      </>
+    );
+
   return (
     <section className={s.detail}>
       <header className={s.header}>
@@ -309,6 +400,20 @@ export default function SessionDetailPage() {
               {cancelled && <Pill tone="warning">Đã huỷ</Pill>}
             </div>
           </div>
+          {!cancelled && session.status === "planned" && canWrite && (
+            <button
+              type="button"
+              className={s.moreButton}
+              aria-label="Tuỳ chọn buổi học"
+              title="Tuỳ chọn buổi học"
+              onClick={() => {
+                setMenuOpen(true);
+                setError("");
+              }}
+            >
+              <Icon name="more" />
+            </button>
+          )}
         </div>
         {!cancelled && (
           <div className={s.tabs} role="tablist" aria-label="Nội dung buổi học">
@@ -318,7 +423,9 @@ export default function SessionDetailPage() {
                 type="button"
                 role="tab"
                 aria-selected={tab === item.value}
-                className={s.tab + (tab === item.value ? " " + s.tabActive : "")}
+                className={
+                  s.tab + (tab === item.value ? " " + s.tabActive : "")
+                }
                 onClick={() => openTab(item.value)}
               >
                 {item.label}
@@ -390,26 +497,12 @@ export default function SessionDetailPage() {
           <>
             <div className={s.dateCard}>
               <p className={s.dateTitle}>{formatWeekdayDate(session.date)}</p>
-              <p className={s.dateMeta}>
-                {sessionPrefix(session)} · đã huỷ
-              </p>
+              <p className={s.dateMeta}>{sessionPrefix(session)} · đã huỷ</p>
             </div>
-            <div className={s.emptyBlock}>
-              <span className={s.emptyIcon} aria-hidden="true">
-                <Icon name="calendar" size={32} />
-              </span>
-              <div className={s.emptyText}>
-                <h2 className={s.emptyTitle}>Buổi này đã huỷ</h2>
-                <p className={s.emptyTextLine}>
-                  Không cần điểm danh. Khôi phục nếu bạn huỷ nhầm.
-                </p>
-              </div>
-              <div className={s.emptyActions}>
-                {canWrite && (
-                  <Button size="lg" onClick={restore}>
-                    Khôi phục buổi học
-                  </Button>
-                )}
+            <EmptyState
+              title="Buổi này đã huỷ"
+              description="Không cần điểm danh."
+              action={
                 <LinkButton
                   variant="secondary"
                   size="lg"
@@ -417,8 +510,8 @@ export default function SessionDetailPage() {
                 >
                   Về danh sách buổi
                 </LinkButton>
-              </div>
-            </div>
+              }
+            />
           </>
         ) : (
           <>
@@ -439,48 +532,57 @@ export default function SessionDetailPage() {
               />
             </div>
             <div hidden={tab !== "btvn"}>
-              <HomeworkPanel session={session} />
+              <HomeworkPanel
+                session={session}
+                onDirtyChange={setHomeworkDirty}
+              />
             </div>
-            {tab === "diem-danh" &&
+            {features.lectures &&
+              tab === "diem-danh" &&
               access.can("lectures", "read") &&
               canAccessClass(classId) && (
                 <SessionLecturesPanel sessionId={session.id} />
               )}
-            {session.status === "planned" && canWrite && tab !== "btvn" && (
-              <div className={s.detailActions}>
-                <Button
-                  variant="danger"
-                  size="lg"
-                  onClick={() => setConfirmCancel(true)}
-                >
-                  Huỷ buổi
-                </Button>
-              </div>
-            )}
           </>
         )}
       </div>
 
-      {!cancelled && session.status === "planned" && (
-        <ConfirmDialog
-          open={confirmCancel}
-          title={`Huỷ buổi học ${formatDayMonth(session.date)}?`}
-          message="Buổi học sẽ được đánh dấu là đã huỷ. Bạn có thể khôi phục lại sau."
-          actions={[
-            {
-              label: "Huỷ buổi học",
-              variant: "danger",
-              onClick: cancel,
-            },
-            {
-              label: "Giữ buổi học",
-              variant: "neutral",
-              onClick: () => setConfirmCancel(false),
-            },
-          ]}
-          onDismiss={() => setConfirmCancel(false)}
-        />
+      {!cancelled && session.status === "planned" && canWrite && (
+        <Sheet
+          title="Tuỳ chọn buổi học"
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+        >
+          <div className={s.sheetActions}>
+            {manualPlanned && (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setEditOpen(true);
+                }}
+              >
+                Sửa buổi lẻ
+              </Button>
+            )}
+            <Button
+              variant="danger"
+              size="md"
+              onClick={() => {
+                setMenuOpen(false);
+                setError("");
+                cancelling.clearError();
+                setConfirmCancel(true);
+              }}
+            >
+              Huỷ buổi
+            </Button>
+          </div>
+        </Sheet>
       )}
+      {cancelDialog}
+      {editModal}
 
       {access.isAdmin && !cancelled && teacherModal && (
         <TeacherModal
@@ -525,38 +627,7 @@ export default function SessionDetailPage() {
         onDismiss={() => setConfirmSub(null)}
       />
 
-      <ConfirmDialog
-        open={blocker.state === "blocked"}
-        title="Điểm danh chưa lưu"
-        message="Bạn đang điểm danh dở buổi học. Lưu trước khi rời màn này?"
-        actions={[
-          {
-            label: "Lưu",
-            variant: "primary",
-            onClick: () => {
-              saveRef.current?.();
-              if (blocker.state === "blocked") blocker.proceed();
-            },
-          },
-          {
-            label: "Bỏ thay đổi",
-            variant: "danger",
-            onClick: () => {
-              if (blocker.state === "blocked") blocker.proceed();
-            },
-          },
-          {
-            label: "Ở lại",
-            variant: "neutral",
-            onClick: () => {
-              if (blocker.state === "blocked") blocker.reset();
-            },
-          },
-        ]}
-        onDismiss={() => {
-          if (blocker.state === "blocked") blocker.reset();
-        }}
-      />
+      {unsavedDialog}
     </section>
   );
 }

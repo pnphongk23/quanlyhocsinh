@@ -12,9 +12,9 @@ export const MEMBER_IDS = {
   lanAdmin: "member-lan-admin",
   lanTeacher: "member-lan-teacher",
   lanGuardian: "member-lan-guardian",
+  minhAnhGuardian: "member-minhanh-guardian",
   minh: "member-minh",
   trang: "member-trang",
-  mai: "member-mai",
 } as const;
 
 export const PERMISSION_GROUP_IDS: PermissionGroup[] = [
@@ -117,7 +117,6 @@ export function defaultMembers(): Member[] {
       roleId: ROLE_IDS.admin,
       classIds: [],
       status: "active",
-      invitedAt: null,
     },
     {
       id: MEMBER_IDS.lanTeacher,
@@ -126,7 +125,6 @@ export function defaultMembers(): Member[] {
       roleId: ROLE_IDS.teacher,
       classIds: ["6a"],
       status: "active",
-      invitedAt: null,
     },
     {
       id: MEMBER_IDS.lanGuardian,
@@ -134,9 +132,19 @@ export function defaultMembers(): Member[] {
       phone: "0900000001",
       roleId: ROLE_IDS.guardian,
       classIds: [],
-      studentIds: ["6a-student-1", "6a-student-8"],
+        studentIds: ["6a-student-1", "6a-student-8"],
       status: "active",
-      invitedAt: null,
+    },
+    {
+      id: MEMBER_IDS.minhAnhGuardian,
+      // Tài khoản phụ huynh mẫu đăng nhập bằng SĐT +84 900 000 002 (spec mục 4
+      // "Tài khoản"): hai con dùng chung SĐT này trong hồ sơ học sinh.
+      name: "Mẹ của Minh Anh",
+      phone: "0900000002",
+      roleId: ROLE_IDS.guardian,
+      classIds: [],
+      studentIds: ["6a-student-0", "6a-student-1"],
+      status: "active",
     },
     {
       id: MEMBER_IDS.minh,
@@ -145,7 +153,6 @@ export function defaultMembers(): Member[] {
       roleId: ROLE_IDS.teacher,
       classIds: ["6a", "ielts"],
       status: "active",
-      invitedAt: null,
     },
     {
       id: MEMBER_IDS.trang,
@@ -154,16 +161,6 @@ export function defaultMembers(): Member[] {
       roleId: ROLE_IDS.assistant,
       classIds: ["ielts"],
       status: "active",
-      invitedAt: null,
-    },
-    {
-      id: MEMBER_IDS.mai,
-      name: "Cô Mai",
-      phone: "0900000004",
-      roleId: ROLE_IDS.teacher,
-      classIds: ["6a"],
-      status: "invited",
-      invitedAt: "2026-10-16T09:00:00.000Z",
     },
   ];
 }

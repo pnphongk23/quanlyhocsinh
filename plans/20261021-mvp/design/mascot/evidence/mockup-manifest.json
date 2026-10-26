@@ -1,0 +1,242 @@
+[
+  {
+    "name": "nep-login",
+    "scenario": "login",
+    "route": "/dang-nhap",
+    "component": "design/prototype/src/features/auth/LoginPage.tsx",
+    "slot": {
+      "x": 286,
+      "y": 88,
+      "size": 64,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "b5798d5bd1829369b0d8f43858ab906695a84308270281f22aa822b906769672",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "welcome",
+    "component_sha256": "ce5502a14cd021eef356e62cbe749b6325522c916f3cd2ef17bc1ec01aa04d14",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "197a06d3a85ecc05e2329ce10cecad71566cd7d1f2784194cccbeccebaedefea"
+  },
+  {
+    "name": "nep-empty",
+    "scenario": "empty",
+    "route": "/lop/6a/hoc-sinh",
+    "component": "design/prototype/src/features/students/StudentsPage.tsx",
+    "slot": {
+      "x": 155,
+      "y": 292,
+      "size": 80,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "cb5185085c095bb33a03db0d973c0d6d6d3582b13d8bdeeb7f36f572df167e8b",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "empty",
+    "component_sha256": "628218d0f4726c0d0884c0b9d01694dcf242d8ff51ad0732464da66697066cfd",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "4a8bb54547daaaab5f25e509adf9f023f2b3c65f4494594edcfe567e941bedf7"
+  },
+  {
+    "name": "nep-sent",
+    "scenario": "sent",
+    "route": "/lop/6a/buoi-hoc/6a-session-0?tab=nhan-xet",
+    "component": "design/prototype/src/features/comments/CommentsPanel.tsx",
+    "slot": {
+      "x": 286,
+      "y": 380,
+      "size": 80,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "3497f2002d772304ffbf06b52de147cc5ba535dbcb78e8eb13d0d0dc25dc1b67",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "celebration",
+    "component_sha256": "b5a96449b4fda74c60388178873f36688d7207083532e797412be0674cc196ac",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "525df5dec7f856a67ba3284742c557322d23f5e37e785825a9857d2880fb63b9"
+  },
+  {
+    "name": "nep-overview",
+    "scenario": "overview",
+    "route": "/ph",
+    "component": "design/prototype/src/roles/guardian/GuardianOverviewPage.tsx",
+    "slot": {
+      "x": 262,
+      "y": 108,
+      "size": 80,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "616f497a31a1f71ad021ab687974372e254b362a1c8a0bebd45974c53e0947fb",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "welcome",
+    "component_sha256": "a5b9748c54128ca6e562a55ce06b896cad5fee3f8d2b16fad94d76ba59ad1750",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "c3bb004526d0bea4d80bf63f1b53bf0ca22222fd36f69bae02b3f885d27c906a"
+  },
+  {
+    "name": "nep-published",
+    "scenario": "published",
+    "route": "/ph/bao-cao",
+    "component": "design/prototype/src/roles/guardian/GuardianReportPage.tsx",
+    "slot": {
+      "x": 294,
+      "y": 16,
+      "size": 56,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "1753c984525890a57262a3841aeb6d815bfeffb0017594c3c3fd5da7ccecb3b0",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "celebration",
+    "component_sha256": "f4ae0aef113a16a4e4507b8adb27b6e4c9b8af83528a074e91d9586ee18f8741",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "c7c20d5416aceac9de4bdfb56fc7357c61c2b4ce6149b6b46072c0e7bc25e795"
+  },
+  {
+    "name": "nep-error",
+    "scenario": "error",
+    "route": "/lop/6a/buoi-hoc/6a-session-0",
+    "component": "design/prototype/src/features/attendance/AttendancePanel.tsx",
+    "slot": {
+      "x": 318,
+      "y": 2,
+      "size": 32,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "a4a0e720324dfe6ab94f5b7413e2acaa395dd8e8021244d7d450600503d39320",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "gentle-error",
+    "component_sha256": "6d542c2861409e7cc6618c0f2e664dc2f1b0f49f68a86efe3477e5815c5b6ff6",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "d5b5877f2c4aafd1759a5fb144e61d03567faf3cbc2f09aacf563ae82487fcc1"
+  },
+  {
+    "name": "mam-login",
+    "scenario": "login",
+    "route": "/dang-nhap",
+    "component": "design/prototype/src/features/auth/LoginPage.tsx",
+    "slot": {
+      "x": 286,
+      "y": 88,
+      "size": 64,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "b5798d5bd1829369b0d8f43858ab906695a84308270281f22aa822b906769672",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "welcome",
+    "component_sha256": "ce5502a14cd021eef356e62cbe749b6325522c916f3cd2ef17bc1ec01aa04d14",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "0c42cc357cfd8e8ede00b47677d765945ab6f2c4cd44f2cd0334287dfc7e3626"
+  },
+  {
+    "name": "mam-empty",
+    "scenario": "empty",
+    "route": "/lop/6a/hoc-sinh",
+    "component": "design/prototype/src/features/students/StudentsPage.tsx",
+    "slot": {
+      "x": 155,
+      "y": 292,
+      "size": 80,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "cb5185085c095bb33a03db0d973c0d6d6d3582b13d8bdeeb7f36f572df167e8b",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "empty",
+    "component_sha256": "628218d0f4726c0d0884c0b9d01694dcf242d8ff51ad0732464da66697066cfd",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "09542739f8d2d17d9c656fc92f3b49d7927b3327499d413d9ff28595678a6d50"
+  },
+  {
+    "name": "nhip-login",
+    "scenario": "login",
+    "route": "/dang-nhap",
+    "component": "design/prototype/src/features/auth/LoginPage.tsx",
+    "slot": {
+      "x": 286,
+      "y": 88,
+      "size": 64,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "b5798d5bd1829369b0d8f43858ab906695a84308270281f22aa822b906769672",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "welcome",
+    "component_sha256": "ce5502a14cd021eef356e62cbe749b6325522c916f3cd2ef17bc1ec01aa04d14",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "64b2a46665f236f15554ec0a59f4bfa63bb12e8cba67448d93d747232eb9f5bd"
+  },
+  {
+    "name": "nhip-empty",
+    "scenario": "empty",
+    "route": "/lop/6a/hoc-sinh",
+    "component": "design/prototype/src/features/students/StudentsPage.tsx",
+    "slot": {
+      "x": 155,
+      "y": 292,
+      "size": 80,
+      "clearance": 8
+    },
+    "obstruction_count": 0,
+    "baseline_sha256": "cb5185085c095bb33a03db0d973c0d6d6d3582b13d8bdeeb7f36f572df167e8b",
+    "flag_response_patches": 2,
+    "viewport": [
+      390,
+      844
+    ],
+    "state": "local fixture; proposed overlay separate",
+    "pose": "empty",
+    "component_sha256": "628218d0f4726c0d0884c0b9d01694dcf242d8ff51ad0732464da66697066cfd",
+    "fixture_script_sha256": "69af3f2d795235c9c2c7ca94b2241953886fa176494a705d6242e5e6a86a2ce9",
+    "mockup_png_sha256": "055c6b19c0293c646ac577dd46228a9a15e6958be67358aead5e82f074ba75a9"
+  }
+]

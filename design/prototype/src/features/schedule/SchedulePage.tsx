@@ -16,7 +16,7 @@ import {
   todayISO,
   weekdayNames,
 } from "../../shared/format";
-import { Icon, NoAccess, PageHeader, Segmented } from "../../shared/ui";
+import { EmptyState, Icon, NoAccess, PageHeader, Segmented } from "../../shared/ui";
 import type { PillTone } from "../../shared/ui";
 import { useOnline } from "../../shared/hooks/useOnline";
 import {
@@ -139,16 +139,10 @@ function SessionList({
 function DayEmpty({ date }: { date: string }) {
   return (
     <div className={s.empty}>
-      <span className={s.emptyIcon} aria-hidden="true">
-        <Icon name="calendar" size={32} />
-      </span>
-      <div className={s.emptyText}>
-        <h2 className={s.emptyTitle}>Không có buổi học</h2>
-        <p className={s.emptyBody}>
-          Ngày {formatDayMonth(date)} chưa có buổi học nào. Chọn ngày khác để
-          xem lịch.
-        </p>
-      </div>
+      <EmptyState
+        title="Không có buổi học"
+        description={`Ngày ${formatDayMonth(date)} chưa có buổi học nào. Chọn ngày khác để xem lịch.`}
+      />
     </div>
   );
 }

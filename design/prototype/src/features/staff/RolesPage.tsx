@@ -68,7 +68,7 @@ export default function RolesPage() {
       </p>
 
       {roles.length === 0 ? (
-        <EmptyState title="Chưa có vai trò">
+        <EmptyState title="Chưa có vai trò" mascot="cho">
           <p>Workspace luôn có vai trò Admin cố định. Tạo thêm vai trò cho nhân sự.</p>
         </EmptyState>
       ) : (

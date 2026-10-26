@@ -27,7 +27,7 @@ const storage = {
 /** Đặt vai trò đang dùng thành một membership cụ thể (mặc định dữ liệu mẫu). */
 function actAs(memberId: string, mutate?: (state: StoreState) => void): void {
   const state = createSeed();
-  state.auth = { email: "scores@example.test", memberIds: [memberId] };
+  state.auth = { phone: "900000001", memberIds: [memberId] };
   state.activeMemberId = memberId;
   mutate?.(state);
   replaceStore(state);

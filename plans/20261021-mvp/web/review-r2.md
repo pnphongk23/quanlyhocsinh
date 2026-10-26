@@ -1,0 +1,14 @@
+# Review tổng thể web (vòng 2, cuối)
+
+Rà soát tĩnh mã frontend trong worktree `mvp-web` tại HEAD `6b58afcd0ba2636603804cd0387f36a227ae7a20`. Đã kiểm tra lại hai finding MAJOR vòng 1 cùng luồng phiên, cache/outbox, phân quyền client, thao tác ghi, service worker/CSP và các chuỗi/tính năng MVP. Không đánh giá parity prototype màn phụ huynh hoặc desktop theo phạm vi brief. Không chạy test/build hoặc xác minh runtime/backend trong lượt review chỉ đọc này.
+
+| Mức | Vị trí | Vấn đề | Kịch bản tái hiện | Đề xuất sửa |
+|---|---|---|---|---|
+| MAJOR | `src/data/auth/session.ts:51-57,81-88`; `src/data/sync.ts:147-150` | Khi API trả 403/404 cho membership đang dùng, `invalidateActiveMembership()` chọn membership khác dựa trên bản `/me` cũ ở local và gọi `activateMembershipCache()` để hydrate cache của membership đó mà chưa được máy chủ xác nhận đổi phiên. Nhánh lỗi của `syncNow()` còn gọi hàm này trong lúc promise đồng bộ hiện tại đang chạy; lời gọi sync mới bị gộp vào promise hiện tại, nên cache thay thế có thể nằm trên màn hình đến lần đồng bộ tiếp theo. Điều này có thể làm lộ dữ liệu cache của vai trò khác sau khi quyền phiên hiện tại bị thu hồi. | Đăng nhập tài khoản có hai membership và đã cache dữ liệu cho cả hai; khi đang dùng membership A, thu hồi A trên máy chủ rồi để `/sync/push` trả 403/404. Client xóa cache A nhưng chuyển sang hydrate cache B dù chưa gửi `PUT /session/membership` được máy chủ xác nhận. | Khi bị từ chối, ẩn cache của membership bị ảnh hưởng và yêu cầu làm mới danh tính hoặc đổi membership có xác nhận máy chủ trước khi hydrate membership khác; không chọn fallback từ snapshot membership cũ. |
+| MAJOR | `src/data/auth/index.ts:26-31`; `src/data/outbox.ts:22-39`; `src/data/sync.ts:109-115` | Kiểm tra outbox khi logout chỉ diễn ra trước request logout. Trong lúc request chờ phản hồi, tab khác còn phiên trong bộ nhớ có thể lưu một lệnh offline mới vào outbox. Sau phản hồi 204, `clearUserCache()` xóa toàn bộ outbox của user, kể cả lệnh vừa tạo chưa được đồng bộ; thao tác đó làm mất thay đổi chưa được máy chủ xác nhận. | Mở cùng tài khoản ở hai tab. Tab A bấm đăng xuất khi outbox đang rỗng; trong lúc `POST /auth/logout` chờ, tab B lưu điểm danh khi offline. Sau khi máy chủ trả 204, tab A dọn cache user và lệnh điểm danh của tab B biến mất. | Ngăn tạo lệnh mới trong toàn bộ phiên logout giữa các tab, rồi kiểm tra lại outbox trước khi dọn; chỉ xóa cache khi chắc chắn outbox rỗng và không có ghi đang diễn ra. |
+
+Không ghi nhận thêm lỗi có bằng chứng trong các phần CSP/service worker, đường ghi REST đã rà soát, token/URL/log, hay các tính năng ngoài MVP đã tìm trong mã frontend. Đây là kết luận review tĩnh; chưa xác minh triển khai Worker hoặc hành vi runtime.
+
+Status: DONE — BLOCKER 0 / MAJOR 2 / MINOR 0
+
+Kết luận: cần sửa thêm hai vấn đề MAJOR nêu trên trước khi coi vòng review web đã đạt.
