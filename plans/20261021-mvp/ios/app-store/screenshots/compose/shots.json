@@ -1,0 +1,31 @@
+{
+  "$comment": "Cấu hình ghép ảnh App Store. Màu, cỡ chữ, bóng đọc từ design/tokens/tokens.json (theo tên token). Phần hình học (cỡ khung máy, lề) là bố cục ảnh marketing, không phải giao diện app.",
+  "tokens": "../../../../../../design/tokens/tokens.json",
+  "mascotDir": "../../../../../../design/prototype/public/mascot",
+  "canvas": { "width": 1320, "height": 2868 },
+  "rawSize": { "width": 1179, "height": 2556 },
+  "pxScale": 4,
+  "fonts": [
+    "/System/Library/Fonts/SFNS.ttf",
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
+  ],
+  "colors": {
+    "background": "color-primary-soft",
+    "title": "color-text",
+    "accent": "color-primary",
+    "bezel": "color-text",
+    "screenEdge": "color-border"
+  },
+  "title": { "size": "text-3xl", "weight": "Bold", "lineHeight": "leading-tight", "maxWidthRatio": 0.84, "topSpace": "space-48" },
+  "device": { "widthRatio": 0.76, "bezelSpace": "space-4", "cornerRatio": 0.125, "topGapSpace": "space-32", "shadow": "shadow-menu" },
+  "mascot": { "heightRatio": 0.16, "overlapRatio": 0.35 },
+  "shots": [
+    { "prefix": "01", "slug": "lop-lich", "title": "Lớp và lịch dạy gọn trong tay" },
+    { "prefix": "02", "slug": "diem-danh", "title": "Điểm danh bằng một cú vuốt" },
+    { "prefix": "03", "slug": "phieu-nhan-xet", "title": "Nhận xét rõ ràng, chấm sao nhanh", "mascot": "mit-sao-3@2x.webp" },
+    { "prefix": "04", "slug": "cham-btvn", "title": "Chấm bài tập về nhà dễ dàng" },
+    { "prefix": "05", "slug": "nhap-diem", "title": "Nhập điểm bài kiểm tra nhanh" },
+    { "prefix": "06", "slug": "phu-huynh", "title": "Phụ huynh xem phiếu ngay", "mascot": "mit-khen@2x.webp" }
+  ],
+  "contactSheet": { "columns": 3, "cellWidth": 440, "gapSpace": "space-16" }
+}
