@@ -64,9 +64,15 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 - Spec chốt ô nhận xét gộp một trường; chữ trong hộp xác nhận gửi vẫn nói "câu mẫu, ghi chú" như hai phần riêng.
 - Mức độ: thấp (chữ). Ảnh: cùng thư mục shots/qa-slip (31/31b).
 
-### WEB-010 · Phiếu đã gửi hiện lại "Chưa gửi", mất BTVN, còn 4 sao sau khi chấm lại BTVN — Mở (nghi thật; web bundle `index-CNZPcz5i.js`)
-- Tái hiện không ổn định bằng `qa/maestro/web/slip-homework-regrade.mjs` (workspace smoke, lớp QA mới mỗi lượt): 3 lượt gần nhất thì 2 lượt FAIL, 1 lượt PASS. Lần probe riêng có thêm 1 lượt FAIL (sau khi mở lại trang, một trong hai phiếu tụt từ "Đã gửi" về "Chưa gửi").
-- Kết quả thật (lượt FAIL): sau khi Gửi phiếu cả lớp (em Sent đã "Đã gửi") rồi chấm lại BTVN buổi trước "Chưa hoàn thành", mở lại phiếu em Sent: trạng thái "Chưa gửi", tiêu chí BTVN bỏ tích, 4/5 sao.
-- Mong đợi: phiếu đã gửi không đổi (spec 61, TC-CMT-013/020): vẫn "Đã gửi", 5 sao, tiêu chí BTVN còn tích.
-- Ghi nhận thêm: sau khi hộp xác nhận gửi đóng, trạng thái "Đã gửi" hiện chậm khoảng 1–3 giây; chấm lại BTVN ngay lúc đó có thể chạy trước khi bản đã gửi về máy (nghi race giữa tự sửa phiếu của client và gửi). Lượt PASS là khi đã chờ đủ lâu. Flow đã thêm bước chờ "Đã gửi" nhưng vẫn FAIL 1/3, nên không chỉ là lỗi chờ của flow.
-- Bằng chứng: `plans/20261021-mvp/qa/runs/2026-10-26/web/slip-homework-regrade-failure.png` (lượt bị giới hạn đăng nhập, không phải lỗi này), log chạy trong báo cáo GL; chưa lưu JUnit.
+### WEB-010 · Phiếu đã gửi hiện lại "Chưa gửi", mất BTVN sau khi chấm lại BTVN — Đã đóng (lỗi flow QA, bundle index-BdRqyODg.js)
+- Báo lỗi ban đầu (bundle `index-CNZPcz5i.js`, 2/3 lượt `slip-homework-regrade.mjs` FAIL) là do flow đọc phiếu khi editor của em trước còn hiện một nhịp sau khi chuyển em, không phải dữ liệu bị đổi. Chu Du thêm bước chờ tiêu đề h2 đúng tên em trong `openSlip` (đã nhận vào cả `slip-homework-regrade.mjs` và `brief96-web.mjs`).
+- Chạy lại trên `index-BdRqyODg.js`: regrade 2/2 PASS (CMT-013/014), `brief96-web.mjs` CMT-020 PASS 5 lần liên tiếp, phiếu đã gửi giữ nguyên "Đã gửi" 5 sao.
+- Hiện tượng còn lại (không phải lỗi dữ liệu): sau khi chuyển em, editor của em trước còn hiện một nhịp ngắn.
+
+### WEB-011 · Hộp xác nhận Gửi phiếu cả lớp trên web còn ghi "câu mẫu, ghi chú" — Mở (thấp, bundle `index-BdRqyODg.js`)
+- `brief96-web.mjs` CMT-021: hộp "Gửi phiếu … ?" (nút "Gửi 3 phiếu") vẫn có chữ "câu mẫu, ghi chú"; spec chốt một ô nhận xét gộp, câu do app sinh. Nguồn: `src/features/comments/SendTicketsDialog.tsx:80`. Cùng loại với IOS-002.
+
+### API-001 · phone-check không có giới hạn lượt quan sát được với số chưa có tài khoản — Mở (trung bình, cần xác nhận hợp đồng)
+- Hợp đồng D13: 429 theo IP 30 lần/15 phút và theo SĐT 10 lần/15 phút. `brief96-http.mjs limit` (staging, 2026-10-26 15:37, số giả): 12 lần liên tiếp cùng một số giả đều 200, rồi 35 lần số giả khác nhau từ cùng IP đều 200; không có 429.
+- Trước đó chính màn đăng nhập từng báo "Bạn thử đăng nhập quá nhiều lần" khi chạy lặp bằng SĐT smoke (khoảng 14 lần trong 15 phút), nghĩa là giới hạn có hiệu lực với số đã có tài khoản nhưng chưa quan sát được với số chưa có tài khoản hoặc theo IP. Nghi giới hạn chỉ áp cho tài khoản tồn tại hoặc ngưỡng theo IP không nhận đúng IP client. Cần Tiêu Hà (backend) xác nhận.
+- Ảnh/chứng cứ: log `brief96-http.mjs limit` trong báo cáo GL. Spec 124 yêu cầu giới hạn theo IP và theo SĐT.

@@ -75,7 +75,8 @@ async function createOneOff(date, time = '18:00') {
 async function openSessionFor(date, sessionListUrl, time = '18:00') {
   const expected = `${date.getDate()}/${date.getMonth() + 1} · ${time}`;
   await page.getByRole('link', { name: 'Xem buổi', exact: true }).first().waitFor({ state: 'visible', timeout: 10000 });
-  await page.waitForTimeout(1500);
+  await page.waitForFunction(() => [...document.querySelectorAll('a')].filter((a) => a.textContent.trim() === 'Xem buổi').length >= 3, null, { timeout: 12000 }).catch(() => {});
+  await page.waitForTimeout(800);
   const count = await page.getByRole('link', { name: 'Xem buổi', exact: true }).count();
   for (let index = 0; index < count; index++) {
     await page.getByRole('link', { name: 'Xem buổi', exact: true }).nth(index).click();
@@ -94,6 +95,7 @@ const pressed = async (id) => (await page.getByTestId(id).getAttribute('aria-pre
 async function openSlip(student) {
   await page.getByRole('tab', { name: 'Nhận xét', exact: true }).click();
   await page.getByRole('button', { name: new RegExp(student) }).first().click();
+  await page.getByRole('heading', { level: 2, name: new RegExp(student) }).waitFor({ state: 'visible', timeout: 8000 });
   await page.getByTestId('slip-homework-row').waitFor({ state: 'visible', timeout: 8000 });
 }
 async function hwButton() {
@@ -152,12 +154,14 @@ async function slipState() {
   const hw = await critOn(4);
   return { stars, hw: hw.on, auto: await page.getByTestId('slip-homework-auto-label').count(), autoText: (await page.getByTestId('slip-homework-auto-label').first().innerText().catch(() => '')).trim(), status: (await page.getByTestId('slip-ticket-status').first().innerText().catch(() => '')).trim(), sentence: await sentence(), note: await page.getByTestId('slip-note').inputValue() };
 }
-async function gradeAll(buttonName, count) {
+async function gradeAll(buttonName, names) {
   await page.getByRole('tab', { name: 'Bài tập về nhà', exact: true }).click();
   await page.getByRole('tab', { name: 'Bài tập buổi trước', exact: true }).click();
   await page.getByText(/Luyện đọc · cả lớp/).waitFor({ timeout: 12000 });
-  const b = page.getByRole('button', { name: buttonName, exact: true });
-  for (let i = 1; i <= count; i += 1) await b.nth(i).click();
+  for (const name of names) {
+    const row = page.locator(`xpath=//*[normalize-space(text())='${name}']/ancestor::*[.//button[normalize-space()='${buttonName}']][1]`);
+    await row.getByRole('button', { name: buttonName, exact: true }).first().click();
+  }
   await page.getByRole('button', { name: 'Lưu kết quả chấm', exact: true }).click();
   await page.getByText('Đã lưu', { exact: true }).first().waitFor({ timeout: 10000 });
 }
@@ -200,8 +204,15 @@ try {
   await nav.getByRole('link', { name: 'Buổi học' }).click();
   const listUrl = page.url();
   const today = new Date();
-  await createOneOff(today, '21:00');
+  // The class page lists only the next upcoming one-off, so open each new one right after creating it and keep its URL.
   await createOneOff(today, '22:00');
+  await openSessionFor(today, listUrl, '22:00');
+  const n2Url = page.url();
+  await page.goto(listUrl);
+  await createOneOff(today, '21:00');
+  await openSessionFor(today, listUrl, '21:00');
+  const n1Url = page.url();
+  await page.goto(listUrl);
 
   phase = 'N: attendance, label without previous homework (CMT-023), homework';
   await openSessionFor(today, listUrl);
@@ -241,9 +252,7 @@ try {
   await page.getByText(title, { exact: true }).waitFor({ timeout: 12000 });
 
   phase = 'N+1: S1 present, send (only S1 enrolled)';
-  await page.goto(listUrl);
-  await openSessionFor(today, listUrl, '21:00');
-  const n1Url = page.url();
+  await page.goto(n1Url, { waitUntil: 'domcontentloaded' });
   await markAttendance([students[0]], () => 'Có mặt');
   await page.getByRole('tab', { name: 'Nhận xét', exact: true }).click();
   await page.getByRole('button', { name: /Gửi phiếu cả lớp/ }).click();
@@ -254,16 +263,18 @@ try {
     await page.waitForFunction(() => /Đã gửi/.test(document.body.innerText), null, { timeout: 15000 }); }
   await page.waitForTimeout(2500);
 
+  phase = 'diagnostic: session list after the send';
+  await page.goto(listUrl);
+  await page.waitForTimeout(3000);
+  console.log('LIST_AFTER_SEND', JSON.stringify((await page.getByRole('main').last().innerText()).split('\n').filter((l) => /T2 ·|Xem buổi|buổi/.test(l)).slice(0, 12)));
+  await page.screenshot({ path: `${out}/brief96-list-after-send.png`, fullPage: true });
   phase = 'add S2..S5 (S4 declared parent phone), attendance N+1 and N+2';
   await nav.getByRole('link', { name: 'Học sinh' }).click();
   for (const [i, name] of students.slice(1).entries()) await addStudent(name, i === 2 ? guardianPhone : undefined);
   await writeFile('/tmp/b96-guardian-phone.txt', guardianPhone);
-  for (const t of ['21:00', '22:00']) {
-    await page.goto(listUrl);
-    await openSessionFor(today, listUrl, t);
-    if (t === '21:00') { /* url re-read below */ }
-    await markAttendance(students.filter((n) => t === '22:00' || n !== students[0]), (n) => (n === students[4] ? 'Vắng' : 'Có mặt'));
-    if (t === '21:00') console.log('N1_URL_OK');
+  for (const [time, url] of [['21:00', n1Url], ['22:00', n2Url]]) {
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await markAttendance(students.filter((n) => time === '22:00' || n !== students[0]), (n) => (n === students[4] ? 'Vắng' : 'Có mặt'));
   }
 
   phase = 'S3 manual tick + note, S2 note-free; then regrade (CMT-020)';
@@ -274,7 +285,7 @@ try {
   await settle();
   const manualBefore = await slipState();
   rec('CMT-020-setup-manual', manualBefore.hw && manualBefore.auto === 0 && manualBefore.note === NOTE ? 'PASS' : 'FAIL', `hw=${manualBefore.hw} auto=${manualBefore.auto}`);
-  await gradeAll('Chưa hoàn thành', 3);
+  await gradeAll('Chưa hoàn thành', [students[0], students[1], students[2]]);
   await page.goto(n1Url, { waitUntil: 'domcontentloaded' });
   const snap = {};
   for (const [k, n] of [['S1', students[0]], ['S2', students[1]], ['S3', students[2]]]) { await openSlip(n); await page.waitForTimeout(2500); snap[k] = await slipState(); }
@@ -287,21 +298,20 @@ try {
     rec('CMT-020-sent-unchanged', okSent ? 'PASS' : 'FAIL', JSON.stringify({ status: snap.S1.status, hw: snap.S1.hw, stars: snap.S1.stars }));
   });
   await check('CMT-020-next-only', async () => {
-    await page.goto(listUrl);
-    await openSessionFor(today, listUrl, '22:00');
+    await page.goto(n2Url, { waitUntil: 'domcontentloaded' });
     await openSlip(students[1]);
     const st = await slipState();
     rec('CMT-020-N+2-untouched', st.hw && st.stars === '5' ? 'PASS' : 'FAIL', JSON.stringify({ hw: st.hw, stars: st.stars }));
   });
   await check('CMT-020-regrade-back', async () => {
     await page.goto(n1Url, { waitUntil: 'domcontentloaded' });
-    await gradeAll('Hoàn thành', 3);
+    await gradeAll('Hoàn thành', [students[0], students[1], students[2]]);
     await page.goto(n1Url, { waitUntil: 'domcontentloaded' });
     await openSlip(students[1]);
     await page.waitForTimeout(2500);
     const st = await slipState();
     rec('CMT-020-regrade-back', st.hw && st.stars === '5' ? 'PASS' : 'FAIL', JSON.stringify({ hw: st.hw, stars: st.stars }));
-    await gradeAll('Chưa hoàn thành', 3);
+    await gradeAll('Chưa hoàn thành', [students[0], students[1], students[2]]);
   });
 
   phase = 'CMT-018 hand-edit sentence, overwrite on toggle, note kept';
@@ -346,10 +356,20 @@ try {
   phase = 'CMT-022 assign defaults';
   await check('CMT-022', async () => {
     await page.goto(n1Url, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('tab', { name: 'Nhận xét', exact: true }).click();
+    await page.waitForTimeout(2500);
+    await page.getByRole('tab', { name: 'Nhận xét', exact: true }).click({ force: true });
+    await page.waitForTimeout(1500);
+    // Read-only look before touching any slip: the absent student must not be counted for the class send.
+    const sendText = (await page.getByRole('button', { name: /Gửi phiếu cả lớp/ }).innerText()).replace(/\s+/g, ' ');
+    const absentRowBefore = (await page.getByRole('button', { name: new RegExp(students[4]) }).first().innerText()).replace(/\s+/g, ' ');
+    rec('CMT-021-count-excludes-absent', /\(3\)/.test(sendText) ? 'PASS' : 'FAIL', `button=${sendText} absentRow=${absentRowBefore.slice(0, 60)}`);
+    await page.screenshot({ path: `${out}/brief96-before-assign-defaults.png`, fullPage: true });
     // pre-state: S2 hand-edited? S3 manual BTVN on (graded not-done) with NOTE
     await openSlip(students[2]);
     await page.waitForTimeout(2000);
+    const rowsBefore = [];
+    for (const n of students) rowsBefore.push(`${n.split('-').slice(-2).join('-')}=${(await page.getByRole('button', { name: new RegExp(n) }).first().innerText()).replace(/\s+/g, ' ').replace(/QA-Web-\w+-/, '').slice(0, 60)}`);
+    console.log('ROWS_BEFORE_ASSIGN', rowsBefore.join(' || '));
     const pre3 = await slipState();
     await openSlip(students[0]);
     const pre1 = await slipState();
@@ -367,6 +387,9 @@ try {
     await page.waitForTimeout(3000);
     await openSlip(students[2]);
     const post3 = await slipState();
+    await openSlip(students[1]);
+    const post2 = await slipState();
+    console.log('POST2', JSON.stringify({ hw: post2.hw, stars: post2.stars, auto: post2.auto }));
     await openSlip(students[0]);
     const post1 = await slipState();
     rec('CMT-022-cancel-no-change', cancelled.hw === pre3.hw && cancelled.stars === pre3.stars && cancelled.sentence === pre3.sentence ? 'PASS' : 'FAIL', '');

@@ -92,6 +92,8 @@ const pressed = async (id) => (await page.getByTestId(id).getAttribute('aria-pre
 async function openSlip(student) {
   await page.getByRole('tab', { name: 'Nhận xét', exact: true }).click();
   await page.getByRole('button', { name: new RegExp(student) }).first().click();
+  // Editor của em trước vẫn hiện cho tới khi chọn xong: chờ đúng tên em rồi mới đọc.
+  await page.getByRole('heading', { level: 2, name: new RegExp(student) }).waitFor({ state: 'visible', timeout: 8000 });
   await page.getByTestId('slip-homework-row').waitFor({ state: 'visible', timeout: 8000 });
 }
 async function hwButton() {
