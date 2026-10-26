@@ -226,6 +226,11 @@ final class SendSlipsTests: XCTestCase {
 
     func testAssignAllDefaultsWritesCriteriaWithTheirSentenceAndClearsTheManualFlag() async throws {
         let (store, data) = try await seededWithHandSentence()
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
+            "student": [.object(["id": .string("a"), "class_id": .string("c"), "name": .string("Em a"), "parent_phone": .null,
+                                 "enrolled_at": .string("2026-09-01"), "left_at": .null, "status": .string("active"),
+                                 "version": .number(1)])]], deleted: []))
+        await data.refresh()
         let plan = CommentsRules.DefaultSlip(studentID: "a", criteria: SlipRules.allCriteria, note: "Cũ")
         let failure = await data.saveDefaultSlips(sessionID: "session", slips: [plan])
         XCTAssertNil(failure)

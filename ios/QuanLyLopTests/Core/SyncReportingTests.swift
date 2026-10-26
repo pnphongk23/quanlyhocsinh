@@ -28,7 +28,7 @@ final class SyncReportingTests: XCTestCase {
         return [
             .init(method: .get, path: "sync/snapshot", query: ["membership_id": scope.membershipId]): manifest,
             try .json(method: .post, path: "sync/push",
-                      body: PushRequest(membershipId: scope.membershipId, deviceId: deviceId, commands: [command.wire])):
+                      body: PushRequest(membershipId: scope.membershipId, deviceId: deviceId, commands: [command.currentContract.wire])):
                 try WireJSON.encoder().encode(PushResponse(epoch: 3, cursor: 9, results: [result])),
             .init(method: .get, path: "sync/pull",
                   query: ["membership_id": scope.membershipId, "cursor": "5", "epoch": "3", "limit": "200"]):

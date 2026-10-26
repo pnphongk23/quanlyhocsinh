@@ -29,7 +29,7 @@ final class CoreTests: XCTestCase {
         XCTAssertNil(try WireJSON.value(plain)["session_number"])
     }
     func testEnumsRejectUnsupportedStatesAndTemplates() throws {
-        XCTAssertEqual(AttendanceStatus.allCases.count, 4)
+        XCTAssertEqual(AttendanceStatus.allCases.count, 3)
         XCTAssertEqual(HomeworkLevel.allCases.count, 3)
         XCTAssertEqual(Stars.allCases.count, 3)
         XCTAssertThrowsError(try WireJSON.decoder().decode(AttendanceStatus.self, from: Data(#""exam_absent""#.utf8)))
