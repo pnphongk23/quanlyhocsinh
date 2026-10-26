@@ -7,18 +7,10 @@
 
 ## Chạy
 ```
-node build-fixtures.mjs --dry-run   # in kế hoạch, không gọi mạng
+node build-fixtures.mjs --dry-run   # in kế hoạch, không gọi mạng, không đăng ký
 node build-fixtures.mjs             # gọi API thật
 ```
-Biến môi trường (người chạy tự đặt; script không đọc file nào và không in giá trị):
-
-| Biến | Ý nghĩa |
-|---|---|
-| `QLH_API_BASE` | gốc API, ví dụ `https://<host>/v1` |
-| `QLH_PHONE`, `QLH_PASSWORD` | tài khoản giáo viên của workspace smoke |
-| `QLH_GUARDIAN_PHONE` | tuỳ chọn: gắn làm SĐT phụ huynh của học sinh đầu lớp đầu, để chụp màn phụ huynh |
-
-Chạy lại sẽ tạo thêm lớp trùng tên (id mới mỗi lần), nên chỉ chạy một lần cho mỗi workspace.
+Lần đầu script đăng ký một workspace giáo viên mới và sạch trên staging (SĐT giả, mật khẩu ngẫu nhiên), ghi `phone`, `password`, `guardian_phone` vào `~/.config/qlh/staging-appstore.txt` (mode 600, ngoài repo, không in). Có file rồi thì chỉ đăng nhập; lớp đã có theo tên thì bỏ qua, nên chạy lại không tạo trùng. Buổi hôm nay lấy từ lịch lặp do máy chủ tự sinh; buổi hôm qua tạo buổi lẻ. `QLH_API_BASE` tuỳ chọn (mặc định API staging). `guardian_phone` là SĐT phụ huynh giả gắn cho học sinh đầu của lớp đầu, dùng cho màn phụ huynh.
 
 ## Trạng thái
-Mới kiểm cú pháp (`node --check`) và `--dry-run`. Chưa chạy lên staging nên chưa biết API có từ chối chỗ nào (ví dụ tạo buổi ở ngày hôm qua, các lệnh `sync/push`).
+Đã chạy thật trên staging một lần: 2 lớp, 16 học sinh, điểm danh, BTVN, bài kiểm tra, phiếu hôm nay và phiếu đã gửi hôm qua.

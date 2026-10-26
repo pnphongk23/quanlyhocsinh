@@ -2,12 +2,12 @@
 // Dựng dữ liệu mẫu để chụp ảnh App Store, chỉ qua API (fetch, không trình duyệt).
 // Chạy:  node build-fixtures.mjs --dry-run     (in kế hoạch, không gọi mạng)
 //        node build-fixtures.mjs               (gọi API thật)
-// Biến môi trường (người chạy cung cấp, script không đọc file nào và không in giá trị):
-//   QLH_API_BASE   gốc API, ví dụ https://<host>/v1
-//   QLH_PHONE      SĐT tài khoản giáo viên của workspace smoke
-//   QLH_PASSWORD   mật khẩu tài khoản đó
-//   QLH_GUARDIAN_PHONE  (tuỳ chọn) SĐT phụ huynh gắn cho 1 học sinh để chụp màn phụ huynh
-import { randomUUID } from 'node:crypto';
+// Workspace giáo viên riêng, sạch: lần đầu script đăng ký tài khoản mới (SĐT giả, mật khẩu ngẫu nhiên) và ghi
+// phone/password/guardian_phone vào ~/.config/qlh/staging-appstore.txt (mode 600, không in, không commit).
+// Có file rồi thì chỉ đăng nhập và bỏ qua lớp đã có (chạy lại không tạo trùng).
+// Biến môi trường tuỳ chọn: QLH_API_BASE (mặc định API staging).
+import { randomBytes, randomInt, randomUUID } from 'node:crypto';
+import { access, chmod, readFile, writeFile } from 'node:fs/promises';
 
 const dryRun = process.argv.includes('--dry-run');
 const ICT = 'Asia/Ho_Chi_Minh';
@@ -19,10 +19,14 @@ const today = day(0);
 const yesterday = day(-1);
 const enrolledAt = day(-45);
 
+// Lịch tuần theo thứ của hôm nay (ISO 1..7) để buổi hôm nay do máy chủ tự sinh từ lịch lặp.
+const todayIso = Number(new Date(`${today}T12:00:00+07:00`).getDay()) || 7;
+const wd = (n) => ((todayIso - 1 + n) % 7) + 1;
+
 const CLASSES = [
-  { name: 'Lớp Tiếng Anh 6A', weekdays: [1, 3, 5], time: '18:00',
+  { name: 'Lớp Tiếng Anh 6A', weekdays: [wd(0), wd(2), wd(4)], time: '18:00',
     students: ['Nguyễn Minh Anh', 'Trần Bảo Châu', 'Lê Gia Hân', 'Phạm Quốc Khánh', 'Võ Thanh Mai', 'Đặng Hoàng Nam', 'Bùi Ngọc Linh', 'Hoàng Đức Phúc'] },
-  { name: 'Lớp Giao Tiếp 7B', weekdays: [2, 4], time: '17:30',
+  { name: 'Lớp Giao Tiếp 7B', weekdays: [wd(0), wd(3)], time: '17:30',
     students: ['Đỗ Khánh Vy', 'Ngô Anh Tuấn', 'Dương Thảo Nhi', 'Lý Gia Bảo', 'Phan Tuệ Lâm', 'Vũ Hải Đăng', 'Trịnh Mai Chi', 'Huỳnh Quang Huy'] },
 ];
 
@@ -47,25 +51,19 @@ const plan = CLASSES.map((c) => ({ ...c, ids: { class: randomUUID(), today: rand
   vocab: randomUUID(), reading: randomUUID(), students: c.students.map(() => randomUUID()) } }));
 
 if (dryRun) {
-  console.log(`DRY RUN (không gọi mạng). Hôm nay ${today}, hôm qua ${yesterday}, học sinh ghi danh từ ${enrolledAt}.`);
+  console.log(`DRY RUN (không gọi mạng, không đăng ký). Hôm nay ${today}, hôm qua ${yesterday}, học sinh ghi danh từ ${enrolledAt}.`);
   for (const c of plan) {
     console.log(`- ${c.name}: thứ ${c.weekdays.join(',')} lúc ${c.time}; ${c.students.length} học sinh`);
     console.log(`  buổi hôm qua ${yesterday} ${c.time}: điểm danh đủ, 2 phần BTVN đã chấm, ${c.students.length} phiếu đã gửi`);
     console.log(`  buổi hôm nay ${today} ${c.time}: điểm danh present/late/absent, ${c.students.length} phiếu nháp (5 tiêu chí + sao)`);
     console.log(`  1 bài kiểm tra "Kiểm tra từ vựng Unit 3" ${yesterday}, ${c.students.length} điểm`);
   }
-  console.log(process.env.QLH_GUARDIAN_PHONE ? 'Gắn SĐT phụ huynh (từ biến môi trường) cho học sinh đầu của lớp đầu.' : 'Không có QLH_GUARDIAN_PHONE: bỏ qua gắn phụ huynh.');
+  console.log('Gắn SĐT phụ huynh giả cho học sinh đầu của lớp đầu; ghi vào file creds.');
   process.exit(0);
 }
 
-const need = (name) => {
-  const v = process.env[name];
-  if (!v) { console.error(`Thiếu biến môi trường ${name}`); process.exit(2); }
-  return v;
-};
-const api = need('QLH_API_BASE').replace(/\/$/, '');
-const phone = need('QLH_PHONE');
-const password = need('QLH_PASSWORD');
+const api = (process.env.QLH_API_BASE ?? 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1').replace(/\/$/, '');
+const credPath = `${process.env.HOME}/.config/qlh/staging-appstore.txt`;
 
 const call = async (method, path, body, token) => {
   const res = await fetch(`${api}${path}`, {
@@ -75,11 +73,30 @@ const call = async (method, path, body, token) => {
   });
   const json = await res.json().catch(() => null);
   // Không in body hay dữ liệu cá nhân: chỉ phương thức, đường dẫn đã che id, mã lỗi.
-  if (!res.ok) throw new Error(`${method} ${path.replace(/[0-9a-f-]{36}/g, ':id')} -> ${res.status} ${json?.error?.code ?? ''}`);
+  if (!res.ok) throw new Error(`${method} ${path.replace(/[0-9a-f-]{36}/g, ':id')} -> ${res.status} ${json?.error?.code ?? ''} ${json?.error?.details?.reason ?? ''}`);
   return json;
 };
+const fakePhone = () => `09${String(randomInt(0, 100_000_000)).padStart(8, '0')}`;
 
-const login = await call('POST', '/auth/login', { phone, password, device_label: 'app-store-fixture' });
+let creds;
+if (await access(credPath).then(() => true, () => false)) {
+  creds = Object.fromEntries((await readFile(credPath, 'utf8')).split(/\r?\n/).map((l) => {
+    const i = l.indexOf('=');
+    return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : ['', ''];
+  }).filter(([k]) => k));
+} else {
+  let teacherPhone = fakePhone();
+  for (let i = 0; i < 5; i += 1) {
+    if ((await call('POST', '/auth/phone-check', { phone: teacherPhone })).next === 'teacher_register') break;
+    teacherPhone = fakePhone();
+  }
+  creds = { phone: teacherPhone, password: randomBytes(12).toString('base64url'), guardian_phone: fakePhone() };
+  await call('POST', '/auth/register', { phone: creds.phone, password: creds.password, display_name: 'Cô Thu Hà', workspace_name: 'Lớp tiếng Anh cô Hà' });
+  await writeFile(credPath, `phone=${creds.phone}\npassword=${creds.password}\nguardian_phone=${creds.guardian_phone}\n`, { mode: 0o600 });
+  await chmod(credPath, 0o600);
+}
+
+const login = await call('POST', '/auth/login', { phone: creds.phone, password: creds.password, device_label: 'app-store-fixture' });
 if (!login.active_membership_id) throw new Error('đăng nhập không chọn được membership');
 const token = login.token;
 const membershipId = login.active_membership_id;
@@ -94,16 +111,28 @@ const push = async (commands) => {
   }
 };
 
+// Buổi của ngày đó: lấy buổi máy chủ đã tự sinh từ lịch lặp, chưa có thì tạo buổi lẻ.
+const sessionOn = async (classId, date, time) => {
+  const found = await call('GET', `/classes/${classId}/sessions?from=${date}&to=${date}`, null, token);
+  if (found.items.length) return found.items[0].id;
+  const id = randomUUID();
+  await call('POST', `/classes/${classId}/sessions`, { id, date, start_time: time, is_makeup: false, note: '' }, token);
+  return id;
+};
+
+const existing = new Set((await call('GET', '/classes', null, token)).items.map((c) => c.name));
+
 for (const [ci, c] of plan.entries()) {
+  if (existing.has(c.name)) { console.log(`FIXTURE_SKIPPED lớp="${c.name}" (đã có)`); continue; }
   const { ids } = c;
   await call('POST', '/classes', { id: ids.class, name: c.name, weekdays: c.weekdays, start_time: c.time }, token);
   for (const [i, name] of c.students.entries()) {
     const body = { id: ids.students[i], name, enrolled_at: enrolledAt };
-    if (ci === 0 && i === 0 && process.env.QLH_GUARDIAN_PHONE) body.parent_phone = process.env.QLH_GUARDIAN_PHONE;
+    if (ci === 0 && i === 0) body.parent_phone = creds.guardian_phone;
     await call('POST', `/classes/${ids.class}/students`, body, token);
   }
-  await call('POST', `/classes/${ids.class}/sessions`, { id: ids.previous, date: yesterday, start_time: c.time, is_makeup: false, note: '' }, token);
-  await call('POST', `/classes/${ids.class}/sessions`, { id: ids.today, date: today, start_time: c.time, is_makeup: false, note: '' }, token);
+  ids.previous = await sessionOn(ids.class, yesterday, c.time);
+  ids.today = await sessionOn(ids.class, today, c.time);
 
   const commands = [];
   commands.push({ type: 'homework.assign', payload: { session_id: ids.previous, sections: [
