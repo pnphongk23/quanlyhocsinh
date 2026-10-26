@@ -65,6 +65,44 @@ describe("phiếu nhận xét khi mất mạng", () => {
     expect((await db.outbox.toArray()).map((row) => row.type)).toContain("slip.send");
   });
 
+  it("cập nhật riêng note giữ nguyên phiếu năm sao và bỏ criteria khỏi payload", async () => {
+    const { getStore } = await import("../store");
+    const state = getStore();
+    state.comments = [{
+      id: "6a-session-7:6a-student-0",
+      classId: "6a",
+      sessionId: "6a-session-7",
+      studentId: "6a-student-0",
+      criteria: 15,
+      comment: "Câu nhận xét đã lưu.",
+      scale: 5,
+      stars: 4,
+      note: "Ghi chú đã lưu.",
+      hwManual: true,
+      status: "draft",
+      sendQueued: false,
+      sentAt: null,
+      updatedAt: "2026-10-14",
+      createdAt: "2026-10-14",
+    }];
+    replaceStore(state);
+
+    const { getSessionComment, saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-0", note: "Ghi chú mới." });
+
+    expect(getSessionComment("6a-session-7", "6a-student-0")).toMatchObject({
+      criteria: 15,
+      stars: 4,
+      scale: 5,
+      hwManual: true,
+      comment: "Câu nhận xét đã lưu.",
+      note: "Ghi chú mới.",
+    });
+    const command = (await db.outbox.toArray()).find((row) => row.type === "slip.set");
+    expect(command?.payload).not.toHaveProperty("criteria");
+    expect(command?.payload).toMatchObject({ note: "Ghi chú mới." });
+  });
+
   it("gửi phiếu mặc định chỉ cho Có mặt/Muộn và giữ phiếu đã mở cho em vắng", async () => {
     const { getStore } = await import("../store");
     const seed = getStore();

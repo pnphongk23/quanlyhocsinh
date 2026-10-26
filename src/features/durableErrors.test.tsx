@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { replaceStore } from "../data/store";
+import { generatedSlipSentence } from "../data/slip";
 import { createSeed } from "../test/fixtures/seed";
 import { getClass } from "../data/repositories/classes";
 import { getSession } from "../data/repositories/sessions";
@@ -62,6 +63,29 @@ const FAIL = "Ghi bền thất bại.";
 function inRouter(node: ReactNode, path: string, url: string) {
   const router = createMemoryRouter([{ path, element: node }], { initialEntries: [url] });
   return render(<RouterProvider router={router} />);
+}
+
+function seedFiveStarSlip() {
+  const seed = createSeed();
+  seed.comments = seed.comments.filter((comment) => comment.sessionId !== "6a-session-6" || comment.studentId !== "6a-student-1");
+  seed.comments.push({
+    id: "review-five-star",
+    classId: "6a",
+    sessionId: "6a-session-6",
+    studentId: "6a-student-1",
+    criteria: 15,
+    comment: "Câu nhận xét đã lưu.",
+    scale: 5,
+    stars: 4,
+    note: "Ghi chú đã lưu.",
+    hwManual: true,
+    status: "draft",
+    sendQueued: false,
+    sentAt: null,
+    updatedAt: "2026-10-12T12:00:00.000Z",
+    createdAt: "2026-10-12T12:00:00.000Z",
+  });
+  replaceStore(seed);
 }
 
 beforeEach(() => {
@@ -242,6 +266,85 @@ describe("phiếu nhận xét: ghi bền lỗi", () => {
     );
     expect(screen.getByRole("button", { name: /Gửi phiếu cả lớp/ })).toBeDisabled();
     expect(screen.getByText("Cần có mạng để gửi phiếu")).toBeInTheDocument();
+  });
+});
+
+describe("phiếu nhận xét: chỉnh note và tiêu chí", () => {
+  it("focus rồi blur note không đổi không ghi và giữ câu cũ", async () => {
+    seedFiveStarSlip();
+    inRouter(
+      <CommentsPanel classId="6a" sessionId="6a-session-6" />,
+      "/lop/:classId/buoi-hoc/:sessionId",
+      "/lop/6a/buoi-hoc/6a-session-6?tab=nhan-xet&student=6a-student-1",
+    );
+
+    const note = await screen.findByLabelText(/Thêm nhận xét riêng/) as HTMLTextAreaElement;
+    fireEvent.focus(note);
+    fireEvent.blur(note);
+
+    expect(mocks.saveSessionCommentDurable).not.toHaveBeenCalled();
+    const { getSessionComment } = await vi.importActual<typeof import("../data/repositories/comments")>("../data/repositories/comments");
+    expect(getSessionComment("6a-session-6", "6a-student-1")?.comment).toBe("Câu nhận xét đã lưu.");
+  });
+
+  it("lưu riêng note chỉ gửi note", async () => {
+    seedFiveStarSlip();
+    mocks.saveSessionCommentDurable.mockResolvedValue({});
+    inRouter(
+      <CommentsPanel classId="6a" sessionId="6a-session-6" />,
+      "/lop/:classId/buoi-hoc/:sessionId",
+      "/lop/6a/buoi-hoc/6a-session-6?tab=nhan-xet&student=6a-student-1",
+    );
+
+    const note = await screen.findByLabelText(/Thêm nhận xét riêng/);
+    fireEvent.change(note, { target: { value: "Ghi chú mới." } });
+    expect(note).toHaveValue("Ghi chú mới.");
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    await waitFor(() => expect(mocks.saveSessionCommentDurable).toHaveBeenCalledTimes(1));
+    const input = mocks.saveSessionCommentDurable.mock.calls[0]?.[0];
+    expect(input).toMatchObject({ sessionId: "6a-session-6", studentId: "6a-student-1", note: "Ghi chú mới." });
+    expect(input).not.toHaveProperty("criteria");
+  });
+
+  it("đổi tiêu chí thay câu cũ và giữ note đã lưu", async () => {
+    seedFiveStarSlip();
+    mocks.saveSessionCommentDurable.mockResolvedValue({});
+    inRouter(
+      <CommentsPanel classId="6a" sessionId="6a-session-6" />,
+      "/lop/:classId/buoi-hoc/:sessionId",
+      "/lop/6a/buoi-hoc/6a-session-6?tab=nhan-xet&student=6a-student-1",
+    );
+
+    fireEvent.click(await screen.findByTestId("slip-criterion-0"));
+    const beforeSave = generatedSlipSentence(14);
+    expect(screen.getByTestId("slip-generated-comment")).toHaveTextContent(beforeSave);
+    expect(screen.getByLabelText(/Thêm nhận xét riêng/)).toHaveValue("Ghi chú đã lưu.");
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    await waitFor(() => expect(mocks.saveSessionCommentDurable).toHaveBeenCalledTimes(1));
+    expect(mocks.saveSessionCommentDurable.mock.calls[0]?.[0]).toMatchObject({ criteria: 14, note: "Ghi chú đã lưu." });
+  });
+
+  it("desktop hiển thị chưa lưu ngay khi note đổi", async () => {
+    seedFiveStarSlip();
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("min-width: 1024px"),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }));
+    inRouter(
+      <CommentsPanel classId="6a" sessionId="6a-session-6" />,
+      "/lop/:classId/buoi-hoc/:sessionId",
+      "/lop/6a/buoi-hoc/6a-session-6?tab=nhan-xet",
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: /Trần Gia Bảo/ }));
+
+    const note = await screen.findByLabelText(/Thêm nhận xét riêng/);
+    fireEvent.change(note, { target: { value: "Ghi chú đang soạn." } });
+    expect(screen.getByTestId("slip-save-status")).toHaveTextContent("Chưa lưu");
   });
 });
 

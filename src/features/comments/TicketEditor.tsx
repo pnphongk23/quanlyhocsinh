@@ -15,7 +15,7 @@ import { readDraft, writeDraft } from "./draftStore";
 import type { SheetHomework } from "./CommentTicketSheet";
 import s from "./CommentsDesktop.module.css";
 import { SlipCriteriaFields } from "./SlipCriteriaFields";
-import { initialsOf, criteriaWithHomeworkResult, hwManualAfterCriterionToggle, preserveLegacyComment } from "./commentsModel";
+import { initialsOf, criteriaWithHomeworkResult, hwManualAfterCriterionToggle } from "./commentsModel";
 import { sessionPrefix } from "../../data/repositories/sessions";
 
 function Star({ filled }: { filled: boolean }) {
@@ -88,25 +88,27 @@ export default function TicketEditor({
   const [criteria, setCriteria] = useState(draft.current.criteria);
   const [comment, setComment] = useState<string | null>(draft.current.comment);
   const [note, setNote] = useState(draft.current.note);
+  const savedNote = useRef(row.comment?.note ?? "");
   const [manualHomework, setManualHomework] = useState(draft.current.hwManual);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [unsaved, setUnsaved] = useState(canWrite && (!row.comment || Boolean(stored)));
   const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
 
-  async function persist(next: { criteria: number; comment: string | null; note: string; hwManual: boolean }) {
+  async function persist(next: { criteria?: number; comment?: string | null; note: string; hwManual?: boolean }) {
     setSaving(true);
     try {
       await saveSessionCommentDurable({
         sessionId: session.id,
         studentId: row.student.id,
-        criteria: next.criteria,
-        comment: next.comment,
+        ...(next.criteria === undefined ? {} : { criteria: next.criteria }),
+        ...(next.comment === undefined ? {} : { comment: next.comment }),
         note: next.note,
-        hwManual: next.hwManual,
+        ...(next.hwManual === undefined ? {} : { hwManual: next.hwManual }),
       });
       setError("");
-      setUnsaved(false);
+      savedNote.current = next.note;
+      setUnsaved(draft.current.note !== next.note);
     } catch (cause) {
       setUnsaved(true);
       setError(
@@ -121,28 +123,24 @@ export default function TicketEditor({
     if (scale === 3 || row.status === "sent" || manualHomework) return;
     const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
     if (next === criteria) return;
-    const nextNote = preserveLegacyComment(comment, note);
     const nextComment = comment ? null : comment;
-    draft.current = { ...draft.current, criteria: next, note: nextNote, comment: nextComment };
+    draft.current = { ...draft.current, criteria: next, comment: nextComment };
     writeDraft(session.id, row.student.id, draft.current);
     setCriteria(next);
     setComment(nextComment);
-    setNote(nextNote);
     setUnsaved(true);
-    void persist(draft.current);
+    void persist({ criteria: next, note: draft.current.note, hwManual: draft.current.hwManual });
   }, [gradeKey, criteria, comment, note, manualHomework, row.status, scale, session.id, row.student.id]);
 
   function updateCriteria(next: number, index: number) {
     if (!canWrite) return;
     const nextManual = hwManualAfterCriterionToggle(manualHomework, index);
-      const nextNote = preserveLegacyComment(scale === 5 ? comment : null, note);
     const nextComment = scale === 5 && comment ? null : comment;
-    const nextValue = { criteria: next, comment: nextComment, note: nextNote, hwManual: nextManual };
+    const nextValue = { criteria: next, comment: nextComment, note, hwManual: nextManual };
     draft.current = nextValue;
     writeDraft(session.id, row.student.id, draft.current);
     setCriteria(next);
     setComment(nextComment);
-    setNote(nextNote);
     setUnsaved(true);
     if (nextManual !== manualHomework) setManualHomework(nextManual);
     setError("");
@@ -150,12 +148,10 @@ export default function TicketEditor({
   }
 
   function changeNote(value: string) {
-    const nextNote = scale === 5 && comment ? preserveLegacyComment(comment, value) : value;
-    const nextComment = scale === 5 && comment ? null : comment;
-    draft.current = { ...draft.current, comment: nextComment, note: nextNote };
+    draft.current = { ...draft.current, note: value };
     writeDraft(session.id, row.student.id, draft.current);
-    setComment(nextComment);
-    setNote(nextNote);
+    setNote(value);
+    setUnsaved(value !== savedNote.current);
     setError("");
   }
 
@@ -183,7 +179,11 @@ export default function TicketEditor({
         disabled={!canWrite}
         onCriteriaChange={updateCriteria}
         onNoteChange={changeNote}
-        onNoteBlur={() => { if (canWrite) void persist(draft.current); }}
+        onNoteBlur={() => {
+          if (canWrite && draft.current.note !== savedNote.current) {
+            void persist({ note: draft.current.note });
+          }
+        }}
       />
 
       {error && (

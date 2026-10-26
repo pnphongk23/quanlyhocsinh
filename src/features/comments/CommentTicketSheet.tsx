@@ -20,7 +20,7 @@ import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./CommentsPanel.module.css";
 import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 import { SlipCriteriaFields } from "./SlipCriteriaFields";
-import { criteriaWithHomeworkResult, hwManualAfterCriterionToggle, preserveLegacyComment } from "./commentsModel";
+import { criteriaWithHomeworkResult, hwManualAfterCriterionToggle } from "./commentsModel";
 
 export interface SheetHomeworkSection {
   id: string;
@@ -85,7 +85,7 @@ export default function CommentTicketSheet({
   const sourceNote = stored ? stored.note : (row.comment?.note ?? "");
   const migrateLegacy = scale === 5 && initialCriteria !== rawCriteria && Boolean(legacyComment);
   const initialComment = migrateLegacy ? null : legacyComment;
-  const initialNote = migrateLegacy && legacyComment ? preserveLegacyComment(legacyComment, sourceNote) : sourceNote;
+  const initialNote = sourceNote;
   // Nháp đang sửa là nguồn chuẩn: chọn sao rồi gõ ghi chú ngay trong cùng một
   // nhịp vẫn lưu đúng cả hai (state React có thể chưa kịp render lại).
   const draft = useRef<{ criteria: number; comment: string | null; note: string; hwManual: boolean }>({
@@ -99,19 +99,20 @@ export default function CommentTicketSheet({
   const [note, setNote] = useState(draft.current.note);
   const [manualHomework, setManualHomework] = useState(draft.current.hwManual);
   const baselineCriteria = row.comment?.criteria ?? (row.comment?.scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31);
+  const baselineManual = row.comment?.hwManual ?? false;
   const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
   const action = useSaveAction({
-      baseline: { criteria: baselineCriteria, note: row.comment?.note ?? "", hwManual: row.comment?.hwManual ?? false },
+      baseline: { criteria: baselineCriteria, note: row.comment?.note ?? "", hwManual: baselineManual },
       value: { criteria, note, hwManual: manualHomework },
     save: async (value) => {
       await saveSessionCommentDurable({
         sessionId: session.id,
         studentId: row.student.id,
-          criteria: value.criteria,
-          comment: draft.current.comment,
+          ...(value.criteria !== baselineCriteria || value.hwManual !== baselineManual
+            ? { criteria: value.criteria, hwManual: value.hwManual }
+            : {}),
           note: value.note,
-          hwManual: value.hwManual,
-      });
+        });
       clearDraft(session.id, row.student.id);
     },
   });
@@ -136,16 +137,11 @@ export default function CommentTicketSheet({
     const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
     if (next === criteria) return;
     setCriteria(next);
-    if (comment) {
-      const nextNote = preserveLegacyComment(comment, note);
-      setComment(null);
-      setNote(nextNote);
-      draft.current = { ...draft.current, criteria: next, comment: null, note: nextNote };
-    } else {
-      draft.current = { ...draft.current, criteria: next };
-    }
+    const nextComment = comment ? null : comment;
+    setComment(nextComment);
+    draft.current = { ...draft.current, criteria: next, comment: nextComment };
     writeDraft(session.id, row.student.id, draft.current);
-  }, [gradeKey, criteria, comment, note, manualHomework, row.status, scale, session.id, row.student.id]);
+  }, [gradeKey, criteria, comment, manualHomework, row.status, scale, session.id, row.student.id]);
 
   function keepDraft(next: { criteria?: number; comment?: string | null; note?: string; hwManual?: boolean }) {
     draft.current = { ...draft.current, ...next };
@@ -157,21 +153,14 @@ export default function CommentTicketSheet({
     setCriteria(next);
     const nextManual = hwManualAfterCriterionToggle(manualHomework, index);
     if (nextManual !== manualHomework) setManualHomework(nextManual);
-    if (scale === 5 && comment) {
-      const nextNote = preserveLegacyComment(comment, note);
-      setNote(nextNote);
-      setComment(null);
-      keepDraft({ criteria: next, comment: null, note: nextNote, hwManual: nextManual });
-    } else {
-      keepDraft({ criteria: next, ...(nextManual !== manualHomework ? { hwManual: nextManual } : {}) });
-    }
+    const nextComment = scale === 5 && comment ? null : comment;
+    setComment(nextComment);
+    keepDraft({ criteria: next, comment: nextComment, ...(nextManual !== manualHomework ? { hwManual: nextManual } : {}) });
   }
 
   function changeNote(value: string) {
-    const nextNote = scale === 5 && comment ? preserveLegacyComment(comment, value) : value;
-    setNote(nextNote);
-    if (scale === 5 && comment) setComment(null);
-    keepDraft({ note: nextNote, ...(scale === 5 && comment ? { comment: null } : {}) });
+    setNote(value);
+    keepDraft({ note: value });
   }
 
   async function save() {
