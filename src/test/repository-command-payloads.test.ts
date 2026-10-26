@@ -238,6 +238,24 @@ describe("repository command payload contracts", () => {
     expect(server.rows.get("slip")?.get("session-1|s1")).toMatchObject({ criteria: 31 });
   });
 
+  it("a slip whose send is still in the outbox stays queued after a reload and is not rewritten by regrading homework", async () => {
+    server.put("class_session", { id: "session-2", class_id: "c1", date: "2026-10-22", start_time: "09:00", origin: "manual", status: "held" });
+    server.put("attendance", { session_id: "session-2", student_id: "s1", status: "present" });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const c = await import("../data/repositories/comments");
+    const homework = await import("../data/repositories/homework");
+    const { hydrateStore } = await import("../data/store");
+    const section = await homework.saveHomeworkSectionDurable({ sessionId: "session-1", kind: "vocabulary", title: "Words" });
+    await c.sendSessionTicketsDurable("session-2", ["s1"]);
+    await hydrateStore();
+    expect(c.getSessionComment("session-2", "s1")).toMatchObject({ status: "draft", sendQueued: true });
+    await homework.setHomeworkGradeDurable(section.id, "s1", "not_done");
+    await d.syncNow();
+    expect(server.hooks.pushBatches.flat().filter((command) => command.type === "slip.set" && (command.payload as any).session_id === "session-2")).toEqual([]);
+    expect(server.rows.get("slip")?.get("session-2|s1")).toMatchObject({ status: "sent", criteria: 31 });
+  });
+
   it("regrading homework enqueues slip.set with criteria and comment for the next session's draft", async () => {
     server.put("class_session", { id: "session-2", class_id: "c1", date: "2026-10-22", start_time: "09:00", origin: "manual", status: "held" });
     server.put("slip", { session_id: "session-2", student_id: "s1", criteria: 31, comment: generatedSlipSentence(31), scale: 5, stars: 5, note: "", hw_manual: false, status: "draft", sent_at: null });

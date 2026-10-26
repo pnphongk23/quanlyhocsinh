@@ -58,6 +58,8 @@ function updateStoreView(entity: EntityName, item: Record<string, any>): void {
     const target = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "comments", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report_batch: "reportBatches", report: "reports" } as const)[entity];
   const list = state[target] as Array<Record<string, any>>; const k = entity === "attendance" ? `${item.session_id}:${item.student_id}` : entity === "score" ? `${item.test_id}:${item.student_id}` : entity === "slip" ? `${item.session_id}:${item.student_id}` : entity === "homework_grade" ? `${item.section_id}:${item.student_id}` : item.id;
   const index = list.findIndex((entry) => entry.id === k || entry.id === item.id || (entry.sectionId === item.section_id && entry.studentId === item.student_id));
+  // Phiếu đang chờ gửi chưa có kết quả từ máy chủ: một lần kéo về không được xoá cờ chờ gửi, nếu không phiếu hiện lại như nháp.
+  if (entity === "slip" && index >= 0 && list[index].sendQueued && view.status !== "sent") view.sendQueued = true;
   if (index >= 0) list[index] = view; else list.push(view);
 }
 declare global { interface Window { __QLH_STATE__?: import("./types").StoreState } }
