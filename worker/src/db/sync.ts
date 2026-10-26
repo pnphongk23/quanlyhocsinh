@@ -207,11 +207,15 @@ function slipValues(p:Row,row:Row|null):Row {
   if (p.criteria!==undefined) {
     if (typeof p.criteria!=='number' || !Number.isInteger(p.criteria) || p.criteria<0 || p.criteria>CRITERIA_MASK) throw validationError(undefined,'invalid_criteria');
     if (row?.scale===3 && row.status==='sent') throw validationError(undefined,'legacy_scale');
-    return {stars:bits(p.criteria),scale:5,criteria:p.criteria,comment:generateSlipComment(p.criteria),note,hw_manual};
+    if (p.comment!==undefined && p.comment!==null && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
+    const manual=typeof p.comment==='string' ? p.comment.trim() : '';
+    return {stars:bits(p.criteria),scale:5,criteria:p.criteria,comment:manual || generateSlipComment(p.criteria),note,hw_manual};
   }
   if (row && row.scale===5) {
     if (p.stars!==undefined) throw validationError(undefined,'criteria_required');
-    return {stars:row.stars,scale:5,criteria:row.criteria,comment:row.comment,note,hw_manual};
+    if (p.comment!==undefined && p.comment!==null && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
+    const comment=p.comment===undefined ? row.comment : typeof p.comment==='string' ? p.comment.trim() : null;
+    return {stars:row.stars,scale:5,criteria:row.criteria,comment,note,hw_manual};
   }
   return {stars:memberOf(p.stars,[null,1,2,3]),scale:3,criteria:null,comment:null,note,hw_manual};
 }

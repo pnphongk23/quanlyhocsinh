@@ -32,31 +32,36 @@ const attend = (f: Awaited<ReturnType<typeof setup>>, student: string, status: s
   command('attendance.set', { session_id: f.ses, student_id: student, status });
 
 describe('slip criteria', () => {
-  it('derives stars and comment from criteria, ignores client comment, and preserves unbounded note', async () => {
+  it('derives or saves scale-five comments from criteria and preserves unbounded note', async () => {
     const f = await setup();
     const set = (extra: any, base = 0) => f.send([command('slip.set', { session_id: f.ses, student_id: f.s[0], note: '', ...extra }, base)]);
     expect((await set({ criteria: 0b10111 })).body.results[0].status).toBe('applied');
       expect(await f.row(f.s[0]!)).toMatchObject({ stars: 4, scale: 5, criteria: 23, comment: generateSlipComment(23), status: 'draft' });
-    expect((await set({ criteria: 0b10111, comment: 'client comment' }, 1)).body.results[0].status).toBe('applied');
-    expect((await f.row(f.s[0]!)).comment).toBe('Con chú ý nghe giảng, ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp và hoàn thành tốt bài tập về nhà, nhưng còn mất trật tự.');
+    expect((await set({ criteria: 0b10111, comment: '  Nhận xét riêng.  ' }, 1)).body.results[0].status).toBe('applied');
+    expect((await f.row(f.s[0]!)).comment).toBe('Nhận xét riêng.');
       expect((await set({ criteria: 0 }, 1)).body.results[0].status).toBe('applied');
     expect(await f.row(f.s[0]!)).toMatchObject({ stars: 0, criteria: 0, comment: 'Con chưa chú ý nghe giảng, chưa ghi bài đầy đủ, chưa tích cực tham gia hoạt động, còn mất trật tự và chưa hoàn thành bài tập về nhà.' });
       expect((await set({ criteria: 31 }, 2)).body.results[0].status).toBe('applied');
     expect(await f.row(f.s[0]!)).toMatchObject({ stars: 5, comment: 'Con chú ý nghe giảng, ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp, ngồi học ngoan ngoãn, không mất trật tự và hoàn thành tốt bài tập về nhà.' });
     for (const bad of [32, -1, 1.5, '3', null])
         expect((await set({ criteria: bad }, 3)).body.results[0].error.details.reason).toBe('invalid_criteria');
-      expect((await set({ criteria: 31, comment: 7 }, 3)).body.results[0].status).toBe('applied');
+    expect((await set({ criteria: 31, comment: 7 }, 3)).body.results[0].error.details.reason).toBe('invalid_comment');
+    expect((await set({ comment: '  Nhận xét sửa riêng.  ' }, 3)).body.results[0].status).toBe('applied');
+    expect(await f.row(f.s[0]!)).toMatchObject({ criteria: 31, stars: 5, comment: 'Nhận xét sửa riêng.' });
+    expect((await set({ criteria: 0, comment: '' }, 4)).body.results[0].status).toBe('applied');
+    expect((await f.row(f.s[0]!)).comment).toBe(generateSlipComment(0));
     const long = 'Con rất cố gắng. '.repeat(400);
-      expect((await set({ note: long }, 3)).body.results[0].status).toBe('applied');
+      expect((await set({ note: long }, 5)).body.results[0].status).toBe('applied');
     expect((await f.row(f.s[0]!)).note).toBe(long);
-    expect((await f.row(f.s[0]!)).comment).toBe(generateExpectedFive());
-      expect((await set({ hw_manual: 'true' }, 4)).body.results[0].error.details.reason).toBe('invalid_hw_manual');
-      expect((await set({ note: 'updated' }, 4)).body.results[0].status).toBe('applied');
-      expect((await f.row(f.s[0]!)).comment).toBe(generateExpectedFive());
+    expect((await f.row(f.s[0]!)).comment).toBe(generateSlipComment(0));
+      expect((await set({ hw_manual: 'true' }, 6)).body.results[0].error.details.reason).toBe('invalid_hw_manual');
+      expect((await set({ comment: 'Keeps on note edit.', note: '' }, 6)).body.results[0].status).toBe('applied');
+      expect((await set({ note: 'updated' }, 7)).body.results[0].status).toBe('applied');
+    expect((await f.row(f.s[0]!)).comment).toBe('Keeps on note edit.');
       expect((await f.row(f.s[0]!)).note).toBe('updated');
       await f.send([attend(f,f.s[0]!,'present'),command('slip.send',{session_id:f.ses,student_ids:[f.s[0]]})]);
       const parentSlip=(await f.parentSlips()).find((x:any)=>x.student_id===f.s[0]);
-      expect(parentSlip.comment).toBe(`${generateExpectedFive()}\nupdated`);
+      expect(parentSlip.comment).toBe(`Keeps on note edit.\nupdated`);
       expect(parentSlip).not.toHaveProperty('note');
   });
 
