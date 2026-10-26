@@ -250,7 +250,7 @@ final class SendSlipsTests: XCTestCase {
     /// Slips for "a" and "b" and the matching students, so a write is only held back by the guards under test.
     private func seededRoster(api: SlipPushAPI) async throws -> (SQLiteStore, I4FeatureStore) {
         let store = try await seededStore()
-        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
             "student": [studentRecord("a"), studentRecord("b")]], deleted: []))
         let data = I4FeatureStore(store: store, api: api)
         await data.refresh()
