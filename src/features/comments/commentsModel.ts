@@ -29,6 +29,11 @@ export function criteriaWithHomeworkResult(
   return (criteria & ~(1 << 4)) | (checked ? 1 << 4 : 0);
 }
 
+/** A slip that is sent or already queued to send must not be rewritten by a later homework regrade. */
+export function slipFrozenForAutoUpdate(status: TicketRow["status"]): boolean {
+  return status === "sent" || status === "queued";
+}
+
 /** Only toggling the homework chip opts the teacher into a manual BTVN value. */
 export function hwManualAfterCriterionToggle(current: boolean, index: number): boolean {
   return index === 4 ? true : current;

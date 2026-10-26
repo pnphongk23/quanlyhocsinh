@@ -3,6 +3,7 @@ import type { HomeworkSummary, TicketRow } from "../../data/homework";
 import type { Student } from "../../data/types";
 import { starPose } from "../../shared/ui/Mascot";
 import {
+  slipFrozenForAutoUpdate,
   filterTicketRows,
   homeworkLine,
   initialsOf,
@@ -181,5 +182,14 @@ describe("tiêu chí BTVN và Mít trên phiếu", () => {
 
   it("preserves legacy comment and note content when moving it into note storage", () => {
     expect(preserveLegacyComment("Câu cũ", "  ghi chú  ")).toBe("Câu cũ\n  ghi chú  ");
+  });
+});
+
+describe("slipFrozenForAutoUpdate", () => {
+  it("freezes sent and queued slips but not drafts", () => {
+    expect(slipFrozenForAutoUpdate("sent")).toBe(true);
+    expect(slipFrozenForAutoUpdate("queued")).toBe(true);
+    expect(slipFrozenForAutoUpdate("draft")).toBe(false);
+    expect(slipFrozenForAutoUpdate("none")).toBe(false);
   });
 });

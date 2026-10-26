@@ -15,7 +15,7 @@ import { readDraft, writeDraft } from "./draftStore";
 import type { SheetHomework } from "./CommentTicketSheet";
 import s from "./CommentsDesktop.module.css";
 import { SlipCriteriaFields } from "./SlipCriteriaFields";
-import { initialsOf, criteriaWithHomeworkResult, hwManualAfterCriterionToggle } from "./commentsModel";
+import { initialsOf, criteriaWithHomeworkResult, hwManualAfterCriterionToggle, slipFrozenForAutoUpdate } from "./commentsModel";
 import { sessionPrefix } from "../../data/repositories/sessions";
 
 function Star({ filled }: { filled: boolean }) {
@@ -76,7 +76,7 @@ export default function TicketEditor({
   const previousGrades: HomeworkGrade[] = homework.sections.flatMap((section) => section.level === null ? [] : [{ sectionId: section.id, studentId: row.student.id, level: section.level }]);
   const rawCriteria = stored?.criteria ?? row.comment?.criteria ?? (scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31);
   const initialManual = stored?.hwManual ?? row.comment?.hwManual ?? false;
-  const initialCriteria = criteriaWithHomeworkResult(rawCriteria, previousGrades, initialManual, row.status === "sent", scale);
+  const initialCriteria = criteriaWithHomeworkResult(rawCriteria, previousGrades, initialManual, slipFrozenForAutoUpdate(row.status), scale);
   const storedComment = stored ? stored.comment : row.comment?.comment ?? null;
   const legacyComment = scale === 3 || Boolean(storedComment && storedComment !== generatedSlipSentence(rawCriteria)) ? storedComment : null;
   const draft = useRef<{ criteria: number; comment: string | null; note: string; hwManual: boolean }>({
@@ -120,7 +120,7 @@ export default function TicketEditor({
   }
 
   useEffect(() => {
-    if (scale === 3 || row.status === "sent" || manualHomework) return;
+    if (scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
     const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
     if (next === criteria) return;
     const nextComment = comment ? null : comment;
