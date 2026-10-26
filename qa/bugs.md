@@ -81,6 +81,8 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 - Lưu ý QA: không chụp ảnh khi bật mắt (đã xóa 2 ảnh lộ mật khẩu).
 
 ## IOS-004 — Thêm/sửa buổi lẻ báo "Lỗi lưu - vui lòng thử lại" (người dùng báo) — Tái hiện một phần trên 67e9e31: thêm/sửa hợp lệ đã ổn, sửa trùng buổi đã có vẫn báo "Lỗi lưu" chung
+
+**Kiểm lại trên ac6c2f0 (2026-10-27):** sửa buổi lẻ sang ngày giờ đã có buổi → dưới nút "Lưu thay đổi" hiện "Đã có buổi vào ngày và giờ này", sheet giữ mở (ảnh `shots/qa-reg3/10-collide-fixed.png`). Chưa kiểm: ca thêm buổi lẻ trùng, dòng lỗi biến mất khi đổi ngày/giờ.
 - Lượt 0593443: chưa chạy được TC-CLS-009 / TC-CLS-018 trên iOS. Menu "…" của màn buổi chỉ có "Huỷ buổi", thông tin buổi không có nút sửa; chi tiết lớp (nơi thêm/sửa buổi lẻ) không với tới được qua Maestro vì danh sách lớp nằm dưới hàng trăm thẻ "Điểm danh chưa xong" ở tab Lớp (ảnh qa-b97/33).
 - Cần: id/nhãn truy cập của hàng lớp hoặc đường vào chi tiết lớp từ Lịch, rồi chạy TC-CLS-009 và TC-CLS-018 (lớp `AAA-97I-w1`).
 
