@@ -433,9 +433,7 @@ struct AuthPasswordField: View {
                     if shown {
                         TextField("", text: $value).textContentType(autoComplete)
                     } else {
-                        // Typed dots were invisible with the bundled font (likely no bullet glyph); the system font draws them.
                         SecureField("", text: $value).textContentType(autoComplete)
-                            .font(.system(size: AuthText.input.size))
                     }
                 }
                 .appText(AuthText.input)
