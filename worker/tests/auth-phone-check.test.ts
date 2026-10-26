@@ -32,7 +32,7 @@ describe('phone check', () => {
     expect(invalid.body.error).toMatchObject({ code: 'validation_error', details: { fields: { phone: 'invalid_phone' } } });
 
     const phone = fakePhone();
-    for (let index = 0; index < 10; index += 1) {
+    for (let index = 0; index < 50; index += 1) {
       expect((await call('/v1/auth/phone-check', {
         ...post({ phone }), headers: { 'cf-connecting-ip': `198.51.100.${100 + index}` },
       })).status).toBe(200);
@@ -47,7 +47,7 @@ describe('phone check', () => {
 
   it('applies the per-IP limit independently of phone keys', async () => {
     const ip = '198.51.100.178';
-    for (let index = 0; index < 30; index += 1) {
+    for (let index = 0; index < 100; index += 1) {
       expect((await call('/v1/auth/phone-check', {
         ...post({ phone: fakePhone() }), headers: { 'cf-connecting-ip': ip },
       })).status).toBe(200);

@@ -78,8 +78,8 @@ import { requireAuth } from '../middleware/auth';
 export const authRoutes = new Hono<AppEnv>();
 
 const WORKSPACE_CREATE_POLICY = { limit: 5, windowMs: 60 * 60 * 1000 } as const;
-const PHONE_CHECK_IP_POLICY = { limit: 30, windowMs: 15 * 60 * 1000 } as const;
-const PHONE_CHECK_PHONE_POLICY = { limit: 10, windowMs: 15 * 60 * 1000 } as const;
+const PHONE_CHECK_IP_POLICY = { limit: 100, windowMs: 15 * 60 * 1000 } as const;
+const PHONE_CHECK_PHONE_POLICY = { limit: 50, windowMs: 15 * 60 * 1000 } as const;
 
 function requirePassword(value: unknown, field = 'password'): string {
   if (typeof value !== 'string' || value === '') {
