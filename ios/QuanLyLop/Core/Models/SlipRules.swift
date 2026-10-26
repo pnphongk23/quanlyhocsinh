@@ -37,7 +37,6 @@ enum SlipRules {
 
     /// The sentence generated from the ticked criteria (bit 0...4 in spec order): "Con", the met criteria first,
     /// then the unmet ones after ", nhưng", ending with a full stop. With nothing met only the unmet ones are listed.
-    /// Replaces `defaultSentence(stars:)` once the sheet follows the criteria.
     static func generatedSentence(criteria: Int) -> String {
         var met: [String] = []
         var unmet: [String] = []
@@ -55,29 +54,26 @@ enum SlipRules {
         return sentence + "."
     }
 
-    /// Old star-based sentence; goes away when the sheet moves to `generatedSentence(criteria:)`.
-    static func defaultSentence(stars: Int) -> String {
-        let key = switch stars {
-        case 5...: "slip.default.five"
-        case 4: "slip.default.four"
-        case 3: "slip.default.three"
-        default: "slip.default.low"
-        }
-        return String(localized: String.LocalizationValue(key), table: "Teacher")
-    }
-
-    /// The sentence a slip carries: a scale-5 slip follows its stars until edited, an old slip keeps the old template.
+    /// The sentence a slip carries: a scale-5 slip carries the stored sentence or, when none is stored yet, the one
+    /// generated from its criteria; an old slip keeps the old template.
     static func sentence(for slip: SessionSlip) -> String {
         if slip.isLegacy { return slip.legacyStars?.template ?? "" }
         if let comment = slip.comment { return comment }
-        return defaultSentence(stars: slip.stars ?? stars(criteria: slip.criteria ?? allCriteria))
+        return generatedSentence(criteria: slip.criteria ?? allCriteria)
     }
+}
 
-    /// What to send as `comment`: nil when the text is empty or still the default for these stars.
-    /// The sentence has no length limit: it is only trimmed, never shortened.
-    static func normalizedComment(_ text: String, stars: Int) -> String? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty || trimmed == defaultSentence(stars: stars) { return nil }
-        return trimmed
+/// Fixed Vietnamese text of the slip sheet kept next to the sentence phrases, outside the string tables.
+enum SlipSheetText {
+    private static let criteria = ["Chú ý nghe giảng", "Ghi chép đầy đủ", "Tham gia sôi nổi", "Không mất trật tự",
+                                   "Hoàn thành BTVN"]
+    static func criterion(_ index: Int) -> String { criteria[index] }
+    static func scoreLine(stars: Int, canWrite: Bool) -> String {
+        canWrite ? "\(stars)/5 sao · bấm tiêu chí để đổi" : "\(stars)/5 sao"
     }
+    static let followsGrades = "Theo chấm BTVN"
+    static let commentTitle = "Nhận xét gửi phụ huynh"
+    static let autoLabel = "Tự sinh theo tiêu chí"
+    static let notePlaceholder = "Thêm nhận xét riêng (không bắt buộc)…"
+    static let unsaved = "Chưa lưu"
 }

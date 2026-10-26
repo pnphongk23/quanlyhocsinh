@@ -42,6 +42,46 @@ final class TeacherScreenshotTests: XCTestCase {
 }
 
 extension TeacherScreenshotTests {
+    /// The slip sheet of a four-star slip, drawn at 390×844 the way `design/slip-sheet-v4` shows it.
+    func testRenderSlipSheet() throws {
+        guard let directory = ProcessInfo.processInfo.environment["QLH_SLIP_SHEET_DIR"] else {
+            throw XCTSkip("QLH_SLIP_SHEET_DIR not set: screenshot run only")
+        }
+        let session = ClassSession(id: "s", classId: "c", date: "2026-10-25", startTime: "18:00", origin: .recurring,
+                                   isMakeup: false, status: .held, note: nil, version: 1)
+        let student = Student(id: "a", classId: "c", name: "Nguyễn Vũ Gia Hân", parentPhone: nil,
+                              enrolledAt: "2026-09-01", leftAt: nil, status: .active, version: 1)
+        let slip = SessionSlip(sessionId: "s", studentId: "a", stars: 4, criteria: 0b10111, note: "", status: .draft,
+                               sentAt: nil, version: 1, updatedAt: "2026-10-25T10:00:00.000Z")
+        let folder = URL(fileURLWithPath: directory, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        for (name, current) in [("slip-sheet-4-stars", slip), ("slip-sheet-new", nil)] {
+            let sheet = I4TicketSheet(session: session, student: student, slip: current, previousDate: nil, sections: [],
+                                      grades: [], canWrite: true, saveStatusSource: nil, onClose: {}, onGoHomework: {},
+                                      onSave: { _, _ in nil })
+            try Self.snapshot(sheet, to: folder.appendingPathComponent("\(name).png"))
+        }
+    }
+
+    /// `ImageRenderer` leaves a `ScrollView` empty, so the sheet is hosted in a real window and drawn from it.
+    private static func snapshot<V: View>(_ view: V, to url: URL) throws {
+        let frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = frame
+        let host = UIHostingController(rootView: view.environment(\.colorScheme, .light))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.8))
+        let image = UIGraphicsImageRenderer(bounds: frame).image { _ in
+            window.drawHierarchy(in: frame, afterScreenUpdates: true)
+        }
+        window.isHidden = true
+        try XCTUnwrap(image.pngData()).write(to: url)
+    }
+}
+
+extension TeacherScreenshotTests {
     static func cropTop(_ image: UIImage, height: CGFloat) -> UIImage? {
         guard let cg = image.cgImage else { return nil }
         let maxHeight = min(CGFloat(cg.height), height)

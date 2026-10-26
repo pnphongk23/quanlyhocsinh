@@ -131,12 +131,12 @@ enum GuardianDemo {
                    note: "", lateAt: nil, version: 1, updatedAt: "2026-10-20T11:00:00.000Z")
     }
 
-    /// Stars 1...3 make an old three-star slip; 4 and 5 make a five-criteria slip with the default sentence.
+    /// Stars 1...3 make an old three-star slip; 4 and 5 make a five-criteria slip with the sentence generated from its criteria.
     private static func slip(_ sessionID: String, _ stars: Int, _ note: String) -> SessionSlip {
         let current = stars > 3
         return SessionSlip(sessionId: sessionID, studentId: "demo-student-bao", stars: stars,
                            criteria: current ? (1 << stars) - 1 : nil,
-                           comment: current ? SlipRules.defaultSentence(stars: stars) : nil,
+                           comment: current ? SlipRules.generatedSentence(criteria: (1 << stars) - 1) : nil,
                            note: note, status: .sent, sentAt: "2026-10-20T11:00:00.000Z",
                            version: 1, updatedAt: "2026-10-20T11:00:00.000Z")
     }

@@ -35,37 +35,11 @@ final class SlipRulesTests: XCTestCase {
         ])
     }
 
-    func testDefaultSentenceFollowsTheStars() {
-        XCTAssertEqual(SlipRules.defaultSentence(stars: 5), "Con học rất tốt, chăm chỉ, tích cực tham gia phát biểu")
-        XCTAssertEqual(SlipRules.defaultSentence(stars: 4), "Con học tốt, làm bài đầy đủ nhưng hơi trầm")
-        XCTAssertEqual(SlipRules.defaultSentence(stars: 3), "Con học tốt, nhưng còn hơi mất tập trung, nói tự do")
-        let low = "Con chưa tích cực tham gia hoạt động, cần tập trung hơn"
-        for stars in 0...2 { XCTAssertEqual(SlipRules.defaultSentence(stars: stars), low) }
-    }
-
-    func testAnUneditedCommentFollowsTheStarsAndAnEditedOneStays() throws {
-        let unedited = try decodeSlip(#"{"stars":4,"criteria":15,"comment":null,"scale":5,\#(common)}"#)
-        XCTAssertEqual(SlipRules.sentence(for: unedited), SlipRules.defaultSentence(stars: 4))
-        let edited = try decodeSlip(#"{"stars":4,"criteria":15,"comment":"Con tiến bộ rõ","scale":5,\#(common)}"#)
-        XCTAssertEqual(SlipRules.sentence(for: edited), "Con tiến bộ rõ")
-    }
-
-    func testNormalizedCommentDropsEmptyAndDefaultText() {
-        XCTAssertNil(SlipRules.normalizedComment("   \n", stars: 5))
-        XCTAssertNil(SlipRules.normalizedComment(" \(SlipRules.defaultSentence(stars: 5)) ", stars: 5))
-        XCTAssertEqual(SlipRules.normalizedComment(" Con rất ngoan ", stars: 5), "Con rất ngoan")
-        // The default of another star count is an edit.
-        XCTAssertEqual(SlipRules.normalizedComment(SlipRules.defaultSentence(stars: 4), stars: 5),
-                       SlipRules.defaultSentence(stars: 4))
-    }
-
-    func testALongSentenceIsKeptWhole() {
-        let long = String(repeating: "a", count: 400)
-        XCTAssertEqual(SlipRules.normalizedComment(long, stars: 5), long)
-        XCTAssertEqual(SlipRules.normalizedComment("  \(long)\n", stars: 5), long)
-        // Emoji and decomposed Vietnamese are kept too, whatever their length.
-        let mixed = String(repeating: "\u{1F600}a\u{0306}\u{0301}", count: 200)
-        XCTAssertEqual(SlipRules.normalizedComment(mixed, stars: 5), mixed)
+    func testASlipWithoutAStoredSentenceCarriesTheGeneratedOneAndAStoredOneStays() throws {
+        let unedited = try decodeSlip(#"{"stars":4,"criteria":23,"comment":null,"scale":5,\#(common)}"#)
+        XCTAssertEqual(SlipRules.sentence(for: unedited), SlipRules.generatedSentence(criteria: 23))
+        let stored = try decodeSlip(#"{"stars":4,"criteria":15,"comment":"Con tiến bộ rõ","scale":5,\#(common)}"#)
+        XCTAssertEqual(SlipRules.sentence(for: stored), "Con tiến bộ rõ")
     }
 
     func testOldSlipDecodesAsScaleThreeAndKeepsItsOldSentence() throws {
