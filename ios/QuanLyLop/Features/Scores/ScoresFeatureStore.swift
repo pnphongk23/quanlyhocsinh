@@ -373,7 +373,7 @@ final class I4FeatureStore: ObservableObject {
         guard !sendingSessionIDs.contains(sessionID) else { return nil }
         await refresh()
         guard !sendingSessionIDs.contains(sessionID) else { return nil }
-        var entries: [(value: SessionSlip, key: String, command: PendingCommand)] = []
+        var entries: [(value: SessionSlip, key: String, command: PendingCommand?)] = []
         for plan in plans {
             guard slip(sessionID: sessionID, studentID: plan.studentID)?.status != .sent,
                   let student = students.first(where: { $0.id == plan.studentID }) else { continue }
@@ -410,7 +410,11 @@ final class I4FeatureStore: ObservableObject {
         defer { sendingSessionIDs.remove(sessionID) }
         let failure = SendOutcome.failed(String(localized: "comments.send.failed", table: "Teacher"))
         // Edits still waiting in the outbox must reach the server first, or it would send older criteria and notes.
-        guard await syncIfNeeded() else { return failure }
+        // With an empty outbox there is nothing to push and the send itself tells the server's state, so the
+        // round trips are skipped.
+        if !((try? await store.pendingCommands()) ?? []).isEmpty {
+            guard await syncIfNeeded() else { return failure }
+        }
         await refresh()
         let chosen = studentIDs.filter { id in slip(sessionID: sessionID, studentID: id)?.status != .sent }
         guard !chosen.isEmpty else { return .failed(String(localized: "comments.send.nothing", table: "Teacher")) }
@@ -450,18 +454,21 @@ final class I4FeatureStore: ObservableObject {
         }
 
         let sentIDs = Set(result.sent ?? [])
-        for id in chosen where sentIDs.contains(id) {
-            guard let slip = slip(sessionID: sessionID, studentID: id) else { continue }
+        let sentRows = chosen.filter { sentIDs.contains($0) }.compactMap { id -> (value: SessionSlip, key: String, command: PendingCommand?)? in
+            guard let slip = slip(sessionID: sessionID, studentID: id) else { return nil }
             let row = SessionSlip(sessionId: slip.sessionId, studentId: slip.studentId, stars: slip.stars,
                                   criteria: slip.criteria, comment: slip.comment, scale: slip.scale, hwManual: slip.hwManual,
                                   note: slip.note,
                                   status: .sent, sentAt: Self.now, version: slip.version, updatedAt: Self.now)
-            try? await store.write(row, forKey: key("slip", sessionID, id), enqueueing: nil)
+            return (row, key("slip", sessionID, id), nil)
         }
-        // Slips the server scored from a default are picked up by this pull.
-        await syncIfNeeded()
-        await refresh()
+        try? await store.writeAll(sentRows)
         let notSent = chosen.filter { !sentIDs.contains($0) }.count
+        // A pull is only needed when the local rows might not match the server: slips it scored from a default,
+        // or slips it left out. When every slip went and none was scored by the server, the rows written above
+        // are already the real state.
+        if !defaults.isEmpty || notSent > 0 { await syncIfNeeded() }
+        await refresh()
         let sentCount = chosen.filter { sentIDs.contains($0) }.count
         return notSent == 0 ? .sent(sentCount) : .partial(sent: sentCount, notSent: notSent)
     }

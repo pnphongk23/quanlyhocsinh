@@ -323,6 +323,54 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(plans.compactMap { data.slip(sessionID: "session", studentID: $0.studentID) }.count, 20)
     }
 
+    private func classWithSlips(count: Int, api: APIClient) async throws -> (SQLiteStore, I4FeatureStore, [String]) {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        let ids = (1...count).map { "s\($0)" }
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "fixture",
+                                       upserts: ["slip": ids.map { slip($0, stars: 3, note: "Tốt") }], deleted: []))
+        let data = I4FeatureStore(store: store, api: api)
+        await data.refresh()
+        return (store, data, ids)
+    }
+
+    func testSendingAWholeClassWithAnEmptyOutboxIsOnePushAndNoPull() async throws {
+        for count in [3, 20] {
+            let api = CountingAPI()
+            let (store, data, ids) = try await classWithSlips(count: count, api: api)
+
+            let outcome = await data.sendSlips(sessionID: "session", studentIDs: ids)
+
+            XCTAssertEqual(outcome, .sent(count))
+            XCTAssertEqual(api.pushRequests, 1, "\(count) students: just the send")
+            XCTAssertEqual(api.pullRequests, 0, "\(count) students: the rows written after the send are the real state")
+            XCTAssertTrue(ids.allSatisfy { data.slip(sessionID: "session", studentID: $0)?.status == .sent })
+            let pending = try await store.pendingCommands()
+            XCTAssertTrue(pending.isEmpty)
+        }
+    }
+
+    func testSendingAfterQueuedEditsPushesThemFirstAndPullsOnlyForThatSync() async throws {
+        for count in [3, 20] {
+            let api = CountingAPI()
+            let (store, data, ids) = try await classWithSlips(count: count, api: api)
+            for id in ids {
+                let old = try XCTUnwrap(data.slip(sessionID: "session", studentID: id))
+                let command = PendingCommand(recordKey: "[\"slip\",\"session\",\"\(id)\"]", baseVersion: old.version,
+                                             kind: "slip.set", payload: .object(["session_id": .string("session"),
+                                                                                 "student_id": .string(id), "note": .string("Mới")]))
+                try await store.write(old, forKey: command.recordKey, enqueueing: command)
+            }
+
+            let outcome = await data.sendSlips(sessionID: "session", studentIDs: ids)
+
+            XCTAssertEqual(outcome, .sent(count))
+            XCTAssertEqual(api.pushRequests, 2, "\(count) students: the queued edits in one push, then the send")
+            XCTAssertEqual(api.pullRequests, 2, "\(count) students: the sync's own pulls only, none after the send")
+            let pending = try await store.pendingCommands()
+            XCTAssertTrue(pending.isEmpty)
+        }
+    }
+
     func testAssignAllOfflineQueuesAllTwentyInTheOutbox() async throws {
         let (store, data, plans) = try await twentyStudentRoster(api: SlipPushAPI(mode: .offline))
 
@@ -515,9 +563,15 @@ private final class CountingAPI: APIClient, @unchecked Sendable {
         switch endpoint.path {
         case "sync/push":
             let body = try JSONSerialization.jsonObject(with: endpoint.body ?? Data()) as? [String: Any]
-            let ids = (body?["commands"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
-            lock.withLock { pushes += 1; commandCount += ids.count }
-            let results = ids.map { "{\"id\":\"\($0)\",\"status\":\"applied\",\"version\":1}" }.joined(separator: ",")
+            let commands = body?["commands"] as? [[String: Any]] ?? []
+            lock.withLock { pushes += 1; commandCount += commands.count }
+            let results = commands.compactMap { command -> String? in
+                guard let id = command["id"] as? String else { return nil }
+                // A send answers with the students it was asked for as sent.
+                let students = ((command["payload"] as? [String: Any])?["student_ids"] as? [String] ?? [])
+                    .map { "\"\($0)\"" }.joined(separator: ",")
+                return "{\"id\":\"\(id)\",\"status\":\"applied\",\"version\":1,\"sent\":[\(students)],\"skipped\":[]}"
+            }.joined(separator: ",")
             json = "{\"epoch\":1,\"cursor\":1,\"results\":[\(results)]}"
         case "sync/pull":
             lock.withLock { pulls += 1 }

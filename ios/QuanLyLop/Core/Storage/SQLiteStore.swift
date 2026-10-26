@@ -176,9 +176,9 @@ actor SQLiteStore: LocalStore {
         let tree = try JSONDecoder().decode(JSONValue.self, from: Data(json.utf8))
         try transaction { try writeRecord(json: json, tree: tree, key: key, command: command) }
     }
-    /// Writes every record with its command in one transaction: all of them are saved, or none.
-    func writeAll<Value: Encodable & Sendable>(_ entries: [(value: Value, key: String, command: PendingCommand)]) throws {
-        let encoded = try entries.map { entry -> (json: String, tree: JSONValue, key: String, command: PendingCommand) in
+    /// Writes every record (with its command, when it has one) in one transaction: all of them are saved, or none.
+    func writeAll<Value: Encodable & Sendable>(_ entries: [(value: Value, key: String, command: PendingCommand?)]) throws {
+        let encoded = try entries.map { entry -> (json: String, tree: JSONValue, key: String, command: PendingCommand?) in
             let json = try encode(entry.value)
             return (json, try JSONDecoder().decode(JSONValue.self, from: Data(json.utf8)), entry.key, entry.command)
         }
