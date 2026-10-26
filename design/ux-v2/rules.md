@@ -63,4 +63,4 @@ Quy tắc:
 - **Thành công**: nút hiện "Đã lưu" kèm dấu check trong 1,6 s (`--dur-success-hold`) rồi về default. Báo bằng `aria-live="polite"`.
 - **Lỗi**: giữ dữ liệu người dùng đã nhập, giữ editor mở, nút về default để thử lại; không tự đóng.
 - **Chờ đồng bộ**: dữ liệu đã lưu trên máy nhưng chưa đẩy lên: `SaveStatus` hiện pill "Chờ đồng bộ" (`--state-pending-*`) khi kéo dài hơn 1 s; khi offline hiện "Đã lưu trên máy · sẽ đồng bộ khi có mạng".
-- **Empty duy nhất có Mít**: chỉ `EmptyState` (Mít + tiêu đề + mô tả + hành động tuỳ chọn). Khung nhỏ/lọc rỗng dùng `size="compact"` (`--empty-mascot-compact`); mặc định `--empty-mascot`. Không tự viết empty khác, không dùng Mít ở chỗ khác ngoài empty/trạng thái chờ.
+- **Empty duy nhất có Mít**: chỉ `EmptyState` (Mít + tiêu đề + mô tả + hành động tuỳ chọn). Khung nhỏ/lọc rỗng dùng `size="compact"` (`--empty-mascot-compact`); mặc định `--empty-mascot`. Không tự viết empty khác, không dùng Mít ở chỗ khác ngoài empty/trạng thái chờ và khung sao của phiếu nhận xét (dáng `sao-0`…`sao-5` theo số sao, cỡ `--empty-mascot-compact`).
