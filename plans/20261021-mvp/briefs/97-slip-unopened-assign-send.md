@@ -10,6 +10,7 @@ Buổi mới, tab Nhận xét: 3 em đều hiện 5 sao + "Chưa gửi", nhưng 
 2. "Gán tất cả mặc định": ngoài việc đưa phiếu chưa gửi về mặc định như cũ, **tạo phiếu mặc định** (5 tiêu chí, BTVN theo chấm, `hw_manual=false`, câu tự sinh) cho mọi em trong danh sách chưa có phiếu, kể cả em chưa điểm danh hoặc Vắng. Phiếu đã gửi/đang chờ gửi không đổi. Ghi được khi mất mạng như sửa phiếu thường. Hộp xác nhận ghi đúng số phiếu sẽ gán.
 3. "Gửi phiếu cả lớp": **chỉ gửi phiếu đã có** và chưa gửi. Bỏ việc tự tạo phiếu mặc định khi gửi (không gửi `defaults` cho em chưa có phiếu nữa). Số trên nút = số phiếu đã có, chưa gửi. Bấm "Gán tất cả mặc định" xong thì nút đếm đủ các em.
 
+4. Nhãn trạng thái phiếu đã gửi trên thẻ danh sách (và nơi khác ở tab Nhận xét nếu có) chỉ ghi **"Đã gửi"**, bỏ giờ gửi (vd "Đã gửi · 22:14" → "Đã gửi"). Người dùng thêm 2026-10-26.
 ## Phân công
 - **Web (Chu Du)** và **iOS (Lỗ Túc)**: làm 1–3 phía mình, test đỏ-khi-bỏ-fix cho: thẻ em chưa có phiếu không có sao; gán mặc định tạo phiếu cho em chưa có phiếu (kể cả chưa điểm danh) và không đụng phiếu đã gửi/đang gửi; số đếm gửi cả lớp chỉ tính phiếu đã có; gửi không kèm `defaults`. Sửa chữ hộp xác nhận gửi nếu còn nhắc "phiếu mặc định 5 sao" cho em chưa có phiếu.
 - **Backend:** không đổi. Máy chủ vẫn nhận `defaults` (client cũ), client mới không gửi.
