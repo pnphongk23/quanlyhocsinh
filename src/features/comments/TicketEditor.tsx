@@ -175,7 +175,7 @@ export default function TicketEditor({
         scale={scale}
         previousGrades={previousGrades}
         hwManual={manualHomework}
-        sent={row.status === "sent"}
+        sent={slipFrozenForAutoUpdate(row.status)}
         disabled={!canWrite}
         onCriteriaChange={updateCriteria}
         onNoteChange={changeNote}

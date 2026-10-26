@@ -177,7 +177,7 @@ export default function CommentTicketSheet({
         scale={scale}
         previousGrades={previousGrades}
         hwManual={manualHomework}
-        sent={row.status === "sent"}
+        sent={slipFrozenForAutoUpdate(row.status)}
         disabled={readOnly}
         onCriteriaChange={updateCriteria}
         onNoteChange={changeNote}
