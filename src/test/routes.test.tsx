@@ -113,6 +113,21 @@ describe("foundation route integration", () => {
   });
 
   it.each([
+    ["/lich", "Lịch"],
+    ["/lop", "Lớp"],
+    ["/cai-dat", "Cài đặt"],
+  ])("staff side nav marks only %s active", async (path, label) => {
+    authState.session = activeSession("staff");
+    const router = open(path);
+    const nav = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
+    const links = within(nav).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual(expect.arrayContaining(["Lớp", "Lịch", "Cài đặt"]));
+    const active = links.filter((link) => link.getAttribute("aria-current") === "page");
+    expect(active.map((link) => link.textContent)).toEqual([label]);
+    router.dispose();
+  });
+
+  it.each([
     ["/lop/6a/buoi-hoc", "Buổi học"],
     ["/lop/6a/buoi-hoc/6a-session-0", "Điểm danh"],
     ["/lop/6a/bai-kiem-tra", "Bài kiểm tra"],
@@ -188,7 +203,7 @@ describe("foundation route integration", () => {
     const mobileNavigation = screen.getByRole("navigation", { name: "Điều hướng chính" });
     expect(mobileNavigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     expect(mobileNavigation.querySelectorAll('[aria-disabled="true"]')).toHaveLength(0);
-    expect(navigation.querySelectorAll("a")).toHaveLength(2);
+    expect(navigation.querySelectorAll("a")).toHaveLength(3);
     expect(within(navigation).getByRole("link", { name: "Cài đặt" })).toBeVisible();
     for (const label of ["Điểm danh", "Điểm số", "Học sinh", "Báo cáo"]) {
       expect(within(navigation).queryByText(label)).toBeNull();
@@ -210,7 +225,7 @@ describe("foundation route integration", () => {
     const children = ["Điểm danh", "Điểm số", "Học sinh", "Báo cáo"];
     expect(
       Array.from(navigation.querySelectorAll("a")).map((link) => link.textContent),
-    ).toEqual(["Lớp", ...children, "Cài đặt"]);
+    ).toEqual(["Lớp", ...children, "Lịch", "Cài đặt"]);
     router.dispose();
   });
 
@@ -256,11 +271,11 @@ describe("foundation route integration", () => {
     expect(getStore().classes.map((item) => item.id)).toEqual(["6a"]);
     const router = open("/lop");
     const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
-    expect(navigation.querySelectorAll("a")).toHaveLength(2);
+    expect(navigation.querySelectorAll("a")).toHaveLength(3);
 
     fireEvent.click(screen.getByRole("button", { name: /Đang xem lớp/ }));
     fireEvent.click(await screen.findByRole("option", { name: /6A/ }));
-    await waitFor(() => expect(navigation.querySelectorAll("a")).toHaveLength(6));
+    await waitFor(() => expect(navigation.querySelectorAll("a")).toHaveLength(7));
     expect(screen.getByRole("button", { name: /Đang xem lớp/ })).toHaveTextContent("6A");
 
     // Đồng bộ xong thì store dựng lại từ Dexie; lớp đã chọn phải còn.
@@ -268,7 +283,7 @@ describe("foundation route integration", () => {
       await hydrateStore();
     });
     expect(getStore().currentClassId).toBe("6a");
-    expect(navigation.querySelectorAll("a")).toHaveLength(6);
+    expect(navigation.querySelectorAll("a")).toHaveLength(7);
     expect(screen.getByRole("button", { name: /Đang xem lớp/ })).toHaveTextContent("6A");
     router.dispose();
     setCacheIdentity(null);

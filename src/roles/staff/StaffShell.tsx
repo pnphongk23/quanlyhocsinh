@@ -146,6 +146,9 @@ export function Component() {
                 {label}
               </NavLink>
             ))}
+          <NavLink to="/lich" end className={navLinkClass(false)}>
+            Lịch
+          </NavLink>
           <NavLink to="/cai-dat" end className={navLinkClass(false)}>
             Cài đặt
           </NavLink>
