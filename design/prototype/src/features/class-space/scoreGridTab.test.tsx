@@ -65,6 +65,28 @@ describe("bảng điểm lớp theo thang điểm từng bài", () => {
     expect(html).toContain("thang 10");
     expect(html).not.toContain("điểm từ 0 đến 10");
   });
+
+  it("mỗi ô điểm là link mở đúng bài và focus đúng em vừa bấm", () => {
+    const html = render(
+      "/lop/6a/diem",
+      "/lop/:classId/diem",
+      <ScoreGridTab />,
+    );
+    // 10 học sinh (cả em đã nghỉ) × 4 bài.
+    expect(html.match(/hoc-sinh=/g)?.length).toBe(40);
+    expect(html).toContain(
+      'href="/lop/6a/bai-kiem-tra/6a-test-0?hoc-sinh=6a-student-0"',
+    );
+    expect(html).toContain('aria-label="Nhập điểm Từ vựng cho Nguyễn Minh Anh"');
+    expect(html).toContain(
+      'href="/lop/6a/bai-kiem-tra/6a-test-3?hoc-sinh=6a-student-9"',
+    );
+    expect(html).toContain('aria-label="Nhập điểm Nói cho Đỗ Hải Nam"');
+    // Ô trống và ô đã có điểm dùng cùng một kiểu link.
+    expect(html).toContain('aria-label="Nhập điểm Nói cho Phạm Đức Dũng"');
+    expect(html).toContain("Chưa có điểm");
+    expect(html).not.toContain("Trung bình");
+  });
 });
 
 describe("danh sách bài kiểm tra theo thang điểm từng bài", () => {

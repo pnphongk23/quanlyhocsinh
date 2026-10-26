@@ -122,7 +122,7 @@ describe("Tab Bài tập về nhà · Bài tập hôm nay (ảnh 51, 53, 57, 58)
     expect(html).toContain("BTVN giao hôm nay");
     expect(html).toContain("Một lần cho cả lớp · 3/4 phần · ");
     expect(html).toContain("chấm ở buổi 9");
-    expect(html).toContain("Đã lưu · phụ huynh đã thấy");
+    expect(html).not.toContain("Đã lưu · phụ huynh đã thấy");
     expect(html).toContain("Unit 6 · 15 từ chủ đề Travel");
     expect(html).toContain("Kể về chuyến đi gần nhất");
     expect(html).toContain("Workbook trang 42–43");
@@ -182,7 +182,7 @@ describe("Tab Bài tập về nhà · điều hướng và buổi hủy (ảnh 6
   it("buổi đã hủy: chỉ hiện thông báo, không giao và không chấm", () => {
     const html = renderPanel("6a-extra-cancelled");
     expect(html).toContain(
-      "Buổi học đã hủy nên không giao hoặc chấm bài tập.",
+      "Buổi học đã hủy nên không giao hoặc chấm bài tập",
     );
     expect(html).not.toContain("Bài tập buổi trước");
     expect(html).not.toContain("Bài tập hôm nay");

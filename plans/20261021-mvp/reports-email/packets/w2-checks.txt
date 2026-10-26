@@ -1,0 +1,1 @@
+cd worker && npm run typecheck && npx vitest run tests/password-reset.test.ts tests/account-email.test.ts tests/auth*.test.ts; cuối cùng npx vitest run toàn bộ (lỗi ở file thuộc worker báo cáo song song thì ghi lại, không sửa). Commit theo đường dẫn trên mvp-backend: git add <từng file> && git commit -m "feat(worker): account email and password reset by link".

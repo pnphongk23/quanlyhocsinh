@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, PageHeader } from "../../shared/ui";
+import { Card, EmptyState, PageHeader } from "../../shared/ui";
 import { useGuardianContext } from "./guardianContext";
 import {
   childMonths,
@@ -7,7 +7,8 @@ import {
   defaultChildMonth,
 } from "./guardianRead";
 import { longDayMonth, scoreText } from "./guardianFormat";
-import { ChildEmpty, MonthSwitch } from "./guardianUi";
+import { MonthSwitch, useBackTarget } from "./guardianUi";
+import GuardianNoChild from "./guardianEmpty";
 import g from "./guardian.module.css";
 
 /**
@@ -17,6 +18,7 @@ import g from "./guardian.module.css";
  */
 export default function GuardianScoresPage() {
   const { child, error } = useGuardianContext();
+  const back = useBackTarget();
   const [month, setMonth] = useState<string | null>(null);
   if (error) {
     return (
@@ -26,11 +28,7 @@ export default function GuardianScoresPage() {
     );
   }
   if (!child) {
-    return (
-      <ChildEmpty title="Chưa có con nào được liên kết">
-        <p>Liên hệ giáo viên nếu bạn cần xem dữ liệu của con.</p>
-      </ChildEmpty>
-    );
+    return <GuardianNoChild />;
   }
   const studentId = child.student.id;
   const months = childMonths(studentId);
@@ -48,7 +46,7 @@ export default function GuardianScoresPage() {
 
   return (
     <main className={g.page}>
-      <PageHeader eyebrow={child.student.name} title="Điểm số" />
+      <PageHeader backTo={back} eyebrow={child.student.name} title="Điểm số" />
       <MonthSwitch
         month={current}
         months={months.length ? months : [current]}
@@ -64,7 +62,7 @@ export default function GuardianScoresPage() {
       {data && (
         <>
           {data.rows.length === 0 ? (
-            <p className={g.muted}>Chưa có bài kiểm tra nào trong tháng này.</p>
+            <EmptyState size="compact" title="Chưa có bài kiểm tra nào trong tháng này" />
           ) : (
             <Card className={g.card}>
               <div className={g.cardHead}>

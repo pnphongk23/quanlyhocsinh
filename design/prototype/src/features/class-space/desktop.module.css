@@ -1,0 +1,536 @@
+/*
+ * Khung web desktop của "Chi tiết lớp" (ảnh round-4 01…15): tiêu
+ * đề + hàng tab, nền thẻ trắng 16px, chữ theo bảng thiết kế 1360×934.
+ * Chỉ dùng ở breakpoint ≥ 1024px; mobile giữ CSS riêng của từng màn.
+ */
+
+/* ------------------------------------------------------------- khung chung */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding-bottom: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 60px;
+}
+
+.titleBlock {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 36px;
+  overflow-wrap: anywhere;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  padding: 0;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.menuButton:hover,
+.menuButton:focus-visible {
+  color: var(--color-text);
+  border-color: var(--color-input-border-strong);
+}
+
+.menuWrap {
+  position: relative;
+  display: flex;
+}
+
+.tabs {
+  position: relative;
+  display: flex;
+  margin-top: 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  margin-right: 28px;
+  border-bottom: 3px solid transparent;
+  box-sizing: border-box;
+  color: var(--color-muted);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab:hover,
+.tab:focus-visible {
+  color: var(--color-text);
+}
+
+.tabActive {
+  color: var(--color-primary-ink);
+  font-weight: 700;
+}
+
+/* Gạch chỉ báo trượt theo tab đang chọn (đo bằng useSlideIndicator) */
+.tabs > .slideBar {
+  top: calc(var(--ind-top, 0px) + var(--ind-h, 0px) - 3px);
+  height: 3px;
+  background: var(--color-primary);
+}
+
+
+/* ------------------------------------------------------ thẻ, bảng, chữ phụ */
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.cardFlush {
+  padding: 18px 8px 6px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.label13 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.muted13 {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.muted14 {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.tableWrap {
+  overflow: auto;
+  min-width: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fixedTable {
+  table-layout: fixed;
+}
+
+/* Bảng buổi vừa khung: để overflow visible cho menu "…" không đẩy bảng ngang. */
+.noScroll {
+  overflow: visible;
+}
+
+.table th {
+  padding: 0 8px 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0 8px 0 12px;
+  border-top: 1px solid var(--color-divider);
+  font-size: 15px;
+  vertical-align: middle;
+}
+
+.rowTall td {
+  height: 52px;
+}
+
+.rowTall th {
+  height: 40px;
+}
+
+.nameCell {
+  font-weight: 500;
+}
+
+.strongName {
+  font-weight: 700;
+}
+
+.smallMeta {
+  display: block;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.stickyFirst th:first-child,
+.stickyFirst td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--color-surface);
+  box-shadow: 6px 0 8px -6px rgb(20 24 31 / 0.15);
+}
+
+.link {
+  color: inherit;
+  text-decoration: none;
+}
+.link:hover,
+.link:focus-visible {
+  color: var(--color-primary-ink);
+  text-decoration: underline;
+}
+
+.rowButton {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+.rowButton:hover,
+.rowButton:focus-visible {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: none;
+}
+
+.split {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.mainColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sideColumn {
+  width: 360px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sideColumnNarrow {
+  width: 260px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.emptyCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.emptyText {
+  margin: 0;
+  max-width: 460px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+/* ------------------------------------------------------------- tab của buổi */
+
+.sessionTabRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: none;
+}
+
+/* Segmented control dạng nền xám, mục đang chọn nền trắng (ảnh 03…07). */
+.segmented {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--radius-button);
+  background: var(--color-border);
+}
+
+.segment {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.segmentSmall {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.segment:hover:not(.segmentActive) { background: var(--state-hover-bg); }
+.segment:focus-visible { outline: none; box-shadow: var(--state-focus-ring); }
+
+.segmentActive {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
+}
+
+.inlineHint {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.successNote {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+/* ------------------------------------------------------------------- ô nhập */
+
+.input {
+  box-sizing: border-box;
+  height: 44px;
+  width: 100%;
+  padding: 0 14px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.input:focus-visible,
+.textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.fieldLabel {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+/* ----------------------------------------------------------------- danh sách */
+
+.listRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--color-divider);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 15px;
+  text-align: left;
+}
+
+button.listRow {
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  cursor: pointer;
+}
+
+.listRowSelected {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
+  border-radius: 10px;
+  border-top-color: transparent;
+}
+
+.statGrid {
+  display: flex;
+  gap: 12px;
+}
+
+.statCard {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.statValue {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.statLabel {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.statBox {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+
+.statBoxValue {
+  font-size: 18px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.flex1 {
+  flex: 1;
+  min-width: 0;
+}
+
+.flex13 {
+  flex: 1.3;
+  min-width: 0;
+}
+
+/*
+ * Buổi học: bảng 6 cột cần chỗ riêng. Dưới 1440px cột phải xuống trên bảng,
+ * các thẻ chia đều một hàng; từ 1440px trở lên giữ hai cột cạnh nhau.
+ */
+@media (max-width: 1439px) {
+  .sessionsSplit {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sessionsSplit > .sessionsSide {
+    order: -1;
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .sessionsSplit > .sessionsSide > * {
+    flex: 1;
+    min-width: 0;
+  }
+}

@@ -21,8 +21,8 @@ Trong cùng terminal đã chạy bước 1, nhập đúng SĐT và chạy từng
 
 ```sh
 read -s 'PHONE?SĐT E.164 của tài khoản: '
-npx wrangler d1 execute qlh-staging-db --remote --env staging --command "UPDATE users SET password_hash = '$HASH', must_change_password = 1, password_changed_at = datetime('now'), version = version + 1 WHERE phone = '$PHONE'"
-npx wrangler d1 execute qlh-staging-db --remote --env staging --command "UPDATE auth_sessions SET revoked_at = datetime('now') WHERE user_id = (SELECT id FROM users WHERE phone = '$PHONE') AND revoked_at IS NULL"
+npx wrangler d1 execute qlh-staging-db --remote --env staging --command "UPDATE users SET password_hash = '$HASH', must_change_password = 1, password_changed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), version = version + 1 WHERE phone = '$PHONE'"
+npx wrangler d1 execute qlh-staging-db --remote --env staging --command "UPDATE auth_sessions SET revoked_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE user_id = (SELECT id FROM users WHERE phone = '$PHONE') AND revoked_at IS NULL"
 npx wrangler d1 execute qlh-staging-db --remote --env staging --command "DELETE FROM device_tokens WHERE auth_session_id IN (SELECT id FROM auth_sessions WHERE user_id = (SELECT id FROM users WHERE phone = '$PHONE') AND revoked_at IS NOT NULL)"
 npx wrangler d1 execute qlh-staging-db --remote --env staging --command "DELETE FROM auth_throttle WHERE key = 'login:p:$PHONE'"
 unset HASH PHONE

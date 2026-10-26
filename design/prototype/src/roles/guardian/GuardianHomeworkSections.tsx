@@ -2,10 +2,8 @@ import type {
   ChildHomework,
   ChildHomeworkSection,
 } from "../../data/repositories/guardian";
-import { sessionPrefix } from "../../data/repositories/sessions";
 import GuardianIcon, { homeworkIcon } from "./GuardianIcon";
 import {
-  dayMonth,
   homeworkLevelLabel,
   homeworkLevelTone,
   weekdayDayMonth,
@@ -73,12 +71,4 @@ export function gradingLine(item: ChildHomework): string {
   return `Cô chấm ở buổi ${item.grading.sessionNumber} · ${weekdayDayMonth(
     item.grading.session.date,
   )}`;
-}
-
-/** Buổi bị hủy nằm giữa buổi giao bài và buổi chấm (ảnh 34). */
-export function cancelledFlags(item: ChildHomework): string[] {
-  return item.grading.cancelled.map(
-    (entry) =>
-      `${sessionPrefix(entry.session)} · ${dayMonth(entry.session.date)} · Đã huỷ`,
-  );
 }

@@ -4,8 +4,7 @@ import { getClass, listClasses } from "../../data/repositories/classes";
 import { useStore } from "../../data/store";
 import { formatDayMonth } from "../../shared/format";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
-import { Card, LinkButton, NoAccess, PageHeader, Pill } from "../../shared/ui";
-import { ChartIcon } from "./ScoreIcons";
+import { Card, EmptyState, LinkButton, NoAccess, PageHeader, Pill } from "../../shared/ui";
 import {
   classScoreReport,
   formatSignedPercent,
@@ -198,17 +197,11 @@ function AttentionPanel({
 
 function EmptyReport({ classId }: { classId: string }) {
   return (
-    <div className={s.emptyState}>
-      <span className={s.emptyIcon} aria-hidden="true">
-        <ChartIcon size={30} />
-      </span>
-      <h2 className={s.emptyTitle}>Chưa có điểm để báo cáo</h2>
-      <p className={s.emptyText}>
-        Nhập điểm cho ít nhất một bài kiểm tra để xem tiến độ nhập điểm và danh
-        sách cần chú ý.
-      </p>
-      <LinkButton to={`/lop/${classId}/diem`}>Nhập điểm</LinkButton>
-    </div>
+    <EmptyState
+      title="Chưa có điểm để báo cáo"
+      description="Nhập điểm cho ít nhất một bài kiểm tra để xem tiến độ nhập điểm và danh sách cần chú ý."
+      action={<LinkButton to={`/lop/${classId}/diem`}>Nhập điểm</LinkButton>}
+    />
   );
 }
 

@@ -14,13 +14,7 @@ export const formatTime = (value: string | Date) =>
     hour: "2-digit",
     minute: "2-digit",
   }).format(asDate(value));
-export const formatScore = (value: number | null) =>
-  value === null
-    ? "Chưa có điểm"
-    : new Intl.NumberFormat("vi-VN", {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      }).format(value);
+export { formatScore } from "../../data/scoreFormat";
 export function todayISO(): string {
   const now = new Date();
   return [

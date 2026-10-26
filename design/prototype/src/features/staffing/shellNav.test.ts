@@ -39,8 +39,8 @@ function labels(links: Array<{ label: string }>): string[] {
   return links.map((link) => link.label);
 }
 
-describe("lối vào sidebar desktop theo quyền", () => {
-  it("Admin thấy đủ mục, gồm các mục quản trị và Cài đặt", () => {
+describe("lối vào sidebar desktop theo quyền và cờ MVP", () => {
+  it("Admin chỉ thấy các mục MVP và Cài đặt", () => {
     const links = desktopNav(can(teacher), true, true, "member-lan-admin", "6a");
     expect(labels(links)).toEqual([
       "Lớp",
@@ -48,12 +48,6 @@ describe("lối vào sidebar desktop theo quyền", () => {
       "Điểm số",
       "Học sinh",
       "Báo cáo",
-      "Bài giảng",
-      "Phân công",
-      "Lịch dạy",
-      "Học phí",
-      "Nhân sự",
-      "Vai trò",
       "Cài đặt",
     ]);
     // Cờ Lương đang tắt: không còn lối vào bảng lương.
@@ -68,8 +62,6 @@ describe("lối vào sidebar desktop theo quyền", () => {
       "Điểm số",
       "Học sinh",
       "Báo cáo",
-      "Bài giảng",
-      "Lịch dạy",
       "Cài đặt",
     ]);
     expect(labels(links)).not.toContain("Lương");
@@ -88,20 +80,24 @@ describe("lối vào sidebar desktop theo quyền", () => {
       "Điểm danh",
       "Điểm số",
       "Học sinh",
-      "Bài giảng",
-      "Lịch dạy",
       "Cài đặt",
     ]);
     expect(labels(links)).not.toContain("Báo cáo");
     expect(labels(links)).not.toContain("Lương của tôi");
   });
 
-  it("gắn lớp đang mở vào lối vào theo lớp, có lớp dự phòng khi chưa chọn", () => {
+  it("gắn lớp đang mở vào các mục con của Lớp; chưa chọn lớp thì ẩn hẳn", () => {
     const scoped = desktopNav(can(teacher), true, true, "member-lan-admin", "6a");
     expect(scoped.find((link) => link.label === "Điểm danh")?.to).toBe(
       "/lop/6a/diem-danh",
     );
-    const fallback = desktopNav(can(teacher), true, true, "member-lan-admin", null);
-    expect(fallback.find((link) => link.label === "Học sinh")?.to).toBe("/lop");
+    expect(scoped.filter((link) => link.child).map((link) => link.label)).toEqual([
+      "Điểm danh",
+      "Điểm số",
+      "Học sinh",
+      "Báo cáo",
+    ]);
+    const unselected = desktopNav(can(teacher), true, true, "member-lan-admin", null);
+    expect(unselected.map((link) => link.label)).toEqual(["Lớp", "Cài đặt"]);
   });
 });

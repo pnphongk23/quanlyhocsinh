@@ -41,14 +41,6 @@ export interface ClassScoreReport {
 /** Ngưỡng "cần chú ý": bài gần nhất giảm từ 20% thang trở lên. */
 const ATTENTION_DROP_PERCENT = 20;
 
-/**
- * Điểm trong báo cáo điểm hiển thị dấu chấm (7.2, 6.5 – 7.9) theo ảnh thiết kế.
- * Cố ý cục bộ ở đây, không đổi format chung của app.
- */
-export function formatScoreDot(value: number): string {
-  return value.toFixed(1);
-}
-
 /** Điểm theo phần trăm thang của bài: value / max × 100. */
 export function scorePercent(value: number, max: number): number {
   if (max <= 0) return 0;

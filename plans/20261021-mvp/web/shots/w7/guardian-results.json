@@ -1,0 +1,212 @@
+{
+  "screens": [
+    {
+      "screen": "guardian-class",
+      "size": "desktop",
+      "path": "/ph",
+      "scrollWidth": 1440,
+      "contentWidth": 960,
+      "smallButtons": 0,
+      "minButton": {
+        "w": 145,
+        "h": 44
+      },
+      "dotDecimalCount": 0,
+      "staffNav": false
+    },
+    {
+      "screen": "guardian-class",
+      "size": "mobile",
+      "path": "/ph",
+      "scrollWidth": 390,
+      "contentWidth": 390,
+      "smallButtons": 0,
+      "minButton": {
+        "w": 145,
+        "h": 44
+      },
+      "dotDecimalCount": 0,
+      "staffNav": false
+    },
+    {
+      "screen": "guardian-scores",
+      "size": "desktop",
+      "path": "/ph/diem",
+      "scrollWidth": 1440,
+      "contentWidth": 960,
+      "smallButtons": 0,
+      "minButton": {
+        "w": 44,
+        "h": 44
+      },
+      "dotDecimalCount": 0,
+      "staffNav": false
+    },
+    {
+      "screen": "guardian-scores",
+      "size": "mobile",
+      "path": "/ph/diem",
+      "scrollWidth": 390,
+      "contentWidth": 390,
+      "smallButtons": 0,
+      "minButton": {
+        "w": 44,
+        "h": 44
+      },
+      "dotDecimalCount": 0,
+      "staffNav": false
+    },
+    {
+      "screen": "guardian-report",
+      "size": "desktop",
+      "path": "/ph/bao-cao",
+      "scrollWidth": 1440,
+      "contentWidth": 960,
+      "smallButtons": 0,
+      "minButton": {
+        "w": 145,
+        "h": 44
+      },
+      "dotDecimalCount": 0,
+      "staffNav": false
+    },
+    {
+      "screen": "guardian-report",
+      "size": "mobile",
+      "path": "/ph/bao-cao",
+      "scrollWidth": 390,
+      "contentWidth": 390,
+      "smallButtons": 0,
+      "minButton": null,
+      "dotDecimalCount": 0,
+      "staffNav": false
+    },
+    {
+      "screen": "guardian-comments",
+      "size": "desktop",
+      "path": "/ph/nhan-xet",
+      "scrollWidth": 1440,
+      "contentWidth": 960,
+      "smallButtons": 0,
+      "minButton": {
+        "w": 145,
+        "h": 44
+      },
+      "dotDecimalCount": 0,
+      "staffNav": false
+    },
+    {
+      "screen": "guardian-comments",
+      "size": "mobile",
+      "path": "/ph/nhan-xet",
+      "scrollWidth": 390,
+      "contentWidth": 390,
+      "smallButtons": 0,
+      "minButton": {
+        "w": 145,
+        "h": 44
+      },
+      "dotDecimalCount": 0,
+      "staffNav": false
+    },
+    {
+      "screen": "guardian-settings",
+      "size": "desktop",
+      "path": "/cai-dat",
+      "scrollWidth": 1440,
+      "contentWidth": 1160,
+      "smallButtons": 3,
+      "minButton": {
+        "w": 40,
+        "h": 44
+      },
+      "dotDecimalCount": 0,
+      "staffNav": true
+    },
+    {
+      "screen": "guardian-settings",
+      "size": "mobile",
+      "path": "/cai-dat",
+      "scrollWidth": 390,
+      "contentWidth": 390,
+      "smallButtons": 0,
+      "minButton": {
+        "w": 350,
+        "h": 56
+      },
+      "dotDecimalCount": 0,
+      "staffNav": true
+    },
+    {
+      "screen": "guardian-session",
+      "size": "desktop",
+      "path": "/ph/buoi/5b50f18f-8c2f-490b-ab7f-5cf9d77fd7e9",
+      "scrollWidth": 1440,
+      "contentWidth": 960,
+      "smallButtons": 0,
+      "minButton": {
+        "w": 145,
+        "h": 44
+      },
+      "dotDecimalCount": 0,
+      "staffNav": false
+    },
+    {
+      "screen": "guardian-session",
+      "size": "mobile",
+      "path": "/ph/buoi/5b50f18f-8c2f-490b-ab7f-5cf9d77fd7e9",
+      "scrollWidth": 390,
+      "contentWidth": 390,
+      "smallButtons": 0,
+      "minButton": null,
+      "dotDecimalCount": 0,
+      "staffNav": false
+    }
+  ],
+  "legacy": [
+    {
+      "from": "ph/diem-danh",
+      "to": "/ph"
+    },
+    {
+      "from": "ph/btvn",
+      "to": "/ph"
+    },
+    {
+      "from": "ph/diem-so",
+      "to": "/ph/diem"
+    },
+    {
+      "from": "ph/nhan-xet",
+      "to": "/ph/buoi/:id"
+    },
+    {
+      "from": "ph/btvn",
+      "to": "/ph/buoi/:id"
+    }
+  ],
+  "children": 2,
+  "motion": {
+    "sheet": {
+      "animation": "_sheetIn_146ud_1",
+      "duration": "0.25s"
+    },
+    "tokens": {
+      "fast": ".15s",
+      "base": ".2s",
+      "slow": ".25s",
+      "page": "0.2s",
+      "indicator": "no-transform-width-transition"
+    },
+    "reduced": {
+      "base": "1ms",
+      "animation": "none"
+    }
+  },
+  "errors": 0,
+  "sessionAvailable": true,
+  "cancelledAvailable": false,
+  "sessionLinks": 4,
+  "childChangeMs": 227,
+  "childChanged": true
+}

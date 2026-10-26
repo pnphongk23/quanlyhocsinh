@@ -55,6 +55,7 @@
 }
 
 .subTabs {
+  position: relative;
   display: flex;
   gap: 4px;
   justify-content: space-between;
@@ -85,8 +86,15 @@
 
 .subTabActive {
   color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
 }
+
+/* Gạch chỉ báo trượt theo tab đang chọn (đo bằng useSlideIndicator) */
+.subTabs > .slideBar {
+  top: calc(var(--ind-top, 0px) + var(--ind-h, 0px) - 3px);
+  height: 3px;
+  background: var(--color-primary);
+}
+
 
 .body {
   flex: 1;

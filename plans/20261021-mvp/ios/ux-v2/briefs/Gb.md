@@ -1,0 +1,13 @@
+# Brief Gb — Sửa mục review: phụ huynh + Auth (luna)
+
+Đọc: `b-common.md`, `review.md` (nguồn sự thật, file:dòng), `ios/docs/design-system-states.md`, `design/ux-v2/guardian-ia.md`, `shots/proto/proto-ph-class.png`/`proto-ph-comments.png`/`proto-inventory.md`. Sửa Swift ĐƯỢC. Write-set: `Features/Guardian/**`, `Features/Auth/**` (KHÔNG đụng `restoreSession` ~105–118 — task F sau), `Resources/Guardian.xcstrings`, `QuanLyLopTests/{Guardian,Auth}/**`. KHÔNG sửa Core/**, Teacher, Scores (Ga/lane khác).
+
+## Việc
+1. **Cao** `GuardianRootView.swift:101` / `GuardianPages.swift:79,98` / `GuardianRepository.swift:57`: danh sách buổi trong tab "Lớp học của con" dùng `GuardianAttendancePage` chỉ lấy buổi đã diễn ra, hàng không có action ⇒ không mở được buổi chưa gửi phiếu để xem BTVN đã giao. Theo guardian-ia.md tab 1: danh sách buổi, bấm hàng ⇒ màn Buổi học (phiếu nếu đã gửi + BTVN đã giao). Dùng danh sách buổi CÓ action mở `GuardianTicketView`/màn buổi, gồm buổi đã diễn ra có BTVN dù chưa gửi phiếu (spec: phụ huynh chỉ thấy nội dung ĐÃ GỬI/phát hành — kiểm lại `docs/spec.md` phần phụ huynh; BTVN đã giao mới thấy, phiếu chưa gửi hiện "Cô chưa gửi phiếu buổi này"). Buổi tương lai/huỷ: theo prototype (đọc `design/prototype/src/features/guardian`). Test thuần cho lọc/sắp xếp danh sách buổi + mapping hàng→đích (QuanLyLopTests/Guardian/). Test đỏ trước khi sửa.
+2. **Vừa** empty PH tự viết chữ thường ⇒ `AppEmptyState` có Mít: `GuardianPages.swift:66,95,151`, `GuardianTicketView.swift:43,75` (khung nhỏ/lọc rỗng = compact; mặc định chung).
+3. **Thấp** `GuardianRootView.swift:218`: hàng chọn con chỉ có dấu check ⇒ thêm nền selected (`AppState.selectedBg/Fg`, không viền).
+4. **Vừa** `AuthService.swift:221` + màn gọi `model.<action>` trong `AppSaveButton`: Auth chuyển màn NGAY trong work ⇒ pha "Đã lưu" mất. Chỉ với luồng ĐỔI MẬT KHẨU (AuthChangePasswordView ở AuthSettingsView.swift): điều hướng sau khi controller sang `saved` (hoặc sau successHold). Đăng nhập/đăng ký chuyển màn ngay là chấp nhận được (màn đổi hẳn) — không đổi. Test nếu tách được logic.
+5. **Vừa/Thấp** token trong mã thêm: `AuthScreens.swift:317,337` (spacing/font ghi cứng ⇒ AppMetrics/AppText). Dynamic Type màn PH chính (lớp, nhận xét): kiểm font dùng token co giãn; chụp 1–2 ảnh simulator extra-extra-large `shots/after/gb-ph-*.png` nếu có khoá build rảnh (không bắt buộc; ghi rõ).
+6. Test cuối `xcodebuild test` Staging 1 lần (bản sao /tmp, khoá owner "Gb") ⇒ xanh; commit theo đường dẫn nhiều commit nhỏ; `ux-v2/handback-Gb.md`.
+
+Handback ≤150 từ: commit SHA từng mục, test đỏ→xanh (tên), số test/skip/lỗi, việc chưa làm + lý do.

@@ -86,10 +86,14 @@ const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
  */
 export function buildStarSuggestion(
   byStars: Record<StarLevel, number>,
+  unit: "month" | "range" = "month",
 ): string | null {
   const total = byStars[1] + byStars[2] + byStars[3];
   if (!total) return null;
-  return `Gợi ý theo số buổi 3/2/1 sao của tháng: Tháng này con có ${byStars[3]} buổi 3 sao, ${byStars[2]} buổi 2 sao, ${byStars[1]} buổi 1 sao.`;
+  const counts = `${byStars[3]} buổi 3 sao, ${byStars[2]} buổi 2 sao, ${byStars[1]} buổi 1 sao`;
+  return unit === "range"
+    ? `Gợi ý theo số buổi 3/2/1 sao của đợt: Trong đợt này con có ${counts}.`
+    : `Gợi ý theo số buổi 3/2/1 sao của tháng: Tháng này con có ${counts}.`;
 }
 
 function monthBounds(month: string): { start: string; end: string } {
@@ -116,6 +120,65 @@ export function buildMonthlyStudentReport(
 ): MonthlyStudentReport | null {
   if (!MONTH_PATTERN.test(month)) return null;
   const { start, end } = monthBounds(month);
+  const core = buildPeriodReport(
+    student,
+    {
+      start,
+      end,
+      includeSession: (session) =>
+        session.status === "held" && session.date >= start && session.date <= end,
+      suggestionUnit: "month",
+    },
+    data,
+  );
+  return core && { ...core, month };
+}
+
+/** Phạm vi một báo cáo: khoảng ngày, buổi được tính và cách gọi trong câu gợi ý. */
+interface ReportPeriod {
+  start: string;
+  end: string;
+  includeSession: (session: Session) => boolean;
+  suggestionUnit: "month" | "range";
+}
+
+/** Nội dung báo cáo của một em trong một phạm vi (tháng hoặc khoảng buổi). */
+export type PeriodStudentReport = Omit<MonthlyStudentReport, "month">;
+
+/**
+ * Báo cáo theo khoảng buổi: tính trong các buổi chưa hủy từ buổi đầu đến buổi
+ * cuối (so theo ngày + giờ), điểm và BTVN theo ngày của khoảng. Trả null khi em
+ * chưa vào lớp sau buổi cuối hoặc đã rời lớp trước buổi đầu.
+ */
+export function buildRangeStudentReport(
+  student: Student,
+  range: { from: Session; to: Session },
+  data: MonthlyStudentReportData,
+): PeriodStudentReport | null {
+  const key = (session: Session) => `${session.date} ${session.time ?? "00:00"}`;
+  const fromKey = key(range.from);
+  const toKey = key(range.to);
+  return buildPeriodReport(
+    student,
+    {
+      start: range.from.date,
+      end: range.to.date,
+      includeSession: (session) =>
+        session.status !== "cancelled" &&
+        key(session) >= fromKey &&
+        key(session) <= toKey,
+      suggestionUnit: "range",
+    },
+    data,
+  );
+}
+
+function buildPeriodReport(
+  student: Student,
+  period: ReportPeriod,
+  data: MonthlyStudentReportData,
+): PeriodStudentReport | null {
+  const { start, end } = period;
   if (student.enrolledAt > end || (student.leftAt && student.leftAt < start))
     return null;
   const inStudentRange = (date: string) =>
@@ -125,9 +188,7 @@ export function buildMonthlyStudentReport(
     .filter(
       (session) =>
         session.classId === student.classId &&
-        session.status === "held" &&
-        session.date >= start &&
-        session.date <= end &&
+        period.includeSession(session) &&
         inStudentRange(session.date),
     )
     .sort((a, b) =>
@@ -170,7 +231,7 @@ export function buildMonthlyStudentReport(
   for (const comment of sentComments) {
     const session = sessionById.get(comment.sessionId);
     if (!session) continue;
-    if (session.date < start || session.date > end) continue;
+    if (!sessionIds.has(session.id)) continue;
     if (comment.stars === null) continue;
     byStars[comment.stars] += 1;
     ticketCount += 1;
@@ -185,8 +246,7 @@ export function buildMonthlyStudentReport(
   for (const section of data.homeworkSections) {
     const giving = sessionById.get(section.sessionId);
     if (!giving || giving.classId !== student.classId) continue;
-    if (giving.date < start || giving.date > end) continue;
-    if (!inStudentRange(giving.date)) continue;
+    if (!sessionIds.has(giving.id)) continue;
     // Chỉ hiện kết quả chấm khi phiếu của buổi chấm đã gửi cho em.
     const grading = gradingSessionFor(data.sessions, section.sessionId);
     if (!grading || !sentSessionIds.has(grading.id)) continue;
@@ -226,7 +286,6 @@ export function buildMonthlyStudentReport(
 
   return {
     student,
-    month,
     sessions,
     attendance,
     tests,
@@ -238,7 +297,7 @@ export function buildMonthlyStudentReport(
     stars: { ticketCount, byStars },
     homework,
     generalComment,
-    suggestion: buildStarSuggestion(byStars),
+    suggestion: buildStarSuggestion(byStars, period.suggestionUnit),
     ready: missing.length === 0,
     missing,
   };

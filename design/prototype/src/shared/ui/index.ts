@@ -16,3 +16,7 @@ export type { PillTone } from "./Pill";
 export type { ButtonSize, ButtonVariant } from "./buttonClass";
 export { Fab } from "./Fab";
 export { NoAccess } from "./NoAccess";
+export { ActionFooter } from "./ActionFooter";
+export { UnsavedChangesDialog } from "./UnsavedChangesDialog";
+export type { UnsavedChangesDialogProps } from "./UnsavedChangesDialog";
+export type { BeforeClose } from "./useGuardedClose";

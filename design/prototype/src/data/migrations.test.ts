@@ -21,7 +21,7 @@ describe("Migration session đã lưu", () => {
     expect(migrated.attendance).toEqual(state.attendance);
   });
 
-  it("nâng dữ liệu cũ thiếu roles, members và bài giảng mà giữ nguyên dữ liệu", () => {
+    it("nâng dữ liệu cũ thiếu roles, members và bài giảng; phiên email cũ cần đăng nhập lại", () => {
     const state = createSeed();
     const legacy = {
       ...state,
@@ -30,14 +30,13 @@ describe("Migration session đã lưu", () => {
       activeMemberId: undefined,
       lectures: undefined,
       sessionLectures: undefined,
-      auth: { email: "old@example.test" },
+        auth: { email: "old@example.test" },
     };
     const migrated = migrateStore(legacy);
     expect(migrated.roles.length).toBeGreaterThan(0);
     expect(migrated.members.length).toBeGreaterThan(0);
-    expect(migrated.auth?.email).toBe("old@example.test");
-    expect(migrated.auth?.memberIds.length).toBeGreaterThan(0);
-    expect(migrated.activeMemberId).toBe(migrated.auth?.memberIds[0]);
+      expect(migrated.auth).toBeNull();
+      expect(migrated.activeMemberId).toBeNull();
     expect(migrated.lectures).toEqual([]);
     expect(migrated.sessionLectures).toEqual([]);
     expect(migrated.classes).toEqual(state.classes);
@@ -241,7 +240,7 @@ describe("Migration Vắng thi, nhận xét, BTVN và phụ huynh", () => {
         (member) => member.roleId !== ROLE_IDS.guardian,
       ),
       auth: {
-        email: "colan@example.test",
+          phone: "0900000001",
         memberIds: [MEMBER_IDS.lanAdmin, MEMBER_IDS.lanTeacher],
       },
     };
@@ -251,7 +250,7 @@ describe("Migration Vắng thi, nhận xét, BTVN và phụ huynh", () => {
     );
     expect(guardian).toMatchObject({
       id: MEMBER_IDS.lanGuardian,
-      studentIds: ["6a-student-1", "6a-student-8"],
+        studentIds: ["6a-student-1", "6a-student-8"],
     });
     expect(migrated.auth?.memberIds).toEqual([
       MEMBER_IDS.lanAdmin,
@@ -270,5 +269,42 @@ describe("Migration Vắng thi, nhận xét, BTVN và phụ huynh", () => {
     expect(
       again.auth?.memberIds.filter((id) => id === MEMBER_IDS.lanGuardian),
     ).toHaveLength(1);
+  });
+});
+
+describe("Migration luồng mời nhân sự đã bỏ", () => {
+  it("xoá thành viên còn trạng thái invited và bỏ invitedAt của bản cũ", () => {
+    const state = createSeed();
+    const legacyMembers = [
+      ...state.members.map((member) => ({ ...member, invitedAt: null })),
+      {
+        id: "member-invited",
+        name: "Cô Hoa",
+        phone: "0900000005",
+        roleId: ROLE_IDS.teacher,
+        classIds: [],
+        status: "invited",
+        invitedAt: "2026-10-16T09:00:00.000Z",
+      },
+    ];
+    const migrated = migrateStore({
+      ...state,
+      members: legacyMembers,
+      auth: {
+        phone: "0900000001",
+        memberIds: [MEMBER_IDS.lanAdmin, "member-invited"],
+      },
+      activeMemberId: MEMBER_IDS.lanAdmin,
+    });
+
+    const ids = migrated.members.map((member) => member.id);
+    expect(ids).not.toContain("member-invited");
+    expect(ids).toContain(MEMBER_IDS.lanAdmin);
+    expect(
+      migrated.members.every((member) => !("invitedAt" in member)),
+    ).toBe(true);
+    // Phiên đăng nhập không còn trỏ tới thành viên đã bị xoá.
+    expect(migrated.auth?.memberIds).toEqual([MEMBER_IDS.lanAdmin]);
+    expect(migrated.activeMemberId).toBe(MEMBER_IDS.lanAdmin);
   });
 });

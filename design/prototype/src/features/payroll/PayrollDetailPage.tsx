@@ -38,6 +38,7 @@ import {
   unpricedPositions,
   unpricedSubstituteLines,
 } from "./payrollModel";
+import { Collapse, motionClass } from "../../shared/motion";
 import s from "./payroll.module.css";
 
 const SESSION_PREVIEW = 3;
@@ -426,11 +427,13 @@ export default function PayrollDetailPage() {
               </span>
             </span>
             <Pill tone="neutral">Dự kiến</Pill>
-            <Icon name={plannedOpen ? "chevron-down" : "chevron-right"} />
+            <span className={motionClass.chevron} aria-hidden="true">
+              <Icon name="chevron-down" />
+            </span>
           </button>
-          {plannedOpen && (
+          <Collapse open={plannedOpen}>
             <ul className={s.sessionList}>{plannedLines.map(renderLine)}</ul>
-          )}
+          </Collapse>
         </Card>
       )}
 

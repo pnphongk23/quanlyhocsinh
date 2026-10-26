@@ -4,10 +4,12 @@ import { listStudents } from "../../data/repositories/students";
 import { listTests } from "../../data/repositories/tests";
 import { listScores } from "../../data/repositories/scores";
 import { useAccess } from "../../data/repositories/access";
+import { features } from "../../shared/features";
 import { orderScoreGridStudents } from "../../data/logic";
 import { formatDayMonth, formatScore } from "../../shared/format";
-import { Card, LinkButton, NoAccess } from "../../shared/ui";
-import { ChartIcon } from "../scores/ScoreIcons";
+import { Card, EmptyState, LinkButton, NoAccess } from "../../shared/ui";
+import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
+import ScoreGridDesktop from "../scores/ScoreGridDesktop";
 import reportS from "../scores/scoreReport.module.css";
 import s from "../scores/scores.module.css";
 
@@ -15,6 +17,7 @@ export default function ScoreGridTab() {
   useStore();
   const { classId = "" } = useParams();
   const access = useAccess();
+  const desktop = useIsDesktop();
   const students = orderScoreGridStudents(listStudents(classId));
   const activeCount = students.filter(
     (student) => student.status === "active",
@@ -29,35 +32,31 @@ export default function ScoreGridTab() {
   if (!access.can("scores", "read")) return <NoAccess what="bảng điểm" />;
   const canWrite = access.can("scores", "write");
 
-  // Trạng thái rỗng: design/reference/75-trang-thai-rong-chua-co-bai-kiem-tra.html
+  if (desktop) return <ScoreGridDesktop key={classId} classId={classId} />;
+
   if (!tests.length)
     return (
-      <div className={s.emptyScore}>
-        <span className={s.emptyIcon}>
-          <ChartIcon size={32} />
-        </span>
-        <div className={s.emptyText}>
-          <p className={s.emptyTitle}>Chưa có bài kiểm tra</p>
-          <p className={s.emptyDesc}>
-            Tạo bài kiểm tra đầu tiên, sau đó nhập điểm cho cả lớp.
-          </p>
-        </div>
-        {canWrite && (
-          <div className={s.emptyActions}>
+      <EmptyState
+        title="Chưa có bài kiểm tra"
+        description="Tạo bài kiểm tra đầu tiên, sau đó nhập điểm cho cả lớp."
+        action={
+          canWrite ? (
             <LinkButton size="lg" to={`/lop/${classId}/bai-kiem-tra/moi`}>
               Tạo bài kiểm tra
             </LinkButton>
-          </div>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
     );
 
   return (
     <div className={s.tab}>
       <div className={`${s.gridHead} ${reportS.tabActions}`}>
-        <LinkButton variant="secondary" to={`/lop/${classId}/bao-cao-diem`}>
-          Báo cáo điểm
-        </LinkButton>
+        {features.scoreReports && (
+          <LinkButton variant="secondary" to={`/lop/${classId}/bao-cao-diem`}>
+            Báo cáo điểm
+          </LinkButton>
+        )}
         {canWrite && (
           <LinkButton
             variant="secondary"
@@ -111,16 +110,24 @@ export default function ScoreGridTab() {
                     const score = scores[index];
                     return (
                       <td key={test.id}>
-                        {score && score.value !== null ? (
-                          formatScore(score.value)
-                        ) : (
-                          <>
-                            <span className={s.cellEmpty} aria-hidden="true">
-                              –
-                            </span>
-                            <span className={s.cellMissing}>Chưa có điểm</span>
-                          </>
-                        )}
+                        <Link
+                          className={s.cellLink}
+                          to={`/lop/${classId}/bai-kiem-tra/${test.id}?hoc-sinh=${student.id}`}
+                          aria-label={`Nhập điểm ${test.name} cho ${student.name}`}
+                        >
+                          {score && score.value !== null ? (
+                            formatScore(score.value)
+                          ) : (
+                            <>
+                              <span className={s.cellEmpty} aria-hidden="true">
+                                –
+                              </span>
+                              <span className={s.cellMissing}>
+                                Chưa có điểm
+                              </span>
+                            </>
+                          )}
+                        </Link>
                       </td>
                     );
                   })}

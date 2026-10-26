@@ -105,7 +105,7 @@ describe("render thật của các màn A/B (mobile mặc định khi SSR)", () 
 
   it("Lịch của tôi: nhân sự chỉ xem lịch mình, thấy buổi dạy thay", () => {
     const state = createSeed();
-    state.auth = { email: "minh@example.test", memberIds: [MEMBER_IDS.minh] };
+    state.auth = { phone: "900000003", memberIds: [MEMBER_IDS.minh] };
     state.activeMemberId = MEMBER_IDS.minh;
     replaceStore(state);
     const html = render("/lich-day", "/lich-day");

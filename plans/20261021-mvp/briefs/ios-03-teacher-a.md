@@ -1,0 +1,5 @@
+# iOS I-3 · Giáo viên A
+Đọc `briefs/ios-common-feature.md` trước (bắt buộc). Bạn SỞ HỮU `Features/Classes/**` và `Features/Attendance/**` (và thư mục con mới như `Features/Schedule/`, `Features/Students/`, `Features/ClassSpace/` nếu cần).
+Việc: `TeacherRootView` thật (tab bar giáo viên theo prototype `src/app/TeacherShell.tsx`, chỉ mục MVP), Lớp (danh sách, tạo/sửa/lưu trữ; lịch lặp), Chi tiết lớp (container tab theo prototype `src/features/class-space`; nhúng `TestsTabView`, `ScoreGridTabView`, `MonthlyReportView`, và trong Chi tiết buổi nhúng `SessionCommentsView`, `SessionHomeworkView` của I-4), Học sinh (thêm kèm SĐT phụ huynh, sửa SĐT, đánh dấu nghỉ, Cấp mật khẩu: mật khẩu tạm hiện một lần), Buổi học + tab Lịch (ngày/tháng, hủy, buổi lẻ), Điểm danh 4 trạng thái (offline). Số buổi: hiển thị `sessionNumber` do server trả (nullable; buổi hủy không có số), không tự tính (Q16).
+Nguồn UI: `src/features/classes`, `class-space`, `attendance`, `students`, `schedule` (chỉ phần tab Lịch ngày/tháng của MVP; Lịch dạy/Phân công/Nhân sự/Học phí là ngoài MVP, không làm).
+Báo cáo: `ios/docs/report-i3.md`.

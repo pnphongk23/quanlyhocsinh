@@ -3,6 +3,7 @@ import { getStore } from "../store";
 import { commit } from "../outbox";
 import { requirePermission, requireTest, requireStudent, eligible } from "./helpers";
 import { canAccessClass, requireClassAccess } from "./access";
+import { reportCoversDate } from "../reportRange";
 /** Điểm của bài kiểm tra thuộc lớp trong phạm vi vai trò đang dùng. */
 export const listScores = (testId: string): Score[] => {
   const test = getStore().tests.find((item) => item.id === testId);
@@ -20,9 +21,9 @@ export function saveScore(input: Omit<Score, "id">): Score {
     throw new Error("Học sinh không thuộc bài kiểm tra này.");
   if (
     input.value !== null &&
-    (!Number.isFinite(input.value) || input.value < 0 || input.value > test.max)
-  )
-    throw new Error(`Điểm phải từ 0 đến ${test.max}.`);
+      (!Number.isFinite(input.value) || input.value < 0 || input.value > test.max || Math.abs(input.value * 2 - Math.round(input.value * 2)) > 1e-9)
+    )
+    throw new Error(`Điểm phải từ 0 đến ${test.max}, theo bước 0,5.`);
   const old = getStore().scores.find(
     (s) => s.testId === input.testId && s.studentId === input.studentId,
   );
@@ -40,15 +41,15 @@ export function saveScore(input: Omit<Score, "id">): Score {
         before: { ...old },
         after: { ...item },
         changedAt: new Date().toISOString(),
-        actor: d.auth?.email ?? "prototype",
+        actor: d.auth?.phone ?? "prototype",
       });
       d.scores = d.scores.map((s) => (s.id === item.id ? item : s));
     } else d.scores.push(item);
     d.reports.forEach((r) => {
       if (
         r.studentId === item.studentId &&
-        r.month === test.date.slice(0, 7) &&
-        r.status === "published"
+        r.status === "published" &&
+        reportCoversDate(r, d.reportBatches, d.sessions, test.date)
       )
         r.needsRepublish = true;
     });

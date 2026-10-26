@@ -39,6 +39,37 @@
   min-width: 0;
 }
 
+/* Nút "⋯" mở tuỳ chọn buổi học, cùng kiểu với màn chi tiết bài giảng. */
+.moreButton {
+  display: grid;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.moreButton:hover,
+.moreButton:focus-visible {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Thao tác trong sheet tuỳ chọn: nút rộng hết khung, đủ 44px để bấm. */
+.sheetActions {
+  display: grid;
+  gap: 10px;
+}
+
+.sheetActions > * {
+  width: 100%;
+}
+
 .eyebrow {
   font-size: 13px;
   color: var(--color-muted);
@@ -189,16 +220,6 @@
   border-radius: var(--radius-button);
 }
 
-.detailActions {
-  display: flex;
-  padding-bottom: 4px;
-}
-
-.detailActions > * {
-  flex: 1;
-  border-radius: var(--radius-button);
-}
-
 @media (min-width: 1024px) {
   .detail {
     margin: 0;
@@ -226,13 +247,5 @@
   .body {
     padding: 0 0 16px;
     gap: 16px;
-  }
-
-  .detailActions {
-    justify-content: flex-end;
-  }
-
-  .detailActions > * {
-    flex: 0 0 auto;
   }
 }

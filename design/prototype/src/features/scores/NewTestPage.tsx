@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useStore } from "../../data/store";
 import { createTest, DEFAULT_TEST_MAX } from "../../data/repositories/tests";
@@ -6,7 +6,17 @@ import { getClass } from "../../data/repositories/classes";
 import { useAccess } from "../../data/repositories/access";
 import { useSaveStatus } from "../../shared/SaveStatus";
 import { todayISO } from "../../shared/format";
-import { Button, Input, NoAccess, PageHeader } from "../../shared/ui";
+import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { useSavedPeek, useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
+import {
+  ActionFooter,
+  Button,
+  Input,
+  NoAccess,
+  PageHeader,
+  UnsavedChangesDialog,
+} from "../../shared/ui";
 import { AlertTriangleIcon } from "./ScoreIcons";
 import s from "./scores.module.css";
 
@@ -14,44 +24,69 @@ export default function NewTestPage() {
   const { classId = "" } = useParams();
   const navigate = useNavigate();
   useStore();
-  const { markUnsaved, clearStatus, setStatus } = useSaveStatus();
+  const { clearStatus, setStatus } = useSaveStatus();
   const access = useAccess();
   const classItem = getClass(classId);
-  const [name, setName] = useState("");
-  const [date, setDate] = useState(() => todayISO());
-  const [max, setMax] = useState(String(DEFAULT_TEST_MAX));
-  const [error, setError] = useState("");
+  const initial = {
+    name: "",
+    date: todayISO(),
+    max: String(DEFAULT_TEST_MAX),
+  };
+  const [form, setForm] = useState(initial);
+  const [done, setDone] = useState<string | null>(null);
+  const created = useRef<string | null>(null);
+  const action = useSaveAction({
+    baseline: initial,
+    value: form,
+    validate: (value) => {
+      const max = Number(value.max.trim());
+      return (
+        value.name.trim() !== "" &&
+        value.date !== "" &&
+        Number.isInteger(max) &&
+        max >= 1 &&
+        max <= 1000
+      );
+    },
+    save: (value) => {
+      if (!classItem) throw new Error("Không tìm thấy lớp học.");
+      const test = createTest({
+        classId,
+        name: value.name,
+        date: value.date,
+        max: Number(value.max.trim()),
+      });
+      created.current = test.id;
+    },
+  });
+  const guard = useLeaveGuard(action.dirty && done === null);
+  const saved = useSavedPeek();
+  const leave = useSaveAndLeave();
   const listPath = `/lop/${classId}/bai-kiem-tra`;
+  // Điều hướng sau khi state "đã lưu" được render để không bị chặn bởi chính màn này.
+  useEffect(() => {
+    if (done) navigate(`/lop/${classId}/bai-kiem-tra/${done}`);
+  }, [done, classId, navigate]);
 
   if (!access.can("scores", "write"))
     return <NoAccess what="mục tạo bài kiểm tra" />;
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!classItem) {
-      setError("Không tìm thấy lớp học.");
-      return;
-    }
-    if (!name.trim()) {
-      setError("Nhập tên bài kiểm tra.");
-      return;
-    }
-    if (!date) {
-      setError("Chọn ngày kiểm tra.");
-      return;
-    }
-    try {
-      const test = createTest({ classId, name, date, max: Number(max.trim()) });
-      setError("");
+    if (await action.submit()) {
       clearStatus();
-      navigate(`/lop/${classId}/bai-kiem-tra/${test.id}`);
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Không tạo được bài kiểm tra.",
-      );
-      setStatus("error");
-    }
+      if (await saved.peek()) setDone(created.current);
+    } else setStatus("error");
   }
+  const error = action.error
+    ? action.error instanceof Error && action.error.message !== "save_failed"
+      ? action.error.message
+      : "Không tạo được bài kiểm tra."
+    : "";
+  const { name, date, max } = form;
+  const setName = (next: string) => setForm((current) => ({ ...current, name: next }));
+  const setDate = (next: string) => setForm((current) => ({ ...current, date: next }));
+  const setMax = (next: string) => setForm((current) => ({ ...current, max: next }));
 
   return (
     <section className={s.formPage}>
@@ -63,8 +98,6 @@ export default function NewTestPage() {
           placeholder="Ví dụ: Unit 6 Test"
           onChange={(event) => {
             setName(event.target.value);
-            markUnsaved();
-            setError("");
           }}
           required
         />
@@ -74,8 +107,6 @@ export default function NewTestPage() {
           value={date}
           onChange={(event) => {
             setDate(event.target.value);
-            markUnsaved();
-            setError("");
           }}
           required
         />
@@ -89,8 +120,6 @@ export default function NewTestPage() {
           value={max}
           onChange={(event) => {
             setMax(event.target.value);
-            markUnsaved();
-            setError("");
           }}
           required
         />
@@ -104,8 +133,14 @@ export default function NewTestPage() {
             <span className={s.errorBannerText}>{error}</span>
           </p>
         )}
-        <div className={s.actions}>
-          <Button type="submit" size="lg">
+        <ActionFooter className={s.actions}>
+          <Button
+            type="submit"
+            size="lg"
+            loading={action.saving}
+            done={action.justSaved}
+            disabled={!action.canSave}
+          >
             Tạo bài và nhập điểm
           </Button>
           <Button
@@ -117,8 +152,29 @@ export default function NewTestPage() {
           >
             Huỷ
           </Button>
-        </div>
+        </ActionFooter>
       </form>
+      <UnsavedChangesDialog
+        open={guard.blocked}
+        title="Chưa tạo bài kiểm tra"
+        message="Bạn đang nhập dở. Tạo bài trước khi rời màn này?"
+        saving={action.saving}
+        done={leave.done}
+        onSave={() =>
+          leave.run(action.submit, () => {
+            setDone(created.current);
+            guard.proceed();
+          })
+        }
+        onDiscard={() => {
+          leave.cancel();
+          guard.proceed();
+        }}
+        onStay={() => {
+          leave.cancel();
+          guard.stay();
+        }}
+      />
     </section>
   );
 }

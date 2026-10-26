@@ -1,22 +1,29 @@
-import { getChildMonthlyReport } from "../../data/repositories/guardian";
-import { Button, Card, PageHeader } from "../../shared/ui";
+import { Link, useParams } from "react-router-dom";
+import { formatScore } from "../../data/scoreFormat";
+import { getChildReport, listChildReports } from "../../data/repositories/guardian";
+import { Button, Card, EmptyState, PageHeader } from "../../shared/ui";
+import { motionClass } from "../../shared/motion";
 import { useGuardianContext } from "./guardianContext";
-import {
-  defaultChildMonth,
-  publishedReportMonths,
-} from "./guardianRead";
-import { longDayMonth, monthLabel } from "./guardianFormat";
-import { ChildEmpty, StarRow } from "./guardianUi";
+import { longDayMonth } from "./guardianFormat";
+import GuardianIcon from "./GuardianIcon";
+import { ChildEmpty, GuardianPill, StarRow } from "./guardianUi";
+import GuardianNoChild from "./guardianEmpty";
 import g from "./guardian.module.css";
 
 const REPUBLISH_NOTICE = "Điểm có cập nhật, cần phát hành lại";
 
+/** "12/10" từ thời điểm phát hành ISO. */
+const publishedDay = (iso: string | null) =>
+  iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "";
+
 /**
- * PH · Báo cáo tháng (ảnh 10): chuyên cần, điểm từng bài, nhận xét theo sao và
- * bảng BTVN theo phần. Chỉ hiện khi giáo viên ĐÃ phát hành; phát hành lại khi
+ * PH · Báo cáo (ảnh 10): `/ph/bao-cao` liệt kê các báo cáo ĐÃ phát hành của con
+ * theo khoảng buổi; `/ph/bao-cao/:reportId` mở bản đã phát hành với chuyên cần,
+ * điểm từng bài, nhận xét theo sao và bảng BTVN theo phần. Phát hành lại khi
  * điểm có cập nhật thì hiện cờ nhắc.
  */
 export default function GuardianReportPage() {
+  const { reportId } = useParams();
   const { child, error } = useGuardianContext();
   if (error) {
     return (
@@ -26,20 +33,77 @@ export default function GuardianReportPage() {
     );
   }
   if (!child) {
-    return (
-      <ChildEmpty title="Chưa có con nào được liên kết">
-        <p>Liên hệ giáo viên nếu bạn cần xem dữ liệu của con.</p>
-      </ChildEmpty>
-    );
+    return <GuardianNoChild />;
   }
-  const studentId = child.student.id;
-  const published = publishedReportMonths(studentId);
-  const month = published[0] ?? defaultChildMonth(studentId);
+  return reportId ? (
+    <ReportDetail studentId={child.student.id} childName={child.student.name} reportId={reportId} />
+  ) : (
+    <ReportList studentId={child.student.id} childName={child.student.name} />
+  );
+}
 
-  let report: ReturnType<typeof getChildMonthlyReport> = null;
+function ReportList({ studentId, childName }: { studentId: string; childName: string }) {
+  let reports: ReturnType<typeof listChildReports> = [];
   let loadError = "";
   try {
-    report = getChildMonthlyReport(studentId, month);
+    reports = listChildReports(studentId);
+  } catch (cause) {
+    loadError =
+      cause instanceof Error ? cause.message : "Không đọc được báo cáo của con.";
+  }
+  return (
+    <main className={g.page}>
+      <PageHeader backTo="/ph" eyebrow={childName} title="Báo cáo" />
+      {loadError ? (
+        <p className={g.error} role="alert">
+          {loadError}
+        </p>
+      ) : reports.length === 0 ? (
+        <ChildEmpty title="Cô chưa phát hành báo cáo nào">
+          <p>Báo cáo hiện ở đây sau khi cô phát hành cho phụ huynh.</p>
+        </ChildEmpty>
+      ) : (
+        <ul className={g.rowList}>
+          {reports.map(({ report, range, needsRepublish }) => (
+            <li key={report.id}>
+              <Link
+                to={`/ph/bao-cao/${report.id}`}
+                className={`${g.sessionRow} ${motionClass.pressable}`}
+              >
+                <span className={g.rowMain}>
+                  <span className={g.rowTitle}>{range.label}</span>
+                  <span className={g.sessionMeta}>
+                    <span className={g.hint}>
+                      Phát hành {publishedDay(report.publishedAt)}
+                    </span>
+                    {needsRepublish && (
+                      <GuardianPill tone="primary">Cập nhật</GuardianPill>
+                    )}
+                  </span>
+                </span>
+                <GuardianIcon name="chevron-right" size={18} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
+  );
+}
+
+function ReportDetail({
+  studentId,
+  childName,
+  reportId,
+}: {
+  studentId: string;
+  childName: string;
+  reportId: string;
+}) {
+  let report: ReturnType<typeof getChildReport> = null;
+  let loadError = "";
+  try {
+    report = getChildReport(studentId, reportId);
   } catch (cause) {
     loadError =
       cause instanceof Error ? cause.message : "Không đọc được báo cáo của con.";
@@ -48,7 +112,7 @@ export default function GuardianReportPage() {
   if (loadError) {
     return (
       <main className={g.page}>
-        <PageHeader eyebrow={child.student.name} title="Báo cáo" />
+        <PageHeader backTo="/ph/bao-cao" eyebrow={childName} title="Báo cáo" />
         <p className={g.error} role="alert">
           {loadError}
         </p>
@@ -59,11 +123,8 @@ export default function GuardianReportPage() {
   if (!report) {
     return (
       <main className={g.page}>
-        <PageHeader
-          eyebrow={child.student.name}
-          title={`Báo cáo tháng ${Number(month.slice(5, 7))}`}
-        />
-        <ChildEmpty title="Cô chưa phát hành báo cáo tháng này">
+        <PageHeader backTo="/ph/bao-cao" eyebrow={childName} title="Báo cáo" />
+        <ChildEmpty title="Chưa có báo cáo này">
           <p>Báo cáo hiện ở đây sau khi cô phát hành cho phụ huynh.</p>
         </ChildEmpty>
       </main>
@@ -71,24 +132,17 @@ export default function GuardianReportPage() {
   }
 
   const body = report.body;
+  const { range } = report;
   const starMax = Math.max(1, body.stars.byStars[3], body.stars.byStars[2], body.stars.byStars[1]);
 
   return (
     <main className={g.page}>
       <PageHeader
-        eyebrow={child.student.name}
-        title={`Báo cáo tháng ${Number(month.slice(5, 7))}`}
+        backTo="/ph/bao-cao"
+        eyebrow={childName}
+        title={`Báo cáo ${range.sessionsLabel}`}
+        overlay={<p className={g.muted}>{range.datesLabel}</p>}
       />
-
-      <div className={g.segmented} role="group" aria-label="Kỳ báo cáo">
-        <button type="button" className={g.segment + " " + g.segmentOn} aria-pressed="true">
-          {monthLabel(month)}
-        </button>
-        {/* Báo cáo 3 tháng thuộc mục "Làm sau" của spec 8 nên chưa mở. */}
-        <button type="button" className={g.segment} disabled aria-pressed="false">
-          3 tháng gần nhất
-        </button>
-      </div>
 
       {report.needsRepublish && (
         <p className={g.warning} role="status">
@@ -146,9 +200,7 @@ export default function GuardianReportPage() {
           Tốt = Hoàn thành tốt · Chưa = Chưa hoàn thành
         </p>
         {body.homework.length === 0 ? (
-          <p className={g.muted}>
-            Chưa có kết quả bài tập đã gửi trong tháng này.
-          </p>
+          <EmptyState size="compact" title="Chưa có kết quả bài tập đã gửi trong đợt này" />
         ) : (
           <table className={g.table}>
             <thead>
@@ -181,7 +233,7 @@ export default function GuardianReportPage() {
           <h2>Điểm từng bài</h2>
         </div>
         {body.tests.length === 0 ? (
-          <p className={g.muted}>Không có bài kiểm tra trong tháng này.</p>
+          <EmptyState size="compact" title="Không có bài kiểm tra trong đợt này" />
         ) : (
           <ul className={g.scoreList}>
             {body.tests.map(({ test, score }) => (
@@ -194,7 +246,7 @@ export default function GuardianReportPage() {
                 </span>
                 <b className={g.scoreValue}>
                   {score && score.value !== null
-                    ? `${score.value.toFixed(1)}/${test.max}`
+                    ? `${formatScore(score.value)}/${test.max}`
                     : "Chưa có điểm"}
                 </b>
               </li>

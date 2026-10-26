@@ -1,0 +1,515 @@
+--- r2/plans/20261021-mvp/backend/api-spec.md
++++ r3/plans/20261021-mvp/backend/api-spec.md
+@@ -393,10 +393,11 @@
+ 
+ ### Mở rộng inbox và trần fanout
+ 
+-- Cron mở rộng inbox theo hai pha. **Freeze:** claim inbox bằng UPDATE có điều kiện đặt `expansion_started_at` đúng một lần (lease 60 giây) ⇒ nhóm điểm đóng; lần nhập điểm tiếp theo tạo nhóm mới, không kéo `ready_at`/`cursor` của job đang chạy.
+-- **Fanout có trần cứng:** tối đa **5 inbox** và tổng **20 đăng ký thiết bị** được xét trong một invocation (kể cả đăng ký bị bỏ qua); keyset paging `ORDER BY device_tokens.id LIMIT n` với `delivery_cursor` lưu ở D1, không nạp hết token của một inbox vào RAM rồi cắt. Chỉ đặt `deliveries_expanded_at` khi đã xét hết đăng ký đủ điều kiện; hết ngân sách thì cron sau tiếp tục từ cursor.
+-- Đăng ký đủ điều kiện khi fanout: membership khớp inbox, `bound_at <= notifications.created_at` (chuyển chủ sau sự kiện không nhận push lịch sử; làm mới cùng binding vẫn đủ điều kiện), phiên chưa thu hồi/hết hạn và `auth_sessions.membership_id` = membership của token, còn quyền nhóm và liên kết con.
+-- Trước mỗi lần gửi, sender đối chiếu lại: phiên còn hiệu lực, `auth_sessions.user_id`/`membership_id` **khớp** `device_tokens.user_id`/`membership_id`, cộng quyền con/nhóm, bài chưa lưu trữ, phiếu/báo cáo đã gửi, `registration_version` đúng bản đã chụp; lệch ⇒ `skipped`, không gọi FCM.
++- Cron mở rộng inbox theo hai pha. **Freeze bằng CAS, đúng một lần:** caller đọc candidate kèm `event_version`/`ready_at`, rồi (a) *initial* `UPDATE … SET expansion_started_at = :now, expansion_lease_id/until WHERE id = :id AND deliveries_expanded_at IS NULL AND expansion_started_at IS NULL AND ready_at <= :now AND event_version = :event_version_vừa_đọc RETURNING id` — 0 dòng (score commit chen giữa dời `ready_at`/tăng version, hoặc job khác đã freeze) ⇒ bỏ qua, không freeze; (b) *reclaim* chỉ khi `expansion_started_at IS NOT NULL` và lease hết, cập nhật lease nhưng **không** ghi `expansion_started_at` (mốc freeze giữ lần đầu) và vẫn đòi `ready_at <= :now`. Nhóm điểm đóng từ lúc freeze; nhập điểm tiếp theo tạo nhóm mới.
++- **Fanout có trần cứng, phân trang trước lọc sau:** trang lấy **toàn bộ** đăng ký của `workspace_id + membership_id + id > :cursor` theo `ORDER BY device_tokens.id LIMIT :ngân_sách_còn_lại`; cờ đủ điều kiện tính trong projection bằng `CASE`/`LEFT JOIN`, **không** đặt predicate vào `WHERE` trước `LIMIT`. Mọi dòng lấy được tính vào trần **20** (kể cả bị skip); cursor tiến theo dòng cuối đã xét dù cả trang bị skip; trang đầy ⇒ chưa xong; chỉ đặt `deliveries_expanded_at` khi trang trả 0 hoặc < `LIMIT` (đã cạn đăng ký). Tối đa **5 inbox**/invocation; không nạp hết token của một inbox vào RAM.
++- **Ghi của job buộc vào lease:** xác nhận `expansion_lease_id` trước khi dùng dòng; delivery chèn bằng `INSERT … SELECT … WHERE EXISTS (… id = :nid AND expansion_lease_id = :lease)`; cursor và đánh dấu xong chỉ cập nhật `WHERE expansion_lease_id = :lease` (đánh dấu xong thêm `AND delivery_cursor = :cursor_mới`), cùng một batch — owner cũ sau takeover không mutate được gì.
++- Đăng ký đủ điều kiện khi fanout (đánh giá trong projection): membership khớp inbox, `bound_at <= notifications.created_at` (chuyển chủ sau sự kiện không nhận push lịch sử; làm mới cùng binding vẫn đủ điều kiện), phiên chưa thu hồi/hết hạn và `auth_sessions.membership_id` = membership của token, user/membership còn hoạt động, còn quyền nhóm và liên kết con.
++- Trước **mỗi lần gửi**, sender đối chiếu lại: `users.status = 'active'` **và** `memberships.status = 'active'` tại thời điểm gửi, phiên còn hiệu lực, `auth_sessions.user_id`/`membership_id` **khớp** `device_tokens.user_id`/`membership_id`, `registration_version` đúng bản đã chụp, cộng quyền con/nhóm hiện hành, bài chưa lưu trữ, phiếu/báo cáo đã gửi; lệch ⇒ `skipped`, không gọi FCM. Membership bị vô hiệu **sau fanout** vẫn bị chặn ở bước này.
+ - Số 5 inbox / 20 đăng ký / 5 deliveries / 2 kết nối là ngân sách đề xuất, **chưa đo** (`stack-and-cpu.md` mục 9).
+ 
+ ### Sự kiện
+--- r2/plans/20261021-mvp/backend/authz-matrix.md
++++ r3/plans/20261021-mvp/backend/authz-matrix.md
+@@ -122,7 +122,7 @@
+ 
+ ## 5. Ca kiểm FCM bổ sung (B2, chưa chạy vì chưa có backend)
+ 
+-F13–F17 là ca mới của vòng sửa r2 (C-01/R-01/R-02). Đến khi có mã, đây là **ca bắt buộc**, không phải bằng chứng runtime.
++F13–F19 là ca của các vòng sửa r2/r3 (C-01/R-01/R-02 rồi C2-01/R2-01/R2-02/R2-03). Đến khi có mã, đây là **ca bắt buộc**, không phải bằng chứng runtime.
+ 
+ | ID | Ca | Kỳ vọng |
+ |---|---|---|
+@@ -141,6 +141,8 @@
+ | F12 | `homework.assign` 4 phần, một phần sai hoặc trùng kind; retry command_id thành công | sai: cả lệnh rollback, không inbox; đúng: một inbox/em/phụ huynh, không 4 push; retry không trùng |
+ | F13 | `PUT /session/membership` khi thiết bị có token; cùng lúc có phiên thứ hai của user | batch ghi membership mới + xoá token/deliveries của đúng phiên hiện tại; token của phiên khác còn nguyên; client chỉ đổi identity sau 200; `GET /notifications` sau đó theo membership mới |
+ | F14 | Token bị dữ liệu lệch: `auth_sessions.membership_id` ≠ `device_tokens.membership_id` (giả lập ghi tay, bỏ qua batch F13) | sender `skipped`, không gọi FCM; delivery không bị coi là đã gửi |
+-| F15 | Fanout: 1 inbox có 25 đăng ký; 6 inbox cùng ready | mỗi invocation xét ≤20 đăng ký và ≤5 inbox; keyset cursor lưu D1; nhiều invocation không trùng PK, không sót; chỉ đặt `deliveries_expanded_at` ở invocation xét hết; inbox thứ 6 chờ lượt sau |
+-| F16 | Cron crash giữa fanout (đã ghi cursor, chưa xong); cron khác claim cùng inbox | lease 60 giây, chỉ chủ lease đẩy cursor; invocation sau tiếp tục từ cursor, không tạo delivery trùng |
++| F15 | Fanout: 1 inbox có 25 đăng ký trong đó 20 đầu không đủ điều kiện; 6 inbox cùng ready | mỗi invocation lấy ≤20 đăng ký **kể cả bị skip** và ≤5 inbox; trang đầy nhưng 0 delivery vẫn **chưa** xong; cursor đi qua dòng bị skip; invocation 2 xét 5 còn lại, gửi đúng không sót; chỉ đặt `deliveries_expanded_at` khi cạn đăng ký; inbox thứ 6 chờ lượt sau |
++| F16 | Cron crash giữa fanout (đã ghi cursor, lease hết); owner cũ chạy tiếp sau takeover | lease 60 giây; owner cũ nhận 0 dòng ở insert delivery/cursor/complete; owner mới tiếp tục từ cursor, kết thúc đúng một lần, không trùng PK, mốc freeze giữ lần đầu |
+ | F17 | Đổi tài khoản/role khi offline có token đang đăng ký | client giữ identity hiện tại, báo cần mạng; không xếp thao tác vào outbox; token cũ không nhận push của danh tính mới; push đã nhận trước ack không thu hồi từ xa (kỳ vọng ghi rõ, không coi là lỗi) |
++| F18 | Claim inbox khi score commit chen giữa đọc candidate và claim (dời `ready_at`/tăng `event_version`) | claim CAS theo `event_version` vừa đọc + `ready_at <= now` trả 0 dòng, `expansion_started_at` vẫn NULL; khi tới hạn + đúng version thì claim được |
++| F19 | Membership/user bị vô hiệu **sau** khi đã fanout | sender check ngay trước mỗi lần gửi trả false ⇒ `skipped`, không gọi FCM; trường hợp còn `active` vẫn gửi được |
+--- r2/plans/20261021-mvp/backend/check-fcm-ddl.py
++++ r3/plans/20261021-mvp/backend/check-fcm-ddl.py
+@@ -35,6 +35,7 @@
+     "plans/20261021-mvp/backend/firebase-setup-checklist.md",
+     "plans/20261021-mvp/backend/resume-verification.md",
+     "plans/20261021-mvp/backend/fcm-b2-fix-r1.md",
++    "plans/20261021-mvp/backend/fcm-b2-fix-r2.md",
+ ]
+ 
+ REQUIRED_TABLES = {
+@@ -201,6 +202,10 @@
+         "INSERT INTO guardian_student (workspace_id, user_id, student_id, created_at) VALUES (?,?,?,?)",
+         (WS, U_PARENT, STU, NOW),
+     )
++    cur.execute("INSERT INTO role_permissions (role_id, perm_group, level) VALUES (?,?,?)",
++                (ROLE_ADMIN, "comments_reports", "write"))
++    cur.execute("INSERT INTO role_permissions (role_id, perm_group, level) VALUES (?,?,?)",
++                (ROLE_GUARDIAN, "comments_reports", "read"))
+     con.commit()
+ 
+ 
+@@ -238,27 +243,74 @@
+ MEM_PARENT_OTHER = "mem_fake_parent_other"
+ SESS_PARENT_2 = "auth_fake_session_parent_2"
+ FANOUT_PAGE_SQL = """
+-SELECT d.id, d.registration_version
++SELECT d.id, d.registration_version,
++       CASE WHEN d.bound_at <= ? AND s.id IS NOT NULL AND s.revoked_at IS NULL
++                 AND s.expires_at > ? AND s.user_id = d.user_id
++                 AND s.membership_id = d.membership_id
++                 AND u.status = 'active' AND m.status = 'active'
++            THEN 1 ELSE 0 END AS eligible
+ FROM device_tokens d
+-JOIN auth_sessions s ON s.id = d.auth_session_id
+-JOIN memberships m ON m.id = d.membership_id
+-WHERE d.workspace_id = ? AND d.membership_id = ?
+-  AND d.bound_at <= ?
+-  AND d.id > ?
+-  AND s.revoked_at IS NULL AND s.expires_at > ?
+-  AND s.user_id = d.user_id AND s.membership_id = d.membership_id
+-  AND m.status = 'active'
++LEFT JOIN auth_sessions s ON s.id = d.auth_session_id
++LEFT JOIN users u ON u.id = d.user_id
++LEFT JOIN memberships m ON m.id = d.membership_id
++WHERE d.workspace_id = ? AND d.membership_id = ? AND d.id > ?
+ ORDER BY d.id
+ LIMIT ?
++"""
++CLAIM_INITIAL_SQL = """
++UPDATE notifications
++   SET expansion_started_at = ?, expansion_lease_id = ?, expansion_lease_until = ?
++ WHERE id = ? AND deliveries_expanded_at IS NULL AND expansion_started_at IS NULL
++   AND ready_at <= ? AND event_version = ?
++"""
++CLAIM_RECLAIM_SQL = """
++UPDATE notifications SET expansion_lease_id = ?, expansion_lease_until = ?
++ WHERE id = ? AND deliveries_expanded_at IS NULL AND expansion_started_at IS NOT NULL
++   AND (expansion_lease_until IS NULL OR expansion_lease_until < ?) AND ready_at <= ?
++"""
++GUARDED_DELIVERY_SQL = """
++INSERT INTO push_deliveries (notification_id, membership_id, device_id, registration_version,
++                             next_attempt_at)
++SELECT ?, ?, ?, ?, ?
++ WHERE EXISTS (SELECT 1 FROM notifications WHERE id = ? AND expansion_lease_id = ?)
++"""
++GUARDED_CURSOR_SQL = "UPDATE notifications SET delivery_cursor = ? WHERE id = ? AND expansion_lease_id = ?"
++GUARDED_COMPLETE_SQL = """
++UPDATE notifications SET deliveries_expanded_at = ?, expansion_lease_id = NULL,
++       expansion_lease_until = NULL
++ WHERE id = ? AND expansion_lease_id = ? AND delivery_cursor = ?
+ """
+ IDENTITY_OK_SQL = """
+ SELECT 1 FROM device_tokens d
+ JOIN auth_sessions s ON s.id = d.auth_session_id
++JOIN users u ON u.id = d.user_id
++JOIN memberships m ON m.id = d.membership_id
+ WHERE d.id = ? AND s.revoked_at IS NULL AND s.expires_at > ?
++  AND u.status = 'active' AND m.status = 'active'
+   AND s.user_id = d.user_id AND s.membership_id = d.membership_id
++"""
++SENDER_OK_SQL = """
++SELECT 1
++FROM push_deliveries pd
++JOIN notifications n ON n.id = pd.notification_id AND n.membership_id = pd.membership_id
++JOIN device_tokens d ON d.id = pd.device_id AND d.membership_id = pd.membership_id
++JOIN auth_sessions s ON s.id = d.auth_session_id
++JOIN users u ON u.id = d.user_id
++JOIN memberships m ON m.id = d.membership_id
++WHERE pd.notification_id = ? AND pd.device_id = ?
++  AND pd.registration_version = d.registration_version
++  AND u.status = 'active' AND m.status = 'active'
++  AND s.revoked_at IS NULL AND s.expires_at > ?
++  AND s.user_id = d.user_id AND s.membership_id = d.membership_id
++  AND EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = m.role_id
++              AND rp.perm_group = ? AND rp.level IN ('read','write'))
++  AND EXISTS (SELECT 1 FROM guardian_student gs
++              WHERE gs.user_id = u.id AND gs.student_id = n.student_id)
+ """
+ INBOX_LIMIT = 5
+ REG_BUDGET = 20
++LEASE_UNTIL_DEFAULT = "2026-10-21T03:16:00.000Z"
++NOW_LATER = "2026-10-21T03:17:00.000Z"   # cron ke tiep, sau khi lease 60s het han
+ 
+ 
+ def add_guardian(con, tag):
+@@ -288,42 +340,59 @@
+     return ids
+ 
+ 
++def claim_inbox(con, nid, now, lease, version, lease_until=LEASE_UNTIL_DEFAULT):
++    """Hai nhanh claim cua contract: 'initial' (CAS version+ready) hoac 'reclaim' (giu moc freeze)."""
++    if con.execute(CLAIM_INITIAL_SQL, (now, lease, lease_until, nid, now, version)).rowcount == 1:
++        return "initial"
++    if con.execute(CLAIM_RECLAIM_SQL, (lease, lease_until, nid, now, now)).rowcount == 1:
++        return "reclaim"
++    return None
++
++
++def fanout_page(con, mem, event_at, cursor, now, limit):
++    return con.execute(FANOUT_PAGE_SQL, (event_at, now, WS, mem, cursor, limit)).fetchall()
++
++
++def guarded_delivery(con, nid, mem, dev_id, version, now, lease):
++    return con.execute(GUARDED_DELIVERY_SQL, (nid, mem, dev_id, version, now, nid, lease)).rowcount
++
++
++def guarded_cursor(con, nid, cursor, lease):
++    return con.execute(GUARDED_CURSOR_SQL, (cursor, nid, lease)).rowcount
++
++
++def guarded_complete(con, nid, cursor, now, lease):
++    return con.execute(GUARDED_COMPLETE_SQL, (now, nid, lease, cursor)).rowcount
++
++
+ def fanout_invocation(con, now, lease="lease_fake_job_1"):
+-    """Mo phong cron: claim toi da 5 inbox, xet toi da 20 dang ky, keyset cursor."""
+-    rows = con.execute(
+-        "SELECT id, membership_id, created_at FROM notifications"
++    """Mo phong cron: claim <=5 inbox, phan trang truoc roi moi loc, tran 20 dang ky ke ca bi skip."""
++    cands = con.execute(
++        "SELECT id, membership_id, created_at, event_version FROM notifications"
+         " WHERE ready_at <= ? AND deliveries_expanded_at IS NULL"
+-        "   AND (expansion_lease_until IS NULL OR expansion_lease_until < ?)"
+-        " ORDER BY ready_at, id LIMIT ?", (now, now, INBOX_LIMIT)).fetchall()
++        " ORDER BY ready_at, id LIMIT ?", (now, INBOX_LIMIT)).fetchall()
+     considered, touched = 0, []
+-    for nid, mem, created_at in rows:
++    for nid, mem, created_at, version in cands:
+         if considered >= REG_BUDGET:
+             break
+-        if con.execute(
+-                "UPDATE notifications SET expansion_lease_id = ?, expansion_lease_until = ?"
+-                " WHERE id = ? AND deliveries_expanded_at IS NULL"
+-                "   AND (expansion_lease_until IS NULL OR expansion_lease_until < ?)",
+-                (lease, now, nid, now)).rowcount != 1:
++        if not claim_inbox(con, nid, now, lease, version):
+             continue
+-        con.execute("UPDATE notifications SET expansion_started_at = COALESCE(expansion_started_at, ?)"
+-                    " WHERE id = ? AND expansion_started_at IS NULL", (now, nid))
++        if con.execute("SELECT 1 FROM notifications WHERE id=? AND expansion_lease_id=?",
++                       (nid, lease)).fetchone() is None:
++            continue
+         cursor = con.execute("SELECT delivery_cursor FROM notifications WHERE id=?",
+                              (nid,)).fetchone()[0] or ""
+         limit = min(REG_BUDGET - considered, REG_BUDGET)
+-        page = con.execute(FANOUT_PAGE_SQL, (WS, mem, created_at, cursor, now, limit)).fetchall()
+-        for dev_id, version in page:
+-            con.execute("INSERT INTO push_deliveries (notification_id, membership_id, device_id,"
+-                        " registration_version, next_attempt_at) VALUES (?,?,?,?,?)",
+-                        (nid, mem, dev_id, version, now))
+-        considered += len(page)
+-        if page:
+-            cursor = page[-1][0]
+-        done = len(page) < limit
+-        con.execute(
+-            "UPDATE notifications SET delivery_cursor = ?, deliveries_expanded_at = ?,"
+-            " expansion_lease_id = NULL, expansion_lease_until = NULL"
+-            " WHERE id = ? AND expansion_lease_id = ?",
+-            (cursor, now if done else None, nid, lease))
++        page = fanout_page(con, mem, created_at, cursor, now, limit)
++        considered += len(page)          # moi dong lay duoc, ke ca dong bi skip
++        new_cursor = page[-1][0] if page else cursor
++        with con:
++            for dev_id, dev_version, eligible in page:
++                if eligible:
++                    guarded_delivery(con, nid, mem, dev_id, dev_version, now, lease)
++            guarded_cursor(con, nid, new_cursor, lease)
++            if len(page) < limit:
++                guarded_complete(con, nid, new_cursor, now, lease)
+         touched.append(nid)
+     con.commit()
+     return considered, touched
+@@ -407,12 +476,12 @@
+ 
+ 
+ def run_fanout_checks(con, checks):
+-    """Mo phong SQL hai pha: freeze + keyset fanout co tran; khong phai test API/FCM that."""
++    """Mo phong SQL tuan tu: claim CAS, phan trang truoc loc sau, tran 20/5, lease guard."""
+     con.execute("DELETE FROM notifications")
+     con.execute("DELETE FROM device_tokens")
+     con.commit()
+ 
+-    # A. 1 inbox / 25 dang ky: tran 20 moi invocation, cursor tiep tuc, khong trung PK
++    # A. 1 inbox / 25 dang ky du dieu kien: tran 20 moi invocation, cursor tiep tuc
+     _, mem_a, _ = add_guardian(con, 1)
+     seed_devices(con, mem_a, "usr_g1", "a", 25)
+     insert_notification(con, None, "slip_sent", "evt_fan_a", session=CS, mem=mem_a, user="usr_g1")
+@@ -426,7 +495,7 @@
+     checks.ok("fanout_chua_xong_thi_chua_danh_dau",
+               checks.one("SELECT deliveries_expanded_at IS NULL AND expansion_started_at IS NOT NULL"
+                          " FROM notifications WHERE id=?", (nid_a,))[0] == 1)
+-    considered2, _ = fanout_invocation(con, NOW, "lease_fake_a2")
++    considered2, _ = fanout_invocation(con, NOW_LATER, "lease_fake_a2")
+     got2 = checks.one("SELECT count(*) FROM push_deliveries WHERE notification_id=?", (nid_a,))[0]
+     checks.ok("fanout_invocation_sau_xet_not_dang_ky_con_lai", considered2 == 5 and got2 == 25,
+               f"xet={considered2} delivery={got2}")
+@@ -437,32 +506,149 @@
+               checks.one("SELECT deliveries_expanded_at IS NOT NULL"
+                          " FROM notifications WHERE id=?", (nid_a,))[0] == 1)
+ 
+-    # B. crash giua fanout: cursor da ghi, lease het han -> invocation sau tiep tuc, khong trung
+-    _, mem_c, _ = add_guardian(con, 2)
+-    seed_devices(con, mem_c, "usr_g2", "c", 25)
+-    insert_notification(con, None, "slip_sent", "evt_fan_crash", session=CS, mem=mem_c, user="usr_g2")
+-    con.commit()
+-    nid_c = checks.one("SELECT id FROM notifications WHERE event_key='evt_fan_crash'")[0]
+-    considered_c1, _ = fanout_invocation(con, NOW, "lease_fake_c1")
+-    con.execute("UPDATE notifications SET expansion_lease_id='lease_fake_dead',"
+-                " expansion_lease_until='2000-01-01T00:00:00.000Z' WHERE id=?", (nid_c,))
+-    con.commit()
+-    considered_c2, _ = fanout_invocation(con, NOW, "lease_fake_c2")
+-    checks.ok("fanout_crash_tiep_tuc_tu_cursor_khong_trung",
+-              considered_c1 == 20 and considered_c2 == 5
++    # B. C2-01: 25 dang ky, 20 dau KHONG du dieu kien -> van chiem ngan sach, cursor di qua,
++    #    trang day nhung 0 delivery thi chua duoc danh dau xong.
++    _, mem_b, _ = add_guardian(con, 2)
++    seed_devices(con, mem_b, "usr_g2", "b", 25)
++    for i in range(20):
++        con.execute("UPDATE auth_sessions SET revoked_at=? WHERE id=?", (NOW, f"sess_b{i:02d}"))
++    insert_notification(con, None, "slip_sent", "evt_fan_b", session=CS, mem=mem_b, user="usr_g2")
++    con.commit()
++    nid_b = checks.one("SELECT id FROM notifications WHERE event_key='evt_fan_b'")[0]
++
++    considered_b1, _ = fanout_invocation(con, NOW, "lease_fake_b1")
++    got_b1 = checks.one("SELECT count(*) FROM push_deliveries WHERE notification_id=?", (nid_b,))[0]
++    cursor_b1 = checks.one("SELECT delivery_cursor, deliveries_expanded_at IS NULL"
++                           " FROM notifications WHERE id=?", (nid_b,))
++    checks.ok("fanout_skip_van_chiem_ngan_sach_20", considered_b1 == 20 and got_b1 == 0,
++              f"xet={considered_b1} delivery={got_b1}")
++    checks.ok("fanout_cursor_di_qua_dong_bi_skip", cursor_b1[0] == "dev_b19", f"cursor={cursor_b1[0]}")
++    checks.ok("fanout_trang_day_toan_skip_khong_danh_dau_xong", cursor_b1[1] == 1)
++    considered_b2, _ = fanout_invocation(con, NOW_LATER, "lease_fake_b2")
++    delivered_b = [r[0] for r in con.execute(
++        "SELECT device_id FROM push_deliveries WHERE notification_id=? ORDER BY device_id", (nid_b,))]
++    checks.ok("fanout_luot_sau_xet_not_va_gui_dung_khong_sot",
++              considered_b2 == 5 and delivered_b == [f"dev_b{i:02d}" for i in range(20, 25)],
++              f"xet={considered_b2} delivery={delivered_b}")
++    checks.ok("fanout_b_khong_danh_dau_xong_som",
++              checks.one("SELECT deliveries_expanded_at IS NOT NULL FROM notifications WHERE id=?",
++                         (nid_b,))[0] == 1)
++
++    # C. R2-01: claim CAS theo event_version + ready_at<=now; score commit chen giua => 0 dong
++    uid_f, mem_f, sess_f = add_guardian(con, 11)
++    insert_device(con, "dev_f_only", "FAKE_TOKEN_F_ONLY", mem=mem_f, user=uid_f, session=sess_f)
++    group_f = f"{mem_f}:{STU}:{TEST}"
++    t_ready = "2026-10-21T03:20:00.000Z"
++    t_defer = "2026-10-21T03:25:00.000Z"
++    insert_notification(con, None, "score_updated", "evt_score_f", group_key=group_f, test=TEST,
++                        mem=mem_f, user=uid_f, ready_at=t_ready)
++    con.commit()
++    nid_f = checks.one("SELECT id FROM notifications WHERE event_key='evt_score_f'")[0]
++    version_f = checks.one("SELECT event_version FROM notifications WHERE id=?", (nid_f,))[0]
++    with con:
++        con.execute(
++            "INSERT INTO notifications (workspace_id, user_id, membership_id, kind, event_key,"
++            " student_id, test_id, created_at, ready_at, group_key, event_version)"
++            " VALUES (?,?,?,?,?,?,?,?,?,?,1)"
++            " ON CONFLICT(membership_id, group_key) WHERE group_key IS NOT NULL"
++            "   AND expansion_started_at IS NULL"
++            " DO UPDATE SET event_version = event_version + 1, ready_at = excluded.ready_at",
++            (WS, uid_f, mem_f, "score_updated", "evt_score_f2", STU, TEST, NOW, t_defer, group_f))
++    version_after = checks.one("SELECT event_version FROM notifications WHERE id=?", (nid_f,))[0]
++    checks.ok("score_chen_giua_tang_version_va_doi_han", version_after == version_f + 1,
++              f"truoc={version_f} sau={version_after}")
++    checks.ok("claim_cu_sau_khi_doi_han_tra_0_dong",
++              claim_inbox(con, nid_f, t_ready, "lease_fake_f1", version_f) is None
++              and checks.one("SELECT expansion_started_at IS NULL FROM notifications WHERE id=?",
++                             (nid_f,))[0] == 1)
++    checks.ok("claim_dung_version_nhung_chua_toi_han_cung_tra_0_dong",
++              claim_inbox(con, nid_f, t_ready, "lease_fake_f2", version_after) is None)
++    checks.ok("claim_khi_toi_han_va_dung_version_thanh_cong",
++              claim_inbox(con, nid_f, t_defer, "lease_fake_f3", version_after) == "initial"
++              and checks.one("SELECT expansion_started_at = ? FROM notifications WHERE id=?",
++                             (t_defer, nid_f))[0] == 1)
++    with con:
++        con.execute(
++            "INSERT INTO notifications (workspace_id, user_id, membership_id, kind, event_key,"
++            " student_id, test_id, created_at, ready_at, group_key, event_version)"
++            " VALUES (?,?,?,?,?,?,?,?,?,?,1)"
++            " ON CONFLICT(membership_id, group_key) WHERE group_key IS NOT NULL"
++            "   AND expansion_started_at IS NULL"
++            " DO UPDATE SET event_version = event_version + 1, ready_at = excluded.ready_at",
++            (WS, uid_f, mem_f, "score_updated", "evt_score_f3", STU, TEST, NOW,
++             "2026-10-21T03:35:00.000Z", group_f))
++    checks.ok("nhap_diem_sau_freeze_khong_dong_toi_dong_frozen",
++              checks.one("SELECT event_version, ready_at FROM notifications WHERE id=?",
++                         (nid_f,)) == (version_after, t_defer)
++              and checks.one("SELECT count(*) FROM notifications WHERE event_key='evt_score_f3'")[0] == 1)
++    # dep fixture cua ca CAS (ready_at tuong lai) de cac ca sau dem pending sach
++    con.execute("DELETE FROM notifications WHERE event_key IN ('evt_score_f','evt_score_f3')")
++    con.commit()
++
++    # D. R2-03: takeover giu moc freeze; owner cu khong ghi duoc gi; chong trung PK
++    _, mem_c, _ = add_guardian(con, 3)
++    seed_devices(con, mem_c, "usr_g3", "c", 25)
++    insert_notification(con, None, "slip_sent", "evt_fan_c", session=CS, mem=mem_c, user="usr_g3")
++    con.commit()
++    nid_c = checks.one("SELECT id FROM notifications WHERE event_key='evt_fan_c'")[0]
++    v_c = checks.one("SELECT event_version FROM notifications WHERE id=?", (nid_c,))[0]
++    checks.ok("claim_lan_dau_la_initial", claim_inbox(con, nid_c, NOW, "lease_old", v_c) == "initial")
++    freeze_at = checks.one("SELECT expansion_started_at FROM notifications WHERE id=?", (nid_c,))[0]
++    page_c = fanout_page(con, mem_c, NOW, "", NOW, 20)
++    for dev_id, dev_version, eligible in page_c:
++        if eligible:
++            guarded_delivery(con, nid_c, mem_c, dev_id, dev_version, NOW, "lease_old")
++    guarded_cursor(con, nid_c, page_c[-1][0], "lease_old")
++    con.commit()  # "crash": khong complete, lease het han
++    con.execute("UPDATE notifications SET expansion_lease_until='2000-01-01T00:00:00.000Z'"
++                " WHERE id=?", (nid_c,))
++    con.commit()
++    t2 = "2026-10-21T03:40:00.000Z"
++    checks.ok("takeover_la_reclaim", claim_inbox(con, nid_c, t2, "lease_new", v_c) == "reclaim")
++    checks.ok("takeover_giu_nguyen_moc_freeze",
++              checks.one("SELECT expansion_started_at FROM notifications WHERE id=?", (nid_c,))[0] == freeze_at)
++    stale_writes = (
++        guarded_delivery(con, nid_c, mem_c, "dev_c24", 1, t2, "lease_old"),
++        guarded_cursor(con, nid_c, "dev_c24", "lease_old"),
++        guarded_complete(con, nid_c, "dev_c24", t2, "lease_old"),
++    )
++    checks.ok("owner_cu_sau_takeover_khong_ghi_duoc", stale_writes == (0, 0, 0), f"rows={stale_writes}")
++    page_c2 = fanout_page(con, mem_c, NOW, "dev_c19", t2, 20)
++    with con:
++        for dev_id, dev_version, eligible in page_c2:
++            if eligible:
++                guarded_delivery(con, nid_c, mem_c, dev_id, dev_version, t2, "lease_new")
++        guarded_cursor(con, nid_c, page_c2[-1][0], "lease_new")
++        checks.ok("complete_chi_khi_dung_lease_va_cursor",
++                  guarded_complete(con, nid_c, "dev_c99", t2, "lease_new") == 0)
++        guarded_complete(con, nid_c, page_c2[-1][0], t2, "lease_new")
++    checks.ok("takeover_hoan_tat_dung_mot_lan_khong_trung_pk",
++              checks.one("SELECT count(*) FROM push_deliveries WHERE notification_id=?", (nid_c,))[0] == 25
+               and checks.one("SELECT count(DISTINCT device_id) FROM push_deliveries"
+                              " WHERE notification_id=?", (nid_c,))[0] == 25
+-              and checks.one("SELECT count(*) FROM push_deliveries"
+-                             " WHERE notification_id=?", (nid_c,))[0] == 25,
+-              f"xet1={considered_c1} xet2={considered_c2}")
+-
+-    # C. nhieu inbox: tran 5 inbox moi invocation, inbox thu 6 cho luot sau
+-    inboxes = []
+-    for tag in range(3, 9):
++              and checks.one("SELECT deliveries_expanded_at IS NOT NULL FROM notifications"
++                             " WHERE id=?", (nid_c,))[0] == 1)
++
++    # D2. reclaim khong duoc dung cho dong chua freeze hoac chua toi han
++    insert_notification(con, None, "slip_sent", "evt_fan_unfrozen", session=CS,
++                        mem=mem_c, user="usr_g3", ready_at=NOW)
++    con.commit()
++    nid_u = checks.one("SELECT id FROM notifications WHERE event_key='evt_fan_unfrozen'")[0]
++    checks.ok("reclaim_tu_choi_dong_chua_freeze",
++              claim_inbox(con, nid_u, NOW, "lease_fake_u", 1) == "initial")
++    con.execute("UPDATE notifications SET expansion_started_at=? , ready_at='2026-10-21T09:00:00.000Z'"
++                " WHERE id=?", (NOW, nid_u))
++    con.commit()
++    checks.ok("reclaim_tu_choi_dong_chua_toi_han",
++              claim_inbox(con, nid_u, NOW, "lease_fake_u2", 1) is None)
++    con.execute("DELETE FROM notifications WHERE id=?", (nid_u,))
++    con.commit()
++
++    # E. nhieu inbox: tran 5 inbox moi invocation
++    for tag in range(4, 10):
+         uid, mem, _ = add_guardian(con, tag)
+         seed_devices(con, mem, uid, f"d{tag}", 1)
+         insert_notification(con, None, "slip_sent", f"evt_fan_many_{tag}", session=CS, mem=mem, user=uid)
+-        inboxes.append(f"evt_fan_many_{tag}")
+     con.commit()
+     considered3, touched3 = fanout_invocation(con, NOW, "lease_fake_m1")
+     pending_left = checks.one(
+@@ -470,13 +656,13 @@
+     checks.ok("fanout_tran_5_inbox_moi_invocation",
+               len(touched3) == 5 and pending_left == 1 and considered3 == 5,
+               f"inbox={len(touched3)} con_lai={pending_left} xet={considered3}")
+-    _, touched4 = fanout_invocation(con, NOW, "lease_fake_m2")
++    _, touched4 = fanout_invocation(con, NOW_LATER, "lease_fake_m2")
+     checks.ok("fanout_inbox_con_lai_duoc_xu_ly_luot_sau",
+               len(touched4) == 1 and checks.one(
+                   "SELECT count(*) FROM notifications WHERE deliveries_expanded_at IS NULL")[0] == 0)
+ 
+-    # D. dieu kien dang ky: bound_at, phien thu hoi, lech danh tinh, refresh cung binding
+-    uid_e, mem_e, sess_e = add_guardian(con, 9)
++    # F. dieu kien dang ky: 5 rows / 2 eligible => budget = 5 (khong phai 2)
++    uid_e, mem_e, sess_e = add_guardian(con, 10)
+     insert_device(con, "dev_e_a_norm", "FAKE_TOKEN_E_NORM", mem=mem_e, user=uid_e, session=sess_e)
+     insert_device(con, "dev_e_b_refresh", "FAKE_TOKEN_E_REFRESH", mem=mem_e, user=uid_e,
+                   session=sess_e, bound_at=NOW, updated_at="2026-10-21T04:30:00.000Z")
+@@ -495,11 +681,38 @@
+     considered5, _ = fanout_invocation(con, NOW, "lease_fake_e1")
+     delivered = [r[0] for r in con.execute(
+         "SELECT device_id FROM push_deliveries WHERE notification_id=? ORDER BY device_id", (nid_e,))]
++    checks.ok("fanout_ngan_sach_tinh_ca_dong_bi_skip", considered5 == 5,
++              f"xet={considered5} (neu chi dem eligible thi = 2)")
+     checks.ok("fanout_bo_qua_thiet_bi_khong_du_dieu_kien",
+-              considered5 == 2 and delivered == ["dev_e_a_norm", "dev_e_b_refresh"],
+-              f"xet={considered5} delivery={delivered}")
++              delivered == ["dev_e_a_norm", "dev_e_b_refresh"], f"delivery={delivered}")
+     checks.ok("fanout_khong_gui_push_lich_su_cho_thiet_bi_chuyen_chu",
+               "dev_e_c_transfer" not in delivered)
++
++    # G. R2-02: disable membership/user SAU fanout => sender check false, khong goi FCM
++    uid_h, mem_h, sess_h = add_guardian(con, 12)
++    insert_device(con, "dev_h_only", "FAKE_TOKEN_H_ONLY", mem=mem_h, user=uid_h, session=sess_h)
++    insert_notification(con, None, "slip_sent", "evt_fan_h", session=CS, mem=mem_h, user=uid_h)
++    con.commit()
++    nid_h = checks.one("SELECT id FROM notifications WHERE event_key='evt_fan_h'")[0]
++    fanout_invocation(con, NOW, "lease_fake_h1")
++    sender_ok = lambda: con.execute(SENDER_OK_SQL, (nid_h, "dev_h_only", NOW, "comments_reports")).fetchone() is not None
++    checks.ok("sender_hop_le_khi_user_va_membership_active", sender_ok())
++    con.execute("UPDATE memberships SET status='disabled' WHERE id=?", (mem_h,))
++    con.commit()
++    checks.ok("sender_skip_khi_membership_bi_vo_hieu_sau_fanout", not sender_ok())
++    con.execute("UPDATE memberships SET status='active' WHERE id=?", (mem_h,))
++    con.execute("UPDATE users SET status='disabled' WHERE id=?", (uid_h,))
++    con.commit()
++    checks.ok("sender_skip_khi_user_bi_vo_hieu", not sender_ok())
++    con.execute("UPDATE users SET status='active' WHERE id=?", (uid_h,))
++    con.execute("UPDATE role_permissions SET level='none' WHERE role_id=? AND perm_group='comments_reports'",
++                (ROLE_GUARDIAN,))
++    con.commit()
++    checks.ok("sender_skip_khi_mat_quyen_nhom", not sender_ok())
++    con.execute("UPDATE role_permissions SET level='read' WHERE role_id=? AND perm_group='comments_reports'",
++                (ROLE_GUARDIAN,))
++    con.commit()
++    checks.ok("sender_hop_le_lai_sau_khi_phuc_hoi_quyen", sender_ok())
+ 
+ 
+ def run_checks(con, checks):
+--- r2/plans/20261021-mvp/backend/data-model.md
++++ r3/plans/20261021-mvp/backend/data-model.md
+@@ -527,9 +527,13 @@
+ - Tầng `db` kiểm `auth_session_id` thuộc user đăng nhập, membership thuộc user và đang hoạt động. **Hai loại ghi khác nhau:** (a) *làm mới cùng binding* (cùng `user_id` + `membership_id` + `auth_session_id`) chỉ cập nhật `updated_at`/`token`; **không** tăng `registration_version`, **không** đổi `bound_at`, không xoá deliveries ⇒ thiết bị không mất quyền nhận job đang chạy; (b) *đổi binding* (chuyển chủ, đổi membership, phiên khác) bump `registration_version`, đặt `bound_at = now`, xoá deliveries cũ, tất cả trong cùng batch (không chỉ đổi FK gây lỗi); thiết bị cũ không được xoá bản đăng ký mới. Đổi token do SDK: client gỡ device cũ rồi đăng ký token mới (binding mới). Đăng xuất/thu hồi phiên gỡ các device token gắn với phiên đó, cascade deliveries; không xoá thiết bị thuộc phiên khác.
+ - **Đổi danh tính cần mạng + xác nhận máy chủ trước khi client đổi UI/cache** (sửa C-01/R-01): `PUT /session/membership` ghi `auth_sessions.membership_id` mới **và** `DELETE device_tokens WHERE auth_session_id = <phiên hiện tại>` (cascade deliveries) trong **cùng batch**, trả 200 sau khi batch xong; `POST /auth/logout` làm tương tự rồi thu hồi phiên, trả 204. Thiết bị/phiên khác của cùng user không bị gỡ. Client chỉ đổi danh tính sau khi nhận 200/204, rồi đăng ký lại token theo membership mới; chưa có quyền push không cản dùng app. Đổi tài khoản: thu hồi phiên/đăng ký cũ xong mới kích hoạt tài khoản mới. Không đưa thao tác này vào outbox nghiệp vụ; offline thì giữ identity hiện tại và báo cần mạng.
+ - Inbox tạo cùng batch với thay đổi nghiệp vụ, mỗi học sinh gửi tới membership phụ huynh được liên kết và có quyền đọc nhóm tương ứng. `event_key`: phiếu theo em/buổi; báo cáo theo publication; BTVN theo lệnh lưu tạo/giao; điểm theo lệnh thay đổi giá trị. Retry/noop không tạo sự kiện mới. Sửa phiếu/kết quả chấm sau gửi không tạo thông báo riêng. Gộp đã chốt: điểm có group_key theo membership + em + bài, UPSERT nhóm chưa mở rộng, tăng event_version và đặt ready_at = thời gian server commit mới nhất + 5 phút; giữ cùng inbox, retry/noop không đẩy hạn. Khi cron mở rộng nhóm chỉ thực hiện nếu ready_at đã tới và event_version vẫn đúng bản vừa đọc; đổi hạn giữa chừng thì claim thất bại, chờ lần sau. Sau mở rộng, lần nhập tiếp tạo nhóm mới. BTVN dùng command_id của `homework.assign` cho cả 1..4 phần trong một lần giao, ready_at = thời gian commit; chỉnh tiêu đề/mô tả phần đã giao không tạo sự kiện mới.
+-- **Mở rộng inbox hai pha, có trần cứng** (sửa R-02). Pha 1 — *freeze*: cron claim inbox (`ready_at <= now`) bằng `UPDATE … SET expansion_started_at = :now, expansion_lease_id = :lease, expansion_lease_until = :now+60s WHERE id = :id AND deliveries_expanded_at IS NULL AND (expansion_lease_until IS NULL OR expansion_lease_until < :now) RETURNING …`. Đặt `expansion_started_at` **đúng một lần**: từ đó nhóm điểm đóng, lần nhập điểm mới UPSERT vào nhóm khác (chỉ mục `notifications_open_group` loại dòng đã freeze) nên không kéo `ready_at`/`cursor`/`event_version` của job đang chạy. Pha 2 — *fanout*: keyset paging `ORDER BY device_tokens.id LIMIT n` với `delivery_cursor` lưu trong D1; mỗi invocation xét **tối đa 5 inbox và tổng 20 đăng ký thiết bị** (kể cả đăng ký bị bỏ qua), `INSERT OR IGNORE` deliveries, cập nhật `delivery_cursor` trong cùng batch; không nạp toàn bộ token của một inbox vào RAM rồi mới cắt. Chỉ đặt `deliveries_expanded_at` khi trang cuối đã xét hết đăng ký đủ điều kiện (và xoá lease); hết ngân sách giữa chừng thì để cron sau tiếp tục từ `delivery_cursor`. Chỉ chủ `expansion_lease_id` được đẩy cursor/đánh dấu xong.
+-- **Điều kiện đăng ký đủ điều kiện khi fanout** (chốt mốc theo binding hiện hành): `device_tokens.membership_id = notifications.membership_id`, `bound_at <= notifications.created_at` (chuyển chủ sau sự kiện không nhận push lịch sử; làm mới cùng binding không đổi `bound_at` nên không mất quyền), phiên `auth_sessions` của token chưa thu hồi, chưa hết hạn và có `membership_id = device_tokens.membership_id`, `user_id` khớp, membership/user còn hoạt động, cùng quyền nhóm và liên kết con. Không có đăng ký đủ điều kiện thì chỉ giữ inbox, không phát lại push cũ khi đăng ký mới. Mỗi delivery theo từng thiết bị, không dùng một cờ `pushed_at` chung để bỏ sót thiết bị khác.
+-- Trước mỗi lần gửi phải **đối chiếu danh tính**, không chỉ kiểm hai object đều `active` (sửa R-01): `auth_sessions` của token chưa thu hồi/chưa hết hạn, và `auth_sessions.user_id`/`auth_sessions.membership_id` **khớp chính** `device_tokens.user_id`/`device_tokens.membership_id`; lệch ⇒ `skipped`, không gọi FCM. Sau đó mới kiểm liên kết con và quyền nhóm, bài kiểm tra chưa lưu trữ, phiếu/báo cáo đã gửi, `device_tokens.registration_version` = bản đã chụp trong delivery; sai thì `skipped`. Token chuyển chủ không mang theo delivery cũ. **Giới hạn không thể hứa:** thông báo đã được FCM/OS nhận và hiển thị trước khi máy chủ ack việc thu hồi thì không thu hồi từ xa được; client xoá notification cũ khi đổi danh tính và không dùng payload làm quyền truy cập (payload chỉ có loại + ID). FCM `UNREGISTERED`: xoá đúng device/version đã gửi; `INVALID_ARGUMENT`: chỉ xoá nếu error detail FCM xác nhận registration token sai và payload đã hợp lệ, không xoá hàng loạt vì payload lỗi.
++- **Freeze inbox bằng CAS, đúng một lần** (sửa R2-01/R2-03). Caller đọc candidate (trang inbox `ready_at <= :now AND deliveries_expanded_at IS NULL ORDER BY ready_at, id LIMIT 5`) kèm `event_version` và `ready_at` vừa đọc, rồi claim theo đúng nhánh:
++  - *Initial* (chưa freeze): `UPDATE notifications SET expansion_started_at = :now, expansion_lease_id = :lease, expansion_lease_until = :now+60s WHERE id = :id AND deliveries_expanded_at IS NULL AND expansion_started_at IS NULL AND ready_at <= :now AND event_version = :event_version_read RETURNING id`. Trả **0 dòng** khi có score commit chen giữa (dời `ready_at`/tăng `event_version`) hoặc job khác đã freeze ⇒ bỏ qua, **không** freeze, chờ lần sau.
++  - *Reclaim* (đã freeze, lease hết): `UPDATE notifications SET expansion_lease_id = :lease, expansion_lease_until = :now+60s WHERE id = :id AND deliveries_expanded_at IS NULL AND expansion_started_at IS NOT NULL AND (expansion_lease_until IS NULL OR expansion_lease_until < :now) AND ready_at <= :now RETURNING expansion_started_at, delivery_cursor`. Nhánh này **không** ghi `expansion_started_at` — mốc freeze giữ nguyên lần đầu — và chỉ áp cho dòng đã frozen; dòng chưa tới `ready_at` không lọt qua được nhánh reclaim.
++- **Fanout: phân trang trước, lọc điều kiện sau** (sửa C2-01). Trang lấy **toàn bộ** đăng ký của đúng `workspace_id + membership_id + id > :cursor`, `ORDER BY device_tokens.id LIMIT :ngân_sách_còn_lại` (chỉ mục `device_tokens_member`); cờ `eligible` tính trong projection bằng `CASE` trên `LEFT JOIN` (session/user/membership/bound_at) — **không** đặt predicate điều kiện vào `WHERE` trước `LIMIT`. Mọi dòng lấy được đều tính vào trần 20 (kể cả dòng bị skip); `delivery_cursor` tiến tới id dòng cuối **đã xét** dù cả trang không đủ điều kiện. Trang đầy ⇒ chưa xong dù không tạo delivery nào; chỉ đặt `deliveries_expanded_at` khi trang trả 0 dòng hoặc ít hơn `LIMIT` (đã cạn đăng ký của inbox). Không nạp cả membership/token vào RAM rồi mới cắt.
++- **Mọi ghi của job buộc vào lease hiện hành** (sửa R2-03). Sau claim phải xác nhận `expansion_lease_id = :lease` trước khi dùng dòng; mỗi delivery chèn bằng `INSERT … SELECT … WHERE EXISTS (SELECT 1 FROM notifications WHERE id = :nid AND expansion_lease_id = :lease)`; `delivery_cursor` cập nhật `WHERE id = :id AND expansion_lease_id = :lease`; đánh dấu xong `WHERE id = :id AND expansion_lease_id = :lease AND delivery_cursor = :cursor_mới`. Tất cả trong **một** `batch` D1 (atomic) ⇒ owner cũ sau takeover nhận 0 dòng ở mọi câu: không chèn delivery, không đẩy cursor, không đánh dấu xong. Không bulk INSERT không guard rồi mới CAS cursor.
++- **Điều kiện đăng ký đủ điều kiện khi fanout** (chốt mốc theo binding hiện hành, đánh giá trong projection của trang đã phân trang): `device_tokens.membership_id = notifications.membership_id`, `bound_at <= notifications.created_at` (chuyển chủ sau sự kiện không nhận push lịch sử; làm mới cùng binding không đổi `bound_at` nên không mất quyền), phiên `auth_sessions` của token chưa thu hồi, chưa hết hạn và có `membership_id = device_tokens.membership_id`, `user_id` khớp, membership/user còn hoạt động, cùng quyền nhóm và liên kết con. Không có đăng ký đủ điều kiện thì chỉ giữ inbox, không phát lại push cũ khi đăng ký mới. Mỗi delivery theo từng thiết bị, không dùng một cờ `pushed_at` chung để bỏ sót thiết bị khác.
++- Trước **mỗi lần gửi** (không phải một lần cho cả job) phải **đối chiếu danh tính đầy đủ** (sửa R2-02): `users.status = 'active'` **và** `memberships.status = 'active'` tại thời điểm gửi, `auth_sessions` của token chưa thu hồi/chưa hết hạn, `auth_sessions.user_id`/`membership_id` **khớp chính** `device_tokens.user_id`/`membership_id`, `device_tokens.registration_version` = bản đã chụp trong delivery; sau đó kiểm quyền nhóm hiện hành (qua `role_permissions`) và liên kết con. Bất kỳ điều kiện nào sai ⇒ `skipped`, **không** gọi FCM. Membership/user bị vô hiệu **sau khi đã fanout** vẫn bị chặn ở bước này. Token chuyển chủ không mang theo delivery cũ. **Giới hạn không thể hứa:** thông báo đã được FCM/OS nhận và hiển thị trước khi máy chủ ack việc thu hồi thì không thu hồi từ xa được; client xoá notification cũ khi đổi danh tính và không dùng payload làm quyền truy cập (payload chỉ có loại + ID). FCM `UNREGISTERED`: xoá đúng device/version đã gửi; `INVALID_ARGUMENT`: chỉ xoá nếu error detail FCM xác nhận registration token sai và payload đã hợp lệ, không xoá hàng loạt vì payload lỗi.
+ - Claim delivery bằng cập nhật có điều kiện với lease 60 giây, `RETURNING`; chỉ chủ lease cập nhật kết quả. `429`/`5xx` retry theo `Retry-After` và backoff có jitter, tối đa 5 lần; hết lần thì `failed`, inbox vẫn còn. Lỗi `401` làm mới OAuth một lần; `403`/lỗi cấu hình báo vận hành bằng mã đã lọc. Kết nối bị cắt sau FCM nhận nhưng trước ghi `sent` có thể gửi trùng; không cam kết exactly-once, client dùng notification id chống xử lý trùng.
+ - D1 cache OAuth không theo workspace vì một Firebase project dùng chung staging; chỉ mã gửi push truy cập. Lease và hạn cache ở `stack-and-cpu.md` mục 9. Không lưu private key/JWT assertion vào D1.
+ 
+--- r2/plans/20261021-mvp/backend/stack-and-cpu.md
++++ r3/plans/20261021-mvp/backend/stack-and-cpu.md
+@@ -185,7 +185,7 @@
+ 
+ Chọn inbox + deliveries trong D1, cron `* * * * *` (một trigger riêng hoặc gộp lịch hiện có). Mỗi invocation claim tối đa **5 deliveries**, tối đa 2 kết nối FCM đồng thời. Tính thêm D1 đọc/cache/claim/ghi kết quả, OAuth cache miss và retry 401; giữ tổng dưới 50 subrequest, giới hạn CPU p95 dưới 8 ms để chừa dư. Các giá trị 5/2 là ngân sách đề xuất, **chưa đo**; giảm lô hoặc nâng gói nếu không đạt. Hàng chưa tới lượt nằm D1, không tự gọi Worker nối chuỗi.
+ 
+-**Mở rộng inbox có trần cứng (sửa R-02):** mỗi invocation xét tối đa **5 inbox** và tổng **20 đăng ký thiết bị** (kể cả đăng ký bị bỏ qua), đọc bằng keyset `ORDER BY device_tokens.id LIMIT n`, `delivery_cursor` lưu ở D1 — không nạp toàn bộ token của một inbox vào RAM rồi cắt. Freeze inbox bằng `expansion_started_at` (lease 60 giây) trước khi tạo delivery để nhóm điểm đóng đúng một lần; chỉ chủ lease đẩy cursor; chỉ đặt `deliveries_expanded_at` khi đã xét hết. Hết ngân sách giữa chừng thì cron sau tiếp tục từ cursor. 5/20 là ngân sách đề xuất, **chưa đo** cùng các giá trị trên; vượt thì giảm lô hoặc nâng gói, không thêm queue ở MVP.
++**Mở rộng inbox có trần cứng (sửa R-02, siết ở r3):** mỗi invocation xét tối đa **5 inbox** và tổng **20 đăng ký thiết bị**. Trang đăng ký lấy **toàn bộ** theo `workspace_id + membership_id + id > cursor` (`ORDER BY id LIMIT :còn_lại`, chỉ mục `device_tokens_member`), rồi mới lọc điều kiện trong projection — predicate điều kiện không nằm trong `WHERE` trước `LIMIT`, nên đăng ký bị skip vẫn chiếm ngân sách và cursor vẫn đi qua chúng; trang đầy nhưng 0 delivery vẫn chưa xong. `delivery_cursor` lưu ở D1. Freeze bằng CAS `event_version` + `ready_at <= now` (0 dòng ⇒ bỏ qua), reclaim chỉ cho dòng đã freeze và giữ nguyên `expansion_started_at`; delivery/cursor/complete đều `WHERE expansion_lease_id = :lease` trong cùng batch. 5/20 là ngân sách đề xuất, **chưa đo** cùng các giá trị trên; vượt thì giảm lô hoặc nâng gói, không thêm queue ở MVP.
+ 
+ `ctx.waitUntil` dùng được để xử lý một ít việc sau response nhưng vẫn cùng CPU/subrequest, tối đa 30 giây sau response; không làm bộ bảo đảm gửi. Nếu crash, D1 giữ pending/lease để cron retry. D1 deliveries retry theo mục 2.7 mô hình dữ liệu. Free 10 ms CPU cho cả cron, 50 subrequest và 6 kết nối đồng thời; Workers Paid mặc định 30 giây CPU, cấu hình tối đa 5 phút, không tự nâng gói.
+ 
