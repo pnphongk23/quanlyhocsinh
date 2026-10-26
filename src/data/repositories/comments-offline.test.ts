@@ -13,6 +13,7 @@ beforeEach(async () => {
   setCacheIdentity({ userId: "teacher", workspaceId: "workspace", membershipId: "member" });
   await db.delete();
   await db.open();
+  await db.meta.put({ key: "teacher:workspace:member", identity: "teacher:workspace:member", cursor: 0, epoch: 1 } as never);
   const seed = createSeed();
   const session = seed.sessions.find((item) => item.id === "6a-session-7")!;
   seed.comments = [{
@@ -46,6 +47,29 @@ describe("phiếu nhận xét khi mất mạng", () => {
     await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Chỉ ghi chú" });
     const [set] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
     expect(set.payload).toMatchObject({ criteria: 31, note: "Chỉ ghi chú" });
+  });
+
+  it("lệnh stars mới thay tiêu chí cũ khi gộp", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const { saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-0", criteria: 23 });
+    const { db: database, identityKey } = await import("../db");
+    const [pending] = (await database.outbox.where("identity").equals(identityKey()).toArray()).filter((row) => row.type === "slip.set");
+    const { persistCommand } = await import("../outbox");
+    await persistCommand("slip", ["6a-session-7", "6a-student-0"], null, { id: "x", type: "slip.set", payload: { session_id: "6a-session-7", student_id: "6a-student-0", stars: 1, note: "" }, base_version: 0, created_at: new Date().toISOString() } as never);
+    const sets = (await database.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(sets).toHaveLength(1);
+    expect(sets[0].payload).toMatchObject({ stars: 1 });
+    expect(sets[0].payload).not.toHaveProperty("criteria");
+    expect(pending.type).toBe("slip.set");
+  });
+
+  it("chưa tải xong snapshot thì không ghi phiếu mới chỉ có ghi chú", async () => {
+    const { db: database } = await import("../db");
+    await database.meta.clear();
+    const { saveSessionCommentDurable } = await import("./comments");
+    await expect(saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Chờ" })).rejects.toThrow("Đang tải dữ liệu phiếu");
+    expect((await database.outbox.toArray()).filter((row) => row.type === "slip.set")).toHaveLength(0);
   });
 
   it("phiếu đã có chỉ sửa ghi chú thì không gửi criteria cũ đè lên máy chủ", async () => {

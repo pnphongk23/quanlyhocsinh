@@ -19,6 +19,14 @@ function keyForCommand(command: SyncCommand): string | undefined {
     default: return undefined;
   }
 }
+/** Lệnh mới thắng; mức sao cũ (stars) và tiêu chí (criteria) loại trừ nhau nên bên mới xoá bên kia của lệnh cũ. */
+function mergeSlipPayload(previous: unknown, next: unknown): Record<string, unknown> {
+  const merged = { ...(previous as Record<string, unknown>), ...(next as Record<string, unknown>) };
+  const incoming = next as Record<string, unknown>;
+  if ("criteria" in incoming) delete merged.stars;
+  else if ("stars" in incoming) { delete merged.criteria; delete merged.comment; }
+  return merged;
+}
 export async function persistCommand(entity: EntityName, parts: Array<string | number | null>, wireRecord: Record<string, unknown> | null, command: SyncCommand): Promise<void> {
   const identity = identityKey(); const cache = getCacheIdentity(); if (!cache) throw new Error("Đăng nhập để lưu thay đổi.");
   const key = rowKey(entity, parts), cellKey = keyForCommand(command);
@@ -30,7 +38,7 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
         if (wireRecord) await recordTable.put(stored(entity, key, wireRecord) as any); else await recordTable.delete(key);
         const matching = cellKey ? await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "pending").first() : undefined;
         // Phiếu chỉ gửi trường vừa đổi: gộp vào lệnh chờ cũ để không làm mất tiêu chí đã soạn trước đó.
-        const mergedPayload = matching && command.type === "slip.set" ? { ...matching.payload, ...row.payload } : row.payload;
+        const mergedPayload = matching && command.type === "slip.set" ? (mergeSlipPayload(matching.payload, row.payload) as OutboxRow["payload"]) : row.payload;
         const finalRow = matching ? { ...row, payload: mergedPayload, base_version: matching.base_version } : row;
         if (matching) await db.outbox.delete(matching.id);
         // Lệnh mới cho cùng ô thay thế lệnh cũ đã bị từ chối, để lỗi cũ không kẹt mãi.
