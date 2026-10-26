@@ -75,7 +75,7 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 ### API-001 · phone-check không trả 429 sau 12 lần / 35 lần — Đã đóng (không phải lỗi)
 - Giới hạn đã đổi theo yêu cầu người dùng thành 50 lần/SĐT và 100 lần/IP mỗi 15 phút (`contract-changes.md` commit `0e5629d`, Worker `f8cb4ce5`). Lượt thử 12 lần cùng số và 35 số khác nhau đều dưới ngưỡng mới. Testcase TC-AUTH-026 và `brief96-http.mjs` đã sửa theo ngưỡng 50/100.
 
-## IOS-003 — Đăng nhập bước 2: ô mật khẩu ẩn không hiện dấu chấm, bàn phím che nút (Mở, fc37088)
-- Bàn phím mềm che nút "Đăng nhập" nên chạm nút không submit; ô mật khẩu ẩn trống dù chữ đã vào (xác nhận khi bật mắt). Vào được khi bật mắt, vuốt đóng bàn phím rồi chạm nút (ảnh qa-b96/07-typed, 08-after, 16-after-submit).
-- Nút "Đăng nhập" không còn nháy "✓ Đã lưu" ở fc37088 (đã sửa).
+## IOS-003 — Đăng nhập bước 2: bàn phím che nút, ô mật khẩu ẩn không hiện dấu chấm — Đã đóng (34cd1ac)
+- Phím Return trên ô mật khẩu giờ đăng nhập (e6da45d): chạy Maestro `pressKey: Enter` vào được app. Nút "Đăng nhập" không còn nháy "✓ Đã lưu" (fc37088).
+- Ô mật khẩu không hiện dấu chấm trên ảnh chụp: iOS không vẽ SecureField vào ảnh chụp, không phải lỗi app.
 - Lưu ý QA: không chụp ảnh khi bật mắt (đã xóa 2 ảnh lộ mật khẩu).
