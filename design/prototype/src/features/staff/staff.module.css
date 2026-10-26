@@ -349,19 +349,6 @@
   cursor: not-allowed;
 }
 
-/* Link mời */
-.linkBox {
-  display: grid;
-  gap: 8px;
-}
-.linkValue {
-  padding: 12px;
-  border: 1.5px solid var(--color-input-border);
-  border-radius: var(--radius-control);
-  background: var(--color-bg);
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
 .meta {
   display: flex;
   flex-wrap: wrap;

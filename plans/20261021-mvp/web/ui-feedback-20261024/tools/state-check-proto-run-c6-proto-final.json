@@ -1,0 +1,800 @@
+[
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F1-no-class",
+    "result": "SKIP",
+    "evidence": "prototype seed always selects class 6A; screenshot proto-F1-no-class-390.png is not a no-class state"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F1 sidebar links",
+    "result": "SKIP",
+    "evidence": "mobile layout uses tab navigation rather than desktop sidebar"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F1-class-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F1-class-selected-390.png; Đến nội dung Tiếng Anh giao tiếp 6A Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Buổi hiện tại Buổi 10 · Chủ Nhật, 25 tháng 10 17:00 Xem buổi Điểm danh mở vào ngày học. Các buổi đã "
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F1 sidebar links",
+    "result": "SKIP",
+    "evidence": "mobile layout uses tab navigation rather than desktop sidebar"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F3-the-lop-selected-390.png; Đến nội dung Xin chào, cô Lan Lớp của tôi CL Hôm nay · Thứ Bảy 24/10 Hôm nay không có buổi học Buổi kế tiếp · Chủ Nhật, 25 tháng 10 17:00 Tiếng Anh giao tiếp 6A 25/10 · Buổi 10 Chư"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F5-class",
+    "result": "PASS",
+    "evidence": "screenshot proto-F5-class-390.png; Đến nội dung Tiếng Anh giao tiếp 6A Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Buổi hiện tại Buổi 10 · Chủ Nhật, 25 tháng 10 17:00 Xem buổi Điểm danh mở vào ngày học. Các buổi đã "
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F5 no breadcrumb",
+    "result": "PASS",
+    "evidence": "breadcrumb selectors=0"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F6-current-session",
+    "result": "PASS",
+    "evidence": "screenshot proto-F6-current-session-390.png; Đến nội dung Tiếng Anh giao tiếp 6A Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Buổi hiện tại Buổi 10 · Chủ Nhật, 25 tháng 10 17:00 Xem buổi Điểm danh mở vào ngày học. Các buổi đã "
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F6 upcoming single action",
+    "result": "SKIP",
+    "evidence": "mobile SessionsTab does not render the 'Buổi lẻ sắp tới' card"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F7 empty filter route",
+    "result": "SKIP",
+    "evidence": "prototype seed has no empty-class/filter fixture"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F2-sidebar-mep",
+    "result": "PASS",
+    "evidence": "screenshot proto-F2-sidebar-mep-390.png; Đến nội dung Tiếng Anh giao tiếp 6A Buổi học Bài kiểm tra Điểm Học sinh Báo cáo Buổi hiện tại Buổi 10 · Chủ Nhật, 25 tháng 10 17:00 Xem buổi Điểm danh mở vào ngày học. Các buổi đã "
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F3-the-lop-selected-390.png; Đến nội dung Xin chào, cô Lan Lớp của tôi CL Hôm nay · Thứ Bảy 24/10 Hôm nay không có buổi học Buổi kế tiếp · Chủ Nhật, 25 tháng 10 17:00 Tiếng Anh giao tiếp 6A 25/10 · Buổi 10 Chư"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F4-bang-diem",
+    "result": "PASS",
+    "evidence": "screenshot proto-F4-bang-diem-390.png; Đến nội dung Xin chào, cô Lan Lớp của tôi CL Hôm nay · Thứ Bảy 24/10 Hôm nay không có buổi học Buổi kế tiếp · Chủ Nhật, 25 tháng 10 17:00 Tiếng Anh giao tiếp 6A 25/10 · Buổi 10 Chư"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F9-man-nhap-diem-mobile",
+    "result": "PASS",
+    "evidence": "screenshot proto-F9-man-nhap-diem-mobile-390.png; Đến nội dung Tiếng Anh giao tiếp 6A Điểm số Từ vựng Ngày 30 tháng 9 · Thang 10 điểm Đổi bài Học sinh Điểm Nguyễn Minh Anh Trần Gia Bảo Lê Khánh Chi Phạm Đức Dũng Hoàng Thu Hà Vũ Qu"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F9 score keyboard",
+    "result": "SKIP",
+    "evidence": "contract covers desktop score-grid keyboard navigation"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "F8 loading/success/pending",
+    "result": "SKIP",
+    "evidence": "prototype has no outbox or real save implementation"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "save busy+done+error",
+    "result": "SKIP",
+    "evidence": "prototype has no web backend/IndexedDB outbox; action flow not seeded by the local demo runner"
+  },
+  {
+    "target": "proto",
+    "viewport": "390x844",
+    "item": "outbox pending/offline",
+    "result": "SKIP",
+    "evidence": "prototype has no web backend/IndexedDB outbox; action flow not seeded by the local demo runner"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F1-no-class",
+    "result": "SKIP",
+    "evidence": "prototype seed always selects class 6A; screenshot proto-F1-no-class-1024.png is not a no-class state"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F1 sidebar links",
+    "result": "SKIP",
+    "evidence": "prototype seed fixes currentClassId to 6A; no-class sidebar state cannot be selected"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F1-class-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F1-class-selected-1024.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F1 sidebar links",
+    "result": "PASS",
+    "evidence": "links=[\"Lớp\",\"Điểm danh\",\"Điểm số\",\"Học sinh\",\"Báo cáo\",\"Cài đặt\"]; expected 6"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F3-the-lop-selected-1024.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Học kỳ này · 1 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 Hôm nay"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F3 selected class card fill",
+    "result": "PASS",
+    "evidence": "card=1; computed={\"background\":\"rgb(232, 238, 254)\",\"border\":\"rgb(30, 67, 184)\",\"borderWidth\":\"0px\"}; token=rgb(232, 238, 254)"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F5-class",
+    "result": "PASS",
+    "evidence": "screenshot proto-F5-class-1024.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F5 no breadcrumb",
+    "result": "PASS",
+    "evidence": "breadcrumb selectors=0"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F6-current-session",
+    "result": "PASS",
+    "evidence": "screenshot proto-F6-current-session-1024.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F6 upcoming single action",
+    "result": "SKIP",
+    "evidence": "prototype class page has no 'Buổi lẻ sắp tới' card"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F7 empty filter route",
+    "result": "SKIP",
+    "evidence": "prototype seed has no empty-class/filter fixture"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F2-sidebar-mep",
+    "result": "PASS",
+    "evidence": "screenshot proto-F2-sidebar-mep-1024.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F3-the-lop-selected-1024.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Học kỳ này · 1 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 Hôm nay"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F3 selected class card fill",
+    "result": "PASS",
+    "evidence": "card=1; computed={\"background\":\"rgb(232, 238, 254)\",\"border\":\"rgb(30, 67, 184)\",\"borderWidth\":\"0px\"}; token=rgb(232, 238, 254)"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F4-bang-diem",
+    "result": "PASS",
+    "evidence": "screenshot proto-F4-bang-diem-1024.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Lưu điểm Buổi học Bài kiểm tra Điểm Học sinh B"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F9-man-nhap-diem-mobile",
+    "result": "PASS",
+    "evidence": "screenshot proto-F9-man-nhap-diem-mobile-1024.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Điểm số Từ vựng Ngày 30 tháng 9 · Thang 10 điể"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F9 Enter/↓/↑ moves score cell ×20",
+    "result": "PASS",
+    "evidence": "cycles=20; focusLoss=0; ArrowDown unchanged=0; ArrowUp failedToReturn=0; Enter failedToMove=0; Chưa có bài kiểm tra flashes=0"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F8 loading/success/pending",
+    "result": "SKIP",
+    "evidence": "prototype has no outbox or real save implementation"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "F1 /lop sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "class page · Buổi học sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "attendance page sidebar exactly one selected fill",
+    "result": "SKIP",
+    "evidence": "prototype does not expose the attendance page route used by web"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "session detail sidebar exactly one selected fill",
+    "result": "SKIP",
+    "evidence": "prototype does not expose the web session-detail route/sidebar state"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "save busy+done+error",
+    "result": "SKIP",
+    "evidence": "prototype has no web backend/IndexedDB outbox; action flow not seeded by the local demo runner"
+  },
+  {
+    "target": "proto",
+    "viewport": "1024x800",
+    "item": "outbox pending/offline",
+    "result": "SKIP",
+    "evidence": "prototype has no web backend/IndexedDB outbox; action flow not seeded by the local demo runner"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F1-no-class",
+    "result": "SKIP",
+    "evidence": "prototype seed always selects class 6A; screenshot proto-F1-no-class-1280.png is not a no-class state"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F1 sidebar links",
+    "result": "SKIP",
+    "evidence": "prototype seed fixes currentClassId to 6A; no-class sidebar state cannot be selected"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F1-class-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F1-class-selected-1280.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F1 sidebar links",
+    "result": "PASS",
+    "evidence": "links=[\"Lớp\",\"Điểm danh\",\"Điểm số\",\"Học sinh\",\"Báo cáo\",\"Cài đặt\"]; expected 6"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F3-the-lop-selected-1280.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Học kỳ này · 1 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 Hôm nay"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F3 selected class card fill",
+    "result": "PASS",
+    "evidence": "card=1; computed={\"background\":\"rgb(232, 238, 254)\",\"border\":\"rgb(30, 67, 184)\",\"borderWidth\":\"0px\"}; token=rgb(232, 238, 254)"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F5-class",
+    "result": "PASS",
+    "evidence": "screenshot proto-F5-class-1280.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F5 no breadcrumb",
+    "result": "PASS",
+    "evidence": "breadcrumb selectors=0"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F6-current-session",
+    "result": "PASS",
+    "evidence": "screenshot proto-F6-current-session-1280.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F6 upcoming single action",
+    "result": "SKIP",
+    "evidence": "prototype class page has no 'Buổi lẻ sắp tới' card"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F7 empty filter route",
+    "result": "SKIP",
+    "evidence": "prototype seed has no empty-class/filter fixture"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F2-sidebar-mep",
+    "result": "PASS",
+    "evidence": "screenshot proto-F2-sidebar-mep-1280.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F3-the-lop-selected-1280.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Học kỳ này · 1 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 Hôm nay"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F3 selected class card fill",
+    "result": "PASS",
+    "evidence": "card=1; computed={\"background\":\"rgb(232, 238, 254)\",\"border\":\"rgb(30, 67, 184)\",\"borderWidth\":\"0px\"}; token=rgb(232, 238, 254)"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F4-bang-diem",
+    "result": "PASS",
+    "evidence": "screenshot proto-F4-bang-diem-1280.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Lưu điểm Buổi học Bài kiểm tra Điểm Học sinh B"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F9-man-nhap-diem-mobile",
+    "result": "PASS",
+    "evidence": "screenshot proto-F9-man-nhap-diem-mobile-1280.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Điểm số Từ vựng Ngày 30 tháng 9 · Thang 10 điể"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F9 Enter/↓/↑ moves score cell ×20",
+    "result": "PASS",
+    "evidence": "cycles=20; focusLoss=0; ArrowDown unchanged=0; ArrowUp failedToReturn=0; Enter failedToMove=0; Chưa có bài kiểm tra flashes=0"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F8 loading/success/pending",
+    "result": "SKIP",
+    "evidence": "prototype has no outbox or real save implementation"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "F1 /lop sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "class page · Buổi học sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "attendance page sidebar exactly one selected fill",
+    "result": "SKIP",
+    "evidence": "prototype does not expose the attendance page route used by web"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "session detail sidebar exactly one selected fill",
+    "result": "SKIP",
+    "evidence": "prototype does not expose the web session-detail route/sidebar state"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "save busy+done+error",
+    "result": "SKIP",
+    "evidence": "prototype has no web backend/IndexedDB outbox; action flow not seeded by the local demo runner"
+  },
+  {
+    "target": "proto",
+    "viewport": "1280x800",
+    "item": "outbox pending/offline",
+    "result": "SKIP",
+    "evidence": "prototype has no web backend/IndexedDB outbox; action flow not seeded by the local demo runner"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F1-no-class",
+    "result": "SKIP",
+    "evidence": "prototype seed always selects class 6A; screenshot proto-F1-no-class-1440.png is not a no-class state"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F1 sidebar links",
+    "result": "SKIP",
+    "evidence": "prototype seed fixes currentClassId to 6A; no-class sidebar state cannot be selected"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F1-class-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F1-class-selected-1440.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F1 sidebar links",
+    "result": "PASS",
+    "evidence": "links=[\"Lớp\",\"Điểm danh\",\"Điểm số\",\"Học sinh\",\"Báo cáo\",\"Cài đặt\"]; expected 6"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F3-the-lop-selected-1440.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Học kỳ này · 1 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 Hôm nay"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F3 selected class card fill",
+    "result": "PASS",
+    "evidence": "card=1; computed={\"background\":\"rgb(232, 238, 254)\",\"border\":\"rgb(30, 67, 184)\",\"borderWidth\":\"0px\"}; token=rgb(232, 238, 254)"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F5-class",
+    "result": "PASS",
+    "evidence": "screenshot proto-F5-class-1440.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F5 no breadcrumb",
+    "result": "PASS",
+    "evidence": "breadcrumb selectors=0"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F6-current-session",
+    "result": "PASS",
+    "evidence": "screenshot proto-F6-current-session-1440.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F6 upcoming single action",
+    "result": "SKIP",
+    "evidence": "prototype class page has no 'Buổi lẻ sắp tới' card"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F7 empty filter route",
+    "result": "SKIP",
+    "evidence": "prototype seed has no empty-class/filter fixture"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F2-sidebar-mep",
+    "result": "PASS",
+    "evidence": "screenshot proto-F2-sidebar-mep-1440.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Thêm buổi lẻ Buổi học Bài kiểm tra Điểm Học si"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F3-the-lop-selected",
+    "result": "PASS",
+    "evidence": "screenshot proto-F3-the-lop-selected-1440.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Học kỳ này · 1 lớp đang mở Tất cả lớp Hôm nay · Thứ Bảy 24/10 Hôm nay"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F3 selected class card fill",
+    "result": "PASS",
+    "evidence": "card=1; computed={\"background\":\"rgb(232, 238, 254)\",\"border\":\"rgb(30, 67, 184)\",\"borderWidth\":\"0px\"}; token=rgb(232, 238, 254)"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "Selected segmented token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "Selected chip token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "Selected row token fill",
+    "result": "SKIP",
+    "evidence": "token=#e8eefe; selected=[]; mismatches=[]"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F4-bang-diem",
+    "result": "PASS",
+    "evidence": "screenshot proto-F4-bang-diem-1440.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Lưu điểm Buổi học Bài kiểm tra Điểm Học sinh B"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F9-man-nhap-diem-mobile",
+    "result": "PASS",
+    "evidence": "screenshot proto-F9-man-nhap-diem-mobile-1440.png; Đến nội dung Lớp của cô Lan Đang xem lớp Tiếng Anh giao tiếp 6A Lớp Điểm danh Điểm số Học sinh Báo cáo Cài đặt Tiếng Anh giao tiếp 6A Điểm số Từ vựng Ngày 30 tháng 9 · Thang 10 điể"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F9 Enter/↓/↑ moves score cell ×20",
+    "result": "PASS",
+    "evidence": "cycles=20; focusLoss=0; ArrowDown unchanged=0; ArrowUp failedToReturn=0; Enter failedToMove=0; Chưa có bài kiểm tra flashes=0"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F8 loading/success/pending",
+    "result": "SKIP",
+    "evidence": "prototype has no outbox or real save implementation"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "F1 /lop sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "class page · Buổi học sidebar exactly one selected fill",
+    "result": "PASS",
+    "evidence": "{\"token\":\"#e8eefe\",\"tokenBg\":\"rgb(232, 238, 254)\",\"visibleLinks\":6,\"filled\":1,\"styles\":[{\"text\":\"Lớp\",\"bg\":\"rgb(232, 238, 254)\",\"borderWidth\":\"0px\",\"outline\":\"none\",\"focused\":false}]}"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "attendance page sidebar exactly one selected fill",
+    "result": "SKIP",
+    "evidence": "prototype does not expose the attendance page route used by web"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "session detail sidebar exactly one selected fill",
+    "result": "SKIP",
+    "evidence": "prototype does not expose the web session-detail route/sidebar state"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "save busy+done+error",
+    "result": "SKIP",
+    "evidence": "prototype has no web backend/IndexedDB outbox; action flow not seeded by the local demo runner"
+  },
+  {
+    "target": "proto",
+    "viewport": "1440x900",
+    "item": "outbox pending/offline",
+    "result": "SKIP",
+    "evidence": "prototype has no web backend/IndexedDB outbox; action flow not seeded by the local demo runner"
+  }
+]

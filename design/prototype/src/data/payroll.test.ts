@@ -160,20 +160,22 @@ describe("Lương cả tháng", () => {
     const ids = payrollForMonth(d, "2026-10").map((summary) => summary.memberId);
     expect(ids).not.toContain(minh);
     expect(ids).not.toContain(MEMBER_IDS.lanAdmin);
-    expect(ids).not.toContain(MEMBER_IDS.mai);
   });
   it("thành viên chỉ có điều chỉnh vẫn có bảng lương", () => {
     const d = createSeed();
-    d.payRates = d.payRates.filter((rate) => rate.memberId !== MEMBER_IDS.mai);
+    // Admin không có đơn giá và không dạy buổi nào: chỉ có điều chỉnh.
+    d.payRates = d.payRates.filter(
+      (rate) => rate.memberId !== MEMBER_IDS.lanAdmin,
+    );
     d.payAdjustments.push({
-      id: "adjustment-mai",
-      memberId: MEMBER_IDS.mai,
+      id: "adjustment-admin",
+      memberId: MEMBER_IDS.lanAdmin,
       month: "2026-10",
       amount: 50000,
       note: "Thưởng",
     });
     const summary = payrollForMonth(d, "2026-10").find(
-      (item) => item.memberId === MEMBER_IDS.mai,
+      (item) => item.memberId === MEMBER_IDS.lanAdmin,
     )!;
     expect(summary.lines).toEqual([]);
     expect(summary.adjustmentTotal).toBe(50000);

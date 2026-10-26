@@ -34,27 +34,31 @@ describe("Nhập điểm theo thang của bài", () => {
     expect(saveScore({ testId: test.id, studentId: "6a-student-0", value: 20 }).value).toBe(20);
     expect(() =>
       saveScore({ testId: test.id, studentId: "6a-student-1", value: 21 }),
-    ).toThrow("Điểm phải từ 0 đến 20.");
+      ).toThrow("Điểm phải từ 0 đến 20, theo bước 0,5.");
     expect(() =>
       saveScore({ testId: test.id, studentId: "6a-student-1", value: -1 }),
-    ).toThrow("Điểm phải từ 0 đến 20.");
+      ).toThrow("Điểm phải từ 0 đến 20, theo bước 0,5.");
     expect(() =>
       saveScore({ testId: test.id, studentId: "6a-student-1", value: Number.NaN }),
-    ).toThrow("Điểm phải từ 0 đến 20.");
+      ).toThrow("Điểm phải từ 0 đến 20, theo bước 0,5.");
+    expect(saveScore({ testId: test.id, studentId: "6a-student-1", value: 7.5 }).value).toBe(7.5);
+    expect(() => saveScore({ testId: test.id, studentId: "6a-student-2", value: 7.3 })).toThrow(
+      "Điểm phải từ 0 đến 20, theo bước 0,5.",
+    );
   });
 
   it("thang mặc định 15 chặn điểm 16 nhưng nhận 15", () => {
     const test = createTest({ classId: "6a", name: "Bài 15 điểm", date: "2026-10-10" });
     expect(() =>
       saveScore({ testId: test.id, studentId: "6a-student-0", value: 16 }),
-    ).toThrow("Điểm phải từ 0 đến 15.");
+      ).toThrow("Điểm phải từ 0 đến 15, theo bước 0,5.");
     expect(saveScore({ testId: test.id, studentId: "6a-student-0", value: 15 }).value).toBe(15);
   });
 
   it("bài dữ liệu mẫu thang 10 vẫn nhận 10 và chặn 11", () => {
     expect(() =>
       saveScore({ testId: "6a-test-0", studentId: "6a-student-0", value: 11 }),
-    ).toThrow("Điểm phải từ 0 đến 10.");
+      ).toThrow("Điểm phải từ 0 đến 10, theo bước 0,5.");
     expect(saveScore({ testId: "6a-test-0", studentId: "6a-student-0", value: 10 }).value).toBe(10);
   });
 
@@ -70,7 +74,7 @@ describe("Nhập điểm theo thang của bài", () => {
 
   it("ngoài lớp thì không đọc hoặc ghi điểm", () => {
     const state = createSeed();
-    state.auth = { email: "scores@example.test", memberIds: [MEMBER_IDS.lanTeacher] };
+    state.auth = { phone: "900000001", memberIds: [MEMBER_IDS.lanTeacher] };
     state.activeMemberId = MEMBER_IDS.lanTeacher;
     replaceStore(state);
     expect(listScores("ielts-test-0")).toEqual([]);

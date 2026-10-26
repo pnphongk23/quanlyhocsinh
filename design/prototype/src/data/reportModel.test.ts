@@ -158,6 +158,31 @@ describe("buildMonthlyStudentReport", () => {
     );
   });
 
+  it("bỏ phiếu sao và BTVN gắn với buổi đã hủy", () => {
+    const baseline = buildMonthlyStudentReport(student, "2026-10", data)!;
+    const cancelled: Session = {
+      id: "session-cancelled",
+      classId: student.classId,
+      date: "2026-10-20",
+      status: "cancelled",
+    };
+    const result = buildMonthlyStudentReport(student, "2026-10", {
+      ...data,
+      sessions: [...sessions, cancelled],
+      comments: [...comments, ticket("comment-cancelled", cancelled.id, 3, "sent")],
+      homeworkSections: [
+        ...homeworkSections,
+        { id: "hw-cancelled", sessionId: cancelled.id, kind: "vocabulary", title: "Bài bị hủy", description: "" },
+      ],
+      homeworkGrades: [
+        ...homeworkGrades,
+        { sectionId: "hw-cancelled", studentId: student.id, level: "done" },
+      ],
+    })!;
+    expect(result.stars).toEqual(baseline.stars);
+    expect(result.homework).toEqual(baseline.homework);
+  });
+
   it("kết quả BTVN chỉ gồm phần giao trong tháng đã chấm và phiếu buổi chấm đã gửi", () => {
     const result = buildMonthlyStudentReport(student, "2026-10", data)!;
     expect(result.homework).toEqual([

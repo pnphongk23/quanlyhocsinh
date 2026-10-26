@@ -3,6 +3,7 @@ import type {
   HomeworkKind,
   HomeworkLevel,
   HomeworkSection,
+  Member,
   PermissionGroup,
   Report,
   Session,
@@ -12,6 +13,8 @@ import type {
   Test,
 } from "../types";
 import { getStore } from "../store";
+import { normalizePhone } from "../authAccounts";
+import { ROLE_IDS } from "../defaults";
 import {
   can,
   canAccessStudent,
@@ -31,9 +34,11 @@ import {
 import { starTemplate } from "../logic";
 import {
   buildMonthlyStudentReport,
-  type MonthlyStudentReport,
+  buildRangeStudentReport,
   type MonthlyStudentReportData,
+  type PeriodStudentReport,
 } from "../reportModel";
+import { resolveRange, type ResolvedRange } from "../reportRange";
 
 /**
  * Repository ĐỌC cho role phụ huynh (màn phụ huynh, spec mục 5.2).
@@ -52,6 +57,59 @@ import {
 
 export const GUARDIAN_PERMISSION_ERROR = "Bạn không có quyền thực hiện thao tác này.";
 export const STUDENT_ACCESS_ERROR = "Bạn không có quyền truy cập học sinh này.";
+
+/* ------------------------------------------------- liên kết con theo SĐT */
+
+/** Role phụ huynh mặc định của workspace (fallback khi dữ liệu cũ thiếu role). */
+export function defaultGuardianRoleId(state: StoreState): string {
+  return (
+    state.roles.find((role) => role.kind === "guardian")?.id ??
+    ROLE_IDS.guardian
+  );
+}
+
+function isGuardianMember(state: StoreState, member: Member): boolean {
+  return (
+    state.roles.find((role) => role.id === member.roleId)?.kind === "guardian"
+  );
+}
+
+/**
+ * Học sinh có `parentPhone` trùng SĐT sau `normalizePhone` (spec mục 4 "Tài
+ * khoản"). SĐT rỗng hoặc không đủ 9 số thì không khớp ai.
+ */
+export function studentIdsForPhone(
+  state: StoreState,
+  rawPhone: string,
+): string[] {
+  const phone = normalizePhone(rawPhone);
+  if (!phone) return [];
+  return state.students
+    .filter((student) => normalizePhone(student.parentPhone) === phone)
+    .map((student) => student.id);
+}
+
+/**
+ * Cập nhật liên kết cho ĐÚNG một học sinh vừa được khai hoặc đổi SĐT phụ
+ * huynh: member phụ huynh có SĐT khớp thì thêm em vào `studentIds`, member
+ * phụ huynh không còn khớp thì gỡ em ra. Không đụng tới con khác của member.
+ */
+export function relinkStudentGuardians(
+  state: StoreState,
+  student: Student,
+): void {
+  const phone = normalizePhone(student.parentPhone);
+  for (const member of state.members) {
+    if (!isGuardianMember(state, member)) continue;
+    const linked = member.studentIds ?? [];
+    const matches = Boolean(phone) && normalizePhone(member.phone) === phone;
+    if (matches && !linked.includes(student.id)) {
+      member.studentIds = [...linked, student.id];
+    } else if (!matches && linked.includes(student.id)) {
+      member.studentIds = linked.filter((id) => id !== student.id);
+    }
+  }
+}
 
 function requireGuardian(group?: PermissionGroup): void {
   if (!isGuardian()) throw new Error(GUARDIAN_PERMISSION_ERROR);
@@ -423,38 +481,74 @@ export function getChildOverview(
   };
 }
 
-/** Báo cáo tháng đã phát hành của con. */
-export interface ChildMonthlyReport {
+/** Báo cáo theo khoảng buổi đã phát hành của con. */
+export interface ChildReport {
   report: Report;
-  body: MonthlyStudentReport;
+  /** Khoảng buổi của đợt, vd. "Buổi 1–8 · 01/10–24/10". */
+  range: ResolvedRange;
+  body: PeriodStudentReport;
   /** Điểm có cập nhật sau khi phát hành, cần phát hành lại (spec mục 4). */
   needsRepublish: boolean;
 }
 
+function childReportOf(
+  state: StoreState,
+  student: Student,
+  report: Report,
+): ChildReport | null {
+  const batch = state.reportBatches.find((item) => item.id === report.batchId);
+  const range = batch ? resolveRange(state.sessions, batch) : null;
+  if (!range) return null;
+  const body = buildRangeStudentReport(
+    student,
+    range,
+    studentReportData(state, student, report.generalComment),
+  );
+  return body
+    ? { report, range, body, needsRepublish: report.needsRepublish }
+    : null;
+}
+
 /**
- * Báo cáo tháng mà phụ huynh xem được: CHỈ khi giáo viên đã phát hành.
- * Chưa phát hành (hoặc không có báo cáo) → null. Nội dung dựng bằng
- * `buildMonthlyStudentReport` + nhận xét chung đã lưu ở `Report.generalComment`.
+ * Danh sách báo cáo ĐÃ phát hành của con theo khoảng buổi, đợt kết thúc muộn
+ * nhất trước. Bản nháp không bao giờ hiện cho phụ huynh.
  */
-export function getChildMonthlyReport(
+export function listChildReports(studentId: string): ChildReport[] {
+  requireGuardian("comments_reports");
+  const student = requireChild(studentId);
+  const state = getStore();
+  return state.reports
+    .filter(
+      (item) => item.studentId === student.id && item.status === "published",
+    )
+    .flatMap((item) => {
+      const found = childReportOf(state, student, item);
+      return found ? [found] : [];
+    })
+    .sort(
+      (a, b) =>
+        b.range.to.date.localeCompare(a.range.to.date) ||
+        (b.report.publishedAt ?? "").localeCompare(a.report.publishedAt ?? ""),
+    );
+}
+
+/**
+ * Báo cáo mà phụ huynh xem được: CHỈ khi giáo viên đã phát hành. Chưa phát
+ * hành, không phải của con hoặc không tồn tại → null. Nội dung dựng bằng
+ * `buildRangeStudentReport` + nhận xét chung đã lưu ở `Report.generalComment`.
+ */
+export function getChildReport(
   studentId: string,
-  month: string,
-): ChildMonthlyReport | null {
+  reportId: string,
+): ChildReport | null {
   requireGuardian("comments_reports");
   const student = requireChild(studentId);
   const state = getStore();
   const report = state.reports.find(
     (item) =>
+      item.id === reportId &&
       item.studentId === student.id &&
-      item.month === month &&
       item.status === "published",
   );
-  if (!report) return null;
-  const body = buildMonthlyStudentReport(
-    student,
-    month,
-    studentReportData(state, student, report.generalComment),
-  );
-  if (!body) return null;
-  return { report, body, needsRepublish: report.needsRepublish };
+  return report ? childReportOf(state, student, report) : null;
 }

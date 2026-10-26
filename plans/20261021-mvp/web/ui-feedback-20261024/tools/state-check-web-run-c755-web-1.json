@@ -1,0 +1,9 @@
+[
+  {
+    "target": "web",
+    "viewport": "—",
+    "item": "runner",
+    "result": "FAIL",
+    "evidence": "TimeoutError: page.goto: Timeout 7000ms exceeded."
+  }
+]

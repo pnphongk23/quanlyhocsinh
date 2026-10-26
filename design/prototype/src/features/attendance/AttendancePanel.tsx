@@ -12,7 +12,8 @@ import {
 import { useAccess } from "../../data/repositories/access";
 import type { Attendance as AttendanceRecord } from "../../data/types";
 import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
-import { Button, NoAccess } from "../../shared/ui";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { ActionFooter, Button, EmptyState, NoAccess } from "../../shared/ui";
 import { studentsForSession } from "./sessionRoster";
 import s from "./AttendancePanel.module.css";
 
@@ -79,11 +80,6 @@ export default function AttendancePanel({
   const [error, setError] = useState("");
   const gesture = useRef<SwipeGesture | null>(null);
   const [swipe, setSwipe] = useState<SwipeState | null>(null);
-  const dirty = Object.keys(drafts).length > 0;
-  useEffect(() => {
-    onDirtyChange?.(dirty);
-  }, [dirty, onDirtyChange]);
-
   const draftFor = (studentId: string): Draft => {
     const existing = stored.find((record) => record.studentId === studentId);
     return (
@@ -111,6 +107,35 @@ export default function AttendancePanel({
       ),
     [rows, viewOnly, stored],
   );
+
+  const storedRows = Object.fromEntries(
+    students.map((student) => {
+      const record = stored.find((item) => item.studentId === student.id);
+      return [
+        student.id,
+        {
+          status: record?.status ?? "present",
+          lateAt: record?.lateAt ?? "",
+          note: record?.note ?? "",
+        },
+      ];
+    }),
+  );
+  const typedRows = Object.fromEntries(
+    rows.map((row) => [
+      row.student.id,
+      { status: row.status, lateAt: row.lateAt, note: row.note },
+    ]),
+  );
+  const action = useSaveAction({
+    baseline: storedRows,
+    value: typedRows,
+    save: () => persist(),
+  });
+  const dirty = action.dirty;
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   const warnings = students.filter((student) =>
     studentAbsenceWarning(student.id),
@@ -197,8 +222,9 @@ export default function AttendancePanel({
       ),
     );
   };
-  const save = () => {
-    if (!session) return;
+  /** Trả `false` khi lưu lỗi (useSaveAction giữ dirty để thử lại). */
+  const persist = (): boolean => {
+    if (!session) return false;
     try {
       saveAttendanceBatch(
         rows.map((row) => ({
@@ -212,12 +238,17 @@ export default function AttendancePanel({
       setDrafts({});
       setError("");
       clearStatus();
+      return true;
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Không lưu được điểm danh.",
       );
       setStatus("error");
+      return false;
     }
+  };
+  const save = () => {
+    void action.submit();
   };
   useEffect(() => {
     if (saveRef) saveRef.current = save;
@@ -445,9 +476,10 @@ export default function AttendancePanel({
                   </p>
                 ))
               ) : (
-                <p className={s.warning}>
-                  Chưa có học sinh vắng 2 buổi liên tiếp.
-                </p>
+                <EmptyState
+                  size="compact"
+                  title="Chưa có học sinh vắng 2 buổi liên tiếp"
+                />
               )}
             </article>
             {desktop && (
@@ -459,18 +491,24 @@ export default function AttendancePanel({
         )}
       </div>
 
-      {!desktop && (
-        <div className={s.stickyBar}>
+      {/* Buổi chưa tới đã có thông báo khoá phía trên: không thêm nút xám thừa */}
+      {!desktop && !readOnly && (
+        <ActionFooter
+          className={s.stickyBar}
+          hint={!viewOnly && !action.dirty ? "Chưa có thay đổi để lưu" : undefined}
+        >
           {errorBanner}
           <Button
             size="lg"
             onClick={save}
-            disabled={viewOnly}
+            disabled={viewOnly || !action.canSave}
+            loading={action.saving}
+            done={action.justSaved}
             aria-describedby={viewOnlyNoticeId}
           >
-            {readOnly ? "Điểm danh" : "Lưu điểm danh"}
+            Lưu điểm danh
           </Button>
-        </div>
+        </ActionFooter>
       )}
     </section>
   );

@@ -1,0 +1,12 @@
+# Việc backend-08: sửa phát hiện review r2 (hai worker, file riêng)
+
+Bạn là worker. Worktree `/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-backend`, `worker/` (nhánh `mvp-backend`). Đọc `/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/backend/review-impl-r2.md` (mục của bạn) và `api-spec.md`. Dùng `srcwalk`. Chỉ sửa file thuộc mục của bạn. Mỗi sửa có test hồi quy MỚI (đỏ trước, xanh sau, assert nội dung). Chạy `npm run typecheck` và `npm test`. Commit chỉ file của bạn (conventional, tiếng Anh, không nhắc AI), không push, không deploy. Ghi mục "Đã sửa (<mục>)" ngắn vào cuối `review-impl-r2.md`. Nếu gặp lỗi upstream 429 tạm thời, kiểm `git diff` rồi làm tiếp. Kết thúc: Status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT + 2 câu.
+
+## Mục D — file: `src/index.ts`, `src/middleware/auth.ts`, `src/db/identity.ts`, `src/db/auth.ts`, `src/routes/auth.ts`, `src/types.ts`, `.dev.vars.example`, `README.md`, `wrangler.jsonc` (chỉ thêm biến `ALLOWED_ORIGINS` rỗng/placeholder cho staging), `tests/cors.test.ts`, `tests/auth*.test.ts`
+1. N1 CORS: middleware CORS cho `/v1/*` theo danh sách origin cho phép từ biến `ALLOWED_ORIGINS` (phân tách dấu phẩy; mặc định rỗng = không cho origin nào), KHÔNG dùng `*`, phản chiếu chỉ origin nằm trong danh sách, `Vary: Origin`, cho phép `Authorization, Content-Type, X-Request-Id, X-Client` (+ phương thức dùng thật), `OPTIONS` preflight trả 204, `Access-Control-Max-Age` hợp lý, lỗi cũng có header. Test: origin hợp lệ, origin lạ không phản chiếu, preflight.
+2. m9 + N2: `/me` và danh sách vai trò chỉ trả membership `active`; membership đang chọn bị vô hiệu/vai trò bị vô hiệu thì 5 route tài khoản vẫn dùng được (phiên không kẹt `account_disabled`), route miền trả lỗi đúng spec.
+3. m3: `changePassword` xoá `device_tokens` của các phiên bị thu hồi trong cùng batch.
+
+## Mục E — file: `src/db/sessions.ts`, `src/db/session-generation.ts`, `src/db/classes.ts` (chỉ `insertSessions` và liên quan), `tests/sessions.test.ts`, `tests/classes.test.ts`, test mới `tests/session-generation.test.ts`
+1. m2: hủy buổi phát lại `change_log` của `homework_grade` bị ảnh hưởng ở CẢ HAI chiều (cổng mở và cổng đóng lại), không điều kiện join `slip.status='sent'` (pull tự sinh upsert/deleted). Test với pull.
+2. N3: cron sinh buổi dùng cùng cơ chế `INSERT … WHERE NOT EXISTS` (một buổi/lớp/ngày) như `insertSessions` của PATCH lớp; test cron gặp ngày đã có buổi lẻ/đã hủy, chạy lại cron không nhân đôi.

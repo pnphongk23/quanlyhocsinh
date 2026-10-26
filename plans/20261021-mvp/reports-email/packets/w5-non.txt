@@ -1,0 +1,1 @@
+Không sửa backend/web/iOS/docs/design/tokens; không thêm token (cần thì báo); không nhận xét tổng hợp AI, không OTP; không in env/printenv/set/ps/lsof.

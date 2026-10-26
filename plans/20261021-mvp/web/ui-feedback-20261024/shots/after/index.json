@@ -1,0 +1,760 @@
+[
+  {
+    "file": "F1-sidebar-chua-chon-lop-390.png",
+    "label": "F1-sidebar-chua-chon-lop",
+    "viewport": "390x844",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Lớp của tôi",
+      "Hôm nay · Thứ Bảy 24/10",
+      "Việc còn dở",
+      "Lớp 6A",
+      "Lớp 7B",
+      "Lớp trống"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-lop-390.png",
+    "label": "F7-empty-lop",
+    "viewport": "390x844",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Lớp của tôi",
+      "Chưa có lớp học"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-buoi-hoc-390.png",
+    "label": "F7-empty-buoi-hoc",
+    "viewport": "390x844",
+    "route": "/lop/demo-empty/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/buoi-hoc",
+    "headings": [
+      "Lớp trống",
+      "Lớp chưa có buổi học"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F1-sidebar-da-chon-lop-390.png",
+    "label": "F1-sidebar-da-chon-lop",
+    "viewport": "390x844",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Buổi hiện tại",
+      "Các buổi đã qua"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F2-sidebar-mep-390.png",
+    "label": "F2-sidebar-mep",
+    "viewport": "390x844",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Buổi hiện tại",
+      "Các buổi đã qua"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F5-dau-trang-lop-390.png",
+    "label": "F5-dau-trang-lop",
+    "viewport": "390x844",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Buổi hiện tại",
+      "Các buổi đã qua"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F6-the-buoi-hien-tai-390.png",
+    "label": "F6-the-buoi-hien-tai",
+    "viewport": "390x844",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Buổi hiện tại",
+      "Các buổi đã qua"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-hoc-sinh-390.png",
+    "label": "F7-empty-hoc-sinh",
+    "viewport": "390x844",
+    "route": "/lop/demo-empty/hoc-sinh",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/hoc-sinh",
+    "headings": [
+      "Lớp trống",
+      "Chưa có học sinh",
+      "Đánh dấu học sinh đã nghỉ?",
+      "Tuỳ chọn học sinh"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-bai-kiem-tra-390.png",
+    "label": "F7-empty-bai-kiem-tra",
+    "viewport": "390x844",
+    "route": "/lop/demo-empty/bai-kiem-tra",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/bai-kiem-tra",
+    "headings": [
+      "Lớp trống",
+      "Chưa có bài kiểm tra"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-bao-cao-390.png",
+    "label": "F7-empty-bao-cao",
+    "viewport": "390x844",
+    "route": "/lop/demo-empty/bao-cao",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/bao-cao",
+    "headings": [
+      "Lớp trống",
+      "Chưa có dữ liệu báo cáo"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-btvn-buoi-dau-390.png",
+    "label": "F7-empty-btvn-buoi-dau",
+    "viewport": "390x844",
+    "route": "/lop/demo-6a/buoi-hoc/demo-future?tab=btvn",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc/demo-future?tab=btvn",
+    "headings": [
+      "Buổi 3 · 27/10",
+      "Buổi 29/10 đã bị hủy. BTVN buổi 3 chấm ở buổi 4 · Thứ Sáu 30/10. Phụ huynh thấy thay đổi này.",
+      "Chưa giao phần bài tập nào",
+      "Tuỳ chọn buổi học"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-nhan-xet-loc-rong-390.png",
+    "label": "F7-empty-nhan-xet-loc-rong",
+    "viewport": "390x844",
+    "route": "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet",
+    "headings": [
+      "Buổi 1 · 20/10",
+      "Cần chú ý",
+      "Không có học sinh trong mục này",
+      "Buổi đầu, chưa có BTVN buổi trước"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F9-man-nhap-diem-mobile-390.png",
+    "label": "F9-man-nhap-diem-mobile",
+    "viewport": "390x844",
+    "route": "/lop/demo-6a/bai-kiem-tra/demo-test",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/bai-kiem-tra/demo-test",
+    "headings": [
+      "Điểm số",
+      "Tuỳ chọn bài kiểm tra"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F1-sidebar-chua-chon-lop-1024.png",
+    "label": "F1-sidebar-chua-chon-lop",
+    "viewport": "1024x800",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Tất cả lớp",
+      "Hôm nay · Thứ Bảy 24/10",
+      "Việc còn dở",
+      "Lớp 6A",
+      "Lớp 7B",
+      "Lớp trống"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-lop-1024.png",
+    "label": "F7-empty-lop",
+    "viewport": "1024x800",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Tất cả lớp",
+      "Chưa có lớp học"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-buoi-hoc-1024.png",
+    "label": "F7-empty-buoi-hoc",
+    "viewport": "1024x800",
+    "route": "/lop/demo-empty/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/buoi-hoc",
+    "headings": [
+      "Lớp trống",
+      "Các buổi đã qua",
+      "Chưa có buổi học nào đã qua",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F1-sidebar-da-chon-lop-1024.png",
+    "label": "F1-sidebar-da-chon-lop",
+    "viewport": "1024x800",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F2-sidebar-mep-1024.png",
+    "label": "F2-sidebar-mep",
+    "viewport": "1024x800",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F3-the-lop-selected-1024.png",
+    "label": "F3-the-lop-selected",
+    "viewport": "1024x800",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Tất cả lớp",
+      "Hôm nay · Thứ Bảy 24/10",
+      "Việc còn dở",
+      "Lớp 6A",
+      "Lớp 7B",
+      "Lớp trống"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F5-dau-trang-lop-1024.png",
+    "label": "F5-dau-trang-lop",
+    "viewport": "1024x800",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F6-the-buoi-hien-tai-1024.png",
+    "label": "F6-the-buoi-hien-tai",
+    "viewport": "1024x800",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-hoc-sinh-1024.png",
+    "label": "F7-empty-hoc-sinh",
+    "viewport": "1024x800",
+    "route": "/lop/demo-empty/hoc-sinh",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/hoc-sinh",
+    "headings": [
+      "Lớp trống",
+      "Chưa có học sinh"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-bai-kiem-tra-1024.png",
+    "label": "F7-empty-bai-kiem-tra",
+    "viewport": "1024x800",
+    "route": "/lop/demo-empty/bai-kiem-tra",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/bai-kiem-tra",
+    "headings": [
+      "Lớp trống",
+      "Chưa có bài kiểm tra"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-bao-cao-1024.png",
+    "label": "F7-empty-bao-cao",
+    "viewport": "1024x800",
+    "route": "/lop/demo-empty/bao-cao",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/bao-cao",
+    "headings": [
+      "Lớp trống",
+      "Chưa có dữ liệu báo cáo"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-btvn-buoi-dau-1024.png",
+    "label": "F7-empty-btvn-buoi-dau",
+    "viewport": "1024x800",
+    "route": "/lop/demo-6a/buoi-hoc/demo-future?tab=btvn",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc/demo-future?tab=btvn",
+    "headings": [
+      "Buổi 3 · Thứ Ba, 27 tháng 10 · 17:00",
+      "Học sinh 1",
+      "Kết quả BTVN buổi trước · chỉ đọc",
+      "Buổi trước không giao BTVN",
+      "Buổi này chưa có bài tập về nhà"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-nhan-xet-loc-rong-1024.png",
+    "label": "F7-empty-nhan-xet-loc-rong",
+    "viewport": "1024x800",
+    "route": "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet",
+    "headings": [
+      "Buổi 1 · Thứ Ba, 20 tháng 10 · 17:00",
+      "Không có học sinh trong mục này",
+      "Học sinh 1",
+      "Kết quả BTVN buổi trước · chỉ đọc",
+      "Buổi đầu · chưa có BTVN buổi trước",
+      "Buổi đầu, chưa có BTVN buổi trước"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F4-bang-diem-1024.png",
+    "label": "F4-bang-diem",
+    "viewport": "1024x800",
+    "route": "/lop/demo-6a/diem",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/diem",
+    "headings": [
+      "Lớp 6A"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F1-sidebar-chua-chon-lop-1280.png",
+    "label": "F1-sidebar-chua-chon-lop",
+    "viewport": "1280x800",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Tất cả lớp",
+      "Hôm nay · Thứ Bảy 24/10",
+      "Việc còn dở",
+      "Lớp 6A",
+      "Lớp 7B",
+      "Lớp trống"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-lop-1280.png",
+    "label": "F7-empty-lop",
+    "viewport": "1280x800",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Tất cả lớp",
+      "Chưa có lớp học"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-buoi-hoc-1280.png",
+    "label": "F7-empty-buoi-hoc",
+    "viewport": "1280x800",
+    "route": "/lop/demo-empty/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/buoi-hoc",
+    "headings": [
+      "Lớp trống",
+      "Các buổi đã qua",
+      "Chưa có buổi học nào đã qua",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F1-sidebar-da-chon-lop-1280.png",
+    "label": "F1-sidebar-da-chon-lop",
+    "viewport": "1280x800",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F2-sidebar-mep-1280.png",
+    "label": "F2-sidebar-mep",
+    "viewport": "1280x800",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F3-the-lop-selected-1280.png",
+    "label": "F3-the-lop-selected",
+    "viewport": "1280x800",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Tất cả lớp",
+      "Hôm nay · Thứ Bảy 24/10",
+      "Việc còn dở",
+      "Lớp 6A",
+      "Lớp 7B",
+      "Lớp trống"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F5-dau-trang-lop-1280.png",
+    "label": "F5-dau-trang-lop",
+    "viewport": "1280x800",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F6-the-buoi-hien-tai-1280.png",
+    "label": "F6-the-buoi-hien-tai",
+    "viewport": "1280x800",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-hoc-sinh-1280.png",
+    "label": "F7-empty-hoc-sinh",
+    "viewport": "1280x800",
+    "route": "/lop/demo-empty/hoc-sinh",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/hoc-sinh",
+    "headings": [
+      "Lớp trống",
+      "Chưa có học sinh"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-bai-kiem-tra-1280.png",
+    "label": "F7-empty-bai-kiem-tra",
+    "viewport": "1280x800",
+    "route": "/lop/demo-empty/bai-kiem-tra",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/bai-kiem-tra",
+    "headings": [
+      "Lớp trống",
+      "Chưa có bài kiểm tra"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-bao-cao-1280.png",
+    "label": "F7-empty-bao-cao",
+    "viewport": "1280x800",
+    "route": "/lop/demo-empty/bao-cao",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/bao-cao",
+    "headings": [
+      "Lớp trống",
+      "Chưa có dữ liệu báo cáo"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-btvn-buoi-dau-1280.png",
+    "label": "F7-empty-btvn-buoi-dau",
+    "viewport": "1280x800",
+    "route": "/lop/demo-6a/buoi-hoc/demo-future?tab=btvn",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc/demo-future?tab=btvn",
+    "headings": [
+      "Buổi 3 · Thứ Ba, 27 tháng 10 · 17:00",
+      "Học sinh 1",
+      "Kết quả BTVN buổi trước · chỉ đọc",
+      "Buổi trước không giao BTVN",
+      "Buổi này chưa có bài tập về nhà"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-nhan-xet-loc-rong-1280.png",
+    "label": "F7-empty-nhan-xet-loc-rong",
+    "viewport": "1280x800",
+    "route": "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet",
+    "headings": [
+      "Buổi 1 · Thứ Ba, 20 tháng 10 · 17:00",
+      "Không có học sinh trong mục này",
+      "Học sinh 1",
+      "Kết quả BTVN buổi trước · chỉ đọc",
+      "Buổi đầu · chưa có BTVN buổi trước",
+      "Buổi đầu, chưa có BTVN buổi trước"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F4-bang-diem-1280.png",
+    "label": "F4-bang-diem",
+    "viewport": "1280x800",
+    "route": "/lop/demo-6a/diem",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/diem",
+    "headings": [
+      "Lớp 6A"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F1-sidebar-chua-chon-lop-1440.png",
+    "label": "F1-sidebar-chua-chon-lop",
+    "viewport": "1440x900",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Tất cả lớp",
+      "Hôm nay · Thứ Bảy 24/10",
+      "Việc còn dở",
+      "Lớp 6A",
+      "Lớp 7B",
+      "Lớp trống"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-lop-1440.png",
+    "label": "F7-empty-lop",
+    "viewport": "1440x900",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Tất cả lớp",
+      "Chưa có lớp học"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-buoi-hoc-1440.png",
+    "label": "F7-empty-buoi-hoc",
+    "viewport": "1440x900",
+    "route": "/lop/demo-empty/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/buoi-hoc",
+    "headings": [
+      "Lớp trống",
+      "Các buổi đã qua",
+      "Chưa có buổi học nào đã qua",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F1-sidebar-da-chon-lop-1440.png",
+    "label": "F1-sidebar-da-chon-lop",
+    "viewport": "1440x900",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F2-sidebar-mep-1440.png",
+    "label": "F2-sidebar-mep",
+    "viewport": "1440x900",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F3-the-lop-selected-1440.png",
+    "label": "F3-the-lop-selected",
+    "viewport": "1440x900",
+    "route": "/lop",
+    "url": "http://127.0.0.1:5197/lop",
+    "headings": [
+      "Tất cả lớp",
+      "Hôm nay · Thứ Bảy 24/10",
+      "Việc còn dở",
+      "Lớp 6A",
+      "Lớp 7B",
+      "Lớp trống"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F5-dau-trang-lop-1440.png",
+    "label": "F5-dau-trang-lop",
+    "viewport": "1440x900",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F6-the-buoi-hien-tai-1440.png",
+    "label": "F6-the-buoi-hien-tai",
+    "viewport": "1440x900",
+    "route": "/lop/demo-6a/buoi-hoc",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc",
+    "headings": [
+      "Lớp 6A",
+      "Các buổi đã qua",
+      "Buổi hiện tại",
+      "Buổi lẻ sắp tới",
+      "Lịch lặp"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-hoc-sinh-1440.png",
+    "label": "F7-empty-hoc-sinh",
+    "viewport": "1440x900",
+    "route": "/lop/demo-empty/hoc-sinh",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/hoc-sinh",
+    "headings": [
+      "Lớp trống",
+      "Chưa có học sinh"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-bai-kiem-tra-1440.png",
+    "label": "F7-empty-bai-kiem-tra",
+    "viewport": "1440x900",
+    "route": "/lop/demo-empty/bai-kiem-tra",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/bai-kiem-tra",
+    "headings": [
+      "Lớp trống",
+      "Chưa có bài kiểm tra"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-bao-cao-1440.png",
+    "label": "F7-empty-bao-cao",
+    "viewport": "1440x900",
+    "route": "/lop/demo-empty/bao-cao",
+    "url": "http://127.0.0.1:5197/lop/demo-empty/bao-cao",
+    "headings": [
+      "Lớp trống",
+      "Chưa có dữ liệu báo cáo"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-btvn-buoi-dau-1440.png",
+    "label": "F7-empty-btvn-buoi-dau",
+    "viewport": "1440x900",
+    "route": "/lop/demo-6a/buoi-hoc/demo-future?tab=btvn",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc/demo-future?tab=btvn",
+    "headings": [
+      "Buổi 3 · Thứ Ba, 27 tháng 10 · 17:00",
+      "Học sinh 1",
+      "Kết quả BTVN buổi trước · chỉ đọc",
+      "Buổi trước không giao BTVN",
+      "Buổi này chưa có bài tập về nhà"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F7-empty-nhan-xet-loc-rong-1440.png",
+    "label": "F7-empty-nhan-xet-loc-rong",
+    "viewport": "1440x900",
+    "route": "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet",
+    "headings": [
+      "Buổi 1 · Thứ Ba, 20 tháng 10 · 17:00",
+      "Không có học sinh trong mục này",
+      "Học sinh 1",
+      "Kết quả BTVN buổi trước · chỉ đọc",
+      "Buổi đầu · chưa có BTVN buổi trước",
+      "Buổi đầu, chưa có BTVN buổi trước"
+    ],
+    "valid": true
+  },
+  {
+    "file": "F4-bang-diem-1440.png",
+    "label": "F4-bang-diem",
+    "viewport": "1440x900",
+    "route": "/lop/demo-6a/diem",
+    "url": "http://127.0.0.1:5197/lop/demo-6a/diem",
+    "headings": [
+      "Lớp 6A"
+    ],
+    "valid": true
+  }
+]

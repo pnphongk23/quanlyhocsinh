@@ -109,3 +109,57 @@ Cách làm: `npm run build` + `npx vite preview --port 4199`, rồi điều khi�
 
 - Review + commit (tôi không commit/push/deploy). File thay đổi: 49 mục trong `git status` (33 modified, 4 test mới, 2 docs).
 - Nếu chốt khác ở mục 7.1/7.2/7.3 thì nhắn lại, tôi sẽ điều phối sửa.
+
+## 9. Vòng 2 — pattern màn chi tiết (General Lead góp ý 2026-10-20)
+
+**Yêu cầu:** màn chi tiết không có nút tạo mới (nút tạo chỉ ở màn danh sách); các thao tác phụ (sửa/xoá/huỷ) gom vào một nút “⋯ more” ở góc phải trên header, áp dụng cho các màn tương tự.
+
+**Đã làm** (Lính · Lữ Bố `a6dc45fc`, đúng 6 file, không đụng file ngoài):
+- `features/scores/TestScoresPage.tsx`: bỏ `+ Bài mới` khỏi header; bỏ hàng `Sửa bài`/`Xoá bài`; thêm nút `⋯` (`aria-label`/`title`="Tuỳ chọn bài kiểm tra", 44×44, `Icon name="more"`) trong `PageHeader actions`, chỉ hiện khi có quyền `scores` write → mở `Sheet` "Tuỳ chọn bài kiểm tra" với "Sửa bài" (secondary) và "Xoá bài" (danger). Giữ nguyên `EditTestModal`, `ConfirmDialog` lưu trữ/xoá, `Đổi bài`, thanh Lưu điểm, chặn rời màn khi còn nháp.
+- `features/class-space/SessionDetailPage.tsx`: màn này dùng `<header>` riêng (không phải `PageHeader`) nên `⋯` đặt ở cuối `headerRow` (góc phải trên), `aria-label`="Tuỳ chọn buổi học", chỉ hiện khi buổi `planned` + có quyền → `Sheet` với "Huỷ buổi" (danger); bỏ khối `Huỷ buổi` cuối tab Điểm danh. Giữ `ConfirmDialog` huỷ buổi, nút "Khôi phục buổi học" ở trạng thái đã huỷ, luồng dạy thay/điểm danh.
+- CSS: xoá `.testActions`/`.detailActions` (+ rule responsive), thêm `.moreButton` (đúng style `lectureDetail.module.css`) và `.sheetActions`.
+- Test: `testScoresPage.test.tsx` +4 case, `sessionDetailTabs.test.tsx` +3 case (không còn `+ Bài mới`; `Sửa bài`/`Xoá bài` chỉ nằm trong sheet đóng; có `⋯` khi có quyền ghi, không có khi chỉ quyền đọc; buổi planned có `⋯`, buổi đã huỷ không có và vẫn có "Khôi phục buổi học").
+
+**Kiểm chứng lại (tôi tự chạy):** `npm run typecheck` sạch · `npm test` **49 file / 485 test pass** (+6) · `npm run build` OK.
+
+**Xem thử 390px** (Chrome CDP, đã tắt preview/Chrome):
+- `13-diem-bai-kiem-tra-more.png`: màn điểm 1 bài — không còn `+ Bài mới`, không còn hàng 2 nút, chỉ có `⋯` ở góc phải trên (đo được 44×44, x=326/y=21), `scrollWidth = 390`.
+- `14-sheet-tuy-chon-bai-kiem-tra.png`: sheet "Tuỳ chọn bài kiểm tra" với "Sửa bài"/"Xoá bài".
+- `15-modal-sua-bai.png`: bấm "Sửa bài" mở modal "Sửa bài kiểm tra" như cũ.
+- `17-sheet-buoi-6a-session-8.png`: buổi 9 (planned) — `⋯` ở header, sheet "Tuỳ chọn buổi học" với "Huỷ buổi"; buổi đã huỷ (`6a-session-7`) không có `⋯`.
+
+**Audit các màn khác** (chỉ báo cáo, chưa sửa — chờ General Lead quyết):
+- Đã đúng pattern: `LectureDetailPage` (⋯ + Sheet), `StudentsPage` (⋯ từng em), `ClassOptionsMenu` (Tuỳ chọn lớp).
+- Ổn, không cần đổi: `StudentScoreReportPage`, `ScoreReportPage`, `PayrollDetailPage`, `GuardianReportPage` (header không action/picker/điều hướng tháng).
+- Có nhiều nút nhưng **không nằm ở header**, nên tôi chưa đụng: `MemberDetailPage` card "Lời mời đang chờ" (Gửi lại lời mời / Huỷ lời mời); `TuitionDetailPage` sticky bar (Ghi nhận thu / Gửi thông báo + Xoá từng lần thu); `ReportPreview` cuối bản xem trước (Phát hành / In báo cáo). Nếu muốn gom cả các chỗ này thì nói, tôi chia packet tiếp.
+- Hai lối tạo bài trong cùng một lớp (tab Điểm có `+ Bài kiểm tra mới`, tab Bài kiểm tra có `+ Bài mới`) vẫn giữ vì cả hai là màn danh sách — cần General Lead quyết nếu muốn chỉ còn một.
+- Thay đổi hành vi nhỏ: `Huỷ buổi` trước đây ẩn ở tab Bài tập về nhà, nay vào sheet nên dùng được từ mọi tab khi buổi planned.
+
+## 10. Deploy Cloudflare Pages (2026-10-20, theo yêu cầu General Lead)
+
+Lệnh (đúng lệnh đã dùng ở các vòng trước):
+`cd design/prototype && npx wrangler pages deploy dist --project-name quanlyhocsinh-proto --branch main --commit-dirty=true`
+
+- Deployment: https://0be79317.quanlyhocsinh-proto.pages.dev
+- Bản chính: https://quanlyhocsinh-proto.pages.dev (đang phục vụ `index-By9oPuOm.js`, trùng bundle trong `dist`)
+- Kiểm sau deploy: `/`, `/chon-vai-tro`, `/lop/6a/diem`, `/lop/6a/bai-kiem-tra/6a-test-0`, URL deployment → 200. Chunk `TestScoresPage-*.js` và `SessionDetailPage-*.js` tải từ bản chính trùng SHA-256 với `dist/assets` và có nhãn mới ("Tuỳ chọn bài kiểm tra", "Tuỳ chọn buổi học").
+- Không commit/push git (đúng ràng buộc; deploy dùng `--commit-dirty=true`).
+
+## 11. Sửa lỗi "không gõ được vào ô điểm" (2026-10-20)
+
+**Chẩn đoán** (kiểm trên bản deploy, gõ phím thật qua CDP):
+- `/lop/:classId/bai-kiem-tra/:testId` (màn nhập điểm một bài): ô nhận phím bình thường (`disabled=false`, `readOnly=false`).
+- `/lop/:classId/diem` (bảng điểm lớp — đúng URL trong ảnh người dùng): **0 ô `input`** trong bảng, bấm ô điểm **không có phản ứng**. Ô "– / Chưa có điểm" trông như ô nhập nhưng chỉ là chữ; đường nhập duy nhất là bấm tên bài ở header cột.
+→ Kết luận: lỗi khả dụng của bảng điểm, không phải ô nhập bị khoá.
+
+**Đã sửa** (Lính · Quan Vũ `65b36a08`, 5 file):
+- `features/class-space/ScoreGridTab.tsx`: mỗi ô điểm bọc `<Link>` tới `/lop/${classId}/bai-kiem-tra/${test.id}?hoc-sinh=${student.id}`, `aria-label` = "Nhập điểm {tên bài} cho {tên em}"; giữ nguyên `<td>`, link header cột, nút tạo bài/báo cáo, chú thích, thứ tự học sinh, nhãn "Đã nghỉ".
+- `features/scores/TestScoresPage.tsx`: đọc `?hoc-sinh`, khớp thì `autoFocus` + `scrollIntoView({block:"center"})` cho đúng ô của em đó; không khớp thì như cũ.
+- `features/scores/scores.module.css`: thêm `.cellLink` (min-height 44px, hover/focus-visible nền nhạt), dùng cho cả ô trống và ô có điểm.
+- Test: `scoreGridTab.test.tsx` (40 link đúng `href`/`aria-label`, 10 em × 4 bài) + `testScoresPage.test.tsx` (`autofocus` đúng em khi có param, không có khi vắng).
+
+**Kiểm chứng (tôi tự chạy):** typecheck sạch · **49 file / 488 test pass** · build OK. Xem thử 390px bằng CDP: bảng điểm có 40 ô bấm được, bấm ô trống "Nhập điểm Nói cho Phạm Đức Dũng" → mở `/lop/6a/bai-kiem-tra/6a-test-3?hoc-sinh=6a-student-3`, **focus đúng input "Điểm Phạm Đức Dũng"**, gõ phím vào đúng ô đó; không tràn ngang. Ảnh: `reports/shots/18-bang-diem-o-bam-duoc.png`, `19-nhap-diem-tu-o-bang.png`.
+
+**Không làm:** sửa trực tiếp trong bảng (inline edit) — thuộc mục "Làm sau" của spec ("Bản web giáo viên: bảng điểm").
+
+**Deploy lại:** https://9e0e3e0f.quanlyhocsinh-proto.pages.dev · bản chính https://quanlyhocsinh-proto.pages.dev (phục vụ `index-CSfrCM9A.js`, trùng `dist`). Kiểm: `/`, `/lop/6a/diem`, `/lop/6a/bai-kiem-tra/6a-test-3?hoc-sinh=6a-student-3`, `/ph` → 200; chunk `ScoreGridTab-*`/`TestScoresPage-*` trên bản chính có `hoc-sinh`.

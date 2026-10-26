@@ -1,0 +1,1 @@
+cd <worktree> && npm ci (nếu chưa có node_modules) && npm run typecheck && npm test && npm run build. Commit theo đường dẫn trên nhánh feat/reports-email: git add <từng file> && git commit -m "feat(web): reports by session range with preview dialog".

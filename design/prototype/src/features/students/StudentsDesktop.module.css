@@ -1,0 +1,148 @@
+/* Tab Học sinh trên web desktop (ảnh 14). */
+/* Một thẻ gom các số, rộng theo nội dung */
+.stats {
+  display: flex;
+  align-self: flex-start;
+  padding: 12px 8px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.stat {
+  min-width: 112px;
+  padding: 0 20px;
+}
+
+.stat + .stat {
+  border-left: 1px solid var(--color-divider);
+}
+
+.colRate {
+  width: 120px;
+}
+
+.colMenu {
+  width: 56px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.table th {
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  min-height: 52px;
+  padding: 8px;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 15px;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+.studentName {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.studentMeta {
+  display: block;
+  font-size: 12.5px;
+  color: var(--color-muted);
+}
+
+.rateCell {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.accountCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.smallButton,
+.smallButtonWarning {
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.smallButton {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+
+.smallButtonWarning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.menuWrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.footnote {
+  margin: 0;
+  padding-top: 10px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.prototypeNote {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.password {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--color-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.passwordActions {
+  display: flex;
+  gap: 8px;
+}
+
+.passwordActions > * {
+  flex: 1;
+}

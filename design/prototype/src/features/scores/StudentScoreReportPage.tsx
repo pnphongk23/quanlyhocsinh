@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useAccess, visibleClassIds } from "../../data/repositories/access";
 import { getClass } from "../../data/repositories/classes";
+import { formatScore } from "../../data/scoreFormat";
 import { useStore } from "../../data/store";
 import { formatDayMonth } from "../../shared/format";
 import {
@@ -14,7 +15,6 @@ import {
 } from "../../shared/ui";
 import {
   classScoreReport,
-  formatScoreDot,
   formatSignedPercent,
   scorePercent,
   studentScoreReport,
@@ -304,7 +304,7 @@ export default function StudentScoreReportPage() {
                   <Pill tone="neutral">Chưa có điểm</Pill>
                 ) : (
                   <span className={s.testScore}>
-                    {formatScoreDot(row.value)}
+                    {formatScore(row.value)}
                     <span className={s.testScoreUnit}>/{row.test.max}</span>
                   </span>
                 )}
@@ -312,7 +312,7 @@ export default function StudentScoreReportPage() {
             ))}
           </ul>
         ) : (
-          <EmptyState title="Chưa có bài kiểm tra">
+          <EmptyState title="Chưa có bài kiểm tra" mascot="cho">
             <p>Lớp chưa có bài kiểm tra nào nên chưa có điểm.</p>
           </EmptyState>
         )}

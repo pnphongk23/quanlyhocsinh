@@ -10,6 +10,7 @@ import {
   substitutedSessionIds,
 } from "./access";
 import { attendanceRate, hasAbsenceWarning } from "../logic";
+import { relinkStudentGuardians } from "./guardian";
 
 /** Học sinh của lớp trong phạm vi vai trò đang dùng. */
 export const listStudents = (classId: string, includeLeft = true): Student[] =>
@@ -69,6 +70,9 @@ export function createStudent(
   };
   commit("students", item.id, (d) => {
     d.students.push(item);
+    // Khai SĐT phụ huynh ngay khi thêm học sinh thì liên kết tài khoản phụ
+    // huynh đã đăng ký trước đó bằng đúng SĐT này (spec mục 4 "Tài khoản").
+    relinkStudentGuardians(d, requireStudent(item.id, d));
   });
   return item;
 }
@@ -82,6 +86,26 @@ export function updateStudent(
     Object.assign(requireStudent(id, d), patch);
   });
 }
+/**
+ * Sửa SĐT phụ huynh trên hồ sơ học sinh. SĐT khớp tài khoản phụ huynh nào thì
+ * tự liên kết em với tài khoản đó; đổi sang số khác thì gỡ liên kết cũ (spec
+ * mục 4 "Tài khoản", vẫn liên kết được khi hồ sơ khai SĐT sau khi phụ huynh
+ * đã đăng ký).
+ */
+export function updateStudentPhone(id: string, parentPhone: string): void {
+  requirePermission("students", "write");
+  const student = requireStudent(id);
+  requireClassAccess(student.classId);
+  const phone = parentPhone.trim();
+  if (phone && !/^[0-9+().\s-]{6,20}$/.test(phone))
+    throw new Error("Số điện thoại không hợp lệ.");
+  commit("students", id, (d) => {
+    const target = requireStudent(id, d);
+    target.parentPhone = phone;
+    relinkStudentGuardians(d, target);
+  });
+}
+
 export function markStudentLeft(id: string, leftAt: string): void {
   requirePermission("students", "write");
   const student = requireStudent(id);

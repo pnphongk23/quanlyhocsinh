@@ -1,0 +1,41 @@
+/* Thẻ Email khôi phục của Cài đặt; dùng chung cho mobile và desktop, chỉ token. */
+
+.card {
+  display: grid;
+  gap: var(--space-8);
+  padding: var(--card-pad);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+.head {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+.hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-md);
+  line-height: var(--leading-base);
+}
+.current {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  overflow-wrap: anywhere;
+}
+.form {
+  display: grid;
+  gap: var(--space-16);
+  margin-top: var(--space-8);
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}
+@media (max-width: 1023px) {
+  .actions > button {
+    flex: 1;
+  }
+}

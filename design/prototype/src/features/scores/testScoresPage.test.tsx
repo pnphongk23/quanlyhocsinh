@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { createSeed } from "../../data/seed";
 import { replaceStore } from "../../data/store";
+import { MEMBER_IDS, ROLE_IDS } from "../../data/defaults";
 import { createTest } from "../../data/repositories/tests";
 import NewTestPage from "./NewTestPage";
 import TestScoresPage, { isInvalidDraft } from "./TestScoresPage";
@@ -32,6 +33,28 @@ const scorePage = (testId: string) =>
     <TestScoresPage />,
   );
 
+const scorePageWithQuery = (testId: string, query: string) =>
+  render(
+    `/lop/6a/bai-kiem-tra/${testId}${query}`,
+    "/lop/:classId/bai-kiem-tra/:testId",
+    <TestScoresPage />,
+  );
+
+/** Thẻ input điểm của một học sinh. */
+function scoreInputTag(html: string, studentName: string): string {
+  const match = new RegExp(
+    `<input[^>]*aria-label="Điểm ${studentName}"[^>]*>`,
+  ).exec(html);
+  return match ? match[0] : "";
+}
+
+/** Khối sheet tuỳ chọn bài kiểm tra (dialog đóng, chưa có thuộc tính open). */
+function optionsSheet(html: string): string {
+  const match =
+    /<dialog[^>]*aria-label="Tuỳ chọn bài kiểm tra"[\s\S]*?<\/dialog>/.exec(html);
+  return match ? match[0] : "";
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal("localStorage", storage);
@@ -50,13 +73,15 @@ describe("điểm gõ dở theo thang của bài", () => {
     expect(isInvalidDraft({ value: "16" }, 15)).toBe(true);
     expect(isInvalidDraft({ value: "10,5" }, 10)).toBe(true);
     expect(isInvalidDraft({ value: "-1" }, 15)).toBe(true);
-    expect(isInvalidDraft({ value: "abc" }, 15)).toBe(true);
+      expect(isInvalidDraft({ value: "abc" }, 15)).toBe(true);
+      expect(isInvalidDraft({ value: "7,3" }, 15)).toBe(true);
   });
 
   it("điểm trong thang hợp lệ, ô trống không tính là lỗi", () => {
     expect(isInvalidDraft({ value: "15" }, 15)).toBe(false);
     expect(isInvalidDraft({ value: "0" }, 15)).toBe(false);
-    expect(isInvalidDraft({ value: "7,5" }, 15)).toBe(false);
+      expect(isInvalidDraft({ value: "7,5" }, 15)).toBe(false);
+      expect(isInvalidDraft({ value: "7.5" }, 15)).toBe(false);
     expect(isInvalidDraft({ value: "" }, 15)).toBe(false);
   });
 });
@@ -79,10 +104,52 @@ describe("màn nhập điểm hiện thang điểm của bài", () => {
     expect(html).not.toContain("Điểm từ 0 đến 10");
   });
 
-  it("có quyền sửa điểm thì có nút Sửa bài và Xoá bài", () => {
+  it("màn chi tiết điểm không còn nút tạo bài mới", () => {
     const html = scorePage("6a-test-3");
-    expect(html).toContain("Sửa bài");
-    expect(html).toContain("Xoá bài");
+    expect(html).not.toContain("+ Bài mới");
+    expect(html).not.toContain("Tạo bài kiểm tra");
+  });
+
+  it("Sửa bài và Xoá bài chỉ nằm trong sheet tuỳ chọn, không hiện sẵn trên màn", () => {
+    const html = scorePage("6a-test-3");
+    const sheet = optionsSheet(html);
+    expect(sheet).toContain("Sửa bài");
+    expect(sheet).toContain("Xoá bài");
+    // Sheet đang đóng nên không chiếm chỗ trên màn.
+    expect(sheet).not.toMatch(/<dialog[^>]*\sopen/);
+    const outside = html.replace(sheet, "");
+    expect(outside).not.toContain("Sửa bài");
+    expect(outside).not.toContain("Xoá bài");
+  });
+
+  it("có quyền ghi điểm thì có nút tuỳ chọn bài kiểm tra", () => {
+    const html = scorePage("6a-test-3");
+    expect(html).toContain('aria-label="Tuỳ chọn bài kiểm tra"');
+  });
+
+  it("mở từ ô điểm của một em thì focus đúng ô của em đó", () => {
+    const html = scorePageWithQuery("6a-test-3", "?hoc-sinh=6a-student-0");
+    expect(scoreInputTag(html, "Nguyễn Minh Anh")).toContain("autofocus");
+    expect(scoreInputTag(html, "Trần Gia Bảo")).not.toContain("autofocus");
+  });
+
+  it("mở thẳng màn điểm thì không focus ô nào", () => {
+    const html = scorePage("6a-test-3");
+    expect(html).not.toContain("autofocus");
+  });
+
+  it("chỉ có quyền đọc điểm thì không có nút tuỳ chọn", () => {
+    const state = createSeed();
+    state.activeMemberId = MEMBER_IDS.lanTeacher;
+    const teacherRole = state.roles.find(
+      (role) => role.id === ROLE_IDS.teacher,
+    )!;
+    teacherRole.permissions.scores = "read";
+    replaceStore(state);
+
+    const html = scorePage("6a-test-3");
+    expect(html).toContain("Bạn chỉ có quyền xem điểm của lớp này.");
+    expect(html).not.toContain('aria-label="Tuỳ chọn bài kiểm tra"');
   });
 });
 

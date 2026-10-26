@@ -28,6 +28,13 @@ function activeTab(html: string): string {
   return match ? match[1] : "";
 }
 
+/** Khối sheet tuỳ chọn buổi học (dialog đóng, chưa có thuộc tính open). */
+function optionsSheet(html: string): string {
+  const match =
+    /<dialog[^>]*aria-label="Tuỳ chọn buổi học"[\s\S]*?<\/dialog>/.exec(html);
+  return match ? match[0] : "";
+}
+
 describe("tab của màn buổi học (ảnh 60/61)", () => {
   it("ba tab ngang hàng đúng thứ tự và nhãn", () => {
     expect(SESSION_TABS.map((tab) => tab.label)).toEqual([
@@ -134,11 +141,42 @@ describe("Màn buổi học có ba tab ở URL (ảnh 60/61)", () => {
   });
 });
 
-describe("Thẻ Người dạy và Bài giảng chỉ ở tab Điểm danh (ảnh 40–47, 50–62)", () => {
-  it("tab Điểm danh vẫn có Người dạy và Bài giảng", () => {
+describe("Tuỳ chọn buổi học trong nút ⋯ ở đầu màn", () => {
+  it("buổi chưa huỷ không hiện nút Huỷ buổi trực tiếp trên màn", () => {
+    const html = renderSession("/lop/6a/buoi-hoc/6a-session-8");
+    const sheet = optionsSheet(html);
+    expect(sheet).toContain("Huỷ buổi");
+    // Sheet đang đóng nên không chiếm chỗ trên màn.
+    expect(sheet).not.toMatch(/<dialog[^>]*\sopen/);
+    expect(html.replace(sheet, "")).not.toContain("Huỷ buổi");
+  });
+
+  it("buổi sắp tới có nút tuỳ chọn buổi học", () => {
+    const html = renderSession("/lop/6a/buoi-hoc/6a-session-8");
+    expect(html).toContain('aria-label="Tuỳ chọn buổi học"');
+  });
+
+  it("buổi đã huỷ không có nút tuỳ chọn buổi học", () => {
+    const state = createSeed();
+    state.sessions = state.sessions.map((session) =>
+      session.id === "6a-session-8"
+        ? { ...session, status: "cancelled" }
+        : session,
+    );
+    replaceStore(state);
+    const html = renderSession("/lop/6a/buoi-hoc/6a-session-8");
+    expect(html).toContain("Buổi này đã huỷ");
+    expect(html).not.toContain("Khôi phục");
+    expect(html).not.toContain('aria-label="Tuỳ chọn buổi học"');
+    expect(html).not.toContain("Huỷ buổi");
+  });
+});
+
+describe("Thẻ Người dạy chỉ ở tab Điểm danh; Bài giảng tắt bằng cờ (ảnh 40–47, 50–62)", () => {
+  it("tab Điểm danh có Người dạy, không có Bài giảng khi cờ tắt", () => {
     const html = renderSession("/lop/6a/buoi-hoc/6a-session-7");
     expect(html).toContain("Người dạy");
-    expect(html).toContain("Bài giảng");
+    expect(html).not.toContain("Bài giảng");
   });
 
   it("tab Nhận xét ẩn Người dạy và Bài giảng nhưng giữ tính năng khác", () => {

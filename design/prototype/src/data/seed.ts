@@ -40,12 +40,15 @@ export function createSeed(): StoreState {
     comments: [],
     homeworkSections: [],
     homeworkGrades: [],
+    reportBatches: [],
     reports: [],
     changeLogs: [],
     pending: [],
     auth: {
-      email: "colan@example.test",
+      phone: "900000001",
       // Cô Lan có ba membership: Admin, Giáo viên và Phụ huynh (hai con ở lớp 6A).
+      // Seed giữ phiên Admin để dữ liệu mẫu mở được mọi lớp; tài khoản đăng nhập
+      // bằng SĐT (authAccounts.ts) chỉ có hai vai trò như ảnh thiết kế.
       memberIds: [
         MEMBER_IDS.lanAdmin,
         MEMBER_IDS.lanTeacher,
@@ -197,13 +200,24 @@ export function createSeed(): StoreState {
         makeup: true,
         status: "cancelled",
       });
+    // Đợt báo cáo mẫu: các buổi đã diễn ra trong tháng 10 (Buổi 5–8 của 6A).
+    state.reportBatches.push({
+      id: id + "-report-batch",
+      classId: id,
+      fromSessionId: id + "-session-" + dates.findIndex((date) => date.startsWith("2026-10")),
+      toSessionId: id + "-session-7",
+      createdAt: "2026-10-15T09:00:00.000Z",
+    });
     names.forEach((name, i) => {
       const studentId = id + "-student-" + i;
       state.students.push({
         id: studentId,
         classId: id,
         name,
-        parentPhone: "09xx xxx xxx",
+        // Hai em đầu lớp 6A dùng chung SĐT phụ huynh +84 900 000 002 (tài khoản
+        // phụ huynh mẫu); các em còn lại dùng SĐT giả trong hồ sơ.
+        parentPhone: c === 0 && i < 2 ? "0900000002" : "09xx xxx xxx",
+        guardianRelation: i === 1 || i === 5 || i === 9 ? "Bố" : "Mẹ",
         enrolledAt: "2026-09-01",
         leftAt: i === 9 ? "2026-10-09" : null,
         status: i === 9 ? "left" : "active",
@@ -239,6 +253,7 @@ export function createSeed(): StoreState {
         id: studentId + "-report",
         classId: id,
         studentId,
+        batchId: id + "-report-batch",
         month: "2026-10",
         status: i < 2 ? "published" : "draft",
         needsRepublish: false,

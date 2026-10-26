@@ -26,7 +26,9 @@ import {
 import { useStore } from "../../data/store";
 import { useSaveStatus } from "../../shared/SaveStatus";
 import { formatDayMonth } from "../../shared/format";
-import { Button, EmptyState, NoAccess, Pill } from "../../shared/ui";
+import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
+import { Button, EmptyState, NoAccess, Pill, UnsavedChangesDialog } from "../../shared/ui";
 import type {
   HomeworkKind,
   HomeworkLevel,
@@ -49,6 +51,7 @@ import {
   type HomeworkView,
 } from "./homeworkModel";
 import styles from "./HomeworkPanel.module.css";
+import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 
 /* ------------------------------------------------------------------ icons */
 
@@ -132,11 +135,14 @@ type PanelProps = {
   session: Session;
   /** Mặc định mở "Bài tập buổi trước" (ảnh 50). Chỉ dùng cho test/deep link. */
   initialView?: HomeworkView;
+  /** Báo trang cha khi phần BTVN đang soạn dở (để hỏi trước khi rời màn/đổi tab). */
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 export default function HomeworkPanel({
   session,
   initialView = "previous",
+  onDirtyChange,
 }: PanelProps) {
   const state = useStore();
   const access = useAccess();
@@ -203,14 +209,7 @@ export default function HomeworkPanel({
     return (
       <section className={styles.panel} aria-label="Bài tập về nhà">
         {backBar}
-        <div className={styles.noticeCard} role="status">
-          <span className={styles.noticeIcon}>
-            <Glyph size={20}>{infoIcon}</Glyph>
-          </span>
-          <p className={styles.noticeTitle}>
-            Buổi học đã hủy nên không giao hoặc chấm bài tập.
-          </p>
-        </div>
+        <EmptyState title="Buổi học đã hủy nên không giao hoặc chấm bài tập" />
       </section>
     );
 
@@ -277,18 +276,11 @@ export default function HomeworkPanel({
         previous.state === "first" ? "first" : "none-given",
       );
       return (
-        <>
-          <div className={styles.noticeCard} role="status">
-            <span className={styles.noticeIcon}>
-              <Glyph size={20}>{infoIcon}</Glyph>
-            </span>
-            <div>
-              <p className={styles.noticeTitle}>{copy.title}</p>
-              <p className={styles.noticeBody}>{copy.body}</p>
-            </div>
-          </div>
-          {canWrite && goToToday}
-        </>
+        <EmptyState
+          title={copy.title}
+          description={copy.body}
+          action={canWrite ? goToToday : undefined}
+        />
       );
     }
     if (!activeProgress || !activeSection) return null;
@@ -476,11 +468,6 @@ export default function HomeworkPanel({
               {todayGradingText(grading)}
             </p>
           </div>
-          {sections.length > 0 && (
-            <Pill tone="success" className={styles.savedPill}>
-              Đã lưu · phụ huynh đã thấy
-            </Pill>
-          )}
           {sections.length > 0 ? (
             <div className={styles.sectionList}>
               {sections.map((section) => (
@@ -515,7 +502,7 @@ export default function HomeworkPanel({
               ))}
             </div>
           ) : (
-            <p className={styles.emptyLine}>Chưa giao phần bài tập nào.</p>
+            <EmptyState size="compact" title="Chưa giao phần bài tập nào" />
           )}
           {canWrite && addLabel && (
             <button
@@ -569,6 +556,7 @@ export default function HomeworkPanel({
           gradeCount={editingGrades.length}
           gradingTotal={gradingTotal}
           onClose={() => setEditor(null)}
+          onDirtyChange={onDirtyChange}
         />
       )}
     </section>
@@ -587,6 +575,7 @@ function SectionEditor({
   gradeCount,
   gradingTotal,
   onClose,
+  onDirtyChange,
 }: {
   mode: "add" | "edit";
   sessionId: string;
@@ -597,55 +586,96 @@ function SectionEditor({
   gradeCount: number;
   gradingTotal: number;
   onClose: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const save = useSaveStatus();
-  const [kind, setKind] = useState<HomeworkKind | null>(
-    initialKind ?? missingKinds[0] ?? null,
-  );
-  const [title, setTitle] = useState(section?.title ?? "");
-  const [description, setDescription] = useState(section?.description ?? "");
-  const [error, setError] = useState("");
+  const initialKindValue = initialKind ?? missingKinds[0] ?? null;
+  const [form, setForm] = useState<{
+    kind: HomeworkKind | null;
+    title: string;
+    description: string;
+  }>({
+    kind: initialKindValue,
+    title: section?.title ?? "",
+    description: section?.description ?? "",
+  });
+  const kind = form.kind;
+  const title = form.title;
+  const description = form.description;
+  const setKind = (next: HomeworkKind | null) => setForm((current) => ({ ...current, kind: next }));
+  const setTitle = (next: string) => setForm((current) => ({ ...current, title: next }));
+  const setDescription = (next: string) =>
+    setForm((current) => ({ ...current, description: next }));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [removeError, setRemoveError] = useState("");
   const existing = new Set(existingKinds);
-  const used = mode === "edit" ? section?.kind : kind;
+  const used = form.kind;
   const deletable = canDeleteSection(gradeCount);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  function submit() {
-    if (!used) return;
-    setError("");
-    save.markUnsaved();
-    try {
+  const action = useSaveAction({
+    baseline: {
+      kind: mode === "edit" ? (section?.kind ?? null) : initialKindValue,
+      title: section?.title ?? "",
+      description: section?.description ?? "",
+    },
+    value: { ...form, kind: mode === "edit" ? (section?.kind ?? null) : form.kind },
+    validate: (value) => value.kind !== null && value.title.trim() !== "",
+    save: (value) => {
+      if (!value.kind) return false;
       saveHomeworkSection({
         id: section?.id,
         sessionId: section?.sessionId ?? sessionId,
-        kind: used,
-        title,
-        description,
+        kind: value.kind,
+        title: value.title,
+        description: value.description,
       });
+    },
+  });
+  const saved = useSavedPeek();
+  const closeNow = () => {
+    saved.cancel();
+    onClose();
+  };
+  const dirtyNow = action.dirty;
+  useEffect(() => {
+    onDirtyChange?.(dirtyNow);
+    return () => onDirtyChange?.(false);
+  }, [dirtyNow, onDirtyChange]);
+  const guard = useUnsavedCloseGuard(action, { onClose: closeNow });
+  const requestClose = () => {
+    if (guard.beforeClose()) closeNow();
+  };
+  const confirmDialog = <UnsavedChangesDialog {...guard.dialogProps} />;
+  const error = removeError
+    ? removeError
+    : action.error
+      ? action.error instanceof Error && action.error.message !== "save_failed"
+        ? action.error.message
+        : "Không lưu được phần bài tập."
+      : "";
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      // Chặn hành động mặc định của Esc: nếu không, trình duyệt đóng luôn hộp thoại "chưa lưu" vừa mở.
+      event.preventDefault();
+      requestClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [requestClose]);
+
+  async function submit() {
+    if (await action.submit()) {
       save.clearStatus();
-      onClose();
-    } catch (cause) {
+      if (await saved.peek()) onClose();
+    } else {
       save.setStatus("error");
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Không lưu được phần bài tập.",
-      );
     }
   }
 
   function remove() {
     if (!section) return;
-    setError("");
-    save.markUnsaved();
+    setRemoveError("");
     try {
       deleteHomeworkSection(section.id);
       save.clearStatus();
@@ -653,7 +683,7 @@ function SectionEditor({
     } catch (cause) {
       save.setStatus("error");
       setConfirmDelete(false);
-      setError(
+      setRemoveError(
         cause instanceof Error
           ? cause.message
           : "Không xoá được phần bài tập.",
@@ -667,7 +697,8 @@ function SectionEditor({
       : `Sửa phần · ${kindLabel(section?.kind ?? "exercise")}`;
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="presentation">
+    <>
+    <div className={styles.overlay} onClick={requestClose} role="presentation">
       <div
         className={styles.sheet}
         role="dialog"
@@ -767,7 +798,10 @@ function SectionEditor({
               <Glyph size={16}>{infoIcon}</Glyph>
               Phụ huynh thấy ngay khi lưu. Không đính kèm tệp.
             </p>
-            <Button size="lg" onClick={submit}>
+            {!action.valid && (
+              <p className={styles.footHint}>Nhập tiêu đề để lưu phần bài tập</p>
+            )}
+            <Button size="lg" onClick={submit} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
               Lưu phần
             </Button>
           </>
@@ -831,12 +865,17 @@ function SectionEditor({
               <Glyph size={16}>{checkIcon}</Glyph>
               Phụ huynh thấy ngay khi lưu
             </p>
-            <Button size="lg" onClick={submit}>
+            {!action.dirty && (
+              <p className={styles.footHint}>Chưa có thay đổi để lưu</p>
+            )}
+            <Button size="lg" onClick={submit} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
               Lưu
             </Button>
           </>
         )}
       </div>
     </div>
+    {confirmDialog}
+    </>
   );
 }

@@ -77,8 +77,9 @@ describe("màn báo cáo điểm không còn trạng thái Vắng thi", () => {
   it("báo cáo một học viên hiện điểm từng bài trên thang của bài và chênh lệch phần trăm", () => {
     replaceStore(createSeed());
     const html = studentReport("6a-student-0");
-    // Bài đầu 6.0/10 … bài cuối 9.0/10; chênh lệch 8/10 → 9/10 = +10%.
-    expect(html).toContain("6.0");
+    // Bài đầu 6/10 … bài cuối 9/10; chênh lệch 8/10 → 9/10 = +10%.
+    expect(html).toContain(">6<");
+    expect(html).not.toMatch(/\d\.0\b/);
     expect(html).toContain("/10");
     expect(html).toContain("+10%");
     expect(html).toContain("So với bài có điểm trước đó");

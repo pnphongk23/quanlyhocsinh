@@ -13,6 +13,7 @@ const report = (patch: Partial<Report> = {}): Report => ({
   id: "6a-student-1-report",
   classId: "6a",
   studentId: "6a-student-1",
+  batchId: "6a-report-batch",
   month: "2026-10",
   status: "draft",
   needsRepublish: false,

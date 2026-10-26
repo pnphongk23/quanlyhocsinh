@@ -1,0 +1,1 @@
+Status DONE|DONE_WITH_CONCERNS|BLOCKED; commit hash; danh sách file; bảng endpoint đã chốt (method, path, body, response, mã lỗi); kết quả lệnh kiểm (số test pass/fail); lệch so với packet; rủi ro.

@@ -97,17 +97,15 @@ describe("chọn nhân sự và người mặc định", () => {
   const members = [
     { id: "m-admin", name: "Cô Lan", status: "active" as const, roleId: "role-admin" },
     { id: "m-teacher", name: "Cô Lan", status: "active" as const, roleId: "role-teacher" },
-    { id: "m-invited", name: "Cô Mai", status: "invited" as const, roleId: "role-teacher" },
     { id: "m-guardian", name: "Phụ huynh", status: "active" as const, roleId: "role-guardian" },
   ].map((member) => ({
     ...member,
     phone: "",
     classIds: [],
-    invitedAt: null,
   }));
   const isStaffRole = (roleId: string) => roleId !== "role-guardian";
 
-  it("chỉ giữ nhân sự đang hoạt động, bỏ lời mời và phụ huynh", () => {
+  it("chỉ giữ nhân sự đang hoạt động, bỏ phụ huynh", () => {
     const staff = activeStaffMembers(members, isStaffRole);
     expect(staff.map((member) => member.id)).toEqual(["m-admin", "m-teacher"]);
   });

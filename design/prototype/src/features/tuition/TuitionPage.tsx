@@ -327,7 +327,7 @@ export default function TuitionPage() {
       )}
 
       {classes.length === 0 ? (
-        <EmptyState title="Chưa có lớp đang hoạt động">
+        <EmptyState title="Chưa có lớp đang hoạt động" mascot="cho">
           <p>Mở một lớp đang hoạt động để bắt đầu tính học phí.</p>
         </EmptyState>
       ) : (
@@ -356,7 +356,7 @@ export default function TuitionPage() {
           )}
 
           {!fee ? (
-            <EmptyState title="Lớp chưa đặt học phí">
+            <EmptyState title="Lớp chưa đặt học phí" mascot="cho">
               <p>Đặt học phí mỗi buổi để tính phiếu học phí cho học sinh.</p>
               <Button size="md" onClick={openFeeModal}>
                 Đặt học phí
@@ -475,11 +475,11 @@ export default function TuitionPage() {
               </div>
 
               {!hasStudents ? (
-                <EmptyState title="Lớp chưa có học sinh">
+                <EmptyState title="Lớp chưa có học sinh" mascot="cho">
                   <p>Thêm học sinh vào lớp để tính học phí.</p>
                 </EmptyState>
               ) : invoices.length === 0 ? (
-                <EmptyState title="Tháng này chưa có học phí">
+                <EmptyState title="Tháng này chưa có học phí" mascot="cho">
                   <p>Chưa có buổi tính phí hoặc lần thu nào của lớp trong tháng.</p>
                 </EmptyState>
               ) : visible.length === 0 ? (

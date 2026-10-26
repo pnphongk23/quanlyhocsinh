@@ -1,0 +1,768 @@
+--- r1/docs/architecture.md
++++ r2/docs/architecture.md
+@@ -95,9 +95,9 @@
+ - Tài khoản và mật khẩu: `users` giữ SĐT chuẩn hoá (+84) và mật khẩu đã băm (PBKDF2 qua WebCrypto + salt; số vòng **chưa chốt**, phải đo trên staging trước khi chốt — xem mục 7 và 9). Cờ `must_change_password` bắt buộc đổi mật khẩu ở lần đăng nhập đầu, áp cho phụ huynh nhận mật khẩu tạm (luồng cấp mật khẩu tạm là đề xuất 2026-10-21, chờ xác nhận). Giới hạn số lần đăng nhập sai theo SĐT và theo IP, đếm trong D1, khoá tạm rồi cho thử lại. Mật khẩu tạm chỉ trả về một lần trong response của lệnh cấp mật khẩu, không lưu dạng rõ, không ghi log. Đăng ký workspace: tạo `workspaces`, các `roles` mặc định và `memberships` của người tạo với role Admin hệ thống trong một `batch`. Quên mật khẩu = giáo viên cấp lại; quên mật khẩu của Admin **chưa chốt**.
+ - Liên kết phụ huynh theo SĐT: SĐT phụ huynh khai ở hồ sơ học sinh (cột cụ thể do spec backend chốt). Khi lưu hồ sơ, tầng `db` tự tạo hoặc cập nhật dòng `guardian_student` cho mọi học sinh cùng SĐT trong workspace, nên một tài khoản tự thấy mọi con kể cả khác lớp. Đổi SĐT thì xoá liên kết cũ và tạo liên kết mới trong cùng `batch`. Không còn bảng `invites` và không còn link mời dùng một lần (đã bỏ 2026-10-21).
+ - Hồ sơ nghỉ học và chuyển lớp: giữ lịch sử, đánh dấu ngày vào và ngày rời lớp (spec mục 3).
+-- Push (đã chốt 2026-10-21): `device_tokens` lưu FCM registration token theo user và membership, nền tảng `ios|web`, thời gian tạo/cập nhật. Mỗi token chỉ thuộc một user/membership tại một thời điểm; đổi tài khoản/role thì chuyển đăng ký, đăng xuất gỡ token của phiên đó; xoá khi FCM xác nhận token không còn hợp lệ (không xoá chỉ vì payload sai). Máy chủ kiểm lại quyền nhận trước khi gửi.
++- Push (đã chốt 2026-10-21): `device_tokens` lưu FCM registration token theo user và membership, nền tảng `ios|web`, thời gian tạo/cập nhật, `bound_at` + `registration_version` theo thế hệ binding. Mỗi token chỉ thuộc một user/membership/phiên tại một thời điểm; **đổi vai trò, đăng xuất, đổi tài khoản cần mạng** và máy chủ gỡ đăng ký token của đúng phiên hiện tại (cascade deliveries) trong cùng batch rồi mới trả 200/204; client chỉ đổi danh tính sau xác nhận rồi đăng ký lại theo membership mới. Làm mới token cùng binding không bump version nên không mất quyền nhận job đang chạy. Xoá khi FCM xác nhận token không còn hợp lệ (không xoá chỉ vì payload sai). Máy chủ kiểm lại danh tính + quyền nhận trước khi gửi (token phải khớp user/membership hiện hành của phiên, không chỉ cùng `active`). Push đã hiện trên thiết bị trước lúc ack thu hồi thì **không thu hồi từ xa được**; client xoá notification cũ và không dùng payload làm quyền truy cập.
+ - Worker gửi FCM HTTP v1 bằng OAuth access token từ JWT ký RS256; service account trong secret `FCM_SERVICE_ACCOUNT_JSON`, không commit/in log. Chọn D1 cache token khoảng 50 phút để dùng chung các isolate, không thêm KV (chi tiết [stack-and-cpu.md](../plans/20261021-mvp/backend/stack-and-cpu.md) mục 9). Số đo RS256 chưa có.
+-- Inbox và hàng chờ push ghi cùng batch với sự kiện nghiệp vụ, gửi ngoài request qua cron chia lô; `ctx.waitUntil` không tăng ngân sách CPU/subrequest. Push chỉ chứa tiêu đề và mã tham chiếu, không nhận xét, số điểm hay mức sao. Bốn sự kiện và cách gộp đã chốt theo spec mục 5.3 (điểm sau 5 phút không nhập thêm; BTVN theo lần giao); hợp đồng chi tiết ở [api-spec.md](../plans/20261021-mvp/backend/api-spec.md) mục 7.
++- Inbox và hàng chờ push ghi cùng batch với sự kiện nghiệp vụ, gửi ngoài request qua cron chia lô; `ctx.waitUntil` không tăng ngân sách CPU/subrequest. Mở rộng inbox hai pha: freeze inbox đúng một lần (nhóm điểm đóng, nhập mới tạo nhóm mới) rồi fanout keyset page với trần cứng **5 inbox và 20 đăng ký thiết bị mỗi invocation**, cursor lưu D1 để cron sau tiếp tục; giới hạn này **chưa đo**. Push chỉ chứa tiêu đề và mã tham chiếu, không nhận xét, số điểm hay mức sao. Bốn sự kiện và cách gộp đã chốt theo spec mục 5.3 (điểm sau 5 phút không nhập thêm; BTVN theo lần giao); hợp đồng chi tiết ở [api-spec.md](../plans/20261021-mvp/backend/api-spec.md) mục 7.
+ 
+ ## 5. Offline-first
+ 
+@@ -107,7 +107,7 @@
+ - **Khi nào đồng bộ:** lúc mở app, khi có mạng trở lại, khi app lấy lại focus, định kỳ lúc đang mở. iOS không đồng bộ được khi app đã đóng.
+ - **Xung đột:** hai thiết bị sửa cùng một ô điểm danh hoặc điểm. Thiết bị tới trước lên phiên bản mới. Thiết bị tới sau nhận xung đột, hai giá trị đều được giữ, giáo viên chọn. Không ghi đè theo giờ của thiết bị.
+ - **Offline được:** điểm danh, nhập điểm, tạo bài kiểm tra, soạn nhận xét, giao và chấm BTVN.
+-- **Cần mạng:** đăng nhập, đăng ký workspace, cấp mật khẩu tạm (đề xuất, chờ xác nhận), đổi hoặc quên mật khẩu, sửa SĐT, gửi nhận xét, phát hành báo cáo, lưu trữ lớp, tải tệp bài giảng lên hoặc xem. "Gửi nhận xét" có thể xếp hàng nhưng phải hiện rõ "sẽ gửi khi có mạng". Tạo bài giảng mới và gắn vào buổi dùng hàng đợi như các thao tác khác; sửa bài giảng đã có cần mạng.
++- **Cần mạng:** đăng nhập, đăng ký workspace, cấp mật khẩu tạm (đề xuất, chờ xác nhận), đổi hoặc quên mật khẩu, sửa SĐT, gửi nhận xét, phát hành báo cáo, lưu trữ lớp, đổi vai trò, đăng xuất và đổi tài khoản (phải có xác nhận của máy chủ đã thu hồi đăng ký nhận push của phiên trước khi máy đổi danh tính), tải tệp bài giảng lên hoặc xem. "Gửi nhận xét" có thể xếp hàng nhưng phải hiện rõ "sẽ gửi khi có mạng". Tạo bài giảng mới và gắn vào buổi dùng hàng đợi như các thao tác khác; sửa bài giảng đã có cần mạng.
+ - **Quyền khi offline:** quyền được cache trên máy chỉ để ẩn hoặc khoá nút. Khi đồng bộ hoặc mở app, máy chủ kiểm lại; nếu membership bị thu hồi thì ẩn cache của membership đó, lệnh bị từ chối được giữ lại và hiện lỗi, không tự xoá.
+ - **Ngoại lệ duy nhất cho quy tắc chỉ hiện lỗi:** sau khi bấm Gửi nhận xét lúc mất mạng, hiện một thông báo ngắn "sẽ gửi khi có mạng".
+ - **Bảo vệ dữ liệu:** chặn đăng xuất khi còn lệnh chờ (giải thích lý do khi chặn). Gọi `navigator.storage.persist()` khi hỗ trợ và bắt lỗi quota. Không hiện thường trực số thay đổi chưa đồng bộ; chỉ hiện khi lỗi.
+@@ -136,7 +136,7 @@
+ 
+ Khi đổi SĐT hoặc đổi role, quyền phía máy chủ gỡ ngay nhưng cache offline đã tải trên máy chưa thu hồi tức thì được.
+ 
+-Rủi ro FCM: ký RS256/làm mới OAuth có thể vượt CPU 10 ms; cache khoảng 50 phút trong D1, chia lô gửi và đo staging. Service account/access token/FCM token không vào log, phản hồi API, cache client hay file commit; chỉ tiến trình push nội bộ đọc cache OAuth.
++Rủi ro FCM: ký RS256/làm mới OAuth có thể vượt CPU 10 ms; cache khoảng 50 phút trong D1, chia lô gửi và đo staging. Fanout inbox bị chặn trần 5 inbox/20 đăng ký mỗi invocation (chưa đo) để không vượt CPU/subrequest. Service account/access token/FCM token không vào log, phản hồi API, cache client hay file commit; chỉ tiến trình push nội bộ đọc cache OAuth. Giới hạn không tránh được: push đã được FCM/OS nhận trước khi máy chủ ack thu hồi vẫn có thể hiện trên thiết bị; vì vậy mọi nội dung nhạy cảm chỉ tải qua API có phân quyền, payload chỉ có loại + ID.
+ 
+ ## 8. Lộ trình
+ 
+--- r1/docs/spec.md
++++ r2/docs/spec.md
+@@ -181,11 +181,11 @@
+ | Tài khoản | Đăng nhập SĐT + mật khẩu, không SMS/OTP. Giáo viên cấp mật khẩu tạm cho SĐT phụ huynh, hiện đúng một lần; phụ huynh bắt buộc đổi ở lần đăng nhập đầu; quên mật khẩu thì giáo viên cấp lại. Hệ thống tự liên kết mọi con cùng SĐT trong workspace. (đã chốt 2026-10-21; cấp mật khẩu là đề xuất, chờ xác nhận) |
+ | Dữ liệu | Giữ lịch sử khi nghỉ hoặc chuyển lớp; lịch sử sửa điểm và điểm danh. |
+ | Tính toán | Mỗi bài kiểm tra có điểm tối đa riêng; so sánh giữa các bài theo % thang điểm (score/max); bài chưa có điểm không tính vào đâu. |
+-| Thông báo | Thông báo trong app và push bằng FCM cho iOS native (qua APNs, SDK Firebase Messaging) và PWA/web (FCM web token), đã chốt 2026-10-21. Chỉ gửi khi giáo viên bấm gửi phiếu buổi học, phát hành báo cáo, lưu đề BTVN hoặc có điểm mới; sửa phiếu/kết quả chấm đã gửi không phát push riêng. Gộp thông báo điểm theo phụ huynh + học sinh + bài kiểm tra, gửi sau 5 phút không nhập thêm; BTVN gộp các phần trong một lần giao, sửa nội dung đề đã giao không phát push mới (đã chốt 2026-10-21). Push chỉ có tiêu đề và mã tham chiếu, không chứa nội dung nhận xét, điểm chi tiết hay mức sao; mở app phải tải dữ liệu qua API có phân quyền (đã chốt 2026-10-21). Thông báo quan trọng gửi thêm qua Zalo hoặc SMS (kênh thông báo, không dùng để đăng nhập; làm sau). |
++| Thông báo | Thông báo trong app và push bằng FCM cho iOS native (qua APNs, SDK Firebase Messaging) và PWA/web (FCM web token), đã chốt 2026-10-21. Chỉ gửi khi giáo viên bấm gửi phiếu buổi học, phát hành báo cáo, lưu đề BTVN hoặc có điểm mới; sửa phiếu/kết quả chấm đã gửi không phát push riêng. Gộp thông báo điểm theo phụ huynh + học sinh + bài kiểm tra, gửi sau 5 phút không nhập thêm; BTVN gộp các phần trong một lần giao, sửa nội dung đề đã giao không phát push mới (đã chốt 2026-10-21). Push chỉ có tiêu đề và mã tham chiếu, không chứa nội dung nhận xét, điểm chi tiết hay mức sao; mở app phải tải dữ liệu qua API có phân quyền (đã chốt 2026-10-21). Thông báo quan trọng gửi thêm qua Zalo hoặc SMS (kênh thông báo, không dùng để đăng nhập; làm sau). Đổi vai trò, đăng xuất, đổi tài khoản cần mạng và máy chủ xác nhận đã gỡ đăng ký nhận push của đúng phiên đó trước khi máy đổi danh tính; push đã hiện trên thiết bị trước lúc xác nhận thì không thu hồi từ xa được. |
+ | Báo cáo PDF | Sinh PDF trên máy giáo viên khi phát hành, lưu bản chụp của phiên bản đã phát hành trên máy chủ, bản nháp, phát hành lại. |
+ | Song ngữ | Giao diện, lỗi, thông báo, ngày tháng, PDF. |
+ | PWA | Cài lên màn hình chính, giữ đăng nhập lâu. App iOS native dùng chung API, không vướng các giới hạn của PWA (đã chốt 2026-10-21). |
+-| Offline | Điểm danh, nhập điểm, tạo bài kiểm tra, soạn nhận xét, giao và chấm BTVN ghi được khi mất mạng, tự đồng bộ khi có mạng. Đồng bộ chạy ngầm: giao diện không hiện "Đã lưu trên máy", "Đã đồng bộ", "Chưa lưu" hay số thay đổi chờ; chỉ hiện khi LỖI lưu hoặc đồng bộ (đã chốt 2026-10-18). Hệ thống vẫn theo dõi trạng thái nội bộ (chưa lưu, đã lưu trên máy, đã đồng bộ, lỗi). Phụ huynh xem được dữ liệu đã tải kèm thời gian cập nhật. Cần có mạng: đăng nhập, đăng ký workspace, cấp và đổi mật khẩu, gửi nhận xét, phát hành báo cáo. Hai thiết bị sửa cùng một ô: giữ cả hai giá trị và hiện cờ để giáo viên chọn. Không cho đăng xuất khi còn thay đổi chưa đồng bộ; khi chặn thì giải thích lý do. Quyền bị đổi trong lúc offline: lệnh bị từ chối khi đồng bộ và hiện lỗi. |
++| Offline | Điểm danh, nhập điểm, tạo bài kiểm tra, soạn nhận xét, giao và chấm BTVN ghi được khi mất mạng, tự đồng bộ khi có mạng. Đồng bộ chạy ngầm: giao diện không hiện "Đã lưu trên máy", "Đã đồng bộ", "Chưa lưu" hay số thay đổi chờ; chỉ hiện khi LỖI lưu hoặc đồng bộ (đã chốt 2026-10-18). Hệ thống vẫn theo dõi trạng thái nội bộ (chưa lưu, đã lưu trên máy, đã đồng bộ, lỗi). Phụ huynh xem được dữ liệu đã tải kèm thời gian cập nhật. Cần có mạng: đăng nhập, đăng ký workspace, cấp và đổi mật khẩu, gửi nhận xét, phát hành báo cáo, đổi vai trò, đăng xuất và đổi tài khoản (thu hồi đăng ký nhận push của phiên trước khi đổi danh tính). Hai thiết bị sửa cùng một ô: giữ cả hai giá trị và hiện cờ để giáo viên chọn. Không cho đăng xuất khi còn thay đổi chưa đồng bộ; khi chặn thì giải thích lý do. Quyền bị đổi trong lúc offline: lệnh bị từ chối khi đồng bộ và hiện lỗi. |
+ | Trạng thái chung | Đang tải, rỗng, lỗi lưu, mất mạng. |
+ 
+ ## 6. PWA: lưu ý cho phụ huynh
+--- r1/plans/20261021-mvp/backend/api-spec.md
++++ r2/plans/20261021-mvp/backend/api-spec.md
+@@ -104,7 +104,8 @@
+ Một vai trò hoạt động ⇒ `active_membership_id` điền sẵn. Từ hai vai trò trở lên ⇒ `null`, client hiển thị màn chọn vai trò (spec mục 4) rồi gọi `PUT /session/membership`. Phiên hết hạn sau 180 ngày không dùng (gia hạn khi còn dưới 150 ngày). Lỗi: `401 invalid_credentials`, `403 account_disabled`, `429`.
+ 
+ ### POST /auth/logout
+-Ai gọi: mọi người dùng đã đăng nhập. Thu hồi phiên hiện tại. `204`. (Client chặn đăng xuất khi còn lệnh chờ chưa đồng bộ, spec mục 5.3; máy chủ không kiểm.)
++Ai gọi: mọi người dùng đã đăng nhập. Thu hồi phiên hiện tại `204`. (Client chặn đăng xuất khi còn lệnh chờ chưa đồng bộ, spec mục 5.3; máy chủ không kiểm.)
++Trong cùng batch: `UPDATE auth_sessions SET revoked_at` + `DELETE device_tokens WHERE auth_session_id = <phiên đó>` (cascade `push_deliveries`); không gỡ đăng ký của phiên khác. **Cần mạng + phải nhận `204` trước khi client đổi danh tính/cache/UI**; mất mạng thì giữ identity hiện tại và báo cần mạng, không xếp thao tác này vào outbox nghiệp vụ.
+ 
+ ### POST /auth/change-password
+ Ai gọi: mọi người dùng đã đăng nhập (kể cả khi `password_change_required`).
+@@ -126,11 +127,11 @@
+ Client dùng `permissions` để ẩn/khóa nút và `scope_epoch` để so với `epoch` đồng bộ.
+ 
+ ### PUT /session/membership — chọn / đổi vai trò
+-Ai gọi: mọi người dùng đã đăng nhập.
+-```json
+-{ "membership_id": "mem_2" }   // 200: { "active_membership_id": "mem_2" }
+-```
+-`404` nếu membership không thuộc user hoặc đã bị vô hiệu.
++Ai gọi: mọi người dùng đã đăng nhập. **Cần mạng.**
++```json
++{ "membership_id": "mem_2" }   // 200: { "active_membership_id": "mem_2", "device_registration_cleared": true }
++```
++`404` nếu membership không thuộc user hoặc đã bị vô hiệu. Server ghi membership mới vào phiên **và** gỡ các `device-tokens` gắn với đúng `auth_session` hiện tại (cascade deliveries) trong cùng batch, rồi mới trả 200; thiết bị/phiên khác của user không bị gỡ. `device_registration_cleared = true` nghĩa là thiết bị này phải `PUT /device-tokens` lại theo membership mới; chưa đăng ký lại chỉ mất push, không cản dùng app. Client chỉ đổi danh tính/cache/UI sau khi nhận 200.
+ 
+ ### POST /students/{student_id}/guardian-credentials — cấp mật khẩu cho phụ huynh
+ Ai gọi: `students:write` (phạm vi lớp của học sinh). Đề xuất 2026-10-21, chờ xác nhận (spec mục 4).
+@@ -377,12 +378,26 @@
+ // PUT /device-tokens — dữ liệu giả, không log body
+ { "token": "FAKE_FCM_REGISTRATION_TOKEN", "platform": "ios" }
+ // 200 — chỉ ID quản lý, không phản hồi token
+-{ "id": "dev_example", "registration_version": 1, "platform": "ios", "updated_at": "2026-10-21T11:30:00.000Z" }
++{ "id": "dev_example", "registration_version": 1, "bound_at": "2026-10-21T11:30:00.000Z", "platform": "ios", "updated_at": "2026-10-21T11:30:00.000Z" }
+ // GET /notifications
+ { "items": [{ "id": 124, "kind": "slip_sent", "student_id": "stu_1", "session_id": "ses_3", "created_at": "2026-10-21T11:30:00.000Z", "read_at": null }], "next_cursor": null }
+ ```
+ 
+-Token: chuỗi không rỗng tối đa 4096 ký tự, platform chỉ `ios|web`; sai body `422`, không phiên `401`, membership ngoài user/vô hiệu `404`, bắt buộc đổi mật khẩu `403`. Token chỉ thuộc một user/membership ở một thời điểm. Upsert cùng token chuyển quyền đăng ký và tăng version trong batch, huỷ delivery cũ; đăng xuất/thu hồi phiên xoá token gắn với phiên, không gỡ mọi thiết bị của user. Đổi role: đăng ký lại token sau khi chọn membership, không dùng token cho role cũ. Đổi token do SDK: gỡ ID cũ rồi PUT token mới; mở app kiểm lại quyền nhận và đăng ký hiện hành. Không có API liệt kê token hoặc client gọi FCM send trực tiếp.
++Token: chuỗi không rỗng tối đa 4096 ký tự, platform chỉ `ios|web`; sai body `422`, không phiên `401`, membership ngoài user/vô hiệu `404`, bắt buộc đổi mật khẩu `403`. Token chỉ thuộc một user/membership/phiên ở một thời điểm. **Hai loại upsert:** *làm mới cùng binding* (cùng user + membership + phiên) chỉ cập nhật `updated_at` (và `token` nếu là token mới của cùng binding), **không** tăng `registration_version`, **không** đổi `bound_at`, không xoá deliveries — thiết bị không mất quyền nhận job đang chạy; *đổi binding* (chuyển chủ, đổi membership, phiên khác) bump `registration_version`, đặt `bound_at = now`, huỷ delivery cũ trong batch. Đổi role: client đổi vai trò (mục 4) rồi đăng ký lại token theo membership mới; token cũ đã bị gỡ trong batch đổi vai trò nên không dùng được cho role cũ. Đổi token do SDK: gỡ ID cũ rồi PUT token mới; mở app kiểm lại quyền nhận và đăng ký hiện hành. Đăng xuất/thu hồi phiên xoá token gắn với phiên, không gỡ mọi thiết bị của user. Không có API liệt kê token hoặc client gọi FCM send trực tiếp.
++
++### Vòng đời đăng ký và đổi danh tính
++
++- Đổi vai trò, đăng xuất, đổi tài khoản là thao tác **cần mạng có xác nhận** (`PUT /session/membership` 200 / `POST /auth/logout` 204). Máy chủ gỡ đăng ký token của đúng phiên hiện tại trong cùng batch trước khi trả response; client chỉ đổi danh tính/cache/UI sau đó. Có token đang đăng ký mà mất mạng: giữ identity hiện tại, báo cần mạng; không đưa vào outbox nghiệp vụ.
++- Đổi tài khoản trên cùng thiết bị: thu hồi phiên/đăng ký cũ (logout ack) rồi mới đăng nhập tài khoản mới. Nếu token bị PUT lại bởi user/membership khác mà chưa qua logout, đường *đổi binding* vẫn bump version, đặt `bound_at` và huỷ deliveries cũ — lớp chặn thứ hai, không phải đường chính.
++- **Giới hạn:** push đã được FCM/OS nhận (hoặc đang trên đường) trước khi máy chủ ack thu hồi **không thu hồi từ xa được**. Vì vậy client xoá notification cũ khi đổi danh tính, chỉ mở màn sau khi tải dữ liệu qua API có phân quyền, và không coi payload/notification là quyền truy cập. Không cam kết "không còn push đang bay".
++
++### Mở rộng inbox và trần fanout
++
++- Cron mở rộng inbox theo hai pha. **Freeze:** claim inbox bằng UPDATE có điều kiện đặt `expansion_started_at` đúng một lần (lease 60 giây) ⇒ nhóm điểm đóng; lần nhập điểm tiếp theo tạo nhóm mới, không kéo `ready_at`/`cursor` của job đang chạy.
++- **Fanout có trần cứng:** tối đa **5 inbox** và tổng **20 đăng ký thiết bị** được xét trong một invocation (kể cả đăng ký bị bỏ qua); keyset paging `ORDER BY device_tokens.id LIMIT n` với `delivery_cursor` lưu ở D1, không nạp hết token của một inbox vào RAM rồi cắt. Chỉ đặt `deliveries_expanded_at` khi đã xét hết đăng ký đủ điều kiện; hết ngân sách thì cron sau tiếp tục từ cursor.
++- Đăng ký đủ điều kiện khi fanout: membership khớp inbox, `bound_at <= notifications.created_at` (chuyển chủ sau sự kiện không nhận push lịch sử; làm mới cùng binding vẫn đủ điều kiện), phiên chưa thu hồi/hết hạn và `auth_sessions.membership_id` = membership của token, còn quyền nhóm và liên kết con.
++- Trước mỗi lần gửi, sender đối chiếu lại: phiên còn hiệu lực, `auth_sessions.user_id`/`membership_id` **khớp** `device_tokens.user_id`/`membership_id`, cộng quyền con/nhóm, bài chưa lưu trữ, phiếu/báo cáo đã gửi, `registration_version` đúng bản đã chụp; lệch ⇒ `skipped`, không gọi FCM.
++- Số 5 inbox / 20 đăng ký / 5 deliveries / 2 kết nối là ngân sách đề xuất, **chưa đo** (`stack-and-cpu.md` mục 9).
+ 
+ ### Sự kiện
+ 
+@@ -393,7 +408,7 @@
+ | `homework_assigned` | giáo viên giao phần mới qua `homework.assign` (hoặc tạo một phần bằng upsert); offline chỉ kích hoạt sau server áp lệnh, không kích hoạt khi chỉ sửa nội dung phần đã có | phụ huynh của học sinh thuộc buổi giao, quyền comments_reports |
+ | `score_updated` | lưu điểm mới/thay đổi giá trị không rỗng, offline chỉ sau server áp lệnh, bỏ noop | phụ huynh của em có điểm, quyền scores, bài chưa lưu trữ |
+ 
+-Sửa phiếu đã gửi hoặc chấm/sửa BTVN không gửi push riêng; kết quả chấm đi cùng phiếu. Nội dung sự kiện và inbox ghi trong cùng batch thay đổi để retry không tạo trùng. Chỉ gộp theo học sinh, không gộp dữ liệu của nhiều em vào payload. Q7 đã chốt: điểm gộp theo phụ huynh/học sinh/bài, ready_at dời tới 5 phút sau lần nhập cuối (server commit, retry/noop không dời). BTVN gộp theo một lần giao 1..4 phần bằng `homework.assign`, chỉnh nội dung phần đã giao không gửi mới. Inbox nhóm được giữ một dòng tới khi cron mở rộng; sau đó lần nhập mới tạo nhóm mới. Cron chỉ claim nhóm khi ready_at tới và event_version chưa đổi, tránh gửi sớm khi vừa nhập thêm. Quyền vẫn kiểm lại tại thời điểm gửi.
++Sửa phiếu đã gửi hoặc chấm/sửa BTVN không gửi push riêng; kết quả chấm đi cùng phiếu. Nội dung sự kiện và inbox ghi trong cùng batch thay đổi để retry không tạo trùng. Chỉ gộp theo học sinh, không gộp dữ liệu của nhiều em vào payload. Q7 đã chốt: điểm gộp theo phụ huynh/học sinh/bài, ready_at dời tới 5 phút sau lần nhập cuối (server commit, retry/noop không dời). BTVN gộp theo một lần giao 1..4 phần bằng `homework.assign`, chỉnh nội dung phần đã giao không gửi mới. Inbox nhóm được giữ một dòng tới khi job freeze nó (`expansion_started_at`); sau freeze, lần nhập mới tạo nhóm mới nên không đổi `ready_at`/cursor của job đang chạy. Cron chỉ claim nhóm khi ready_at tới và event_version chưa đổi, tránh gửi sớm khi vừa nhập thêm. Quyền và danh tính vẫn kiểm lại tại thời điểm gửi.
+ 
+ ### Payload FCM HTTP v1 và gửi
+ 
+@@ -409,7 +424,7 @@
+ 
+ Không có body nhận xét, mức sao, số điểm, SĐT, mật khẩu hoặc link tải công khai; `data` chỉ loại và ID cần mở màn, giá trị là chuỗi. App tải lại dữ liệu qua API có phân quyền; không coi payload là quyền truy cập. Tiêu đề BTVN/điểm/báo cáo cùng nguyên tắc. Không log request/response OAuth hoặc FCM nguyên văn. Payload dùng token được yêu cầu trong quyết định hiện tại; phải kiểm phiên bản SDK/token API tương thích trước khi tích hợp (Firebase đang bổ sung FID, không tự đổi hợp đồng sang FID).
+ 
+-Ghi inbox trước; cron chia lô deliveries riêng từng thiết bị, kiểm lại quyền trước mỗi gửi, lease/retry/thu hồi token theo `data-model.md` mục 2.7. Cache OAuth ~50 phút ở D1, JWT RS256 và giới hạn gửi theo `stack-and-cpu.md` mục 9. `ctx.waitUntil` chỉ giảm thời gian chờ response, không tạo ngân sách CPU/subrequest mới. Không gửi HTTP cho cả lớp trong request lưu dữ liệu.
++Ghi inbox trước; cron chia lô deliveries riêng từng thiết bị, kiểm lại quyền trước mỗi gửi, lease/retry/thu hồi token theo `data-model.md` mục 2.7. Cache OAuth ~50 phút ở D1, JWT RS256 và giới hạn gửi theo `stack-and-cpu.md` mục 9. `ctx.waitUntil` chỉ giảm thời gian chờ response, không tạo ngân sách CPU/subrequest mới. Không gửi HTTP cho cả lớp trong request lưu dữ liệu. Mở rộng inbox cũng bị chặn trần (5 inbox / 20 đăng ký mỗi invocation) như mục "Mở rộng inbox và trần fanout".
+ 
+ ## 8. Báo cáo tháng
+ 
+--- r1/plans/20261021-mvp/backend/authz-matrix.md
++++ r2/plans/20261021-mvp/backend/authz-matrix.md
+@@ -22,6 +22,7 @@
+ | Đăng xuất, đổi mật khẩu, `GET /me`, đổi vai trò, tạo thêm workspace | ✗ `401` | ✓ | ✓ | ✓ | ✓ |
+ | Cấp mật khẩu cho phụ huynh (`guardian-credentials`) | ✗ | ✓ (mọi lớp) | ✓ `P(students:w)`, lớp được gán | ✗ (`students:r`) | ✗ |
+ | Đăng ký/làm mới/xoá FCM device token của chính user + membership + phiên (PUT/DELETE /device-tokens) | ✗ | ✓ | ✓ | ✓ | ✓ |
++| Đổi vai trò (`PUT /session/membership`), đăng xuất/đổi tài khoản (kèm gỡ đăng ký token của **đúng phiên hiện tại**) | ✗ | ✓ | ✓ | ✓ | ✓ (chỉ gỡ của phiên mình, không gỡ thiết bị của phiên khác) |
+ | Quản trị: mời/thêm nhân sự, tạo-sửa role, gán lớp, đổi role, vô hiệu tài khoản | ✗ | Chưa có endpoint ở MVP (làm sau); khi làm: **chỉ Admin**, kiểm ở tầng `db` | ✗ | ✗ | ✗ |
+ 
+ ### 2.2 Lớp, học sinh, buổi học
+@@ -121,6 +122,8 @@
+ 
+ ## 5. Ca kiểm FCM bổ sung (B2, chưa chạy vì chưa có backend)
+ 
++F13–F17 là ca mới của vòng sửa r2 (C-01/R-01/R-02). Đến khi có mã, đây là **ca bắt buộc**, không phải bằng chứng runtime.
++
+ | ID | Ca | Kỳ vọng |
+ |---|---|---|
+ | F01 | Chưa đăng nhập, chưa chọn membership, buộc đổi mật khẩu, membership vô hiệu | 401/404/403 đúng thứ tự xác thực, không đăng ký token |
+@@ -134,5 +137,10 @@
+ | F09 | Bốn sự kiện; noop/retry; sửa phiếu hoặc chấm BTVN sau gửi | đúng mục 7 API; không thông báo chấm riêng; điểm sau 5 phút không nhập thêm, BTVN một lần giao, sửa đề không phát push |
+ | F10 | Cache OAuth hết hạn/đổi key, hai isolate refresh, FCM 401/429/5xx | refresh có lease, không lộ secret; retry hữu hạn/backoff; inbox vẫn còn khi push lỗi |
+ 
+-| F11 | Nhập tiếp điểm trước ready_at, cron đang đọc nhóm cũ | tăng event_version/ready_at; claim phiên bản cũ không gửi sớm; retry/noop không dời hạn |
++| F11 | Nhập tiếp điểm trước ready_at, cron đang đọc nhóm cũ | tăng event_version/ready_at; claim phiên bản cũ không gửi sớm; retry/noop không dời hạn. Sau khi job freeze (`expansion_started_at`), lần nhập mới tạo nhóm mới và không đổi cursor/ready_at của job đang chạy |
+ | F12 | `homework.assign` 4 phần, một phần sai hoặc trùng kind; retry command_id thành công | sai: cả lệnh rollback, không inbox; đúng: một inbox/em/phụ huynh, không 4 push; retry không trùng |
++| F13 | `PUT /session/membership` khi thiết bị có token; cùng lúc có phiên thứ hai của user | batch ghi membership mới + xoá token/deliveries của đúng phiên hiện tại; token của phiên khác còn nguyên; client chỉ đổi identity sau 200; `GET /notifications` sau đó theo membership mới |
++| F14 | Token bị dữ liệu lệch: `auth_sessions.membership_id` ≠ `device_tokens.membership_id` (giả lập ghi tay, bỏ qua batch F13) | sender `skipped`, không gọi FCM; delivery không bị coi là đã gửi |
++| F15 | Fanout: 1 inbox có 25 đăng ký; 6 inbox cùng ready | mỗi invocation xét ≤20 đăng ký và ≤5 inbox; keyset cursor lưu D1; nhiều invocation không trùng PK, không sót; chỉ đặt `deliveries_expanded_at` ở invocation xét hết; inbox thứ 6 chờ lượt sau |
++| F16 | Cron crash giữa fanout (đã ghi cursor, chưa xong); cron khác claim cùng inbox | lease 60 giây, chỉ chủ lease đẩy cursor; invocation sau tiếp tục từ cursor, không tạo delivery trùng |
++| F17 | Đổi tài khoản/role khi offline có token đang đăng ký | client giữ identity hiện tại, báo cần mạng; không xếp thao tác vào outbox; token cũ không nhận push của danh tính mới; push đã nhận trước ack không thu hồi từ xa (kỳ vọng ghi rõ, không coi là lỗi) |
+--- r1/plans/20261021-mvp/backend/check-fcm-ddl.py
++++ r2/plans/20261021-mvp/backend/check-fcm-ddl.py
+@@ -2,8 +2,10 @@
+ """Kiem tra DDL cua goi FCM B2 (data-model.md) tren SQLite trong bo nho.
+ 
+ Chi dung thu vien chuan Python. Du lieu gia, khong in SDT/token/khoa/noi dung nhan xet.
+-Pham vi: DDL + rang buoc khai bao trong markdown. KHONG kiem trigger (chi mo ta bang
+-bang trong tai lieu), KHONG kiem hanh vi D1/Worker/FCM that, KHONG do CPU.
++Pham vi: DDL + rang buoc khai bao trong markdown, va mo phong SQL tuan tu cho vong doi
++dang ky token (batch doi vai tro/dang xuat, sender khop danh tinh) va fanout hai pha
++(freeze + keyset paging co tran). KHONG kiem trigger (chi mo ta bang bang trong tai lieu),
++KHONG kiem D1/Worker/FCM/cron concurrent that, KHONG do CPU.
+ 
+ Chay:  python3 plans/20261021-mvp/backend/check-fcm-ddl.py [--data-model PATH]
+        python3 plans/20261021-mvp/backend/check-fcm-ddl.py --links [--root DIR]
+@@ -32,6 +34,7 @@
+     "plans/20261021-mvp/backend/report-b1.md",
+     "plans/20261021-mvp/backend/firebase-setup-checklist.md",
+     "plans/20261021-mvp/backend/resume-verification.md",
++    "plans/20261021-mvp/backend/fcm-b2-fix-r1.md",
+ ]
+ 
+ REQUIRED_TABLES = {
+@@ -167,12 +170,12 @@
+     cur.execute(
+         "INSERT INTO auth_sessions (id, user_id, membership_id, token_hash, created_at, last_seen_at, expires_at)"
+         " VALUES (?,?,?,?,?,?,?)",
+-        (SESS, U_TEACHER, MEM_TEACHER, "hash_fake_teacher", NOW, NOW, NOW),
++        (SESS, U_TEACHER, MEM_TEACHER, "hash_fake_teacher", NOW, NOW, EXPIRE_FUTURE),
+     )
+     cur.execute(
+         "INSERT INTO auth_sessions (id, user_id, membership_id, token_hash, created_at, last_seen_at, expires_at)"
+         " VALUES (?,?,?,?,?,?,?)",
+-        (SESS_PARENT, U_PARENT, MEM_PARENT, "hash_fake_parent", NOW, NOW, NOW),
++        (SESS_PARENT, U_PARENT, MEM_PARENT, "hash_fake_parent", NOW, NOW, EXPIRE_FUTURE),
+     )
+     cur.execute(
+         "INSERT INTO classes (id, workspace_id, name, weekdays, start_time, created_by, created_at, updated_at)"
+@@ -213,12 +216,12 @@
+ 
+ 
+ def insert_device(con, dev_id, token, platform="ios", mem=MEM_PARENT, user=U_PARENT,
+-                  session=SESS_PARENT, version=1):
++                  session=SESS_PARENT, version=1, bound_at=NOW, updated_at=NOW):
+     con.execute(
+         "INSERT INTO device_tokens (id, workspace_id, user_id, membership_id, auth_session_id,"
+-        " token, platform, registration_version, created_at, updated_at)"
+-        " VALUES (?,?,?,?,?,?,?,?,?,?)",
+-        (dev_id, WS, user, mem, session, token, platform, version, NOW, NOW),
++        " token, platform, registration_version, bound_at, created_at, updated_at)"
++        " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
++        (dev_id, WS, user, mem, session, token, platform, version, bound_at, NOW, updated_at),
+     )
+ 
+ 
+@@ -228,6 +231,275 @@
+         " registration_version, next_attempt_at) VALUES (?,?,?,?,?)",
+         (notification_id, mem, dev_id, version, NOW),
+     )
++
++
++EXPIRE_FUTURE = "2027-04-19T03:00:00.000Z"
++ROLE_GUARDIAN_2 = "role_fake_guardian_2"
++MEM_PARENT_OTHER = "mem_fake_parent_other"
++SESS_PARENT_2 = "auth_fake_session_parent_2"
++FANOUT_PAGE_SQL = """
++SELECT d.id, d.registration_version
++FROM device_tokens d
++JOIN auth_sessions s ON s.id = d.auth_session_id
++JOIN memberships m ON m.id = d.membership_id
++WHERE d.workspace_id = ? AND d.membership_id = ?
++  AND d.bound_at <= ?
++  AND d.id > ?
++  AND s.revoked_at IS NULL AND s.expires_at > ?
++  AND s.user_id = d.user_id AND s.membership_id = d.membership_id
++  AND m.status = 'active'
++ORDER BY d.id
++LIMIT ?
++"""
++IDENTITY_OK_SQL = """
++SELECT 1 FROM device_tokens d
++JOIN auth_sessions s ON s.id = d.auth_session_id
++WHERE d.id = ? AND s.revoked_at IS NULL AND s.expires_at > ?
++  AND s.user_id = d.user_id AND s.membership_id = d.membership_id
++"""
++INBOX_LIMIT = 5
++REG_BUDGET = 20
++
++
++def add_guardian(con, tag):
++    uid, mem, sess = f"usr_g{tag}", f"mem_g{tag}", f"sess_g{tag}"
++    con.execute("INSERT INTO users (id, phone, password_hash, created_at) VALUES (?,?,?,?)",
++                (uid, f"+8491000{tag:04d}", "pbkdf2-sha256$1000$fake$fake", NOW))
++    con.execute("INSERT INTO memberships (id, workspace_id, user_id, role_id, created_at)"
++                " VALUES (?,?,?,?,?)", (mem, WS, uid, ROLE_GUARDIAN, NOW))
++    con.execute("INSERT INTO auth_sessions (id, user_id, membership_id, token_hash, created_at,"
++                " last_seen_at, expires_at) VALUES (?,?,?,?,?,?,?)",
++                (sess, uid, mem, f"hash_fake_{tag}", NOW, NOW, EXPIRE_FUTURE))
++    con.execute("INSERT INTO guardian_student (workspace_id, user_id, student_id, created_at)"
++                " VALUES (?,?,?,?)", (WS, uid, STU, NOW))
++    return uid, mem, sess
++
++
++def seed_devices(con, mem, user, prefix, count, bound_at=NOW, updated_at=NOW):
++    ids = []
++    for i in range(count):
++        sess, dev = f"sess_{prefix}{i:02d}", f"dev_{prefix}{i:02d}"
++        con.execute("INSERT INTO auth_sessions (id, user_id, membership_id, token_hash, created_at,"
++                    " last_seen_at, expires_at) VALUES (?,?,?,?,?,?,?)",
++                    (sess, user, mem, f"hash_{prefix}{i:02d}", NOW, NOW, EXPIRE_FUTURE))
++        insert_device(con, dev, f"FAKE_TOKEN_{prefix}{i:02d}", mem=mem, user=user,
++                      session=sess, bound_at=bound_at, updated_at=updated_at)
++        ids.append(dev)
++    return ids
++
++
++def fanout_invocation(con, now, lease="lease_fake_job_1"):
++    """Mo phong cron: claim toi da 5 inbox, xet toi da 20 dang ky, keyset cursor."""
++    rows = con.execute(
++        "SELECT id, membership_id, created_at FROM notifications"
++        " WHERE ready_at <= ? AND deliveries_expanded_at IS NULL"
++        "   AND (expansion_lease_until IS NULL OR expansion_lease_until < ?)"
++        " ORDER BY ready_at, id LIMIT ?", (now, now, INBOX_LIMIT)).fetchall()
++    considered, touched = 0, []
++    for nid, mem, created_at in rows:
++        if considered >= REG_BUDGET:
++            break
++        if con.execute(
++                "UPDATE notifications SET expansion_lease_id = ?, expansion_lease_until = ?"
++                " WHERE id = ? AND deliveries_expanded_at IS NULL"
++                "   AND (expansion_lease_until IS NULL OR expansion_lease_until < ?)",
++                (lease, now, nid, now)).rowcount != 1:
++            continue
++        con.execute("UPDATE notifications SET expansion_started_at = COALESCE(expansion_started_at, ?)"
++                    " WHERE id = ? AND expansion_started_at IS NULL", (now, nid))
++        cursor = con.execute("SELECT delivery_cursor FROM notifications WHERE id=?",
++                             (nid,)).fetchone()[0] or ""
++        limit = min(REG_BUDGET - considered, REG_BUDGET)
++        page = con.execute(FANOUT_PAGE_SQL, (WS, mem, created_at, cursor, now, limit)).fetchall()
++        for dev_id, version in page:
++            con.execute("INSERT INTO push_deliveries (notification_id, membership_id, device_id,"
++                        " registration_version, next_attempt_at) VALUES (?,?,?,?,?)",
++                        (nid, mem, dev_id, version, now))
++        considered += len(page)
++        if page:
++            cursor = page[-1][0]
++        done = len(page) < limit
++        con.execute(
++            "UPDATE notifications SET delivery_cursor = ?, deliveries_expanded_at = ?,"
++            " expansion_lease_id = NULL, expansion_lease_until = NULL"
++            " WHERE id = ? AND expansion_lease_id = ?",
++            (cursor, now if done else None, nid, lease))
++        touched.append(nid)
++    con.commit()
++    return considered, touched
++
++
++def run_lifecycle_checks(con, checks):
++    """Vong doi dang ky token: cot/state moi + batch doi vai tro/dang xuat + sender khop danh tinh."""
++    con.execute("DELETE FROM notifications")
++    con.execute("DELETE FROM device_tokens")
++    con.commit()
++
++    ncols = [r[1] for r in con.execute("PRAGMA table_info(notifications)")]
++    checks.ok("notif_co_cot_fanout",
++              {"expansion_started_at", "delivery_cursor", "expansion_lease_id",
++               "expansion_lease_until"} <= set(ncols), f"cot={ncols}")
++    dcols = [r[1] for r in con.execute("PRAGMA table_info(device_tokens)")]
++    checks.ok("device_co_cot_bound_at", "bound_at" in dcols, f"cot={dcols}")
++    cols = [r[2] for r in con.execute("PRAGMA index_info('device_tokens_member')")]
++    checks.ok("chi_muc_fanout_membership_id", cols == ["membership_id", "id"], f"cot={cols}")
++
++    con.execute("INSERT INTO roles (id, workspace_id, name, scope_kind, is_system, created_at)"
++                " VALUES (?,?,?,?,?,?)",
++                (ROLE_GUARDIAN_2, WS, "Phu huynh 2", "linked_students", 0, NOW))
++    con.execute("INSERT INTO memberships (id, workspace_id, user_id, role_id, created_at)"
++                " VALUES (?,?,?,?,?)", (MEM_PARENT_OTHER, WS, U_PARENT, ROLE_GUARDIAN_2, NOW))
++    con.execute("INSERT INTO auth_sessions (id, user_id, membership_id, token_hash, created_at,"
++                " last_seen_at, expires_at) VALUES (?,?,?,?,?,?,?)",
++                (SESS_PARENT_2, U_PARENT, MEM_PARENT, "hash_fake_parent_2", NOW, NOW, EXPIRE_FUTURE))
++    insert_device(con, "dev_switch", "FAKE_TOKEN_SWITCH", session=SESS_PARENT_2)
++    insert_device(con, "dev_keep", "FAKE_TOKEN_KEEP", session=SESS_PARENT)
++    insert_notification(con, None, "slip_sent", "evt_life", session=CS)
++    nid = checks.one("SELECT id FROM notifications WHERE event_key='evt_life'")[0]
++    insert_delivery(con, nid, MEM_PARENT, "dev_switch")
++    con.commit()
++
++    # lam moi cung binding: chi doi updated_at, schema khong tu bump version/bound_at
++    before = checks.one("SELECT registration_version, bound_at FROM device_tokens WHERE id='dev_keep'")
++    con.execute("UPDATE device_tokens SET updated_at=? WHERE id=? AND user_id=? AND membership_id=?"
++                " AND auth_session_id=?", ("2026-10-21T05:00:00.000Z", "dev_keep", U_PARENT,
++                                            MEM_PARENT, SESS_PARENT))
++    con.commit()
++    after = checks.one("SELECT registration_version, bound_at FROM device_tokens WHERE id='dev_keep'")
++    checks.ok("refresh_cung_binding_khong_bump_version", before == after, f"truoc={before} sau={after}")
++
++    # PUT /session/membership: batch doi membership + go token cua dung phien hien tai
++    with con:
++        con.execute("UPDATE auth_sessions SET membership_id=? WHERE id=?", (MEM_PARENT_OTHER, SESS_PARENT_2))
++        con.execute("DELETE FROM device_tokens WHERE auth_session_id=?", (SESS_PARENT_2,))
++    checks.ok("doi_vai_tro_go_token_dung_phien",
++              checks.one("SELECT count(*) FROM device_tokens WHERE id='dev_switch'")[0] == 0)
++    checks.ok("doi_vai_tro_go_delivery_cua_token_do",
++              checks.one("SELECT count(*) FROM push_deliveries WHERE device_id='dev_switch'")[0] == 0)
++    checks.ok("doi_vai_tro_khong_dung_phien_khac",
++              checks.one("SELECT count(*) FROM device_tokens WHERE id='dev_keep'")[0] == 1)
++
++    # sender: token phai khop user+membership hien hanh cua phien
++    checks.ok("sender_chap_nhan_token_khop_phien",
++              checks.one(IDENTITY_OK_SQL, ("dev_keep", NOW)) is not None)
++    insert_device(con, "dev_mismatch_life", "FAKE_TOKEN_MISMATCH_LIFE", session=SESS)  # phien cua giao vien
++    con.commit()
++    checks.ok("sender_tu_choi_token_lech_danh_tinh",
++              checks.one(IDENTITY_OK_SQL, ("dev_mismatch_life", NOW)) is None)
++
++    # POST /auth/logout: thu hoi phien + go token cua phien do, phien khac con
++    con.execute("INSERT INTO auth_sessions (id, user_id, membership_id, token_hash, created_at,"
++                " last_seen_at, expires_at) VALUES ('auth_fake_session_parent_3', ?, ?, ?, ?, ?, ?)",
++                (U_PARENT, MEM_PARENT, "hash_fake_parent_3", NOW, NOW, EXPIRE_FUTURE))
++    insert_device(con, "dev_other_session", "FAKE_TOKEN_OTHER_SESSION",
++                  session="auth_fake_session_parent_3")
++    con.commit()
++    with con:
++        con.execute("UPDATE auth_sessions SET revoked_at=? WHERE id=?", (NOW, SESS_PARENT))
++        con.execute("DELETE FROM device_tokens WHERE auth_session_id=?", (SESS_PARENT,))
++    checks.ok("dang_xuat_go_token_cua_phien",
++              checks.one("SELECT count(*) FROM device_tokens WHERE id='dev_keep'")[0] == 0)
++    checks.ok("dang_xuat_khong_go_phien_khac",
++              checks.one("SELECT count(*) FROM device_tokens WHERE id='dev_other_session'")[0] == 1)
++    checks.ok("sender_tu_choi_phien_da_thu_hoi",
++              checks.one(IDENTITY_OK_SQL, ("dev_other_session", NOW)) is not None
++              and checks.one(IDENTITY_OK_SQL, ("dev_keep", NOW)) is None)
++
++
++def run_fanout_checks(con, checks):
++    """Mo phong SQL hai pha: freeze + keyset fanout co tran; khong phai test API/FCM that."""
++    con.execute("DELETE FROM notifications")
++    con.execute("DELETE FROM device_tokens")
++    con.commit()
++
++    # A. 1 inbox / 25 dang ky: tran 20 moi invocation, cursor tiep tuc, khong trung PK
++    _, mem_a, _ = add_guardian(con, 1)
++    seed_devices(con, mem_a, "usr_g1", "a", 25)
++    insert_notification(con, None, "slip_sent", "evt_fan_a", session=CS, mem=mem_a, user="usr_g1")
++    con.commit()
++    nid_a = checks.one("SELECT id FROM notifications WHERE event_key='evt_fan_a'")[0]
++
++    considered1, touched1 = fanout_invocation(con, NOW, "lease_fake_a1")
++    got1 = checks.one("SELECT count(*) FROM push_deliveries WHERE notification_id=?", (nid_a,))[0]
++    checks.ok("fanout_tran_20_dang_ky_moi_invocation", considered1 == 20 and got1 == 20,
++              f"xet={considered1} delivery={got1}")
++    checks.ok("fanout_chua_xong_thi_chua_danh_dau",
++              checks.one("SELECT deliveries_expanded_at IS NULL AND expansion_started_at IS NOT NULL"
++                         " FROM notifications WHERE id=?", (nid_a,))[0] == 1)
++    considered2, _ = fanout_invocation(con, NOW, "lease_fake_a2")
++    got2 = checks.one("SELECT count(*) FROM push_deliveries WHERE notification_id=?", (nid_a,))[0]
++    checks.ok("fanout_invocation_sau_xet_not_dang_ky_con_lai", considered2 == 5 and got2 == 25,
++              f"xet={considered2} delivery={got2}")
++    checks.ok("fanout_du_25_thiet_bi_khong_trung_va_khong_sot",
++              checks.one("SELECT count(DISTINCT device_id) FROM push_deliveries"
++                         " WHERE notification_id=?", (nid_a,))[0] == 25)
++    checks.ok("fanout_chi_danh_dau_xong_khi_xet_het",
++              checks.one("SELECT deliveries_expanded_at IS NOT NULL"
++                         " FROM notifications WHERE id=?", (nid_a,))[0] == 1)
++
++    # B. crash giua fanout: cursor da ghi, lease het han -> invocation sau tiep tuc, khong trung
++    _, mem_c, _ = add_guardian(con, 2)
++    seed_devices(con, mem_c, "usr_g2", "c", 25)
++    insert_notification(con, None, "slip_sent", "evt_fan_crash", session=CS, mem=mem_c, user="usr_g2")
++    con.commit()
++    nid_c = checks.one("SELECT id FROM notifications WHERE event_key='evt_fan_crash'")[0]
++    considered_c1, _ = fanout_invocation(con, NOW, "lease_fake_c1")
++    con.execute("UPDATE notifications SET expansion_lease_id='lease_fake_dead',"
++                " expansion_lease_until='2000-01-01T00:00:00.000Z' WHERE id=?", (nid_c,))
++    con.commit()
++    considered_c2, _ = fanout_invocation(con, NOW, "lease_fake_c2")
++    checks.ok("fanout_crash_tiep_tuc_tu_cursor_khong_trung",
++              considered_c1 == 20 and considered_c2 == 5
++              and checks.one("SELECT count(DISTINCT device_id) FROM push_deliveries"
++                             " WHERE notification_id=?", (nid_c,))[0] == 25
++              and checks.one("SELECT count(*) FROM push_deliveries"
++                             " WHERE notification_id=?", (nid_c,))[0] == 25,
++              f"xet1={considered_c1} xet2={considered_c2}")
++
++    # C. nhieu inbox: tran 5 inbox moi invocation, inbox thu 6 cho luot sau
++    inboxes = []
++    for tag in range(3, 9):
++        uid, mem, _ = add_guardian(con, tag)
++        seed_devices(con, mem, uid, f"d{tag}", 1)
++        insert_notification(con, None, "slip_sent", f"evt_fan_many_{tag}", session=CS, mem=mem, user=uid)
++        inboxes.append(f"evt_fan_many_{tag}")
++    con.commit()
++    considered3, touched3 = fanout_invocation(con, NOW, "lease_fake_m1")
++    pending_left = checks.one(
++        "SELECT count(*) FROM notifications WHERE deliveries_expanded_at IS NULL")[0]
++    checks.ok("fanout_tran_5_inbox_moi_invocation",
++              len(touched3) == 5 and pending_left == 1 and considered3 == 5,
++              f"inbox={len(touched3)} con_lai={pending_left} xet={considered3}")
++    _, touched4 = fanout_invocation(con, NOW, "lease_fake_m2")
++    checks.ok("fanout_inbox_con_lai_duoc_xu_ly_luot_sau",
++              len(touched4) == 1 and checks.one(
++                  "SELECT count(*) FROM notifications WHERE deliveries_expanded_at IS NULL")[0] == 0)
++
++    # D. dieu kien dang ky: bound_at, phien thu hoi, lech danh tinh, refresh cung binding
++    uid_e, mem_e, sess_e = add_guardian(con, 9)
++    insert_device(con, "dev_e_a_norm", "FAKE_TOKEN_E_NORM", mem=mem_e, user=uid_e, session=sess_e)
++    insert_device(con, "dev_e_b_refresh", "FAKE_TOKEN_E_REFRESH", mem=mem_e, user=uid_e,
++                  session=sess_e, bound_at=NOW, updated_at="2026-10-21T04:30:00.000Z")
++    insert_device(con, "dev_e_c_transfer", "FAKE_TOKEN_E_TRANSFER", mem=mem_e, user=uid_e,
++                  session=sess_e, bound_at="2026-10-21T04:30:00.000Z")
++    con.execute("INSERT INTO auth_sessions (id, user_id, membership_id, token_hash, created_at,"
++                " last_seen_at, expires_at, revoked_at) VALUES ('sess_e_revoked', ?, ?, 'hash_e_rev', ?, ?, ?, ?)",
++                (uid_e, mem_e, NOW, NOW, EXPIRE_FUTURE, NOW))
++    insert_device(con, "dev_e_d_revoked", "FAKE_TOKEN_E_REVOKED", mem=mem_e, user=uid_e,
++                  session="sess_e_revoked")
++    insert_device(con, "dev_e_e_mismatch", "FAKE_TOKEN_E_MISMATCH", mem=mem_e, user=uid_e,
++                  session=SESS)  # phien cua giao vien
++    insert_notification(con, None, "slip_sent", "evt_fan_elig", session=CS, mem=mem_e, user=uid_e)
++    con.commit()
++    nid_e = checks.one("SELECT id FROM notifications WHERE event_key='evt_fan_elig'")[0]
++    considered5, _ = fanout_invocation(con, NOW, "lease_fake_e1")
++    delivered = [r[0] for r in con.execute(
++        "SELECT device_id FROM push_deliveries WHERE notification_id=? ORDER BY device_id", (nid_e,))]
++    checks.ok("fanout_bo_qua_thiet_bi_khong_du_dieu_kien",
++              considered5 == 2 and delivered == ["dev_e_a_norm", "dev_e_b_refresh"],
++              f"xet={considered5} delivery={delivered}")
++    checks.ok("fanout_khong_gui_push_lich_su_cho_thiet_bi_chuyen_chu",
++              "dev_e_c_transfer" not in delivered)
+ 
+ 
+ def run_checks(con, checks):
+@@ -246,14 +518,15 @@
+     checks.rejects(
+         "fk_device_membership_thuoc_dung_user",
+         "INSERT INTO device_tokens (id, workspace_id, user_id, membership_id, auth_session_id,"
+-        " token, platform, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+-        ("dev_fake_bad_owner", WS, U_PARENT, MEM_TEACHER, SESS, "FAKE_TOKEN_BAD_OWNER", "ios", NOW, NOW),
++        " token, platform, bound_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
++        ("dev_fake_bad_owner", WS, U_PARENT, MEM_TEACHER, SESS, "FAKE_TOKEN_BAD_OWNER", "ios", NOW, NOW, NOW),
+     )
+     checks.rejects(
+         "fk_device_auth_session_ton_tai",
+         "INSERT INTO device_tokens (id, workspace_id, user_id, membership_id, auth_session_id,"
+-        " token, platform, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+-        ("dev_fake_bad_session", WS, U_PARENT, MEM_PARENT, "auth_fake_missing", "FAKE_TOKEN_BAD_SESSION", "ios", NOW, NOW),
++        " token, platform, bound_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
++        ("dev_fake_bad_session", WS, U_PARENT, MEM_PARENT, "auth_fake_missing", "FAKE_TOKEN_BAD_SESSION",
++         "ios", NOW, NOW, NOW),
+     )
+     checks.rejects(
+         "fk_notification_membership_thuoc_dung_user",
+@@ -276,20 +549,26 @@
+     checks.rejects(
+         "device_token_unique_toan_cuc",
+         "INSERT INTO device_tokens (id, workspace_id, user_id, membership_id, auth_session_id,"
+-        " token, platform, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+-        ("dev_fake_dupe", WS, U_TEACHER, MEM_TEACHER, SESS, "FAKE_FCM_REGISTRATION_TOKEN_1", "web", NOW, NOW),
++        " token, platform, bound_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
++        ("dev_fake_dupe", WS, U_TEACHER, MEM_TEACHER, SESS, "FAKE_FCM_REGISTRATION_TOKEN_1", "web", NOW, NOW, NOW),
+     )
+     checks.rejects(
+         "device_platform_chi_ios_web",
+         "INSERT INTO device_tokens (id, workspace_id, user_id, membership_id, auth_session_id,"
+-        " token, platform, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+-        ("dev_fake_android", WS, U_PARENT, MEM_PARENT, SESS_PARENT, "FAKE_TOKEN_ANDROID", "android", NOW, NOW),
++        " token, platform, bound_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
++        ("dev_fake_android", WS, U_PARENT, MEM_PARENT, SESS_PARENT, "FAKE_TOKEN_ANDROID", "android", NOW, NOW, NOW),
+     )
+     checks.rejects(
+         "device_token_khong_rong",
+         "INSERT INTO device_tokens (id, workspace_id, user_id, membership_id, auth_session_id,"
++        " token, platform, bound_at, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
++        ("dev_fake_empty", WS, U_PARENT, MEM_PARENT, SESS_PARENT, "", "ios", NOW, NOW, NOW),
++    )
++    checks.rejects(
++        "device_thieu_bound_at",
++        "INSERT INTO device_tokens (id, workspace_id, user_id, membership_id, auth_session_id,"
+         " token, platform, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+-        ("dev_fake_empty", WS, U_PARENT, MEM_PARENT, SESS_PARENT, "", "ios", NOW, NOW),
++        ("dev_fake_nobound", WS, U_PARENT, MEM_PARENT, SESS_PARENT, "FAKE_TOKEN_NOBOUND", "ios", NOW, NOW),
+     )
+     checks.accepts("device_thu_hai_cung_membership", lambda: insert_device(
+         con, "dev_fake_2", "FAKE_FCM_REGISTRATION_TOKEN_2", platform="web"))
+@@ -326,8 +605,15 @@
+     checks.accepts("don_notification_cua_giao_vien",
+                    "DELETE FROM notifications WHERE membership_id=?", (MEM_TEACHER,))
+ 
+-    # --- gop diem: mot nhom mo, sau khi mo rong moi tao nhom moi ---
++    # --- gop diem: mot nhom mo; freeze dong nhom dung mot lan; nhap moi mo nhom moi ---
+     group = f"{MEM_PARENT}:{STU}:{TEST}"
++    upsert_score = (
++        "INSERT INTO notifications (workspace_id, user_id, membership_id, kind, event_key, student_id,"
++        " test_id, created_at, ready_at, group_key, event_version)"
++        " VALUES (?,?,?,?,?,?,?,?,?,?,1)"
++        " ON CONFLICT(membership_id, group_key) WHERE group_key IS NOT NULL AND expansion_started_at IS NULL"
++        " DO UPDATE SET event_version = event_version + 1, ready_at = excluded.ready_at"
++    )
+     checks.accepts("diem_nhom_mo_dau_tien", lambda: insert_notification(
+         con, None, "score_updated", "evt_score_cmd_1", group_key=group, test=TEST))
+     checks.rejects(
+@@ -337,21 +623,74 @@
+         (WS, U_PARENT, MEM_PARENT, "score_updated", "evt_score_cmd_2", STU, TEST, NOW, NOW, group),
+     )
+     checks.accepts(
+-        "diem_nhom_da_mo_rong_nhan_cap_nhat",
++        "diem_upsert_truoc_freeze_giu_cung_nhom",
++        upsert_score,
++        (WS, U_PARENT, MEM_PARENT, "score_updated", "evt_score_cmd_1b", STU, TEST, NOW,
++         "2026-10-21T03:20:00.000Z", group),
++    )
++    checks.ok(
++        "diem_upsert_truoc_freeze_tang_event_version_mot_dong",
++        checks.one("SELECT count(*) FROM notifications WHERE membership_id=? AND group_key=?",
++                   (MEM_PARENT, group))[0] == 1
++        and checks.one("SELECT event_version FROM notifications WHERE event_key='evt_score_cmd_1'")[0] == 2,
++    )
++    group_b = f"{MEM_PARENT}:{STU}:probe"
++    checks.accepts(
++        "diem_nhom_probe_tao",
++        "INSERT INTO notifications (workspace_id, user_id, membership_id, kind, event_key,"
++        " student_id, test_id, created_at, ready_at, group_key) VALUES (?,?,?,?,?,?,?,?,?,?)",
++        (WS, U_PARENT, MEM_PARENT, "score_updated", "evt_probe_b", STU, TEST, NOW, NOW, group_b),
++    )
++    checks.accepts(
++        "diem_nhom_probe_danh_dau_xong",
++        "UPDATE notifications SET deliveries_expanded_at=? WHERE event_key='evt_probe_b'", (NOW,))
++    checks.rejects(
++        "diem_expand_xong_khong_thay_cho_freeze",
++        "INSERT INTO notifications (workspace_id, user_id, membership_id, kind, event_key,"
++        " student_id, test_id, created_at, ready_at, group_key) VALUES (?,?,?,?,?,?,?,?,?,?)",
++        (WS, U_PARENT, MEM_PARENT, "score_updated", "evt_probe_b2", STU, TEST, NOW, NOW, group_b),
++    )
++    checks.accepts("diem_don_nhom_probe", "DELETE FROM notifications WHERE event_key='evt_probe_b'")
++    checks.accepts(
++        "diem_freeze_dung_mot_lan",
++        "UPDATE notifications SET expansion_started_at=? WHERE membership_id=? AND group_key=?"
++        " AND expansion_started_at IS NULL",
++        (NOW, MEM_PARENT, group),
++    )
++    checks.ok(
++        "diem_freeze_lap_lai_khong_doi_gi",
++        con.execute(
++            "UPDATE notifications SET expansion_started_at='2026-10-21T09:00:00.000Z'"
++            " WHERE membership_id=? AND group_key=? AND expansion_started_at IS NULL",
++            (MEM_PARENT, group)).rowcount == 0,
++    )
++    checks.accepts(
++        "diem_job_xong_sau_freeze",
+         "UPDATE notifications SET deliveries_expanded_at=? WHERE membership_id=? AND group_key=?",
+         (NOW, MEM_PARENT, group),
+     )
+-    checks.accepts("diem_nhom_moi_sau_mo_rong", lambda: insert_notification(
+-        con, None, "score_updated", "evt_score_cmd_3", group_key=group, test=TEST))
++    before = checks.one(
++        "SELECT event_version, ready_at FROM notifications WHERE event_key='evt_score_cmd_1'")
++    checks.accepts(
++        "diem_nhap_moi_sau_freeze_tao_nhom_moi",
++        upsert_score,
++        (WS, U_PARENT, MEM_PARENT, "score_updated", "evt_score_cmd_3", STU, TEST, NOW,
++         "2026-10-21T04:00:00.000Z", group),
++    )
++    after = checks.one(
++        "SELECT event_version, ready_at FROM notifications WHERE event_key='evt_score_cmd_1'")
+     checks.ok(
+-        "diem_dem_hai_nhom_da_mo_rong",
+-        checks.one(
+-            "SELECT count(*) FROM notifications WHERE membership_id=? AND group_key=?", (MEM_PARENT, group))[0] == 2,
++        "diem_freeze_khong_bi_nhap_moi_keo_theo",
++        checks.one("SELECT count(*) FROM notifications WHERE membership_id=? AND group_key=?",
++                   (MEM_PARENT, group))[0] == 2 and before == after,
++        f"truoc={before} sau={after}",
+     )
+     checks.ok(
+-        "diem_moi_nhat_con_mo",
+-        checks.one(
+-            "SELECT deliveries_expanded_at IS NULL FROM notifications WHERE event_key='evt_score_cmd_3'")[0] == 1,
++        "diem_nhom_moi_dang_mo_va_nhom_cu_da_freeze",
++        checks.one("SELECT expansion_started_at IS NULL FROM notifications"
++                   " WHERE event_key='evt_score_cmd_3'")[0] == 1
++        and checks.one("SELECT expansion_started_at IS NOT NULL FROM notifications"
++                       " WHERE event_key='evt_score_cmd_1'")[0] == 1,
+     )
+ 
+     # --- deliveries theo tung thiet bi, FK membership ---
+@@ -437,6 +776,9 @@
+         "oauth_cache_token_khong_bat_buoc",
+         checks.one("SELECT access_token IS NOT NULL FROM fcm_oauth_cache WHERE project_id='proj_fake'")[0] == 1,
+     )
++
++    run_lifecycle_checks(con, checks)
++    run_fanout_checks(con, checks)
+ 
+     # --- toan ven FK toan schema sau khi chay ---
+     violations = con.execute("PRAGMA foreign_key_check").fetchall()
+@@ -524,8 +866,9 @@
+         for name, detail in checks.failed:
+             print(f"  - {name}: {detail}")
+         return 1
+-    print("gioi_han: chi DDL khai bao trong markdown, SQLite :memory:; khong co trigger, "
+-          "khong co D1/Worker/FCM, khong do CPU")
++    print("gioi_han: chi DDL + cau SQL khai bao trong markdown tren SQLite :memory:; "
++          "fanout la mo phong SQL tuan tu (khong phai API/FCM/cron concurrent that); "
++          "khong co trigger, khong co D1/Worker, khong do CPU")
+     return 0
+ 
+ 
+--- r1/plans/20261021-mvp/backend/data-model.md
++++ r2/plans/20261021-mvp/backend/data-model.md
+@@ -454,7 +454,11 @@
+   test_id TEXT,
+   created_at TEXT NOT NULL,
+   read_at TEXT,
+-  deliveries_expanded_at TEXT,
++  deliveries_expanded_at TEXT,                    -- chỉ đặt khi đã xét hết đăng ký đủ điều kiện
++  expansion_started_at TEXT,                      -- đóng băng inbox khi job mở rộng bắt đầu; NULL = chưa bắt đầu
++  delivery_cursor TEXT,                            -- keyset paging: device_tokens.id cuối đã xét
++  expansion_lease_id TEXT,                        -- cron đang giữ quyền mở rộng inbox này
++  expansion_lease_until TEXT,
+   ready_at TEXT NOT NULL,                         -- điểm: thời điểm thay đổi cuối + 5 phút
+   group_key TEXT,                                -- điểm: membership + student + test, server dựng
+   event_version INTEGER NOT NULL DEFAULT 1,
+@@ -468,8 +472,9 @@
+ );
+ CREATE INDEX notifications_user ON notifications(membership_id, id DESC);
+ CREATE INDEX notifications_pending ON notifications(ready_at, id) WHERE deliveries_expanded_at IS NULL;
++-- nhóm mở = chưa đóng băng; job đã freeze thì lần nhập điểm mới tạo nhóm mới (không kéo ready_at/cursor của job đang chạy)
+ CREATE UNIQUE INDEX notifications_open_group ON notifications(membership_id, group_key)
+-  WHERE group_key IS NOT NULL AND deliveries_expanded_at IS NULL;
++  WHERE group_key IS NOT NULL AND expansion_started_at IS NULL;
+ 
+ CREATE TABLE device_tokens (
+   id TEXT PRIMARY KEY,
+@@ -479,13 +484,15 @@
+   auth_session_id TEXT NOT NULL REFERENCES auth_sessions(id),
+   token TEXT NOT NULL UNIQUE CHECK (length(token) BETWEEN 1 AND 4096),
+   platform TEXT NOT NULL CHECK (platform IN ('ios','web')),
+-  registration_version INTEGER NOT NULL DEFAULT 1,
++  registration_version INTEGER NOT NULL DEFAULT 1,  -- thế hệ binding; chỉ tăng khi đổi user/membership/phiên
++  bound_at TEXT NOT NULL,                          -- thời điểm binding hiện hành được lập; mốc xét fanout
+   created_at TEXT NOT NULL,
+   updated_at TEXT NOT NULL,
+   UNIQUE (id, membership_id),
+   FOREIGN KEY (workspace_id, membership_id, user_id) REFERENCES memberships(workspace_id, id, user_id)
+ );
+-CREATE INDEX device_tokens_member ON device_tokens(membership_id);
++-- keyset paging fanout: WHERE membership_id = ? AND bound_at <= ? AND id > ? ORDER BY id
++CREATE INDEX device_tokens_member ON device_tokens(membership_id, id);
+ CREATE INDEX device_tokens_session ON device_tokens(auth_session_id);
+ 
+ CREATE TABLE push_deliveries (
+@@ -517,10 +524,12 @@
+ );
+ ```
+ 
+-- Tầng `db` kiểm `auth_session_id` thuộc user đăng nhập, membership thuộc user và đang hoạt động. Đăng ký token đã tồn tại: xoá deliveries cũ, chuyển chủ và tăng `registration_version` trong cùng batch (không chỉ đổi FK gây lỗi); thiết bị cũ không được xoá bản đăng ký mới. Đổi token: client gỡ device cũ rồi đăng ký token mới. Đăng xuất/thu hồi phiên gỡ các device token gắn với phiên đó, cascade deliveries; không xoá thiết bị thuộc phiên khác.
++- Tầng `db` kiểm `auth_session_id` thuộc user đăng nhập, membership thuộc user và đang hoạt động. **Hai loại ghi khác nhau:** (a) *làm mới cùng binding* (cùng `user_id` + `membership_id` + `auth_session_id`) chỉ cập nhật `updated_at`/`token`; **không** tăng `registration_version`, **không** đổi `bound_at`, không xoá deliveries ⇒ thiết bị không mất quyền nhận job đang chạy; (b) *đổi binding* (chuyển chủ, đổi membership, phiên khác) bump `registration_version`, đặt `bound_at = now`, xoá deliveries cũ, tất cả trong cùng batch (không chỉ đổi FK gây lỗi); thiết bị cũ không được xoá bản đăng ký mới. Đổi token do SDK: client gỡ device cũ rồi đăng ký token mới (binding mới). Đăng xuất/thu hồi phiên gỡ các device token gắn với phiên đó, cascade deliveries; không xoá thiết bị thuộc phiên khác.
++- **Đổi danh tính cần mạng + xác nhận máy chủ trước khi client đổi UI/cache** (sửa C-01/R-01): `PUT /session/membership` ghi `auth_sessions.membership_id` mới **và** `DELETE device_tokens WHERE auth_session_id = <phiên hiện tại>` (cascade deliveries) trong **cùng batch**, trả 200 sau khi batch xong; `POST /auth/logout` làm tương tự rồi thu hồi phiên, trả 204. Thiết bị/phiên khác của cùng user không bị gỡ. Client chỉ đổi danh tính sau khi nhận 200/204, rồi đăng ký lại token theo membership mới; chưa có quyền push không cản dùng app. Đổi tài khoản: thu hồi phiên/đăng ký cũ xong mới kích hoạt tài khoản mới. Không đưa thao tác này vào outbox nghiệp vụ; offline thì giữ identity hiện tại và báo cần mạng.
+ - Inbox tạo cùng batch với thay đổi nghiệp vụ, mỗi học sinh gửi tới membership phụ huynh được liên kết và có quyền đọc nhóm tương ứng. `event_key`: phiếu theo em/buổi; báo cáo theo publication; BTVN theo lệnh lưu tạo/giao; điểm theo lệnh thay đổi giá trị. Retry/noop không tạo sự kiện mới. Sửa phiếu/kết quả chấm sau gửi không tạo thông báo riêng. Gộp đã chốt: điểm có group_key theo membership + em + bài, UPSERT nhóm chưa mở rộng, tăng event_version và đặt ready_at = thời gian server commit mới nhất + 5 phút; giữ cùng inbox, retry/noop không đẩy hạn. Khi cron mở rộng nhóm chỉ thực hiện nếu ready_at đã tới và event_version vẫn đúng bản vừa đọc; đổi hạn giữa chừng thì claim thất bại, chờ lần sau. Sau mở rộng, lần nhập tiếp tạo nhóm mới. BTVN dùng command_id của `homework.assign` cho cả 1..4 phần trong một lần giao, ready_at = thời gian commit; chỉnh tiêu đề/mô tả phần đã giao không tạo sự kiện mới.
+-- Cron mở rộng inbox đã tới ready_at sang deliveries cho token hiện hành được đăng ký không muộn hơn thời điểm sự kiện rồi đánh dấu `deliveries_expanded_at` cùng batch; không có thiết bị thì chỉ giữ inbox, không phát lại push cũ khi đăng ký mới. Mỗi delivery theo từng thiết bị, không dùng một cờ `pushed_at` chung để bỏ sót thiết bị khác. Đăng ký sau thời điểm sự kiện không nhận lịch sử push.
+-- Trước mỗi lần gửi: đọc lại user/membership/phiên còn hiệu lực, liên kết con và quyền nhóm, bài kiểm tra chưa lưu trữ, phiếu/báo cáo đã gửi, token đúng `registration_version`; sai thì `skipped`. Token chuyển chủ không mang theo delivery cũ. FCM `UNREGISTERED`: xoá đúng device/version đã gửi; `INVALID_ARGUMENT`: chỉ xoá nếu error detail FCM xác nhận registration token sai và payload đã hợp lệ, không xoá hàng loạt vì payload lỗi.
++- **Mở rộng inbox hai pha, có trần cứng** (sửa R-02). Pha 1 — *freeze*: cron claim inbox (`ready_at <= now`) bằng `UPDATE … SET expansion_started_at = :now, expansion_lease_id = :lease, expansion_lease_until = :now+60s WHERE id = :id AND deliveries_expanded_at IS NULL AND (expansion_lease_until IS NULL OR expansion_lease_until < :now) RETURNING …`. Đặt `expansion_started_at` **đúng một lần**: từ đó nhóm điểm đóng, lần nhập điểm mới UPSERT vào nhóm khác (chỉ mục `notifications_open_group` loại dòng đã freeze) nên không kéo `ready_at`/`cursor`/`event_version` của job đang chạy. Pha 2 — *fanout*: keyset paging `ORDER BY device_tokens.id LIMIT n` với `delivery_cursor` lưu trong D1; mỗi invocation xét **tối đa 5 inbox và tổng 20 đăng ký thiết bị** (kể cả đăng ký bị bỏ qua), `INSERT OR IGNORE` deliveries, cập nhật `delivery_cursor` trong cùng batch; không nạp toàn bộ token của một inbox vào RAM rồi mới cắt. Chỉ đặt `deliveries_expanded_at` khi trang cuối đã xét hết đăng ký đủ điều kiện (và xoá lease); hết ngân sách giữa chừng thì để cron sau tiếp tục từ `delivery_cursor`. Chỉ chủ `expansion_lease_id` được đẩy cursor/đánh dấu xong.
++- **Điều kiện đăng ký đủ điều kiện khi fanout** (chốt mốc theo binding hiện hành): `device_tokens.membership_id = notifications.membership_id`, `bound_at <= notifications.created_at` (chuyển chủ sau sự kiện không nhận push lịch sử; làm mới cùng binding không đổi `bound_at` nên không mất quyền), phiên `auth_sessions` của token chưa thu hồi, chưa hết hạn và có `membership_id = device_tokens.membership_id`, `user_id` khớp, membership/user còn hoạt động, cùng quyền nhóm và liên kết con. Không có đăng ký đủ điều kiện thì chỉ giữ inbox, không phát lại push cũ khi đăng ký mới. Mỗi delivery theo từng thiết bị, không dùng một cờ `pushed_at` chung để bỏ sót thiết bị khác.
++- Trước mỗi lần gửi phải **đối chiếu danh tính**, không chỉ kiểm hai object đều `active` (sửa R-01): `auth_sessions` của token chưa thu hồi/chưa hết hạn, và `auth_sessions.user_id`/`auth_sessions.membership_id` **khớp chính** `device_tokens.user_id`/`device_tokens.membership_id`; lệch ⇒ `skipped`, không gọi FCM. Sau đó mới kiểm liên kết con và quyền nhóm, bài kiểm tra chưa lưu trữ, phiếu/báo cáo đã gửi, `device_tokens.registration_version` = bản đã chụp trong delivery; sai thì `skipped`. Token chuyển chủ không mang theo delivery cũ. **Giới hạn không thể hứa:** thông báo đã được FCM/OS nhận và hiển thị trước khi máy chủ ack việc thu hồi thì không thu hồi từ xa được; client xoá notification cũ khi đổi danh tính và không dùng payload làm quyền truy cập (payload chỉ có loại + ID). FCM `UNREGISTERED`: xoá đúng device/version đã gửi; `INVALID_ARGUMENT`: chỉ xoá nếu error detail FCM xác nhận registration token sai và payload đã hợp lệ, không xoá hàng loạt vì payload lỗi.
+ - Claim delivery bằng cập nhật có điều kiện với lease 60 giây, `RETURNING`; chỉ chủ lease cập nhật kết quả. `429`/`5xx` retry theo `Retry-After` và backoff có jitter, tối đa 5 lần; hết lần thì `failed`, inbox vẫn còn. Lỗi `401` làm mới OAuth một lần; `403`/lỗi cấu hình báo vận hành bằng mã đã lọc. Kết nối bị cắt sau FCM nhận nhưng trước ghi `sent` có thể gửi trùng; không cam kết exactly-once, client dùng notification id chống xử lý trùng.
+ - D1 cache OAuth không theo workspace vì một Firebase project dùng chung staging; chỉ mã gửi push truy cập. Lease và hạn cache ở `stack-and-cpu.md` mục 9. Không lưu private key/JWT assertion vào D1.
+ 
+@@ -627,6 +636,9 @@
+ | Lệnh đồng bộ (mỗi lệnh) | `UPDATE/INSERT` bản ghi với điều kiện `version`, rồi `INSERT applied_commands … WHERE changes() > 0`; trigger lo lịch sử và `change_log` |
+ | Gửi phiếu | `UPDATE session_comments`, `INSERT notifications` (mỗi phụ huynh), `INSERT change_log` phát lại các `homework_grade` vừa lộ ra |
+ | Phát hành báo cáo | `INSERT report_publications`, `UPDATE reports`, `INSERT notifications` |
++| Đổi vai trò trên phiên (`PUT /session/membership`) | `UPDATE auth_sessions SET membership_id`; `DELETE device_tokens WHERE auth_session_id = <phiên hiện tại>` (cascade `push_deliveries`); trả 200 sau batch. Không đụng đăng ký của phiên khác |
++| Đăng xuất / thu hồi phiên | `UPDATE auth_sessions SET revoked_at = now`; `DELETE device_tokens WHERE auth_session_id = <phiên đó>` (cascade deliveries); trả 204 sau batch |
++| Đăng ký / làm mới device token | Cùng binding: `UPDATE updated_at` (không bump `registration_version`/`bound_at`, không xoá deliveries). Đổi binding: `UPDATE registration_version + 1, bound_at = now, user_id, membership_id, auth_session_id`, `DELETE push_deliveries` của token, `INSERT/UPDATE device_tokens` trong cùng batch |
+ 
+ ## 5. Sinh buổi học
+ 
+--- r1/plans/20261021-mvp/backend/firebase-setup-checklist.md
++++ r2/plans/20261021-mvp/backend/firebase-setup-checklist.md
+@@ -10,6 +10,6 @@
+ 6. **Người dùng + dev:** thêm app Web, lấy cấu hình Firebase web và public key của cặp khoá Web Push **của Firebase** ở Cloud Messaging → Web Push certificates (bắt buộc cho FCM web token; đây không phải Web Push VAPID tự gửi đã bị loại); cấu hình các biến `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_VAPID_KEY`. Chỉ public config vào client; service account/private VAPID key không vào frontend. Dev cấu hình HTTPS/service worker, kiểm API đăng ký token theo phiên bản SDK (Firebase đang bổ sung FID), thử PWA iPhone đã cài màn hình chính iOS 16.4+.
+ 7. **Người dùng:** tạo service account riêng cho gửi FCM trong đúng project, quyền Firebase Cloud Messaging API Admin (`roles/firebasecloudmessaging.admin`) hoặc custom role hẹp có `cloudmessaging.messages.create`; tạo khoá JSON và giữ ngoài repo, không dùng Owner/Editor chỉ để gửi push.
+ 8. **Người dùng/vận hành, sau 7:** dùng `wrangler secret put FCM_SERVICE_ACCOUNT_JSON --name qlh-staging-api` để nhập JSON bằng stdin an toàn khi Worker staging đã tồn tại; đặt `FCM_PROJECT_ID` trong cấu hình staging. Không đưa JSON vào dòng lệnh, log, chat hay commit; không chạy lệnh production. Xoay/revoke key khi lộ, xoá cache OAuth khi đổi key.
+-9. **Dev + người dùng, sau các bước tương ứng:** gửi một thông báo thử không có nội dung nhận xét/điểm, xác nhận nhận trên iOS và web, mở đúng con qua API, rồi thử đăng xuất/chuyển tài khoản/thu hồi token; ghi chỉ mã kết quả, CPU và trạng thái, không ghi token/khoá. Hiện **chưa thể xác minh gửi đầu cuối** vì chưa có cấu hình và mã tích hợp.
++9. **Dev + người dùng, sau các bước tương ứng:** gửi một thông báo thử không có nội dung nhận xét/điểm, xác nhận nhận trên iOS và web, mở đúng con qua API, rồi thử đăng xuất/chuyển vai trò/thu hồi token; ghi chỉ mã kết quả, CPU và trạng thái, không ghi token/khoá. Kiểm thêm: đổi vai trò/đăng xuất phải chờ máy chủ ack rồi mới đổi danh tính; push đã hiện trên thiết bị trước lúc ack **không thu hồi từ xa được** (chỉ xoá được notification phía client) — ghi rõ kỳ vọng này, không coi là lỗi. Hiện **chưa thể xác minh gửi đầu cuối** vì chưa có cấu hình và mã tích hợp.
+ 
+ [Apple/FCM](https://firebase.google.com/docs/cloud-messaging/ios/client), [FCM web](https://firebase.google.com/docs/cloud-messaging/js/client), [HTTP v1 và quyền service account](https://firebase.google.com/docs/cloud-messaging/send/v1-api). Các file cấu hình client không tương đương private key, nhưng bản thật vẫn giữ ngoài repo công khai theo brief; service account JSON và APNs `.p8` luôn là secret.
+--- r1/plans/20261021-mvp/backend/offline-plan.md
++++ r2/plans/20261021-mvp/backend/offline-plan.md
+@@ -39,4 +39,10 @@
+ 
+ ## Push và offline (B2)
+ 
+-Push không thay cơ chế đồng bộ. Mở app/token đổi/quyền thông báo đổi: đăng ký lại qua `PUT /device-tokens` khi có mạng; thu hồi quyền thì gỡ đăng ký. Đổi user/role phải chuyển token sang membership hiện hành; đăng xuất gỡ token phía server trước khi xoá phiên. Khi mất mạng chưa thể đăng ký/gỡ token, lưu thao tác quản lý thiết bị để xử lý lúc nối lại, không ghi token vào log. Server kiểm lại phiên/quyền/con được liên kết trước gửi nên không dựa vào client gỡ token để bảo mật. Nhận push chỉ kích hoạt tải qua API, không ghi đè kho cục bộ từ payload. Lưu đề BTVN/điểm offline chỉ tạo sự kiện sau commit server; gửi phiếu/phát hành báo cáo vẫn cần mạng theo spec. Gộp đã chốt Q7: điểm chờ 5 phút sau server commit cuối, BTVN một lần giao (lệnh `homework.assign` chứa 1..4 phần mới và UUID chung), sửa nội dung đề đã giao không push. Chưa triển khai.
++Push không thay cơ chế đồng bộ. Mở app/token đổi/quyền thông báo đổi: đăng ký lại qua `PUT /device-tokens` khi có mạng; thu hồi quyền thì gỡ đăng ký thủ công.
++
++**Đổi danh tính cần mạng + xác nhận máy chủ (sửa C-01/R-01).** Đổi vai trò (`PUT /session/membership`), đăng xuất (`POST /auth/logout`) và đổi tài khoản **không** đi qua outbox nghiệp vụ: có token đang đăng ký mà mất mạng thì giữ nguyên identity/cache/UI hiện tại và báo cần mạng. Chỉ sau khi máy chủ trả 200/204 (batch đã gỡ đăng ký token của **đúng phiên hiện tại** và deliveries tương ứng) client mới đổi danh tính, rồi đăng ký FCM theo membership mới; chưa đăng ký lại chỉ mất push, không cản dùng app. Đổi tài khoản: thu hồi phiên/đăng ký cũ xong mới kích hoạt tài khoản mới. Token của phiên/thiết bị khác không bị gỡ.
++
++**Làm mới token trong cùng binding** (cùng user + membership + phiên, ví dụ SDK xoay token) chỉ cập nhật `updated_at`: không bump `registration_version`, không đổi `bound_at`, không xoá deliveries ⇒ không mất quyền nhận job fanout đang chạy. Chỉ khi đổi binding mới bump version, đặt `bound_at` và huỷ deliveries cũ.
++
++Server kiểm lại phiên/danh tính/quyền/con được liên kết trước khi gửi (token phải khớp `auth_sessions.user_id`/`membership_id`, không chỉ cùng `active`) nên không dựa vào client gỡ token để bảo mật. **Giới hạn:** push đã được FCM/OS nhận trước khi máy chủ ack thu hồi không thu hồi từ xa được; client xoá notification cũ khi đổi danh tính và không dùng payload làm quyền truy cập. Nhận push chỉ kích hoạt tải qua API, không ghi đè kho cục bộ từ payload. Lưu đề BTVN/điểm offline chỉ tạo sự kiện sau commit server; gửi phiếu/phát hành báo cáo vẫn cần mạng theo spec. Gộp đã chốt Q7: điểm chờ 5 phút sau server commit cuối, BTVN một lần giao (lệnh `homework.assign` chứa 1..4 phần mới và UUID chung), sửa nội dung đề đã giao không push. Chưa triển khai.
+--- r1/plans/20261021-mvp/backend/stack-and-cpu.md
++++ r2/plans/20261021-mvp/backend/stack-and-cpu.md
+@@ -183,7 +183,9 @@
+ 
+ ### Gửi lô và hạn mức
+ 
+-Chọn inbox + deliveries trong D1, cron `* * * * *` (một trigger riêng hoặc gộp lịch hiện có). Mỗi invocation claim tối đa **5 deliveries**, tối đa 2 kết nối FCM đồng thời. Tính thêm D1 đọc/cache/claim/ghi kết quả, OAuth cache miss và retry 401; giữ tổng dưới 50 subrequest, giới hạn CPU p95 dưới 8 ms để chừa dư. Các giá trị 5/2 là ngân sách đề xuất, **chưa đo**; giảm lô hoặc nâng gói nếu không đạt. Việc mở rộng inbox thành deliveries cũng phải chia lô, không tạo vô hạn trong cùng cron. Hàng chưa tới lượt nằm D1, không tự gọi Worker nối chuỗi.
++Chọn inbox + deliveries trong D1, cron `* * * * *` (một trigger riêng hoặc gộp lịch hiện có). Mỗi invocation claim tối đa **5 deliveries**, tối đa 2 kết nối FCM đồng thời. Tính thêm D1 đọc/cache/claim/ghi kết quả, OAuth cache miss và retry 401; giữ tổng dưới 50 subrequest, giới hạn CPU p95 dưới 8 ms để chừa dư. Các giá trị 5/2 là ngân sách đề xuất, **chưa đo**; giảm lô hoặc nâng gói nếu không đạt. Hàng chưa tới lượt nằm D1, không tự gọi Worker nối chuỗi.
++
++**Mở rộng inbox có trần cứng (sửa R-02):** mỗi invocation xét tối đa **5 inbox** và tổng **20 đăng ký thiết bị** (kể cả đăng ký bị bỏ qua), đọc bằng keyset `ORDER BY device_tokens.id LIMIT n`, `delivery_cursor` lưu ở D1 — không nạp toàn bộ token của một inbox vào RAM rồi cắt. Freeze inbox bằng `expansion_started_at` (lease 60 giây) trước khi tạo delivery để nhóm điểm đóng đúng một lần; chỉ chủ lease đẩy cursor; chỉ đặt `deliveries_expanded_at` khi đã xét hết. Hết ngân sách giữa chừng thì cron sau tiếp tục từ cursor. 5/20 là ngân sách đề xuất, **chưa đo** cùng các giá trị trên; vượt thì giảm lô hoặc nâng gói, không thêm queue ở MVP.
+ 
+ `ctx.waitUntil` dùng được để xử lý một ít việc sau response nhưng vẫn cùng CPU/subrequest, tối đa 30 giây sau response; không làm bộ bảo đảm gửi. Nếu crash, D1 giữ pending/lease để cron retry. D1 deliveries retry theo mục 2.7 mô hình dữ liệu. Free 10 ms CPU cho cả cron, 50 subrequest và 6 kết nối đồng thời; Workers Paid mặc định 30 giây CPU, cấu hình tối đa 5 phút, không tự nâng gói.
+ 

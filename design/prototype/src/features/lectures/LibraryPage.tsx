@@ -89,7 +89,7 @@ export default function LibraryPage() {
 
       {visible.length === 0 ? (
         <Card>
-          <EmptyState title={emptyTitle}>
+          <EmptyState title={emptyTitle} mascot="cho">
             <p className={s.emptyHint}>
               {searching
                 ? "Thử từ khoá khác hoặc xoá ô tìm kiếm."

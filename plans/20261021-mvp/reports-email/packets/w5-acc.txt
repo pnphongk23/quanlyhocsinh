@@ -1,0 +1,1 @@
+Các màn A–F chạy thật trong prototype (npm run dev), đúng 390 và 1280; popup xem trước; trạng thái chuẩn; chỉ dùng token (grep không thấy màu hex/px mới ngoài token trong file đã sửa); test xanh.

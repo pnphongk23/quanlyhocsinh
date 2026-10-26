@@ -46,7 +46,7 @@ const PERMISSION_ERROR = "Bạn không có quyền thực hiện thao tác này.
 /** Đặt vai trò đang dùng thành một membership không phải Admin. */
 function actAs(memberId: string): void {
   const state = createSeed();
-  state.auth = { email: "test@example.test", memberIds: [memberId] };
+  state.auth = { phone: "900000001", memberIds: [memberId] };
   state.activeMemberId = memberId;
   replaceStore(state);
 }
@@ -101,7 +101,7 @@ describe("Phân công giảng dạy", () => {
 
   it("chỉ chọn được nhân sự đang hoạt động", () => {
     expect(() =>
-      assignClassStaff("6a", MEMBER_IDS.mai, "assistant"),
+      assignClassStaff("6a", MEMBER_IDS.minhAnhGuardian, "assistant"),
     ).toThrow("Chỉ chọn được nhân sự đang hoạt động.");
     expect(() => assignClassStaff("6a", "khong-co", "main")).toThrow(
       "Không tìm thấy thành viên.",

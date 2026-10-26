@@ -1,0 +1,9 @@
+# Review tổng thể web (vòng 2, cuối)
+
+Reviewer: `codex/gpt-6-luna` high, CHỈ ĐỌC code (ghi duy nhất `plans/20261021-mvp/web/review-r2.md` ở thư mục chính; không sửa mã, không commit, không deploy, không tạo agent; `srcwalk`). Worktree `/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web`, nhánh `mvp-web` tại HEAD `6b58afc`.
+Đọc `web/review-r1.md` (2 MAJOR vòng 1), `web/f1-report.md`, `web/f2-report.md`, `web/w6-report.md`, `briefs/web-10-review-overall.md` (phạm vi 1-4 và 6; mục 5 đúng prototype BỎ cho màn phụ huynh và bố cục desktop vì lead UX đang làm lại prototype), `backend/{api-spec,authz-matrix,offline-plan}.md`, `AGENTS.md`.
+
+## Việc
+1. **Kiểm các sửa của vòng 1**: (a) `initializeSession`/`sync` phân biệt 401/403/membership không còn active với lỗi mạng, ẩn cache, không hydrate; (b) các thao tác REST (sửa lớp, thêm/sửa buổi lẻ, hủy buổi, thêm/sửa/gỡ học sinh, lưu trữ bài, phát hành báo cáo, gửi phiếu…) chờ xác nhận và rollback/giữ modal khi lỗi; (c) phiên lưu bền (IndexedDB): khởi tạo trước redirect, di trú `sessionStorage`, đăng xuất chỉ khi máy chủ 204 và không còn lệnh chờ; (d) đăng xuất xoá toàn bộ cache của user (F-2) mà không mất lệnh chờ; đổi tài khoản không để lại dữ liệu; (e) CSP trong `public/_headers` không chặn tài nguyên cần thiết và không mở rộng quá mức.
+2. **Quét lại toàn bộ phạm vi 1-4 và 6** ở HEAD hiện tại (phân quyền client, rò dữ liệu Dexie giữa vai trò/tài khoản/membership, offline/outbox, đúng spec/quyết định 71/74/76, bảo mật web), đặc biệt các thay đổi sau vòng 1 (commit `563e3e5`, `bb4442e`, `6b58afc`): có hồi quy nào không? token lưu bền ở IndexedDB có bị lộ qua log/URL/Cache Storage? service worker có thể phục vụ dữ liệu cũ của tài khoản khác không?
+3. Chỉ ghi vấn đề có bằng chứng (file:dòng, kịch bản tái hiện, đề xuất sửa); loại báo động giả. Bảng mức BLOCKER/MAJOR/MINOR. Cuối: `Status: DONE` kèm số BLOCKER/MAJOR/MINOR và kết luận "có thể coi vòng review web đã đạt" hay "cần sửa thêm" (liệt kê).

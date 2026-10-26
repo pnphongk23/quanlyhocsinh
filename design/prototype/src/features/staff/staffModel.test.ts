@@ -4,9 +4,6 @@ import {
   classAssignmentLabel,
   GUARDIAN_LEVELS,
   initials,
-  INVITE_DAYS,
-  inviteExpiry,
-  inviteLink,
   levelOf,
   maskPhone,
   matchesMember,
@@ -46,7 +43,7 @@ describe("che bớt số điện thoại", () => {
   });
 });
 
-describe("kiểm tra số điện thoại khi mời", () => {
+describe("kiểm tra số điện thoại", () => {
   it("chỉ nhận số 10 chữ số bắt đầu bằng 0", () => {
     expect(validatePhone("0912345678")).toBe("");
     expect(validatePhone("091 234 5678")).toBe("");
@@ -110,32 +107,9 @@ describe("tên vai trò", () => {
   });
 });
 
-describe("link mời", () => {
-  const invitedAt = "2026-10-01T09:00:00.000Z";
-
-  it("hết hạn sau 7 ngày", () => {
-    const now = new Date("2026-10-04T09:00:00.000Z");
-    const { daysLeft, expiresAtLabel } = inviteExpiry(invitedAt, now);
-    expect(INVITE_DAYS).toBe(7);
-    expect(daysLeft).toBe(4);
-    expect(expiresAtLabel).toMatch(/\d{2}\/\d{2}\/\d{4}/);
-  });
-
-  it("không trả số ngày âm khi đã hết hạn", () => {
-    expect(inviteExpiry(invitedAt, new Date("2026-11-01T00:00:00.000Z")).daysLeft).toBe(0);
-  });
-
-  it("gắn mã thành viên vào link một lần", () => {
-    expect(inviteLink("m1", "https://app.example.com/")).toBe(
-      "https://app.example.com/kich-hoat?loi-moi=m1",
-    );
-  });
-});
-
 describe("nhãn trạng thái và lớp", () => {
   it("hiện đúng tiếng Việt", () => {
     expect(memberStatusLabel("active")).toBe("Hoạt động");
-    expect(memberStatusLabel("invited")).toBe("Đã mời");
     expect(memberStatusLabel("disabled")).toBe("Vô hiệu hoá");
   });
 
