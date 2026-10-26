@@ -500,16 +500,6 @@ struct HomeworkSectionEditor: View {
                     }
                     titleField
                     descriptionField
-                    if let error {
-                        Text(error)
-                            .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                            .foregroundStyle(AppColors.error)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
-                    }
-                    if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                     if let section = editingSection { deleteRow(section) }
                 }
                 .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
@@ -527,6 +517,16 @@ struct HomeworkSectionEditor: View {
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 TeacherPinnedBar {
+                if let error {
+                    Text(error)
+                        .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                        .foregroundStyle(AppColors.error)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
+                }
+                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                     AppSaveButton(title: editingSection == nil ? String(localized: "feature.homework.luu.phan")
                                                                : String(localized: "feature.homework.luu"),
                                   controller: saveController, identifier: "homework.assign.save") {

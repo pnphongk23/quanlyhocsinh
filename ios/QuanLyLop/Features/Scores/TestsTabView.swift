@@ -481,21 +481,6 @@ struct TestEditorView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, placeholder: String(localized: "feature.scores.vi.du.unit.6.test"), identifier: "test.name")
                     dateField
-                    if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
-                    if let failure = saveController.error {
-                        I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
-                    }
-                    if let error {
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle").font(.system(size: 16))
-                            Text(error).appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                        }
-                        .foregroundStyle(AppColors.error)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: 12))
-                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
@@ -503,6 +488,21 @@ struct TestEditorView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 8) {
+                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
+                if let failure = saveController.error {
+                    I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
+                }
+                if let error {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle").font(.system(size: 16))
+                        Text(error).appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                    }
+                    .foregroundStyle(AppColors.error)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: 12))
+                }
               AppSaveButton(title: String(localized: "feature.scores.tao.bai.va.nhap.iem"), controller: saveController, identifier: "test.save") {
                   try await save()
               }
@@ -602,23 +602,23 @@ struct TestFormSheet: View {
             VStack(spacing: 14) {
                 AppTextField(label: String(localized: "feature.scores.ten.bai.kiem.tra"), text: $name, identifier: "test.name")
                 AppTextField(label: String(localized: "feature.scores.ngay.kiem.tra"), text: $date, placeholder: "YYYY-MM-DD")
-                if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
-                if let failure = saveController.error {
-                    I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
-                }
-                if let error {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle").font(.system(size: 16))
-                        Text(error).appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                    }
-                    .foregroundStyle(AppColors.error)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: 12))
-                }
             }
         } footer: {
+            if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
+            if let failure = saveController.error {
+                I4Banner(text: failure.localizedDescription, tone: .error, systemImage: "exclamationmark.triangle")
+            }
+            if let error {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle").font(.system(size: 16))
+                    Text(error).appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                }
+                .foregroundStyle(AppColors.error)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: 12))
+            }
               AppSaveButton(title: String(localized: "feature.scores.luu.thay.oi"), controller: saveController, identifier: "test.save") {
                   try await save()
               }

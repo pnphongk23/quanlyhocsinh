@@ -485,12 +485,6 @@ struct I4TicketSheet: View {
                         criteriaGrid
                         mergedComment
                     }
-                    if let error {
-                        Text(error)
-                            .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
-                            .foregroundStyle(AppColors.error)
-                    }
-                    if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
                 }
                 .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
                 .padding(.bottom, 12)
@@ -503,6 +497,12 @@ struct I4TicketSheet: View {
           .safeAreaInset(edge: .bottom, spacing: 0) {
               if canWrite {
                   TeacherPinnedBar {
+                      if let error {
+                          Text(error)
+                              .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                              .foregroundStyle(AppColors.error)
+                      }
+                      if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
                       HStack(spacing: TeacherMetrics.contentGap) {
                           if hasUnsavedChanges { unsavedStatus }
                           AppSaveButton(title: String(localized: "feature.comments.luu"), controller: saveController, identifier: "comment.save") {

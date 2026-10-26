@@ -177,12 +177,12 @@ struct AddReportBatchSheet: View {
                 Text(String(localized: "reports.add.hint", table: "Reports"))
                     .appText(AppText.muted).foregroundStyle(AppColors.muted)
                 monthPicker
-                if let message = (controller.error as? I4SaveFailure)?.message {
-                    TeacherErrorBanner(message: message)
-                }
             }
             .padding(.bottom, AppMetrics.cardPaddingHorizontal)
         } footer: {
+            if let message = (controller.error as? I4SaveFailure)?.message {
+                TeacherErrorBanner(message: message)
+            }
             AppSaveButton(title: String(localized: "reports.add.create", table: "Reports"), controller: controller,
                           identifier: "reports.add.create", onSuccess: {}) {
                 let result = await data.createBatch(classID: classID, month: month, requestID: requestID)
