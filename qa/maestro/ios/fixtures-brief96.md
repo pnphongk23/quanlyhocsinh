@@ -16,3 +16,11 @@ Chưa làm được trong lượt hiện tại: GL chưa cấp lượt Chromium/
 - Lớp `QA-iOS-c87f0e-HW`, học sinh `QA-iOS-c87f0e-HS1..HS3`, tạo bằng `qa/maestro/web/ios-hw-fixture.mjs` (bundle `index-DXfBbe1w.js`).
 - Buổi N hôm nay 18:00 (giao BTVN `QA-iOS-c87f0e-Reading`, chưa chấm); N+1 hôm nay 21:00 và N+2 hôm nay 22:00 đều đã lưu điểm danh Có mặt cho 3 em; chưa phiếu nào được gửi, chưa chấm BTVN.
 - Việc còn lại trên iOS: chấm BTVN ở N+1 hoặc N+2 (tab "Bài tập buổi trước"), kiểm phiếu, gửi một phiếu để kiểm phiếu đã gửi.
+
+## Fixture 2 (2026-10-26, workspace smoke, `qa/maestro/web/ios-hw-fixture2.mjs`)
+- Lớp `AAA-QA-a405a7-HW`, học sinh `AAA-QA-a405a7-HS1..HS3`, 3 buổi hôm nay:
+  - S1 18:00 (buổi lặp): không giao BTVN.
+  - S2 21:00 (buổi lẻ): giao `AAA-QA-a405a7-Reading` (chưa chấm), điểm danh Có mặt cả 3; phiếu nháp.
+  - S3 22:00 (buổi lẻ): HS1 đã gửi phiếu; HS2, HS3 nháp, điểm danh Có mặt; BTVN buổi trước (S2) chấm được ở tab "Bài tập buổi trước".
+- Dùng để kiểm: nhãn "Buổi trước chưa có BTVN" (S2), chấm lại viết lại nháp S3, "Gán mặc định" không đụng phiếu đã gửi (S3), câu sửa tay.
+- Lưu ý: trình duyệt chỉ dùng khi GL cấp lượt Chromium; lần chạy này chạy cùng lúc iOS giữ simulator (không chạm simulator).
