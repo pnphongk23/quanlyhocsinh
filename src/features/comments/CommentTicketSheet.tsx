@@ -15,7 +15,7 @@ import {
   ticketBadge,
   type TicketBadge,
 } from "./commentsModel";
-import { clearDraft, readDraft, writeDraft } from "./draftStore";
+import { clearDraft, readDraft, useSessionDraftReset, writeDraft } from "./draftStore";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./CommentsPanel.module.css";
 import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
@@ -118,6 +118,19 @@ export default function CommentTicketSheet({
         });
       clearDraft(session.id, row.student.id);
     },
+  });
+  const latestComment = useRef(row.comment);
+  latestComment.current = row.comment;
+  // Gán mặc định cả lớp: nạp lại từ phiếu đã lưu để nút Lưu không ghi ngược nội dung cũ.
+  useSessionDraftReset(session.id, () => {
+    const savedSlip = latestComment.current;
+    if (!savedSlip) return;
+    const next = { criteria: savedSlip.criteria ?? 31, comment: savedSlip.comment ?? generatedSlipSentence(savedSlip.criteria ?? 31), note: savedSlip.note ?? "", hwManual: savedSlip.hwManual ?? false };
+    draft.current = next;
+    setCriteria(next.criteria);
+    setComment(next.comment);
+    setNote(next.note);
+    setManualHomework(next.hwManual);
   });
   const saved = useSavedPeek();
   const sheetTitleRef = useRef<HTMLHeadingElement>(null);

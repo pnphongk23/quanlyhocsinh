@@ -6,6 +6,8 @@ import { createSeed } from "../../test/fixtures/seed";
 import type { TicketRow } from "../../data/homework";
 import { generatedSlipSentence } from "../../data/slip";
 import TicketEditor from "./TicketEditor";
+import { resetSessionDrafts } from "./draftStore";
+import type { Comment } from "../../data/types";
 
 const save = vi.hoisted(() => vi.fn());
 vi.mock("../../data/repositories/comments", async (original) => ({
@@ -111,5 +113,34 @@ describe("TicketEditor tự lưu khi rời ô ghi chú (desktop)", () => {
   it("nhãn BTVN: buổi trước chưa có BTVN", () => {
     renderEditor();
     expect(screen.getByTestId("slip-homework-auto-label")).toHaveTextContent("Buổi trước chưa có BTVN");
+  });
+
+  it("câu sửa tay chưa lưu vẫn giữ trạng thái Chưa lưu khi ghi chú được lưu", async () => {
+    renderEditor();
+    fireEvent.change(screen.getByTestId("slip-generated-comment"), { target: { value: "Câu đang sửa" } });
+    const note = screen.getByTestId("slip-note");
+    fireEvent.change(note, { target: { value: "Ghi chú" } });
+    fireEvent.blur(note);
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByTestId("slip-save-status")).toHaveAttribute("data-save-state", "pending"));
+  });
+
+  it("sau Gán tất cả mặc định phiếu đang mở nạp lại và blur không ghi ngược câu cũ", async () => {
+    const seed = createSeed();
+    replaceStore(seed);
+    const student = seed.students.find((item) => item.id === studentId)!;
+    const slip = (criteria: number, comment: string): Comment => ({ id: "c", classId: "6a", sessionId, studentId, criteria, comment, scale: 5, stars: 3, note: "giữ", hwManual: false, status: "draft", sendQueued: false, sentAt: null, updatedAt: "2026-10-26T00:00:00.000Z", createdAt: "2026-10-26T00:00:00.000Z" } as Comment);
+    const rowOf = (comment: Comment): TicketRow => ({ student, comment, stars: 3, attended: true, status: "draft", sentAt: null, previousHomework: { state: "first", session: null, totalSections: 0, gradedSections: 0, ungradedSections: 0 } } as TicketRow);
+    const homework = { state: "first" as const, sections: [] };
+    const view = render(<TicketEditor session={getSession(sessionId)!} row={rowOf(slip(3, "Câu cũ"))} homework={homework} />);
+    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
+    fireEvent.change(sentence, { target: { value: "Câu tôi vừa gõ" } });
+    view.rerender(<TicketEditor session={getSession(sessionId)!} row={rowOf(slip(31, generatedSlipSentence(31)))} homework={homework} />);
+    resetSessionDrafts(sessionId);
+    await waitFor(() => expect(sentence.value).toBe(generatedSlipSentence(31)));
+    fireEvent.blur(sentence);
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByTestId("slip-save-status")).toHaveAttribute("data-save-state", "saved");
+    expect(sessionStorage.length).toBe(0);
   });
 });

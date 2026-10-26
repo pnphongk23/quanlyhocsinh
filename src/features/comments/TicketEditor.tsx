@@ -11,7 +11,7 @@ import type {
 } from "../../data/types";
 import { useAccess } from "../../data/repositories/access";
 import { Pill } from "../../shared/ui";
-import { readDraft, writeDraft } from "./draftStore";
+import { readDraft, useSessionDraftReset, writeDraft } from "./draftStore";
 import type { SheetHomework } from "./CommentTicketSheet";
 import s from "./CommentsDesktop.module.css";
 import { SlipCriteriaFields } from "./SlipCriteriaFields";
@@ -95,6 +95,26 @@ export default function TicketEditor({
   const [saving, setSaving] = useState(false);
   const [unsaved, setUnsaved] = useState(canWrite && (!row.comment || Boolean(stored)));
   const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
+  const latestComment = useRef(row.comment);
+  latestComment.current = row.comment;
+
+  /** Nạp lại từ phiếu đã lưu: bỏ nội dung đang soạn để blur/lưu sau đó không ghi ngược bản cũ. */
+  useSessionDraftReset(session.id, () => {
+    const saved = latestComment.current;
+    if (!saved) return;
+    const next = { criteria: saved.criteria ?? 31, comment: saved.comment ?? generatedSlipSentence(saved.criteria ?? 31), note: saved.note ?? "", hwManual: saved.hwManual ?? false };
+    draft.current = next;
+    savedNote.current = next.note;
+    savedComment.current = next.comment;
+    setCriteria(next.criteria);
+    setComment(next.comment);
+    setNote(next.note);
+    setManualHomework(next.hwManual);
+    setUnsaved(false);
+    setError("");
+  });
+
+  const hasUnsavedText = () => draft.current.note !== savedNote.current || (scale === 5 && draft.current.comment !== savedComment.current);
 
   async function persist(next: { criteria?: number; comment?: string | null; note: string; hwManual?: boolean }) {
     setSaving(true);
@@ -110,7 +130,7 @@ export default function TicketEditor({
       setError("");
       savedNote.current = next.note;
       if (next.comment !== undefined) savedComment.current = next.comment;
-      setUnsaved(draft.current.note !== next.note);
+      setUnsaved(hasUnsavedText());
     } catch (cause) {
       setUnsaved(true);
       setError(
@@ -169,7 +189,7 @@ export default function TicketEditor({
     draft.current = { ...draft.current, note: value };
     writeDraft(session.id, row.student.id, draft.current);
     setNote(value);
-    setUnsaved(value !== savedNote.current);
+    setUnsaved(hasUnsavedText());
     setError("");
   }
 

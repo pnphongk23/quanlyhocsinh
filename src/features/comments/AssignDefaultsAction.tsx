@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { assignDefaultSlipsDurable } from "../../data/repositories/comments";
+import { resetSessionDrafts } from "./draftStore";
 import { Button } from "../../shared/ui";
 import type { ButtonSize } from "../../shared/ui";
 import s from "./CommentsPanel.module.css";
@@ -31,6 +32,7 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size }: 
     setBusy(true);
     try {
       await assignDefaultSlipsDurable(sessionId);
+      resetSessionDrafts(sessionId);
       setError("");
       setOpen(false);
     } catch (cause) {

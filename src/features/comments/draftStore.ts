@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { StarLevel } from "../../data/types";
 
 /**
@@ -70,4 +71,33 @@ export function clearDraft(sessionId: string, studentId: string): void {
   } catch {
     // Không xoá được thì lần mở sau vẫn còn nháp; không chặn thao tác lưu.
   }
+}
+
+const RESET_EVENT = "comment-drafts-reset";
+
+/** Bỏ mọi nháp của buổi và báo các phiếu đang mở nạp lại từ dữ liệu đã lưu (sau khi gán mặc định cả lớp). */
+export function resetSessionDrafts(sessionId: string): void {
+  const box = storage();
+  if (box) {
+    try {
+      const prefix = `${PREFIX}${sessionId}:`;
+      for (const key of Object.keys(box).filter((name) => name.startsWith(prefix))) box.removeItem(key);
+    } catch {
+      // Không xoá được thì bỏ qua; phiếu đang mở vẫn nạp lại từ dữ liệu đã lưu.
+    }
+  }
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(RESET_EVENT, { detail: sessionId }));
+}
+
+/** Gọi `onReset` mỗi khi nháp của buổi này bị bỏ do thao tác hàng loạt. */
+export function useSessionDraftReset(sessionId: string, onReset: () => void): void {
+  const latest = useRef(onReset);
+  latest.current = onReset;
+  useEffect(() => {
+    const handler = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === sessionId) latest.current();
+    };
+    window.addEventListener(RESET_EVENT, handler);
+    return () => window.removeEventListener(RESET_EVENT, handler);
+  }, [sessionId]);
 }

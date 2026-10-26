@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AssignDefaultsAction from "./AssignDefaultsAction";
+import { draftKey, readDraft, writeDraft } from "./draftStore";
 
 const assign = vi.hoisted(() => vi.fn());
 vi.mock("../../data/repositories/comments", () => ({ assignDefaultSlipsDurable: assign }));
@@ -35,5 +36,16 @@ describe("Gán tất cả mặc định", () => {
     fireEvent.click(screen.getByRole("button", { name: "Gán mặc định" }));
     expect(await screen.findByText("Ghi bền thất bại.")).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("xong thì bỏ nháp của buổi để phiếu đang mở nạp lại", async () => {
+    writeDraft("s1", "a", { criteria: 3, comment: "x", note: "" });
+    writeDraft("s2", "a", { criteria: 3, comment: "x", note: "" });
+    view();
+    fireEvent.click(screen.getByTestId("slip-assign-defaults"));
+    fireEvent.click(screen.getByRole("button", { name: "Gán mặc định" }));
+    await waitFor(() => expect(readDraft("s1", "a")).toBeNull());
+    expect(readDraft("s2", "a")).not.toBeNull();
+    expect(sessionStorage.getItem(draftKey("s1", "a"))).toBeNull();
   });
 });
