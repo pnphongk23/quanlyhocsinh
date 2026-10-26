@@ -74,3 +74,39 @@ describe("sync rejection persistence", () => {
     expect(auth.clearSession).toHaveBeenCalledOnce();
   });
 });
+
+describe("sync claims pending commands", () => {
+  it("does not resurrect a command that was merged away after it was read", async () => {
+    const { api, syncNow } = await import("../data/sync");
+    const id = identityKey();
+    await db.meta.put({ key: id, identity: id, cursor: 0, epoch: 1 });
+    const base = { identity: id, membership_id: identity.membershipId, status: "pending" as const };
+    const slip = (payload: object) => ({ type: "slip.set" as const, payload: { session_id: "s", student_id: "st", ...payload }, base_version: 0 });
+    await db.outbox.put({ ...base, ...slip({ criteria: 23, note: "" }), id: "stale", created_at: "2026-10-23T00:00:01Z", depends_on: "missing-dependency" } as never);
+    const realGet = db.outbox.get.bind(db.outbox);
+    let merged = false;
+    vi.spyOn(db.outbox, "get").mockImplementation(((key: string) => {
+      if (key !== "missing-dependency" || merged) return realGet(key);
+      merged = true;
+      return db.transaction("rw", db.outbox, async () => {
+        await db.outbox.delete("stale");
+        await db.outbox.put({ ...base, ...slip({ criteria: 23, note: "Gộp" }), id: "merged", created_at: "2026-10-23T00:00:02Z" } as never);
+      }).then(() => realGet(key));
+    }) as never);
+    const pushed: string[][] = [];
+    vi.spyOn(api, "request").mockImplementation((async (endpoint: string, options?: { body?: { commands?: Array<{ id: string }> } }) => {
+      if (endpoint === "POST /sync/push") {
+        const ids = (options?.body?.commands ?? []).map((command) => command.id);
+        pushed.push(ids);
+        return { epoch: 1, cursor: 1, results: ids.map((commandId) => ({ id: commandId, status: "applied", version: 1 })) };
+      }
+      if (endpoint === "GET /sync/pull") return { cursor: 1, epoch: 1, has_more: false, server_time: "2026-10-23T00:00:00Z", upserts: {}, deleted: [] };
+      throw new Error(`Unexpected fake endpoint: ${endpoint}`);
+    }) as never);
+
+    await syncNow();
+
+    expect(pushed.flat()).toEqual(["merged"]);
+    expect(await realGet("stale")).toBeUndefined();
+  });
+});

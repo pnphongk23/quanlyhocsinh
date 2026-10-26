@@ -201,7 +201,7 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
     while (true) {
       const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").sortBy("created_at");
       if (!rows.length) break;
-      const batch = [] as typeof rows;
+      let batch = [] as typeof rows;
       for (const row of rows) {
         if (batch.length >= 50) break;
         if (row.depends_on) {
@@ -212,10 +212,20 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
       }
       if (!batch.length) break;
       for (let i = 0; i < batch.length; i++) batch[i] = await withTestUpdateId(batch[i], identity);
-        const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({
-          id, type, payload: payloadWithoutLegacyTestMax(type, payload), base_version, created_at,
-        })) as SyncCommand[];
-      await db.outbox.bulkPut(batch.map((row) => ({ ...row, status: "sending" as const })));
+      // Lệnh có thể đã bị gộp hoặc xoá từ lúc đọc; chỉ nhận lệnh vẫn đang chờ để không dựng lại bản cũ.
+      batch = await db.transaction("rw", db.outbox, async () => {
+        const claimed = [] as typeof batch;
+        for (const row of batch) {
+          if ((await db.outbox.get(row.id))?.status !== "pending") continue;
+          await db.outbox.put({ ...row, status: "sending" });
+          claimed.push(row);
+        }
+        return claimed;
+      });
+      if (!batch.length) continue;
+      const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({
+        id, type, payload: payloadWithoutLegacyTestMax(type, payload), base_version, created_at,
+      })) as SyncCommand[];
       outboxChanged = true;
       let response;
       try { response = await api.request("POST /sync/push", { body: { membership_id: membershipId, device_id: getDeviceId(), commands } }); }
