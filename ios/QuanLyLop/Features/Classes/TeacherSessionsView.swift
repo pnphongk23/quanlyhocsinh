@@ -302,8 +302,8 @@ struct TeacherExtraSessionSheet: View {
         }
         .onAppear(perform: load)
         // A reason belongs to the date and time that caused it: editing them clears it.
-        .onChange(of: date) { _, _ in error = nil }
-        .onChange(of: time) { _, _ in error = nil }
+        .onChange(of: date) { _, _ in clearFailure() }
+        .onChange(of: time) { _, _ in clearFailure() }
     }
 
     private var intro: String {
@@ -324,6 +324,12 @@ struct TeacherExtraSessionSheet: View {
                     RoundedRectangle(cornerRadius: AppRadius.button)
                         .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
         }
+    }
+
+    /// A new date or time makes the last failure stale, so neither the reason nor the generic pill stays.
+    private func clearFailure() {
+        error = nil
+        saveController.clearError()
     }
 
     private func load() {
