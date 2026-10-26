@@ -51,6 +51,8 @@ enum TeacherMetrics {
     static let slipChipTickGlyphSize: CGFloat = 12
     static let slipNoteMinHeight: CGFloat = 84
     static let slipUnsavedDotSize: CGFloat = 8
+    /// Attendance row swiped open: width of each of the three status buttons.
+    static let attendanceSwipeButtonWidth: CGFloat = 72
 }
 
 /// Prototype date labels (`src/shared/format/index.ts`) in the same `vi-VN` shapes.

@@ -78,9 +78,8 @@ final class DesignSystemTests: XCTestCase {
     }
 
     func testAttendanceAndHomeworkLabelsComeFromPrototype() {
-        XCTAssertEqual(AttendanceStatus.allCases.map(\.label), ["Có mặt", "Muộn", "Có phép", "Vắng"])
+        XCTAssertEqual(AttendanceStatus.allCases.map(\.label), ["Có mặt", "Muộn", "Vắng"])
         XCTAssertEqual(HomeworkLevel.allCases.map(\.label), ["Hoàn thành tốt", "Hoàn thành", "Chưa hoàn thành"])
-        XCTAssertEqual(AttendanceStatus.excused.pillTone, .primary)
         XCTAssertEqual(HomeworkLevel.done.pillTone, .primary)
         XCTAssertEqual(HomeworkLevel.notDone.pillTone, .error)
         XCTAssertEqual(Stars.three.template,

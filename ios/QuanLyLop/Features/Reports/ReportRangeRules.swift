@@ -292,7 +292,7 @@ enum ReportRules {
             batchId: batchID,
             range: ReportRange(fromKey: range.fromKey, toKey: range.toKey, fromNumber: range.fromNumber,
                                toNumber: range.toNumber, label: range.label),
-            attendance: AttendanceSummary(present: count(.present), late: count(.late), excused: count(.excused),
+            attendance: AttendanceSummary(present: count(.present), late: count(.late), excused: 0,
                                          absent: count(.absent), heldSessions: rangeSessions.count),
             tests: rangeTests,
             stars: StarsSummary(three: three, two: two, one: one, stars5: stars5),

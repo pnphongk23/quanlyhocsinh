@@ -1,6 +1,18 @@
 import Foundation
 
-enum AttendanceStatus: String, Codable, Sendable, CaseIterable { case present, late, excused, absent }
+/// Attendance has three states. A row the server has not migrated yet may still say "excused": it reads as absent.
+enum AttendanceStatus: String, Codable, Sendable, CaseIterable {
+    case present, late, absent
+
+    init(from decoder: any Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        if raw == "excused" { self = .absent; return }
+        guard let status = Self(rawValue: raw) else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "unknown attendance status"))
+        }
+        self = status
+    }
+}
 enum HomeworkLevel: String, Codable, Sendable, CaseIterable { case excellent, done, notDone = "not_done" }
 enum HomeworkKind: String, Codable, Sendable, CaseIterable { case vocabulary, reading, speaking, exercise }
 enum SessionStatus: String, Codable, Sendable { case planned, held, cancelled }

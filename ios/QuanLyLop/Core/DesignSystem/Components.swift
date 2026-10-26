@@ -288,12 +288,11 @@ struct AppPill: View {
 }
 
 extension AttendanceStatus {
-    /// Labels from `AttendancePanel.tsx`, colours from `.present/.late/.excused/.absent`.
+    /// Labels from `AttendancePanel.tsx`, colours from `.present/.late/.absent`.
     var label: String {
         switch self {
         case .present: String(localized: "design.attendance.present")
         case .late: String(localized: "design.attendance.late")
-        case .excused: String(localized: "design.attendance.excused")
         case .absent: String(localized: "design.attendance.absent")
         }
     }
@@ -301,11 +300,13 @@ extension AttendanceStatus {
         switch self {
         case .present: .success
         case .late: .warning
-        case .excused: .primary
         case .absent: .error
         }
     }
     var pill: AppPill { AppPill(title: label, tone: pillTone) }
+
+    /// "2 buổi muộn · 1 buổi vắng": the detail line of the attendance card, kept outside the string tables.
+    static func lateAbsentSummary(late: Int, absent: Int) -> String { "\(late) buổi muộn · \(absent) buổi vắng" }
 }
 
 extension HomeworkLevel {

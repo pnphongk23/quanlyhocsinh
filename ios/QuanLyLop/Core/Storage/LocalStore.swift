@@ -30,6 +30,18 @@ struct PendingCommand: Codable, Sendable, Equatable, Identifiable {
         self.id = id; self.recordKey = recordKey; self.baseVersion = baseVersion
         self.kind = kind; self.payload = payload; self.createdAt = createdAt
     }
+    /// An `attendance.set` queued before attendance had three states may say "excused" and carry an arrival time and
+    /// a note. The server migrated "excused" to absent and no longer takes those two fields, so the command goes out
+    /// as the absence it means instead of being rejected.
+    var currentContract: PendingCommand {
+        guard kind == "attendance.set", case .object(var fields) = payload else { return self }
+        if fields["status"] == .string("excused") { fields["status"] = .string("absent") }
+        fields["late_at"] = nil
+        fields["note"] = nil
+        return PendingCommand(id: id, recordKey: recordKey, baseVersion: baseVersion, kind: kind,
+                              payload: .object(fields), createdAt: createdAt)
+    }
+
     var wire: SyncCommand {
         SyncCommand(id: id, type: kind, baseVersion: baseVersion, createdAt: createdAt, payload: payload)
     }

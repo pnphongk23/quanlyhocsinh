@@ -60,8 +60,7 @@ final class GuardianAccessTests: XCTestCase {
 
         XCTAssertEqual(month.rows.map(\.session.id), ["grading-session", "assignment-session"])
         XCTAssertEqual(month.present, 0)
-        XCTAssertEqual(month.excused, 1)
-        XCTAssertEqual(month.absent, 0)
+        XCTAssertEqual(month.absent, 1)
         XCTAssertEqual(month.rows.count, 2)
     }
 
@@ -108,9 +107,9 @@ final class GuardianAccessTests: XCTestCase {
     }
 
     func testGuardianLabelsAndTonesMatchPrototype() {
-        XCTAssertEqual(AttendanceStatus.excused.guardianPillLabel, "Có phép")
-        XCTAssertEqual(AttendanceStatus.excused.guardianLabel, "có phép")
-        XCTAssertEqual(AttendanceStatus.excused.guardianTone, .primary)
+        XCTAssertEqual(AttendanceStatus.absent.guardianPillLabel, "Vắng")
+        XCTAssertEqual(AttendanceStatus.absent.guardianTone, .error)
+        XCTAssertEqual(AttendanceStatus.lateAbsentSummary(late: 2, absent: 1), "2 buổi muộn · 1 buổi vắng")
         XCTAssertEqual(HomeworkKind.vocabulary.guardianKindLabel, "Luyện từ vựng")
         XCTAssertEqual(HomeworkLevel.excellent.guardianLabel, "Hoàn thành tốt")
         XCTAssertEqual(HomeworkLevel.notDone.guardianTone, .error)
@@ -185,7 +184,7 @@ final class GuardianAccessTests: XCTestCase {
         let slip = SessionSlip(sessionId: second.id, studentId: childID, stars: 3, note: "", status: sent ? .sent : .draft,
             sentAt: sent ? "2026-10-18T00:00:00.000Z" : nil, version: 1, updatedAt: "2026-10-18T00:00:00.000Z")
         return GuardianChildData(student: student, className: "Lớp", sessions: [first, second, third, cancelled],
-            attendances: [Attendance(sessionId: second.id, studentId: childID, status: .excused, note: "",
+            attendances: [Attendance(sessionId: second.id, studentId: childID, status: .absent, note: "",
                                      lateAt: nil, version: 1, updatedAt: "2026-10-17T12:00:00.000Z")],
             tests: [test], scores: [Score(testId: test.id, studentId: childID, value: 12.5, version: 1, updatedAt: "")],
             slips: [slip], homeworkSections: [section, nextSection],

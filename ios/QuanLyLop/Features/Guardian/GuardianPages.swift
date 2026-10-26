@@ -29,7 +29,7 @@ struct GuardianOverviewPage: View {
         let attended = data.present + data.late
         return GuardianStatCard(label: String(localized: "feature.guardian.i.hoc"),
                                 value: "\(attended)/\(data.rows.count)",
-                                detail: String.localizedStringWithFormat(String(localized: "feature.guardian.buoi.muon.co.phep"), String(describing: (data.late)), String(describing: (data.excused))))
+                                detail: AttendanceStatus.lateAbsentSummary(late: data.late, absent: data.absent))
     }
 
     private func latestTicket(_ item: GuardianSentSlip) -> some View {

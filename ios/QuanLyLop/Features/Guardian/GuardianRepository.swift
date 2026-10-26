@@ -235,7 +235,6 @@ struct GuardianSessionRow: Identifiable, Sendable {
             switch attendance?.status {
             case .present: AppColors.success
             case .late: AppColors.warning
-            case .excused: AppColors.primary
             case .absent: AppColors.error
             case nil: AppColors.muted
             }
@@ -248,7 +247,6 @@ struct GuardianAttendanceMonth: Sendable {
     let rows: [GuardianAttendanceRow]
     var present: Int { count(.present) }
     var late: Int { count(.late) }
-    var excused: Int { count(.excused) }
     var absent: Int { count(.absent) }
     private func count(_ status: AttendanceStatus) -> Int { rows.filter { $0.status == status }.count }
 }
@@ -376,7 +374,6 @@ extension AttendanceStatus {
         switch self {
         case .present: String(localized: "feature.guardian.co.mat")
         case .late: String(localized: "feature.guardian.muon")
-        case .excused: String(localized: "feature.guardian.co.phep")
         case .absent: String(localized: "feature.guardian.vang")
         }
     }
@@ -386,7 +383,6 @@ extension AttendanceStatus {
         switch self {
         case .present: String(localized: "feature.guardian.co.mat.e40cb3ed")
         case .late: String(localized: "feature.guardian.muon.70dc7b1f")
-        case .excused: String(localized: "feature.guardian.co.phep.714fbab4")
         case .absent: String(localized: "feature.guardian.vang.67bfe384")
         }
     }
@@ -395,7 +391,6 @@ extension AttendanceStatus {
         switch self {
         case .present: .success
         case .late: .warning
-        case .excused: .primary
         case .absent: .error
         }
     }

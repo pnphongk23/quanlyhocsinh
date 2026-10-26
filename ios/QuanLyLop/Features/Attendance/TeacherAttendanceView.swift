@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Điểm danh buổi học (`features/attendance/AttendancePanel.tsx`).
 ///
-/// Bốn trạng thái đúng thứ tự hợp đồng Có mặt → Vắng → Muộn → Có phép; bấm vào nhãn
-/// để mở menu chọn trạng thái (vuốt phải: vắng, vuốt trái: muộn là đường phụ, không hiện hướng dẫn).
+/// Ba trạng thái Có mặt → Muộn → Vắng; bấm vào nhãn để mở menu chọn trạng thái, hoặc vuốt trái một dòng
+/// để hiện ba nút Có mặt / Muộn / Vắng.
 /// Nút Lưu ghim ở đáy màn, danh sách tự cuộn. Trạng thái được lưu vào
 /// `LocalStore` + hàng đợi lệnh trước khi đồng bộ, nên mất mạng vẫn giữ nháp.
 struct TeacherAttendanceView: View {
@@ -11,8 +11,11 @@ struct TeacherAttendanceView: View {
     @Bindable var data: TeacherFeatureData
     @State private var drafts: [String: TeacherAttendanceDraft] = [:]
     @State private var saveController = AppSaveController()
+    /// The row whose three status buttons are open, and the row being dragged with its horizontal travel.
+    @State private var revealedID: String?
+    @State private var dragging: (id: String, dx: CGFloat)?
 
-    private let cycleOrder: [AttendanceStatus] = [.present, .absent, .late, .excused]
+    private let cycleOrder: [AttendanceStatus] = [.present, .late, .absent]
 
     private var today: String { TeacherFormat.todayISO() }
     private var readOnly: Bool { session.date > today }
@@ -26,9 +29,7 @@ struct TeacherAttendanceView: View {
     private func draft(for student: Student) -> TeacherAttendanceDraft {
         if let draft = drafts[student.id] { return draft }
         let stored = data.attendanceFor(sessionID: session.id, studentID: student.id)
-        return TeacherAttendanceDraft(status: stored?.status ?? .present,
-                                      lateAt: stored?.lateAt,
-                                      note: stored?.note ?? "")
+        return TeacherAttendanceDraft(status: stored?.status ?? .present)
     }
 
     private func storedStatus(_ student: Student) -> AttendanceStatus? {
@@ -183,59 +184,80 @@ struct TeacherAttendanceView: View {
     private func row(_ student: Student) -> some View {
         let value = draft(for: student)
         let displayed: AttendanceStatus? = viewOnly ? storedStatus(student) : value.status
-        return VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                TeacherAvatar(name: student.name, size: 36)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(student.name)
-                        .appText(AppTextStyle(size: 16, weight: .medium, lineHeight: 24))
-                        .foregroundStyle(AppColors.text)
-                    if !viewOnly && value.status == .late { lateFields(student, value) }
-                }
+        let content = HStack(spacing: 8) {
+            TeacherAvatar(name: student.name, size: 36)
+            Text(student.name)
+                .appText(AppTextStyle(size: 16, weight: .medium, lineHeight: 24))
+                .foregroundStyle(AppColors.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                statusButton(student, displayed)
+            statusButton(student, displayed)
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 8)
+        .padding(.vertical, 6)
+        .frame(minHeight: TeacherMetrics.rowMinHeight)
+        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
+        .opacity(readOnly ? 0.6 : 1)
+        return Group {
+            if viewOnly {
+                content
+            } else {
+                content
+                    .offset(x: swipeOffset(for: student))
+                    .background(alignment: .trailing) { swipeActions(student, current: value.status) }
+                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
+                    .simultaneousGesture(swipeGesture(student))
             }
-            .padding(.leading, 12)
-            .padding(.trailing, 8)
-            .padding(.vertical, 6)
-            .frame(minHeight: TeacherMetrics.rowMinHeight)
-            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
-            .opacity(readOnly ? 0.6 : 1)
-            .gesture(swipeGesture(student))
         }
     }
 
-    private func lateFields(_ student: Student, _ value: TeacherAttendanceDraft) -> some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 6) {
-                Text(String(localized: "feature.attendance.en.luc"))
-                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
-                    .foregroundStyle(AppColors.muted)
-                TextField("", text: lateAtBinding(student, value),
-                          prompt: Text("18:00").foregroundStyle(AppColors.placeholder))
-                    .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
-                    .keyboardType(.numbersAndPunctuation)
-                    .padding(.horizontal, 10)
-                    .frame(minHeight: AppMetrics.tap)
-                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppRadius.button)
-                            .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
-                    .frame(maxWidth: 96)
-                    .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.attendance.gio.en.muon.cua"), String(describing: (student.name))))
+    private var swipeActionWidth: CGFloat { TeacherMetrics.attendanceSwipeButtonWidth * CGFloat(swipeOrder.count) }
+    private let swipeOrder: [AttendanceStatus] = [.present, .late, .absent]
+
+    /// Open row rests at the full width of the three buttons; a drag in progress follows the finger.
+    private func swipeOffset(for student: Student) -> CGFloat {
+        let base: CGFloat = revealedID == student.id ? -swipeActionWidth : 0
+        guard dragging?.id == student.id else { return base }
+        return min(0, max(-swipeActionWidth, base + (dragging?.dx ?? 0)))
+    }
+
+    private func swipeActions(_ student: Student, current: AttendanceStatus) -> some View {
+        HStack(spacing: 0) {
+            ForEach(swipeOrder, id: \.self) { status in
+                Button {
+                    update(student) { $0.status = status }
+                    withAnimation(.easeOut(duration: AppDuration.press)) { revealedID = nil }
+                } label: {
+                    Text(status.label)
+                        .appText(AppText.pill)
+                        .foregroundStyle(pillTone(status))
+                        .frame(width: TeacherMetrics.attendanceSwipeButtonWidth)
+                        .frame(maxHeight: .infinity)
+                        .background(pillBackground(status))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("attendance.swipe.\(status.rawValue)")
+                .accessibilityAddTraits(current == status ? [.isSelected] : [])
             }
-            TextField("", text: noteBinding(student, value),
-                      prompt: Text(String(localized: "feature.attendance.ghi.chu")).foregroundStyle(AppColors.placeholder))
-                .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
-                .padding(.horizontal, 10)
-                .frame(minHeight: AppMetrics.tap)
-                .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.button))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppRadius.button)
-                        .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
-                .frame(maxWidth: .infinity)
-                .accessibilityLabel(String.localizedStringWithFormat(String(localized: "feature.attendance.ghi.chu.iem.danh.cua"), String(describing: (student.name))))
         }
+    }
+
+    /// Swipe left opens the three status buttons on that row; swiping right or tapping the row closes them.
+    private func swipeGesture(_ student: Student) -> some Gesture {
+        DragGesture(minimumDistance: 16)
+            .onChanged { value in
+                guard abs(value.translation.width) > abs(value.translation.height) * 1.2 else { return }
+                dragging = (student.id, value.translation.width)
+            }
+            .onEnded { value in
+                defer { dragging = nil }
+                guard abs(value.translation.width) > abs(value.translation.height) * 1.2 else { return }
+                let base: CGFloat = revealedID == student.id ? -swipeActionWidth : 0
+                let end = base + value.translation.width
+                withAnimation(.easeOut(duration: AppDuration.press)) {
+                    revealedID = end < -swipeActionWidth / 2 ? student.id : nil
+                }
+            }
     }
 
     @ViewBuilder private func statusButton(_ student: Student, _ displayed: AttendanceStatus?) -> some View {
@@ -283,7 +305,6 @@ struct TeacherAttendanceView: View {
         switch status {
         case .present: AppColors.success
         case .late: AppColors.warning
-        case .excused: AppColors.primaryInk
         case .absent: AppColors.error
         case nil: AppColors.muted
         }
@@ -293,31 +314,8 @@ struct TeacherAttendanceView: View {
         switch status {
         case .present: AppColors.successSoft
         case .late: AppColors.warningSoft
-        case .excused: AppColors.primarySoft
         case .absent: AppColors.errorSoft
         case nil: AppColors.neutralSoft
         }
     }
-
-    /// Swipe right marks “Vắng”, swipe left marks “Muộn” (secondary path; no hint text is shown).
-    private func swipeGesture(_ student: Student) -> some Gesture {
-        DragGesture(minimumDistance: 24)
-            .onEnded { value in
-                guard !viewOnly else { return }
-                let dx = value.translation.width
-                guard abs(dx) > abs(value.translation.height) * 1.2, abs(dx) >= 64 else { return }
-                update(student) { $0.status = dx < 0 ? .late : .absent }
-            }
-    }
-
-    private func lateAtBinding(_ student: Student, _ value: TeacherAttendanceDraft) -> Binding<String> {
-        Binding(get: { value.lateAt ?? "" },
-                set: { newValue in update(student) { $0.lateAt = newValue } })
-    }
-
-    private func noteBinding(_ student: Student, _ value: TeacherAttendanceDraft) -> Binding<String> {
-        Binding(get: { value.note },
-                set: { newValue in update(student) { $0.note = newValue } })
-    }
-
 }

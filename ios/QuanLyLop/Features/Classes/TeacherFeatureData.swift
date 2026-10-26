@@ -205,9 +205,7 @@ final class TeacherFeatureData {
     func saveAttendance(session: ClassSession, drafts: [String: TeacherAttendanceDraft]) async throws {
         guard let store else { throw TeacherDataFailure.unavailable }
         for student in students(in: session.classId) where Self.student(student, isEnrolledOn: session.date) {
-            let draft = drafts[student.id] ?? TeacherAttendanceDraft(status: attendanceFor(sessionID: session.id, studentID: student.id)?.status ?? .present,
-                                                                    lateAt: attendanceFor(sessionID: session.id, studentID: student.id)?.lateAt,
-                                                                    note: attendanceFor(sessionID: session.id, studentID: student.id)?.note ?? "")
+            let draft = drafts[student.id] ?? TeacherAttendanceDraft(status: attendanceFor(sessionID: session.id, studentID: student.id)?.status ?? .present)
             try await enqueueAttendance(session: session, student: student, draft: draft, store: store)
         }
         await reload()
@@ -218,14 +216,14 @@ final class TeacherFeatureData {
         await saveStatusSource?.refresh()
     }
 
+    /// Only the status goes to the server; an old arrival time or note stays in the cached row and is never shown or sent.
     private func enqueueAttendance(session: ClassSession, student: Student, draft: TeacherAttendanceDraft, store: SQLiteStore) async throws {
         let old = attendance.first { $0.sessionId == session.id && $0.studentId == student.id }
-        let lateAt = draft.status == .late ? draft.lateAt : nil
-        let value = Attendance(sessionId: session.id, studentId: student.id, status: draft.status, note: draft.note,
-                               lateAt: lateAt,
+        let value = Attendance(sessionId: session.id, studentId: student.id, status: draft.status, note: old?.note ?? "",
+                               lateAt: old?.lateAt,
                                version: old?.version ?? 0, updatedAt: Date.now.ISO8601Format())
         let key = RecordKey(entity: "attendance", k1: session.id, k2: student.id).storageKey
-        let payload = try WireJSON.value(AttendanceCommand(sessionId: session.id, studentId: student.id, status: draft.status, lateAt: lateAt, note: draft.note.trimmingCharacters(in: .whitespacesAndNewlines)))
+        let payload = try WireJSON.value(AttendanceCommand(sessionId: session.id, studentId: student.id, status: draft.status))
         let command = PendingCommand(recordKey: key, baseVersion: old?.version ?? 0, kind: "attendance.set", payload: payload)
         try await store.write(value, forKey: key, enqueueing: command)
     }
@@ -247,7 +245,7 @@ final class TeacherFeatureData {
     /// (điểm danh footnote: “Có phép không bị trừ chuyên cần”).
     func attendanceRate(in classID: String) -> Int? {
         let classSessionIDs = Set(sessions.filter { $0.classId == classID && $0.status == .held }.map(\.id))
-        let rows = attendance.filter { classSessionIDs.contains($0.sessionId) && $0.status != .excused }
+        let rows = attendance.filter { classSessionIDs.contains($0.sessionId) }
         guard !rows.isEmpty else { return nil }
         let attending = rows.filter { $0.status == .present || $0.status == .late }.count
         return Int((Double(attending) / Double(rows.count) * 100).rounded())
@@ -370,21 +368,17 @@ private struct AttendanceCommand: Encodable {
     let sessionId: String
     let studentId: String
     let status: AttendanceStatus
-    let lateAt: String?
-    let note: String
 }
 
 enum TeacherDataFailure: Error { case unavailable, missingVersion }
 
 struct TeacherAttendanceDraft: Sendable, Equatable {
     var status: AttendanceStatus
-    var lateAt: String?
-    var note: String
 
     static func hasChanges(draft: TeacherAttendanceDraft?, stored: Attendance?) -> Bool {
         guard let stored else { return true }
         guard let draft else { return false }
-        return draft != TeacherAttendanceDraft(status: stored.status, lateAt: stored.lateAt, note: stored.note)
+        return draft != TeacherAttendanceDraft(status: stored.status)
     }
 }
 

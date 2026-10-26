@@ -63,7 +63,7 @@ enum CommentsRules {
     }
 
     /// What "Gửi phiếu cả lớp" sends: every unsent slip, plus a default slip for each student present or late
-    /// who has none. Absent, excused or not-yet-marked students without a slip are left out.
+    /// who has none. Absent or not-yet-marked students without a slip are left out.
     static func sendable(_ rows: [I4TicketRow]) -> [I4TicketRow] {
         rows.filter { !$0.isSent && ($0.slip != nil || $0.attended) }
     }

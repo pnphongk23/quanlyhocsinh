@@ -34,15 +34,20 @@ final class TeacherFeatureTests: XCTestCase {
         XCTAssertFalse(TeacherFeatureData.allowsAttendance(for: cancelledToday, today: "2026-10-21"))
     }
 
-    func testAttendanceKeepsAllFourContractStates() {
-        XCTAssertEqual(AttendanceStatus.allCases.map(\.rawValue), ["present", "late", "excused", "absent"])
+    func testAttendanceHasThreeStatesAndAnOldExcusedRowReadsAsAbsent() throws {
+        XCTAssertEqual(AttendanceStatus.allCases.map(\.rawValue), ["present", "late", "absent"])
+        let old = try WireJSON.decoder().decode(AttendanceStatus.self, from: Data(#""excused""#.utf8))
+        XCTAssertEqual(old, .absent)
+        XCTAssertThrowsError(try WireJSON.decoder().decode(AttendanceStatus.self, from: Data(#""unknown""#.utf8)))
+        let row = try WireJSON.decoder().decode(Attendance.self, from: Data(#"{"session_id":"s","student_id":"a","status":"excused","note":"Ốm","late_at":null,"version":1,"updated_at":"2026-10-21T10:00:00Z"}"#.utf8))
+        XCTAssertEqual(row.status, .absent)
     }
 
     func testAttendanceDraftTreatsMissingRecordAsUnsavedAndExistingPresentAsUnchanged() {
         XCTAssertTrue(TeacherAttendanceDraft.hasChanges(draft: nil, stored: nil),
                       "a session with no attendance record must be saved even though it displays Present")
 
-        let allPresent = TeacherAttendanceDraft(status: .present, lateAt: nil, note: "")
+        let allPresent = TeacherAttendanceDraft(status: .present)
         XCTAssertTrue(TeacherAttendanceDraft.hasChanges(draft: allPresent, stored: nil),
                       "selecting All present must still create the missing attendance records")
 
@@ -104,25 +109,17 @@ final class TeacherFeatureTests: XCTestCase {
         XCTAssertTrue(absentTwice.hasAbsenceWarning(student))
         XCTAssertEqual(absentTwice.absenceWarningCount(in: "class"), 1)
         XCTAssertEqual(absentTwice.studentsNeedingAttention(in: [student]).map(\.id), ["st"])
-
-        let excusedLatest = demoData(sessions: sessions, attendance: [
-            attendance(session: "s1", student: "st", status: .absent),
-            attendance(session: "s2", student: "st", status: .excused),
-        ], students: [student])
-        XCTAssertEqual(excusedLatest.consecutiveAbsences(of: student), 0)
-        XCTAssertFalse(excusedLatest.hasAbsenceWarning(student))
-        XCTAssertTrue(excusedLatest.studentsNeedingAttention(in: [student]).isEmpty)
     }
 
-    func testAttendanceRateExcludesExcusedSessions() {
+    func testAttendanceRateCountsAnOldExcusedRowAsAbsent() {
         let data = demoData(sessions: [session(id: "s1", date: "2026-10-14", status: .held)],
                             attendance: [
                                 attendance(session: "s1", student: "a", status: .present),
                                 attendance(session: "s1", student: "b", status: .late),
-                                attendance(session: "s1", student: "c", status: .excused),
+                                attendance(session: "s1", student: "c", status: .absent),
                                 attendance(session: "s1", student: "d", status: .absent),
                             ])
-        XCTAssertEqual(data.attendanceRate(in: "class"), 67)
+        XCTAssertEqual(data.attendanceRate(in: "class"), 50)
     }
 
     func testUnfinishedAttendanceIncludesOnlyDueNonCancelledSessionsWithMissingRows() {

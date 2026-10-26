@@ -44,18 +44,17 @@ final class CommentsRulesTests: XCTestCase {
             row("present", "Chi", stars: nil, sent: false, attendance: .present),
             row("late", "Dũng", stars: nil, sent: false, attendance: .late),
             row("absent", "Em", stars: nil, sent: false, attendance: .absent),
-            row("excused", "Phúc", stars: nil, sent: false, attendance: .excused),
             row("unmarked", "Giang", stars: nil, sent: false)
         ]
         XCTAssertEqual(CommentsRules.sendable(rows).map(\.student.id), ["draft", "present", "late"])
-        XCTAssertEqual(CommentsRules.withoutSlip(rows).map(\.student.id), ["absent", "excused", "unmarked"])
+        XCTAssertEqual(CommentsRules.withoutSlip(rows).map(\.student.id), ["absent", "unmarked"])
         XCTAssertEqual(rows.filter(\.getsDefaultSlip).map(\.student.id), ["present", "late"])
     }
 
     func testSendMatrixCoversEveryAttendanceWithAndWithoutADraftSlip() {
         let statuses: [(name: String, value: AttendanceStatus?, attended: Bool)] = [
             ("present", .present, true), ("late", .late, true), ("absent", .absent, false),
-            ("excused", .excused, false), ("unmarked", nil, false)
+            ("unmarked", nil, false)
         ]
         var rows: [I4TicketRow] = []
         var expectedSendable: [String] = []

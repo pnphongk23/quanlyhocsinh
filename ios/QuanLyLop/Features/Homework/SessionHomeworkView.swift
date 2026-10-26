@@ -210,7 +210,7 @@ struct SessionHomeworkView: View {
     private func studentCard(_ section: HomeworkSection, student: Student) -> some View {
         let level = data.grade(sectionID: section.id, studentID: student.id)?.level
         let attendance = previousSession.flatMap { data.attendance(sessionID: $0.id, studentID: student.id) }
-        let absent = attendance?.status == .absent || attendance?.status == .excused
+        let absent = attendance?.status == .absent
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 I4Avatar(name: student.name)

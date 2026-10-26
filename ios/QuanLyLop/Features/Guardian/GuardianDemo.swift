@@ -39,7 +39,7 @@ enum GuardianDemo {
         ]
         let attendances = [
             attendance("bao-5", .present), attendance("bao-6", .present),
-            attendance("bao-7", .present), attendance("bao-8", .excused)
+            attendance("bao-7", .present), attendance("bao-8", .absent)
         ]
         let tests = [
             TestDefinition(id: "test-speaking", classId: classA, name: String(localized: "feature.guardian.noi"), date: "2026-10-12"),

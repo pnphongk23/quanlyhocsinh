@@ -240,7 +240,7 @@ actor SQLiteStore: LocalStore {
             var result: [PendingCommand] = []
             for row in rows {
                 guard row["state"] == "pending", (Double(row["next_attempt"]!) ?? 0) <= now.timeIntervalSince1970 else { break }
-                let command = try decode(PendingCommand.self, row["json"]!)
+                let command = try decode(PendingCommand.self, row["json"]!).currentContract
                 try db.execute("UPDATE commands SET state='sending',attempts=attempts+1 WHERE scope=? AND id=?", [scope.storageKey,command.id.uuidString])
                 result.append(command)
             }
