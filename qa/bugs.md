@@ -55,12 +55,12 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 - Ảnh: `plans/20261021-mvp/qa/runs/2026-10-25/web/comments-offline-send-failure.png`.
 - Ghi chú: ảnh Mít trong ảnh lỗi bị vỡ khi đang offline (ảnh chưa nằm trong cache); online thì Mít 0–5 đều tải được (TC-CMT-016 pass).
 
-### IOS-001 · Hộp xác nhận gửi phiếu không đóng sau khi gửi — Mở (iOS mvp-ios 43744e1, simulator iPhone 16)
+### IOS-001 · Hộp xác nhận gửi phiếu không đóng sau khi gửi — Đã đóng (kiểm lại trên fc37088: gửi 3 phiếu, nút Đã lưu rồi hộp tự đóng, 3 phiếu "Đã gửi"; ảnh qa-b96/33..37). Còn lệch nhỏ: trong lúc "Đã lưu" hộp đổi thành "0 phiếu sẽ gửi"
 - Tái hiện: lớp QA, buổi hôm nay, tab Nhận xét → Gửi phiếu cả lớp → xác nhận. Phiếu được gửi (thẻ HS chuyển "Đã gửi"), nhưng hộp xác nhận vẫn hiện, chuyển sang "0 phiếu" + "Đã lưu" thay vì đóng.
 - Mong đợi: hộp đóng ngay sau khi gửi xong. TC-CMT-003/006.
 - Mức độ: trung bình (dễ bấm gửi lần nữa gây hiểu nhầm). Ảnh: `plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/32-*.png`.
 
-### IOS-002 · Lời nhắc trong hộp xác nhận gửi vẫn ghi "câu mẫu, ghi chú" — Mở (iOS 43744e1)
+### IOS-002 · Lời nhắc trong hộp xác nhận gửi vẫn ghi "câu mẫu, ghi chú" — Đã đóng (fc37088: "gồm sao và nhận xét và kết quả BTVN", ảnh qa-b96/32)
 - Spec chốt ô nhận xét gộp một trường; chữ trong hộp xác nhận gửi vẫn nói "câu mẫu, ghi chú" như hai phần riêng.
 - Mức độ: thấp (chữ). Ảnh: cùng thư mục shots/qa-slip (31/31b).
 
@@ -75,9 +75,7 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 ### API-001 · phone-check không trả 429 sau 12 lần / 35 lần — Đã đóng (không phải lỗi)
 - Giới hạn đã đổi theo yêu cầu người dùng thành 50 lần/SĐT và 100 lần/IP mỗi 15 phút (`contract-changes.md` commit `0e5629d`, Worker `f8cb4ce5`). Lượt thử 12 lần cùng số và 35 số khác nhau đều dưới ngưỡng mới. Testcase TC-AUTH-026 và `brief96-http.mjs` đã sửa theo ngưỡng 50/100.
 
-## IOS-003 — Đăng nhập bước 2 không tiến, ô mật khẩu không hiện ký tự (nghi ngờ, chưa xác nhận)
-- Trạng thái: Mở (chưa rõ lỗi app hay giới hạn Maestro).
-- Build 93ccb17, iPhone 16. Bước 1 (SĐT) → bước 2 hiện đúng (AUTH-024 đạt). Nhập mật khẩu bằng Maestro `-e` rồi bấm "Đăng nhập" 2 lần (hết hạn mức): ô mật khẩu vẫn trống, không lỗi, không chuyển màn.
-- Ảnh: plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-b96/07-typed.png, 08-after.png.
-- Quan sát phụ: ngay sau "Tiếp tục" nút chính thoáng hiện "✓ Đã lưu" thay vì "Đăng nhập" (04-step2.png).
-- Hệ quả: không vào được workspace chứa lớp QA-iOS-c87f0e-HW; app đang đăng xuất.
+## IOS-003 — Đăng nhập bước 2: ô mật khẩu ẩn không hiện dấu chấm, bàn phím che nút (Mở, fc37088)
+- Bàn phím mềm che nút "Đăng nhập" nên chạm nút không submit; ô mật khẩu ẩn trống dù chữ đã vào (xác nhận khi bật mắt). Vào được khi bật mắt, vuốt đóng bàn phím rồi chạm nút (ảnh qa-b96/07-typed, 08-after, 16-after-submit).
+- Nút "Đăng nhập" không còn nháy "✓ Đã lưu" ở fc37088 (đã sửa).
+- Lưu ý QA: không chụp ảnh khi bật mắt (đã xóa 2 ảnh lộ mật khẩu).
