@@ -3,7 +3,7 @@ import {
   type HomeworkPreviousState,
   type TicketRow,
 } from "../../data/homework";
-import { saveSessionCommentDurable } from "../../data/repositories/comments";
+import { getSessionComment, saveSessionCommentDurable } from "../../data/repositories/comments";
 import { generatedSlipSentence } from "../../data/slip";
 import { sessionPrefix } from "../../data/repositories/sessions";
 import type { HomeworkGrade, HomeworkKind, HomeworkLevel, Session } from "../../data/types";
@@ -119,11 +119,9 @@ export default function CommentTicketSheet({
       clearDraft(session.id, row.student.id);
     },
   });
-  const latestComment = useRef(row.comment);
-  latestComment.current = row.comment;
   // Gán mặc định cả lớp: nạp lại từ phiếu đã lưu để nút Lưu không ghi ngược nội dung cũ.
   useSessionDraftReset(session.id, () => {
-    const savedSlip = latestComment.current;
+    const savedSlip = getSessionComment(session.id, row.student.id);
     if (!savedSlip) return;
     const next = { criteria: savedSlip.criteria ?? 31, comment: savedSlip.comment ?? generatedSlipSentence(savedSlip.criteria ?? 31), note: savedSlip.note ?? "", hwManual: savedSlip.hwManual ?? false };
     draft.current = next;

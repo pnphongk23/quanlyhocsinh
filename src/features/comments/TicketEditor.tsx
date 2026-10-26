@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   type TicketRow,
 } from "../../data/homework";
-import { saveSessionCommentDurable } from "../../data/repositories/comments";
+import { getSessionComment, saveSessionCommentDurable } from "../../data/repositories/comments";
 import { generatedSlipSentence, starsFromCriteria } from "../../data/slip";
 import type {
   HomeworkGrade,
@@ -95,12 +95,10 @@ export default function TicketEditor({
   const [saving, setSaving] = useState(false);
   const [unsaved, setUnsaved] = useState(canWrite && (!row.comment || Boolean(stored)));
   const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
-  const latestComment = useRef(row.comment);
-  latestComment.current = row.comment;
 
   /** Nạp lại từ phiếu đã lưu: bỏ nội dung đang soạn để blur/lưu sau đó không ghi ngược bản cũ. */
   useSessionDraftReset(session.id, () => {
-    const saved = latestComment.current;
+    const saved = getSessionComment(session.id, row.student.id);
     if (!saved) return;
     const next = { criteria: saved.criteria ?? 31, comment: saved.comment ?? generatedSlipSentence(saved.criteria ?? 31), note: saved.note ?? "", hwManual: saved.hwManual ?? false };
     draft.current = next;

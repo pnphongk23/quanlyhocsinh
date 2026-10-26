@@ -34,12 +34,12 @@ function setup() {
   const rowOf = (comment: Comment): TicketRow => ({ student, comment, stars: 3, attended: true, status: "draft", sentAt: null, previousHomework: { state: "first", session: null, totalSections: 0, gradedSections: 0, ungradedSections: 0 } } as TicketRow);
   const homework = { state: "first" as const, sections: [] };
   const element = (row: TicketRow) => <CommentTicketSheet session={getSession(sessionId)!} row={row} homework={homework} onClose={() => {}} />;
-  return { slip, rowOf, element };
+  return { seed, slip, rowOf, element };
 }
 
 describe("CommentTicketSheet (mobile)", () => {
   it("sửa riêng câu nhận xét cũng bật nút Lưu", () => {
-    const { slip, rowOf, element } = setup();
+    const { seed, slip, rowOf, element } = setup();
     render(element(rowOf(slip(31, generatedSlipSentence(31)))));
     expect(screen.getByTestId("slip-save-button")).toBeDisabled();
     fireEvent.change(screen.getByTestId("slip-generated-comment"), { target: { value: "Câu tôi sửa" } });
@@ -48,13 +48,15 @@ describe("CommentTicketSheet (mobile)", () => {
   });
 
   it("sau Gán tất cả mặc định phiếu đang mở nạp lại, nút Lưu tắt và không ghi ngược câu cũ", async () => {
-    const { slip, rowOf, element } = setup();
+    const { seed, slip, rowOf, element } = setup();
     const view = render(element(rowOf(slip(3, "Câu cũ"))));
     const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
     fireEvent.change(sentence, { target: { value: "Câu tôi vừa gõ" } });
-    view.rerender(element(rowOf(slip(31, generatedSlipSentence(31)))));
+    // Store đã đổi nhưng component chưa render lại khi sự kiện reset tới.
+    replaceStore({ ...seed, comments: [...seed.comments.filter((item) => item.sessionId !== sessionId || item.studentId !== studentId), slip(31, generatedSlipSentence(31))] });
     resetSessionDrafts(sessionId);
     await waitFor(() => expect(sentence.value).toBe(generatedSlipSentence(31)));
+    view.rerender(element(rowOf(slip(31, generatedSlipSentence(31)))));
     expect(screen.getByTestId("slip-save-button")).toBeDisabled();
     expect(save).not.toHaveBeenCalled();
     expect(sessionStorage.length).toBe(0);

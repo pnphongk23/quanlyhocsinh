@@ -132,10 +132,11 @@ describe("TicketEditor tự lưu khi rời ô ghi chú (desktop)", () => {
     const slip = (criteria: number, comment: string): Comment => ({ id: "c", classId: "6a", sessionId, studentId, criteria, comment, scale: 5, stars: 3, note: "giữ", hwManual: false, status: "draft", sendQueued: false, sentAt: null, updatedAt: "2026-10-26T00:00:00.000Z", createdAt: "2026-10-26T00:00:00.000Z" } as Comment);
     const rowOf = (comment: Comment): TicketRow => ({ student, comment, stars: 3, attended: true, status: "draft", sentAt: null, previousHomework: { state: "first", session: null, totalSections: 0, gradedSections: 0, ungradedSections: 0 } } as TicketRow);
     const homework = { state: "first" as const, sections: [] };
-    const view = render(<TicketEditor session={getSession(sessionId)!} row={rowOf(slip(3, "Câu cũ"))} homework={homework} />);
+    render(<TicketEditor session={getSession(sessionId)!} row={rowOf(slip(3, "Câu cũ"))} homework={homework} />);
     const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
     fireEvent.change(sentence, { target: { value: "Câu tôi vừa gõ" } });
-    view.rerender(<TicketEditor session={getSession(sessionId)!} row={rowOf(slip(31, generatedSlipSentence(31)))} homework={homework} />);
+    // Store đã đổi nhưng component chưa render lại khi sự kiện reset tới.
+    replaceStore({ ...seed, comments: [...seed.comments.filter((item) => item.sessionId !== sessionId || item.studentId !== studentId), slip(31, generatedSlipSentence(31))] });
     resetSessionDrafts(sessionId);
     await waitFor(() => expect(sentence.value).toBe(generatedSlipSentence(31)));
     fireEvent.blur(sentence);
