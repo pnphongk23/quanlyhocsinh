@@ -1,5 +1,38 @@
 # Thay đổi hợp đồng API · 2026-10-25 · Câu nhận xét phiếu không giới hạn ký tự
 
+## 2026-10-26 · Brief 96 · Hợp đồng CHỐT (chưa code, chưa migration): câu sửa tay, kiểm tra SĐT, điểm danh 3 trạng thái
+
+### C8 · `slip.set` nhận `comment` sửa tay (phiếu thang 5)
+Không thêm cờ `comment_manual`. Quy tắc theo payload:
+| Payload | Kết quả |
+|---|---|
+| có `criteria`, KHÔNG có `comment` (hoặc `comment: null`, hoặc rỗng sau trim) | server tự sinh `comment` từ `criteria` (ghi đè câu cũ kể cả câu sửa tay) |
+| có `criteria` VÀ `comment` chuỗi không rỗng | lưu `comment` đúng như gửi (trim hai đầu), `stars` tính từ `criteria` |
+| chỉ có `comment` (không `criteria`) | lưu `comment`, giữ `criteria`/`stars` hiện có |
+| chỉ có `note` | giữ nguyên `comment` |
+- Client đổi tích tiêu chí: gửi `{criteria}` KHÔNG kèm `comment` (câu tự sinh lại). Giáo viên sửa tay: gửi `{criteria: <hiện tại>, comment: <câu sửa>}`. Client vẫn tự sinh cục bộ để hiện ngay/offline, cùng bộ ví dụ spec.
+- Chấm lại BTVN buổi trước tính lại phiếu NHÁP (`hw_manual=0`) như cũ: ghi đè câu sửa tay bằng câu tự sinh. Phiếu đã gửi không đổi.
+- Không có giới hạn độ dài. `comment` sai kiểu → `invalid_comment` (như cũ). Phiếu thang 3: như cũ (không nhận `comment`).
+- "Gán tất cả mặc định": client gửi từng `slip.set` `{criteria: 31 trừ bit BTVN theo chấm, hw_manual:false}` KHÔNG kèm `comment`; giữ `note`.
+- C9: máy chủ không đổi. "Buổi trước không giao BTVN" suy ra từ `homework_section` đã đồng bộ (buổi trước không có phần BTVN nào).
+
+### D13 · Kiểm tra SĐT (đăng nhập 2 bước)
+`POST /v1/auth/phone-check` (không cần auth) body `{phone}` (chuẩn hoá như login: `0…`, `+84…`, khoảng trắng).
+- 200 `{ "next": "login" | "guardian_setup" | "teacher_register" }`
+  - `login`: đã có tài khoản (kể cả bị khoá: bước đăng nhập báo lỗi tương ứng);
+  - `guardian_setup`: chưa có tài khoản, và số là `parent_phone` của ≥1 học sinh (mọi workspace; cùng điều kiện liên kết của đăng ký phụ huynh) → client mở màn đặt mật khẩu lần đầu, gọi `POST /auth/register-guardian` như cũ;
+  - `teacher_register`: còn lại → màn đăng ký workspace giáo viên, SĐT điền sẵn (`POST /auth/register`).
+- 422 `validation_error` `details.fields.phone = "invalid_phone"` khi sai định dạng. 429 `rate_limited` (Retry-After) khi quá hạn mức: theo IP 30 lần/15 phút và theo SĐT 10 lần/15 phút (đủ cho gõ nhầm; chấp nhận rủi ro dò số).
+- Không lộ thêm thông tin (không trả tên, workspace, số học sinh).
+
+### D14 · Đăng ký phụ huynh
+`POST /auth/register-guardian`: số KHÔNG phải `parent_phone` của học sinh nào → 403 `forbidden` với `error.details.reason = "phone_not_declared"` (không tạo tài khoản). Số đã có tài khoản → 409 `phone_registered` như cũ. Tài khoản phụ huynh cũ giữ nguyên.
+
+### A · Điểm danh
+- `attendance.set`: `status` chỉ `present|late|absent`; `excused` → `validation_error` (lệnh `excused` còn trong hàng đợi client cũ cũng bị từ chối như lệnh không hợp lệ khác, `rejected`).
+- `note` và `late_at` bị bỏ qua khi ghi và KHÔNG còn trong response/pull/snapshot attendance (dữ liệu cũ giữ trong DB). Client dừng gửi hai trường này.
+- Migration `0011` (chờ GL duyệt): `UPDATE attendance SET status='absent' WHERE status='excused'` (tăng `version`, `change_log` đẩy xuống client), backup + đếm trước/sau. Sau migration không còn `excused`; báo cáo giữ khoá `excused: 0` trong bản chụp cho tương thích.
+
 ## 2026-10-26 · Brief 94 · Hợp đồng ô nhận xét gộp (đã code)
 - Lưu: `comment` = câu tự sinh từ `criteria`, `note` = phần giáo viên gõ thêm, không giới hạn ký tự. Phiếu thang 5: server sinh `comment` mỗi khi `slip.set` có `criteria`; nội dung `comment` client gửi bị bỏ qua. Phiếu chỉ sửa `note` giữ nguyên câu đã lưu. Phiếu cũ có câu tay giữ tới lần đổi tiêu chí; ghi chú cũ là phần gõ thêm.
 - Giáo viên đọc `comment` và `note` riêng; phụ huynh nhận `comment` đã ghép với note xuống dòng sau, không nhận `note`, `criteria` hay `hw_manual`. Phiếu thang 5 có `comment` null được dựng từ `criteria` khi đọc. Thang 3 giữ nguyên.
