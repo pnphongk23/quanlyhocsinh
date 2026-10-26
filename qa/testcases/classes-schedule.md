@@ -195,3 +195,17 @@ Phạm vi: spec 213 (Lớp), 215 (Buổi học), 37 (bỏ đánh số buổi, 20
   2. Bấm Tạo lớp.
 - Kết quả mong đợi: Lớp được tạo; buổi học sinh ra vào các Chủ nhật. (Hợp đồng backend dùng 1–7, Chủ nhật = 7; web từng gửi 0 nên lỗi, xem WEB-002.)
 - Flow tự động: (chưa gán)
+
+### TC-CLS-018 · Sửa buổi lẻ: đổi ngày và giờ
+- Vai: Giáo viên
+- Nền tảng: Cả hai
+- Ưu tiên: P0
+- Nguồn spec: docs/spec.md:215, 37; `api-spec.md` mục 5.3 (`PATCH /sessions/{id}`)
+- Tiền điều kiện + dữ liệu: Lớp có lịch lặp; một buổi lẻ chưa diễn ra (ngày sau hôm nay) và một buổi định kỳ; có mạng.
+- Các bước:
+  1. Mở buổi lẻ, chọn sửa; đổi giờ (vd 19:00 → 18:30), lưu.
+  2. Sửa lại: đổi sang ngày khác không có buổi, lưu.
+  3. Sửa buổi lẻ sang ngày đã có buổi của lớp (cùng giờ) rồi lưu.
+  4. Mở buổi định kỳ và buổi đã diễn ra; tìm nút sửa.
+- Kết quả mong đợi: Bước 1–2: lưu được, không báo lỗi; buổi hiện đúng ngày/giờ mới ("T3 · 28/10 · 18:30"), danh sách và tab Lịch cập nhật; sau khi mở lại vẫn giữ. Bước 3: báo lỗi trùng buổi rõ ràng (`session_exists`), dữ liệu cũ giữ nguyên. Bước 4: không có nút sửa (chỉ buổi lẻ chưa diễn ra sửa được). Không bao giờ hiện "Lỗi lưu - vui lòng thử lại" khi thao tác hợp lệ.
+- Flow tự động: web: chưa gán; iOS: chưa gán (người dùng báo "Lỗi lưu" khi sửa buổi lẻ trên iOS, ghi IOS-004)

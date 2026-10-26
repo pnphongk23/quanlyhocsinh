@@ -79,3 +79,11 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 - Phím Return trên ô mật khẩu giờ đăng nhập (e6da45d): chạy Maestro `pressKey: Enter` vào được app. Nút "Đăng nhập" không còn nháy "✓ Đã lưu" (fc37088).
 - Ô mật khẩu không hiện dấu chấm trên ảnh chụp: iOS không vẽ SecureField vào ảnh chụp, không phải lỗi app.
 - Lưu ý QA: không chụp ảnh khi bật mắt (đã xóa 2 ảnh lộ mật khẩu).
+
+## IOS-004 — Thêm/sửa buổi lẻ báo "Lỗi lưu - vui lòng thử lại" (người dùng báo) — Chưa tái hiện
+- Lượt 0593443: chưa chạy được TC-CLS-009 / TC-CLS-018 trên iOS. Menu "…" của màn buổi chỉ có "Huỷ buổi", thông tin buổi không có nút sửa; chi tiết lớp (nơi thêm/sửa buổi lẻ) không với tới được qua Maestro vì danh sách lớp nằm dưới hàng trăm thẻ "Điểm danh chưa xong" ở tab Lớp (ảnh qa-b97/33).
+- Cần: id/nhãn truy cập của hàng lớp hoặc đường vào chi tiết lớp từ Lịch, rồi chạy TC-CLS-009 và TC-CLS-018 (lớp `AAA-97I-w1`).
+
+## Brief 97 trên iOS (0593443) — ghi chú
+- CMT-024, CMT-022 (gán), CMT-021, CMT-025 PASS (ảnh qa-b97/10..23). Sau "Gửi 3 phiếu" nút quay >12 s mới đóng hộp (chậm, vẫn gửi đủ 3 phiếu "Đã gửi" không giờ). Nút "Gán tất cả mặc định" xám khi không còn phiếu để gán.
+- CMT-026 (một phiếu mở tay) chưa chạy trên iOS.

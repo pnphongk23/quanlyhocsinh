@@ -17,7 +17,7 @@ const call = async (method, path, body, token) => {
 
 const suffix = randomBytes(3).toString('hex');
 const label = process.argv[2] || 'W';
-const className = `AAA-QA97-${label}-${suffix}`;
+const className = process.argv[3] || `AAA-QA97-${label}-${suffix}`; // optional short name, e.g. AAA-97I-w1
 const login = await call('POST', '/auth/login', { phone: creds.phone, password: creds.password, device_label: 'qa-fixture' });
 if (!login.active_membership_id) throw new Error('login did not select a membership');
 const token = login.token;
@@ -26,7 +26,7 @@ const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
 const todayWeekday = new Date(`${today}T12:00:00+07:00`).getDay(); // 0=Sun
 const otherDay = todayWeekday === 3 ? 4 : 3; // recurring weekday that is never today
 const cls = await call('POST', '/classes', { id: randomUUID(), name: className, weekdays: [otherDay === 0 ? 7 : otherDay], start_time: '18:00' }, token);
-const names = [1, 2, 3].map((n) => `AAA-QA97-${label}-${suffix}-HS${n}`);
+const names = [1, 2, 3].map((n) => `${className}-HS${n}`);
 for (const name of names) await call('POST', `/classes/${cls.id}/students`, { id: randomUUID(), name, enrolled_at: today }, token);
 const ses = await call('POST', `/classes/${cls.id}/sessions`, { id: randomUUID(), date: today, start_time: '23:00', is_makeup: false, note: '' }, token);
 console.log(`FIXTURE_READY class=${className} students=${names.length} session_date=${today} session_time=23:00 class_id=${cls.id} session_id=${ses.id}`);
