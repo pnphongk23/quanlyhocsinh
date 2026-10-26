@@ -269,3 +269,14 @@
     grid-row: 1 / span 2;
   }
 }
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .ticketFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .commentBlock {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
