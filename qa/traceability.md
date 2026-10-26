@@ -81,15 +81,15 @@ Sinh bằng `python3 -I qa/tools/gen-traceability.py`; cột flow và trạng th
 | TC-CMT-015 | Phiếu cũ: hiện một đoạn; đổi tiêu chí thì câu tự sinh thay câu cũ; phiếu thang 3 sao giữ nguyên x/3 | P2 | 60–63 | - | - | iOS: thủ công: cần dữ liệu cũ thang 3 sao; web: thủ công: cần dữ liệu cũ thang 3 sao |
 | TC-CMT-016 | Mít có dáng riêng theo mức 0–5 sao (khối Mít + sao đầu sheet) | P2 | 235 | - | qa/maestro/web/brief91-teacher-smoke.mjs | iOS: thủ công: ảnh Mít ở lượt web, iOS chưa chạy (blocked: cần đăng nhập tay/XCUITest xác nhận); web: thủ công: ảnh element Mít đã lưu; cần QA đối chiếu dáng 0–5 sao |
 | TC-CMT-017 | Dán đoạn dài (1000 ký tự): giữ nguyên, không bộ đếm, lưu được | P0 | docs/spec.md | qa/maestro/ios/comments/TC-CMT-017.yaml |  | iOS: blocked: cần đăng nhập tay/XCUITest xác nhận; flow cập nhật cho spec không giới hạn ký tự (1000 ký tự, không bộ đếm, lưu được), selector/assertion chưa xác minh |
-| TC-CMT-018 | Sửa tay câu tự sinh rồi tích/bỏ tích lại: câu bị ghi đè, phần gõ thêm giữ | P0 | 57 |  |  | chưa làm |
+| TC-CMT-018 | Sửa tay câu tự sinh rồi tích/bỏ tích lại: câu bị ghi đè, phần gõ thêm giữ | P0 | 57 |  |  | iOS: tự động-pass (34cd1ac, qa-b96) |
 | TC-CMT-019 | Web và iOS sinh câu giống hệt nhau cho cùng bộ tiêu chí | P0 | 54–56 |  |  | chưa làm |
-| TC-CMT-020 | Chấm lại BTVN: app tự sửa phiếu NHÁP buổi kế, đúng điều kiện | P0 | 57–58 |  |  | chưa làm |
-| TC-CMT-021 | "Gửi phiếu cả lớp": chỉ gửi phiếu đã có và chưa gửi; số trên nút = số phiếu đó | P0 | 58 |  |  | chưa làm |
-| TC-CMT-022 | "Gán tất cả mặc định": xác nhận, đưa phiếu chưa gửi về mặc định, giữ phần gõ thêm | P0 | 63 |  |  | chưa làm |
-| TC-CMT-023 | Nhãn BTVN: "Buổi trước chưa có BTVN" khi buổi trước không giao; tiêu chí vẫn mặc định tích | P1 | 57 |  |  | chưa làm |
-| TC-CMT-024 | Em chưa có phiếu: thẻ không hiện sao, ghi "Chưa nhận xét" | P0 | 65 |  |  | chưa làm |
-| TC-CMT-025 | Nhãn phiếu đã gửi chỉ ghi "Đã gửi", không giờ | P1 | 65 |  |  | chưa làm |
-| TC-CMT-026 | Một em mở phiếu tay, gửi cả lớp chỉ gửi em đó | P0 | 62 |  |  | chưa làm |
+| TC-CMT-020 | Chấm lại BTVN: app tự sửa phiếu NHÁP buổi kế, đúng điều kiện | P0 | 57–58 |  |  | iOS: tự động-pass (34cd1ac, qa-b96); web: tự động-pass (brief96-web.mjs) |
+| TC-CMT-021 | "Gửi phiếu cả lớp": chỉ gửi phiếu đã có và chưa gửi; số trên nút = số phiếu đó | P0 | 58 |  |  | iOS: pass thủ công-Maestro (0593443, qa-b97); web: tự động-pass (brief97-web.mjs) |
+| TC-CMT-022 | "Gán tất cả mặc định": xác nhận, đưa phiếu chưa gửi về mặc định, giữ phần gõ thêm | P0 | 63 |  |  | iOS: pass (0593443, qa-b97); web: tự động-pass (brief97-web.mjs) |
+| TC-CMT-023 | Nhãn BTVN: "Buổi trước chưa có BTVN" khi buổi trước không giao; tiêu chí vẫn mặc định tích | P1 | 57 |  |  | iOS: tự động-pass (34cd1ac, qa-b96) |
+| TC-CMT-024 | Em chưa có phiếu: thẻ không hiện sao, ghi "Chưa nhận xét" | P0 | 65 |  |  | iOS: pass (0593443, qa-b97); web: tự động-pass (brief97-web.mjs) |
+| TC-CMT-025 | Nhãn phiếu đã gửi chỉ ghi "Đã gửi", không giờ | P1 | 65 |  |  | iOS: pass (0593443, qa-b97); web: tự động-pass (brief97-web.mjs) |
+| TC-CMT-026 | Một em mở phiếu tay, gửi cả lớp chỉ gửi em đó | P0 | 62 |  |  | web: tự động-pass (brief97-web.mjs); iOS: chưa chạy |
 | TC-GRD-001 | Tổng quan: chuyên cần, điểm bài mới nhất, nhận xét mới nhất | P0 | 168, 221 | qa/maestro/ios/guardian/TC-GRD-001.yaml | - | iOS: blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH; web: chặn: cần linked parent, điểm danh/điểm/phiếu đã gửi; chưa có buổi lịch sử sửa được theo WEB-003 và đăng ký phụ huynh hiện bị giới hạn |
 | TC-GRD-002 | Chuyển giữa các con | P0 | 167, 221 | qa/maestro/ios/guardian/TC-GRD-002.yaml | - | iOS: blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH; web: chặn: cần tài khoản phụ huynh liên kết nhiều con; luồng signup staging trả “Bạn thử đăng nhập quá nhiều lần”, chưa có PH-A/PH-B khả dụng |
 | TC-GRD-003 | Điểm danh theo tháng, thống kê, ghi chú từng buổi | P1 | 169 | qa/maestro/ios/guardian/TC-GRD-003.yaml | - | iOS: tự động-chưa-chạy; web: chặn: cần phiên PH đã liên kết và dữ liệu chuyên cần; signup staging bị 429 lúc khoảng 08:44 ICT; không thử lại theo lead |
