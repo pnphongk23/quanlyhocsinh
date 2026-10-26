@@ -257,6 +257,11 @@
   min-width: 0;
 }
 
+/* Tiêu đề chỉ nhận focus bằng mã để đọc màn hình; không phải điều khiển nên không vẽ vòng focus. */
+.sheetName:focus {
+  outline: none;
+}
+
 .sheetName {
   font-size: var(--text-xl);
   font-weight: var(--weight-bold);

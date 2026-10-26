@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { MutableRefObject, PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { MutableRefObject } from "react";
 import { useStore } from "../../data/store";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useSaveStatus } from "../../shared/SaveStatus";
@@ -26,22 +26,6 @@ const labels: Record<AttendanceState, string> = {
   absent: "Vắng",
 };
 type Draft = { status: AttendanceState };
-type SwipeGesture = {
-  pointerId: number;
-  studentId: string;
-  startX: number;
-  startY: number;
-  direction: "late" | "absent" | null;
-  distance: number;
-};
-type SwipeState = {
-  studentId: string;
-  offset: number;
-  direction: "late" | "absent";
-};
-const MAX_SWIPE = 120;
-const SWIPE_THRESHOLD = 64;
-
 export default function AttendancePanel({
   classId,
   sessionId,
@@ -72,8 +56,6 @@ export default function AttendancePanel({
   const stored = listAttendance(sessionId);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [error, setError] = useState("");
-  const gesture = useRef<SwipeGesture | null>(null);
-  const [swipe, setSwipe] = useState<SwipeState | null>(null);
   const draftFor = (studentId: string): Draft => {
     const existing = stored.find((record) => record.studentId === studentId);
     return (
@@ -139,63 +121,6 @@ export default function AttendancePanel({
     setRow(studentId, {
       status: states[(states.indexOf(current) + 1) % states.length],
     });
-  };
-  const startSwipe = (
-    event: ReactPointerEvent<HTMLDivElement>,
-    studentId: string,
-  ) => {
-    if (viewOnly || desktop || !event.isPrimary || event.button !== 0) return;
-    const target = event.target;
-    if (
-      target instanceof Element &&
-      target.closest("button, input, textarea, select, a")
-    )
-      return;
-    gesture.current = {
-      pointerId: event.pointerId,
-      studentId,
-      startX: event.clientX,
-      startY: event.clientY,
-      direction: null,
-      distance: 0,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-  const moveSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const current = gesture.current;
-    if (!current || current.pointerId !== event.pointerId) return;
-    const dx = event.clientX - current.startX;
-    const dy = event.clientY - current.startY;
-    if (!current.direction && Math.max(Math.abs(dx), Math.abs(dy)) < 10) return;
-    if (!current.direction && Math.abs(dy) >= Math.abs(dx) * 1.2) {
-      gesture.current = null;
-      setSwipe(null);
-      return;
-    }
-    if (Math.abs(dx) < Math.abs(dy) * 1.2) {
-      current.distance = 0;
-      setSwipe(null);
-      return;
-    }
-    const direction = dx < 0 ? "late" : "absent";
-    const offset = Math.max(-MAX_SWIPE, Math.min(MAX_SWIPE, dx));
-    current.direction = direction;
-    current.distance = Math.abs(dx);
-    setSwipe({ studentId: current.studentId, offset, direction });
-  };
-  const finishSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const current = gesture.current;
-    if (!current || current.pointerId !== event.pointerId) return;
-    if (current.direction && current.distance >= SWIPE_THRESHOLD) {
-      setRow(current.studentId, { status: current.direction });
-    }
-    gesture.current = null;
-    setSwipe(null);
-  };
-  const cancelSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (gesture.current?.pointerId !== event.pointerId) return;
-    gesture.current = null;
-    setSwipe(null);
   };
   const allPresent = () => {
     markUnsaved();
@@ -327,9 +252,6 @@ export default function AttendancePanel({
           Bạn chỉ có quyền xem điểm danh của buổi học này.
         </p>
       )}
-      {!viewOnly && (
-        <p className={s.hint}>Vuốt phải: vắng · Vuốt trái: muộn</p>
-      )}
       {desktop && errorBanner}
 
       <div className={s.layout}>
@@ -360,33 +282,13 @@ export default function AttendancePanel({
                   ? s[savedStatus]
                   : s.unmarked
                 : s[row.status];
-              const active =
-                swipe?.studentId === row.student.id ? swipe : null;
 
               return (
                 <div className={s.rowWrap} key={row.student.id}>
-                  {!desktop && !viewOnly && (
-                    <div className={s.swipeBackground} aria-hidden="true">
-                      <span className={s.swipeAbsent}>Vắng</span>
-                      <span className={s.swipeLate}>Muộn</span>
-                    </div>
-                  )}
                   <div
                     className={
                       s.studentRow + (readOnly ? " " + s.studentRowLocked : "")
                     }
-                    style={
-                      active
-                        ? { transform: `translateX(${active.offset}px)` }
-                        : undefined
-                    }
-                    onPointerDown={(event) =>
-                      startSwipe(event, row.student.id)
-                    }
-                    onPointerMove={moveSwipe}
-                    onPointerUp={finishSwipe}
-                    onPointerCancel={cancelSwipe}
-                    onLostPointerCapture={cancelSwipe}
                   >
                     <div className={s.avatar}>
                       {row.student.name
