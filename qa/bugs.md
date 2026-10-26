@@ -80,10 +80,12 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 - Ô mật khẩu không hiện dấu chấm trên ảnh chụp: iOS không vẽ SecureField vào ảnh chụp, không phải lỗi app.
 - Lưu ý QA: không chụp ảnh khi bật mắt (đã xóa 2 ảnh lộ mật khẩu).
 
-## IOS-004 — Thêm/sửa buổi lẻ báo "Lỗi lưu - vui lòng thử lại" (người dùng báo) — Chưa tái hiện
+## IOS-004 — Thêm/sửa buổi lẻ báo "Lỗi lưu - vui lòng thử lại" (người dùng báo) — Không tái hiện trên 67e9e31 (đã sửa theo Lỗ Túc)
 - Lượt 0593443: chưa chạy được TC-CLS-009 / TC-CLS-018 trên iOS. Menu "…" của màn buổi chỉ có "Huỷ buổi", thông tin buổi không có nút sửa; chi tiết lớp (nơi thêm/sửa buổi lẻ) không với tới được qua Maestro vì danh sách lớp nằm dưới hàng trăm thẻ "Điểm danh chưa xong" ở tab Lớp (ảnh qa-b97/33).
 - Cần: id/nhãn truy cập của hàng lớp hoặc đường vào chi tiết lớp từ Lịch, rồi chạy TC-CLS-009 và TC-CLS-018 (lớp `AAA-97I-w1`).
 
 ## Brief 97 trên iOS (0593443) — ghi chú
 - CMT-024, CMT-022 (gán), CMT-021, CMT-025 PASS (ảnh qa-b97/10..23). Sau "Gửi 3 phiếu" nút quay >12 s mới đóng hộp (chậm, vẫn gửi đủ 3 phiếu "Đã gửi" không giờ). Nút "Gán tất cả mặc định" xám khi không còn phiếu để gán.
 - CMT-026 (một phiếu mở tay) chưa chạy trên iOS.
+
+- Lượt 67e9e31 (workspace QA iOS sạch, lớp `QA-iOS-A`): thêm buổi lẻ (27/10 18:00) hiện "Đã lưu" và buổi xuất hiện; sửa buổi lẻ đổi ngày 27→30/10 hiện "Đã lưu", buổi rời khỏi ngày cũ. Không thấy "Lỗi lưu". Chưa thử đổi giờ và va chạm buổi trùng (`session_exists`). Ảnh qa-reg1/21..28.
