@@ -34,6 +34,9 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var isReady = false
     @Published var errorMessage: String?
 
+    /// Sessions whose `slip.send` is waiting for the server's answer.
+    private(set) var sendingSessionIDs: Set<String> = []
+
     private(set) var store: SQLiteStore?
     private(set) var api: (any APIClient)?
     private var deviceID: String { DeviceIdentity.current() }
@@ -354,9 +357,14 @@ final class I4FeatureStore: ObservableObject {
 
     /// Writes each default slip through `saveSlip`, so it queues offline like any edit: the criteria as given, the
     /// sentence generated from them, and the homework flag back to following the grades.
+    /// A slip that was sent, or is being sent right now, is left alone: each one is read again just before it is
+    /// written, so a plan made from an older view of the list never overwrites it.
     func saveDefaultSlips(sessionID: String, slips: [CommentsRules.DefaultSlip]) async -> String? {
         for plan in slips {
-            guard let student = students.first(where: { $0.id == plan.studentID }) else { continue }
+            guard !sendingSessionIDs.contains(sessionID) else { return nil }
+            await refresh()
+            guard slip(sessionID: sessionID, studentID: plan.studentID)?.status != .sent,
+                  let student = students.first(where: { $0.id == plan.studentID }) else { continue }
             if let failure = await saveSlip(sessionID: sessionID, student: student,
                                             grading: .criteria(plan.criteria, comment: plan.comment, hwManual: false),
                                             note: plan.note) { return failure }
@@ -379,6 +387,8 @@ final class I4FeatureStore: ObservableObject {
     /// The local state follows what the server reports as `sent` and `skipped`.
     func sendSlips(sessionID: String, studentIDs: [String]) async -> SendOutcome {
         guard let api, let store else { return .failed(String(localized: "feature.scores.khong.xep.hang.uoc.phieu")) }
+        sendingSessionIDs.insert(sessionID)
+        defer { sendingSessionIDs.remove(sessionID) }
         let failure = SendOutcome.failed(String(localized: "comments.send.failed", table: "Teacher"))
         // Edits still waiting in the outbox must reach the server first, or it would send older criteria and notes.
         guard await syncIfNeeded() else { return failure }

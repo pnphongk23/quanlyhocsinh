@@ -58,9 +58,19 @@ final class CommentsRulesTests: XCTestCase {
                                     updatedAt: "2026-10-25T10:00:00.000Z")
         let plans = CommentsRules.sendDefaults(studentIDs: ["a", "b", "c", "d", "e", "f"], slip: { slips[$0] },
                                                attendance: { attendance[$0] }, sections: [part], grades: [notDone])
-        XCTAssertEqual(plans.map(\.studentID), ["a", "b", "e"], "no slip or an unscored one, present or late only")
+        XCTAssertEqual(plans.map(\.studentID), ["a", "b", "e"], "no slip, present or late; or an unscored one")
         XCTAssertEqual(plans.map(\.criteria), [31, 15, 31], "homework follows last session's grades")
         XCTAssertTrue(plans.allSatisfy { !$0.comment.isEmpty })
+    }
+
+    func testAnUnscoredOldDraftGetsItsDefaultEvenWhenAbsentOrNotMarked() {
+        let unscored = SessionSlip(sessionId: "s", studentId: "x", stars: nil, note: "", status: .draft, sentAt: nil,
+                                   version: 1, updatedAt: "2026-10-19T11:00:00.000Z")
+        for status: AttendanceStatus? in [.absent, nil] {
+            let plans = CommentsRules.sendDefaults(studentIDs: ["x", "y"], slip: { $0 == "x" ? unscored : nil },
+                                                   attendance: { _ in status }, sections: [], grades: [])
+            XCTAssertEqual(plans.map(\.studentID), ["x"], "y has no slip and did not attend")
+        }
     }
 
     func testRegradedSlipFollowsOnlyAnUnsentNotHandSetFiveCriteriaSlip() {

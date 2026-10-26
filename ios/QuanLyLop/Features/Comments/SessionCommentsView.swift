@@ -202,7 +202,7 @@ struct SessionCommentsView: View {
                     .accessibilityIdentifier("comment.sendClass.disabledReason")
             }
             AppButton(title: SlipSheetText.defaultsButton, variant: .neutral, size: .large) { showingDefaults = true }
-                .disabled(defaultSlipCount == 0)
+                .disabled(defaultSlipCount == 0 || sendController.phase == .saving)
                 .accessibilityIdentifier("comment.assignDefaults")
             AppButton(
                 title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),

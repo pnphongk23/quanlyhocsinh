@@ -245,6 +245,33 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(row.comment, SlipRules.generatedSentence(criteria: 31))
     }
 
+    func testAssignAllDefaultsLeavesASentSlipEvenFromAnOlderPlan() async throws {
+        let store = try await seededStore()
+        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .sentAll))
+        await data.refresh()
+        let stalePlan = [CommentsRules.DefaultSlip(studentID: "a", criteria: 31, note: "")]
+        _ = await data.sendSlips(sessionID: "session", studentIDs: ["a", "b"])
+        let failure = await data.saveDefaultSlips(sessionID: "session", slips: stalePlan)
+        XCTAssertNil(failure)
+        let pending = try await store.pendingCommands()
+        XCTAssertFalse(pending.contains { $0.kind == "slip.set" }, "a sent slip is never rewritten")
+        XCTAssertEqual(data.slip(sessionID: "session", studentID: "a")?.status, .sent)
+    }
+
+    func testAssignAllDefaultsWaitsOutASendInFlight() async throws {
+        let store = try await seededStore()
+        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .slowSentAll))
+        await data.refresh()
+        let sending = Task { await data.sendSlips(sessionID: "session", studentIDs: ["a", "b"]) }
+        while !data.sendingSessionIDs.contains("session") { await Task.yield() }
+        let failure = await data.saveDefaultSlips(sessionID: "session",
+                                                  slips: [CommentsRules.DefaultSlip(studentID: "a", criteria: 31, note: "")])
+        XCTAssertNil(failure)
+        _ = await sending.value
+        let pending = try await store.pendingCommands()
+        XCTAssertFalse(pending.contains { $0.kind == "slip.set" }, "nothing is written while the send waits for the server")
+    }
+
     func testSkippedSlipsStayUnsentAndAreCounted() async throws {
         let store = try await seededStore()
         let api = SlipPushAPI(mode: .sentOnlyA)
@@ -320,7 +347,7 @@ final class SendSlipsTests: XCTestCase {
 
 /// Answers the sync endpoints and one `slip.send` push; `pushedCommandTypes` shows what reached the wire.
 private final class SlipPushAPI: APIClient, @unchecked Sendable {
-    enum Mode { case offline, pushFails, sentAll, sentOnlyA, notAttended }
+    enum Mode { case offline, pushFails, sentAll, slowSentAll, sentOnlyA, notAttended }
 
     let baseURL = URL(string: "https://fixture.invalid/v1")!
     private let mode: Mode
@@ -345,6 +372,7 @@ private final class SlipPushAPI: APIClient, @unchecked Sendable {
             let sentTypes = commands.compactMap { $0["type"] as? String }
             lock.withLock { types.append(contentsOf: sentTypes) }
             if mode == .pushFails { throw APIFailure.offline }
+            if mode == .slowSentAll { try? await Task.sleep(nanoseconds: 300_000_000) }
             let id = commands.compactMap { $0["id"] as? String }.first ?? ""
             let payload = commands.first?["payload"] as? [String: Any]
             lock.withLock {
@@ -354,7 +382,7 @@ private final class SlipPushAPI: APIClient, @unchecked Sendable {
             let sent: String
             let skipped: String
             switch mode {
-            case .sentAll: (sent, skipped) = ("[\"a\",\"b\"]", "[]")
+            case .sentAll, .slowSentAll: (sent, skipped) = ("[\"a\",\"b\"]", "[]")
             case .notAttended: (sent, skipped) = ("[\"a\",\"b\",\"c\"]", "[{\"student_id\":\"d\",\"reason\":\"not_attended\"}]")
             default: (sent, skipped) = ("[\"a\"]", "[{\"student_id\":\"b\",\"reason\":\"slip_locked\"}]")
             }

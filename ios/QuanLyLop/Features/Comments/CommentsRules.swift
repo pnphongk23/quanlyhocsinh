@@ -82,8 +82,11 @@ enum CommentsRules {
                              sections: [HomeworkSection], grades: [HomeworkGrade]) -> [DefaultSlip] {
         studentIDs.compactMap { id in
             let existing = slip(id)
-            let needsDefault = existing == nil || (existing?.isLegacy == true && existing?.stars == nil)
-            guard needsDefault, attendance(id) == .present || attendance(id) == .late else { return nil }
+            // An old unscored draft needs its default whatever the attendance; having no slip at all needs a present
+            // or late student.
+            let unscored = existing?.isLegacy == true && existing?.stars == nil
+            let attended = attendance(id) == .present || attendance(id) == .late
+            guard unscored || (existing == nil && attended) else { return nil }
             return DefaultSlip(studentID: id,
                                criteria: HomeworkRules.openingCriteria(slip: nil, sections: sections, grades: grades, studentID: id),
                                note: existing?.note ?? "")
