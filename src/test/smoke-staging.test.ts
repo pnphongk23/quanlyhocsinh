@@ -110,7 +110,7 @@ it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
       await syncNow();
       const state = getStore();
     const existing = state.attendance.find((row) => row.sessionId === target.sessionId && row.studentId === target.studentId);
-    const desired = (["present", "excused", "absent", "late"] as const).find((status) => status !== existing?.status) ?? "present";
+    const desired = (["present", "absent", "late"] as const).find((status) => status !== existing?.status) ?? "present";
     let commandId: string | undefined;
     if (target.eligible) {
       const outboxCreated = new Promise<string>((resolve) => {
@@ -119,7 +119,7 @@ it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
         };
         db.outbox.hook("creating").subscribe(handler);
       });
-      await saveAttendanceDurable({ sessionId: target.sessionId, studentId: target.studentId, status: desired, note: "Staging smoke", lateAt: desired === "late" ? "18:10" : null });
+      await saveAttendanceDurable({ sessionId: target.sessionId, studentId: target.studentId, status: desired });
       commandId = await outboxCreated;
     } else {
       commandId = crypto.randomUUID();

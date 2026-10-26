@@ -31,7 +31,7 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
   switch (entity) {
     case "class": return classFromApi(item as unknown as ApiClass);
     case "student": return { id: item.id, classId: item.class_id, name: item.name, parentPhone: item.parent_phone ?? "", enrolledAt: item.enrolled_at, leftAt: item.left_at, status: item.status };
-      case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status, note: item.note, version: item.version };
+      case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status === "excused" ? "absent" : item.status, note: item.note, version: item.version };
     case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };
       case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, archived: item.archived, version: item.version };
     case "score": return { id: `${item.test_id}:${item.student_id}`, testId: item.test_id, studentId: item.student_id, value: item.value, version: item.version };
@@ -224,7 +224,7 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
       });
       if (!batch.length) continue;
       const commands = batch.map(({ id, type, payload, base_version, created_at }) => ({
-        id, type, payload: payloadWithoutLegacyTestMax(type, payload), base_version, created_at,
+        id, type, payload: payloadWithoutLegacyFields(type, payload), base_version, created_at,
       })) as SyncCommand[];
       outboxChanged = true;
       let response;
@@ -255,7 +255,12 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
     if (await db.outbox.where("identity").equals(identity).count()) setSaveStatus("error");
   }
 }
-function payloadWithoutLegacyTestMax(type: string, payload: SyncCommand["payload"]): SyncCommand["payload"] {
+/** Lệnh còn trong hàng đợi từ bản cũ: bỏ `max` của bài kiểm tra; điểm danh "có phép" gửi thành vắng, không gửi giờ đến và ghi chú. */
+function payloadWithoutLegacyFields(type: string, payload: SyncCommand["payload"]): SyncCommand["payload"] {
+  if (type === "attendance.set") {
+    const { note: _note, late_at: _lateAt, ...current } = payload as Record<string, unknown>;
+    return (current.status === "excused" ? { ...current, status: "absent" } : current) as SyncCommand["payload"];
+  }
   if (type !== "test.create" && type !== "test.update") return payload;
   const { max: _legacyMax, ...currentPayload } = payload as Record<string, unknown>;
   return currentPayload as SyncCommand["payload"];

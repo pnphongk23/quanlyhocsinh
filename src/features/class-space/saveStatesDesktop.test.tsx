@@ -153,7 +153,7 @@ describe("Buổi học desktop: điểm danh và đổi tab", () => {
     const group = screen.getByRole("group", {
       name: "Trạng thái của Nguyễn Minh Anh",
     });
-    fireEvent.click(group.querySelectorAll("button")[2]);
+    fireEvent.click(group.querySelectorAll("button")[1]);
     expect(save).toBeEnabled();
     fireEvent.click(save);
     fireEvent.click(save);
@@ -170,12 +170,12 @@ describe("Buổi học desktop: điểm danh và đổi tab", () => {
     );
     const group = () =>
       screen.getByRole("group", { name: "Trạng thái của Trần Gia Bảo" });
-    fireEvent.click(group().querySelectorAll("button")[3]);
+    fireEvent.click(group().querySelectorAll("button")[1]);
     await waitFor(() => expect(onDirty).toHaveBeenLastCalledWith(true));
     const tabs = screen.getAllByRole("tab", { name: "Nhận xét" });
     fireEvent.click(tabs[0]);
     fireEvent.click(screen.getAllByRole("tab", { name: "Điểm danh" })[0]);
-    expect(group().querySelectorAll("button")[3]).toHaveAttribute(
+    expect(group().querySelectorAll("button")[1]).toHaveAttribute(
       "aria-pressed",
       "true",
     );

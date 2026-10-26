@@ -142,7 +142,7 @@ describe("score for a student enrolled after the test date", () => {
     let testB: { id: string };
     try {
       testB = await tests.createTestDurable({ classId: "c1", name: "Bài chưa đồng bộ", date: "2026-10-24" });
-      await attendance.saveAttendanceDurable({ sessionId: "s1", studentId: "old", status: "present", note: "", lateAt: null });
+      await attendance.saveAttendanceDurable({ sessionId: "s1", studentId: "old", status: "present" });
       await scores.assignDefaultScoreDurable(testB.id, Array.from({ length: 53 }, (_, i) => `dep-${String(i).padStart(2, "0")}`));
     } finally {
       if (originalOnline) Object.defineProperty(navigator, "onLine", originalOnline);

@@ -425,7 +425,7 @@ export function homeworkContext(
     ).length;
     return {
       student,
-      absentAtGiving: status === "absent" || status === "excused",
+      absentAtGiving: status === "absent",
       givingAttendance: status,
       grades,
       graded,

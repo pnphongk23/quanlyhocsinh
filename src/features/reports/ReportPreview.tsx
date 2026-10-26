@@ -29,7 +29,6 @@ export default function ReportPreview({
   const starMax = Math.max(1, ...starOrder.map((level) => report.stars.byFiveStars[`s${level}` as keyof typeof report.stars.byFiveStars]));
   const attendanceParts = [
     report.lateCount ? `${report.lateCount} muộn` : "",
-    report.excusedCount ? `${report.excusedCount} có phép` : "",
     report.absentCount ? `${report.absentCount} vắng` : "",
   ].filter(Boolean);
 

@@ -96,7 +96,7 @@ export default function GuardianClassPage() {
                     {attendance.attended}/{attendance.total}
                   </strong>
                   <span className={g.statSub}>
-                    buổi · {attendance.late} muộn, {attendance.excused} có phép
+                    buổi · {attendance.late} muộn, {attendance.absent} vắng
                   </span>
                 </Card>
               )}

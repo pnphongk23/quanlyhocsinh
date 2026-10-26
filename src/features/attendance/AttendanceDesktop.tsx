@@ -21,13 +21,12 @@ import s from "./AttendanceDesktop.module.css";
 import d from "../class-space/desktop.module.css";
 
 type AttendanceState = AttendanceRecord["status"];
-type Draft = { status: AttendanceState; lateAt: string; note: string };
+type Draft = { status: AttendanceState };
 
-const STATES: AttendanceState[] = ["present", "late", "excused", "absent"];
+const STATES: AttendanceState[] = ["present", "late", "absent"];
 const LABELS: Record<AttendanceState, string> = {
   present: "Có mặt",
   late: "Muộn",
-  excused: "Có phép",
   absent: "Vắng",
 };
 
@@ -64,16 +63,10 @@ export default function AttendanceDesktop({
   const stored = listAttendance(sessionId);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
-  const defaultDraft: Draft = { status: "present", lateAt: "", note: "" };
+  const defaultDraft: Draft = { status: "present" };
   const storedDraft = (studentId: string): Draft | null => {
     const existing = stored.find((record) => record.studentId === studentId);
-    return existing
-      ? {
-          status: existing.status,
-          lateAt: existing.lateAt ?? "",
-          note: existing.note ?? "",
-        }
-      : null;
+    return existing ? { status: existing.status } : null;
   };
   const draftFor = (studentId: string): Draft =>
     drafts[studentId] ?? storedDraft(studentId) ?? defaultDraft;
@@ -104,8 +97,6 @@ export default function AttendanceDesktop({
             sessionId,
             studentId: row.student.id,
             status: row.status,
-            note: row.note.trim(),
-            lateAt: row.status === "late" ? row.lateAt || null : null,
           })),
         );
       } catch (cause) {
@@ -193,14 +184,12 @@ export default function AttendanceDesktop({
             <table className={s.table}>
               <colgroup>
                 <col style={{ width: 180 }} />
-                <col style={{ width: 330 }} />
                 <col />
               </colgroup>
               <thead>
                 <tr>
                   <th>Học sinh</th>
                   <th>Trạng thái</th>
-                  <th>Giờ đến (nếu muộn)</th>
                 </tr>
               </thead>
               <tbody>
@@ -234,25 +223,6 @@ export default function AttendanceDesktop({
                         ))}
                       </div>
                     </td>
-                    <td>
-                      {row.status === "late" && (
-                        <label className={s.lateField}>
-                          <span>Đến lúc</span>
-                          <input
-                            className={s.timeInput}
-                            type="time"
-                            aria-label={`Giờ đến muộn của ${row.student.name}`}
-                            value={row.lateAt}
-                            disabled={viewOnly}
-                            onChange={(event) =>
-                              setRow(row.student.id, {
-                                lateAt: event.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                      )}
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -265,10 +235,7 @@ export default function AttendanceDesktop({
                 <b className={s.countLate}>{counts[1]}</b> Muộn
               </span>
               <span>
-                <b className={s.countExcused}>{counts[2]}</b> Có phép
-              </span>
-              <span>
-                <b className={s.countAbsent}>{counts[3]}</b> Vắng
+                <b className={s.countAbsent}>{counts[2]}</b> Vắng
               </span>
             </div>
           </div>

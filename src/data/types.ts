@@ -38,7 +38,7 @@ export interface Attendance {
   id: string;
   sessionId: string;
   studentId: string;
-  status: "present" | "late" | "excused" | "absent";
+  status: "present" | "late" | "absent";
   note: string;
   lateAt: string | null;
 }

@@ -67,7 +67,6 @@ export interface MonthlyStudentReport {
   /** Số buổi có mặt hoặc muộn. */
   attendanceCount: number;
   lateCount: number;
-  excusedCount: number;
   absentCount: number;
   stars: MonthlyStarTally;
   /** Kết quả BTVN theo từng loại phần, theo thứ tự Luyện từ vựng → Bài tập. */
@@ -305,7 +304,6 @@ function buildPeriodReport(
     gradedTestCount: tests.filter(({ score }) => score?.value != null).length,
     attendanceCount: countStatus("present") + countStatus("late"),
     lateCount: countStatus("late"),
-    excusedCount: countStatus("excused"),
     absentCount: countStatus("absent"),
     stars: { ticketCount, byStars, byFiveStars, legacy },
     homework,
@@ -375,7 +373,7 @@ export function decodeServerReport(value: unknown, student: Student, key: string
   };
   const sessions: Session[] = Array.from({ length: counts.held_sessions }, (_, index) => ({ id: `${key}:session:${index}`, classId: student.classId, date: month ? `${month}-01` : "", origin: "recurring", status: "held" }));
   const attendanceRows: Attendance[] = [];
-  for (const [status, amount] of [["present", counts.present], ["late", counts.late], ["excused", counts.excused], ["absent", counts.absent]] as const) {
+  for (const [status, amount] of [["present", counts.present], ["late", counts.late], ["absent", counts.absent + counts.excused]] as const) {
     for (let index = 0; index < amount; index++) attendanceRows.push({ id: `${key}:${status}:${index}`, sessionId: sessions[index % Math.max(1, sessions.length)]?.id ?? "", studentId: student.id, status, note: "", lateAt: null });
   }
     const tests = (value.tests as Array<{ test_id: string; name: string; date: string; value: number | null }>).map((item) => ({
@@ -401,7 +399,7 @@ export function decodeServerReport(value: unknown, student: Student, key: string
     report: {
       student, sessions, attendance: attendanceRows, tests,
       gradedTestCount: tests.filter(({ score }) => score?.value != null).length,
-      attendanceCount: counts.present + counts.late, lateCount: counts.late, excusedCount: counts.excused, absentCount: counts.absent,
+      attendanceCount: counts.present + counts.late, lateCount: counts.late, absentCount: counts.absent + counts.excused,
       stars: { ticketCount: starCounts.one + starCounts.two + starCounts.three + Object.values(byFiveStars).reduce((sum, count) => sum + count, 0), byStars, byFiveStars, legacy }, homework,
       generalComment: value.general_comment.trim(), suggestion: buildStarSuggestion(byStars, "range"), ready, missing: ready ? [] : ["Báo cáo chưa đủ dữ liệu"],
     },

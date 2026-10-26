@@ -76,7 +76,7 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     expect(card).not.toContain("Sửa buổi lẻ");
   });
 
-  it("Điểm danh: 4 trạng thái, ô giờ đến, nút lưu; không quản lý phân công", () => {
+  it("Điểm danh: 3 trạng thái, không ô giờ đến, nút lưu; không quản lý phân công", () => {
     const session = getSession("6a-session-7")!;
     const klass = getClass("6a")!;
     const html = render(
@@ -95,9 +95,9 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     expect(html).toContain("Lưu điểm danh");
     expect(html).toContain("Có mặt");
     expect(html).toContain("Muộn");
-    expect(html).toContain("Có phép");
     expect(html).toContain("Vắng");
-    expect(html).toContain("Giờ đến (nếu muộn)");
+    expect(html).not.toContain("Có phép");
+    expect(html).not.toContain("Giờ đến");
     expect(html).not.toContain("Người dạy");
     // Phân công nhân sự nằm ngoài MVP.
     expect(html).not.toContain("Đổi người dạy");

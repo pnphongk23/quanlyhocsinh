@@ -19,7 +19,7 @@ export function createSeed(): StoreState {
     names.forEach((name,i)=>{
       const studentId=`${classId}-student-${i}`; const left=i===9&&classId==="6a";
       state.students.push({id:studentId,classId,name,parentPhone:"",enrolledAt:"2026-09-01",leftAt:left?"2026-10-09":null,status:left?"left":"active"});
-      classDates.slice(0,8).forEach((date,j)=>{ if(left&&date>"2026-10-09")return; const status=i===0&&j>=6?"absent":i===1&&j===7?"excused":i===2&&j===7?"late":"present"; state.attendance.push({id:`${classId}-attendance-${i}-${j}`,sessionId:`${classId}-session-${j}`,studentId,status,note:"",lateAt:status==="late"?"18:10":null}); });
+      classDates.slice(0,8).forEach((date,j)=>{ if(left&&date>"2026-10-09")return; const status=i===0&&j>=6?"absent":i===1&&j===7?"absent":i===2&&j===7?"late":"present"; state.attendance.push({id:`${classId}-attendance-${i}-${j}`,sessionId:`${classId}-session-${j}`,studentId,status,note:"",lateAt:status==="late"?"18:10":null}); });
         for(let j=0;j<4;j++) state.scores.push({id:`${classId}-score-${i}-${j}`,testId:`${classId}-test-${j}`,studentId,value:i===3&&j===3?null:classId==="6a"&&i===1&&j===2?10:classId==="6a"&&i===1&&j===3?9:6+((i+j)%5)});
       state.reports.push({id:`${studentId}-report`,classId,studentId,batchId:`${classId}-batch`,month:"2026-10",status:i<2?"published":"draft",needsRepublish:false,generalComment:i===1&&classId==="6a"?"Nhận xét kiểm thử tổng hợp.":"",publishedAt:i<2?"2026-10-12T09:00:00.000Z":null});
     });

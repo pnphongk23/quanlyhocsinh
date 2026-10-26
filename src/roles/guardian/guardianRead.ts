@@ -69,8 +69,6 @@ export interface ChildAttendanceRow {
   number: number;
   /** null = giáo viên chưa điểm danh buổi đó. */
   status: AttendanceStatus | null;
-  note: string;
-  lateAt: string | null;
 }
 
 export interface ChildAttendanceMonth {
@@ -79,7 +77,6 @@ export interface ChildAttendanceMonth {
   rows: ChildAttendanceRow[];
   present: number;
   late: number;
-  excused: number;
   absent: number;
 }
 
@@ -109,8 +106,6 @@ export function childAttendanceMonth(
           session,
           number,
           status: record?.status ?? null,
-          note: record?.note ?? "",
-          lateAt: record?.lateAt ?? null,
         },
       ];
     });
@@ -121,7 +116,6 @@ export function childAttendanceMonth(
     rows,
     present: count("present"),
     late: count("late"),
-    excused: count("excused"),
     absent: count("absent"),
   };
 }
@@ -299,8 +293,6 @@ export function childSessionById(
 
 export interface ChildSessionAttendance {
   status: AttendanceStatus;
-  note: string;
-  lateAt: string | null;
 }
 
 /** Điểm danh của con ở một buổi; null = chưa điểm danh hoặc nhóm quyền bị tắt. */
@@ -314,7 +306,7 @@ export function childAttendanceOf(
     (item) => item.sessionId === sessionId && item.studentId === studentId,
   );
   return record
-    ? { status: record.status, note: record.note, lateAt: record.lateAt }
+    ? { status: record.status }
     : null;
 }
 

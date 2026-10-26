@@ -312,7 +312,6 @@ export interface ChildOverviewAttendance {
   /** Số buổi đã diễn ra trong tháng của em. */
   total: number;
   late: number;
-  excused: number;
   absent: number;
 }
 
@@ -442,7 +441,6 @@ export function getChildOverview(
           attended: current.attendanceCount,
           total: current.sessions.length,
           late: current.lateCount,
-          excused: current.excusedCount,
           absent: current.absentCount,
         }
       : null,

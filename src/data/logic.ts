@@ -35,11 +35,10 @@ export function isFutureSession(date: string, today = todayISO()): boolean {
 export function attendanceRate(
   records: Pick<Attendance, "status">[],
 ): number | null {
-  const counted = records.filter((r) => r.status !== "excused");
-  return counted.length
+  return records.length
     ? (100 *
-        counted.filter((r) => r.status === "present" || r.status === "late")
+        records.filter((r) => r.status === "present" || r.status === "late")
           .length) /
-        counted.length
+        records.length
     : null;
 }

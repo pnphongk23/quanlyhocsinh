@@ -64,7 +64,7 @@ export function createFakeServer() {
         if (p.hw_manual !== undefined && typeof p.hw_manual !== "boolean") return { id: command.id, status: "rejected", error: { code: "invalid_hw_manual", message: "invalid_hw_manual", request_id: "fake" } };
     }
     switch (command.type) {
-      case "attendance.set": put("attendance", { session_id: p.session_id, student_id: p.student_id, status: p.status, note: p.note ?? "", late_at: p.late_at ?? null }); break;
+      case "attendance.set": if (!["present", "late", "absent"].includes(p.status)) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "invalid_status", request_id: "fake" } }; put("attendance", { session_id: p.session_id, student_id: p.student_id, status: p.status }); break;
         case "test.create": put("test", { id: p.id, class_id: p.class_id, name: p.name, date: p.date, archived: false }); break;
         case "test.update": { const current = table("test").get(p.id); if (!current) return { id: command.id, status: "rejected", error: { code: "not_found", message: "not_found", request_id: "fake" } }; const { max: _oldMax, ...withoutMax } = current; const { max: _ignoredMax, ...patch } = p; put("test", { ...withoutMax, ...patch }); break; }
       case "test.delete": { const current = table("test").get(p.id); if (current?.archived) put("test", { ...current, archived: true }); else remove("test", p.id); break; }

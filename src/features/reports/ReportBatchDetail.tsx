@@ -565,7 +565,6 @@ function ReportFacts({
 function attendanceDetail(report: PeriodStudentReport): string {
   return [
     report.lateCount ? `${report.lateCount} muộn` : "",
-    report.excusedCount ? `${report.excusedCount} có phép` : "",
     report.absentCount ? `${report.absentCount} vắng` : "",
   ]
     .filter(Boolean)

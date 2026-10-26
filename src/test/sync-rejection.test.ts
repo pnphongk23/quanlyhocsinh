@@ -75,6 +75,29 @@ describe("sync rejection persistence", () => {
   });
 });
 
+describe("sync cleans queued attendance commands from older builds", () => {
+  it("sends excused as absent and drops arrival time and note", async () => {
+    const { api, syncNow } = await import("../data/sync");
+    await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
+    await db.outbox.put({
+      id: "cmd-old-excused", identity: identityKey(), type: "attendance.set",
+      payload: { session_id: "session-a", student_id: "student-a", status: "excused", note: "x", late_at: "18:10" },
+      base_version: 0, membership_id: identity.membershipId, created_at: "2026-10-23T00:00:00Z", status: "pending",
+    });
+    const pushed: Array<{ payload: Record<string, unknown> }> = [];
+    vi.spyOn(api, "request").mockImplementation((async (endpoint: string, init?: { body?: { commands?: Array<{ payload: Record<string, unknown> }> } }) => {
+      if (endpoint === "POST /sync/push") { pushed.push(...(init?.body?.commands ?? [])); return { epoch: 1, cursor: 1, results: [{ id: "cmd-old-excused", status: "applied" }] }; }
+      if (endpoint === "GET /sync/pull") return { cursor: 1, epoch: 1, has_more: false, server_time: "2026-10-23T00:00:00Z", upserts: {}, deleted: [] };
+      throw new Error(`Unexpected fake endpoint: ${endpoint}`);
+    }) as never);
+
+    await syncNow();
+
+    expect(pushed).toHaveLength(1);
+    expect(pushed[0].payload).toEqual({ session_id: "session-a", student_id: "student-a", status: "absent" });
+  });
+});
+
 describe("sync claims pending commands", () => {
   it("does not resurrect a command that was merged away after it was read", async () => {
     const { api, syncNow } = await import("../data/sync");

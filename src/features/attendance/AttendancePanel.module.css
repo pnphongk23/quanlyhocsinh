@@ -157,38 +157,6 @@
   font-weight: 500;
 }
 
-.lateFields {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  flex-wrap: wrap;
-}
-
-.lateLabel {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-sm);
-  color: var(--color-muted);
-}
-
-.lateInput,
-.noteInput {
-  height: var(--tap);
-  min-height: var(--tap);
-  padding: 0 10px;
-  border: 1.5px solid var(--color-input-border);
-  border-radius: var(--radius-button);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 15px;
-}
-
-.noteInput {
-  flex: 1;
-  min-width: 120px;
-}
-
 /* Nút trạng thái: 16 — nút 96x44 chứa pill 13/600; web 89 — nút đặc 92x44 */
 .statusButton {
   flex: none;
@@ -226,11 +194,6 @@
 .late {
   --status-bg: var(--color-warning-soft);
   --status-fg: var(--color-warning);
-}
-
-.excused {
-  --status-bg: var(--color-primary-soft);
-  --status-fg: var(--color-primary-ink);
 }
 
 .absent {

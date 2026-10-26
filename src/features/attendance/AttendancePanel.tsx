@@ -18,20 +18,14 @@ import { studentsForSession } from "./sessionRoster";
 import s from "./AttendancePanel.module.css";
 
 type AttendanceState = AttendanceRecord["status"];
-const states: AttendanceState[] = ["present", "absent", "late", "excused"];
-const summaryStates: AttendanceState[] = [
-  "present",
-  "late",
-  "excused",
-  "absent",
-];
+const states: AttendanceState[] = ["present", "absent", "late"];
+const summaryStates: AttendanceState[] = ["present", "late", "absent"];
 const labels: Record<AttendanceState, string> = {
   present: "Có mặt",
   late: "Muộn",
-  excused: "Có phép",
   absent: "Vắng",
 };
-type Draft = { status: AttendanceState; lateAt: string; note: string };
+type Draft = { status: AttendanceState };
 type SwipeGesture = {
   pointerId: number;
   studentId: string;
@@ -83,11 +77,7 @@ export default function AttendancePanel({
   const draftFor = (studentId: string): Draft => {
     const existing = stored.find((record) => record.studentId === studentId);
     return (
-      drafts[studentId] ?? {
-        status: existing?.status ?? "present",
-        lateAt: existing?.lateAt ?? "",
-        note: existing?.note ?? "",
-      }
+      drafts[studentId] ?? { status: existing?.status ?? "present" }
     );
   };
   const rows = students.map((student) => ({
@@ -113,18 +103,14 @@ export default function AttendancePanel({
       const record = stored.find((item) => item.studentId === student.id);
       return [
         student.id,
-        {
-          status: record?.status ?? "present",
-          lateAt: record?.lateAt ?? "",
-          note: record?.note ?? "",
-        },
+        { status: record?.status ?? "present" },
       ];
     }),
   );
   const typedRows = Object.fromEntries(
     rows.map((row) => [
       row.student.id,
-      { status: row.status, lateAt: row.lateAt, note: row.note },
+      { status: row.status },
     ]),
   );
   const action = useSaveAction({
@@ -231,8 +217,6 @@ export default function AttendancePanel({
           sessionId: session.id,
           studentId: row.student.id,
           status: row.status,
-          note: row.note.trim(),
-          lateAt: row.status === "late" ? row.lateAt || null : null,
         })),
       );
       setDrafts({});
@@ -290,7 +274,7 @@ export default function AttendancePanel({
       <div className={s.summaryRow}>
         {!desktop && !readOnly && (
           <p className={s.summary}>
-            <b>{counts[3]}</b> vắng mặt
+            <b>{counts[2]}</b> vắng mặt
           </p>
         )}
         <div className={s.summaryActions}>
@@ -358,7 +342,7 @@ export default function AttendancePanel({
               </p>
               <p className={s.cardSummary}>
                 <b>{counts[0]}</b> có mặt · <b>{counts[1]}</b> muộn ·{" "}
-                <b>{counts[2]}</b> có phép · <b>{counts[3]}</b> vắng
+                <b>{counts[2]}</b> vắng
               </p>
             </div>
           )}
@@ -413,37 +397,6 @@ export default function AttendancePanel({
                     </div>
                     <div className={s.person}>
                       <span className={s.personName}>{row.student.name}</span>
-                      {row.status === "late" && (
-                        <div className={s.lateFields}>
-                          <label className={s.lateLabel}>
-                            Đến lúc
-                            <input
-                              className={s.lateInput}
-                              aria-label={`Giờ đến muộn của ${row.student.name}`}
-                              type="time"
-                              value={row.lateAt}
-                              disabled={viewOnly}
-                              onChange={(event) =>
-                                setRow(row.student.id, {
-                                  lateAt: event.target.value,
-                                })
-                              }
-                            />
-                          </label>
-                          <input
-                            className={s.noteInput}
-                            aria-label={`Ghi chú điểm danh của ${row.student.name}`}
-                            placeholder="Ghi chú"
-                            value={row.note}
-                            disabled={viewOnly}
-                            onChange={(event) =>
-                              setRow(row.student.id, {
-                                note: event.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      )}
                     </div>
                     <button
                       type="button"
@@ -484,7 +437,7 @@ export default function AttendancePanel({
             </article>
             {desktop && (
               <p className={s.footnote}>
-                Muộn tính là có đi học · Có phép không bị trừ chuyên cần
+                Muộn tính là có đi học
               </p>
             )}
           </div>

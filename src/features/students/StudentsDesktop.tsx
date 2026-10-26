@@ -44,8 +44,7 @@ export function attendanceSummary(
     );
     return (
       record?.status === "present" ||
-      record?.status === "late" ||
-      record?.status === "excused"
+      record?.status === "late"
     );
   }).length;
   return { attended, total: held.length };

@@ -89,19 +89,17 @@ export function homeworkLevelTone(level: HomeworkLevel | null): GuardianTone {
   return "neutral";
 }
 
-export type AttendanceStatus = "present" | "late" | "excused" | "absent";
+export type AttendanceStatus = "present" | "late" | "absent";
 
 export const attendanceText: Record<AttendanceStatus, string> = {
   present: "Có mặt",
   late: "Muộn",
-  excused: "Có phép",
   absent: "Vắng",
 };
 
 export function attendanceTone(status: AttendanceStatus): GuardianTone {
   if (status === "present") return "success";
   if (status === "late") return "warning";
-  if (status === "excused") return "primary";
   return "error";
 }
 

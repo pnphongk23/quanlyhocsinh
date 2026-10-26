@@ -71,8 +71,8 @@ describe("repository command payload contracts", () => {
       expect(todayISO()).toBe("2026-10-25");
       const { saveAttendanceDurable } = await import("../data/repositories/attendance");
 
-      await expect(saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "present", note: "", lateAt: null })).resolves.toMatchObject({ sessionId: "session-1" });
-      expect(() => saveAttendanceDurable({ sessionId: "session-future", studentId: "s1", status: "present", note: "", lateAt: null })).toThrow("Chưa thể điểm danh");
+      await expect(saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "present" })).resolves.toMatchObject({ sessionId: "session-1" });
+      expect(() => saveAttendanceDurable({ sessionId: "session-future", studentId: "s1", status: "present" })).toThrow("Chưa thể điểm danh");
     },
   );
 
@@ -90,7 +90,7 @@ describe("repository command payload contracts", () => {
   await tests.createTestDurable({ classId: "c1", name: "New", date: "2026-10-20" });
       await tests.updateTestDurable("test-1", { name: "Quiz updated" });
       await scores.saveScoreDurable({ testId: "test-1", studentId: "s1", value: 7 });
-      await attendance.saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "present", note: "", lateAt: null });
+      await attendance.saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "present" });
       await comments.sendSessionTicketsDurable("session-1", ["s1"]);
         await comments.saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", stars: 3, note: "" });
         await d.syncNow();
@@ -115,6 +115,17 @@ describe("repository command payload contracts", () => {
       for (const key of requiredFields[command.type]) expect(Object.hasOwn(command.payload, key), `${command.type} missing ${String(key)}`).toBe(true);
       for (const key of Object.keys(command.payload)) expect(payloadFields[command.type], `${command.type} unexpected ${key}`).toContain(key);
     }
+  });
+
+  it("sends attendance with status only, no arrival time or note", async () => {
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { saveAttendanceDurable } = await import("../data/repositories/attendance");
+    await saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "late" });
+    await d.syncNow();
+
+    const sent = server.hooks.pushBatches.flat().find((command) => command.type === "attendance.set");
+    expect(Object.keys(sent?.payload ?? {}).sort()).toEqual(["session_id", "status", "student_id"]);
   });
 
   it("keeps comment while editing note and regenerates it when criteria changes", async () => {

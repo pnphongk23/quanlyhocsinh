@@ -142,12 +142,6 @@ export default function GuardianSessionPage() {
                   <span className={g.hint}>Chưa điểm danh</span>
                 )}
               </div>
-              {attendance?.status === "late" && attendance.lateAt && (
-                <p className={g.muted}>Đến muộn {attendance.lateAt}</p>
-              )}
-              {attendance?.note && (
-                <p className={g.muted}>Ghi chú: {attendance.note}</p>
-              )}
             </section>
           )}
         </div>

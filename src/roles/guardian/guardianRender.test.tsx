@@ -90,7 +90,7 @@ describe("PH · Lớp học của con (tab 1)", () => {
       expect(html).toContain("Giáo viên Cô Lan");
     expect(html).toContain("Chuyên cần tháng 10");
     expect(html).toContain("3/4");
-    expect(html).toContain("buổi · 0 muộn, 1 có phép");
+    expect(html).toContain("buổi · 0 muộn, 1 vắng");
     expect(html).toContain("Bài kiểm tra mới nhất");
     expect(html).not.toContain("trung bình");
     expect(html).not.toContain("TB");
@@ -102,7 +102,7 @@ describe("PH · Lớp học của con (tab 1)", () => {
     expect(html).toContain("Tháng 10/2026");
     expect(html).toContain('href="/ph/buoi/6a-session-7"');
       expect(html).toContain("T4 · 14/10");
-    expect(html).toContain("Có phép");
+    expect(html).toContain("Vắng");
     expect(html).toContain("Có mặt");
     expect(html).toContain("3 sao");
     expect(html).toContain("Mới");
@@ -144,7 +144,7 @@ describe("PH · Lớp học của con (tab 1)", () => {
     seedGuardian();
     const feed = childSessionFeed("6a-student-1");
     const eight = feed.find((item) => item.session.id === "6a-session-7");
-    expect(eight).toMatchObject({ number: 8, attendance: "excused", stars: 3 });
+    expect(eight).toMatchObject({ number: 8, attendance: "absent", stars: 3 });
     const cancelled = feed.filter((item) => item.cancelled);
     expect(cancelled.length).toBeGreaterThan(0);
     expect(cancelled[0]).toMatchObject({
@@ -669,7 +669,7 @@ describe("PH · Điểm danh trong Buổi học và Điểm số (dữ liệu th
       <GuardianSessionPage />,
     );
     expect(html).toContain("Điểm danh");
-    expect(html).toContain("Có phép");
+    expect(html).toContain("Vắng");
     // Không lộ dữ liệu của lớp hay em khác.
     expect(html).not.toContain("Nguyễn Minh Anh");
   });

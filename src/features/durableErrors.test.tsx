@@ -167,7 +167,7 @@ describe("điểm danh: ghi bền lỗi", () => {
   it("desktop: báo lỗi, giữ trạng thái đã chọn", async () => {
     inRouter(<SessionHarness sessionId="6a-session-7" />, "/lop/:classId/*", "/lop/6a/buoi-hoc/6a-session-7");
     const group = screen.getByRole("group", { name: "Trạng thái của Nguyễn Minh Anh" });
-    const target = group.querySelectorAll("button")[2];
+    const target = group.querySelectorAll("button")[1];
     fireEvent.click(target);
     expect(target).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Lưu điểm danh" }));
