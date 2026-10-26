@@ -63,6 +63,7 @@ async function login(page, phone, password) {
   const responsePromise = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('/auth/login'), { timeout: 15000 });
   await page.goto(`${web}/dang-nhap`, { waitUntil: 'domcontentloaded' });
   await page.locator('#login-phone').fill(phone);
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   const response = await responsePromise;

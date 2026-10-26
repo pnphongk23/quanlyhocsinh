@@ -13,6 +13,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 try {
   await page.goto('https://qlh-staging-web.pages.dev/dang-nhap');
   await page.locator('#login-phone').fill(credentials.phone);
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill('QA-Web-invalid-password');
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
 

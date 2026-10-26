@@ -17,6 +17,7 @@ let phase = 'teacher login';
 try {
   await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
   await page.locator('#login-phone').fill(credentials.phone);
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
     await page.locator('#login-password').fill(credentials.password);
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
     await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });

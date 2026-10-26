@@ -57,6 +57,7 @@ try {
 
   phase = 'teacher login';
   await page.locator('#login-phone').fill(credentials.phone);
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
@@ -72,6 +73,7 @@ try {
       await page.goto('https://qlh-staging-web.pages.dev/lop', { waitUntil: 'domcontentloaded' });
       if (new URL(page.url()).pathname === '/dang-nhap') {
         await page.locator('#login-phone').fill(credentials.phone);
+        await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
         await page.locator('#login-password').fill(credentials.password);
         await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
         await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });

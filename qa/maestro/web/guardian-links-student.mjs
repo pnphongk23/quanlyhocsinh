@@ -24,6 +24,7 @@ try {
     await teacherPage.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
     console.log('STAGING_BUNDLE', await assertStagingBundle(teacherPage));
   await teacherPage.locator('#login-phone').fill(values.phone);
+  await teacherPage.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await teacherPage.locator('#login-password').fill(values.password);
   await teacherPage.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await teacherPage.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });

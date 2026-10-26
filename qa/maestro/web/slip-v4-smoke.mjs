@@ -21,6 +21,7 @@ try {
     await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
     console.log('STAGING_BUNDLE', await assertStagingBundle(page));
   await page.locator('#login-phone').fill(credentials.phone);
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
@@ -92,7 +93,7 @@ try {
   await hwBtn.click(); const z = await snap(); seen.set(z.stars, z);
   const rows = [...seen.entries()].filter(([, v]) => v).map(([k, v]) => `${k}:${v.src}:w${v.w}`).sort();
   const broken = [...seen.values()].filter((v) => v && v.w <= 0);
-  const zeroSentence = (await gen.innerText()).replace('Tự sinh theo tiêu chí', '').trim();
+  const zeroSentence = (await gen.evaluate((e) => e.value ?? e.innerText)).trim();
   const zeroOk = zeroSentence === 'Con chưa chú ý nghe giảng, chưa ghi bài đầy đủ, chưa tích cực tham gia hoạt động, còn mất trật tự và chưa hoàn thành bài tập về nhà.';
   const distinct = new Set([...seen.values()].filter(Boolean).map((v) => v.src)).size;
   await page.screenshot({ path: `${out}/slip-v4-zero-star.png`, fullPage: true });

@@ -21,6 +21,7 @@ try {
   await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
   console.log('STAGING_BUNDLE', await assertStagingBundle(page));
   await page.locator('#login-phone').fill(values.phone);
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(values.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });

@@ -20,6 +20,7 @@ let phase = 'teacher login';
 try {
   await teacher.goto(`${base}/dang-nhap`, { waitUntil: 'domcontentloaded' });
   await teacher.locator('#login-phone').fill(credentials.phone);
+  await teacher.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await teacher.locator('#login-password').fill(credentials.password);
   await teacher.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await teacher.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });

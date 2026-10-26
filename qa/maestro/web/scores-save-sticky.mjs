@@ -73,6 +73,7 @@ try {
   const bundle = await assertStagingBundle(page);
   console.log('STAGING_BUNDLE', bundle);
   await page.locator('#login-phone').fill(credentials.phone);
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });

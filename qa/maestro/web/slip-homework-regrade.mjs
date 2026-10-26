@@ -107,6 +107,7 @@ try {
   await page.goto(`${base}/dang-nhap`, { waitUntil: 'domcontentloaded' });
   console.log('STAGING_BUNDLE', await assertStagingBundle(page));
   await page.locator('#login-phone').fill(credentials.phone);
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
@@ -171,6 +172,7 @@ try {
   await dialog.getByRole('button', { name: /^Gửi \d+ phiếu$/ }).click();
   await dialog.waitFor({ state: 'detached', timeout: 15000 });
   await page.getByTestId('slip-ticket-status').first().waitFor({ timeout: 10000 }).catch(() => {});
+  await page.getByText('Đã gửi', { exact: true }).first().waitFor({ timeout: 15000 });
 
   console.log('AFTER_SEND_HEADING', (await page.getByRole('main').last().innerText()).split('\n')[0]);
   phase = 'add Draft student after the send so only that slip stays unsent';
@@ -199,7 +201,7 @@ try {
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `${out}/slip-homework-draft-after-regrade.png`, fullPage: true });
   const draft = await homeworkState();
-  const sentence = (await page.getByTestId('slip-generated-comment').innerText()).replace('Tự sinh theo tiêu chí', '').trim();
+  const sentence = (await page.getByTestId('slip-generated-comment').evaluate((e) => e.value ?? e.innerText)).trim();
   rec('CMT-014-draft-auto-untick', !draft.on && draft.stars === '4' && /chưa hoàn thành bài tập về nhà/.test(sentence) && draft.auto === 1 ? 'PASS' : 'FAIL', `on=${draft.on} stars=${draft.stars} auto=${draft.auto} sentenceHasHw=${/chưa hoàn thành bài tập về nhà/.test(sentence)}`);
 
   phase = 'manual tick is kept (CMT-014)';

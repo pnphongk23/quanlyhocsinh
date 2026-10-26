@@ -164,6 +164,7 @@ try {
   phase = 'login';
   await page.goto(`${base}/dang-nhap`, { waitUntil: 'domcontentloaded' });
     await page.locator('#login-phone').fill(phone);
+    await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
   loginSubmitted = true;
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -174,16 +175,16 @@ try {
     await page.goto(`${base}/lop`, { waitUntil: 'domcontentloaded' });
     const bundleSeen = () => page.evaluate((expected) => performance.getEntriesByType('resource').some((item) => {
       try { return new URL(item.name).pathname.endsWith(`/assets/${expected}`); } catch { return false; }
-    }), 'index-DXfBbe1w.js');
+    }), 'index-CNZPcz5i.js');
     await page.waitForFunction((expected) => performance.getEntriesByType('resource').some((item) => {
       try { return new URL(item.name).pathname.endsWith(`/assets/${expected}`); } catch { return false; }
-    }), 'index-DXfBbe1w.js', { timeout: 12000 }).catch(() => {});
+    }), 'index-CNZPcz5i.js', { timeout: 12000 }).catch(() => {});
     const initialBundleSeen = await bundleSeen();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForFunction((expected) => performance.getEntriesByType('resource').some((item) => {
       try { return new URL(item.name).pathname.endsWith(`/assets/${expected}`); } catch { return false; }
-    }), 'index-DXfBbe1w.js', { timeout: 15000 });
-    verifiedBundle = 'index-DXfBbe1w.js';
+    }), 'index-CNZPcz5i.js', { timeout: 15000 });
+    verifiedBundle = 'index-CNZPcz5i.js';
     record('BUNDLE-current', 'PASS', `initial=${initialBundleSeen}; reloaded=true`);
 
     phase = 'find QA class and session';
@@ -241,7 +242,7 @@ try {
   const hw = page.getByTestId('slip-homework-row');
   const hwBtn = (await hw.getAttribute('aria-pressed')) !== null ? hw : hw.getByRole('button').first();
   if ((await hwBtn.getAttribute('aria-pressed')) === 'true') checkedCount += 1;
-  const hasDefaultSentence = Boolean((await page.getByTestId('slip-generated-comment').innerText()).trim());
+  const hasDefaultSentence = Boolean((await page.getByTestId('slip-generated-comment').evaluate((e) => e.value ?? e.innerText)).trim());
   if (checkedCount !== 5 || !hasDefaultSentence) throw new Error(`expected 5 default criteria and sentence; observed ${checkedCount}/5`);
   record('CMT-001', 'PASS');
     // Brief 94: one merged comment field; the "Dùng câu mặc định" button is gone, so CMT-014 (auto homework criterion) needs graded fixtures and is not driven here.

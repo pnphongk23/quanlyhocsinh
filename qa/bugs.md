@@ -63,3 +63,10 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 ### IOS-002 · Lời nhắc trong hộp xác nhận gửi vẫn ghi "câu mẫu, ghi chú" — Mở (iOS 43744e1)
 - Spec chốt ô nhận xét gộp một trường; chữ trong hộp xác nhận gửi vẫn nói "câu mẫu, ghi chú" như hai phần riêng.
 - Mức độ: thấp (chữ). Ảnh: cùng thư mục shots/qa-slip (31/31b).
+
+### WEB-010 · Phiếu đã gửi hiện lại "Chưa gửi", mất BTVN, còn 4 sao sau khi chấm lại BTVN — Mở (nghi thật; web bundle `index-CNZPcz5i.js`)
+- Tái hiện không ổn định bằng `qa/maestro/web/slip-homework-regrade.mjs` (workspace smoke, lớp QA mới mỗi lượt): 3 lượt gần nhất thì 2 lượt FAIL, 1 lượt PASS. Lần probe riêng có thêm 1 lượt FAIL (sau khi mở lại trang, một trong hai phiếu tụt từ "Đã gửi" về "Chưa gửi").
+- Kết quả thật (lượt FAIL): sau khi Gửi phiếu cả lớp (em Sent đã "Đã gửi") rồi chấm lại BTVN buổi trước "Chưa hoàn thành", mở lại phiếu em Sent: trạng thái "Chưa gửi", tiêu chí BTVN bỏ tích, 4/5 sao.
+- Mong đợi: phiếu đã gửi không đổi (spec 61, TC-CMT-013/020): vẫn "Đã gửi", 5 sao, tiêu chí BTVN còn tích.
+- Ghi nhận thêm: sau khi hộp xác nhận gửi đóng, trạng thái "Đã gửi" hiện chậm khoảng 1–3 giây; chấm lại BTVN ngay lúc đó có thể chạy trước khi bản đã gửi về máy (nghi race giữa tự sửa phiếu của client và gửi). Lượt PASS là khi đã chờ đủ lâu. Flow đã thêm bước chờ "Đã gửi" nhưng vẫn FAIL 1/3, nên không chỉ là lỗi chờ của flow.
+- Bằng chứng: `plans/20261021-mvp/qa/runs/2026-10-26/web/slip-homework-regrade-failure.png` (lượt bị giới hạn đăng nhập, không phải lỗi này), log chạy trong báo cáo GL; chưa lưu JUnit.

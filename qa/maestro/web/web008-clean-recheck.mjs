@@ -129,6 +129,7 @@ try {
   await phase('one teacher login and bundle update', async () => {
     await page.goto(`${base}/dang-nhap`, { waitUntil: 'domcontentloaded' });
     await page.locator('#login-phone').fill(local9(credentials.phone));
+    await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
     await page.locator('#login-password').fill(credentials.password);
     loginSubmitted = true;
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();

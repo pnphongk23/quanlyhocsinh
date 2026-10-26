@@ -39,6 +39,7 @@ try {
   const authResponse = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith('/auth/login'), { timeout: 15000 });
   await page.goto(`${web}/dang-nhap`, { waitUntil: 'domcontentloaded' });
   await page.locator('#login-phone').fill(loginPhone(creds.parentPhone));
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(creds.parentPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   const auth = await authResponse;
