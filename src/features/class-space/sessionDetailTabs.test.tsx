@@ -39,13 +39,13 @@ describe("tab của màn buổi học (ảnh 60/61)", () => {
   it("ba tab ngang hàng đúng thứ tự và nhãn", () => {
     expect(SESSION_TABS.map((tab) => tab.label)).toEqual([
       "Điểm danh",
-      "Nhận xét",
       "Bài tập về nhà",
+      "Nhận xét",
     ]);
     expect(SESSION_TABS.map((tab) => tab.value)).toEqual([
       "diem-danh",
-      "nhan-xet",
       "btvn",
+      "nhan-xet",
     ]);
   });
 

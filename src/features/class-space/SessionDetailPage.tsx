@@ -41,7 +41,7 @@ import s from "./sessionDetail.module.css";
 
 /**
  * Ba tab ngang hàng của màn buổi học (spec mục 4, ảnh 60/61): Điểm danh ·
- * Nhận xét · Bài tập về nhà. Tab nằm ở URL (?tab=diem-danh|nhan-xet|btvn) để
+ * Bài tập về nhà · Nhận xét. Tab nằm ở URL (?tab=diem-danh|nhan-xet|btvn) để
  * mở thẳng được và để tab BTVN quay lại đúng em ở tab Nhận xét.
  */
 export type SessionTab = "diem-danh" | "nhan-xet" | "btvn";
@@ -49,8 +49,8 @@ export type SessionTab = "diem-danh" | "nhan-xet" | "btvn";
 export const SESSION_TABS: ReadonlyArray<{ value: SessionTab; label: string }> =
   [
     { value: "diem-danh", label: "Điểm danh" },
-    { value: "nhan-xet", label: "Nhận xét" },
     { value: "btvn", label: "Bài tập về nhà" },
+    { value: "nhan-xet", label: "Nhận xét" },
   ];
 
 export const DEFAULT_SESSION_TAB: SessionTab = "diem-danh";
