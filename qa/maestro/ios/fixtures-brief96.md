@@ -11,3 +11,8 @@ Lý do: lớp `Lớp Smoke FB2` buổi trước không giao BTVN nên iOS chưa 
 5. Trên iOS: đăng nhập chỉ qua Maestro `-e` (không gõ tay), mở lớp, "Xem buổi" N+1, tab Nhận xét. Chấm lại ở N rồi quay N+1 để kiểm TC-CMT-020.
 
 Chưa làm được trong lượt hiện tại: GL chưa cấp lượt Chromium/simulator cho brief 96, nên fixture chưa được tạo (chỉ có công thức). Chưa có iOS build có tính năng brief 96 (câu sửa tay, vuốt điểm danh, đăng nhập 2 bước, Gán tất cả mặc định); chờ lane iOS xong rồi QA chạy.
+
+## Đã tạo (2026-10-26, staging, workspace smoke)
+- Lớp `QA-iOS-c87f0e-HW`, học sinh `QA-iOS-c87f0e-HS1..HS3`, tạo bằng `qa/maestro/web/ios-hw-fixture.mjs` (bundle `index-DXfBbe1w.js`).
+- Buổi N hôm nay 18:00 (giao BTVN `QA-iOS-c87f0e-Reading`, chưa chấm); N+1 hôm nay 21:00 và N+2 hôm nay 22:00 đều đã lưu điểm danh Có mặt cho 3 em; chưa phiếu nào được gửi, chưa chấm BTVN.
+- Việc còn lại trên iOS: chấm BTVN ở N+1 hoặc N+2 (tab "Bài tập buổi trước"), kiểm phiếu, gửi một phiếu để kiểm phiếu đã gửi.
