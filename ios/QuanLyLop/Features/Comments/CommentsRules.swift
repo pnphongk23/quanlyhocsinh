@@ -85,6 +85,18 @@ enum CommentsRules {
         return sendableCount > 0 ? .ready : .nothingToSend
     }
 
+    enum SendGate: Equatable { case go, blocked, alreadySent }
+
+    /// What the dialog's send button does. Once every slip is sent nothing is left to send, so a press that lands
+    /// before the dialog has closed does nothing instead of sending again or reporting a fault.
+    static func sendGate(_ availability: SendAvailability) -> SendGate {
+        switch availability {
+        case .ready: .go
+        case .needsNetwork: .blocked
+        case .nothingToSend: .alreadySent
+        }
+    }
+
     static func badge(_ row: I4TicketRow) -> (label: String, tone: AppPill.Tone) {
         if row.isSent {
             if let time = I4Format.time(row.slip?.sentAt) {

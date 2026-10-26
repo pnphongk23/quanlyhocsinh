@@ -143,5 +143,8 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertEqual(CommentsRules.sendAvailability(sendableCount: 0, isOnline: true), .nothingToSend)
         XCTAssertEqual(CommentsRules.sendAvailability(sendableCount: 3, isOnline: false), .needsNetwork)
         XCTAssertEqual(CommentsRules.sendAvailability(sendableCount: 0, isOnline: false), .needsNetwork)
+        XCTAssertEqual(CommentsRules.sendGate(.ready), .go)
+        XCTAssertEqual(CommentsRules.sendGate(.needsNetwork), .blocked)
+        XCTAssertEqual(CommentsRules.sendGate(.nothingToSend), .alreadySent, "a second press after sending sends nothing")
     }
 }

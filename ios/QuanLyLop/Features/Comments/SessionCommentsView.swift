@@ -11,7 +11,6 @@ struct SessionCommentsView: View {
     @State private var sendError: String?
     @State private var sendController = AppSaveController()
     @State private var saveStatusSource: AppSaveStatusSource?
-    @State private var dismissSendAfterSuccess = false
 
     init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.sessionID = sessionID
@@ -79,12 +78,6 @@ struct SessionCommentsView: View {
                 let source = AppSaveStatusSource(store: store)
                 await source.refresh()
                 saveStatusSource = source
-            }
-        }
-        .onChange(of: sendController.phase) { oldPhase, newPhase in
-            if oldPhase == .saved, newPhase == .idle, dismissSendAfterSuccess {
-                closeSend()
-                dismissSendAfterSuccess = false
             }
         }
         .onChange(of: SyncStatusCenter.shared.state) { _, _ in
@@ -250,7 +243,8 @@ struct SessionCommentsView: View {
                     title: sendError == nil
                         ? String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu"), String(describing: (sendableRows.count)))
                         : String(localized: "comments.send.retry", table: "Teacher"),
-                    controller: sendController
+                    controller: sendController,
+                    onSuccess: { closeSend() }
                 ) { try await send() }
                 AppButton(title: String(localized: "feature.comments.quay.lai"), variant: .neutral, size: .large) { closeSend() }
             }
@@ -294,7 +288,10 @@ struct SessionCommentsView: View {
     }
 
     private func send() async throws {
-        guard sendAvailability == .ready else {
+        switch CommentsRules.sendGate(sendAvailability) {
+        case .alreadySent: return
+        case .go: break
+        case .blocked:
             let message = String(localized: "comments.send.needs_network", table: "Teacher")
             sendError = message
             throw I4SaveFailure(message: message)
@@ -303,7 +300,6 @@ struct SessionCommentsView: View {
         let outcome = await data.sendSlips(sessionID: sessionID, studentIDs: ids)
         switch outcome {
         case .sent:
-            dismissSendAfterSuccess = true
             sendError = nil
             await saveStatusSource?.refresh()
         case .partial(_, let notSent):
