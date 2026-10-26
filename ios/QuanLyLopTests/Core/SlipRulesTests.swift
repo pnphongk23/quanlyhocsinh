@@ -148,6 +148,35 @@ final class SlipRulesTests: XCTestCase {
         XCTAssertTrue(SlipRules.isMet(none, index: 4), "the criterion stays ticked")
     }
 
+    func testSendDialogNoteSaysCommentNotSampleSentenceAndNote() {
+        let text = SlipSheetText.sendDialogNote(homeworkSuffix: ".")
+        XCTAssertEqual(text, "Phụ huynh nhận **một thông báo** cho buổi này, gồm sao và nhận xét.")
+        XCTAssertFalse(text.contains("câu mẫu"))
+    }
+
+    // MARK: - Hand-editable sentence
+
+    func testSavePayloadChoosesWhichOfCriteriaAndSentenceGoOut() {
+        func grading(touched: Bool, sentence: String?, hasSlip: Bool = true, legacy: Bool = false) -> I4FeatureStore.SlipGrading {
+            SlipRules.grading(isLegacy: legacy, hasSlip: hasSlip, criteria: 15, criteriaTouched: touched,
+                              homeworkTouched: false, sentence: sentence)
+        }
+        XCTAssertEqual(grading(touched: true, sentence: nil), .criteria(15, comment: nil))
+        XCTAssertEqual(grading(touched: false, sentence: "Con ngoan."), .criteria(15, comment: "Con ngoan."))
+        XCTAssertEqual(grading(touched: true, sentence: "Con ngoan."), .criteria(15, comment: "Con ngoan."))
+        XCTAssertEqual(grading(touched: false, sentence: nil), .noteOnly)
+        XCTAssertEqual(grading(touched: false, sentence: nil, hasSlip: false), .criteria(15, comment: nil))
+        XCTAssertEqual(grading(touched: true, sentence: nil, legacy: true), .legacy)
+    }
+
+    func testOpeningSentenceKeepsTheSavedOneUnlessTheCriteriaMoved() throws {
+        let slip = try decodeSlip(#"{"stars":4,"criteria":15,"comment":"Con tiến bộ rõ","scale":5,\#(common)}"#)
+        XCTAssertEqual(SlipRules.openingSentence(slip: slip, openingCriteria: 15), "Con tiến bộ rõ")
+        XCTAssertEqual(SlipRules.openingSentence(slip: slip, openingCriteria: 31), SlipRules.generatedSentence(criteria: 31),
+                       "re-grading homework overwrites a hand-written sentence")
+        XCTAssertEqual(SlipRules.openingSentence(slip: nil, openingCriteria: 31), SlipRules.generatedSentence(criteria: 31))
+    }
+
     func testAParentSlipWithoutNoteDecodes() throws {
         let slip = try decodeSlip(#"{"session_id":"s","student_id":"a","stars":4,"comment":"Con chú ý nghe giảng.\nGhi thêm","scale":5,"status":"sent","sent_at":null,"version":1,"updated_at":"2026-10-26T10:00:00.000Z"}"#)
         XCTAssertEqual(slip.note, "")

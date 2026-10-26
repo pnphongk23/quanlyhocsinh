@@ -197,7 +197,8 @@ actor SQLiteStore: LocalStore {
                    let old = row["json"] {
                     let previous = try decode(PendingCommand.self, old)
                     replacement = PendingCommand(id: command.id, recordKey: key, baseVersion: previous.baseVersion,
-                                                 kind: command.kind, payload: command.payload, createdAt: previous.createdAt)
+                                                 kind: command.kind, payload: command.merged(over: previous).payload,
+                                                 createdAt: previous.createdAt)
                     try db.execute("DELETE FROM commands WHERE scope=? AND id=?", [scope.storageKey,previous.id.uuidString])
                 }
                 try db.execute("INSERT INTO commands(scope,id,record_key,kind,json,local_json,created_at) VALUES(?,?,?,?,?,?,?)",

@@ -225,7 +225,7 @@ struct SessionCommentsView: View {
                   let homeworkSuffix = ungraded.parts > 0
                       ? String.localizedStringWithFormat(String(localized: "feature.comments.homeworkResultSuffix"), previousLabel)
                       : String(localized: "feature.comments.sentencePeriod")
-                  Text(LocalizedStringKey(String.localizedStringWithFormat(String(localized: "feature.comments.phu.huynh.nhan.mot.thong.bao.cho.buoi.nay.gom.sa"), homeworkSuffix)))
+                  Text(LocalizedStringKey(SlipSheetText.sendDialogNote(homeworkSuffix: homeworkSuffix)))
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                     .foregroundStyle(AppColors.muted)
                 if !skipped.isEmpty {
@@ -365,6 +365,9 @@ struct I4TicketSheet: View {
     /// The teacher ticked or unticked a criterion on this open sheet; until then a save only changes the note.
     @State private var criteriaTouched = false
     @State private var note: String = ""
+    /// The sentence shown in the box: the generated one, or the teacher's own once typed over.
+    @State private var sentence: String
+    @State private var sentenceEdited = false
     @State private var error: String?
     @State private var saveController = AppSaveController()
     @FocusState private var noteFocused: Bool
@@ -389,6 +392,7 @@ struct I4TicketSheet: View {
         initialCriteria = bits
         _criteria = State(initialValue: bits)
         _note = State(initialValue: slip?.note ?? "")
+        _sentence = State(initialValue: SlipRules.openingSentence(slip: slip, openingCriteria: bits))
     }
 
     private static let homeworkIndex = SlipRules.criteriaCount - 1
@@ -401,7 +405,7 @@ struct I4TicketSheet: View {
     private var homeworkIsManual: Bool { homeworkTouched || slip?.hwManual == true }
     /// Nothing to save when the slip exists and nothing was changed.
     private var hasUnsavedChanges: Bool {
-        slip == nil || criteria != initialCriteria || note != (slip?.note ?? "") || homeworkTouched
+        slip == nil || criteria != initialCriteria || note != (slip?.note ?? "") || homeworkTouched || sentenceEdited
     }
 
     private var badge: (label: String, tone: AppPill.Tone) {
@@ -542,6 +546,8 @@ struct I4TicketSheet: View {
             guard canWrite else { return }
             criteria = SlipRules.toggled(criteria, index: index)
             criteriaTouched = true
+            sentenceEdited = false
+            sentence = SlipRules.generatedSentence(criteria: criteria)
             if isHomework { homeworkTouched = true }
             error = nil
         } label: {
@@ -585,14 +591,12 @@ struct I4TicketSheet: View {
         .accessibilityAddTraits(met ? [.isSelected] : [])
     }
 
-    /// The sentence generated from the ticked criteria; it follows every tick and is never edited by hand.
-    private var generatedSentence: String { SlipRules.generatedSentence(criteria: criteria) }
-
-    /// Until a criterion is touched the slip shows its saved sentence (an old hand-written one included);
-    /// after that the sentence follows the ticks.
-    private var shownSentence: String {
-        if !criteriaTouched, let stored = slip?.comment, !isLegacy { return stored }
-        return generatedSentence
+    private var sentenceBinding: Binding<String> {
+        Binding(get: { sentence }, set: { newValue in
+            guard newValue != sentence else { return }
+            sentence = newValue
+            sentenceEdited = true
+        })
     }
 
     private var mergedComment: some View {
@@ -602,9 +606,11 @@ struct I4TicketSheet: View {
                 .foregroundStyle(AppColors.text)
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(shownSentence)
+                    TextField("", text: sentenceBinding, axis: .vertical)
                         .appText(AppText.chip)
                         .foregroundStyle(AppColors.text)
+                        .focused($noteFocused)
+                        .disabled(!canWrite)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("comment.sentence")
                 }
@@ -735,11 +741,9 @@ struct I4TicketSheet: View {
 
     private func save() async throws {
         let note = self.note
-        let grading: I4FeatureStore.SlipGrading = isLegacy
-            ? .legacy
-            : (slip != nil && !criteriaTouched
-               ? .noteOnly
-               : .criteria(criteria, comment: generatedSentence, hwManual: homeworkTouched ? true : nil))
+        let grading = SlipRules.grading(isLegacy: isLegacy, hasSlip: slip != nil, criteria: criteria,
+                                        criteriaTouched: criteriaTouched, homeworkTouched: homeworkTouched,
+                                        sentence: sentenceEdited && !sentence.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? sentence : nil)
         if let failure = await onSave(grading, note) {
             error = failure
             throw I4SaveFailure(message: failure)

@@ -30,6 +30,19 @@ struct PendingCommand: Codable, Sendable, Equatable, Identifiable {
         self.id = id; self.recordKey = recordKey; self.baseVersion = baseVersion
         self.kind = kind; self.payload = payload; self.createdAt = createdAt
     }
+    /// The command that takes the place of a never-sent `previous` for the same cell. A `slip.set` carries only the
+    /// fields its edit touched, so what the earlier edit set and this one does not mention is kept; a criteria edit
+    /// without a sentence drops the earlier hand-written sentence, because the server rewrites it from the criteria.
+    func merged(over previous: PendingCommand) -> PendingCommand {
+        guard kind == "slip.set", case .object(var fields) = payload, case .object(let earlier) = previous.payload else { return self }
+        var combined = earlier
+        for (name, value) in fields { combined[name] = value }
+        if fields["criteria"] != nil, fields["comment"] == nil { combined["comment"] = nil }
+        fields = combined
+        return PendingCommand(id: id, recordKey: recordKey, baseVersion: baseVersion, kind: kind,
+                              payload: .object(fields), createdAt: createdAt)
+    }
+
     /// An `attendance.set` queued before attendance had three states may say "excused" and carry an arrival time and
     /// a note. The server migrated "excused" to absent and no longer takes those two fields, so the command goes out
     /// as the absence it means instead of being rejected.

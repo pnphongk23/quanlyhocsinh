@@ -298,7 +298,7 @@ final class I4FeatureStore: ObservableObject {
 
     // MARK: - Session slips (comments)
 
-    /// What the teacher chose on a slip: the five criteria with an optional edited sentence, or only a note
+    /// What the teacher chose on a slip: the five criteria with an optional hand-written sentence (nil: generated), or only a note
     /// on an old three-star slip (those keep their stars and sentence).
     enum SlipGrading: Equatable {
         /// `hwManual` is nil when the teacher did not touch the homework criterion: the slip keeps its flag and
@@ -322,7 +322,8 @@ final class I4FeatureStore: ObservableObject {
         case .criteria(let criteria, let comment, let hwManual):
             let bits = criteria & SlipRules.allCriteria
             fields["criteria"] = .number(Double(bits))
-            fields["comment"] = comment.map { .string($0) } ?? .null
+            // No sentence is sent unless the teacher wrote one: the server writes it from the criteria.
+            if let comment { fields["comment"] = .string(comment) }
             if let hwManual { fields["hw_manual"] = .bool(hwManual) }
             row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: SlipRules.stars(criteria: bits),
                               criteria: bits, comment: comment, scale: SessionSlip.currentScale,

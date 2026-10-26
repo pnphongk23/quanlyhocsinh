@@ -63,6 +63,24 @@ enum SlipRules {
     }
 }
 
+extension SlipRules {
+    /// The sentence a slip sheet opens with: the saved one, unless the criteria it opens with differ from the saved
+    /// ones (last session's homework was re-graded), in which case it is written again from the criteria.
+    static func openingSentence(slip: SessionSlip?, openingCriteria: Int) -> String {
+        if let slip, !slip.isLegacy, let comment = slip.comment, slip.criteria == openingCriteria { return comment }
+        return generatedSentence(criteria: openingCriteria)
+    }
+
+    /// What a save sends. A toggled criterion sends the criteria alone, so the server rewrites the sentence; a
+    /// hand-written sentence goes with the criteria it was written for; a note-only change sends neither.
+    static func grading(isLegacy: Bool, hasSlip: Bool, criteria: Int, criteriaTouched: Bool, homeworkTouched: Bool,
+                        sentence: String?) -> I4FeatureStore.SlipGrading {
+        if isLegacy { return .legacy }
+        if hasSlip, !criteriaTouched, sentence == nil { return .noteOnly }
+        return .criteria(criteria, comment: sentence, hwManual: homeworkTouched ? true : nil)
+    }
+}
+
 /// Fixed Vietnamese text of the slip sheet kept next to the sentence phrases, outside the string tables.
 enum SlipSheetText {
     private static let criteria = ["Chú ý nghe giảng", "Ghi chép đầy đủ", "Tham gia sôi nổi", "Không mất trật tự",
@@ -79,5 +97,9 @@ enum SlipSheetText {
     }
     static let commentTitle = "Nhận xét gửi phụ huynh"
     static let notePlaceholder = "Thêm nhận xét riêng (không bắt buộc)…"
+    /// The line under the send-class dialog; the slip has one merged comment, so it says "nhận xét".
+    static func sendDialogNote(homeworkSuffix: String) -> String {
+        "Phụ huynh nhận **một thông báo** cho buổi này, gồm sao và nhận xét\(homeworkSuffix)"
+    }
     static let unsaved = "Chưa lưu"
 }

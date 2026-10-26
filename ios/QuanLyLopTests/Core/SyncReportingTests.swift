@@ -123,4 +123,52 @@ final class SyncReportingTests: XCTestCase {
         XCTAssertNil(fields["note"])
         XCTAssertEqual(fields["session_id"], .string("session"))
     }
+
+    private func slipCommand(_ fields: [String: JSONValue]) -> PendingCommand {
+        let key = RecordKey(entity: "slip", k1: "session", k2: "student").storageKey
+        var payload: [String: JSONValue] = ["session_id": .string("session"), "student_id": .string("student")]
+        payload.merge(fields) { _, new in new }
+        return PendingCommand(recordKey: key, baseVersion: 0, kind: "slip.set", payload: .object(payload), createdAt: now)
+    }
+
+    private func claimedSlipFields(_ edits: [[String: JSONValue]]) async throws -> [String: JSONValue] {
+        let store = try store()
+        for edit in edits {
+            let command = slipCommand(edit)
+            try await store.write(1, forKey: command.recordKey, enqueueing: command)
+        }
+        let claimed = try await store.claimBatch(now: now)
+        XCTAssertEqual(claimed.count, 1, "edits of one never-sent slip share one command")
+        guard case .object(let fields) = try XCTUnwrap(claimed.first).payload else { XCTFail("payload is not an object"); return [:] }
+        return fields
+    }
+
+    func testToggleAfterAHandEditedSentenceDropsTheOldSentenceFromTheQueuedCommand() async throws {
+        let fields = try await claimedSlipFields([
+            ["criteria": .number(31), "comment": .string("Con học rất tốt.")],
+            ["criteria": .number(15)]
+        ])
+        XCTAssertEqual(fields["criteria"], .number(15))
+        XCTAssertNil(fields["comment"], "the server rewrites the sentence from the criteria")
+    }
+
+    func testHandEditAfterAToggleKeepsTheCriteriaAndTheSentence() async throws {
+        let fields = try await claimedSlipFields([
+            ["criteria": .number(15)],
+            ["criteria": .number(15), "comment": .string("Con học rất tốt.")]
+        ])
+        XCTAssertEqual(fields["criteria"], .number(15))
+        XCTAssertEqual(fields["comment"], .string("Con học rất tốt."))
+    }
+
+    func testANoteOnlyEditKeepsTheQueuedCriteriaAndSentence() async throws {
+        let fields = try await claimedSlipFields([
+            ["criteria": .number(15), "comment": .string("Con học rất tốt."), "hw_manual": .bool(true)],
+            ["note": .string("Nhắc con ghi bài")]
+        ])
+        XCTAssertEqual(fields["criteria"], .number(15))
+        XCTAssertEqual(fields["comment"], .string("Con học rất tốt."))
+        XCTAssertEqual(fields["hw_manual"], .bool(true))
+        XCTAssertEqual(fields["note"], .string("Nhắc con ghi bài"))
+    }
 }
