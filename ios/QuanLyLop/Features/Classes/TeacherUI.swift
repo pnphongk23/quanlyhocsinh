@@ -39,6 +39,18 @@ enum TeacherMetrics {
     static let sheetSectionGap: CGFloat = 8
     static let criterionRowGap: CGFloat = 12
     static let commentBoxPadding: CGFloat = 12
+    /// Slip sheet grid (`design/slip-sheet-v4`): gap between blocks, score box padding and star size,
+    /// criterion chip padding and tick, merged comment box minimum height for the typed part, unsaved dot.
+    static let slipSheetGap: CGFloat = 16
+    static let slipScorePaddingVertical: CGFloat = 8
+    static let slipScorePaddingHorizontal: CGFloat = 12
+    static let slipScoreStarSize: CGFloat = 24
+    static let slipChipGap: CGFloat = 8
+    static let slipChipPaddingHorizontal: CGFloat = 12
+    static let slipChipTickSize: CGFloat = 20
+    static let slipChipTickGlyphSize: CGFloat = 12
+    static let slipNoteMinHeight: CGFloat = 84
+    static let slipUnsavedDotSize: CGFloat = 8
 }
 
 /// Prototype date labels (`src/shared/format/index.ts`) in the same `vi-VN` shapes.
