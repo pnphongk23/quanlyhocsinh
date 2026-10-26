@@ -174,7 +174,19 @@ actor SQLiteStore: LocalStore {
     func write<Value: Encodable & Sendable>(_ value: Value, forKey key: String, enqueueing command: PendingCommand? = nil) throws {
         let json = try encode(value)
         let tree = try JSONDecoder().decode(JSONValue.self, from: Data(json.utf8))
+        try transaction { try writeRecord(json: json, tree: tree, key: key, command: command) }
+    }
+    /// Writes every record with its command in one transaction: all of them are saved, or none.
+    func writeAll<Value: Encodable & Sendable>(_ entries: [(value: Value, key: String, command: PendingCommand)]) throws {
+        let encoded = try entries.map { entry -> (json: String, tree: JSONValue, key: String, command: PendingCommand) in
+            let json = try encode(entry.value)
+            return (json, try JSONDecoder().decode(JSONValue.self, from: Data(json.utf8)), entry.key, entry.command)
+        }
         try transaction {
+            for entry in encoded { try writeRecord(json: entry.json, tree: entry.tree, key: entry.key, command: entry.command) }
+        }
+    }
+    private func writeRecord(json: String, tree: JSONValue, key: String, command: PendingCommand?) throws {
             if let command {
                 guard command.recordKey == key, command.baseVersion >= 0 else { throw StoreFailure(code: SQLITE_MISMATCH) }
                 if try !db.execute("SELECT id FROM commands WHERE scope=? AND id=?", [scope.storageKey, command.id.uuidString]).isEmpty { return }
@@ -209,7 +221,6 @@ actor SQLiteStore: LocalStore {
                 try db.execute("DELETE FROM commands WHERE scope=? AND record_key=? AND kind=? AND state='rejected'",
                                [scope.storageKey,key,command.kind])
             }
-        }
     }
     func queuedCommands() throws -> [QueuedCommand] {
         try db.execute("SELECT * FROM commands WHERE scope=? ORDER BY created_at,seq", [scope.storageKey]).map {

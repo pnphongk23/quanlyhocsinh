@@ -313,7 +313,20 @@ final class I4FeatureStore: ObservableObject {
     }
 
     func saveSlip(sessionID: String, student: Student, grading: SlipGrading, note: String) async -> String? {
-        guard let store else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+        guard let store, let write = slipWrite(sessionID: sessionID, student: student, grading: grading, note: note)
+        else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+        do {
+            try await store.write(write.row, forKey: write.command.recordKey, enqueueing: write.command)
+            await syncIfNeeded()
+            await refresh()
+            return nil
+        } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+    }
+
+    /// The slip row and the `slip.set` that save `grading` on top of the slip as currently loaded; nil when the
+    /// grading needs a slip (or stars) the student does not have.
+    private func slipWrite(sessionID: String, student: Student, grading: SlipGrading,
+                           note: String) -> (row: SessionSlip, command: PendingCommand)? {
         let old = slip(sessionID: sessionID, studentID: student.id)
         var fields: [String: JSONValue] = [
             "session_id": .string(sessionID),
@@ -334,12 +347,12 @@ final class I4FeatureStore: ObservableObject {
                               status: old?.status ?? .draft, sentAt: old?.sentAt,
                               version: old?.version ?? 0, updatedAt: Self.now)
         case .noteOnly:
-            guard let old else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+            guard let old else { return nil }
             row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: old.stars, criteria: old.criteria,
                               comment: old.comment, scale: old.scale, hwManual: old.hwManual, note: note,
                               status: old.status, sentAt: old.sentAt, version: old.version, updatedAt: Self.now)
         case .legacy:
-            guard let old, let stars = old.stars else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+            guard let old, let stars = old.stars else { return nil }
             fields["stars"] = .number(Double(stars))
             row = SessionSlip(sessionId: sessionID, studentId: student.id, stars: stars, criteria: old.criteria,
                               comment: old.comment, scale: old.scale, hwManual: old.hwManual, note: note, status: old.status,
@@ -347,29 +360,36 @@ final class I4FeatureStore: ObservableObject {
         }
         let command = PendingCommand(recordKey: key("slip", sessionID, student.id),
                                      baseVersion: old?.version ?? 0, kind: "slip.set", payload: object(fields))
+        return (row, command)
+    }
+
+    /// Saves every default slip in one go: the list is read once, each plan is checked, and all the slips and their
+    /// `slip.set` commands are written in one transaction (so offline they queue like any edit) before a single sync.
+    /// The criteria are as given, the sentence generated from them, and the homework flag back to following the grades.
+    /// A slip that was sent, or is being sent right now, is left alone: the state is read again just before the
+    /// write, so a plan made from an older view of the list never overwrites it.
+    func saveDefaultSlips(sessionID: String, slips plans: [CommentsRules.DefaultSlip]) async -> String? {
+        guard let store else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+        guard !sendingSessionIDs.contains(sessionID) else { return nil }
+        await refresh()
+        guard !sendingSessionIDs.contains(sessionID) else { return nil }
+        var entries: [(value: SessionSlip, key: String, command: PendingCommand)] = []
+        for plan in plans {
+            guard slip(sessionID: sessionID, studentID: plan.studentID)?.status != .sent,
+                  let student = students.first(where: { $0.id == plan.studentID }) else { continue }
+            guard let write = slipWrite(sessionID: sessionID, student: student,
+                                        grading: .criteria(plan.criteria, comment: plan.comment, hwManual: false),
+                                        note: plan.note)
+            else { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+            entries.append((write.row, write.command.recordKey, write.command))
+        }
+        guard !entries.isEmpty else { return nil }
         do {
-            try await store.write(row, forKey: command.recordKey, enqueueing: command)
+            try await store.writeAll(entries)
             await syncIfNeeded()
             await refresh()
             return nil
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
-    }
-
-    /// Writes each default slip through `saveSlip`, so it queues offline like any edit: the criteria as given, the
-    /// sentence generated from them, and the homework flag back to following the grades.
-    /// A slip that was sent, or is being sent right now, is left alone: each one is read again just before it is
-    /// written, so a plan made from an older view of the list never overwrites it.
-    func saveDefaultSlips(sessionID: String, slips: [CommentsRules.DefaultSlip]) async -> String? {
-        for plan in slips {
-            guard !sendingSessionIDs.contains(sessionID) else { return nil }
-            await refresh()
-            guard slip(sessionID: sessionID, studentID: plan.studentID)?.status != .sent,
-                  let student = students.first(where: { $0.id == plan.studentID }) else { continue }
-            if let failure = await saveSlip(sessionID: sessionID, student: student,
-                                            grading: .criteria(plan.criteria, comment: plan.comment, hwManual: false),
-                                            note: plan.note) { return failure }
-        }
-        return nil
     }
 
     enum SendOutcome: Equatable {

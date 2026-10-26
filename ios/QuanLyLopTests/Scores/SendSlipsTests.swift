@@ -296,6 +296,63 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertFalse(pending.contains { $0.kind == "slip.set" }, "nothing is written while the send waits for the server")
     }
 
+    /// 20 students with no slip, written in one go.
+    private func twentyStudentRoster(api: APIClient) async throws -> (SQLiteStore, I4FeatureStore, [CommentsRules.DefaultSlip]) {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        let ids = (1...20).map { "s\($0)" }
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "fixture",
+                                       upserts: ["student": ids.map { studentRecord($0) }], deleted: []))
+        let data = I4FeatureStore(store: store, api: api)
+        await data.refresh()
+        let plans = ids.map { CommentsRules.DefaultSlip(studentID: $0, criteria: SlipRules.allCriteria, note: "") }
+        return (store, data, plans)
+    }
+
+    func testAssignAllForTwentyStudentsPushesAndPullsOnce() async throws {
+        let api = CountingAPI()
+        let (store, data, plans) = try await twentyStudentRoster(api: api)
+
+        let failure = await data.saveDefaultSlips(sessionID: "session", slips: plans)
+
+        XCTAssertNil(failure)
+        XCTAssertEqual(api.pushRequests, 1, "all 20 slip.set go in one push request")
+        XCTAssertEqual(api.pushedCommandCount, 20)
+        XCTAssertLessThanOrEqual(api.pullRequests, 2, "one pull after the push and the closing pull, not one pair per student")
+        let pending = try await store.pendingCommands()
+        XCTAssertTrue(pending.isEmpty)
+        XCTAssertEqual(plans.compactMap { data.slip(sessionID: "session", studentID: $0.studentID) }.count, 20)
+    }
+
+    func testAssignAllOfflineQueuesAllTwentyInTheOutbox() async throws {
+        let (store, data, plans) = try await twentyStudentRoster(api: SlipPushAPI(mode: .offline))
+
+        let failure = await data.saveDefaultSlips(sessionID: "session", slips: plans)
+
+        XCTAssertNil(failure)
+        let commands = try await store.pendingCommands().filter { $0.kind == "slip.set" }
+        XCTAssertEqual(commands.count, 20)
+        XCTAssertEqual(plans.compactMap { data.slip(sessionID: "session", studentID: $0.studentID) }.count, 20)
+    }
+
+    func testAFailedBatchWriteLeavesNoSlipAndNoCommand() async throws {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        func entry(_ student: String, key: String) -> (value: SessionSlip, key: String, command: PendingCommand) {
+            let row = SessionSlip(sessionId: "session", studentId: student, stars: 5, criteria: 31, note: "", status: .draft,
+                                  sentAt: nil, version: 0, updatedAt: "2026-10-25T10:00:00.000Z")
+            let recordKey = "[\"slip\",\"session\",\"\(student)\"]"
+            return (row, key.isEmpty ? recordKey : key,
+                    PendingCommand(recordKey: recordKey, baseVersion: 0, kind: "slip.set", payload: .object([:])))
+        }
+        do {
+            try await store.writeAll([entry("a", key: ""), entry("b", key: "[\"slip\",\"x\",\"other\"]")])
+            XCTFail("a command whose record key differs from the entry's must fail the batch")
+        } catch {}
+        let pending = try await store.pendingCommands()
+        XCTAssertTrue(pending.isEmpty, "the first entry is rolled back with the failing second one")
+        let records = try await store.records(SessionSlip.self, entity: "slip")
+        XCTAssertTrue(records.isEmpty)
+    }
+
     func testSkippedSlipsStayUnsentAndAreCounted() async throws {
         let store = try await seededStore()
         let api = SlipPushAPI(mode: .sentOnlyA)
@@ -432,6 +489,38 @@ private final class SlipPushAPI: APIClient, @unchecked Sendable {
             }
             json = "{\"epoch\":1,\"cursor\":1,\"results\":[{\"id\":\"\(id)\",\"status\":\"applied\",\"sent\":\(sent),\"skipped\":\(skipped)}]}"
         case "sync/pull":
+            json = "{\"cursor\":1,\"epoch\":1,\"has_more\":false,\"server_time\":\"fixture\",\"upserts\":{},\"deleted\":[]}"
+        default:
+            throw APIFailure.offline
+        }
+        return try WireJSON.decoder().decode(type, from: Data(json.utf8))
+    }
+}
+
+
+/// Answers every pushed command as applied and counts the sync requests.
+private final class CountingAPI: APIClient, @unchecked Sendable {
+    let baseURL = URL(string: "https://fixture.invalid/v1")!
+    private let lock = NSLock()
+    private var pushes = 0
+    private var pulls = 0
+    private var commandCount = 0
+
+    var pushRequests: Int { lock.withLock { pushes } }
+    var pullRequests: Int { lock.withLock { pulls } }
+    var pushedCommandCount: Int { lock.withLock { commandCount } }
+
+    func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+        let json: String
+        switch endpoint.path {
+        case "sync/push":
+            let body = try JSONSerialization.jsonObject(with: endpoint.body ?? Data()) as? [String: Any]
+            let ids = (body?["commands"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
+            lock.withLock { pushes += 1; commandCount += ids.count }
+            let results = ids.map { "{\"id\":\"\($0)\",\"status\":\"applied\",\"version\":1}" }.joined(separator: ",")
+            json = "{\"epoch\":1,\"cursor\":1,\"results\":[\(results)]}"
+        case "sync/pull":
+            lock.withLock { pulls += 1 }
             json = "{\"cursor\":1,\"epoch\":1,\"has_more\":false,\"server_time\":\"fixture\",\"upserts\":{},\"deleted\":[]}"
         default:
             throw APIFailure.offline
