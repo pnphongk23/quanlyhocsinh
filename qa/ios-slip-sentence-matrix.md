@@ -1,6 +1,6 @@
 # Ma trận câu nhận xét tự sinh (web, 2026-10-27)
 
-Nguồn: `qa/maestro/web/slip-sentence-matrix.mjs` trên staging (bundle index-BjTshgny.js), phiếu nháp HS1 lớp QA-iOS-D. Mặt nạ: bit 1..5 theo thứ tự tiêu chí, bit 5 là Hoàn thành BTVN. Dùng để so với iOS ở TC-CMT-019 (iOS chưa đối chiếu, cần lượt simulator).
+Nguồn: `qa/maestro/web/slip-sentence-matrix.mjs` trên staging (bundle index-BjTshgny.js), phiếu nháp HS1 lớp QA-iOS-D. Mặt nạ: bit 1..5 theo thứ tự tiêu chí, bit 5 là Hoàn thành BTVN. Dùng để so với iOS ở TC-CMT-019 .
 
 | Mặt nạ | Sao | Câu web |
 |---|---|---|
@@ -14,3 +14,5 @@ Nguồn: `qa/maestro/web/slip-sentence-matrix.mjs` trên staging (bundle index-B
 | 11110 | 4/5 | Con chú ý nghe giảng, ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp và ngồi học ngoan ngoãn, không mất trật tự, nhưng chưa hoàn thành bài tập về nhà. |
 
 Kết quả web: ba ví dụ trong spec (11111, 11101, 00000) trùng khít từng ký tự; năm mặt nạ còn lại theo đúng quy tắc nối (đạt trước, ", nhưng" rồi chưa đạt, hai mục cuối nối "và", dấu chấm cuối).
+
+Kết quả iOS (2026-10-27, build có bản sửa IOS-005): cả 8 mặt nạ (11111 trước đó, 11101, 00000, 11000, 00001, 10101, 01110, 11110) trùng từng ký tự và số sao với bảng web.

@@ -97,8 +97,9 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 
 - Lượt 67e9e31, tiếp: sửa buổi lẻ hôm nay (27/10 18:00) sang ngày 30/10 giờ 18:00, nơi đã có một buổi lẻ khác của cùng lớp → sheet báo "Lỗi lưu — vui lòng thử lại" (ảnh qa-reg2/02-collide-result.png). Mong đợi: thông báo nêu rõ đã có buổi vào ngày giờ đó (server trả `session_exists`), sheet giữ nguyên để đổi giờ/ngày. Mức độ: trung bình (đây rất có thể là trường hợp người dùng đã gặp). Gửi Lỗ Túc.
 
-## IOS-005 — Tạo bài kiểm tra báo "Đã lưu" nhưng bài không xuất hiện, máy chủ không nhận — Mở
+## IOS-005 — Tạo bài kiểm tra báo "Đã lưu" nhưng bài không xuất hiện, máy chủ không nhận — Đã sửa (kiểm lại 2026-10-27)
 - Lớp QA-iOS-E, Bài kiểm tra → Bài mới → nhập tên (chỉ tên và ngày, đúng spec) → "Tạo bài và nhập điểm": nút chuyển "Đã lưu", màn hình tạo giữ nguyên hơn 10 s rồi về tab; tab Bài kiểm tra và tab Điểm vẫn "Chưa có bài kiểm tra", không mở màn nhập điểm.
 - Lặp lại 4 lần trên 63168fb (3 lần) và bản /tmp/lt-ios-build-fix (1 lần); GET /classes/{id}/tests vẫn rỗng sau hơn 2 phút. Gửi thẳng lệnh test.create bằng API cùng tài khoản thì applied, nên lỗi nằm ở app (lệnh không tới máy chủ hoặc bị bỏ). Các lệnh khác (BTVN, phiếu, huỷ buổi) đồng bộ bình thường.
 - Ảnh: shots/qa-reg6/15, 16, 17, 19, 21. Chặn TST-001/003/004/005/008/009 trên iOS.
+- Kiểm lại 2026-10-27 trên bản sửa: tạo QA-KT1 ở lớp QA-iOS-C, server có bài ở đúng lớp, vào màn Điểm số sau vài giây. Ảnh: shots/qa-reg7/04–07.
 
