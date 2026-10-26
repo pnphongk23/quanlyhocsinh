@@ -85,6 +85,8 @@ describe('attendance read API', () => {
       const unchanged = await db.prepare('SELECT status, note, late_at, version FROM attendance WHERE session_id=? AND student_id=?')
         .bind(firstSession, firstStudent).first<any>();
       expect(unchanged).toMatchObject({ status: 'late', note: 'Arrived late', late_at: '18:12', version: 1 });
+      await expect(db.prepare('UPDATE attendance SET class_id=? WHERE session_id=? AND student_id=?')
+        .bind(crypto.randomUUID(), firstSession, firstStudent).run()).rejects.toThrow(/immutable_keys/);
 
       const pushed = await pushCommands(owner.token, owner.membershipId, [syncCommand('attendance.set',
         { session_id: firstSession, student_id: firstStudent, status: 'late', note: 'Ignored', late_at: '20:20' }, 1)]);

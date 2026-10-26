@@ -25,6 +25,13 @@ DROP TABLE attendance;
 ALTER TABLE attendance_new RENAME TO attendance;
 CREATE INDEX attendance_student ON attendance(student_id, session_id);
 
+CREATE TRIGGER attendance_immutable_keys
+BEFORE UPDATE OF class_id ON attendance
+WHEN NEW.class_id IS NOT OLD.class_id
+BEGIN
+  SELECT RAISE(ABORT, 'immutable_keys');
+END;
+
 CREATE TRIGGER attendance_history_ai
 AFTER UPDATE ON attendance
 WHEN OLD.status IS NOT NEW.status OR OLD.note IS NOT NEW.note OR OLD.late_at IS NOT NEW.late_at
