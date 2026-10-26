@@ -31,4 +31,5 @@ Chỉ tài liệu. `Tokens.swift` (mvp-ios `ios/QuanLyLop/Core/DesignSystem/Toke
 | `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms | Chưa có | Đề xuất `AppMotion.loadingMinimum`, `AppMotion.successHold` |
 | `--empty-mascot` 96, `--empty-mascot-compact` 56 | Chưa có | Đề xuất `AppMetrics.emptyMascot`, `emptyMascotCompact` |
 | `--criteria-check-size` 20, `--criteria-check-icon-size` 12, `--comment-star-size` 24 | `TeacherMetrics.slipChipTickSize`, `slipChipTickGlyphSize`, `slipScoreStarSize` | Khớp (sheet phiếu, `Features/Classes/TeacherUI.swift`) |
+| `--dialog-action-gap` 8 | `TeacherMetrics.dialogActionGap` | Khớp (hộp xác nhận, `Features/Classes/TeacherUI.swift`) |
 | `--grid-*` (cột bảng điểm, bước kéo) | Không áp dụng | Chỉ web desktop |

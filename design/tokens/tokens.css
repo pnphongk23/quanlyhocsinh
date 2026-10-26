@@ -105,6 +105,7 @@
   --criteria-check-size: 20px;
   --criteria-check-icon-size: 12px;
   --comment-star-size: 24px;
+  --dialog-action-gap: 8px; /* giữa các nút trong hộp xác nhận */
   --control-h: 52px;        /* ô nhập */
   --button-h-sm: 44px;
   --button-h-md: 48px;
