@@ -51,15 +51,31 @@ extension TeacherScreenshotTests {
                                    isMakeup: false, status: .held, note: nil, version: 1)
         let student = Student(id: "a", classId: "c", name: "Nguyễn Vũ Gia Hân", parentPhone: nil,
                               enrolledAt: "2026-09-01", leftAt: nil, status: .active, version: 1)
-        let slip = SessionSlip(sessionId: "s", studentId: "a", stars: 4, criteria: 0b10111, note: "", status: .draft,
-                               sentAt: nil, version: 1, updatedAt: "2026-10-25T10:00:00.000Z")
+        func slip(_ criteria: Int, hwManual: Bool = false, note: String = "") -> SessionSlip {
+            SessionSlip(sessionId: "s", studentId: "a", stars: SlipRules.stars(criteria: criteria), criteria: criteria,
+                        hwManual: hwManual, note: note, status: .draft, sentAt: nil, version: 1,
+                        updatedAt: "2026-10-25T10:00:00.000Z")
+        }
+        let previousPart = HomeworkSection(id: "p", classId: "c", sessionId: "before", kind: .vocabulary, title: "Từ vựng",
+                                           description: "", version: 1)
+        let notDone = HomeworkGrade(sectionId: "p", studentId: "a", level: .notDone, version: 1,
+                                    updatedAt: "2026-10-25T10:00:00.000Z")
+        let longNote = (1...6).map { "Dòng \($0): em tập trung hơn ở phần nghe, cần luyện thêm phát âm cuối từ." }
+            .joined(separator: "\n")
+        let states: [(name: String, slip: SessionSlip, sections: [HomeworkSection], grades: [HomeworkGrade])] = [
+            ("slip-5-stars", slip(0b11111, hwManual: true), [], []),
+            ("slip-4-stars-missing-order", slip(0b10111, hwManual: true), [], []),
+            ("slip-0-stars", slip(0, hwManual: true), [], []),
+            ("slip-homework-auto", slip(0b11111), [previousPart], [notDone]),
+            ("slip-long-note", slip(0b10111, hwManual: true, note: longNote), [], [])
+        ]
         let folder = URL(fileURLWithPath: directory, isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        for (name, current) in [("slip-sheet-4-stars", slip), ("slip-sheet-new", nil)] {
-            let sheet = I4TicketSheet(session: session, student: student, slip: current, previousDate: nil, sections: [],
-                                      grades: [], canWrite: true, saveStatusSource: nil, onClose: {}, onGoHomework: {},
-                                      onSave: { _, _ in nil })
-            try Self.snapshot(sheet, to: folder.appendingPathComponent("\(name).png"))
+        for state in states {
+            let sheet = I4TicketSheet(session: session, student: student, slip: state.slip, previousDate: nil,
+                                      sections: state.sections, grades: state.grades, canWrite: true,
+                                      saveStatusSource: nil, onClose: {}, onGoHomework: {}, onSave: { _, _ in nil })
+            try Self.snapshot(sheet, to: folder.appendingPathComponent("\(state.name).png"))
         }
     }
 
