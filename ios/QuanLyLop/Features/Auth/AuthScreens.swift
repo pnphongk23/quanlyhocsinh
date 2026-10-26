@@ -39,6 +39,12 @@ struct AuthLoginView: View {
         }
     }
 
+    /// Return on the keyboard signs in, so the soft keyboard never hides the only way to submit.
+    private func submitLogin() {
+        guard !model.isLocked else { return }
+        Task { _ = await loginController.submit { try await model.login(phone: model.loginPhone, password: password) } }
+    }
+
     private var passwordStep: some View {
         Group {
             AuthLoginPhoneField(label: String(localized: "feature.auth.so.ien.thoai"),
@@ -53,7 +59,8 @@ struct AuthLoginView: View {
             AuthPasswordField(label: String(localized: "feature.auth.mat.khau"), value: $password,
                               hasError: model.message != nil && !model.isLocked,
                               disabled: model.isLocked,
-                              identifier: "login.password")
+                              identifier: "login.password",
+                              submitLabel: .go, onSubmit: submitLogin)
             HStack {
                 Spacer(minLength: 0)
                 Button(String(localized: "feature.auth.quen.mat.khau")) {

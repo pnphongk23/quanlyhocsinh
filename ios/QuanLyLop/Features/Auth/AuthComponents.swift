@@ -417,6 +417,9 @@ struct AuthPasswordField: View {
     var errorText: String? = nil
     var disabled = false
     var identifier: String? = nil
+    /// Return key label and action; unset keeps the keyboard default.
+    var submitLabel: SubmitLabel = .done
+    var onSubmit: (() -> Void)? = nil
     /// When set, the password-strength bars render under the field (`hint` in the prototype).
     var strengthPassword: String? = nil
     @State private var shown = false
@@ -430,7 +433,9 @@ struct AuthPasswordField: View {
                     if shown {
                         TextField("", text: $value).textContentType(autoComplete)
                     } else {
+                        // Typed dots were invisible with the bundled font (likely no bullet glyph); the system font draws them.
                         SecureField("", text: $value).textContentType(autoComplete)
+                            .font(.system(size: AuthText.input.size))
                     }
                 }
                 .appText(AuthText.input)
@@ -439,6 +444,8 @@ struct AuthPasswordField: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .focused($focused)
+                .submitLabel(submitLabel)
+                .onSubmit { onSubmit?() }
                 .disabled(disabled)
                 .padding(.leading, 16)
                 .padding(.trailing, 8)
