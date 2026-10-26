@@ -279,6 +279,8 @@ describe("phiếu nhận xét: chỉnh note và tiêu chí", () => {
     );
 
     const note = await screen.findByLabelText(/Thêm nhận xét riêng/) as HTMLTextAreaElement;
+    const heading = screen.getByRole("heading", { name: "Trần Gia Bảo" });
+    expect(heading).toHaveFocus();
     fireEvent.focus(note);
     fireEvent.blur(note);
 
@@ -304,6 +306,24 @@ describe("phiếu nhận xét: chỉnh note và tiêu chí", () => {
     const input = mocks.saveSessionCommentDurable.mock.calls[0]?.[0];
     expect(input).toMatchObject({ sessionId: "6a-session-6", studentId: "6a-student-1", note: "Ghi chú mới." });
     expect(input).not.toHaveProperty("criteria");
+  });
+
+  it("phiếu mới chuyển sang trạng thái đã lưu sau khi ghi bền thành công", async () => {
+    const seed = createSeed();
+    seed.comments = seed.comments.filter((comment) => comment.sessionId !== "6a-session-6" || comment.studentId !== "6a-student-1");
+    replaceStore(seed);
+    mocks.saveSessionCommentDurable.mockResolvedValue({});
+    inRouter(
+      <CommentsPanel classId="6a" sessionId="6a-session-6" />,
+      "/lop/:classId/buoi-hoc/:sessionId",
+      "/lop/6a/buoi-hoc/6a-session-6?tab=nhan-xet&student=6a-student-1",
+    );
+
+    fireEvent.change(await screen.findByLabelText(/Thêm nhận xét riêng/), { target: { value: "Ghi chú mới." } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    const status = screen.getByTestId("slip-save-status");
+    await waitFor(() => expect(status).toHaveAttribute("data-save-state", "saved"));
+    expect(status).toHaveTextContent("Đã lưu");
   });
 
   it("đổi tiêu chí thay câu cũ và giữ note đã lưu", async () => {

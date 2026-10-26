@@ -192,8 +192,8 @@ export default function TicketEditor({
         </p>
       )}
       {canWrite && <div className={s.editorFooter}>
-        <span className={`${s.autosaveStatus} ${unsaved || saving ? s.autosavePending : s.autosaveSaved}`} data-testid="slip-save-status" aria-live="polite">
-          {saving ? "Đang lưu" : unsaved ? "Chưa lưu" : "Đã lưu trên máy"}
+        <span className={`${s.autosaveStatus} ${error ? s.autosaveError : unsaved || saving ? s.autosavePending : s.autosaveSaved}`} data-testid="slip-save-status" data-save-state={error ? "error" : saving ? "saving" : unsaved ? "pending" : "saved"} aria-live="polite">
+          {error ? "Lỗi lưu" : saving ? "Đang lưu" : unsaved ? "Chưa lưu" : "Đã lưu trên máy"}
         </span>
       </div>}
       {row.status === "sent" && <p className={s.savedNote}>Phiếu đã gửi · thay đổi được lưu ngay</p>}

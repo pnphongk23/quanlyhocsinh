@@ -298,6 +298,10 @@
   color: var(--color-success);
 }
 
+.saveStatusError {
+  color: var(--color-error);
+}
+
 .saveStatus::before {
   width: var(--space-8);
   height: var(--space-8);

@@ -138,6 +138,10 @@
   color: var(--color-success);
 }
 
+.autosaveError {
+  color: var(--color-error);
+}
+
 .avatar {
   display: grid;
   place-items: center;

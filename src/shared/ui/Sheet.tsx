@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { Button } from "./Button";
 import { deferDialogClose } from "./deferDialogClose";
 import { useAnimatedDialog } from "./useAnimatedDialog";
@@ -22,6 +22,8 @@ export interface SheetProps {
    * sheet nhận xét có avatar, tên em và nhãn trạng thái phiếu (ảnh 41/42).
    */
   header?: ReactNode;
+  /** Focus target after the native dialog opens, before keyboard navigation begins. */
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -36,10 +38,14 @@ export function Sheet({
   beforeClose,
   footer,
   header,
+  initialFocusRef,
 }: SheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const animatedClose = useAnimatedDialog(ref, open);
   const requestClose = useGuardedClose(animatedClose, beforeClose);
+  useEffect(() => {
+    if (open) initialFocusRef?.current?.focus();
+  }, [open, initialFocusRef]);
   const close = () => requestClose(onClose);
   return (
     <dialog

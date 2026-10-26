@@ -117,6 +117,7 @@ export default function CommentTicketSheet({
     },
   });
   const saved = useSavedPeek();
+  const sheetTitleRef = useRef<HTMLHeadingElement>(null);
   const closeNow = () => {
     saved.cancel();
     clearDraft(session.id, row.student.id);
@@ -199,8 +200,8 @@ export default function CommentTicketSheet({
 
   const footer = readOnly ? undefined : (
     <div className={s.saveFooter}>
-      <span className={`${s.saveStatus} ${action.dirty || !row.comment ? s.saveStatusPending : s.saveStatusSaved}`} data-testid="slip-save-status" aria-live="polite">
-        {action.saving ? "Đang lưu" : action.justSaved ? "Đã lưu" : action.dirty ? "Chưa lưu" : "Đã lưu"}
+      <span className={`${s.saveStatus} ${action.error ? s.saveStatusError : action.saving || action.dirty ? s.saveStatusPending : s.saveStatusSaved}`} data-testid="slip-save-status" data-save-state={action.error ? "error" : action.saving ? "saving" : action.dirty ? "pending" : "saved"} aria-live="polite">
+        {action.error ? "Lỗi lưu" : action.saving ? "Đang lưu" : action.justSaved ? "Đã lưu" : action.dirty ? "Chưa lưu" : "Đã lưu"}
       </span>
       <Button size="lg" data-testid="slip-save-button" onClick={save} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
         Lưu
@@ -216,7 +217,7 @@ export default function CommentTicketSheet({
           {initialsOf(row.student.name)}
         </span>
         <div className={s.sheetTitleText}>
-          <h2 className={s.sheetName}>{row.student.name}</h2>
+          <h2 ref={sheetTitleRef} className={s.sheetName} tabIndex={-1}>{row.student.name}</h2>
             <p className={s.sheetSub}>{sessionPrefix(session)}</p>
         </div>
           <Pill tone={pillTone(badge)} data-testid="slip-ticket-status">{row.status === "sent" ? "Đã gửi" : "Chưa gửi"}</Pill>
@@ -249,6 +250,7 @@ export default function CommentTicketSheet({
         title={`Nhận xét ${row.student.name}`}
         header={header}
         footer={footer}
+        initialFocusRef={sheetTitleRef}
       >
         {body}
       </Sheet>
