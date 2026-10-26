@@ -230,7 +230,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Hệ thống: phân quyền ở máy chủ, thông báo trong app và push bằng FCM (đã chốt 2026-10-21). Lược đồ dữ liệu có sẵn workspace, role, ma trận quyền và gán lớp ngay từ đầu (role mặc định cài sẵn); màn quản lý role và nhân sự làm sau.
 - Offline cho điểm danh, nhập điểm, tạo bài kiểm tra, soạn phiếu nhận xét buổi, giao và chấm BTVN (hàng đợi ghi, đồng bộ lại, chỉ báo khi lỗi).
 - Chạy hai client dùng chung backend và API: app iOS native (SwiftUI) và PWA/web mobile; giao diện tiếng Việt. Android sau.
-- Bản web desktop cho giáo viên (đã chốt 2026-10-21): phần Chi tiết lớp gồm các tab Buổi học (điểm danh, nhận xét, bài tập về nhà), Bài kiểm tra, Điểm, Học sinh, Báo cáo, kèm đăng nhập và đăng ký workspace; deploy web lên Cloudflare Pages staging.
+- Bản web desktop cho giáo viên (đã chốt 2026-10-21): phần Chi tiết lớp gồm các tab Buổi học (điểm danh, nhận xét, bài tập về nhà), Bài kiểm tra, Điểm, Học sinh, Báo cáo, kèm đăng nhập và đăng ký workspace; thanh bên desktop có mục Lịch (giữa Lớp và Cài đặt), mở màn Lịch như trên mobile, bố cục theo desktop (đã chốt 2026-10-26); deploy web lên Cloudflare Pages staging.
 - Deploy: Cloudflare, chỉ môi trường staging; chưa đụng production (đã chốt 2026-10-21).
 - Mascot Mít là lớp trang trí bổ sung cho đăng nhập, màn trống, thành công và lỗi; không đổi luồng hay nghiệp vụ. Chi tiết: `plans/20261021-mvp/design/mascot-v2/` (đã chốt 2026-10-22). Mỗi mức sao 0–5 của phiếu nhận xét có một dáng Mít riêng (thêm dáng 0, 4, 5 sao; đã chốt 2026-10-25).
 
