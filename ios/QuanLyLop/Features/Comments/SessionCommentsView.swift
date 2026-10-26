@@ -420,6 +420,8 @@ struct I4TicketSheet: View {
     /// The sentence shown in the box: the generated one, or the teacher's own once typed over.
     @State private var sentence: String
     @State private var sentenceEdited = false
+    /// What the last successful save wrote; the sheet stays open after saving, so "unsaved" is measured from here.
+    @State private var lastSaved: SlipDraft?
     @State private var error: String?
     @State private var saveController = AppSaveController()
     @FocusState private var noteFocused: Bool
@@ -457,7 +459,13 @@ struct I4TicketSheet: View {
     private var homeworkIsManual: Bool { homeworkTouched || slip?.hwManual == true }
     /// Nothing to save when the slip exists and nothing was changed.
     private var hasUnsavedChanges: Bool {
-        slip == nil || criteria != initialCriteria || note != (slip?.note ?? "") || homeworkTouched || sentenceEdited
+        SlipRules.hasUnsavedChanges(
+            hasSlip: slip != nil, current: draft,
+            opening: SlipDraft(criteria: initialCriteria, note: slip?.note ?? "", homeworkTouched: false, sentence: nil),
+            lastSaved: lastSaved)
+    }
+    private var draft: SlipDraft {
+        SlipDraft(criteria: criteria, note: note, homeworkTouched: homeworkTouched, sentence: sentenceEdited ? sentence : nil)
     }
 
     private var badge: (label: String, tone: AppPill.Tone) {
@@ -793,6 +801,7 @@ struct I4TicketSheet: View {
 
     private func save() async throws {
         let note = self.note
+        let saving = draft
         let grading = SlipRules.grading(isLegacy: isLegacy, hasSlip: slip != nil, criteria: criteria,
                                         criteriaTouched: criteriaTouched || criteria != slip?.criteria, homeworkTouched: homeworkTouched,
                                         sentence: sentenceEdited && !sentence.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? sentence : nil)
@@ -800,6 +809,7 @@ struct I4TicketSheet: View {
             error = failure
             throw I4SaveFailure(message: failure)
         }
+        lastSaved = saving
         await saveStatusSource?.refresh()
     }
 }

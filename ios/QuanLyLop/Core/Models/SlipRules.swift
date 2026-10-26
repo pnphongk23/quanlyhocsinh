@@ -82,6 +82,24 @@ extension SlipRules {
     }
 }
 
+/// What the slip sheet would save right now; compared against what it opened with or last saved.
+struct SlipDraft: Equatable {
+    var criteria: Int
+    var note: String
+    var homeworkTouched: Bool
+    /// The teacher's own sentence, nil while the generated one is shown.
+    var sentence: String?
+}
+
+extension SlipRules {
+    /// A sheet with no slip yet always has something to save; after that, only a difference from the last save (or
+    /// from the opening state before any save) counts.
+    static func hasUnsavedChanges(hasSlip: Bool, current: SlipDraft, opening: SlipDraft, lastSaved: SlipDraft?) -> Bool {
+        if let lastSaved { return current != lastSaved }
+        return !hasSlip || current != opening
+    }
+}
+
 /// Fixed Vietnamese text of the slip sheet kept next to the sentence phrases, outside the string tables.
 enum SlipSheetText {
     private static let criteria = ["Chú ý nghe giảng", "Ghi chép đầy đủ", "Tham gia sôi nổi", "Không mất trật tự",

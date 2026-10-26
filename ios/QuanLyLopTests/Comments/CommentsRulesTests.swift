@@ -232,4 +232,22 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertEqual(CommentsRules.sendGate(.needsNetwork), .blocked)
         XCTAssertEqual(CommentsRules.sendGate(.nothingToSend), .alreadySent, "a second press after sending sends nothing")
     }
+
+    func testSheetIsNotUnsavedAfterItsOwnSave() {
+        let opening = SlipDraft(criteria: 31, note: "", homeworkTouched: false, sentence: nil)
+        let edited = SlipDraft(criteria: 15, note: "ghi chú", homeworkTouched: true, sentence: "Em cố gắng hơn.")
+        XCTAssertTrue(SlipRules.hasUnsavedChanges(hasSlip: true, current: edited, opening: opening, lastSaved: nil))
+        XCTAssertFalse(SlipRules.hasUnsavedChanges(hasSlip: true, current: edited, opening: opening, lastSaved: edited),
+                       "right after a save the sheet matches what was saved")
+        var more = edited
+        more.note = "ghi chú thêm"
+        XCTAssertTrue(SlipRules.hasUnsavedChanges(hasSlip: true, current: more, opening: opening, lastSaved: edited))
+    }
+
+    func testSheetWithoutSlipHasSomethingToSaveUntilSaved() {
+        let opening = SlipDraft(criteria: 31, note: "", homeworkTouched: false, sentence: nil)
+        XCTAssertTrue(SlipRules.hasUnsavedChanges(hasSlip: false, current: opening, opening: opening, lastSaved: nil))
+        XCTAssertFalse(SlipRules.hasUnsavedChanges(hasSlip: true, current: opening, opening: opening, lastSaved: nil))
+        XCTAssertFalse(SlipRules.hasUnsavedChanges(hasSlip: false, current: opening, opening: opening, lastSaved: opening))
+    }
 }
