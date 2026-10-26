@@ -160,7 +160,7 @@ describe("phiếu nhận xét khi mất mạng", () => {
     expect(command?.payload).toMatchObject({ note: "Ghi chú mới." });
   });
 
-  it("gửi phiếu mặc định chỉ cho Có mặt/Muộn và giữ phiếu đã mở cho em vắng", async () => {
+  it("gửi cả lớp chỉ gửi phiếu đã có; em chưa có phiếu (kể cả có mặt) bị bỏ qua và không tạo phiếu", async () => {
     const { getStore } = await import("../store");
     const seed = getStore();
     seed.attendance = seed.attendance.map((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-0" ? { ...item, status: "absent" } : item);
@@ -169,8 +169,10 @@ describe("phiếu nhận xét khi mất mạng", () => {
     const result = await sendSessionTicketsDurable("6a-session-6");
     expect(result.sent).not.toContain("6a-student-0");
     expect(result.skipped).toContain("6a-student-0");
-    expect(result.skippedReasons).toContainEqual({ studentId: "6a-student-0", reason: "not_attended" });
+    expect(result.skippedReasons).toContainEqual({ studentId: "6a-student-0", reason: "no_slip" });
+    expect(result.skippedReasons).toContainEqual({ studentId: "6a-student-1", reason: "no_slip" });
     const created = getStore().comments.find((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-1");
-    expect(created).toMatchObject({ criteria: 31, stars: 5, scale: 5, comment: expect.any(String), sendQueued: true });
+    expect(created).toBeUndefined();
+    expect(((await db.outbox.toArray()).find((row) => row.type === "slip.send")?.payload as { defaults?: unknown } | undefined)?.defaults).toBeUndefined();
   });
 });

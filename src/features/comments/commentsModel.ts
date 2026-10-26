@@ -81,13 +81,19 @@ export function ticketFilterLabel(
   return `${TICKET_FILTER_LABELS[filter]} (${counts[filter]})`;
 }
 
-/**
- * Số phiếu nút "Gửi phiếu cả lớp (n)" sẽ gửi: phiếu đã chọn sao mà chưa gửi.
- * Em chưa chọn sao bị bỏ qua, phiếu đã gửi không gửi lại.
- */
+/** Phiếu "Gửi phiếu cả lớp" sẽ gửi: chỉ phiếu đã có mà chưa gửi. Em chưa có phiếu không được gửi. */
+export function sendableRows(rows: TicketRow[]): TicketRow[] {
+  return rows.filter((row) => row.comment !== null && row.status !== "sent");
+}
+
+/** Em chưa có phiếu: bị bỏ qua khi gửi cả lớp (muốn gửi thì mở phiếu em đó hoặc bấm "Gán tất cả mặc định"). */
+export function unopenedRows(rows: TicketRow[]): TicketRow[] {
+  return rows.filter((row) => row.comment === null);
+}
+
+/** Số phiếu nút "Gửi phiếu cả lớp (n)" sẽ gửi. */
 export function sendableCount(rows: TicketRow[]): number {
-  return rows.filter((row) => row.status !== "sent" && (row.comment !== null || row.attended))
-    .length;
+  return sendableRows(rows).length;
 }
 
 /** Nhãn nút gửi cả lớp; trạng thái mạng giải thích riêng cạnh nút. */
@@ -107,6 +113,9 @@ export interface TicketBadge {
   tone: TicketBadgeTone;
 }
 
+/** Em chưa có phiếu: không hiện sao. */
+export const UNOPENED_LABEL = "Chưa nhận xét";
+
 const STATUS_LABELS: Record<TicketStatus, string> = {
   none: "Chưa gửi",
   draft: "Chưa gửi",
@@ -116,6 +125,7 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
 
 /** Nhãn trạng thái phiếu trên danh sách: Đã gửi · hh:mm / Chờ mạng / Chưa gửi. */
 export function ticketBadge(row: TicketRow): TicketBadge {
+  if (row.comment === null) return { label: UNOPENED_LABEL, tone: "neutral" };
   if (row.status === "sent")
     return {
       label: row.sentAt

@@ -60,7 +60,7 @@ export default function SendTicketsDialog({
           </div>
           <div className={s.statSkip}>
             <strong>{skipped.length}</strong>
-            <span>em chưa chọn sao</span>
+            <span>em chưa có phiếu</span>
           </div>
         </div>
 

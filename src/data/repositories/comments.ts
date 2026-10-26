@@ -56,9 +56,9 @@ function guardUnsent(plan:WritePlan<Comment>,sessionId:string,studentId:string):
     persist:async()=>{const now=getSessionComment(sessionId,studentId);if(now&&(now.status==="sent"||now.sendQueued)){skipped=true;return;}await plan.persist();}};
 }
 /**
- * "Gán tất cả mặc định": mọi phiếu chưa gửi (và chưa chờ gửi) của em có mặt/muộn hoặc đã có phiếu thang 5
- * về đủ năm tiêu chí, BTVN theo chấm (bỏ lựa chọn tay), câu tự sinh lại; giữ phần gõ thêm. Phiếu thang 3 cũ không đổi.
- * Trả số phiếu đã đổi.
+ * "Gán tất cả mặc định": mọi phiếu thang 5 chưa gửi (và chưa chờ gửi) về đủ năm tiêu chí, BTVN theo chấm
+ * (bỏ lựa chọn tay), câu tự sinh lại; giữ phần gõ thêm. Em chưa có phiếu (kể cả chưa điểm danh hoặc Vắng) được tạo phiếu
+ * mặc định. Phiếu thang 3 cũ không đổi. Trả số phiếu đã đổi hoặc tạo.
  */
 function planAssignDefaultSlips(sessionId:string):WritePlan<number>{
   requirePermission("comments_reports","write");
@@ -67,18 +67,19 @@ function planAssignDefaultSlips(sessionId:string):WritePlan<number>{
   const plans:WritePlan<Comment>[]=[];
   for(const student of studentsOnSession(state,session)){
     const old=getSessionComment(sessionId,student.id);
-    const attended=state.attendance.some(a=>a.sessionId===sessionId&&a.studentId===student.id&&(a.status==="present"||a.status==="late"));
-    if(old?(old.status==="sent"||old.sendQueued||old.scale!==5):!attended)continue;
+    if(old&&(old.status==="sent"||old.sendQueued||old.scale!==5))continue;
     const criteria=defaultSlipCriteria(previousHomeworkGrades(state,sessionId,student.id));
     if(old&&old.criteria===criteria&&old.comment===generatedSlipSentence(criteria)&&!old.hwManual)continue;
     plans.push(guardUnsent(planComment({sessionId,studentId:student.id,criteria,hwManual:false}),sessionId,student.id));
   }
   return composePlans(plans,plans.length);
 }
+/** Số phiếu "Gán tất cả mặc định" sẽ đổi hoặc tạo (hộp xác nhận ghi đúng số này). */
+export const countAssignDefaultSlips=(sessionId:string):number=>planAssignDefaultSlips(sessionId).result;
 /** Chờ ghi bền cả lô; một lệnh lỗi ⇒ các phiếu của cả lô trở lại như trước. */
 export const assignDefaultSlipsDurable=(sessionId:string):Promise<number>=>runDurably(planAssignDefaultSlips(sessionId));
-export interface SendTicketsResult { sent:string[];skipped:string[];skippedReasons:Array<{studentId:string;reason:"not_attended"|"already_sent"}>;queued:boolean;ungraded:UngradedHomeworkNotice; }
-  function planSendTickets(sessionId:string,studentIds?:string[]):WritePlan<SendTicketsResult> {requirePermission("comments_reports","write");const session=requireSessionAccess(sessionId);if(session.date>todayISO())throw new Error("Chỉ gửi phiếu từ ngày học.");const requested=studentIds??studentsOnSession(getStore(),session).map(s=>s.id);const sent:string[]=[],skipped:string[]=[],skippedReasons:SendTicketsResult["skippedReasons"]=[];const previous:Array<Comment|null>=[];const targets:Comment[]=[];const defaults:Array<{student_id:string;criteria:number;comment:string}>=[];for(const studentId of requested){const old=getSessionComment(sessionId,studentId);if(old?.status==="sent"){skipped.push(studentId);skippedReasons.push({studentId,reason:"already_sent"});continue;}const attended=getStore().attendance.some(a=>a.sessionId===sessionId&&a.studentId===studentId&&(a.status==="present"||a.status==="late"));if(!old&&!attended){skipped.push(studentId);skippedReasons.push({studentId,reason:"not_attended"});continue;}const now=new Date().toISOString();const needsDefault=!old||(old.scale===3&&old.stars===null);const fallbackCriteria=defaultSlipCriteria(previousHomeworkGrades(getStore(),sessionId,studentId));const fallbackComment=generatedSlipSentence(fallbackCriteria);if(needsDefault)defaults.push({student_id:studentId,criteria:fallbackCriteria,comment:fallbackComment});const target:Comment=old&&old.scale===3&&old.stars===null?{...old,criteria:fallbackCriteria,comment:fallbackComment,scale:5,stars:starsFromCriteria(fallbackCriteria),updatedAt:now}:old??{id:key(sessionId,studentId),classId:session.classId,sessionId,studentId,criteria:fallbackCriteria,comment:fallbackComment,scale:5,stars:starsFromCriteria(fallbackCriteria),note:"",hwManual:false,status:"draft",sendQueued:false,sentAt:null,updatedAt:now,createdAt:now};sent.push(studentId);previous.push(old);targets.push(target);}
+export interface SendTicketsResult { sent:string[];skipped:string[];skippedReasons:Array<{studentId:string;reason:"no_slip"|"already_sent"}>;queued:boolean;ungraded:UngradedHomeworkNotice; }
+  function planSendTickets(sessionId:string,studentIds?:string[]):WritePlan<SendTicketsResult> {requirePermission("comments_reports","write");const session=requireSessionAccess(sessionId);if(session.date>todayISO())throw new Error("Chỉ gửi phiếu từ ngày học.");const requested=studentIds??studentsOnSession(getStore(),session).map(s=>s.id);const sent:string[]=[],skipped:string[]=[],skippedReasons:SendTicketsResult["skippedReasons"]=[];const previous:Array<Comment|null>=[];const targets:Comment[]=[];const defaults:Array<{student_id:string;criteria:number;comment:string}>=[];for(const studentId of requested){const old=getSessionComment(sessionId,studentId);if(old?.status==="sent"){skipped.push(studentId);skippedReasons.push({studentId,reason:"already_sent"});continue;}if(!old){skipped.push(studentId);skippedReasons.push({studentId,reason:"no_slip"});continue;}const now=new Date().toISOString();const needsDefault=old.scale===3&&old.stars===null;const fallbackCriteria=defaultSlipCriteria(previousHomeworkGrades(getStore(),sessionId,studentId));const fallbackComment=generatedSlipSentence(fallbackCriteria);if(needsDefault)defaults.push({student_id:studentId,criteria:fallbackCriteria,comment:fallbackComment});const target:Comment=old.scale===3&&old.stars===null?{...old,criteria:fallbackCriteria,comment:fallbackComment,scale:5,stars:starsFromCriteria(fallbackCriteria),updatedAt:now}:old;sent.push(studentId);previous.push(old);targets.push(target);}
   if(sent.length&&(typeof navigator==="undefined"||!navigator.onLine))throw new Error("Cần có mạng để gửi phiếu.");
     const membership=getCacheIdentity();if(sent.length&&!membership)throw new Error("Đăng nhập để gửi phiếu.");
   const identity=identityKey();const cmd={id:crypto.randomUUID(),type:"slip.send",payload:{session_id:sessionId,student_ids:sent,...(defaults.length?{defaults}:{})},created_at:new Date().toISOString()} as SyncCommand;

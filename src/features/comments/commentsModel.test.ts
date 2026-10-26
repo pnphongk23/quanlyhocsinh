@@ -10,6 +10,8 @@ import {
   sendButtonLabel,
   sendButtonDisabled,
   sendableCount,
+  sendableRows,
+  unopenedRows,
   ticketBadge,
   ticketCounts,
   ticketFilterLabel,
@@ -77,8 +79,10 @@ function row(
     expect(filterTicketRows(rows, "all")).toHaveLength(5);
   });
 
-  it("chỉ phiếu đã chọn sao và chưa gửi mới nằm trong nút gửi cả lớp", () => {
-      expect(sendableCount(rows)).toBe(3);
+  it("chỉ phiếu đã có và chưa gửi mới nằm trong nút gửi cả lớp", () => {
+      expect(sendableCount(rows)).toBe(2);
+    expect(sendableRows(rows).map((item) => item.student.id)).toEqual(["B", "C"]);
+    expect(unopenedRows(rows).map((item) => item.student.id)).toEqual(["D", "E"]);
     expect(sendableCount([row("A"), row("B")])).toBe(0);
   });
 
@@ -104,7 +108,7 @@ describe("nhãn trạng thái phiếu", () => {
       tone: "warning",
     });
     expect(ticketBadge(row("C"))).toEqual({
-      label: "Chưa gửi",
+      label: "Chưa nhận xét",
       tone: "neutral",
     });
     expect(ticketBadge(row("D", { stars: 2, status: "draft" }))).toEqual({

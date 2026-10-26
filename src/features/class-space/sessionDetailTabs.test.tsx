@@ -103,7 +103,8 @@ describe("Màn buổi học có ba tab ở URL (ảnh 60/61)", () => {
     );
     expect(activeTab(html)).toBe("Nhận xét");
     expect(html).toContain("Tất cả (9)");
-      expect(html).toContain("Gửi phiếu cả lớp (6)");
+    expect(html).toContain("Chưa nhận xét");
+      expect(html).toContain("Gửi phiếu cả lớp (2)");
       expect(html).toContain("BTVN buổi trước: 2/2 phần đã chấm");
   });
 
@@ -204,7 +205,7 @@ describe("Tuỳ chọn buổi học trong nút ⋯ ở đầu màn", () => {
     );
     expect(html).not.toContain("Người dạy");
     expect(html).not.toContain("Bài giảng");
-      expect(html).toContain("Gửi phiếu cả lớp (6)");
+      expect(html).toContain("Gửi phiếu cả lớp (2)");
     expect(html).toContain('aria-label="Nội dung buổi học"');
   });
 

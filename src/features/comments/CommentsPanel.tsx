@@ -28,6 +28,8 @@ import {
   homeworkLine,
   initialsOf,
   sendableCount,
+  sendableRows,
+  unopenedRows,
   sendButtonLabel,
   sendButtonDisabled,
   ticketBadge,
@@ -166,8 +168,8 @@ export default function CommentsPanel({
   const rows = buildTicketRows(state, sessionId);
   const counts = ticketCounts(rows);
   const visibleRows = filterTicketRows(rows, filter);
-    const sendable = rows.filter((row) => row.status !== "sent" && (row.comment !== null || row.attended));
-    const skipped = rows.filter((row) => !row.comment && !row.attended);
+    const sendable = sendableRows(rows);
+    const skipped = unopenedRows(rows);
   const count = sendableCount(rows);
   const ungraded = ungradedHomeworkNotice(
     state,
@@ -294,15 +296,13 @@ export default function CommentsPanel({
               <ChevronRight />
             </span>
           </span>
-          <span className={s.starsLine}>
-              {row.stars === null ? (
-                <span className={s.noStars}>Chưa gửi</span>
-              ) : (
-              Array.from({ length: row.stars }, (_, index) => (
+          {row.stars !== null && (
+            <span className={s.starsLine}>
+              {Array.from({ length: row.stars }, (_, index) => (
                 <Star key={index} />
-              ))
-            )}
-          </span>
+              ))}
+            </span>
+          )}
           <span
             className={
               line.tone === "warning" ? s.homeworkLineWarning : s.homeworkLine

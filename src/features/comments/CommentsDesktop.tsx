@@ -26,6 +26,8 @@ import {
   filterTicketRows,
   sendButtonLabel,
   sendButtonDisabled,
+  sendableRows,
+  unopenedRows,
   TICKET_FILTER_LABELS,
   TICKET_FILTERS,
   type TicketFilter,
@@ -65,8 +67,8 @@ export default function CommentsDesktop({
     rows[0];
   // Phiếu đang chờ gửi (queued) đã nằm trong hàng đợi đồng bộ: không chọn gửi lại,
   // nếu không repository xếp thêm một lệnh `slip.send` cho cùng em.
-    const sendable = rows.filter((row) => row.status !== "sent" && (row.comment !== null || row.attended));
-    const skipped = rows.filter((row) => !row.comment && !row.attended);
+    const sendable = sendableRows(rows);
+    const skipped = unopenedRows(rows);
   const count = sendable.length;
   const ungraded = ungradedHomeworkNotice(
     state,
@@ -217,7 +219,7 @@ export default function CommentsDesktop({
                           {homeworkCountsLine(state, row)}
                         </span>
                       </span>
-                      <StarRow level={row.stars} />
+                      {row.stars === null ? <span className={s.stars} /> : <StarRow level={row.stars} />}
                       <Pill
                         tone={row.status === "sent" ? "success" : "neutral"}
                         className={s.ticketBadge}

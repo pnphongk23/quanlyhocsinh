@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { assignDefaultSlipsDurable } from "../../data/repositories/comments";
+import { assignDefaultSlipsDurable, countAssignDefaultSlips } from "../../data/repositories/comments";
 import { resetSessionDrafts } from "./draftStore";
 import { Button } from "../../shared/ui";
 import type { ButtonSize } from "../../shared/ui";
@@ -13,6 +13,7 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size }: 
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
     setOpen(false);
@@ -44,7 +45,7 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size }: 
 
   return (
     <>
-      <Button size={size} variant="surface" data-testid="slip-assign-defaults" onClick={() => { setError(""); setOpen(true); }}>
+      <Button size={size} variant="surface" data-testid="slip-assign-defaults" onClick={() => { setError(""); setCount(countAssignDefaultSlips(sessionId)); setOpen(true); }}>
         Gán tất cả mặc định
       </Button>
       {open && (
@@ -52,12 +53,13 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size }: 
           <div className={s.confirm} role="dialog" aria-modal="true" aria-label={`Gán mặc định ${sessionLabel}?`}>
             <p className={s.confirmTitle}>Gán mặc định {sessionLabel}?</p>
             <p className={s.confirmNote}>
-              Mọi phiếu <strong>chưa gửi</strong> sẽ được tích đủ 5 tiêu chí (BTVN theo chấm) và câu nhận xét được sinh lại,
-              kể cả phần bạn đã sửa tay. Ghi chú riêng được giữ. Phiếu đã gửi hoặc đang chờ gửi không đổi.
+              <strong data-testid="slip-assign-count">{count} phiếu</strong> sẽ được tích đủ 5 tiêu chí (BTVN theo chấm) và câu nhận xét được sinh lại,
+              kể cả phần bạn đã sửa tay. Em chưa có phiếu (kể cả chưa điểm danh hoặc vắng) được tạo phiếu mặc định. Ghi chú riêng được giữ.
+              Phiếu đã gửi hoặc đang chờ gửi không đổi.
             </p>
             {error && <p role="alert" className={s.error}>{error}</p>}
             <div className={s.confirmActions}>
-              <Button size="lg" onClick={() => void confirm()} disabled={busy} loading={busy}>Gán mặc định</Button>
+              <Button size="lg" onClick={() => void confirm()} disabled={busy || count === 0} loading={busy}>Gán mặc định</Button>
               <Button size="lg" variant="neutral" onClick={() => setOpen(false)} disabled={busy}>Quay lại</Button>
             </div>
           </div>

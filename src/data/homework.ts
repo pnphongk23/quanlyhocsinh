@@ -292,9 +292,9 @@ export function buildTicketRows(
       return {
         student,
         comment,
-        stars: comment?.stars ?? 5,
+        stars: comment?.stars ?? null,
         attended: state.attendance.some((item) => item.sessionId === sessionId && item.studentId === student.id && (item.status === "present" || item.status === "late")),
-        status: comment ? ticketStatusOf(comment) : "draft",
+        status: comment ? ticketStatusOf(comment) : "none",
       sentAt: comment?.sentAt ?? null,
       previousHomework: homeworkSummaryFor(state, giving, student.id),
     };

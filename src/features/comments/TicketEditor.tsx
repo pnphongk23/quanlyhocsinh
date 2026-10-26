@@ -15,7 +15,7 @@ import { readDraft, useSessionDraftReset, writeDraft } from "./draftStore";
 import type { SheetHomework } from "./CommentTicketSheet";
 import s from "./CommentsDesktop.module.css";
 import { SlipCriteriaFields } from "./SlipCriteriaFields";
-import { initialsOf, criteriaWithHomeworkResult, hwManualAfterCriterionToggle, slipFrozenForAutoUpdate } from "./commentsModel";
+import { UNOPENED_LABEL, initialsOf, criteriaWithHomeworkResult, hwManualAfterCriterionToggle, slipFrozenForAutoUpdate } from "./commentsModel";
 import { sessionPrefix } from "../../data/repositories/sessions";
 
 function Star({ filled }: { filled: boolean }) {
@@ -50,6 +50,7 @@ export function StarRow({ level }: { level: StarLevel | null }) {
 /** Trạng thái phiếu trên web. */
 export function desktopTicketLabel(row: TicketRow): string {
   if (row.status === "sent") return "Đã gửi";
+  if (row.comment === null) return UNOPENED_LABEL;
   if (row.stars === null) return "Chưa gửi";
   return "Nháp";
 }

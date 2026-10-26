@@ -4,9 +4,13 @@ import AssignDefaultsAction from "./AssignDefaultsAction";
 import { draftKey, readDraft, writeDraft } from "./draftStore";
 
 const assign = vi.hoisted(() => vi.fn());
-vi.mock("../../data/repositories/comments", () => ({ assignDefaultSlipsDurable: assign }));
+const count = vi.hoisted(() => vi.fn());
+vi.mock("../../data/repositories/comments", () => ({ assignDefaultSlipsDurable: assign, countAssignDefaultSlips: count }));
 
-beforeEach(() => assign.mockReset().mockResolvedValue(2));
+beforeEach(() => {
+  assign.mockReset().mockResolvedValue(2);
+  count.mockReset().mockReturnValue(2);
+});
 afterEach(cleanup);
 
 const view = () => render(<AssignDefaultsAction sessionId="s1" sessionLabel="Buổi 3" size="md" />);
@@ -47,5 +51,16 @@ describe("Gán tất cả mặc định", () => {
     await waitFor(() => expect(readDraft("s1", "a")).toBeNull());
     expect(readDraft("s2", "a")).not.toBeNull();
     expect(sessionStorage.getItem(draftKey("s1", "a"))).toBeNull();
+  });
+
+  it("hộp xác nhận ghi đúng số phiếu sẽ gán; không có phiếu nào thì không cho gán", () => {
+    count.mockReturnValueOnce(5);
+    view();
+    fireEvent.click(screen.getByTestId("slip-assign-defaults"));
+    expect(screen.getByTestId("slip-assign-count")).toHaveTextContent("5 phiếu");
+    fireEvent.click(screen.getByRole("button", { name: "Quay lại" }));
+    count.mockReturnValueOnce(0);
+    fireEvent.click(screen.getByTestId("slip-assign-defaults"));
+    expect(screen.getByRole("button", { name: "Gán mặc định" })).toBeDisabled();
   });
 });

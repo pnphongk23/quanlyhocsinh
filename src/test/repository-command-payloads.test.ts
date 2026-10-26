@@ -91,8 +91,8 @@ describe("repository command payload contracts", () => {
       await tests.updateTestDurable("test-1", { name: "Quiz updated" });
       await scores.saveScoreDurable({ testId: "test-1", studentId: "s1", value: 7 });
       await attendance.saveAttendanceDurable({ sessionId: "session-1", studentId: "s1", status: "present" });
-      await comments.sendSessionTicketsDurable("session-1", ["s1"]);
         await comments.saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", stars: 3, note: "" });
+      await comments.sendSessionTicketsDurable("session-1", ["s1"]);
         await d.syncNow();
         await comments.saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 15, note: "Ghi chú tay", hwManual: true });
     const section = await homework.saveHomeworkSectionDurable({ sessionId: "session-1", kind: "vocabulary", title: "Words" });
@@ -195,16 +195,38 @@ describe("repository command payload contracts", () => {
     expect((await response.json() as any).results[0]).toMatchObject({ status: "rejected", error: { message: "comment_required" } });
   });
 
-  it("slip.send carries client-generated defaults for students without a slip", async () => {
-    server.put("attendance", { session_id: "session-1", student_id: "s1", status: "present" });
+  it("send-all only sends slips that exist: a student without a slip is skipped and no defaults travel", async () => {
+    server.put("student", { id: "s2", class_id: "c1", name: "Student 2", enrolled_at: "2026-09-01", left_at: null, status: "active" });
+    for (const id of ["s1", "s2"]) server.put("attendance", { session_id: "session-1", student_id: id, status: "present" });
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
-    const { sendSessionTicketsDurable } = await import("../data/repositories/comments");
-    await sendSessionTicketsDurable("session-1", ["s1"]);
+    const { saveSessionCommentDurable, sendSessionTicketsDurable } = await import("../data/repositories/comments");
+    await saveSessionCommentDurable({ sessionId: "session-1", studentId: "s1", criteria: 15, note: "" });
+    const result = await sendSessionTicketsDurable("session-1", ["s1", "s2"]);
     await d.syncNow();
+    expect(result.sent).toEqual(["s1"]);
+    expect(result.skippedReasons).toContainEqual({ studentId: "s2", reason: "no_slip" });
     const send = server.hooks.pushBatches.flat().find((command) => command.type === "slip.send");
-    expect((send?.payload as any).defaults).toEqual([expect.objectContaining({ student_id: "s1", criteria: expect.any(Number), comment: expect.stringMatching(/\S/) })]);
-    expect(server.rows.get("slip")?.get("session-1|s1")).toMatchObject({ status: "sent" });
+    expect(send?.payload).toEqual({ session_id: "session-1", student_ids: ["s1"] });
+    expect(server.rows.get("slip")?.get("session-1|s1")).toMatchObject({ status: "sent", criteria: 15 });
+    expect(server.rows.get("slip")?.get("session-1|s2")).toBeUndefined();
+  });
+
+  it("assign-all-defaults creates a default slip for students without one, even absent or unmarked, and send-all then counts them", async () => {
+    server.put("student", { id: "s2", class_id: "c1", name: "Student 2", enrolled_at: "2026-09-01", left_at: null, status: "active" });
+    server.put("student", { id: "s3", class_id: "c1", name: "Student 3", enrolled_at: "2026-09-01", left_at: null, status: "active" });
+    server.put("attendance", { session_id: "session-1", student_id: "s2", status: "absent" });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const c = await import("../data/repositories/comments");
+    expect(c.countAssignDefaultSlips("session-1")).toBe(3);
+    expect(await c.assignDefaultSlipsDurable("session-1")).toBe(3);
+    const { buildTicketRows } = await import("../data/homework");
+    const { getStore } = await import("../data/store");
+    const { sendableCount } = await import("../features/comments/commentsModel");
+    expect(sendableCount(buildTicketRows(getStore(), "session-1"))).toBe(3);
+    await d.syncNow();
+    for (const id of ["s1", "s2", "s3"]) expect(server.rows.get("slip")?.get(`session-1|${id}`), id).toMatchObject({ criteria: 31, comment: generatedSlipSentence(31) });
   });
 
   it("assign-all-defaults rewrites unsent slips to the full default and clears the manual homework choice", async () => {
@@ -247,12 +269,13 @@ describe("repository command payload contracts", () => {
     const homework = await import("../data/repositories/homework");
     const { hydrateStore } = await import("../data/store");
     const section = await homework.saveHomeworkSectionDurable({ sessionId: "session-1", kind: "vocabulary", title: "Words" });
+    await c.saveSessionCommentDurable({ sessionId: "session-2", studentId: "s1", criteria: 31, note: "" });
     await c.sendSessionTicketsDurable("session-2", ["s1"]);
     await hydrateStore();
     expect(c.getSessionComment("session-2", "s1")).toMatchObject({ status: "draft", sendQueued: true });
     await homework.setHomeworkGradeDurable(section.id, "s1", "not_done");
     await d.syncNow();
-    expect(server.hooks.pushBatches.flat().filter((command) => command.type === "slip.set" && (command.payload as any).session_id === "session-2")).toEqual([]);
+    expect(server.hooks.pushBatches.flat().filter((command) => command.type === "slip.set" && (command.payload as any).session_id === "session-2" && (command.payload as any).criteria === 15)).toEqual([]);
     expect(server.rows.get("slip")?.get("session-2|s1")).toMatchObject({ status: "sent", criteria: 31 });
   });
 
@@ -265,6 +288,7 @@ describe("repository command payload contracts", () => {
     const homework = await import("../data/repositories/homework");
     const { hydrateStore } = await import("../data/store");
     const section = await homework.saveHomeworkSectionDurable({ sessionId: "session-1", kind: "vocabulary", title: "Words" });
+    await c.saveSessionCommentDurable({ sessionId: "session-2", studentId: "s1", criteria: 31, note: "" });
     await c.sendSessionTicketsDurable("session-2", ["s1"]);
     server.hooks.respond = (request) => (request.path === "/sync/pull" ? { status: 500, code: "internal" } : undefined);
     await d.syncNow();
@@ -273,7 +297,7 @@ describe("repository command payload contracts", () => {
     expect(c.getSessionComment("session-2", "s1")).toMatchObject({ status: "sent", sendQueued: false });
     await homework.setHomeworkGradeDurable(section.id, "s1", "not_done");
     await d.syncNow();
-    expect(server.hooks.pushBatches.flat().filter((command) => command.type === "slip.set" && (command.payload as any).session_id === "session-2")).toEqual([]);
+    expect(server.hooks.pushBatches.flat().filter((command) => command.type === "slip.set" && (command.payload as any).session_id === "session-2" && (command.payload as any).criteria === 15)).toEqual([]);
   });
 
   it("regrading homework enqueues slip.set with criteria and comment for the next session's draft", async () => {
