@@ -4,6 +4,7 @@ import { replaceStore } from "../../data/store";
 import { getSession } from "../../data/repositories/sessions";
 import { createSeed } from "../../test/fixtures/seed";
 import type { TicketRow } from "../../data/homework";
+import { generatedSlipSentence } from "../../data/slip";
 import TicketEditor from "./TicketEditor";
 
 const save = vi.hoisted(() => vi.fn());
@@ -73,5 +74,42 @@ describe("TicketEditor tự lưu khi rời ô ghi chú (desktop)", () => {
     fireEvent.blur(note);
     await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.getByTestId("slip-save-status")).toHaveAttribute("data-save-state", "saved"));
+  });
+
+  it("không còn nhãn Tự sinh theo tiêu chí; ô câu sửa tay được và lưu khi blur cùng tiêu chí", async () => {
+    renderEditor();
+    expect(screen.queryByText("Tự sinh theo tiêu chí")).toBeNull();
+    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
+    fireEvent.blur(sentence);
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.change(sentence, { target: { value: "Câu tôi sửa" } });
+    fireEvent.blur(sentence);
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ sessionId, studentId, criteria: 31, comment: "Câu tôi sửa" }));
+  });
+
+  it("xoá hết câu rồi blur thì sinh lại câu theo tiêu chí", async () => {
+    renderEditor();
+    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
+    fireEvent.change(sentence, { target: { value: "  " } });
+    fireEvent.blur(sentence);
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ comment: generatedSlipSentence(31) }));
+    expect(sentence.value).toBe(generatedSlipSentence(31));
+  });
+
+  it("tích lại tiêu chí ghi đè câu đã sửa tay", async () => {
+    renderEditor();
+    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
+    fireEvent.change(sentence, { target: { value: "Câu tôi sửa" } });
+    fireEvent.click(screen.getByTestId("slip-criterion-3"));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ criteria: 23, comment: generatedSlipSentence(23) }));
+    expect(sentence.value).toBe(generatedSlipSentence(23));
+  });
+
+  it("nhãn BTVN: buổi trước chưa có BTVN", () => {
+    renderEditor();
+    expect(screen.getByTestId("slip-homework-auto-label")).toHaveTextContent("Buổi trước chưa có BTVN");
   });
 });

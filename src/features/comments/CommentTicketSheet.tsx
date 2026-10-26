@@ -81,10 +81,8 @@ export default function CommentTicketSheet({
   const initialManual = stored?.hwManual ?? row.comment?.hwManual ?? false;
   const initialCriteria = criteriaWithHomeworkResult(rawCriteria, previousGrades, initialManual, slipFrozenForAutoUpdate(row.status), scale);
   const storedComment = stored ? stored.comment : row.comment?.comment ?? null;
-  const legacyComment = scale === 3 || Boolean(storedComment && storedComment !== generatedSlipSentence(rawCriteria)) ? storedComment : null;
+  const initialComment = scale === 3 ? storedComment : (storedComment && initialCriteria === rawCriteria ? storedComment : generatedSlipSentence(initialCriteria));
   const sourceNote = stored ? stored.note : (row.comment?.note ?? "");
-  const migrateLegacy = scale === 5 && initialCriteria !== rawCriteria && Boolean(legacyComment);
-  const initialComment = migrateLegacy ? null : legacyComment;
   const initialNote = sourceNote;
   // Nháp đang sửa là nguồn chuẩn: chọn sao rồi gõ ghi chú ngay trong cùng một
   // nhịp vẫn lưu đúng cả hai (state React có thể chưa kịp render lại).
@@ -99,17 +97,22 @@ export default function CommentTicketSheet({
   const [note, setNote] = useState(draft.current.note);
   const [manualHomework, setManualHomework] = useState(draft.current.hwManual);
   const baselineCriteria = row.comment?.criteria ?? (row.comment?.scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31);
+  const baselineComment = scale === 5 ? (row.comment?.comment ?? generatedSlipSentence(baselineCriteria)) : null;
   const baselineManual = row.comment?.hwManual ?? false;
   const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
   const action = useSaveAction({
-      baseline: { criteria: baselineCriteria, note: row.comment?.note ?? "", hwManual: baselineManual },
-      value: { criteria, note, hwManual: manualHomework },
+      baseline: { criteria: baselineCriteria, comment: baselineComment, note: row.comment?.note ?? "", hwManual: baselineManual },
+      value: { criteria, comment: scale === 5 ? (comment ?? "") : null, note, hwManual: manualHomework },
     save: async (value) => {
       await saveSessionCommentDurable({
         sessionId: session.id,
         studentId: row.student.id,
-          ...(value.criteria !== baselineCriteria || value.hwManual !== baselineManual
-            ? { criteria: value.criteria, hwManual: value.hwManual }
+          ...(value.criteria !== baselineCriteria || value.hwManual !== baselineManual || value.comment !== baselineComment
+            ? {
+                criteria: value.criteria,
+                hwManual: value.hwManual,
+                ...(scale === 5 ? { comment: value.comment?.trim() ? value.comment : generatedSlipSentence(value.criteria) } : {}),
+              }
             : {}),
           note: value.note,
         });
@@ -138,7 +141,7 @@ export default function CommentTicketSheet({
     const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
     if (next === criteria) return;
     setCriteria(next);
-    const nextComment = comment ? null : comment;
+    const nextComment = generatedSlipSentence(next);
     setComment(nextComment);
     draft.current = { ...draft.current, criteria: next, comment: nextComment };
     writeDraft(session.id, row.student.id, draft.current);
@@ -154,9 +157,14 @@ export default function CommentTicketSheet({
     setCriteria(next);
     const nextManual = hwManualAfterCriterionToggle(manualHomework, index);
     if (nextManual !== manualHomework) setManualHomework(nextManual);
-    const nextComment = scale === 5 && comment ? null : comment;
+    const nextComment = scale === 5 ? generatedSlipSentence(next) : comment;
     setComment(nextComment);
     keepDraft({ criteria: next, comment: nextComment, ...(nextManual !== manualHomework ? { hwManual: nextManual } : {}) });
+  }
+
+  function changeComment(value: string) {
+    setComment(value);
+    keepDraft({ comment: value });
   }
 
   function changeNote(value: string) {
@@ -176,10 +184,12 @@ export default function CommentTicketSheet({
         note={note}
         scale={scale}
         previousGrades={previousGrades}
+        homeworkState={homework.state}
         hwManual={manualHomework}
         sent={slipFrozenForAutoUpdate(row.status)}
         disabled={readOnly}
         onCriteriaChange={updateCriteria}
+        onCommentChange={changeComment}
         onNoteChange={changeNote}
       />
 

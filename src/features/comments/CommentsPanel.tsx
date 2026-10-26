@@ -21,6 +21,7 @@ import { useOnline } from "../../shared/hooks/useOnline";
 import { Button, EmptyState, NoAccess, Pill } from "../../shared/ui";
 import CommentTicketSheet, { type SheetHomework } from "./CommentTicketSheet";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
+import AssignDefaultsAction from "./AssignDefaultsAction";
 import SendTicketsDialog from "./SendTicketsDialog";
 import {
   filterTicketRows,
@@ -392,6 +393,7 @@ export default function CommentsPanel({
             </p>
           )}
           <div className={s.footer}>
+            <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="lg" />
             <Button
               size="lg"
               disabled={sendButtonDisabled(count, !online)}

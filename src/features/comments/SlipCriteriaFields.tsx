@@ -1,4 +1,5 @@
 import { generatedSlipSentence, SLIP_CRITERIA, starsFromCriteria } from "../../data/slip";
+import type { HomeworkPreviousState } from "../../data/homework";
 import type { HomeworkGrade, SlipScale } from "../../data/types";
 import { Mascot, starPose } from "../../shared/ui/Mascot";
 import { criteriaWithHomeworkResult } from "./commentsModel";
@@ -10,10 +11,13 @@ export function SlipCriteriaFields({
   note,
   scale,
   previousGrades,
+  homeworkState,
   hwManual,
   sent,
   disabled,
   onCriteriaChange,
+  onCommentChange,
+  onCommentBlur,
   onNoteChange,
   onNoteBlur,
 }: {
@@ -22,10 +26,13 @@ export function SlipCriteriaFields({
   note: string;
   scale: SlipScale;
   previousGrades: readonly HomeworkGrade[] | null;
+  homeworkState: HomeworkPreviousState;
   hwManual: boolean;
   sent: boolean;
   disabled: boolean;
   onCriteriaChange: (value: number, index: number) => void;
+  onCommentChange: (value: string) => void;
+  onCommentBlur?: () => void;
   onNoteChange: (value: string) => void;
   onNoteBlur?: () => void;
 }) {
@@ -70,7 +77,7 @@ export function SlipCriteriaFields({
                 </span>
                 {homework && automaticHomework && (
                   <span className={s.autoLabel} data-testid="slip-homework-auto-label">
-                    Theo chấm BTVN
+                    {homeworkState === "has" ? "Theo chấm BTVN" : "Buổi trước chưa có BTVN"}
                   </span>
                 )}
               </button>
@@ -82,10 +89,22 @@ export function SlipCriteriaFields({
       <section className={s.commentBlock} aria-label="Nhận xét gửi phụ huynh">
         <h3 className={s.commentTitle}>Nhận xét gửi phụ huynh</h3>
         <div className={s.commentContent}>
-          <div className={s.generatedComment} data-testid="slip-generated-comment">
-            <p className={s.generatedLabel}>{comment ? "Nhận xét đã lưu" : "Tự sinh theo tiêu chí"}</p>
-            <p className={s.generatedText}>{comment ?? (isLegacyScale ? "" : generatedSlipSentence(visibleCriteria))}</p>
-          </div>
+          {isLegacyScale ? (
+            <div className={s.generatedComment} data-testid="slip-generated-comment">
+              <p className={s.generatedText}>{comment ?? ""}</p>
+            </div>
+          ) : (
+            <textarea
+              className={s.sentenceInput}
+              data-testid="slip-generated-comment"
+              aria-label="Câu nhận xét gửi phụ huynh"
+              value={comment ?? generatedSlipSentence(visibleCriteria)}
+              rows={4}
+              readOnly={disabled}
+              onChange={(event) => onCommentChange(event.target.value)}
+              onBlur={onCommentBlur}
+            />
+          )}
           <textarea
             className={s.noteInput}
             data-testid="slip-note"

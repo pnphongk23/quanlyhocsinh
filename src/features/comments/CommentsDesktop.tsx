@@ -19,6 +19,7 @@ import { useOnline } from "../../shared/hooks/useOnline";
 import { formatDayMonth } from "../../shared/format";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, EmptyState, Pill } from "../../shared/ui";
+import AssignDefaultsAction from "./AssignDefaultsAction";
 import SendTicketsDialog from "./SendTicketsDialog";
 import TicketEditor, { StarRow, desktopTicketLabel } from "./TicketEditor";
 import {
@@ -154,6 +155,7 @@ export default function CommentsDesktop({
       {tabBar(
         canWrite ? (
           <>
+            <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="md" />
             <Button
               size="md"
               disabled={sendButtonDisabled(count, !online)}

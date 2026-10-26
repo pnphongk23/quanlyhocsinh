@@ -101,6 +101,7 @@
 
 .criterion:focus-visible,
 .criterionOn:focus-visible,
+.sentenceInput:focus-visible,
 .noteInput:focus-visible {
   outline: var(--state-focus-ring);
   outline-offset: 1px;
@@ -195,13 +196,6 @@
   background: var(--color-neutral-soft);
 }
 
-.generatedLabel {
-  margin: 0 0 var(--space-8);
-  color: var(--color-muted);
-  font-size: var(--text-base);
-  font-weight: var(--weight-semibold);
-}
-
 .generatedText {
   margin: 0;
   font-size: var(--text-base);
@@ -209,6 +203,7 @@
   white-space: pre-wrap;
 }
 
+.sentenceInput,
 .noteInput {
   box-sizing: border-box;
   width: 100%;
@@ -221,6 +216,10 @@
   font: inherit;
   line-height: var(--leading-base);
   resize: vertical;
+}
+
+.sentenceInput {
+  background: var(--color-neutral-soft);
 }
 
 .noteInput::placeholder {

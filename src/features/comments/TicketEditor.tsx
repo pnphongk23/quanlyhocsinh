@@ -78,10 +78,10 @@ export default function TicketEditor({
   const initialManual = stored?.hwManual ?? row.comment?.hwManual ?? false;
   const initialCriteria = criteriaWithHomeworkResult(rawCriteria, previousGrades, initialManual, slipFrozenForAutoUpdate(row.status), scale);
   const storedComment = stored ? stored.comment : row.comment?.comment ?? null;
-  const legacyComment = scale === 3 || Boolean(storedComment && storedComment !== generatedSlipSentence(rawCriteria)) ? storedComment : null;
+  const initialComment = scale === 3 ? storedComment : (storedComment && initialCriteria === rawCriteria ? storedComment : generatedSlipSentence(initialCriteria));
   const draft = useRef<{ criteria: number; comment: string | null; note: string; hwManual: boolean }>({
     criteria: initialCriteria,
-    comment: legacyComment,
+    comment: initialComment,
     note: stored ? stored.note : (row.comment?.note ?? ""),
     hwManual: initialManual,
   });
@@ -89,6 +89,7 @@ export default function TicketEditor({
   const [comment, setComment] = useState<string | null>(draft.current.comment);
   const [note, setNote] = useState(draft.current.note);
   const savedNote = useRef(row.comment?.note ?? "");
+  const savedComment = useRef<string | null>(scale === 3 ? null : (row.comment?.comment ?? generatedSlipSentence(rawCriteria)));
   const [manualHomework, setManualHomework] = useState(draft.current.hwManual);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -108,6 +109,7 @@ export default function TicketEditor({
       });
       setError("");
       savedNote.current = next.note;
+      if (next.comment !== undefined) savedComment.current = next.comment;
       setUnsaved(draft.current.note !== next.note);
     } catch (cause) {
       setUnsaved(true);
@@ -123,19 +125,19 @@ export default function TicketEditor({
     if (scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
     const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
     if (next === criteria) return;
-    const nextComment = comment ? null : comment;
+    const nextComment = generatedSlipSentence(next);
     draft.current = { ...draft.current, criteria: next, comment: nextComment };
     writeDraft(session.id, row.student.id, draft.current);
     setCriteria(next);
     setComment(nextComment);
     setUnsaved(true);
-    void persist({ criteria: next, note: draft.current.note, hwManual: draft.current.hwManual });
+    void persist({ criteria: next, comment: nextComment, note: draft.current.note, hwManual: draft.current.hwManual });
   }, [gradeKey, criteria, comment, note, manualHomework, row.status, scale, session.id, row.student.id]);
 
   function updateCriteria(next: number, index: number) {
     if (!canWrite) return;
     const nextManual = hwManualAfterCriterionToggle(manualHomework, index);
-    const nextComment = scale === 5 && comment ? null : comment;
+    const nextComment = scale === 5 ? generatedSlipSentence(next) : comment;
     const nextValue = { criteria: next, comment: nextComment, note, hwManual: nextManual };
     draft.current = nextValue;
     writeDraft(session.id, row.student.id, draft.current);
@@ -145,6 +147,22 @@ export default function TicketEditor({
     if (nextManual !== manualHomework) setManualHomework(nextManual);
     setError("");
     void persist(nextValue);
+  }
+
+  function changeComment(value: string) {
+    draft.current = { ...draft.current, comment: value };
+    writeDraft(session.id, row.student.id, draft.current);
+    setComment(value);
+    setUnsaved(true);
+    setError("");
+  }
+
+  function commitComment() {
+    if (!canWrite || scale === 3 || draft.current.comment === savedComment.current) return;
+    const text = draft.current.comment?.trim() ? draft.current.comment : generatedSlipSentence(draft.current.criteria);
+    if (text !== draft.current.comment) changeComment(text);
+    draft.current = { ...draft.current, comment: text };
+    void persist({ criteria: draft.current.criteria, comment: text, note: draft.current.note, hwManual: draft.current.hwManual });
   }
 
   function changeNote(value: string) {
@@ -174,10 +192,13 @@ export default function TicketEditor({
         note={note}
         scale={scale}
         previousGrades={previousGrades}
+        homeworkState={homework.state}
         hwManual={manualHomework}
         sent={slipFrozenForAutoUpdate(row.status)}
         disabled={!canWrite}
         onCriteriaChange={updateCriteria}
+        onCommentChange={changeComment}
+        onCommentBlur={commitComment}
         onNoteChange={changeNote}
         onNoteBlur={() => {
           if (canWrite && draft.current.note !== savedNote.current) {

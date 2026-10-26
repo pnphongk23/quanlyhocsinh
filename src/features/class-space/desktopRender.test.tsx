@@ -109,7 +109,9 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     );
     expect(html).toContain("Gửi phiếu cả lớp");
     expect(html).toContain("Năm tiêu chí nhận xét");
-      expect(html).toContain("Tự sinh theo tiêu chí");
+      expect(html).not.toContain("Tự sinh theo tiêu chí");
+      expect(html).toContain("Câu nhận xét gửi phụ huynh");
+      expect(html).toContain("Gán tất cả mặc định");
       expect(html).toContain("Hoàn thành BTVN");
       expect(html).toContain("Theo chấm BTVN");
     expect(html).toContain("5/5 sao");
