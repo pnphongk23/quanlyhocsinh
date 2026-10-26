@@ -1,4 +1,4 @@
-export const EXPECTED_STAGING_BUNDLE = process.env.EXPECTED_STAGING_BUNDLE || 'index-BdRqyODg.js';
+export const EXPECTED_STAGING_BUNDLE = process.env.EXPECTED_STAGING_BUNDLE || 'index-BFgqWHaY.js';
 
 export async function assertStagingBundle(page) {
   await page.waitForFunction((expected) => performance.getEntriesByType('resource').some((entry) => {
