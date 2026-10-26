@@ -120,6 +120,9 @@
 
 .homeworkCriterion {
   grid-column: 1 / -1;
+  flex-wrap: wrap;
+  padding-block: var(--space-8);
+  row-gap: var(--space-4);
 }
 
 .criterionLabel {
@@ -130,7 +133,7 @@
 }
 
 .homeworkCriterion .criterionLabel {
-  flex: 1;
+  flex: 1 0 auto;
 }
 
 .checkbox {
@@ -243,20 +246,6 @@
   .criterion,
   .criterionOn {
     min-height: var(--tap-desktop);
-  }
-
-  .homeworkCriterion {
-    gap: var(--space-4);
-    padding-inline: var(--space-8);
-  }
-
-  .homeworkCriterion .criterionLabel {
-    flex: 0 0 auto;
-  }
-
-  .homeworkCriterion .autoLabel {
-    padding-inline: var(--space-4);
-    font-size: var(--text-xs);
   }
 
   .starPanel,
