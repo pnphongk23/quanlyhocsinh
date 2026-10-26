@@ -349,6 +349,21 @@ async function applyCommandResult(result: CommandResult, identity: string): Prom
     if (result.status === "duplicate" && (result as { original_status?: string }).original_status === "rejected") {
       await db.outbox.put({ ...row, status: "rejected", error: (result as { error?: { code?: string } }).error?.code ?? row.error ?? "rejected" }); return;
     }
+  if (row.type === "slip.send" && result.status === "applied") {
+    // Gửi xong: ghi ngay trạng thái đã gửi vào máy để tải lại trước lần kéo về kế tiếp không hiện lại phiếu như nháp.
+    const payload = row.payload as { session_id: string; student_ids: string[] };
+    const skipped = new Set((result.skipped ?? []).map((item) => item.student_id));
+    await db.transaction("rw", [db.slips, db.outbox], async () => {
+      for (const studentId of payload.student_ids) {
+        if (skipped.has(studentId)) continue;
+        const key = `${identity}|slip|${payload.session_id}|${studentId}`;
+        const slip = await db.slips.get(key);
+        if (slip && (slip as { status?: string }).status !== "sent") await db.slips.put({ ...slip, status: "sent", sent_at: (slip as { sent_at?: string | null }).sent_at ?? new Date().toISOString() } as typeof slip);
+      }
+      await db.outbox.delete(result.id);
+    });
+    return;
+  }
   await db.outbox.delete(result.id);
 }
 function getDeviceId(): string {
