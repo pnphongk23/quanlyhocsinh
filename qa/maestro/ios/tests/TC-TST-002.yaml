@@ -1,0 +1,55 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-002
+tags: [ios, tests, p1]
+# Preconditions: QA-iOS-P0-Test-1 exists with four visible students.
+# Waiting for IDs: class.tab.tests, test.row.QA-iOS-P0-Test-1, test.score.QA-iOS-P0-Student-1..4, test.score.error.range, test.score.error.step, test.score.save
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-1
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-1
+- inputText: "0"
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-2
+- inputText: "1000"
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-3
+- inputText: "0.5"
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-4
+- inputText: "1000.5"
+- assertVisible:
+    id: test.score.error.range
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-4
+- eraseText: 8
+- inputText: "1001"
+- assertVisible:
+    id: test.score.error.range
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-4
+- eraseText: 8
+- inputText: "0.25"
+- assertVisible:
+    id: test.score.error.step
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-4
+- eraseText: 8
+- inputText: "-0.5"
+- assertVisible:
+    id: test.score.error.range
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-4
+- eraseText: 8
+- tapOn:
+    id: test.score.save
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved0
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-2.saved1000
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-3.saved0_5

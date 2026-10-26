@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-off-002
+tags: [ios, p1]
+---
+# Draft for TC-OFF-002: Mạng chậm: sau khoảng 1 giây hiện "Chờ đồng bộ"
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Mạng giả chậm (>1 giây tới máy chủ).
+# 1. Bấm Lưu.
+# Expected: Nếu thay đổi chưa lên máy chủ sau khoảng 1 giây thì hiện "Chờ đồng bộ"; khi lên máy chủ chuyển thành "Đã lưu".
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

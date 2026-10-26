@@ -1,0 +1,19 @@
+appId: com.study.teacherthu
+name: ios-tc-rpt-023
+tags: [ios, reports, p0]
+# BLOCKED unless a linked PH account and a second concurrent client are available.
+# Requires source-confirmed deletion/sync accessibility IDs before runtime use.
+# Preconditions: published QA-iOS-RPT-023 visible to linked parent; report-delete IDs verified.
+---
+- runFlow:
+    file: ../../common/ios-open-shared-session.yaml
+- tapOn:
+    id: report.row.QA-iOS-RPT-023
+- tapOn:
+    id: report.delete
+- tapOn:
+    id: report.delete.confirm
+- assertNotVisible:
+    id: report.row.QA-iOS-RPT-023
+# Parent must remain open on another client during deletion, then sync after a flaky network.
+# This concurrent-client portion cannot run on the single assigned simulator.

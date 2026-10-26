@@ -1,0 +1,50 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-007-cancel-renumbers
+tags: [ios, classes, p0]
+---
+- launchApp
+- tapOn:
+    text: "Lớp"
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 30000
+- swipe:
+    start: 50%, 30%
+    end: 50%, 85%
+    duration: 600
+- scrollUntilVisible:
+    element:
+      text: "QA-iOS-20261025-CLS-P0-R4"
+    direction: DOWN
+- tapOn:
+    text: "QA-iOS-20261025-CLS-P0-R4"
+- extendedWaitUntil:
+    visible: "Buổi học"
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      text: /T5 · \d{2}\/\d{2}/
+    direction: DOWN
+- tapOn:
+    text: /T5 · \d{2}\/\d{2}/
+- tapOn:
+    point: "92%, 10%"
+- tapOn:
+    point: "58%, 11%"
+- tapOn:
+    point: "50%, 27%"
+- assertVisible:
+    text: "Về danh sách buổi"
+- tapOn:
+    text: "Về danh sách buổi"
+- scrollUntilVisible:
+    element:
+      text: /T5 · \d{2}\/\d{2}/
+    direction: DOWN
+- assertVisible:
+    text: /T5 · \d{2}\/\d{2}/
+- assertNotVisible:
+    text: /Buổi \d+/i
+- assertNotVisible:
+    id: saveStatus.error
+- back

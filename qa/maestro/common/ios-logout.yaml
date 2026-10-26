@@ -1,0 +1,9 @@
+appId: com.study.teacherthu
+name: ios-logout
+---
+- tapOn:
+    text: Cài đặt
+- tapOn:
+    text: Đăng xuất
+- assertVisible:
+    id: login.phone

@@ -1,0 +1,27 @@
+appId: com.study.teacherthu
+name: ios-tc-hw-001
+tags: [ios, homework, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: session.tab.homework, homework.tab.today, homework.addPart, homework.part.type, homework.part.title, homework.part.save, homework.part.QA-iOS-P0-Vocabulary-U1
+---
+- runFlow:
+    file: ../../common/ios-open-shared-session.yaml
+- tapOn:
+    id: session.tab.homework
+- tapOn:
+    id: homework.tab.today
+- tapOn:
+    id: homework.addPart
+- tapOn:
+    id: homework.part.type
+- tapOn:
+    id: homework.type.vocabulary
+- tapOn:
+    id: homework.part.title
+- inputText: QA-iOS-P0-Vocabulary-U1
+- tapOn:
+    id: homework.part.save
+- assertVisible:
+    id: homework.part.QA-iOS-P0-Vocabulary-U1
+- assertNotVisible:
+    id: homework.part.attachment

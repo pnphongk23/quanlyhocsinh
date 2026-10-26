@@ -1,0 +1,28 @@
+appId: com.study.teacherthu
+name: ios-tc-cmt-008
+tags: [ios, comments, p0]
+# Preconditions: QA-iOS fixture in the staging smoke workspace.
+# Waiting for IDs: session.tab.comments, comment.row.QA-iOS-P0-Student-1, comment.rating.2, comment.save, guardian.tab.comments, guardian.comment.QA-iOS-P0-Student-1.rating.2
+---
+- runFlow:
+    file: ../../common/ios-open-shared-session.yaml
+- tapOn:
+    id: session.tab.comments
+- tapOn:
+    id: comment.row.QA-iOS-P0-Student-1
+- tapOn:
+    id: comment.rating.2
+- tapOn:
+    id: comment.save
+- assertVisible:
+    id: comment.saveStatus.synced
+- assertNotVisible:
+    id: comment.sendClass.confirm
+- runFlow:
+    file: ../../common/ios-logout.yaml
+- runFlow:
+    file: ../../common/ios-guardian-entry.yaml
+- tapOn:
+    id: guardian.tab.comments
+- assertVisible:
+    id: guardian.comment.QA-iOS-P0-Student-1.rating.2

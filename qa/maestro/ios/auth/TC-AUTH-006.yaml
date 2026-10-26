@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-006
+tags: [ios, p1]
+---
+# Draft for TC-AUTH-006: Đăng ký SĐT đã tồn tại
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: SĐT của tài khoản smoke đã có.
+# 1. Đăng ký lại với đúng SĐT đó.
+# Expected: Bị từ chối kèm lỗi; không tạo workspace thứ hai, tài khoản cũ không đổi.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

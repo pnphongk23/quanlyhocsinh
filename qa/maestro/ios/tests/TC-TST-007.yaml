@@ -1,0 +1,40 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-007
+tags: [ios, tests, p1]
+# Preconditions: QA-iOS-P0-Test-1 has Student-1 score 15.
+# Waiting for IDs: class.tab.tests, test.row.QA-iOS-P0-Test-1, test.row.QA-iOS-P0-Test-1-Edited, test.edit, test.edit.name, test.edit.date, test.edit.date.nextDay, test.save, test.score.QA-iOS-P0-Student-1.saved15
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-1
+- tapOn:
+    id: test.edit
+- assertNotVisible:
+    text: Điểm tối đa
+- assertNotVisible:
+    text: Hệ số
+- tapOn:
+    id: test.edit.name
+- eraseText: 40
+- inputText: QA-iOS-P0-Test-1-Edited
+- tapOn:
+    id: test.edit.date
+- tapOn:
+    id: test.edit.date.nextDay
+- tapOn:
+    id: test.save
+- tapOn:
+    id: class.tab.tests
+- assertVisible:
+    id: test.row.QA-iOS-P0-Test-1-Edited
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-1-Edited
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved15
+- assertNotVisible:
+    text: /15
+- assertNotVisible:
+    text: /điểm tối đa

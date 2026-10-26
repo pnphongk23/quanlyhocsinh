@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-prm-002
+tags: [ios, p1]
+---
+# Draft for TC-PRM-002: Không có màn quản lý nhân sự, role, phân công ở Bản đầu
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Đã đăng nhập.
+# 1. Duyệt menu/Cài đặt.
+# Expected: Không có màn nhân sự, role, ma trận quyền, mời, mã đăng ký, QR chung của lớp, học phí, lương, bài giảng.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

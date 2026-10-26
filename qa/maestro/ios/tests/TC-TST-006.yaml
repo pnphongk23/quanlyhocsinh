@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-006
+tags: [ios, p1]
+---
+# Draft for TC-TST-006: Sửa tên, ngày bài kiểm tra
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Bài `QA-KT1` đã có điểm.
+# 1. Sửa bài, đổi tên thành `QA-KT1b`, đổi ngày; lưu.
+# Expected: Tên, ngày mới hiện ở danh sách bài, bảng điểm; điểm đã nhập giữ nguyên.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

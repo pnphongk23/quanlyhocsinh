@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-stu-006
+tags: [ios, p1]
+---
+# Draft for TC-STU-006: Học sinh đã nghỉ không có mặt ở buổi sau ngày rời lớp
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: `QA-HS 2` đã nghỉ (TC-STU-005); buổi N sau ngày rời lớp; buổi M trước ngày rời lớp.
+# 1. Mở tab Nhận xét của buổi N và của buổi M.
+# Expected: Buổi N không có phiếu cho `QA-HS 2`; phiếu cũ ở buổi M (nếu đã có) vẫn giữ.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

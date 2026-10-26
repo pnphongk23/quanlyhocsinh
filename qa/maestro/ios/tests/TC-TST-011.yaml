@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-011
+tags: [ios, p1]
+---
+# Draft for TC-TST-011: Bài chỉ có điểm 0 vẫn được lưu trữ, không xoá hẳn
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Bài `QA-KT-0` chỉ có một ô điểm = 0, còn lại "Chưa có điểm".
+# 1. Xoá bài, đọc hộp xác nhận.
+# Expected: Hộp xác nhận nói lưu trữ (điểm 0 là đã có điểm).
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

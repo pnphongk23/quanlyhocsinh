@@ -1,0 +1,13 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-014
+tags: [ios, p1]
+---
+# Draft for TC-AUTH-014: Quên mật khẩu: tài khoản đã lưu email
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Tài khoản QA-forgot đã lưu email; máy chưa từng đăng nhập tài khoản này (chưa nhớ email).
+# 1. Ở màn Đăng nhập chọn Quên mật khẩu, nhập SĐT.
+# 2. Quan sát câu hỏi xác nhận.
+# 3. Nhập sai email rồi bấm Gửi; sau đó nhập đúng email rồi bấm Gửi.
+# Expected: Hiện "Gửi link đặt lại mật khẩu tới t***@…?" với email che một phần kèm ô nhập lại email. Email sai: không gửi. Email khớp: báo đã gửi. Không có chỗ nhập email mới.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

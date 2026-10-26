@@ -1,0 +1,28 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-007
+tags: [ios, classes, p0]
+# Preconditions: QA-iOS fixture in the staging smoke workspace.
+# Row selector follows the observed weekday/date label (`T5 · dd/mm`); action IDs remain unverified.
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.sessions
+- tapOn:
+    id: session.upcoming.toggle
+- tapOn:
+    text: /T5 · \d{2}\/\d{2}/
+- tapOn:
+    id: session.cancel
+- tapOn:
+    id: session.cancel.confirm
+- assertVisible:
+    id: session.cancelled
+- tapOn:
+    id: session.upcoming.toggle
+- assertVisible:
+    text: /T2 · \d{2}\/\d{2}/
+- assertVisible:
+    text: /T5 · \d{2}\/\d{2}/
+- assertNotVisible:
+    text: /Buổi \d+/i

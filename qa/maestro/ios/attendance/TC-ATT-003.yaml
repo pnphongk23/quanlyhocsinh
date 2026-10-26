@@ -1,0 +1,22 @@
+appId: com.study.teacherthu
+name: ios-tc-att-003
+tags: [ios, attendance, p0]
+# Preconditions: QA-iOS fixture in the staging smoke workspace.
+# Waiting for IDs: session.upcoming.toggle, session.row.1, session.tab.attendance, attendance.readOnlyNotice, attendance.save
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.sessions
+- tapOn:
+    id: session.upcoming.toggle
+- tapOn:
+    id: session.row.1
+- tapOn:
+    id: session.tab.attendance
+- assertVisible:
+    id: attendance.readOnlyNotice
+- assertNotVisible:
+    id: attendance.save
+- assertNotVisible:
+    id: attendance.row.QA-iOS-P0-Student-1.present

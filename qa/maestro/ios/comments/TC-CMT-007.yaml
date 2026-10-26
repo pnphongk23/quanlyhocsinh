@@ -1,0 +1,14 @@
+appId: com.study.teacherthu
+name: ios-tc-cmt-007
+tags: [ios, comments, p0]
+# Preconditions: QA-iOS fixture in the staging smoke workspace.
+# Waiting for IDs: guardian.dashboard, guardian.tab.comments, guardian.comment.list
+---
+- runFlow:
+    file: ../../common/ios-guardian-entry.yaml
+- tapOn:
+    id: guardian.tab.comments
+- assertVisible:
+    id: guardian.comment.list
+- assertNotVisible:
+    id: guardian.comment.QA-iOS-P0-SharedClass

@@ -1,0 +1,12 @@
+appId: com.study.teacherthu
+name: ios-tc-hw-014
+tags: [ios, p1]
+---
+# Draft for TC-HW-014: Giao và chấm BTVN khi mất mạng
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Mất mạng.
+# 1. Giao một phần BTVN và chấm một em khi mất mạng.
+# 2. Bật mạng lại.
+# Expected: Ghi được khi mất mạng; có mạng lại thì tự đồng bộ; dữ liệu có trên máy khác.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

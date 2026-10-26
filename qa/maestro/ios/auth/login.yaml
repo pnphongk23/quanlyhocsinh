@@ -1,0 +1,49 @@
+appId: com.study.teacherthu
+name: ios-login-staging
+onFlowComplete:
+  - runFlow:
+      when:
+        visible:
+          id: login.phone
+        notVisible: "Lớp của tôi"
+      commands:
+        - tapOn:
+            id: login.phone
+        - eraseText: 20
+        - tapOn:
+            id: login.password
+        - eraseText: 40
+        - hideKeyboard
+        - takeScreenshot: login-failure-sanitized
+---
+- launchApp
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: login.phone
+    timeout: 30000
+- tapOn:
+    id: login.phone
+- eraseText: 20
+- inputText: ${STAGING_PHONE}
+- tapOn:
+    id: login.password
+- eraseText: 40
+- inputText: ${STAGING_PASSWORD}
+- runFlow:
+    when:
+      notVisible:
+        id: login.submit
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: login.submit
+          direction: DOWN
+- hideKeyboard
+- tapOn:
+    id: login.submit
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 45000
+- assertNotVisible:
+    id: saveStatus.error

@@ -1,0 +1,36 @@
+appId: com.study.teacherthu
+name: ios-tc-stu-005
+tags: [ios, students, p0]
+# Preconditions: QA-iOS-P0-Student-2 has earlier attendance and a test score.
+# Waiting for IDs: class.tab.students, student.row.QA-iOS-P0-Student-2, student.markLeft, student.markLeft.confirm, student.status.left, student.leaveDate, student.enrollmentDate, session.upcoming.toggle, session.row.1, attendance.history.QA-iOS-P0-Student-2, test.score.history.QA-iOS-P0-Student-2
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.students
+- tapOn:
+    id: student.row.QA-iOS-P0-Student-2
+- tapOn:
+    id: student.markLeft
+- tapOn:
+    id: student.markLeft.confirm
+- assertVisible:
+    id: student.status.left
+- assertVisible:
+    id: student.leaveDate
+- assertVisible:
+    id: student.enrollmentDate
+- tapOn:
+    id: class.tab.sessions
+- tapOn:
+    id: session.upcoming.toggle
+- tapOn:
+    id: session.row.1
+- tapOn:
+    id: session.tab.attendance
+- assertVisible:
+    id: attendance.history.QA-iOS-P0-Student-2
+- tapOn:
+    id: class.tab.tests
+- assertVisible:
+    id: test.score.history.QA-iOS-P0-Student-2

@@ -1,0 +1,26 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-007
+tags: [ios, auth, p0]
+# Preconditions: QA-iOS parent number is already linked to QA-iOS-P0-Student-1.
+# Waiting for IDs: guardian.register.phone, guardian.register.password, guardian.register.confirm, guardian.register.submit, guardian.dashboard, guardian.child.card
+---
+- launchApp
+- tapOn:
+    text: Tạo tài khoản phụ huynh
+- tapOn:
+    id: guardian.register.phone
+- inputText: ${QA_PARENT_PHONE}
+- tapOn:
+    id: guardian.register.password
+- inputText: ${QA_PARENT_PASSWORD}
+- tapOn:
+    id: guardian.register.confirm
+- inputText: ${QA_PARENT_PASSWORD}
+- tapOn:
+    id: guardian.register.submit
+- extendedWaitUntil:
+    visible:
+      id: guardian.dashboard
+    timeout: 45000
+- assertVisible:
+    id: guardian.child.card

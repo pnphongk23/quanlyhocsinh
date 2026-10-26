@@ -1,0 +1,25 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-012
+tags: [ios, tests, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: class.tab.tests, test.score.QA-iOS-P0-Student-Late.empty, test.score.save, test.score.QA-iOS-P0-Student-Late.saved10, report.test.QA-iOS-P0-Test-1
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-1
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-Late.empty
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-Late
+- inputText: 10
+- tapOn:
+    id: test.score.save
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-Late.saved10
+- tapOn:
+    id: class.tab.reports
+- assertVisible:
+    id: report.test.QA-iOS-P0-Test-1

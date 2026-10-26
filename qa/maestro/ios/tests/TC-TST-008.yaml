@@ -1,0 +1,36 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-008
+tags: [ios, tests, p0]
+# Preconditions: Fresh QA-iOS-P0-Test-1 with Student-1 and Student-2 in the roster.
+# Waiting for IDs: class.tab.tests, test.row.QA-iOS-P0-Test-1, test.score.QA-iOS-P0-Student-1, test.score.QA-iOS-P0-Student-2, test.score.save, test.score.QA-iOS-P0-Student-1.saved20, test.score.QA-iOS-P0-Student-2.saved100
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-1
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-1
+- inputText: "20"
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-2
+- inputText: "100"
+- tapOn:
+    id: test.score.save
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved20
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-2.saved100
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-1
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved20
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-2.saved100
+- assertNotVisible:
+    text: /15
+- assertNotVisible:
+    text: /điểm tối đa

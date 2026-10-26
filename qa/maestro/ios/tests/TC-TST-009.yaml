@@ -1,0 +1,20 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-009
+tags: [ios, tests, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: class.tab.tests, test.delete, test.delete.confirm.hardDelete
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-EmptyTest
+- tapOn:
+    id: test.delete
+- assertVisible:
+    id: test.delete.confirm.hardDelete
+- tapOn:
+    id: test.delete.confirm
+- assertNotVisible:
+    id: test.row.QA-iOS-P0-EmptyTest

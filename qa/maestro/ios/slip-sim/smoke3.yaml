@@ -1,0 +1,13 @@
+appId: com.study.teacherthu
+---
+- launchApp:
+    stopApp: true
+- tapOn: "Lớp Smoke FB2"
+- tapOn: "Học sinh"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/44-students
+- tapOn: "Báo cáo"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/45-reports

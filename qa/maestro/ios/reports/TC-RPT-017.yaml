@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-rpt-017
+tags: [ios, p1]
+---
+# Draft for TC-RPT-017: Mất mạng: không viết/lưu được nhận xét chung của báo cáo
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Bản nháp báo cáo HS-1; mất mạng.
+# 1. Mở bản nháp, nhập nhận xét chung, bấm Lưu.
+# Expected: Không lưu được; hiện báo cần mạng; nội dung đang soạn giữ để thử lại khi có mạng.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

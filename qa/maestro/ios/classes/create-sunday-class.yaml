@@ -1,0 +1,38 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-017-sunday-class
+tags: [ios, classes, p1]
+---
+- launchApp
+- tapOn:
+    text: "Lớp"
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "QA-iOS-20261025-CLS017-R2-CN"
+    direction: DOWN
+- assertVisible:
+    text: "QA-iOS-20261025-CLS017-R2-CN"
+- assertVisible:
+    text: '/Buổi tới: Chủ Nhật \d{2}\/\d{2} · 18:00/'
+- tapOn:
+    text: "QA-iOS-20261025-CLS017-R2-CN"
+- extendedWaitUntil:
+    visible: "Buổi học"
+    timeout: 20000
+- assertVisible:
+    text: "Buổi hiện tại"
+- assertVisible:
+    text: "Sắp tới"
+- scrollUntilVisible:
+    element:
+      text: /CN · \d{2}\/\d{2}/
+    direction: DOWN
+- assertVisible:
+    text: /CN · \d{2}\/\d{2}/
+- assertVisible:
+    text: "18:00"
+- assertNotVisible:
+    id: saveStatus.error
+- back

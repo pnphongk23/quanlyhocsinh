@@ -1,0 +1,27 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-001
+tags: [ios, tests, p0]
+# Preconditions: QA-iOS-P0-Test-1 fixture class and students are available.
+# Waiting for IDs: class.tab.tests, test.create, test.name, test.date, test.save, test.row.QA-iOS-P0-Test-1, test.score.noValue
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.create
+- tapOn:
+    id: test.name
+- inputText: QA-iOS-P0-Test-1
+- assertVisible:
+    id: test.date
+- assertNotVisible:
+    text: Điểm tối đa
+- assertNotVisible:
+    text: Hệ số
+- tapOn:
+    id: test.save
+- assertVisible:
+    id: test.row.QA-iOS-P0-Test-1
+- assertVisible:
+    id: test.score.noValue

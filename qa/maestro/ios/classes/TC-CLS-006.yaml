@@ -1,0 +1,50 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-006
+tags: [ios, classes, p0]
+# Preconditions: QA-iOS fixture in the staging smoke workspace.
+# Waiting for IDs: session.upcoming.toggle, session.row.1, session.row.2, session.row.3, session.row.4, session.row.5, session.row.6, session.row.7, session.row.8, session.row.9, session.row.10, session.row.11, session.row.12, session.row.13, session.row.14, session.row.15, session.row.16
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.sessions
+- tapOn:
+    id: session.upcoming.toggle
+- assertVisible:
+    text: /^(?:T[2-7]|CN) · \d{2}\/\d{2}$/
+- assertNotVisible:
+    text: /Buổi \d+/i
+- assertVisible:
+    id: session.row.1
+- assertVisible:
+    id: session.row.2
+- assertVisible:
+    id: session.row.3
+- assertVisible:
+    id: session.row.4
+- assertVisible:
+    id: session.row.5
+- assertVisible:
+    id: session.row.6
+- assertVisible:
+    id: session.row.7
+- assertVisible:
+    id: session.row.8
+- assertVisible:
+    id: session.row.9
+- assertVisible:
+    id: session.row.10
+- assertVisible:
+    id: session.row.11
+- assertVisible:
+    id: session.row.12
+- assertVisible:
+    id: session.row.13
+- assertVisible:
+    id: session.row.14
+- assertVisible:
+    id: session.row.15
+- assertVisible:
+    id: session.row.16
+- assertNotVisible:
+    id: saveStatus.error

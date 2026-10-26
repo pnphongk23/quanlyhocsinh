@@ -1,0 +1,28 @@
+appId: com.study.teacherthu
+name: ios-tc-hw-008
+tags: [ios, homework, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: session.tab.homework, homework.grade.QA-iOS-P0-Student-1.completeWell, homework.grade.QA-iOS-P0-Student-2.complete, homework.grade.QA-iOS-P0-Student-3.incomplete, homework.grade.save
+---
+- runFlow:
+    file: ../../common/ios-open-shared-session.yaml
+- tapOn:
+    id: session.tab.homework
+- tapOn:
+    id: homework.tab.previous
+- tapOn:
+    id: homework.part.QA-iOS-P0-GradedPart
+- tapOn:
+    id: homework.grade.QA-iOS-P0-Student-1.completeWell
+- tapOn:
+    id: homework.grade.QA-iOS-P0-Student-2.complete
+- tapOn:
+    id: homework.grade.QA-iOS-P0-Student-3.incomplete
+- assertVisible:
+    id: homework.grade.QA-iOS-P0-Student-4.ungraded
+- tapOn:
+    id: homework.grade.save
+- assertVisible:
+    id: homework.saveStatus.synced
+- assertVisible:
+    id: homework.grade.QA-iOS-P0-Student-1.completeWell

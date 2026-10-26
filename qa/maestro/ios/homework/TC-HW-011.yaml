@@ -1,0 +1,28 @@
+appId: com.study.teacherthu
+name: ios-tc-hw-011
+tags: [ios, homework, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: session.upcoming.toggle, session.row.2, session.cancel, session.cancel.confirm, session.cancelled, session.row.3, session.tab.homework, homework.part.QA-iOS-P0-PreviousPart
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.sessions
+- tapOn:
+    id: session.upcoming.toggle
+- tapOn:
+    id: session.row.2
+- tapOn:
+    id: session.cancel
+- tapOn:
+    id: session.cancel.confirm
+- assertVisible:
+    id: session.cancelled
+- tapOn:
+    id: session.row.3
+- tapOn:
+    id: session.tab.homework
+- assertVisible:
+    id: homework.tab.previous
+- assertVisible:
+    id: homework.part.QA-iOS-P0-PreviousPart

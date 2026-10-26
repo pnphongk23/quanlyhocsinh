@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-cmt-010
+tags: [ios, p1]
+---
+# Draft for TC-CMT-010: Phiếu chỉ gồm học sinh đang học vào ngày buổi
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Có học sinh vào lớp sau buổi M và học sinh nghỉ trước buổi N (xem `students.md`).
+# 1. Mở tab Nhận xét của buổi M và buổi N.
+# Expected: Chỉ học sinh có ngày vào lớp ≤ ngày buổi ≤ ngày rời lớp có phiếu; phiếu cũ của em đã nghỉ được giữ.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

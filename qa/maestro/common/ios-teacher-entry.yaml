@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-teacher-entry
+---
+- launchApp
+- runFlow:
+    when:
+      visible:
+        id: login.phone
+    file: ios-teacher-login.yaml
+- assertVisible:
+    text: "Lớp của tôi"

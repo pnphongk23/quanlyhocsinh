@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-grd-012
+tags: [ios, p1]
+---
+# Draft for TC-GRD-012: Xem dữ liệu đã tải kèm thời gian cập nhật khi mất mạng
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: PH-A đã mở dữ liệu khi có mạng; sau đó tắt mạng.
+# 1. Mở lại app khi mất mạng; xem Tổng quan.
+# Expected: Vẫn xem được dữ liệu đã tải, kèm thời gian cập nhật.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

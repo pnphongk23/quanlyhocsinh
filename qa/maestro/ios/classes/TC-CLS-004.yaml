@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-004
+tags: [ios, p1]
+---
+# Draft for TC-CLS-004: Lưu trữ lớp
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Lớp `QA-Lớp Lưu trữ` có vài dữ liệu (điểm danh, điểm).
+# 1. Mở lớp, chọn lưu trữ lớp, xác nhận.
+# Expected: Lớp được lưu trữ (không xoá cứng; dữ liệu điểm danh, điểm còn nguyên). Lưu trữ lớp cần mạng. Phản ứng giao diện sau lưu trữ (ẩn khỏi danh sách hay không): spec chưa nêu, xem `../open-questions.md` (Q-01).
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

@@ -1,0 +1,24 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-001-create-class
+tags: [ios, classes, p0]
+# Creates the shared QA-iOS class consumed by ios-open-shared-class.yaml.
+---
+- runFlow:
+    file: ../../common/ios-teacher-entry.yaml
+- tapOn:
+    text: "Tạo lớp mới"
+- tapOn:
+    id: class.name
+- inputText: QA-iOS-P0-SharedClass
+- tapOn:
+    text: T2
+- tapOn:
+    text: T5
+- tapOn:
+    text: "Tạo lớp"
+- assertNotVisible:
+    id: class.name
+- assertVisible:
+    text: "QA-iOS-P0-SharedClass"
+- assertVisible:
+    text: "T2 · T5 · 18:30"

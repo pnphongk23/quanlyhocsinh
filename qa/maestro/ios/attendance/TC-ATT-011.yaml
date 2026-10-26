@@ -1,0 +1,23 @@
+appId: com.study.teacherthu
+name: ios-tc-att-011
+tags: [ios, attendance, p0]
+# Preconditions: QA-iOS session exists; runner must toggle simulator network via simctl around offline assertions.
+# Waiting for IDs: attendance.row.QA-iOS-P0-Student-1.present, attendance.save, saveStatus.localPending, saveStatus.synced
+---
+- runFlow:
+    file: ../../common/ios-open-shared-session.yaml
+# Runner disables simulator network before the save and re-enables it after the local-pending assertion.
+- tapOn:
+    id: session.tab.attendance
+- tapOn:
+    id: attendance.row.QA-iOS-P0-Student-1.present
+- tapOn:
+    id: attendance.save
+- assertVisible:
+    id: saveStatus.localPending
+- tapOn:
+    id: session.tab.attendance
+- assertVisible:
+    id: attendance.row.QA-iOS-P0-Student-1.present
+- assertVisible:
+    id: saveStatus.synced

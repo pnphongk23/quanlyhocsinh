@@ -1,0 +1,41 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-009
+tags: [ios, auth, p0]
+# Preconditions: QA-iOS-P0-Student-5 has no parent link; registered QA-iOS parent account is currently unlinked.
+# Waiting for IDs: class.tab.students, student.row.QA-iOS-P0-Student-5, student.editParentPhone, student.parentPhone, student.save, guardian.dashboard, guardian.child.QA-iOS-P0-Student-5
+---
+- runFlow:
+    file: ../../common/ios-teacher-entry.yaml
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.students
+- tapOn:
+    id: student.row.QA-iOS-P0-Student-5
+- tapOn:
+    id: student.editParentPhone
+- tapOn:
+    id: student.parentPhone
+- inputText: ${QA_PARENT_UNLINKED_PHONE}
+- tapOn:
+    id: student.save
+- assertVisible:
+    id: student.saveStatus.synced
+- runFlow:
+    file: ../../common/ios-logout.yaml
+- tapOn:
+    id: login.phone
+- eraseText: 30
+- inputText: ${QA_PARENT_UNLINKED_PHONE}
+- tapOn:
+    id: login.password
+- eraseText: 30
+- inputText: ${QA_PARENT_PASSWORD}
+- tapOn:
+    id: login.submit
+- extendedWaitUntil:
+    visible:
+      id: guardian.dashboard
+    timeout: 45000
+- assertVisible:
+    id: guardian.child.QA-iOS-P0-Student-5

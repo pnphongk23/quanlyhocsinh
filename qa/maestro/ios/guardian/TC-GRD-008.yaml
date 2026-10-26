@@ -1,0 +1,36 @@
+appId: com.study.teacherthu
+name: ios-tc-grd-008
+tags: [ios, guardian, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: guardian.dashboard, guardian.tab.overview, guardian.edit.attendance, guardian.edit.score, guardian.edit.comment, guardian.edit.homework, guardian.edit.report
+---
+- runFlow:
+    file: ../../common/ios-guardian-entry.yaml
+- tapOn:
+    id: guardian.tab.overview
+- assertNotVisible:
+    id: guardian.edit.attendance
+- assertNotVisible:
+    id: guardian.edit.score
+- assertNotVisible:
+    id: guardian.edit.comment
+- tapOn:
+    id: guardian.tab.attendance
+- assertNotVisible:
+    id: guardian.edit.attendance
+- tapOn:
+    id: guardian.tab.scores
+- assertNotVisible:
+    id: guardian.edit.score
+- tapOn:
+    id: guardian.tab.comments
+- assertNotVisible:
+    id: guardian.edit.comment
+- tapOn:
+    id: guardian.tab.homework
+- assertNotVisible:
+    id: guardian.edit.homework
+- tapOn:
+    id: guardian.tab.reports
+- assertNotVisible:
+    id: guardian.edit.report

@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-016
+tags: [ios, p1]
+---
+# Draft for TC-TST-016: Tạo bài kiểm tra khi mất mạng
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Mất mạng.
+# 1. Tạo bài kiểm tra; bật mạng lại.
+# Expected: Tạo được lúc mất mạng; sau đồng bộ bài có trên máy khác, không trùng.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

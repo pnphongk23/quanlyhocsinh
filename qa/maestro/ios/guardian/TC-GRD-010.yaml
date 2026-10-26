@@ -1,0 +1,18 @@
+appId: com.study.teacherthu
+name: ios-tc-grd-010
+tags: [ios, guardian, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: guardian.dashboard, guardian.noChildren; settings/logout use visible text because HEAD has no stable IDs.
+---
+- runFlow:
+    file: ../../common/ios-guardian-entry.yaml
+- assertVisible:
+    id: guardian.noChildren
+- tapOn:
+    text: Cài đặt
+- assertVisible:
+    text: Đổi mật khẩu
+- tapOn:
+    text: Đăng xuất
+- assertVisible:
+    id: login.phone

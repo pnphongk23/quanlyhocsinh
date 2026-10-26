@@ -1,0 +1,33 @@
+appId: com.study.teacherthu
+name: ios-tc-stu-004
+tags: [ios, students, p0]
+# Preconditions: QA-iOS-P0-Student-1 initially linked to QA_PARENT_OLD; old/new QA-iOS parent accounts exist.
+# Waiting for IDs: class.tab.students, student.row.QA-iOS-P0-Student-1, student.editParentPhone, student.parentPhone, student.save, student.saveStatus.synced, guardian.noChildren, guardian.child.QA-iOS-P0-Student-1
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.students
+- tapOn:
+    id: student.row.QA-iOS-P0-Student-1
+- tapOn:
+    id: student.editParentPhone
+- tapOn:
+    id: student.parentPhone
+- inputText: ${QA_PARENT_NEW_PHONE}
+- tapOn:
+    id: student.save
+- assertVisible:
+    id: student.saveStatus.synced
+- runFlow:
+    file: ../../common/ios-logout.yaml
+- runFlow:
+    file: ../../common/ios-parent-old-login.yaml
+- assertVisible:
+    id: guardian.noChildren
+- runFlow:
+    file: ../../common/ios-logout.yaml
+- runFlow:
+    file: ../../common/ios-parent-new-login.yaml
+- assertVisible:
+    id: guardian.child.QA-iOS-P0-Student-1

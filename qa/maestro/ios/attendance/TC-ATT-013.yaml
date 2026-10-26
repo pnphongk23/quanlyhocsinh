@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-att-013
+tags: [ios, p1]
+---
+# Draft for TC-ATT-013: Buổi hủy không điểm danh
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Buổi đã hủy.
+# 1. Mở buổi hủy.
+# Expected: Buổi hiện đã hủy, không có số; không điểm danh được.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

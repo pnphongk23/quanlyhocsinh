@@ -1,0 +1,23 @@
+appId: com.study.teacherthu
+name: ios-tc-off-004
+tags: [ios, offline, p0]
+# Preconditions: QA-iOS fixture has a controlled rejected write followed by an accepted retry.
+# Waiting for IDs: session.tab.attendance, attendance.row.QA-iOS-P0-Student-1.present, attendance.save, saveStatus.error, saveStatus.retry, saveStatus.synced
+---
+- runFlow:
+    file: ../../common/ios-open-shared-session.yaml
+# Preconditions: staging fixture is configured to reject the first save, then accept retry.
+- tapOn:
+    id: session.tab.attendance
+- tapOn:
+    id: attendance.row.QA-iOS-P0-Student-1.present
+- tapOn:
+    id: attendance.save
+- assertVisible:
+    id: saveStatus.error
+- assertVisible:
+    id: attendance.row.QA-iOS-P0-Student-1.present
+- tapOn:
+    id: saveStatus.retry
+- assertVisible:
+    id: saveStatus.synced

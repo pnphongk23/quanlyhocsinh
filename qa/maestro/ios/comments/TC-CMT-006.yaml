@@ -1,0 +1,18 @@
+appId: com.study.teacherthu
+name: ios-tc-cmt-006
+tags: [ios, comments, p0]
+# Preconditions: QA-iOS fixture in the staging smoke workspace.
+# Waiting for IDs: session.tab.comments, comment.sendClass, comment.sendClass.confirm, comment.status.sent
+---
+- runFlow:
+    file: ../../common/ios-open-shared-session.yaml
+- tapOn:
+    id: session.tab.comments
+- tapOn:
+    id: comment.sendClass
+- tapOn:
+    id: comment.sendClass.confirm
+- assertVisible:
+    id: comment.status.sent
+- assertVisible:
+    id: comment.saveStatus.synced

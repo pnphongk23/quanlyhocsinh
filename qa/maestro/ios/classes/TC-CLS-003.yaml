@@ -1,0 +1,12 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-003
+tags: [ios, p1]
+---
+# Draft for TC-CLS-003: Sửa tên và thông tin lớp
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Lớp `QA-Lớp A` đã có.
+# 1. Mở lớp → sửa lớp, đổi tên thành `QA-Lớp A2`.
+# 2. Lưu.
+# Expected: Tên mới hiện ở danh sách lớp và chi tiết lớp; học sinh, buổi học, điểm giữ nguyên.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

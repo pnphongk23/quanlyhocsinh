@@ -1,0 +1,26 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-015
+tags: [ios, tests, p0]
+# Preconditions: QA-iOS test exists; runner toggles simulator network with simctl around this flow.
+# Waiting for IDs: class.tab.tests, test.score.QA-iOS-P0-Student-1, test.score.save, saveStatus.localPending, saveStatus.synced
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+# Runner disables simulator network before the edit and restores it after local persistence is asserted.
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-1
+- tapOn:
+    id: test.score.QA-iOS-P0-Student-1
+- inputText: 12
+- tapOn:
+    id: test.score.save
+- assertVisible:
+    id: saveStatus.localPending
+- tapOn:
+    id: class.tab.tests
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved12
+- assertVisible:
+    id: saveStatus.synced

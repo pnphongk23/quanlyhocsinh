@@ -1,0 +1,8 @@
+export const EXPECTED_STAGING_BUNDLE = 'index-DXfBbe1w.js';
+
+export async function assertStagingBundle(page) {
+  await page.waitForFunction((expected) => performance.getEntriesByType('resource').some((entry) => {
+    try { return new URL(entry.name).pathname.endsWith(`/assets/${expected}`); } catch { return false; }
+  }), EXPECTED_STAGING_BUNDLE, { timeout: 15000 });
+  return EXPECTED_STAGING_BUNDLE;
+}

@@ -1,0 +1,25 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-001
+tags: [ios, classes, p0]
+# Preconditions: Unique fixture name QA-iOS-P0-CLS-001.
+# Confirmed selectors: root tab `Lớp`, create button `Tạo lớp mới`, weekday buttons `T2`/`T5`, save button `Tạo lớp`; field ID `class.name`.
+---
+- runFlow:
+    file: ../../common/ios-teacher-entry.yaml
+- tapOn:
+    text: Tạo lớp mới
+- tapOn:
+    id: class.name
+- inputText: QA-iOS-P0-CLS-001
+- tapOn:
+    text: T2
+- tapOn:
+    text: T5
+- tapOn:
+    text: Tạo lớp
+- assertVisible:
+    text: QA-iOS-P0-CLS-001
+- tapOn:
+    text: "QA-iOS-P0-CLS-001"
+- assertVisible:
+    text: /T2.*T5/

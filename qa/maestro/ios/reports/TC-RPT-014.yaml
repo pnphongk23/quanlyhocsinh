@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-rpt-014
+tags: [ios, p1]
+---
+# Draft for TC-RPT-014: Phát hành khi mất mạng
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Bản nháp; mất mạng.
+# 1. Thử phát hành.
+# Expected: Phát hành cần mạng: không phát hành được khi mất mạng, hiện lỗi; báo cáo vẫn là nháp.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

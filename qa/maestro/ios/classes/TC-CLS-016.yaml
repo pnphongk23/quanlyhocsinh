@@ -1,0 +1,22 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-016
+tags: [ios, classes, p0]
+# Preconditions: QA-iOS fixture in the staging smoke workspace.
+# Waiting for IDs: session.upcoming.toggle, session.tab.attendance, attendance.readOnlyNotice, session.cancel. Future row uses weekday/date text.
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.sessions
+- tapOn:
+    id: session.upcoming.toggle
+- tapOn:
+    text: /T2 · \d{2}\/\d{2}/
+- tapOn:
+    id: session.tab.attendance
+- assertVisible:
+    id: attendance.readOnlyNotice
+- assertNotVisible:
+    id: attendance.save
+- assertVisible:
+    id: session.cancel

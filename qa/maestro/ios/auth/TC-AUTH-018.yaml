@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-018
+tags: [ios, p1]
+---
+# Draft for TC-AUTH-018: Đăng xuất bị chặn khi còn thay đổi chưa đồng bộ
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Mất mạng, vừa lưu một điểm danh (còn lệnh chờ).
+# 1. Vào Cài đặt, bấm Đăng xuất.
+# Expected: Không đăng xuất; hiện giải thích lý do (còn thay đổi chưa đồng bộ). Đăng xuất cần mạng.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

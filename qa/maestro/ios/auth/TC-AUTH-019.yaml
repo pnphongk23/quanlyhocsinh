@@ -1,0 +1,15 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-019
+tags: [ios, auth, p0]
+# Preconditions: Teacher session has finished syncing.
+# Settings/logout are selected by visible text because HEAD has no stable IDs for them.
+---
+- runFlow:
+    file: ../../common/ios-teacher-entry.yaml
+- runFlow:
+    file: ../../common/ios-logout.yaml
+- assertVisible:
+    id: login.phone
+- launchApp
+- assertVisible:
+    id: login.phone

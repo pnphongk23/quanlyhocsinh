@@ -1,0 +1,33 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-001
+tags: [ios, auth, p0]
+# Preconditions: Use a unique QA-iOS fake phone/password supplied at runtime; no credentials are stored here.
+# Waiting for IDs: login.registerTeacher, register.name, register.workspace, register.phone, register.password, register.confirm, register.submit
+---
+- launchApp
+- assertVisible:
+    id: login.phone
+- tapOn:
+    id: login.registerTeacher
+- tapOn:
+    id: register.name
+- inputText: QA-iOS-P0-Teacher
+- tapOn:
+    id: register.workspace
+- inputText: QA-iOS-P0-Workspace
+- tapOn:
+    id: register.phone
+- inputText: ${QA_TEACHER_PHONE}
+- tapOn:
+    id: register.password
+- inputText: ${QA_TEACHER_PASSWORD}
+- tapOn:
+    id: register.confirm
+- inputText: ${QA_TEACHER_PASSWORD}
+- tapOn:
+    id: register.submit
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 45000
+- assertVisible:
+    text: Lớp

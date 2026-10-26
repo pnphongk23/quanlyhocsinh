@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-stu-007
+tags: [ios, p1]
+---
+# Draft for TC-STU-007: Học sinh vào lớp muộn: chỉ thuộc các buổi từ ngày vào lớp
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Lớp đã có buổi 1–3 đã diễn ra; thêm `QA-HS Muộn` sau buổi 3.
+# 1. Mở tab Nhận xét của buổi 2 và buổi sau ngày vào lớp.
+# Expected: Buổi 2 không có phiếu cho `QA-HS Muộn`; các buổi từ ngày vào lớp có. (Điểm: xem `scores.md`, bài kiểm tra trước ngày vào lớp vẫn nhập được.)
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

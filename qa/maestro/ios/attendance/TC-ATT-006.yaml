@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-att-006
+tags: [ios, p1]
+---
+# Draft for TC-ATT-006: Có phép hoặc Muộn không tính vào cảnh báo
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: HS-3: một buổi Vắng rồi buổi sau Có phép; HS-2: Vắng rồi Muộn.
+# 1. Xem cảnh báo.
+# Expected: Không cảnh báo HS-2, HS-3.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-cmt-005
+tags: [ios, p1]
+---
+# Draft for TC-CMT-005: Chạm một em mở bottom sheet: tích tiêu chí, một ô nhận xét (mobile)
+# Unrun: lead has paused simulator/build/Maestro activity due to low disk.
+# Precondition: Tab Nhận xét có học sinh.
+# 1. Chạm một em.
+# Expected: Mở bottom sheet để tích tiêu chí (ra số sao), xem một ô nhận xét gộp (câu tự sinh + phần gõ thêm); không có ô ghi chú riêng, không có nút "Dùng câu mặc định"; không có chấm BTVN trong sheet.
+# TODO: implement observed text/accessibility interactions and assertions after lead lifts the run pause.
+- launchApp

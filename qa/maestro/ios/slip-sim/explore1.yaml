@@ -1,0 +1,4 @@
+appId: com.study.teacherthu
+---
+- tapOn: "Lớp Smoke FB2"
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/01-class

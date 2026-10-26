@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-008
+tags: [ios, p1]
+---
+# Draft for TC-CLS-008: Màn Buổi học chia "buổi hiện tại" và "các buổi đã qua"
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Lớp có buổi đã diễn ra và buổi sắp tới.
+# 1. Mở tab Buổi học.
+# Expected: Hai phần "buổi hiện tại" và "các buổi đã qua", mỗi buổi nằm đúng phần.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

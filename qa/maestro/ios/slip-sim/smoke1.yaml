@@ -1,0 +1,29 @@
+appId: com.study.teacherthu
+---
+- launchApp:
+    stopApp: true
+- assertVisible: "Lớp của tôi"
+- tapOn: "Lịch"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/40-lich
+- tapOn: "Cài đặt"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/41-settings
+- tapOn: "Lớp"
+- tapOn: "Lớp Smoke FB2"
+- tapOn: "Xem buổi"
+- tapOn: "Bài tập về nhà"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/42-homework-tab
+- back
+- tapOn: "Học sinh"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/43-students
+- tapOn: "Báo cáo"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/44-reports

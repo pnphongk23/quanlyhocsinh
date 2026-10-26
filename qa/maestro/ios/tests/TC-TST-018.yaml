@@ -1,0 +1,44 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-018
+tags: [ios, tests, p0]
+# Preconditions: isolated QA-iOS-P0-Test-Default has Student-1 score 12, Student-2 blank, Student-3 absent from the score roster, and Student-4 visible.
+# Waiting for IDs: class.tab.tests, test.row.QA-iOS-P0-Test-Default, test.assignDefault, test.assignDefault.confirm, test.assignDefault.cancel, test.score.QA-iOS-P0-Student-1.saved15, test.score.QA-iOS-P0-Student-2.saved15, test.score.QA-iOS-P0-Student-4.saved15, test.score.save, saveStatus.synced
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-Default
+- tapOn:
+    id: test.assignDefault
+- assertVisible:
+    id: test.assignDefault.confirm
+- tapOn:
+    id: test.assignDefault.cancel
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved12
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-2.empty
+- tapOn:
+    id: test.assignDefault
+- tapOn:
+    id: test.assignDefault.confirm
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved15
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-2.saved15
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-4.saved15
+- assertNotVisible:
+    id: test.score.QA-iOS-P0-Student-3
+- assertVisible:
+    id: saveStatus.synced
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-Default
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved15
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-2.saved15

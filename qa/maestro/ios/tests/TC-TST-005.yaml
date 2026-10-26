@@ -1,0 +1,22 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-005
+tags: [ios, tests, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: class.tab.tests, test.classAverage, test.average, class.tab.reports, report.classAverage
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.tests
+- assertNotVisible:
+    id: test.classAverage
+- assertNotVisible:
+    id: test.average
+- tapOn:
+    id: class.tab.reports
+- assertNotVisible:
+    id: report.classAverage
+- tapOn:
+    id: class.tab.students
+- assertNotVisible:
+    id: student.classAverage

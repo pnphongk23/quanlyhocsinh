@@ -1,0 +1,19 @@
+appId: com.study.teacherthu
+name: ios-tc-off-003
+tags: [ios, offline, p0]
+# Preconditions: QA-iOS session exists; simulator network is disabled by the runner for this flow.
+# Waiting for IDs: session.tab.attendance, attendance.row.QA-iOS-P0-Student-1.present, attendance.save, saveStatus.localPending, network.requiredMessage
+---
+- runFlow:
+    file: ../../common/ios-open-shared-session.yaml
+# Preconditions: runner disables simulator network via simctl before entering the offline save steps.
+- tapOn:
+    id: session.tab.attendance
+- tapOn:
+    id: attendance.row.QA-iOS-P0-Student-1.present
+- tapOn:
+    id: attendance.save
+- assertVisible:
+    id: saveStatus.localPending
+- assertVisible:
+    id: network.requiredMessage

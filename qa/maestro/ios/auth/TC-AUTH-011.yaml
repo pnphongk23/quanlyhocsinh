@@ -1,0 +1,12 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-011
+tags: [ios, p1]
+---
+# Draft for TC-AUTH-011: Đổi mật khẩu của chính mình
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Tài khoản dùng riêng cho ca này (không phải tài khoản smoke chính).
+# 1. Vào Cài đặt → Đổi mật khẩu; nhập mật khẩu cũ và mật khẩu mới.
+# 2. Lưu, đăng xuất, đăng nhập bằng mật khẩu mới.
+# Expected: Đổi được; mật khẩu cũ không còn dùng được; mật khẩu mới đăng nhập được. Không có nút "Cấp mật khẩu", mật khẩu tạm hay bắt buộc đổi lần đầu.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

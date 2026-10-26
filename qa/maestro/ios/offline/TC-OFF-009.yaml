@@ -1,0 +1,13 @@
+appId: com.study.teacherthu
+name: ios-tc-off-009
+tags: [ios, p1]
+---
+# Draft for TC-OFF-009: Thông báo chỉ khi giáo viên bấm gửi phiếu, phát hành báo cáo, lưu đề BTVN hoặc có điểm mới
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Phụ huynh liên kết; thông báo trong app (inbox).
+# 1. Giáo viên lưu phiếu, chưa gửi; phụ huynh mở inbox.
+# 2. Giáo viên gửi phiếu; phụ huynh mở inbox.
+# 3. Giáo viên sửa phiếu đã gửi; phụ huynh mở inbox.
+# Expected: Bước 1 chưa có thông báo; bước 2 một thông báo cho buổi đó; bước 3 không thêm thông báo mới. Inbox chỉ có tiêu đề ngắn và mã tham chiếu, không chứa nội dung nhận xét, điểm chi tiết hay mức sao.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

@@ -1,0 +1,12 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-005
+tags: [ios, p1]
+---
+# Draft for TC-AUTH-005: Mật khẩu ngắn khi đăng ký
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: SĐT chưa đăng ký.
+# 1. Ở màn Đăng ký nhập mật khẩu 7 ký tự.
+# 2. Bấm Đăng ký.
+# Expected: Không tạo được tài khoản; hiện lỗi mật khẩu quá ngắn.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

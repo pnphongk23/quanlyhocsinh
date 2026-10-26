@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-cmt-011
+tags: [ios, p1]
+---
+# Draft for TC-CMT-011: Phiếu hiển thị kết quả BTVN buổi trước
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Buổi N giao BTVN, chấm ở buổi N+1, phiếu buổi N+1 đã gửi.
+# 1. Phụ huynh mở phiếu buổi N+1.
+# Expected: Phiếu gồm số sao, ô nhận xét (câu tự sinh + phần gõ thêm) và kết quả chấm BTVN buổi trước; kết quả chấm đi theo phiếu, không gửi riêng.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

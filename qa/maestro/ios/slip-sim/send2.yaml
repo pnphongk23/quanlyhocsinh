@@ -1,0 +1,20 @@
+appId: com.study.teacherthu
+---
+- launchApp:
+    stopApp: true
+- tapOn: "Lớp Smoke FB2"
+- tapOn: "Xem buổi"
+- tapOn: "Nhận xét"
+- tapOn:
+    id: comment.sendClass
+- tapOn: "Gửi 3 phiếu"
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/32-after-send
+- tapOn: "Bé An"
+- extendedWaitUntil:
+    visible:
+      id: comment.stars
+    timeout: 10000
+- assertVisible: "Đã gửi"
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/33-sent-slip

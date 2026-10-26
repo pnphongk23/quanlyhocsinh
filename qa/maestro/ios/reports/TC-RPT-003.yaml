@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-rpt-003
+tags: [ios, p1]
+---
+# Draft for TC-RPT-003: Chọn khoảng buổi tuỳ ý
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Lớp có ≥ 6 buổi đã diễn ra.
+# 1. Thêm báo cáo, chọn buổi bắt đầu 3 và buổi kết thúc 5.
+# Expected: Báo cáo có tên theo "Buổi 3–5 · dd/mm–dd/mm" và chỉ dùng dữ liệu trong khoảng đó.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

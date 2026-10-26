@@ -1,0 +1,17 @@
+appId: com.study.teacherthu
+name: ios-parent-old-login
+---
+- tapOn:
+    id: login.phone
+- eraseText: 30
+- inputText: ${QA_PARENT_OLD_PHONE}
+- tapOn:
+    id: login.password
+- eraseText: 30
+- inputText: ${QA_PARENT_OLD_PASSWORD}
+- tapOn:
+    id: login.submit
+- extendedWaitUntil:
+    visible:
+      id: guardian.dashboard
+    timeout: 45000

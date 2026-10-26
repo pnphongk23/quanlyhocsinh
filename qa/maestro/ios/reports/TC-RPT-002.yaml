@@ -1,0 +1,26 @@
+appId: com.study.teacherthu
+name: ios-tc-rpt-002
+tags: [ios, reports, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: class.tab.reports, report.create, report.save, report.draft.QA-iOS-P0-Student-1, report.title.sessionRange
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.reports
+- tapOn:
+    id: report.create
+- tapOn:
+    id: report.save
+- assertVisible:
+    id: report.draft.QA-iOS-P0-Student-1
+- assertVisible:
+    id: report.draft.QA-iOS-P0-Student-2
+- assertVisible:
+    id: report.draft.QA-iOS-P0-Student-3
+- assertVisible:
+    id: report.draft.QA-iOS-P0-Student-4
+- assertNotVisible:
+    id: report.draft.QA-iOS-P0-FormerStudent
+- assertVisible:
+    id: report.title.sessionRange

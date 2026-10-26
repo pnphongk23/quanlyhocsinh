@@ -1,0 +1,7 @@
+appId: com.study.teacherthu
+---
+- tapOn: "Lớp Smoke FB2"
+- tapOn: "Điểm danh"
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/02-session
+- tapOn: "Nhận xét"
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/03-comments-list

@@ -1,0 +1,165 @@
+TC-ID	Đường dẫn flow	Trạng thái
+TC-ATT-001	qa/maestro/ios/attendance/TC-ATT-001.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-ATT-002	qa/maestro/ios/attendance/TC-ATT-002.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-ATT-003	qa/maestro/ios/attendance/TC-ATT-003.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-ATT-004	qa/maestro/ios/attendance/TC-ATT-004.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-ATT-005	qa/maestro/ios/attendance/TC-ATT-005.yaml	blocked: phụ thuộc QA-iOS session/HS; fixture chưa truy cập được
+TC-ATT-006	qa/maestro/ios/attendance/TC-ATT-006.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-ATT-007	qa/maestro/ios/attendance/TC-ATT-007.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-ATT-008		blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-ATT-009		thủ công: chưa chốt phạm vi (Q-04), không tính vào coverage/pass-fail Bản đầu.
+TC-ATT-010	qa/maestro/ios/classes/session-numbering.yaml	blocked: flow đang trỏ tới session-numbering, không kiểm ba tab attendance; cần flow riêng trước khi chạy
+TC-ATT-011	qa/maestro/ios/attendance/TC-ATT-011.yaml	blocked: QA-iOS class/session chưa mở được để kiểm tra attendance
+TC-ATT-012		thủ công: cần điều phối hai thiết bị; có thể dùng web + iOS cùng lúc.
+TC-ATT-013	qa/maestro/ios/attendance/TC-ATT-013.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-AUTH-001	qa/maestro/ios/auth/TC-AUTH-001.yaml	chặn: chưa có fixture SĐT giả/runtime vars và đăng ký IDs chưa được xác minh
+TC-AUTH-002	qa/maestro/ios/auth/login.yaml	blocked: signed 5227fe8 ad-hoc build verified/installed; one preflight submit failed; hierarchy unavailable after failure, no screenshot produced; stopped without retry
+TC-AUTH-003	qa/maestro/ios/auth/TC-AUTH-003.yaml	chặn: đã dùng lượt submit duy nhất của tài khoản chính cho đăng nhập hợp lệ
+TC-AUTH-004		thủ công: khoá 15 phút theo SĐT/IP làm cạn lượt thử trên staging; chỉ chạy khi GL cho phép.
+TC-AUTH-005	qa/maestro/ios/auth/TC-AUTH-005.yaml	tự động-chưa-chạy
+TC-AUTH-006	qa/maestro/ios/auth/TC-AUTH-006.yaml	tự động-chưa-chạy
+TC-AUTH-007	qa/maestro/ios/auth/TC-AUTH-007.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký PH
+TC-AUTH-008	qa/maestro/ios/auth/TC-AUTH-008.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký PH
+TC-AUTH-009	qa/maestro/ios/auth/TC-AUTH-009.yaml	blocked: phụ thuộc tài khoản PH; lane đăng ký đang bận
+TC-AUTH-010	qa/maestro/ios/auth/TC-AUTH-010.yaml	tự động-chưa-chạy
+TC-AUTH-011	qa/maestro/ios/auth/TC-AUTH-011.yaml	tự động-chưa-chạy
+TC-AUTH-012	qa/maestro/ios/auth/TC-AUTH-012.yaml	tự động-chưa-chạy
+TC-AUTH-013	qa/maestro/ios/auth/TC-AUTH-013.yaml	tự động-chưa-chạy
+TC-AUTH-014	qa/maestro/ios/auth/TC-AUTH-014.yaml	tự động-chưa-chạy
+TC-AUTH-015		tự động-chưa-chạy
+TC-AUTH-016	qa/maestro/ios/auth/TC-AUTH-016.yaml	tự động-chưa-chạy
+TC-AUTH-018	qa/maestro/ios/auth/TC-AUTH-018.yaml	tự động-chưa-chạy
+TC-AUTH-019	qa/maestro/ios/auth/TC-AUTH-019.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-AUTH-020		tự động-chưa-chạy
+TC-CLS-001	qa/maestro/ios/classes/TC-CLS-001.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-CLS-002		tự động-chưa-chạy
+TC-CLS-003	qa/maestro/ios/classes/TC-CLS-003.yaml	tự động-chưa-chạy
+TC-CLS-004	qa/maestro/ios/classes/TC-CLS-004.yaml	tự động-chưa-chạy
+TC-CLS-005		tự động-chưa-chạy
+TC-CLS-006	qa/maestro/ios/classes/TC-CLS-006.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-CLS-007	qa/maestro/ios/classes/TC-CLS-007.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-CLS-008	qa/maestro/ios/classes/TC-CLS-008.yaml	tự động-chưa-chạy
+TC-CLS-009	qa/maestro/ios/classes/TC-CLS-009.yaml	tự động-chưa-chạy
+TC-CLS-010	qa/maestro/ios/classes/TC-CLS-010.yaml	tự động-chưa-chạy
+TC-CLS-011	qa/maestro/ios/classes/TC-CLS-011.yaml	tự động-chưa-chạy
+TC-CLS-012	qa/maestro/ios/classes/TC-CLS-012.yaml	tự động-chưa-chạy
+TC-CLS-013	qa/maestro/ios/classes/TC-CLS-013.yaml	tự động-chưa-chạy
+TC-CLS-014		thủ công: chưa chốt phạm vi (Q-02), không tính vào coverage/pass-fail Bản đầu.
+TC-CLS-016	qa/maestro/ios/classes/TC-CLS-016.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-CLS-017	qa/maestro/ios/classes/create-sunday-class.yaml	blocked: stopped before execution because the single AUTH-002 preflight submit failed; no authenticated session or QA-iOS class fixture
+TC-CMT-001	qa/maestro/ios/comments/TC-CMT-001.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-CMT-002	qa/maestro/ios/comments/TC-CMT-002.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-CMT-003	qa/maestro/ios/comments/TC-CMT-003.yaml	blocked: chưa có QA-iOS session/HS truy cập được; chưa nhập nội dung nhận xét
+TC-CMT-004	qa/maestro/ios/comments/TC-CMT-004.yaml	tự động-chưa-chạy (chờ cập nhật flow theo spec 3dab010: 5 tiêu chí/tháng/bỏ số buổi; chờ web/iOS triển khai)
+TC-CMT-006	qa/maestro/ios/comments/TC-CMT-006.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-CMT-007	qa/maestro/ios/comments/TC-CMT-007.yaml	blocked: cần QA-iOS session và phiếu nền chưa dựng
+TC-CMT-008	qa/maestro/ios/comments/TC-CMT-008.yaml	blocked: cần QA-iOS session/HS; chưa gửi nội dung nhận xét
+TC-CMT-009	qa/maestro/ios/comments/TC-CMT-009.yaml	blocked: cần QA-iOS session/HS; chưa gửi nội dung nhận xét
+TC-CMT-010	qa/maestro/ios/comments/TC-CMT-010.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-CMT-011	qa/maestro/ios/comments/TC-CMT-011.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-CMT-012	qa/maestro/ios/comments/TC-CMT-012.yaml	tự động-chưa-chạy (chờ cập nhật flow theo spec 3dab010: 5 tiêu chí/tháng/bỏ số buổi; chờ web/iOS triển khai)
+TC-CMT-013	qa/maestro/ios/comments/TC-CMT-013.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-GRD-001	qa/maestro/ios/guardian/TC-GRD-001.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH
+TC-GRD-002	qa/maestro/ios/guardian/TC-GRD-002.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH
+TC-GRD-003	qa/maestro/ios/guardian/TC-GRD-003.yaml	tự động-chưa-chạy
+TC-GRD-004	qa/maestro/ios/guardian/TC-GRD-004.yaml	tự động-chưa-chạy (chờ ID điểm từng bài, xu hướng %, bài trống/lưu trữ và trạng thái không có TB lớp/điểm tối đa)
+TC-GRD-005	qa/maestro/ios/guardian/TC-GRD-005.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH
+TC-GRD-006	qa/maestro/ios/guardian/TC-GRD-006.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH
+TC-GRD-007	qa/maestro/ios/guardian/TC-GRD-007.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH
+TC-GRD-008	qa/maestro/ios/guardian/TC-GRD-008.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH
+TC-GRD-009	qa/maestro/ios/guardian/TC-GRD-009.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH
+TC-GRD-010	qa/maestro/ios/guardian/TC-GRD-010.yaml	blocked: PH lane đang dùng cửa sổ đăng ký; không đăng ký/đăng nhập PH
+TC-GRD-011	qa/maestro/ios/guardian/TC-GRD-011.yaml	tự động-chưa-chạy
+TC-GRD-012	qa/maestro/ios/guardian/TC-GRD-012.yaml	tự động-chưa-chạy
+TC-GRD-013		tự động-chưa-chạy
+TC-HW-001	qa/maestro/ios/homework/TC-HW-001.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-HW-002	qa/maestro/ios/homework/TC-HW-002.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-HW-003	qa/maestro/ios/homework/TC-HW-003.yaml	blocked: chưa có QA-iOS session/HS fixture
+TC-HW-004	qa/maestro/ios/homework/TC-HW-004.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-HW-005	qa/maestro/ios/homework/TC-HW-005.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-HW-006	qa/maestro/ios/homework/TC-HW-006.yaml	blocked: chưa có QA-iOS homework fixture
+TC-HW-007	qa/maestro/ios/homework/TC-HW-007.yaml	blocked: chưa có QA-iOS homework fixture
+TC-HW-008	qa/maestro/ios/homework/TC-HW-008.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-HW-009	qa/maestro/ios/homework/TC-HW-009.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-HW-010	qa/maestro/ios/homework/TC-HW-010.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-HW-011	qa/maestro/ios/homework/TC-HW-011.yaml	blocked: chưa có QA-iOS homework fixture
+TC-HW-012		thủ công: khó dựng buổi cuối của lịch lặp vô hạn trên staging; xem `../open-questions.md` (Q-05).
+TC-HW-013	qa/maestro/ios/homework/TC-HW-013.yaml	blocked: chưa có QA-iOS class/session fixture
+TC-HW-014	qa/maestro/ios/homework/TC-HW-014.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-HW-015		thủ công: Bản đầu không có màn tạo role; xem `permissions.md`.
+TC-OFF-001	qa/maestro/ios/offline/TC-OFF-001.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-OFF-002	qa/maestro/ios/offline/TC-OFF-002.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-OFF-003	qa/maestro/ios/offline/TC-OFF-003.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-OFF-004	qa/maestro/ios/offline/TC-OFF-004.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-OFF-005		thủ công: cần ngắt mạng đúng giữa đồng bộ và xác nhận từ thiết bị khác; Maestro không điều khiển được điểm cắt này.
+TC-OFF-006		thủ công: điều phối hai thiết bị và thứ tự tới máy chủ.
+TC-OFF-007		thủ công: cần thu hồi quyền bằng công cụ vận hành, ngoài phạm vi `qa/`.
+TC-OFF-008	qa/maestro/ios/offline/TC-OFF-008.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-OFF-009	qa/maestro/ios/offline/TC-OFF-009.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-OFF-010		thủ công: cần iPhone thật + FCM, simulator không nhận push thật.
+TC-OFF-011		thủ công: log máy chủ ngoài phạm vi `qa/`; log console web kiểm được một phần.
+TC-OFF-012		blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-OFF-013		thủ công: chờ ≥ 5 phút theo đồng hồ máy chủ và cần cron; kiểm bằng inbox khi app có màn (Q-08).
+TC-OFF-014		thủ công: cần iPhone thật và FCM.
+TC-PRM-001	qa/maestro/ios/permissions/TC-PRM-001.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-PRM-002	qa/maestro/ios/permissions/TC-PRM-002.yaml	tự động-chưa-chạy
+TC-PRM-008		thủ công: Bản đầu không có màn tạo role; xem Q-09.
+TC-PRM-009		thủ công: chờ Q-10.
+TC-RPT-001	qa/maestro/ios/reports/TC-RPT-001.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-RPT-002	qa/maestro/ios/reports/TC-RPT-002.yaml	blocked: cần QA-iOS report fixture chưa dựng
+TC-RPT-003	qa/maestro/ios/reports/TC-RPT-003.yaml	tự động-chưa-chạy (chờ cập nhật flow theo spec 3dab010: 5 tiêu chí/tháng/bỏ số buổi; chờ web/iOS triển khai)
+TC-RPT-004		thủ công: không áp dụng (báo cáo theo tháng, không còn khoảng buổi)
+TC-RPT-005	qa/maestro/ios/reports/TC-RPT-005.yaml	tự động-chưa-chạy (chờ cập nhật flow theo spec 3dab010: 5 tiêu chí/tháng/bỏ số buổi; chờ web/iOS triển khai)
+TC-RPT-006	qa/maestro/ios/reports/TC-RPT-006.yaml	blocked: cần QA-iOS report fixture chưa dựng
+TC-RPT-007	qa/maestro/ios/reports/TC-RPT-007.yaml	blocked: cần QA-iOS report fixture chưa dựng
+TC-RPT-008	qa/maestro/ios/reports/TC-RPT-008.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-RPT-009	qa/maestro/ios/reports/TC-RPT-009.yaml	blocked: cần QA-iOS report fixture chưa dựng
+TC-RPT-010	qa/maestro/ios/reports/TC-RPT-010.yaml	blocked: cần QA-iOS report fixture chưa dựng
+TC-RPT-011	qa/maestro/ios/reports/TC-RPT-011.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-RPT-012	qa/maestro/ios/reports/TC-RPT-012.yaml	blocked: cần QA-iOS report fixture chưa dựng
+TC-RPT-013		thủ công: OS share sheet ngoài tầm Maestro; kiểm không gọi API tải PDF bằng network capture web nếu có thể
+TC-RPT-014	qa/maestro/ios/reports/TC-RPT-014.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-RPT-015	qa/maestro/ios/reports/TC-RPT-015.yaml	tự động-chưa-chạy (chờ cập nhật flow theo spec 3dab010: 5 tiêu chí/tháng/bỏ số buổi; chờ web/iOS triển khai)
+TC-RPT-016	qa/maestro/ios/reports/TC-RPT-016.yaml	tự động-chưa-chạy (chờ cập nhật flow theo spec 3dab010: 5 tiêu chí/tháng/bỏ số buổi; chờ web/iOS triển khai)
+TC-TST-001	qa/maestro/ios/tests/TC-TST-001.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-TST-002	qa/maestro/ios/tests/TC-TST-002.yaml	blocked: cần QA-iOS test/HS fixture; ID ô điểm chưa được kiểm trên đúng màn
+TC-TST-003	qa/maestro/ios/tests/TC-TST-003.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-TST-004	qa/maestro/ios/tests/TC-TST-004.yaml	blocked: QA-iOS test/HS fixture chưa truy cập được
+TC-TST-005	qa/maestro/ios/tests/TC-TST-005.yaml	blocked: QA-iOS test/HS fixture chưa truy cập được
+TC-TST-006	qa/maestro/ios/tests/TC-TST-006.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-TST-007	qa/maestro/ios/tests/TC-TST-007.yaml	blocked: cần QA-iOS test fixture; chưa kiểm sửa tên/ngày và giữ điểm
+TC-TST-008	qa/maestro/ios/tests/TC-TST-008.yaml	blocked: cần QA-iOS test fixture; chưa kiểm điểm 20/100 sau reload
+TC-TST-009	qa/maestro/ios/tests/TC-TST-009.yaml	blocked: QA-iOS test/HS fixture chưa truy cập được
+TC-TST-010	qa/maestro/ios/tests/TC-TST-010.yaml	blocked: QA-iOS test/HS fixture chưa truy cập được
+TC-TST-011	qa/maestro/ios/tests/TC-TST-011.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-TST-012	qa/maestro/ios/tests/TC-TST-012.yaml	blocked: QA-iOS test/HS fixture chưa truy cập được
+TC-TST-013	qa/maestro/ios/tests/TC-TST-013.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-TST-014		thủ công: lịch sử chỉ ở DB, UI không có màn; kiểm cần truy vấn D1 (ngoài `qa/`), xem `../open-questions.md` (Q-06).
+TC-TST-015	qa/maestro/ios/tests/TC-TST-015.yaml	blocked: QA-iOS test/HS fixture chưa truy cập được
+TC-TST-016	qa/maestro/ios/tests/TC-TST-016.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-TST-017	qa/maestro/ios/tests/TC-TST-017.yaml	blocked: QA-iOS test/HS fixture chưa truy cập được
+TC-TST-018	qa/maestro/ios/tests/TC-TST-018.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-TST-019	qa/maestro/ios/tests/TC-TST-019.yaml	blocked: chưa mở được QA-iOS test roster; không bật/tắt mạng khi không có fixture
+TC-TST-020	-	thủ công: ngoài Bản đầu (spec 110)
+TC-STU-001	qa/maestro/ios/students/TC-STU-001.yaml	blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution
+TC-STU-002		blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-STU-003		thủ công: chờ trả lời Q-03.
+TC-STU-004	qa/maestro/ios/students/TC-STU-004.yaml	blocked: cần HS và tài khoản PH cũ/mới chưa được dựng; lớp QA-iOS chưa truy cập được
+TC-STU-005	qa/maestro/ios/students/TC-STU-005.yaml	blocked: cần HS có attendance/score lịch sử; fixture lớp/HS QA-iOS chưa xác lập
+TC-STU-006	qa/maestro/ios/students/TC-STU-006.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-STU-007	qa/maestro/ios/students/TC-STU-007.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-STU-008		blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-STU-009		blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-RPT-017	qa/maestro/ios/reports/TC-RPT-017.yaml	blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB)
+TC-CMT-005	qa/maestro/ios/comments/TC-CMT-005.yaml	tự động-chưa-chạy (chờ cập nhật flow theo spec 3dab010: 5 tiêu chí/tháng/bỏ số buổi; chờ web/iOS triển khai)
+TC-CMT-014	-	tự động-chưa-chạy: testcase viết lại theo spec 34bdf69 (câu tự sinh, một ô gộp, BTVN tự tích); kết quả cũ theo giao diện trước không còn áp dụng; chờ bản triển khai
+TC-CMT-015	-	thủ công: cần dữ liệu cũ thang 3 sao
+TC-RPT-018	-	thủ công: cần dữ liệu cũ khoảng buổi
+TC-RPT-019	-	tự động-chưa-chạy (chờ triển khai xoá báo cáo)
+TC-RPT-020	-	tự động-chưa-chạy (chờ triển khai xoá báo cáo)
+TC-RPT-021	-	tự động-chưa-chạy (chờ triển khai xoá báo cáo)
+TC-RPT-022	-	tự động-chưa-chạy (chờ triển khai xoá báo cáo)
+TC-AUTH-022	-	thủ công (làm sau P0)
+TC-CMT-017	qa/maestro/ios/comments/TC-CMT-017.yaml	blocked: cần đăng nhập tay/XCUITest xác nhận; flow cập nhật cho spec không giới hạn ký tự (1000 ký tự, không bộ đếm, lưu được), selector/assertion chưa xác minh
+TC-RPT-023	qa/maestro/ios/reports/TC-RPT-023.yaml	blocked: no PH account confirmed available and case needs a second concurrent client; flow added with deletion IDs pending verification
+TC-CMT-016	-	thủ công: ảnh Mít ở lượt web, iOS chưa chạy (blocked: cần đăng nhập tay/XCUITest xác nhận)

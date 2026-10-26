@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-cmt-004
+tags: [ios, p1]
+---
+# Draft for TC-CMT-004: Danh sách Nhận xét và bộ lọc
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: HS-1..2 đã chọn sao và gửi; HS-3 đã chọn sao chưa gửi; HS-4 chưa chọn.
+# 1. Mở tab Nhận xét; dùng bộ lọc Tất cả / Chưa chọn sao / Chưa gửi.
+# Expected: Danh sách có mức sao, trạng thái phiếu, tóm tắt BTVN buổi trước. "Chưa chọn sao" chỉ HS-4; "Chưa gửi" gồm HS-3 và HS-4; "Tất cả" đủ bốn em.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

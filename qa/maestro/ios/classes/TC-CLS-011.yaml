@@ -1,0 +1,12 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-011
+tags: [ios, p1]
+---
+# Draft for TC-CLS-011: Sửa lịch lặp áp dụng buổi mới
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Lớp lịch Thứ 2 + Thứ 5; hôm nay chưa có dữ liệu buổi nào.
+# 1. Sửa lịch lặp thành Thứ 3 + Thứ 6, lưu.
+# 2. Xem các buổi sắp tới.
+# Expected: Buổi sắp tới sinh theo lịch mới; buổi đã diễn ra, buổi hủy và buổi lẻ được giữ nguyên.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

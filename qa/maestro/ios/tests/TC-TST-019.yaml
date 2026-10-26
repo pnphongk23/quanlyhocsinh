@@ -1,0 +1,30 @@
+appId: com.study.teacherthu
+name: ios-tc-tst-019
+tags: [ios, tests, p1, offline]
+# Preconditions: QA-iOS-P0-Test-1 exists with visible students. Runner disables network before this flow and restores it after the local-pending assertion.
+# Waiting for IDs: class.tab.tests, test.row.QA-iOS-P0-Test-1, test.assignDefault, test.assignDefault.confirm, saveStatus.localPending, saveStatus.synced, test.score.QA-iOS-P0-Student-1.saved15
+# Cross-session visibility and server history require a second signed-in session; verify manually after sync.
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-1
+- tapOn:
+    id: test.assignDefault
+- tapOn:
+    id: test.assignDefault.confirm
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved15
+- assertVisible:
+    id: saveStatus.localPending
+# Runner restores network before continuing.
+- tapOn:
+    id: class.tab.tests
+- tapOn:
+    id: test.row.QA-iOS-P0-Test-1
+- assertVisible:
+    id: test.score.QA-iOS-P0-Student-1.saved15
+- assertVisible:
+    id: saveStatus.synced

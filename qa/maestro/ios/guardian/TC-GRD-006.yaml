@@ -1,0 +1,18 @@
+appId: com.study.teacherthu
+name: ios-tc-grd-006
+tags: [ios, guardian, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: guardian.dashboard, guardian.tab.homework, guardian.homework.prompt, guardian.homework.result.published, guardian.homework.ungraded
+---
+- runFlow:
+    file: ../../common/ios-guardian-entry.yaml
+- tapOn:
+    id: guardian.tab.homework
+- tapOn:
+    id: guardian.homework.QA-iOS-P0-GradedPart
+- assertVisible:
+    id: guardian.homework.prompt
+- assertVisible:
+    id: guardian.homework.result.published
+- assertVisible:
+    id: guardian.homework.ungraded

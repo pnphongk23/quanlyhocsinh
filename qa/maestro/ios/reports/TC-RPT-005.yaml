@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-rpt-005
+tags: [ios, p1]
+---
+# Draft for TC-RPT-005: Các báo cáo được phép trùng khoảng
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Đã có báo cáo Buổi 1–4.
+# 1. Thêm báo cáo mới cùng khoảng Buổi 1–4.
+# Expected: Tạo được; hai báo cáo cùng khoảng cùng tồn tại trong danh sách.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

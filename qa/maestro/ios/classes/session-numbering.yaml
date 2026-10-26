@@ -1,0 +1,32 @@
+appId: com.study.teacherthu
+name: ios-session-tabs-and-first-generated-session
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: "QA-iOS-1025-B"
+    direction: DOWN
+- tapOn:
+    text: "QA-iOS-1025-B"
+- extendedWaitUntil:
+    visible: "Buổi học"
+    timeout: 20000
+- assertVisible:
+    text: "Sắp tới"
+- assertVisible:
+    text: /^(?:T[2-7]|CN) · \d{2}\/\d{2}$/
+- assertNotVisible:
+    text: /Buổi \d+/i
+- tapOn:
+    text: "Xem buổi"
+- assertVisible:
+    text: "Điểm danh"
+- assertVisible:
+    text: "Nhận xét"
+- assertVisible:
+    text: "Bài tập về nhà"
+- assertNotVisible:
+    id: saveStatus.error

@@ -1,0 +1,32 @@
+appId: com.study.teacherthu
+name: ios-tc-grd-004
+tags: [ios, guardian, p1]
+# Preconditions: HS-1 has score 10 for QA-iOS-P0-Test-A, 12 for later QA-iOS-P0-Test-B; a separate pair has 0 then 5; also one ungraded and one archived test.
+# Waiting for IDs: guardian.tab.scores, guardian.score.QA-iOS-P0-Test-A.value10, guardian.score.QA-iOS-P0-Test-B.value12, guardian.score.trend.QA-iOS-P0-Test-B, guardian.score.zeroPrevious.value0, guardian.score.zeroPreviousNext.value5, guardian.score.noTrend.zeroPrevious, guardian.score.noValue, guardian.score.QA-iOS-P0-Test-Archived, guardian.score.noClassAverage, guardian.score.noMax
+---
+- runFlow:
+    file: ../../common/ios-guardian-entry.yaml
+- tapOn:
+    id: guardian.tab.scores
+- assertVisible:
+    id: guardian.score.QA-iOS-P0-Test-A.value10
+- assertVisible:
+    id: guardian.score.QA-iOS-P0-Test-B.value12
+- assertVisible:
+    id: guardian.score.trend.QA-iOS-P0-Test-B
+- assertVisible:
+    text: "+20%"
+- assertVisible:
+    id: guardian.score.zeroPrevious.value0
+- assertVisible:
+    id: guardian.score.zeroPreviousNext.value5
+- assertNotVisible:
+    id: guardian.score.noTrend.zeroPrevious
+- assertVisible:
+    id: guardian.score.noValue
+- assertNotVisible:
+    id: guardian.score.QA-iOS-P0-Test-Archived
+- assertNotVisible:
+    id: guardian.score.noClassAverage
+- assertVisible:
+    id: guardian.score.noMax

@@ -1,0 +1,11 @@
+url: https://qlh-staging-web.pages.dev/
+---
+- launchApp
+- tapOn:
+    text: ".*Đăng ký.*"
+- assertVisible:
+    text: "Số điện thoại"
+- tapOn:
+    text: "Số điện thoại"
+- inputText: "123456789"
+- assertVisible: "123456789"

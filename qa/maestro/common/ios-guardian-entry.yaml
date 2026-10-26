@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-guardian-entry
+---
+- launchApp
+- runFlow:
+    when:
+      visible:
+        id: login.phone
+    file: ios-guardian-login.yaml
+- assertVisible:
+    id: guardian.dashboard

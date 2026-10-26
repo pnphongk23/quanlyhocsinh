@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-grd-011
+tags: [ios, p1]
+---
+# Draft for TC-GRD-011: Cài đặt phụ huynh: hồ sơ, đổi mật khẩu, đăng xuất
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: PH-A.
+# 1. Mở Cài đặt; đổi mật khẩu, lưu email; đăng xuất.
+# Expected: Có hồ sơ, đổi mật khẩu, lưu email, đăng xuất; Việt/Anh: giao diện tiếng Anh thuộc "Làm sau" nên không kiểm.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

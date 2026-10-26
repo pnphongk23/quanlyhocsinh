@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-att-007
+tags: [ios, p1]
+---
+# Draft for TC-ATT-007: Buổi hủy bị bỏ qua khi tính cảnh báo
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: HS-4 Vắng buổi 1, buổi 2 bị hủy, Vắng buổi 3.
+# 1. Xem cảnh báo.
+# Expected: Có cảnh báo cho HS-4 (buổi hủy bỏ qua, buổi 1 và 3 là hai buổi đã diễn ra gần nhất).
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

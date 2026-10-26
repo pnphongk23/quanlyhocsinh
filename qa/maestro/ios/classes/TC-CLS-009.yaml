@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-009
+tags: [ios, p1]
+---
+# Draft for TC-CLS-009: Thêm buổi lẻ ngoài lịch lặp
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Lớp có lịch lặp; chọn một ngày không thuộc lịch lặp và chưa có buổi.
+# 1. Bấm thêm buổi lẻ, chọn ngày đó, lưu.
+# Expected: Buổi lẻ xuất hiện đúng ngày, có số theo thứ tự ngày trong dãy buổi chưa hủy.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

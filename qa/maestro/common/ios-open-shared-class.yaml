@@ -1,0 +1,13 @@
+appId: com.study.teacherthu
+name: ios-open-shared-class
+---
+- tapOn:
+    text: Lớp
+- scrollUntilVisible:
+    element:
+      text: "QA-iOS-P0-SharedClass"
+    direction: DOWN
+- tapOn:
+    text: "QA-iOS-P0-SharedClass"
+- assertVisible:
+    id: class.tab.sessions

@@ -1,0 +1,22 @@
+appId: com.study.teacherthu
+name: ios-tc-prm-001
+tags: [ios, permissions, p0]
+# Preconditions: Signed-in staging user is the workspace creator/Admin and workspace has multiple classes.
+# Confirmed selectors: create entry `Tạo lớp mới`, submit `Tạo lớp`; settings role IDs remain unverified.
+---
+- runFlow:
+    file: ../../common/ios-teacher-entry.yaml
+- assertVisible:
+    text: Lớp
+- tapOn:
+    text: "Tạo lớp mới"
+- assertVisible:
+    id: class.name
+- assertVisible:
+    text: "Tạo lớp"
+- tapOn:
+    text: Cài đặt
+- assertVisible:
+    id: settings.workspaceRole
+- assertVisible:
+    id: settings.role.admin

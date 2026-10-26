@@ -1,0 +1,13 @@
+appId: com.study.teacherthu
+name: ios-tc-cmt-012
+tags: [ios, p1]
+---
+# Draft for TC-CMT-012: Mất mạng: soạn phiếu vẫn lưu, Gửi phiếu cả lớp bị khoá
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Buổi hôm nay, HS-1 có phiếu mặc định chưa gửi; mất mạng.
+# 1. Bỏ tích một tiêu chí, gõ thêm phần riêng, lưu phiếu khi mất mạng.
+# 2. Xem nút "Gửi phiếu cả lớp".
+# 3. Bật mạng, mở lại buổi, bấm Gửi phiếu cả lớp.
+# Expected: Soạn lưu được ("Đã lưu trên máy · sẽ đồng bộ khi có mạng"). Gửi phiếu cả lớp bắt buộc có mạng, không xếp hàng: lúc mất mạng nút bị khoá kèm báo cần mạng; phiếu đã soạn giữ nguyên. Có mạng lại thì gửi được và phụ huynh thấy. (Người dùng chốt theo spec:191; web hiện còn hành vi cũ: fail thì ghi bug.)
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

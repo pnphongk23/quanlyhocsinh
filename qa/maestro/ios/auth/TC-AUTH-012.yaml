@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-012
+tags: [ios, p1]
+---
+# Draft for TC-AUTH-012: Giáo viên không quản lý mật khẩu người khác
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Hồ sơ học sinh có SĐT phụ huynh đã có tài khoản.
+# 1. Mở hồ sơ học sinh và các màn Phụ huynh/Cài đặt.
+# Expected: Không có nút/hành động cấp, đặt lại hay đổi mật khẩu của phụ huynh.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

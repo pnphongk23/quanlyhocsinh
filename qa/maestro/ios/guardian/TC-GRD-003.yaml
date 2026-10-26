@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-grd-003
+tags: [ios, p1]
+---
+# Draft for TC-GRD-003: Điểm danh theo tháng, thống kê, ghi chú từng buổi
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: HS-1 có điểm danh nhiều trạng thái trong tháng.
+# 1. Mở Điểm danh, đổi tháng, mở một buổi.
+# Expected: Xem theo tháng với thống kê (Có mặt/Muộn/Có phép/Vắng) và ghi chú từng buổi; chỉ đọc.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

@@ -1,0 +1,32 @@
+appId: com.study.teacherthu
+name: ios-tc-stu-001
+tags: [ios, students, p0]
+# Preconditions: QA-iOS-P0-SharedClass exists; use a fake QA-iOS parent number supplied at runtime.
+# Waiting for IDs: class.tab.students, student.add, student.name, student.parentPhone, student.save, student.row.QA-iOS-P0-Student-1, session.upcoming.toggle, session.row.1, session.tab.attendance, attendance.row.QA-iOS-P0-Student-1
+---
+- runFlow:
+    file: ../../common/ios-open-shared-class.yaml
+- tapOn:
+    id: class.tab.students
+- tapOn:
+    id: student.add
+- tapOn:
+    id: student.name
+- inputText: QA-iOS-P0-Student-1
+- tapOn:
+    id: student.parentPhone
+- inputText: ${QA_PARENT_PHONE}
+- tapOn:
+    id: student.save
+- assertVisible:
+    id: student.row.QA-iOS-P0-Student-1
+- tapOn:
+    id: class.tab.sessions
+- tapOn:
+    id: session.upcoming.toggle
+- tapOn:
+    id: session.row.1
+- tapOn:
+    id: session.tab.attendance
+- assertVisible:
+    id: attendance.row.QA-iOS-P0-Student-1

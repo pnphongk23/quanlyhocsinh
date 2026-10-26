@@ -1,0 +1,13 @@
+appId: com.study.teacherthu
+name: ios-tc-cmt-013
+tags: [ios, p1]
+---
+# Draft for TC-CMT-013: Sửa phiếu và chấm BTVN sau khi đã gửi: phụ huynh thấy ngay, không push mới
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Phiếu buổi N+1 của HS-1 đã gửi; một phần BTVN buổi N chưa chấm cho HS-1.
+# 1. Giáo viên chấm phần BTVN còn lại cho HS-1 ('Chưa hoàn thành'); phiếu đã gửi phải giữ nguyên tiêu chí/sao/câu.
+# 1b. Giáo viên tự bỏ tích một tiêu chí, gõ thêm phần riêng; lưu, không bấm gửi lại.
+# 2. Phụ huynh mở lại phiếu/BTVN; mở inbox thông báo (nếu có).
+# Expected: Chấm lại BTVN không đổi phiếu đã gửi. Phụ huynh thấy kết quả chấm và nhận xét mới (câu tự sinh + phần gõ thêm) ngay; không có bước gửi lại; không có thông báo mới cho lần sửa.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

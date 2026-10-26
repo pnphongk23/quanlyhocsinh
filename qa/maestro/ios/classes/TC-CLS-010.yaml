@@ -1,0 +1,12 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-010
+tags: [ios, p1]
+---
+# Draft for TC-CLS-010: Tab Lịch xem theo ngày và theo tháng
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Lớp có buổi trong tháng này.
+# 1. Mở tab Lịch.
+# 2. Chuyển giữa chế độ ngày và tháng.
+# Expected: Cả hai chế độ hiển thị các buổi của lớp đúng ngày; buổi hủy được đánh dấu hủy.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

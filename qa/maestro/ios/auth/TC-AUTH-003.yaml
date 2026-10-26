@@ -1,0 +1,25 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-003
+tags: [ios, auth, p0]
+# Preconditions: Submit a single intentionally incorrect password for the staging teacher account.
+# Waiting for IDs: login.error
+---
+- launchApp
+- assertVisible:
+    id: login.phone
+- tapOn:
+    id: login.phone
+- eraseText: 30
+- inputText: ${STAGING_PHONE}
+- tapOn:
+    id: login.password
+- eraseText: 30
+- inputText: ${QA_WRONG_PASSWORD}
+- tapOn:
+    id: login.submit
+- assertVisible:
+    id: login.error
+- assertVisible:
+    id: login.phone
+- assertNotVisible:
+    text: Lớp

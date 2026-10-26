@@ -1,0 +1,41 @@
+appId: com.study.teacherthu
+name: ios-teacher-login
+onFlowComplete:
+  - runFlow:
+      when:
+        visible:
+          id: login.phone
+        notVisible: "Lớp của tôi"
+      commands:
+        - tapOn:
+            id: login.phone
+        - eraseText: 30
+        - tapOn:
+            id: login.password
+        - eraseText: 30
+        - hideKeyboard
+        - takeScreenshot: teacher-login-failure-sanitized
+---
+- tapOn:
+    id: login.phone
+- eraseText: 30
+- inputText: ${STAGING_PHONE}
+- tapOn:
+    id: login.password
+- eraseText: 30
+- inputText: ${STAGING_PASSWORD}
+- runFlow:
+    when:
+      notVisible:
+        id: login.submit
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: login.submit
+          direction: DOWN
+- hideKeyboard
+- tapOn:
+    id: login.submit
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 45000

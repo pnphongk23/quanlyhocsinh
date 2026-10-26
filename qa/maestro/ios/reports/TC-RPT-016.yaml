@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-rpt-016
+tags: [ios, p1]
+---
+# Draft for TC-RPT-016: Học sinh nghỉ giữa khoảng vẫn có báo cáo
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: HS-2 đang học từ Buổi 1, đánh dấu nghỉ sau Buổi 3 (ngày rời lớp sau Buổi 3); khoảng báo cáo Buổi 1–6.
+# 1. Thêm báo cáo Buổi 1–6; mở bản nháp HS-2.
+# Expected: HS-2 có bản nháp (đang học trong một phần khoảng); số liệu chỉ gồm các buổi em đang học (Buổi 1–3).
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

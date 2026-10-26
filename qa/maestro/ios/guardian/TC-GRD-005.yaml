@@ -1,0 +1,20 @@
+appId: com.study.teacherthu
+name: ios-tc-grd-005
+tags: [ios, guardian, p0]
+# Preconditions: QA-iOS fixture is prepared in the staging smoke workspace.
+# Waiting for IDs: guardian.dashboard, guardian.tab.comments, guardian.comment.rating, guardian.comment.template, guardian.comment.note, guardian.comment.status.published
+---
+- runFlow:
+    file: ../../common/ios-guardian-entry.yaml
+- tapOn:
+    id: guardian.tab.comments
+- tapOn:
+    id: guardian.comment.QA-iOS-P0-Student-1
+- assertVisible:
+    id: guardian.comment.rating
+- assertVisible:
+    id: guardian.comment.template
+- assertVisible:
+    id: guardian.comment.note
+- assertVisible:
+    id: guardian.comment.status.published

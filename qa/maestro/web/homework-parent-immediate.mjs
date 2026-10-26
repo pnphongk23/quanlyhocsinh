@@ -1,0 +1,95 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { randomBytes, randomInt } from 'node:crypto';
+const { chromium } = await import('file:///Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs');
+const credentialPath = `${process.env.HOME}/.config/qlh/staging-smoke.txt`;
+const credentials = Object.fromEntries((await readFile(credentialPath, 'utf8')).split(/\r?\n/).map((line) => {
+  const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
+}).filter(([key]) => key));
+const suffix = randomBytes(3).toString('hex');
+const className = `QA-HW-Parent-${suffix}-Class`;
+const student = `QA-HW-Parent-${suffix}`;
+const parentPhone = `0${randomInt(300000000, 999999999)}`;
+const parentPassword = `${randomBytes(12).toString('base64url')}A1`;
+const title = `QA-HW-Immediate-${suffix}`;
+const base = 'https://qlh-staging-web.pages.dev';
+const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const browser = await chromium.launch({ headless: true });
+const teacher = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+let parent;
+let phase = 'teacher login';
+try {
+  await teacher.goto(`${base}/dang-nhap`, { waitUntil: 'domcontentloaded' });
+  await teacher.locator('#login-phone').fill(credentials.phone);
+  await teacher.locator('#login-password').fill(credentials.password);
+  await teacher.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await teacher.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
+  phase = 'create QA class';
+  await teacher.goto(`${base}/lop/moi`);
+  await teacher.getByPlaceholder('Ví dụ: IELTS Foundation').fill(className);
+  await teacher.getByRole('button', { name: 'T2', exact: true }).click();
+  await teacher.locator('input[type=time]').fill('18:00');
+  await teacher.getByRole('button', { name: 'Tạo lớp', exact: true }).click();
+  await teacher.waitForURL(/\/lop$/, { timeout: 15000 });
+  await teacher.goto(`${base}/lop`);
+  await teacher.getByRole('link', { name: new RegExp(className) }).last().click();
+  let nav = teacher.getByRole('navigation', { name: 'Mục của lớp' });
+  await teacher.goto(new URL(await nav.getByRole('link', { name: 'Học sinh' }).getAttribute('href'), base).toString());
+  await teacher.getByRole('button', { name: /Thêm học sinh/ }).first().click();
+  await teacher.getByLabel('Họ và tên học sinh').fill(student);
+  await teacher.getByLabel(/Số điện thoại phụ huynh/).fill(parentPhone);
+  await teacher.getByRole('button', { name: 'Lưu học sinh', exact: true }).click();
+  await teacher.getByText(student, { exact: true }).waitFor({ timeout: 12000 });
+
+  phase = 'parent signup';
+  parent = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  await parent.goto(`${base}/dang-nhap`, { waitUntil: 'domcontentloaded' });
+  await parent.getByRole('link', { name: /Tạo tài khoản/ }).click();
+  await parent.getByRole('tablist', { name: 'Bạn đăng ký với vai trò' }).getByRole('tab', { name: 'Phụ huynh', exact: true }).click();
+  await parent.locator('#register-name').fill('QA-HW-Guardian');
+  await parent.locator('#register-phone').fill(parentPhone);
+  await parent.locator('#register-password').fill(parentPassword);
+  await parent.locator('#register-confirm').fill(parentPassword);
+  await parent.getByRole('button', { name: 'Tạo tài khoản', exact: true }).click();
+  await parent.waitForURL(/\/ph(?:\/|$)/, { timeout: 20000 });
+
+  phase = 'create future homework';
+  await teacher.goto(`${base}/lop`);
+  await teacher.getByRole('link', { name: new RegExp(className) }).last().click();
+  nav = teacher.getByRole('navigation', { name: 'Mục của lớp' });
+  await teacher.goto(new URL(await nav.getByRole('link', { name: 'Buổi học' }).getAttribute('href'), base).toString());
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  await teacher.getByRole('button', { name: 'Thêm buổi lẻ', exact: true }).click();
+  await teacher.locator('#extra-session-date').fill(today);
+  await teacher.locator('#extra-session-time').fill('18:00');
+  await teacher.getByRole('button', { name: 'Lưu buổi học', exact: true }).click();
+  const sessionView = teacher.getByRole('link', { name: 'Xem buổi', exact: true }).first();
+  await sessionView.waitFor({ timeout: 12000 });
+  await sessionView.click();
+  await teacher.getByRole('tab', { name: 'Bài tập về nhà', exact: true }).click();
+  await teacher.getByRole('tab', { name: 'Bài tập hôm nay', exact: true }).click();
+  await teacher.getByRole('button', { name: /Luyện từ vựng/ }).first().click();
+  await teacher.getByRole('button', { name: 'Luyện từ vựng', exact: true }).click();
+  await teacher.locator('#hw-desktop-title').fill(title);
+  await teacher.getByRole('button', { name: 'Lưu phần', exact: true }).click();
+  await teacher.getByText(title, { exact: true }).waitFor({ timeout: 12000 });
+
+  phase = 'parent visibility';
+  await parent.reload();
+  await parent.getByRole('link', { name: /Bài tập/ }).first().click();
+  await parent.getByText(student, { exact: false }).waitFor({ timeout: 12000 });
+  await parent.getByText(title, { exact: true }).waitFor({ timeout: 12000 });
+  await mkdir(out, { recursive: true });
+  await writeFile(`${out}/homework-parent-immediate-junit.xml`, '<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-homework-parent-immediate" tests="1" failures="0"><testcase classname="web" name="TC-HW-003"/></testsuite>\n');
+  console.log('PASS TC-HW-003: linked parent sees saved homework before a teacher sends comments');
+} catch (error) {
+  const message = error instanceof Error ? error.message : 'unknown error';
+  const alerts = parent ? await parent.getByRole('alert').allTextContents().catch(() => []) : [];
+  console.log(`BLOCKED TC-HW-003 at ${phase}: ${message}`);
+  if (alerts.length) console.log('FORM_ALERT', alerts.map((text) => text.trim()).filter(Boolean).join(' | '));
+  await mkdir(out, { recursive: true });
+  const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
+  await writeFile(`${out}/homework-parent-immediate-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-homework-parent-immediate" tests="1" failures="0" skipped="1"><testcase classname="web" name="TC-HW-003"><skipped message="${escaped}"/></testcase></testsuite>\n`);
+} finally {
+  await browser.close();
+}

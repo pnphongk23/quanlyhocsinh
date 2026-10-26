@@ -1,0 +1,172 @@
+TC-ID	Đường dẫn flow	Trạng thái
+TC-ATT-001	qa/maestro/web/attendance-four-states.mjs	tự động-pass
+TC-ATT-002	qa/maestro/web/attendance-four-states.mjs	tự động-pass
+TC-ATT-003	qa/maestro/web/class-future-session.mjs	tự động-pass
+TC-ATT-004	-	chặn: cần điểm danh buổi hôm qua; staging khoá lưu buổi đã tới ngày khi server UTC còn ngày trước đó (WEB-003; đã tái hiện ở ATT-001/002)
+TC-ATT-005	-	chặn: cần ít nhất ba buổi đã diễn ra và hai trạng thái Vắng liên tiếp; staging không cho lưu điểm danh buổi đã tới ngày (WEB-003; JUnit attendance-four-states)
+TC-ATT-006	-	chặn: cần hai buổi có trạng thái Vắng rồi Muộn/Có phép; không thể ghi lịch sử điểm danh do WEB-003
+TC-ATT-007	-	chặn: cần hai buổi Vắng ngăn cách bởi buổi hủy; chức năng hủy chưa dựng được qua menu (TC-CLS-007), điểm danh lịch sử bị WEB-003
+TC-ATT-008	-	tự động-chưa-chạy
+TC-ATT-009	-	tự động-chưa-chạy
+TC-ATT-010	qa/maestro/web/class-future-session.mjs	tự động-pass
+TC-ATT-011	-	chặn: cần thay đổi điểm danh hôm nay để kiểm hàng chờ offline; DOM xác nhận nút Có mặt disabled trên buổi địa phương 25/10 và ngày server còn 24/10 (WEB-003)
+TC-ATT-012	-	thủ công: cần hai thiết bị/phiên cùng sửa một buổi theo thứ tự; chưa thực hiện vì buổi cần sửa bị khóa theo WEB-003
+TC-ATT-013	-	chặn: cần buổi đã hủy; flow TC-CLS-007 chưa tới được mục Hủy buổi trong menu sau 5 lượt, chưa xác định lỗi app hay selector
+TC-AUTH-001	qa/maestro/web/workspace-bootstrap.mjs	tự động-pass
+TC-AUTH-002	qa/maestro/web/auth-smoke.mjs	tự động-pass
+TC-AUTH-003	qa/maestro/web/auth-invalid.mjs	tự động-pass
+TC-AUTH-004	-	tự động-chưa-chạy
+TC-AUTH-005	-	chặn: cần lượt đăng ký để kiểm mật khẩu ngắn; staging đang giới hạn thử đăng ký PH (429 lúc khoảng 08:44 ICT), lead yêu cầu không thử lại trong cửa sổ này
+TC-AUTH-006	-	chặn: cần đăng ký số điện thoại đã có; đăng ký đang rate-limited, không thử lại theo lead
+TC-AUTH-007	qa/maestro/web/guardian-links-student.mjs	tự động-pass
+TC-AUTH-008	qa/maestro/web/guardian-no-student.mjs	tự động-pass
+TC-AUTH-009	qa/maestro/web/brief91-fb2-final.mjs	chặn: flow timeout khi lưu HS QA mới; dialog “Thêm học sinh” không đóng trong 15 giây; không có student ID/PH login, dừng theo chỉ đạo. JUnit brief91-fb2-final-junit.xml
+TC-AUTH-010	-	chặn: cần tài khoản PH-A/PH-B để đổi/gỡ và xác minh liên kết; không có phiên PH giữ lại, đăng ký đang rate-limited
+TC-AUTH-011	-	thủ công: đổi mật khẩu teacher account là thay đổi credential; cần quy trình rollback/khôi phục được xác nhận; chưa thực hiện trong smoke QA
+TC-AUTH-012	-	chặn: workspace smoke chỉ có admin hiện tại; không có tài khoản người dùng khác/role để xác minh quản lý mật khẩu
+TC-AUTH-013	-	chặn: cần cập nhật email tài khoản để kiểm lưu và tải lại; chưa có email QA xác nhận dành cho tài khoản smoke trong fixture
+TC-AUTH-014	-	chặn: cần email đã lưu và hộp thư nhận link reset; không có inbox/mailbox QA được cung cấp
+TC-AUTH-015	-	tự động-chưa-chạy
+TC-AUTH-016	-	chặn: cần gửi luồng quên mật khẩu và kiểm phản hồi khi email chưa lưu; chưa có mailbox QA để nhận/đối chiếu luồng reset
+TC-AUTH-017	-	chặn: cần mailbox/reset link và phiên cũ để kiểm one-time, 30 phút, revoke; mailbox QA chưa được cung cấp
+TC-AUTH-018	-	chặn: cần outbox chưa đồng bộ rồi đăng xuất; fixture offline hiện chỉ có bài kiểm tra và đã sync, không có pending write khả dụng
+TC-AUTH-019	qa/maestro/web/auth-logout.mjs	tự động-pass
+TC-AUTH-020	-	tự động-chưa-chạy
+TC-AUTH-021	-	tự động-chưa-chạy
+TC-CLS-001	qa/maestro/web/class-smoke.mjs	tự động-pass
+TC-CLS-002	-	tự động-chưa-chạy
+TC-CLS-003	qa/maestro/web/p1-class-edit-archive.mjs	tự động-pass
+TC-CLS-004	qa/maestro/web/p1-class-edit-archive.mjs	chặn (một phần): sau lưu trữ lớp, bài kiểm tra vẫn hiện 1/1 em có điểm và điểm danh còn; trang detail bị chuyển về danh sách nên chưa xác minh giá trị 20. Fixture bài cũ do backend cung cấp cũng không hiển thị trong workspace smoke (legacy-score-fixture-check.json)
+TC-CLS-005	-	tự động-chưa-chạy
+TC-CLS-006	qa/maestro/web/class-schedule.mjs	tự động-chưa-chạy (chờ cập nhật flow theo spec 3dab010: 5 tiêu chí/tháng/bỏ số buổi; chờ web/iOS triển khai)
+TC-CLS-007	qa/maestro/web/class-cancel-renumber.mjs	chặn: menu hủy không hiện mục thao tác sau 5 lượt
+TC-CLS-008	-	chặn: cần cả buổi đã diễn ra và buổi sắp tới; QA chưa có buổi lịch sử do WEB-003
+TC-CLS-009	qa/maestro/web/class-schedule.mjs	tự động-pass
+TC-CLS-010	-	chặn: chưa tới màn Lịch; flow không resolve được lớp QA vừa tạo để kiểm chế độ ngày/tháng, không có bằng chứng lỗi app
+TC-CLS-011	-	chặn: chưa tới form sửa lịch vì flow không resolve được lớp QA vừa tạo; chưa kiểm sinh buổi theo lịch mới
+TC-CLS-012	-	chặn: cần buổi hôm nay đã có dữ liệu điểm danh; lưu điểm danh bị khóa theo WEB-003
+TC-CLS-013	-	chặn: cần tạo buổi lẻ rồi sửa lịch trùng ngày; không resolve được lớp QA trong flow quản lý lớp; chưa kiểm được kết quả
+TC-CLS-014	-	tự động-chưa-chạy
+TC-CLS-015	qa/maestro/web/class-verify.mjs	tự động-pass
+TC-CLS-016	qa/maestro/web/class-future-session.mjs	tự động-pass
+TC-CLS-017	qa/maestro/web/sunday-class-validation.mjs	tự động-pass
+TC-CMT-001	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: testcase viết lại theo spec 34bdf69 (câu tự sinh, một ô gộp, BTVN tự tích); kết quả cũ theo giao diện trước không còn áp dụng; chờ bản triển khai
+TC-CMT-002	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: testcase viết lại theo spec 34bdf69 (câu tự sinh, một ô gộp, BTVN tự tích); kết quả cũ theo giao diện trước không còn áp dụng; chờ bản triển khai
+TC-CMT-003	qa/maestro/web/web008-clean-recheck.mjs; qa/maestro/web/brief91-teacher-smoke.mjs	tự động-pass trên index-l7_C4kqA.js: hai lớp/buổi mới, mỗi lượt 1 Có mặt + 1 Vắng, chưa mở/nhập phiếu; hộp xác nhận 1/1 cả hai lượt; Quay lại, không gửi (JUnit web008-clean-recheck) [chỉ kiểm hộp xác nhận, gửi thật và phía phụ huynh chưa kiểm]
+TC-CMT-004	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-pass: bộ lọc Tất cả/Chưa gửi đổi trạng thái aria-pressed (JUnit brief91-teacher-smoke-run1) [chỉ kiểm trạng thái nút lọc, chưa kiểm nội dung danh sách]
+TC-CMT-005	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: testcase viết lại theo spec 34bdf69 (câu tự sinh, một ô gộp, BTVN tự tích); kết quả cũ theo giao diện trước không còn áp dụng; chờ bản triển khai
+TC-CMT-006	qa/maestro/web/web008-clean-recheck.mjs; qa/maestro/web/brief91-teacher-smoke.mjs	tự động-pass trên index-l7_C4kqA.js: học sinh Vắng bị bỏ qua ở cả hai lượt sạch; WEB-008 đóng do lỗi flow cũ (JUnit web008-clean-recheck) [chỉ kiểm hộp xác nhận, gửi thật và phía phụ huynh chưa kiểm]
+TC-CMT-007	qa/maestro/web/brief91-guardian-smoke.mjs	chặn: PH login HTTP 200; trang Nhận xét không có dữ liệu phiếu QA để xác minh, không kết luận lỗi app
+TC-CMT-008	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng tại điều hướng sau lưu điểm, chưa tới các bước nhận xét này
+TC-CMT-009	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng tại điều hướng sau lưu điểm, chưa tới các bước nhận xét này
+TC-CMT-010	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng tại điều hướng sau lưu điểm, chưa tới các bước nhận xét này
+TC-CMT-011	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng tại điều hướng sau lưu điểm, chưa tới các bước nhận xét này
+TC-CMT-012	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng tại điều hướng sau lưu điểm, chưa tới các bước nhận xét này
+TC-CMT-013	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng tại điều hướng sau lưu điểm, chưa tới các bước nhận xét này
+TC-GRD-001	-	chặn: cần linked parent, điểm danh/điểm/phiếu đã gửi; chưa có buổi lịch sử sửa được theo WEB-003 và đăng ký phụ huynh hiện bị giới hạn
+TC-GRD-002	-	chặn: cần tài khoản phụ huynh liên kết nhiều con; luồng signup staging trả “Bạn thử đăng nhập quá nhiều lần”, chưa có PH-A/PH-B khả dụng
+TC-GRD-003	-	chặn: cần phiên PH đã liên kết và dữ liệu chuyên cần; signup staging bị 429 lúc khoảng 08:44 ICT; không thử lại theo lead
+TC-GRD-004	-	chặn: cần phiên PH liên kết và điểm; signup staging bị 429 lúc khoảng 08:44 ICT; không thử lại
+TC-GRD-005	qa/maestro/web/brief91-fb2-final.mjs	chặn: flow timeout khi lưu HS QA mới trước PH login; chưa kiểm x/5/câu/ghi chú/ẩn tiêu chí (JUnit brief91-fb2-final-junit.xml)
+TC-GRD-006	-	chặn: cần BTVN chấm và tài khoản phụ huynh; không dựng được buổi N/N+1 do WEB-003, signup staging bị giới hạn
+TC-GRD-007	qa/maestro/web/brief91-guardian-smoke.mjs	chặn: PH login HTTP 200; source xác nhận route /ph/bao-cao (flow đã sửa từ tab selector); không chạy lại do login limit, chưa kiểm nhãn báo cáo
+TC-GRD-008	qa/maestro/web/guardian-links-student.mjs	tự động-pass
+TC-GRD-009	qa/maestro/web/guardian-links-student.mjs	tự động-pass
+TC-GRD-010	qa/maestro/web/guardian-no-student.mjs	tự động-pass
+TC-GRD-011	-	chặn: cần phiên PH để kiểm hồ sơ/đổi mật khẩu/đăng xuất; signup staging bị 429 lúc khoảng 08:44 ICT; không thử lại
+TC-GRD-012	-	chặn: cần phiên PH và cache dữ liệu tải trước để kiểm offline; signup staging bị 429 lúc khoảng 08:44 ICT; không thử lại
+TC-GRD-013	-	tự động-chưa-chạy
+TC-HW-001	qa/maestro/web/homework-today.mjs	tự động-pass
+TC-HW-002	qa/maestro/web/p1-homework-kinds-delete.mjs	tự động-pass
+TC-HW-003	qa/maestro/web/homework-parent-immediate.mjs	chặn: lần 1 buổi chọn không có nút thêm Luyện từ vựng; lần 2 dựng lớp/buổi và học sinh nhưng signup phụ huynh bị từ chối “Bạn thử đăng nhập quá nhiều lần” trước khi xác minh phía PH
+TC-HW-004	-	chặn: cần phần đã chấm và tài khoản PH để kiểm sửa hiển thị; thiếu buổi N+1/chấm và signup PH hiện bị 429
+TC-HW-005	qa/maestro/web/p1-homework-kinds-delete.mjs	tự động-pass
+TC-HW-006	-	chặn: cần phần BTVN đã chấm cho học sinh; không có buổi N+1 sửa được để chấm do WEB-003
+TC-HW-007	qa/maestro/web/homework-previous-session.mjs	chặn: tạo N/N+1 qua giao diện; trên bundle index-Cp4GJ8XB.js cả /lich và danh sách Buổi học của lớp không mở chi tiết N+1 ngày 29/10; diagnostics 0 console/page/HTTP/request errors; chưa đủ bằng chứng lỗi app (JUnit homework-previous-session-junit.xml)
+TC-HW-008	qa/maestro/web/homework-previous-session.mjs	chặn: phụ thuộc HW-007; N+1 không hiển thị qua /lich hoặc danh sách Buổi học của lớp, chưa tới tab Bài tập buổi trước/bước chấm; diagnostics sạch, chưa kết luận lỗi app
+TC-HW-009	-	chặn: cần phần BTVN để chấm và roster; không dựng được buổi N+1 có thể sửa do WEB-003
+TC-HW-010	-	chặn: cần học sinh vắng buổi giao bài và buổi kế tiếp để chấm; không thể lưu trạng thái attendance do WEB-003
+TC-HW-011	-	chặn: cần BTVN ở buổi N và hủy N+1; staging không cho tạo buổi lịch sử/đủ chuỗi fixture do WEB-003
+TC-HW-012	-	tự động-chưa-chạy
+TC-HW-013	-	chặn: cần kết quả BTVN chưa gửi rồi đã gửi cho PH-A; thiếu buổi N/N+1 sửa được và phiên phụ huynh do WEB-003/signup rate limit
+TC-HW-014	-	chặn: cần giao BTVN và chấm học sinh offline; phần giao cần buổi có thể sửa, phần chấm cần N/N+1; không dựng được fixture theo WEB-003
+TC-HW-015	-	tự động-chưa-chạy
+TC-OFF-001	-	chặn: cần đổi/lưu điểm danh ở buổi đã tới ngày; nút Có mặt bị disabled trên buổi địa phương 25/10 theo WEB-003
+TC-OFF-002	-	thủ công: cần giả lập request mạng chậm hơn 1 giây/điều phối mạng ngoài UI; chưa có công cụ throttle ổn định trong lượt QA này
+TC-OFF-003	qa/maestro/web/offline-test-create.mjs	tự động-pass
+TC-OFF-004	-	thủ công/ngoài phạm vi bản đầu: role tuỳ chỉnh bị thu quyền thuộc Làm sau; không ghi D1 trực tiếp. Đã rà UI cài đặt, không thấy thao tác thu quyền
+TC-OFF-005	-	chặn: cần queue đồng thời attendance+score+comment và phiên đối chiếu; attendance/comment bị chặn bởi WEB-003; cắt mạng giữa sync cần điều phối thủ công
+TC-OFF-006	-	thủ công: cần hai thiết bị/phiên và điều phối thứ tự đồng bộ cùng một ô; không thực hiện trong lượt trình duyệt đơn
+TC-OFF-007	-	tự động-chưa-chạy
+TC-OFF-008	qa/maestro/web/offline-contracts.mjs#assertNetworkRequired	chặn: cần thử đủ email, mật khẩu, nhận xét/phát hành báo cáo, đăng xuất, sửa SĐT khi offline; báo cáo cần draft (không có buổi lịch sử), SĐT cần fixture PH; không có draft do UI báo cần buổi đã diễn ra
+TC-OFF-009	-	thủ công: cần PH liên kết, inbox và đồng hồ/cron thông báo; Q-08 chưa xác nhận inbox thuộc Bản đầu và đăng ký PH đang bị 429
+TC-OFF-011	-	tự động-chưa-chạy
+TC-OFF-012	-	tự động-chưa-chạy
+TC-OFF-013	-	tự động-chưa-chạy
+TC-PRM-001	qa/maestro/web/permissions-admin-workspace.mjs	tự động-pass
+TC-PRM-002	-	chặn: chưa duyệt được toàn bộ menu/Cài đặt trong lượt P1 do hai flow lớp dừng ở locator trước khi vào chi tiết; cần một lượt điều hướng admin riêng
+TC-PRM-003	qa/maestro/web/guardian-teacher-denied.mjs	tự động-pass
+TC-PRM-004	qa/maestro/web/permissions-http-prm004-005.mjs	pass: backend xác nhận (HTTP, fb2): PH gọi GET /students/:id của HS không liên kết → 404, không lộ dữ liệu [bằng chứng: plans/20261021-mvp/qa/runs/2026-10-25/web/backend-confirmed-prm004-005.md]
+TC-PRM-005	qa/maestro/web/permissions-http-prm004-005.mjs	pass: backend xác nhận (HTTP 200, lệnh attendance.set status=rejected code=forbidden, dữ liệu trước/sau không đổi) [bằng chứng: plans/20261021-mvp/qa/runs/2026-10-25/web/backend-confirmed-prm004-005.md]
+TC-PRM-006	qa/maestro/web/permissions-unauth.mjs	tự động-pass
+TC-PRM-007	qa/maestro/web/permissions-http-prm007.mjs	chặn (một phần): đọc roster pass (chủ lớp HTTP 200, workspace khác HTTP 404); kiểm tra ghi chưa chạy vì không có payload an toàn không làm thay đổi dữ liệu; JUnit permissions-http-prm007-junit.xml
+TC-PRM-008	-	thủ công/ngoài phạm vi bản đầu: role tuỳ chỉnh bị thu quyền thuộc Làm sau; không ghi D1 trực tiếp. Đã rà UI cài đặt, không thấy thao tác thu quyền
+TC-PRM-009	-	tự động-chưa-chạy
+TC-RPT-001	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-pass trên index-l7_C4kqA.js: tiêu đề Tháng 10/2026
+TC-RPT-002	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: chưa xác minh xem trước báo cáo trên bundle C48
+TC-RPT-003	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: chưa xác minh các trường và nhận xét báo cáo
+TC-RPT-004	-	thủ công: không áp dụng (báo cáo theo tháng, không còn khoảng buổi)
+TC-RPT-005	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-pass trên index-l7_C4kqA.js: hai đợt Tháng 10/2026 cùng tồn tại
+TC-RPT-006	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng trước nhóm báo cáo
+TC-RPT-007	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng trước nhóm báo cáo
+TC-RPT-008	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng trước nhóm báo cáo
+TC-RPT-009	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng trước nhóm báo cáo
+TC-RPT-010	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: lượt GV cuối dừng trước nhóm báo cáo
+TC-RPT-011	-	chặn: cần báo cáo đã phát hành và điểm được sửa sau đó; bốn report fixture backend cung cấp không hiển thị qua UI trong workspace smoke, không dùng tài khoản khác
+TC-RPT-012	qa/maestro/web/report-default-range.mjs	chặn: bốn report fixture backend cung cấp không hiển thị qua UI trong workspace smoke; không kiểm được snapshot, không dùng tài khoản khác (legacy-score-fixture-check.json)
+TC-RPT-013	-	thủ công: hộp thoại tải PDF thuộc hệ điều hành; kiểm xác nhận chỉ có PDF, không có ảnh
+TC-RPT-014	-	chặn: cần bản nháp; màn Báo cáo chặn tạo báo cáo khi chưa có buổi diễn ra, nên chưa thể thử phát hành offline
+TC-RPT-015	-	chặn: cần buổi đã diễn ra và học sinh vào lớp giữa khoảng; không có fixture lịch sử
+TC-RPT-016	-	chặn: cần học sinh nghỉ giữa khoảng cùng dữ liệu buổi 1–6; không có fixture lịch sử
+TC-RPT-017	qa/maestro/web/offline-contracts.mjs#assertReportCommentRejectedOffline	chặn: cần bản nháp để nhập nhận xét offline; UI báo lớp cần ít nhất một buổi đã diễn ra, không có bản nháp
+TC-TST-001	qa/maestro/web/scores-create-delete.mjs	tự động-pass (bundle index-Cp4GJ8XB.js; form chỉ tên+ngày, không hiện điểm tối đa)
+TC-TST-002	qa/maestro/web/scores-step-validation.mjs	tự động-pass (0/1000/0,5 và từ chối 1000,5/1001/0,25/-0,5)
+TC-TST-003	qa/maestro/web/scores-step-validation.mjs	tự động-pass (12,5/0/15 lưu và còn sau tải lại; từ chối 12,3/1001/-1)
+TC-TST-004	qa/maestro/web/scores-blank-average.mjs	tự động-pass
+TC-TST-005	qa/maestro/web/scores-blank-average.mjs	tự động-pass
+TC-TST-006	-	chặn: lớp ede75178… và hai bài kiểm tra legacy do backend cung cấp không hiển thị qua UI trong workspace smoke; không sửa fixture ngoài smoke (legacy-score-fixture-check.json)
+TC-TST-007	qa/maestro/web/scores-edit-preserve.mjs	tự động-pass (15 giữ nguyên sau sửa tên/ngày; không có /15)
+TC-TST-008	qa/maestro/web/scores-max-ceiling.mjs	tự động-pass (20/100 lưu qua tải lại; 100 không có hậu tố /15)
+TC-TST-009	qa/maestro/web/scores-create-delete.mjs	tự động-pass
+TC-TST-010	qa/maestro/web/scores-archive-graded.mjs	chặn: lưu trữ + ẩn khỏi danh sách hoạt động đã xác minh; thiếu báo cáo/phụ huynh để kiểm ẩn mọi nơi
+TC-TST-011	-	chặn: cần hàng học sinh để lưu điểm 0 rồi lưu trữ; bảng điểm lớp QA không hiện hàng học sinh sau 3 lượt (TC-TST-015)
+TC-TST-012	qa/maestro/web/scores-late-enrollment.mjs	chặn: ô điểm và lưu 10 đã xác minh; thiếu fixture báo cáo/phụ huynh để kiểm phần còn lại
+TC-TST-013	-	chặn: cần báo cáo đã phát hành rồi sửa điểm; fixture không có buổi đã diễn ra để phát hành báo cáo
+TC-TST-014	-	tự động-chưa-chạy
+TC-TST-015	qa/maestro/web/scores-offline-sync.mjs	chặn: bảng điểm không có hàng dù học sinh vừa thêm, sau 3 lượt
+TC-TST-016	qa/maestro/web/offline-test-create.mjs	tự động-pass
+TC-TST-017	-	chặn: cần học sinh liên kết phụ huynh và điểm để so sánh quyền xem; signup phụ huynh bị giới hạn và chưa có fixture điểm liên kết khả dụng
+TC-TST-018	qa/maestro/web/scores-default-assignment.mjs	tự động-pass (huỷ không đổi; xác nhận ghi 15 đè; học sinh đã nghỉ không hiện; tải lại vẫn 15)
+TC-TST-019	qa/maestro/web/scores-default-assignment-offline.mjs	tự động-pass (gán offline, nhãn chờ đồng bộ hiển thị, POST sync/push thành công và điểm còn sau tải lại)
+TC-TST-020	-	thủ công: ngoài Bản đầu (spec 110)
+TC-STU-001	qa/maestro/web/student-diagnostic.mjs	tự động-pass
+TC-STU-002	-	tự động-chưa-chạy
+TC-STU-003	qa/maestro/web/student-diagnostic.mjs	tự động-pass
+TC-STU-004	-	chặn: cần PH-A/PH-B đã đăng ký và kiểm hai phiên sau khi đổi số; staging hiện từ chối đăng ký thêm do giới hạn thử, chưa có hai phiên phụ huynh khả dụng
+TC-STU-005	-	chặn: cần học sinh có lịch sử điểm danh/điểm để xác minh giữ lịch sử; không tạo được lịch sử điểm danh do WEB-003
+TC-STU-006	-	chặn: cần học sinh đã nghỉ và buổi N/M trước-sau ngày nghỉ; thiếu lịch sử buổi sửa được do WEB-003
+TC-STU-007	-	chặn: cần ba buổi đã diễn ra rồi thêm học sinh muộn; không dựng được các buổi lịch sử do WEB-003
+TC-STU-008	-	tự động-chưa-chạy
+TC-STU-009	-	tự động-chưa-chạy
+TC-CMT-014	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-chưa-chạy: testcase viết lại theo spec 34bdf69 (câu tự sinh, một ô gộp, BTVN tự tích); kết quả cũ theo giao diện trước không còn áp dụng; chờ bản triển khai
+TC-CMT-015	-	thủ công: cần dữ liệu cũ thang 3 sao
+TC-CMT-016	qa/maestro/web/brief91-teacher-smoke.mjs	thủ công: ảnh element Mít đã lưu; cần QA đối chiếu dáng 0–5 sao
+TC-RPT-018	-	thủ công: cần dữ liệu cũ khoảng buổi
+TC-RPT-019	qa/maestro/web/brief91-teacher-smoke.mjs	tự động-pass trên index-l7_C4kqA.js: Huỷ giữ đợt; xác nhận xoá đợt nháp làm số hàng giảm một
+TC-RPT-020	qa/maestro/web/brief91-fb2-final.mjs	chặn: flow timeout khi lưu HS QA mới trước PH login; chưa tạo/phát hành/xoá báo cáo QA (JUnit brief91-fb2-final-junit.xml)
+TC-RPT-021	qa/maestro/web/report-batch-delete.mjs	tự động-chưa-chạy trên bundle C48; kết quả pass trước đó chỉ trên bundle BhzpF4oY
+TC-RPT-022	qa/maestro/web/report-batch-delete.mjs	tự động-chưa-chạy trên bundle C48; kết quả pass trước đó chỉ trên bundle BhzpF4oY
+WEB-005	qa/maestro/web/sw-deploy-recovery.mjs	tự động-pass trên index-BhzpF4oY: 12/12; 4 route offline shell + online recovery pass; đường nâng cấp SW cũ chưa kiểm
+WEB-006	qa/maestro/web/brief90-regression.mjs	tự động-pass trên index-C8aXCZci.js: cuộn tới cuối vùng, desktop 1440x900 và mobile 390x844; nút bật, không che hàng cuối
+WEB-007	qa/maestro/web/brief90-regression.mjs; qa/maestro/web/brief90-report-list-check.mjs	pass: danh sách buổi/BTVN không có “Buổi N”; chặn kiểm nhãn báo cáo: UI tạo vẫn theo khoảng buổi và lượt kiểm cuối không có dòng báo cáo hiển thị (lượt trước thấy 4 dòng, kết quả không ổn định)
+TC-AUTH-022	-	thủ công (làm sau P0)

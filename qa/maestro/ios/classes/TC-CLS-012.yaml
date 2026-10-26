@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-cls-012
+tags: [ios, p1]
+---
+# Draft for TC-CLS-012: Sửa lịch lặp khi buổi hôm nay đã có dữ liệu
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Hôm nay lớp có buổi đã điểm danh (có dữ liệu).
+# 1. Sửa lịch lặp, lưu.
+# Expected: Buổi hôm nay giữ nguyên (thành buổi lẻ); lịch mới áp từ ngày mai.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

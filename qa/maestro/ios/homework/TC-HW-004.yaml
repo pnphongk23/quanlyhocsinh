@@ -1,0 +1,12 @@
+appId: com.study.teacherthu
+name: ios-tc-hw-004
+tags: [ios, p1]
+---
+# Draft for TC-HW-004: Sửa tiêu đề, mô tả phần BTVN, phụ huynh thấy ngay
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Phần BTVN đã chấm cho vài em.
+# 1. Sửa tiêu đề và mô tả, lưu.
+# 2. Phụ huynh mở lại đề.
+# Expected: Sửa được kể cả khi đã chấm; phụ huynh thấy nội dung mới ngay.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

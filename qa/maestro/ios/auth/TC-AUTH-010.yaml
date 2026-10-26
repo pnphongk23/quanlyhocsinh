@@ -1,0 +1,14 @@
+appId: com.study.teacherthu
+name: ios-tc-auth-010
+tags: [ios, p1]
+---
+# Draft for TC-AUTH-010: Đổi hoặc gỡ SĐT làm mất liên kết, khai lại thì có lại
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: PH-0 đang liên kết HS-5 (TC-AUTH-009).
+# 1. Giáo viên gỡ SĐT phụ huynh khỏi hồ sơ HS-5, lưu.
+# 2. Phụ huynh mở lại app: kiểm tra.
+# 3. Giáo viên khai lại đúng số PH-0, lưu.
+# 4. Phụ huynh mở lại app.
+# Expected: Bước 2 phụ huynh không còn thấy HS-5 ("chưa có con nào được liên kết", tài khoản vẫn dùng được). Bước 4 liên kết tự cập nhật, thấy lại HS-5.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp

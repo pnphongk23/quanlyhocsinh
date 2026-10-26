@@ -1,0 +1,41 @@
+appId: com.study.teacherthu
+---
+- launchApp:
+    stopApp: true
+- tapOn: "Lớp Smoke FB2"
+- tapOn: "Điểm danh"
+- tapOn: "Nhận xét"
+- tapOn: "Bé An"
+- extendedWaitUntil:
+    visible:
+      id: comment.stars
+    timeout: 10000
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/10-slip-open
+- assertVisible:
+    id: comment.criterion.0
+- assertVisible:
+    id: comment.criterion.4
+- assertVisible: "Theo chấm BTVN"
+- assertVisible:
+    id: comment.sentence
+- assertVisible:
+    id: comment.note
+- assertNotVisible: "Dùng câu mặc định"
+- tapOn:
+    id: comment.criterion.3
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/11-slip-minus-disruption
+- assertVisible: ".*4/5 sao.*"
+- tapOn:
+    id: comment.criterion.4
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/12-slip-hw-manual
+- assertNotVisible: "Theo chấm BTVN"
+- assertVisible:
+    id: comment.unsaved
+- tapOn:
+    id: comment.note
+- inputText: "QA gõ thêm iOS"
+- tapOn: "Nhận xét gửi phụ huynh"
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/13-slip-note
+- tapOn:
+    id: comment.save
+- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/14-slip-saved

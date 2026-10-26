@@ -1,0 +1,11 @@
+appId: com.study.teacherthu
+name: ios-tc-hw-009
+tags: [ios, p1]
+---
+# Draft for TC-HW-009: Đánh dấu cả lớp
+# Unrun: lead has paused all simulator/build/Maestro activity due to low disk.
+# Precondition: Phần BTVN chưa chấm.
+# 1. Dùng thao tác đánh dấu cả lớp là Hoàn thành.
+# Expected: Mọi học sinh trong danh sách được đặt mức đã chọn; sửa lẻ từng em được sau đó.
+# TODO: replace this planning shell with observed text/accessibility interactions, then run and assert the expected result.
+- launchApp
