@@ -214,6 +214,14 @@ final class OneOffSessionFormTests: XCTestCase {
         XCTAssertNotEqual(generic, "Đã có buổi vào ngày và giờ này")
     }
 
+    func testOnlyKnownReasonsHaveASpecificMessage() {
+        XCTAssertNotNil(TeacherSessionForm.specificMessage(for: failure(status: 409, code: "conflict", reason: "session_exists")))
+        XCTAssertNotNil(TeacherSessionForm.specificMessage(for: failure(status: 422, code: "validation_error", reason: "date_in_past")))
+        XCTAssertNotNil(TeacherSessionForm.specificMessage(for: failure(status: 409, code: "conflict", reason: "version_conflict")))
+        XCTAssertNil(TeacherSessionForm.specificMessage(for: failure(status: 409, code: "conflict", reason: "session_not_editable")))
+        XCTAssertNil(TeacherSessionForm.specificMessage(for: APIFailure.offline))
+    }
+
     func testEditingPatchesTheSessionWithItsVersionInsteadOfCreatingANewOne() async throws {
         let api = SessionAPI()
         let store = try SQLiteStore(path: ":memory:", scope: scope)
@@ -301,5 +309,20 @@ final class KeyboardDismissalTests: XCTestCase {
         let other = UIView()
         container.addSubview(other)
         XCTAssertTrue(KeyboardDismissal.shouldDismiss(touching: other))
+    }
+}
+
+final class SessionFooterNoticeTests: XCTestCase {
+    func testASpecificReasonReplacesTheGenericPill() {
+        XCTAssertEqual(TeacherSessionForm.footerNotice(reason: "Đã có buổi vào ngày và giờ này", saveFailed: true),
+                       .reason("Đã có buổi vào ngày và giờ này"))
+    }
+
+    func testAFailureWithoutAReasonKeepsTheGenericPill() {
+        XCTAssertEqual(TeacherSessionForm.footerNotice(reason: nil, saveFailed: true), .genericError)
+    }
+
+    func testNoFailureShowsTheUsualStatus() {
+        XCTAssertEqual(TeacherSessionForm.footerNotice(reason: nil, saveFailed: false), .status)
     }
 }

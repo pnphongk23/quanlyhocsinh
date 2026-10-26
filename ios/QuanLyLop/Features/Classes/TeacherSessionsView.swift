@@ -277,9 +277,6 @@ struct TeacherExtraSessionSheet: View {
                             RoundedRectangle(cornerRadius: AppRadius.button)
                                 .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
                 }
-                if let error {
-                    Text(error).appText(AppText.muted).foregroundStyle(AppColors.error)
-                }
             }
         } footer: {
             VStack(spacing: 8) {
@@ -288,14 +285,25 @@ struct TeacherExtraSessionSheet: View {
                     try await save()
                   }
                   .frame(maxWidth: .infinity)
-                if saveController.error != nil { AppSaveStatus(kind: .error) }
-                else if let source = data.saveStatusSource { AppSaveStatus(kind: source.kind) }
+                // The reason sits next to the button: the form above scrolls and can hide it behind the keyboard.
+                switch TeacherSessionForm.footerNotice(reason: error, saveFailed: saveController.error != nil) {
+                case .reason(let text):
+                    Text(text).appText(AppText.label).foregroundStyle(AppColors.error)
+                        .multilineTextAlignment(.center).frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("session.save.error")
+                case .genericError: AppSaveStatus(kind: .error)
+                case .status:
+                    if let source = data.saveStatusSource { AppSaveStatus(kind: source.kind) }
+                }
             }
             AppButton(title: String(localized: "feature.classes.ong"), variant: .secondary, size: .large) { dismiss() }
         } close: {
             dismiss()
         }
         .onAppear(perform: load)
+        // A reason belongs to the date and time that caused it: editing them clears it.
+        .onChange(of: date) { _, _ in error = nil }
+        .onChange(of: time) { _, _ in error = nil }
     }
 
     private var intro: String {
@@ -359,7 +367,7 @@ struct TeacherExtraSessionSheet: View {
             }
             error = nil
         } catch {
-            self.error = TeacherSessionForm.message(for: error)
+            self.error = TeacherSessionForm.specificMessage(for: error)
             throw error
         }
     }

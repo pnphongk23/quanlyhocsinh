@@ -53,8 +53,26 @@ enum TeacherSessionForm {
         return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
     }
 
+    /// What the sheet footer shows under the save button: the reason the server gave when there is one, the
+    /// general save-error pill when the save failed without a reason of its own, otherwise the usual save status.
+    enum FooterNotice: Equatable {
+        case reason(String)
+        case genericError
+        case status
+    }
+
+    static func footerNotice(reason: String?, saveFailed: Bool) -> FooterNotice {
+        if let reason { return .reason(reason) }
+        return saveFailed ? .genericError : .status
+    }
+
     /// What the form says for a failed save, from the reason the server gives (`details.reason`, or the code).
     static func message(for error: Error) -> String {
+        specificMessage(for: error) ?? String(localized: "feature.classes.khong.luu.uoc.buoi.hoc.hay.kiem.tra.thong.tin.va")
+    }
+
+    /// Only the reasons the form knows; nil leaves the general save-error pill.
+    static func specificMessage(for error: Error) -> String? {
         if case APIFailure.server(_, let apiError, _) = error {
             switch apiError.details?["reason"]?.string ?? apiError.code {
             case "session_exists": return String(localized: "classes.session.exists", table: "Teacher")
@@ -63,7 +81,7 @@ enum TeacherSessionForm {
             default: break
             }
         }
-        return String(localized: "feature.classes.khong.luu.uoc.buoi.hoc.hay.kiem.tra.thong.tin.va")
+        return nil
     }
 }
 
