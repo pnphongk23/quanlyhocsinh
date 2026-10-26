@@ -114,6 +114,21 @@ struct Attendance: Codable, Sendable, Equatable {
     let updatedAt: String
 }
 
+extension Attendance {
+    /// The server no longer returns a note or an arrival time with attendance; rows cached before that still carry
+    /// them, newer ones do not.
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try values.decode(String.self, forKey: .sessionId)
+        studentId = try values.decode(String.self, forKey: .studentId)
+        status = try values.decode(AttendanceStatus.self, forKey: .status)
+        note = try values.decodeIfPresent(String.self, forKey: .note) ?? ""
+        lateAt = try values.decodeIfPresent(String.self, forKey: .lateAt)
+        version = try values.decode(Int.self, forKey: .version)
+        updatedAt = try values.decode(String.self, forKey: .updatedAt)
+    }
+}
+
 struct Score: Codable, Sendable, Equatable {
     let testId: String
     let studentId: String

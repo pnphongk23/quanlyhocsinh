@@ -111,6 +111,14 @@ final class TeacherFeatureTests: XCTestCase {
         XCTAssertEqual(absentTwice.studentsNeedingAttention(in: [student]).map(\.id), ["st"])
     }
 
+    func testAttendanceRowWithoutNoteOrArrivalTimeDecodes() throws {
+        let json = #"{"session_id":"s","student_id":"a","status":"late","version":2,"updated_at":"2026-10-26T10:00:00.000Z"}"#
+        let row = try WireJSON.decoder().decode(Attendance.self, from: Data(json.utf8))
+        XCTAssertEqual(row.status, .late)
+        XCTAssertEqual(row.note, "")
+        XCTAssertNil(row.lateAt)
+    }
+
     func testAttendanceRateCountsAnOldExcusedRowAsAbsent() {
         let data = demoData(sessions: [session(id: "s1", date: "2026-10-14", status: .held)],
                             attendance: [
