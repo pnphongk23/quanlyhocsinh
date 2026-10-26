@@ -21,7 +21,7 @@ Máy chủ không còn bộ sinh câu lúc chạy. Web và iOS sinh câu cùng m
   - `login`: đã có tài khoản (kể cả bị khoá: bước đăng nhập báo lỗi tương ứng);
   - `guardian_setup`: chưa có tài khoản, và số là `parent_phone` của ≥1 học sinh (mọi workspace; cùng điều kiện liên kết của đăng ký phụ huynh) → client mở màn đặt mật khẩu lần đầu, gọi `POST /auth/register-guardian` như cũ;
   - `teacher_register`: còn lại → màn đăng ký workspace giáo viên, SĐT điền sẵn (`POST /auth/register`).
-- 422 `validation_error` `details.fields.phone = "invalid_phone"` khi sai định dạng. 429 `rate_limited` (Retry-After) khi quá hạn mức: theo IP 30 lần/15 phút và theo SĐT 10 lần/15 phút (đủ cho gõ nhầm; chấp nhận rủi ro dò số).
+- 422 `validation_error` `details.fields.phone = "invalid_phone"` khi sai định dạng. 429 `rate_limited` (Retry-After) khi quá hạn mức: theo IP 100 lần/15 phút và theo SĐT 50 lần/15 phút (người dùng chọn 2026-10-26; chấp nhận rủi ro dò số).
 - Không lộ thêm thông tin (không trả tên, workspace, số học sinh).
 
 ### D14 · Đăng ký phụ huynh
