@@ -13,3 +13,6 @@
 - Thiếu fixture test; test hết hạn Retry-After; test tích hợp thang 3.
 - Dynamic Type của lưới 2 cột; đồng bộ chấm lại nháp offline; phạm vi UNION của `resetCacheForUser`; test hai store xen kẽ.
 - README tokens chưa có dòng `dialog-action-gap`.
+
+## Sau khi gửi phiếu không pull (sol-19, Medium, chưa sửa)
+`sendSlips` (77cc153) bỏ pull khi không có defaults và gửi đủ. Nếu thiết bị khác vừa sửa phiếu, máy chủ gửi bản mới và tăng version, còn cache iOS giữ nội dung/version cũ tới lần đồng bộ sau (hiển thị lệch bản phụ huynh nhận). Cách sửa nếu cần: pull sau gửi khi version local lệch, hoặc để máy chủ trả nội dung đã gửi. Test hiện chưa kiểm tình huống này. Chi tiết: review-sol-19.md.
