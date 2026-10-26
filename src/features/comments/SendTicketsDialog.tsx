@@ -76,8 +76,8 @@ export default function SendTicketsDialog({
         )}
 
         <p className={s.confirmNote}>
-          Phụ huynh nhận <strong>một thông báo</strong> cho buổi này, gồm sao,
-          câu mẫu, ghi chú
+          Phụ huynh nhận <strong>một thông báo</strong> cho buổi này, gồm sao
+          và nhận xét
           {ungraded.ungradedParts > 0
             ? ` và kết quả BTVN ${previousLabel}.`
             : "."}
