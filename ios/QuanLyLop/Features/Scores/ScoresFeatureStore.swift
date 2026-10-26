@@ -254,7 +254,9 @@ final class I4FeatureStore: ObservableObject {
         ])
     }
 
-    func saveTest(name: String, date: String, existing: TestDefinition? = nil) async -> String? {
+    /// `classID` is the class the teacher is viewing; the store holds every class of the workspace, so a new test cannot
+    /// take its class from the store itself.
+    func saveTest(classID: String, name: String, date: String, existing: TestDefinition? = nil) async -> String? {
         guard let store else { return String(localized: "feature.scores.khong.luu.uoc.bai.kiem.tra") }
         do {
             if let existing {
@@ -488,7 +490,7 @@ final class I4FeatureStore: ObservableObject {
                      section: HomeworkSection? = nil) async -> String? {
         guard let store else { return String(localized: "feature.scores.khong.luu.uoc.phan.bai.tap") }
         let id = section?.id ?? UUID().uuidString.lowercased()
-        let row = HomeworkSection(id: id, classId: classID, sessionId: sessionID, kind: kind, title: title,
+        let row = HomeworkSection(id: id, classId: session(id: sessionID)?.classId ?? section?.classId ?? classID, sessionId: sessionID, kind: kind, title: title,
                                   description: description, version: section?.version ?? 0)
         let payload = sectionPayload(sessionID: sessionID, id: id, kind: kind, title: title,
                                      description: description, isNew: section == nil)

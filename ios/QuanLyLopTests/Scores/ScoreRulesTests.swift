@@ -139,10 +139,10 @@ final class ScoreRulesTests: XCTestCase {
 
     func testCreateAndUpdateTestPayloadsCarryOnlyNameAndDate() async throws {
         let (data, store) = try await seededData(students: 1)
-        let result2 = await data.saveTest(name: "Bài mới", date: "2026-10-25")
+        let result2 = await data.saveTest(classID: "c", name: "Bài mới", date: "2026-10-25")
         XCTAssertNil(result2)
         let existing = try XCTUnwrap(data.tests.first { $0.id == "t" })
-        let result3 = await data.saveTest(name: "Đổi tên", date: "2026-10-26", existing: existing)
+        let result3 = await data.saveTest(classID: "c", name: "Đổi tên", date: "2026-10-26", existing: existing)
         XCTAssertNil(result3)
         let pending = try await store.pendingCommands()
         let create = try XCTUnwrap(pending.first { $0.kind == "test.create" })
@@ -152,5 +152,23 @@ final class ScoreRulesTests: XCTestCase {
         }
         XCTAssertEqual(Set(createFields.keys), ["id", "class_id", "name", "date"])
         XCTAssertEqual(Set(updateFields.keys), ["id", "name", "date"])
+    }
+
+    /// The store holds every class of the workspace: a new test belongs to the class being viewed, not the first one.
+    func testNewTestBelongsToTheViewedClassNotTheFirstClassOfTheWorkspace() async throws {
+        let (data, store) = try await seededData(students: 1)
+        let classes: [JSONValue] = ["a-first", "c"].map {
+            .object(["id": .string($0), "name": .string($0), "status": .string("active"), "weekdays": .null,
+                     "start_time": .null, "version": .number(1)])
+        }
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "fixture",
+                                       upserts: ["class": classes], deleted: []))
+        await data.refresh()
+        let failure = await data.saveTest(classID: "c", name: "Bài mới", date: "2026-10-25")
+        XCTAssertNil(failure)
+        let create = try await store.pendingCommands().first { $0.kind == "test.create" }
+        XCTAssertEqual(create?.payload["class_id"], .string("c"))
+        XCTAssertEqual(data.tests(in: "c").map(\.name).sorted(), ["Bài mới", "Unit 6"])
+        XCTAssertTrue(data.tests(in: "a-first").isEmpty)
     }
 }

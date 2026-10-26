@@ -567,7 +567,7 @@ struct TestEditorView: View {
             error = message
             throw I4SaveFailure(message: message)
         }
-        if let failure = await data.saveTest(name: trimmed, date: date) {
+        if let failure = await data.saveTest(classID: classID, name: trimmed, date: date) {
             error = failure
             throw I4SaveFailure(message: failure)
         }
@@ -648,7 +648,7 @@ struct TestFormSheet: View {
             error = message
             throw I4SaveFailure(message: message)
         }
-        if let failure = await data.saveTest(name: trimmed, date: date, existing: existing) {
+        if let failure = await data.saveTest(classID: classID, name: trimmed, date: date, existing: existing) {
             error = failure
             throw I4SaveFailure(message: failure)
         }
