@@ -214,7 +214,9 @@ function slipValues(p:Row,row:Row|null):Row {
   if (row && row.scale===5) {
     if (p.stars!==undefined) throw validationError(undefined,'criteria_required');
     if (p.comment!==undefined && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
-    return {stars:row.stars,scale:5,criteria:row.criteria,comment:p.comment===undefined ? row.comment : p.comment.trim(),note,hw_manual};
+    const kept=p.comment===undefined ? row.comment : p.comment.trim();
+    if (kept==='') throw validationError(undefined,'comment_required');
+    return {stars:row.stars,scale:5,criteria:row.criteria,comment:kept,note,hw_manual};
   }
   return {stars:memberOf(p.stars,[null,1,2,3]),scale:3,criteria:null,comment:null,note,hw_manual};
 }

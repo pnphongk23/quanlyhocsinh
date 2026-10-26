@@ -43,6 +43,7 @@ describe('slip criteria', () => {
     expect((await set({ criteria: 31, comment: '  Manual sentence.  ' }, 1)).body.results[0].status).toBe('applied');
     expect((await set({ comment: '  Revised sentence.  ' }, 2)).body.results[0].status).toBe('applied');
     expect(await f.row(f.s[0]!)).toMatchObject({ stars: 5, criteria: 31, comment: 'Revised sentence.' });
+    expect((await set({ comment: '   ' }, 3)).body.results[0].error.details.reason).toBe('comment_required');
     const long = 'Extra note. '.repeat(400);
     expect((await set({ note: long }, 3)).body.results[0].status).toBe('applied');
     expect((await f.row(f.s[0]!)).note).toBe(long);
