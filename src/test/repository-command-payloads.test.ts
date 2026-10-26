@@ -221,6 +221,23 @@ describe("repository command payload contracts", () => {
     expect(row?.hw_manual).toBeFalsy();
   });
 
+  it("assign-all-defaults skips a slip that becomes queued to send while the batch is still being written", async () => {
+    server.put("student", { id: "s2", class_id: "c1", name: "Student 2", enrolled_at: "2026-09-01", left_at: null, status: "active" });
+    for (const id of ["s1", "s2"]) server.put("attendance", { session_id: "session-1", student_id: id, status: "present" });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { saveSessionCommentDurable, assignDefaultSlipsDurable, sendSessionTicketsDurable } = await import("../data/repositories/comments");
+    const { getSessionComment } = await import("../data/repositories/comments");
+    for (const id of ["s1", "s2"]) await saveSessionCommentDurable({ sessionId: "session-1", studentId: id, criteria: 3, comment: "Câu sửa tay " + id, note: "" });
+    const assigning = assignDefaultSlipsDurable("session-1");
+    await sendSessionTicketsDurable("session-1", ["s2"]);
+    await assigning;
+    await d.syncNow();
+    expect(getSessionComment("session-1", "s2")).toMatchObject({ criteria: 3, comment: "Câu sửa tay s2" });
+    expect(server.rows.get("slip")?.get("session-1|s2")).toMatchObject({ status: "sent", criteria: 3, comment: "Câu sửa tay s2" });
+    expect(server.rows.get("slip")?.get("session-1|s1")).toMatchObject({ criteria: 31 });
+  });
+
   it("regrading homework enqueues slip.set with criteria and comment for the next session's draft", async () => {
     server.put("class_session", { id: "session-2", class_id: "c1", date: "2026-10-22", start_time: "09:00", origin: "manual", status: "held" });
     server.put("slip", { session_id: "session-2", student_id: "s1", criteria: 31, comment: generatedSlipSentence(31), scale: 5, stars: 5, note: "", hw_manual: false, status: "draft", sent_at: null });

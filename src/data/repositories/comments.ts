@@ -48,6 +48,13 @@ export function planRegradedSlip(sectionId:string,studentId:string,level:Homewor
 }
 /** Chờ ghi bền; ghi lỗi ⇒ ném lỗi gốc và phiếu trở lại như trước. */
 export const saveSessionCommentDurable=(input:{sessionId:string;studentId:string;stars?:StarLevel|null;criteria?:number;comment?:string|null;note?:string;hwManual?:boolean}):Promise<Comment>=>runDurably(planComment(input));
+/** Lúc ghi bền đọc lại phiếu: nếu đã gửi hoặc đang chờ gửi (vừa gửi, hoặc vừa kéo từ máy khác) thì bỏ qua, không ghi đè và không hoàn lại. */
+function guardUnsent(plan:WritePlan<Comment>,sessionId:string,studentId:string):WritePlan<Comment>{
+  let skipped=false;
+  return{...plan,
+    undo:()=>{if(!skipped)plan.undo();},
+    persist:async()=>{const now=getSessionComment(sessionId,studentId);if(now&&(now.status==="sent"||now.sendQueued)){skipped=true;return;}await plan.persist();}};
+}
 /**
  * "Gán tất cả mặc định": mọi phiếu chưa gửi (và chưa chờ gửi) của em có mặt/muộn hoặc đã có phiếu thang 5
  * về đủ năm tiêu chí, BTVN theo chấm (bỏ lựa chọn tay), câu tự sinh lại; giữ phần gõ thêm. Phiếu thang 3 cũ không đổi.
@@ -64,7 +71,7 @@ function planAssignDefaultSlips(sessionId:string):WritePlan<number>{
     if(old?(old.status==="sent"||old.sendQueued||old.scale!==5):!attended)continue;
     const criteria=defaultSlipCriteria(previousHomeworkGrades(state,sessionId,student.id));
     if(old&&old.criteria===criteria&&old.comment===generatedSlipSentence(criteria)&&!old.hwManual)continue;
-    plans.push(planComment({sessionId,studentId:student.id,criteria,hwManual:false}));
+    plans.push(guardUnsent(planComment({sessionId,studentId:student.id,criteria,hwManual:false}),sessionId,student.id));
   }
   return composePlans(plans,plans.length);
 }
