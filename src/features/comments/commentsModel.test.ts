@@ -97,11 +97,11 @@ function row(
 });
 
 describe("nhãn trạng thái phiếu", () => {
-  it("đã gửi kèm giờ gửi, chờ mạng và chưa gửi", () => {
+  it("đã gửi không kèm giờ, chờ mạng và chưa gửi", () => {
     const sent = ticketBadge(
       row("A", { stars: 3, status: "sent", sentAt: "2026-10-14T13:14:00.000Z" }),
     );
-    expect(sent.label.startsWith("Đã gửi · ")).toBe(true);
+    expect(sent.label).toBe("Đã gửi");
     expect(sent.tone).toBe("success");
     expect(ticketBadge(row("B", { stars: 2, status: "queued" }))).toEqual({
       label: "Chờ mạng",

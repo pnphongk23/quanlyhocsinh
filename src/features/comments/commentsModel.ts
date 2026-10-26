@@ -2,7 +2,6 @@ import type { TicketRow, TicketStatus } from "../../data/homework";
 import type { HomeworkSummary } from "../../data/homework";
 import { criteriaWithHomework } from "../../data/slip";
 import type { HomeworkGrade, SlipScale } from "../../data/types";
-import { formatTime } from "../../shared/format";
 
 /**
  * Mô hình hiển thị của tab Nhận xét (ảnh 40–47): bộ lọc, số đếm, nhãn trạng
@@ -123,16 +122,11 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   sent: "Đã gửi",
 };
 
-/** Nhãn trạng thái phiếu trên danh sách: Đã gửi · hh:mm / Chờ mạng / Chưa gửi. */
+/** Nhãn trạng thái phiếu trên danh sách: Đã gửi / Chờ mạng / Chưa gửi. */
 export function ticketBadge(row: TicketRow): TicketBadge {
   if (row.comment === null) return { label: UNOPENED_LABEL, tone: "neutral" };
   if (row.status === "sent")
-    return {
-      label: row.sentAt
-        ? `${STATUS_LABELS.sent} · ${formatTime(row.sentAt)}`
-        : STATUS_LABELS.sent,
-      tone: "success",
-    };
+    return { label: STATUS_LABELS.sent, tone: "success" };
   if (row.status === "queued")
     return { label: STATUS_LABELS.queued, tone: "warning" };
   return { label: STATUS_LABELS[row.status], tone: "neutral" };
