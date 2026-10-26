@@ -218,18 +218,18 @@ struct SessionCommentsView: View {
 
     private var defaultsDialog: some View {
         I4Dialog(title: SlipSheetText.defaultsTitle(count: defaultSlipCount), content: {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
                 Text(SlipSheetText.defaultsBody)
-                    .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
+                    .appText(AppText.body)
                     .foregroundStyle(AppColors.muted)
                 if let defaultsError {
                     Text(defaultsError)
-                        .appText(AppTextStyle(size: 14, weight: .semiBold, lineHeight: 21))
+                        .appText(AppText.label)
                         .foregroundStyle(AppColors.error)
                 }
             }
         }, actions: {
-            VStack(spacing: 8) {
+            VStack(spacing: TeacherMetrics.dialogActionGap) {
                 AppSaveButton(title: SlipSheetText.defaultsConfirm, controller: defaultsController, identifier: "comment.assignDefaults.confirm",
                               onSuccess: { closeDefaults() }) { try await assignDefaults() }
                 AppButton(title: SlipSheetText.defaultsCancel, variant: .neutral, size: .large) { closeDefaults() }

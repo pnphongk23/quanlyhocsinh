@@ -398,8 +398,8 @@ struct AuthLoginPhoneField: View {
                 .textContentType(.telephoneNumber)
                 .focused($focused)
                 .disabled(readOnly)
-                .padding(.horizontal, 16)
-                .frame(height: 56)
+                .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+                .frame(height: AppMetrics.inputHeight)
                 .background(readOnly ? AppColors.neutralSoft : AppColors.surface,
                             in: RoundedRectangle(cornerRadius: AppRadius.control))
                 .overlay(boxBorder(focused: focused, readOnly: readOnly, hasError: hasError))

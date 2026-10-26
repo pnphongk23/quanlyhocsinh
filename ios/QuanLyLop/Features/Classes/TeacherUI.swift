@@ -11,6 +11,8 @@ enum TeacherMetrics {
     /// `.mobile { padding-bottom: calc(tabbar + safe-area + 16px) }`
     static let tabBarHeight: CGFloat = 64
     static let contentGap: CGFloat = 12
+    /// Gap between stacked dialog actions.
+    static let dialogActionGap: CGFloat = 8
     static let fabSize: CGFloat = 56
     /// Horizontal padding and icon-to-text gap of a floating button that carries a label.
     static let fabLabelPadding: CGFloat = 20
