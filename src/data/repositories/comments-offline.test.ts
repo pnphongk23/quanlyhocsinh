@@ -72,6 +72,15 @@ describe("phiếu nhận xét khi mất mạng", () => {
     expect((await database.outbox.toArray()).filter((row) => row.type === "slip.set")).toHaveLength(0);
   });
 
+  it("phiếu đã có trong Dexie nhưng store chưa hydrate thì không ghi đè bằng criteria mặc định", async () => {
+    const { db: database, identityKey, stored } = await import("../db");
+    const wire = { session_id: "6a-session-7", student_id: "6a-student-1", criteria: 15, comment: "x", scale: 5, stars: 4, note: "", status: "draft", sent_at: null, version: 2, updated_at: "2026-10-14" };
+    await database.slips.put(stored("slip", `${identityKey()}|slip|6a-session-7|6a-student-1`, wire) as never);
+    const { saveSessionCommentDurable } = await import("./comments");
+    await expect(saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Ghi" })).rejects.toThrow("Đang tải dữ liệu phiếu");
+    expect((await database.outbox.toArray()).filter((row) => row.type === "slip.set")).toHaveLength(0);
+  });
+
   it("phiếu đã có chỉ sửa ghi chú thì không gửi criteria cũ đè lên máy chủ", async () => {
     const { saveSessionCommentDurable } = await import("./comments");
     await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-0", note: "Sửa ghi chú" });
