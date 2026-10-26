@@ -31,6 +31,30 @@ afterEach(async () => {
 });
 
 describe("phiếu nhận xét khi mất mạng", () => {
+  it("gộp lệnh chờ: đổi tiêu chí rồi gõ ghi chú vẫn gửi tiêu chí", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const { saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", criteria: 23 });
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Ghi thêm" });
+    const sets = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(sets).toHaveLength(1);
+    expect(sets[0].payload).toMatchObject({ criteria: 23, note: "Ghi thêm" });
+  });
+
+  it("phiếu mới chỉ gõ ghi chú vẫn gửi criteria để máy chủ nhận", async () => {
+    const { saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Chỉ ghi chú" });
+    const [set] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(set.payload).toMatchObject({ criteria: 31, note: "Chỉ ghi chú" });
+  });
+
+  it("phiếu đã có chỉ sửa ghi chú thì không gửi criteria cũ đè lên máy chủ", async () => {
+    const { saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-0", note: "Sửa ghi chú" });
+    const [set] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(set.payload).not.toHaveProperty("criteria");
+  });
+
   it("chặn gửi, không thêm slip.send, và giữ nguyên slip.send cũ trong outbox", async () => {
     const { identityKey } = await import("../db");
     const identity = identityKey();

@@ -29,7 +29,9 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
         if (await db.meta.get(logoutLockKey(cache.userId))) throw new Error("Đang đăng xuất, thử lại sau.");
         if (wireRecord) await recordTable.put(stored(entity, key, wireRecord) as any); else await recordTable.delete(key);
         const matching = cellKey ? await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "pending").first() : undefined;
-        const finalRow = matching ? { ...row, base_version: matching.base_version } : row;
+        // Phiếu chỉ gửi trường vừa đổi: gộp vào lệnh chờ cũ để không làm mất tiêu chí đã soạn trước đó.
+        const mergedPayload = matching && command.type === "slip.set" ? { ...matching.payload, ...row.payload } : row.payload;
+        const finalRow = matching ? { ...row, payload: mergedPayload, base_version: matching.base_version } : row;
         if (matching) await db.outbox.delete(matching.id);
         // Lệnh mới cho cùng ô thay thế lệnh cũ đã bị từ chối, để lỗi cũ không kẹt mãi.
         if (cellKey) await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "rejected").delete();
