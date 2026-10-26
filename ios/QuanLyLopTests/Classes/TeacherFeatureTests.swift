@@ -266,3 +266,40 @@ private final class SessionAPI: APIClient, @unchecked Sendable {
         return try WireJSON.decoder().decode(type, from: Data(json.utf8))
     }
 }
+
+final class KeyboardDismissalTests: XCTestCase {
+    func testTouchingATextFieldOrTextViewKeepsTheKeyboard() {
+        XCTAssertFalse(KeyboardDismissal.shouldDismiss(touching: UITextField()))
+        XCTAssertFalse(KeyboardDismissal.shouldDismiss(touching: UITextView()))
+    }
+
+    func testTouchingInsideATextFieldKeepsTheKeyboard() {
+        let field = UITextField()
+        let inner = UIView()
+        let deepest = UIView()
+        field.addSubview(inner)
+        inner.addSubview(deepest)
+        XCTAssertFalse(KeyboardDismissal.shouldDismiss(touching: deepest))
+        let textView = UITextView()
+        let child = UIView()
+        textView.addSubview(child)
+        XCTAssertFalse(KeyboardDismissal.shouldDismiss(touching: child))
+    }
+
+    func testTouchingAnyOtherViewHidesTheKeyboard() {
+        let container = UIView()
+        let button = UIButton()
+        container.addSubview(button)
+        XCTAssertTrue(KeyboardDismissal.shouldDismiss(touching: button))
+        XCTAssertTrue(KeyboardDismissal.shouldDismiss(touching: container))
+        XCTAssertTrue(KeyboardDismissal.shouldDismiss(touching: nil))
+    }
+
+    func testAFieldBesideAViewDoesNotProtectIt() {
+        let container = UIView()
+        container.addSubview(UITextField())
+        let other = UIView()
+        container.addSubview(other)
+        XCTAssertTrue(KeyboardDismissal.shouldDismiss(touching: other))
+    }
+}

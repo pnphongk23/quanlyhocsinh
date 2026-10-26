@@ -1,4 +1,51 @@
 import SwiftUI
+import UIKit
+
+/// Hides the keyboard when a touch lands outside every text field. One tap recognizer sits on each app window
+/// (sheets and dialogs are presented inside the same window), never cancels the touch, and lets every other
+/// gesture run, so buttons, toggles, swipes and pickers behave as before.
+enum KeyboardDismissal {
+    /// Whether a touch on `view` should hide the keyboard: not when it is a text field or text view, or inside one.
+    static func shouldDismiss(touching view: UIView?) -> Bool {
+        var current = view
+        while let candidate = current {
+            if candidate is UITextField || candidate is UITextView { return false }
+            current = candidate.superview
+        }
+        return true
+    }
+
+    /// Adds the recognizer to every window of the app that does not have it yet; safe to call again.
+    @MainActor
+    static func install() {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows where !(window.gestureRecognizers ?? []).contains(where: { $0 is Recognizer }) {
+                let recognizer = Recognizer(target: Handler.shared, action: #selector(Handler.dismiss))
+                recognizer.cancelsTouchesInView = false
+                recognizer.delegate = Handler.shared
+                window.addGestureRecognizer(recognizer)
+            }
+        }
+    }
+
+    private final class Recognizer: UITapGestureRecognizer {}
+
+    private final class Handler: NSObject, UIGestureRecognizerDelegate {
+        @MainActor static let shared = Handler()
+
+        @objc func dismiss() {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            KeyboardDismissal.shouldDismiss(touching: touch.view)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
+    }
+}
 
 /// Khung app: màn đăng nhập/luồng tài khoản, dấu hiệu lỗi lưu ở cạnh trên và đăng ký push.
 struct ContentView: View {
@@ -29,9 +76,18 @@ struct ContentView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             SaveStatusBanner(state: syncStatus.state)
         }
-        .task { await push?.registerIfSignedIn() }
+        // Dragging any list or sheet hides the keyboard; a tap outside a text field does too (see `KeyboardDismissal`).
+        .scrollDismissesKeyboard(.interactively)
+        .task {
+            await push?.registerIfSignedIn()
+        }
+        .onAppear { KeyboardDismissal.install() }
+        .onReceive(NotificationCenter.default.publisher(for: UIWindow.didBecomeKeyNotification)) { _ in
+            KeyboardDismissal.install()
+        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
+            KeyboardDismissal.install()
             Task { await push?.registerIfSignedIn() }
         }
     }

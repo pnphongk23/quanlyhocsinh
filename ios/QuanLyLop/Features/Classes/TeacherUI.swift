@@ -157,6 +157,7 @@ struct TeacherScroll<Content: View>: View {
             }
         } else {
             ScrollView { content }
+                .scrollDismissesKeyboard(.interactively)
         }
     }
 }

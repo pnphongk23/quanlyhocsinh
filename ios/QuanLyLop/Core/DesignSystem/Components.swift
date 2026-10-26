@@ -439,6 +439,7 @@ struct AppSheet<Content: View, Footer: View>: View {
             .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 16)
 
             ScrollView { content.padding(.horizontal, 24) }
+                .scrollDismissesKeyboard(.interactively)
 
             VStack(spacing: 8) { footer }
                 .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 16)
