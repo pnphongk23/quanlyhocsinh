@@ -80,7 +80,7 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 - Ô mật khẩu không hiện dấu chấm trên ảnh chụp: iOS không vẽ SecureField vào ảnh chụp, không phải lỗi app.
 - Lưu ý QA: không chụp ảnh khi bật mắt (đã xóa 2 ảnh lộ mật khẩu).
 
-## IOS-004 — Thêm/sửa buổi lẻ báo "Lỗi lưu - vui lòng thử lại" (người dùng báo) — Không tái hiện trên 67e9e31 (đã sửa theo Lỗ Túc)
+## IOS-004 — Thêm/sửa buổi lẻ báo "Lỗi lưu - vui lòng thử lại" (người dùng báo) — Tái hiện một phần trên 67e9e31: thêm/sửa hợp lệ đã ổn, sửa trùng buổi đã có vẫn báo "Lỗi lưu" chung
 - Lượt 0593443: chưa chạy được TC-CLS-009 / TC-CLS-018 trên iOS. Menu "…" của màn buổi chỉ có "Huỷ buổi", thông tin buổi không có nút sửa; chi tiết lớp (nơi thêm/sửa buổi lẻ) không với tới được qua Maestro vì danh sách lớp nằm dưới hàng trăm thẻ "Điểm danh chưa xong" ở tab Lớp (ảnh qa-b97/33).
 - Cần: id/nhãn truy cập của hàng lớp hoặc đường vào chi tiết lớp từ Lịch, rồi chạy TC-CLS-009 và TC-CLS-018 (lớp `AAA-97I-w1`).
 
@@ -92,3 +92,5 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 
 ## Tốc độ Gán/Gửi phiếu (67e9e31, lớp 5 em)
 - Đo bằng Maestro trừ ~3 s khởi động: Gán ≈ 6 s, Gửi ≈ 5 s (bản 0593443: >5 s và >12 s). Kết quả đúng: 5 phiếu 5/5 rồi 5 "Đã gửi", nút (0). Ảnh qa-reg1/30-32. Số đo thô (gồm các lần bấm và hộp thoại), không phải đo từng khung hình.
+
+- Lượt 67e9e31, tiếp: sửa buổi lẻ hôm nay (27/10 18:00) sang ngày 30/10 giờ 18:00, nơi đã có một buổi lẻ khác của cùng lớp → sheet báo "Lỗi lưu — vui lòng thử lại" (ảnh qa-reg2/02-collide-result.png). Mong đợi: thông báo nêu rõ đã có buổi vào ngày giờ đó (server trả `session_exists`), sheet giữ nguyên để đổi giờ/ngày. Mức độ: trung bình (đây rất có thể là trường hợp người dùng đã gặp). Gửi Lỗ Túc.
