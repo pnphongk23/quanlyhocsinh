@@ -307,9 +307,9 @@ Phạm vi: spec mục 4 "Tài khoản" (113–119), mục 8 "Đăng nhập" (222
 - Nền tảng: Web
 - Ưu tiên: P2
 - Nguồn spec: docs/spec.md:124
-- Tiền điều kiện + dữ liệu: Staging; chỉ chạy khi GL cho phép (có thể khoá IP của QA); số giả. Ngưỡng theo hợp đồng: IP 30 lần/15 phút, SĐT 10 lần/15 phút.
+- Tiền điều kiện + dữ liệu: Staging; chỉ chạy khi GL cho phép (có thể khoá IP của QA); số giả. Ngưỡng theo hợp đồng (đổi theo yêu cầu người dùng, commit 0e5629d): SĐT 50 lần/15 phút, IP 100 lần/15 phút.
 - Các bước:
-  1. Gửi 11 lần phone-check cho cùng một số giả trong 15 phút.
-  2. Gửi lần thứ 31 từ cùng IP bằng nhiều số giả khác nhau.
-- Kết quả mong đợi: Sau ngưỡng nhận `rate_limited` (429, có Retry-After); app hiện thông báo thử lại sau, không báo nhầm số "không có". Dưới ngưỡng không bị chặn (gõ nhầm vài lần vẫn dùng được). Phản hồi không lộ thêm thông tin ngoài `next`.
+  1. Gửi 51 lần phone-check cho cùng một số giả trong 15 phút.
+  2. Gửi tiếp từ cùng IP bằng nhiều số giả khác nhau tới khi tổng lượt của IP vượt 100 (tính cả các lượt trước trong cửa sổ).
+- Kết quả mong đợi: Lần thứ 51 của một SĐT (và lượt thứ 101 của IP) nhận `rate_limited` (429, có Retry-After); app hiện thông báo thử lại sau, không báo nhầm số "không có". Dưới ngưỡng không bị chặn (gõ nhầm vài lần vẫn dùng được). Phản hồi không lộ thêm thông tin ngoài `next`.
 - Flow tự động: thủ công/kịch bản HTTP: chạy khi GL cho phép; chưa chạy.

@@ -72,7 +72,12 @@ _Ghi chú: số WEB-007 không dùng (bỏ trống do lượt chẩn đoán bị
 ### WEB-011 · Hộp xác nhận Gửi phiếu cả lớp trên web còn ghi "câu mẫu, ghi chú" — Mở (thấp, bundle `index-BdRqyODg.js`)
 - `brief96-web.mjs` CMT-021: hộp "Gửi phiếu … ?" (nút "Gửi 3 phiếu") vẫn có chữ "câu mẫu, ghi chú"; spec chốt một ô nhận xét gộp, câu do app sinh. Nguồn: `src/features/comments/SendTicketsDialog.tsx:80`. Cùng loại với IOS-002.
 
-### API-001 · phone-check không có giới hạn lượt quan sát được với số chưa có tài khoản — Mở (trung bình, cần xác nhận hợp đồng)
-- Hợp đồng D13: 429 theo IP 30 lần/15 phút và theo SĐT 10 lần/15 phút. `brief96-http.mjs limit` (staging, 2026-10-26 15:37, số giả): 12 lần liên tiếp cùng một số giả đều 200, rồi 35 lần số giả khác nhau từ cùng IP đều 200; không có 429.
-- Trước đó chính màn đăng nhập từng báo "Bạn thử đăng nhập quá nhiều lần" khi chạy lặp bằng SĐT smoke (khoảng 14 lần trong 15 phút), nghĩa là giới hạn có hiệu lực với số đã có tài khoản nhưng chưa quan sát được với số chưa có tài khoản hoặc theo IP. Nghi giới hạn chỉ áp cho tài khoản tồn tại hoặc ngưỡng theo IP không nhận đúng IP client. Cần Tiêu Hà (backend) xác nhận.
-- Ảnh/chứng cứ: log `brief96-http.mjs limit` trong báo cáo GL. Spec 124 yêu cầu giới hạn theo IP và theo SĐT.
+### API-001 · phone-check không trả 429 sau 12 lần / 35 lần — Đã đóng (không phải lỗi)
+- Giới hạn đã đổi theo yêu cầu người dùng thành 50 lần/SĐT và 100 lần/IP mỗi 15 phút (`contract-changes.md` commit `0e5629d`, Worker `f8cb4ce5`). Lượt thử 12 lần cùng số và 35 số khác nhau đều dưới ngưỡng mới. Testcase TC-AUTH-026 và `brief96-http.mjs` đã sửa theo ngưỡng 50/100.
+
+## IOS-003 — Đăng nhập bước 2 không tiến, ô mật khẩu không hiện ký tự (nghi ngờ, chưa xác nhận)
+- Trạng thái: Mở (chưa rõ lỗi app hay giới hạn Maestro).
+- Build 93ccb17, iPhone 16. Bước 1 (SĐT) → bước 2 hiện đúng (AUTH-024 đạt). Nhập mật khẩu bằng Maestro `-e` rồi bấm "Đăng nhập" 2 lần (hết hạn mức): ô mật khẩu vẫn trống, không lỗi, không chuyển màn.
+- Ảnh: plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-b96/07-typed.png, 08-after.png.
+- Quan sát phụ: ngay sau "Tiếp tục" nút chính thoáng hiện "✓ Đã lưu" thay vì "Đăng nhập" (04-step2.png).
+- Hệ quả: không vào được workspace chứa lớp QA-iOS-c87f0e-HW; app đang đăng xuất.

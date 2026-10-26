@@ -17,11 +17,11 @@ if (mode === 'register') {
   const ok = await post('/auth/phone-check', { phone: fake() });
   rec('AUTH-023-api-shape', ok.status === 200 && ok.body && Object.keys(ok.body).join() === 'next' && ok.body.next === 'teacher_register' ? 'PASS' : 'FAIL', `status=${ok.status} keys=${ok.body ? Object.keys(ok.body).join() : ''}`);
 } else {
-  // AUTH-026: per-phone limit (contract: 10/15 min) then per-IP limit (30/15 min). Fake numbers only.
+  // AUTH-026: per-phone limit (contract: 50/15 min) then per-IP limit (100/15 min). Fake numbers only.
   const same = fake(); const seen = [];
-  for (let i = 1; i <= 12; i += 1) { const r = await post('/auth/phone-check', { phone: same }); seen.push(r.status); if (r.status === 429) { rec('AUTH-026-per-phone', i === 11 ? 'PASS' : 'PASS-OFFSET', `first 429 at request ${i}; retry-after=${r.retry}; code=${r.body?.error?.code}`); break; } }
-  if (!seen.includes(429)) rec('AUTH-026-per-phone', 'FAIL', `no 429 after 12 requests: ${seen.join(',')}`);
+  for (let i = 1; i <= 52; i += 1) { const r = await post('/auth/phone-check', { phone: same }); seen.push(r.status); if (r.status === 429) { rec('AUTH-026-per-phone', i === 51 ? 'PASS' : 'PASS-OFFSET', `first 429 at request ${i}; retry-after=${r.retry}; code=${r.body?.error?.code}`); break; } }
+  if (!seen.includes(429)) rec('AUTH-026-per-phone', 'FAIL', `no 429 after 52 requests: ${seen.join(',')}`);
   let ipHit = null;
-  for (let i = 1; i <= 35; i += 1) { const r = await post('/auth/phone-check', { phone: fake() }); if (r.status === 429) { ipHit = i; break; } }
-  rec('AUTH-026-per-ip', ipHit ? 'PASS' : 'FAIL', ipHit ? `429 after ${ipHit} further distinct-number requests (plus the 12 above)` : 'no 429 within 35 more requests');
+  for (let i = 1; i <= 110; i += 1) { const r = await post('/auth/phone-check', { phone: fake() }); if (r.status === 429) { ipHit = i; break; } }
+  rec('AUTH-026-per-ip', ipHit ? 'PASS' : 'FAIL', ipHit ? `429 after ${ipHit} further distinct-number requests (plus the requests above)` : 'no 429 within 110 more requests');
 }
