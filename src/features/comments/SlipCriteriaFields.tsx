@@ -43,7 +43,8 @@ export function SlipCriteriaFields({
         <div className={s.starSummary}>
           <StarRow stars={stars} max={isLegacyScale ? 3 : 5} />
           <p className={s.starCount} aria-live="polite">
-            {isLegacyScale ? `${stars}/3 sao` : `${stars}/5 sao · bấm tiêu chí để đổi`}
+            <strong className={s.starValue}>{isLegacyScale ? `${stars}/3 sao` : `${stars}/5 sao`}</strong>
+            {!isLegacyScale && <span className={s.starHint}>· bấm tiêu chí để đổi</span>}
           </p>
         </div>
       </div>

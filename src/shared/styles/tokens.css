@@ -121,6 +121,9 @@
   /* Vùng bấm và kích thước */
   --tap: 44px;              /* mobile tối thiểu */
   --tap-desktop: 36px;
+  --criteria-check-size: 20px;
+  --criteria-check-icon-size: 12px;
+  --comment-star-size: 24px;
   --control-h: 52px;        /* ô nhập */
   --button-h-sm: 44px;
   --button-h-md: 48px;
