@@ -11,7 +11,7 @@ import OSLog
 final class AppPush {
     private let registrar: APIDeviceTokenRegistrar
     private let tokenStore: any TokenStore
-    private let logger = Logger(subsystem: "vn.quanlylop.push", category: "registration")
+    private let logger = Logger(subsystem: "\(AppConfiguration.identifierPrefix).push", category: "registration")
 
     init(configuration: AppConfiguration) {
         let tokenStore = KeychainTokenStore(service: configuration.tokenStoreService)

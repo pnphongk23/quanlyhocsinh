@@ -39,7 +39,7 @@ struct CommandResult: Codable, Sendable, Equatable {
 }
 /// The server only accepts a UUID as `device_id`, so every push uses this one stored id.
 enum DeviceIdentity {
-    static let defaultsKey = "vn.quanlylop.device_id"
+    static let defaultsKey = "\(AppConfiguration.identifierPrefix).device_id"
     static func current(defaults: UserDefaults = .standard) -> String {
         if let stored = defaults.string(forKey: defaultsKey), UUID(uuidString: stored) != nil { return stored }
         let created = UUID().uuidString.lowercased()

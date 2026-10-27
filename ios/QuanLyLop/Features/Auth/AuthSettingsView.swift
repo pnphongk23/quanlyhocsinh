@@ -17,6 +17,9 @@ struct AuthSettingsView: View {
     /// page draws no title, no back control and no extra top padding.
     var isRootTab = false
 
+    @State private var showingDeleteAccount = false
+    @Environment(\.openURL) private var openURL
+
     var body: some View {
         AuthPage(title: onClose == nil && !isRootTab ? String(localized: "feature.auth.cai.at") : nil,
                  horizontalPadding: AuthSettingsView.shellPadding,
@@ -40,10 +43,15 @@ struct AuthSettingsView: View {
                 }
                 logoutButton
                     .padding(.top, 16)
+                deleteAccountButton
+                    .padding(.top, 12)
             }
         }
         .sheet(item: logoutBlockBinding) { block in
             logoutSheet(block)
+        }
+        .sheet(isPresented: $showingDeleteAccount) {
+            AuthDeleteAccountSheet(close: { showingDeleteAccount = false }, openForm: openDeleteAccountForm)
         }
         .modifier(RootTabTitle(isRootTab: isRootTab))
     }
@@ -170,6 +178,24 @@ struct AuthSettingsView: View {
         .buttonStyle(.plain)
     }
 
+    private var deleteAccountButton: some View {
+        Button { showingDeleteAccount = true } label: {
+            Text(String(localized: "feature.auth.xoa.tai.khoan"))
+                .appText(AuthText.logout)
+                .foregroundStyle(AppColors.error)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 56)
+                .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.control))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("settings.delete-account")
+    }
+
+    private func openDeleteAccountForm() {
+        showingDeleteAccount = false
+        if let url = model.deleteAccountFormURL { openURL(url) }
+    }
+
     private var logoutBlockBinding: Binding<LogoutBlock?> {
         Binding(
             get: { model.logoutBlock },
@@ -274,6 +300,46 @@ private struct AuthLogoutBlockedSheet: View {
             VStack(spacing: 10) {
                 SettingsDialogButton(title: String(localized: "feature.auth.a.hieu"), variant: .secondary, action: close)
                 SettingsDialogButton(title: String(localized: "feature.auth.thu.ong.bo.lai"), variant: .primary, action: retry)
+            }
+            .padding(.top, 18)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            GeometryReader { proxy in
+                AppColors.surface
+                    .onAppear { height = proxy.size.height }
+                    .onChange(of: proxy.size.height) { _, value in height = value }
+            }
+        }
+        .presentationDetents([.height(height)])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(20)
+    }
+}
+
+/// Hộp xác nhận ngắn trước khi mở biểu mẫu yêu cầu xoá tài khoản; cùng khuôn với `AuthLogoutBlockedSheet`.
+private struct AuthDeleteAccountSheet: View {
+    let close: () -> Void
+    let openForm: () -> Void
+
+    @State private var height: CGFloat = 300
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(String(localized: "feature.auth.yeu.cau.xoa.tai.khoan"))
+                .appText(AppText.heading)
+                .foregroundStyle(AppColors.text)
+                .padding(.bottom, 16)
+            Text(String(localized: "feature.auth.xoa.tai.khoan.mo.bieu.mau"))
+                .appText(AppTextStyle(size: 16, weight: .regular, lineHeight: 24))
+                .foregroundStyle(AppColors.text)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: 10) {
+                SettingsDialogButton(title: String(localized: "feature.auth.mo.bieu.mau"), variant: .primary, action: openForm)
+                    .accessibilityIdentifier("settings.delete-account.open-form")
+                SettingsDialogButton(title: String(localized: "feature.auth.huy.xoa.tai.khoan"), variant: .secondary, action: close)
             }
             .padding(.top, 18)
         }

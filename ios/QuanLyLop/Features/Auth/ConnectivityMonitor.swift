@@ -11,7 +11,7 @@ final class ConnectivityMonitor {
     static let shared = ConnectivityMonitor()
 
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "vn.quanlylop.connectivity")
+    private let queue = DispatchQueue(label: "\(AppConfiguration.identifierPrefix).connectivity")
 
     private(set) var isOnline = false
 

@@ -176,7 +176,7 @@ struct ContentView: View {
             AppConfiguration(
                 environment: .staging,
                 apiBaseURL: URL(string: "https://staging.invalid")!,
-                bundleIdentifier: "vn.quanlylop.app",
+                bundleIdentifier: AppConfiguration.identifierPrefix,
                 appVersion: "0.1.0",
                 buildNumber: "1"
             )

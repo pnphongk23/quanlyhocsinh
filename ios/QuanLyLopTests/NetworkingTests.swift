@@ -113,7 +113,7 @@ final class NetworkingTests: XCTestCase {
         } catch { XCTAssertEqual(error as? APIFailure, .offline) }
     }
     func testKeychainRoundTripUpdateAndScopedDelete() async throws {
-        let service = "vn.quanlylop.test." + UUID().uuidString
+        let service = AppConfiguration.identifierPrefix + ".test." + UUID().uuidString
         let first = KeychainTokenStore(service: service, account: "first")
         let second = KeychainTokenStore(service: service, account: "second")
         do { try await first.setToken("FIXTURE_ONE") }

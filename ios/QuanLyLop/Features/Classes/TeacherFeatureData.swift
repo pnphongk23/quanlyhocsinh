@@ -149,7 +149,7 @@ final class TeacherFeatureData {
         self.store = store
         saveStatusSource = AppSaveStatusSource(store: store)
         api = URLSessionAPIClient(configuration: configuration,
-                                  tokenStore: KeychainTokenStore(service: "vn.quanlylop.\(configuration.environment.rawValue)"))
+                                  tokenStore: KeychainTokenStore(service: configuration.tokenStoreService))
         sync = auth.activeSync
         roleName = membership.role.name
         displayName = auth.currentUser?.displayName ?? membership.role.name

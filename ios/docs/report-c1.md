@@ -5,7 +5,7 @@ Commit: `d53a035` (`feat(ios): add SwiftUI app skeleton with XcodeGen`)
 
 ## Đã làm
 
-1. `ios/project.yml` (XcodeGen): app "Quản lý lớp", bundle id tạm `vn.quanlylop.app`, iOS 17+,
+1. `ios/project.yml` (XcodeGen): app "Quản lý lớp", bundle id tạm `com.study.teacherthu`, iOS 17+,
    SwiftUI, Swift 6 (`SWIFT_STRICT_CONCURRENCY=complete`), không thư viện ngoài, chỉ iPhone.
    Hai cấu hình `Staging` (debug, mặc định) và `Production` (release); scheme chạy Staging, archive Production.
    `Config/Base.xcconfig` (bundle id tạm, version) + `Staging.xcconfig` / `Production.xcconfig`
@@ -47,13 +47,13 @@ $ xcodebuild ... -configuration Production ... build
 ```
 
 Giá trị thật trong bundle: `AppEnvironment=Staging`, `APIBaseURL=https://staging.invalid`,
-`CFBundleIdentifier=vn.quanlylop.app`, `CFBundleDisplayName=Quản lý lớp`, `TARGETED_DEVICE_FAMILY=1`;
+`CFBundleIdentifier=com.study.teacherthu`, `CFBundleDisplayName=Quản lý lớp`, `TARGETED_DEVICE_FAMILY=1`;
 build Production ra `AppEnvironment=Production`, `APIBaseURL=https://api.invalid`.
 Bundle có `vi.lproj/Localizable.strings` và `vi.lproj/InfoPlist.strings` (đã dịch).
 
 Chạy thử: simulator `QuanLyLop-iPhone16` (iOS 26.1, UDID `66F0C2F7-…`) — `simctl install` + `launch`
 thành công (pid 84508), ảnh chụp màn khởi động: `ios/docs/launch-screenshot.png` (hiện "Quản lý lớp",
-"Môi trường Staging", `https://staging.invalid`, `0.1.0 (1) · vn.quanlylop.app`).
+"Môi trường Staging", `https://staging.invalid`, `0.1.0 (1) · com.study.teacherthu`).
 Màn launch (UILaunchScreen) kiểm bằng ảnh chụp ngay sau khi launch: toàn màn `rgb(43,92,230)` = `#2B5CE6`.
 
 ## Vấn đề / lưu ý

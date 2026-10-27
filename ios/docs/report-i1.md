@@ -11,7 +11,7 @@ Ngày 2026-10-21. Nguồn chuẩn: `docs/spec.md`, `plans/20261021-mvp/backend/a
 |---|---|---|
 | `testBearerVersionedPathAndSnakeCaseBody` | `URLSession` giao body cho `URLProtocol` dưới dạng `httpBodyStream`, nên `request.httpBody` luôn `nil` khi bắt request | Fixture của test đọc `httpBodyStream` và dựng lại `httpBody` trước khi ghi nhận; assert giữ nguyên (`base_version == 3`) |
 | `testErrorMappingRetryAfterAndSafeUserMessage`, `testPublicRequest204AndOffline` | **Lỗi thật trong mã sản phẩm**: `parts.queryItems = []` làm URL có thêm `?` rỗng (`…/limited?`), nên không khớp fixture và request đi ra ngoài (mất mạng → `.offline`) | `APIClient` chỉ đặt `queryItems` khi có query; thêm assert URL không có `?` thừa |
-| `testKeychainRoundTripUpdateAndScopedDelete` | App không có `CODE_SIGN_ENTITLEMENTS`; tiến trình chạy test không có quyền keychain (`-34018`) | Thêm `QuanLyLop/Resources/QuanLyLop.entitlements` (`keychain-access-groups = $(AppIdentifierPrefix)vn.quanlylop.app`) + `CODE_SIGN_ENTITLEMENTS` trong `project.yml`. Build có ký: test **qua đủ**. Build `CODE_SIGNING_ALLOWED=NO` (không ký, OS cấm keychain): test `XCTSkip` kèm lý do, không xoá và không nới assert |
+| `testKeychainRoundTripUpdateAndScopedDelete` | App không có `CODE_SIGN_ENTITLEMENTS`; tiến trình chạy test không có quyền keychain (`-34018`) | Thêm `QuanLyLop/Resources/QuanLyLop.entitlements` (`keychain-access-groups = $(AppIdentifierPrefix)com.study.teacherthu`) + `CODE_SIGN_ENTITLEMENTS` trong `project.yml`. Build có ký: test **qua đủ**. Build `CODE_SIGNING_ALLOWED=NO` (không ký, OS cấm keychain): test `XCTSkip` kèm lý do, không xoá và không nới assert |
 
 **Rà 7 mục của `ios-01-core.md` và hoàn thiện phần thiếu**
 
@@ -57,7 +57,7 @@ Executed 4 tests, with 0 failures     ** TEST SUCCEEDED **
 
 ```
 $ xcrun simctl install booted …/QuanLyLop.app
-$ SIMCTL_CHILD_QLH_DESIGN_GALLERY=1 xcrun simctl launch booted vn.quanlylop.app
+$ SIMCTL_CHILD_QLH_DESIGN_GALLERY=1 xcrun simctl launch booted com.study.teacherthu
 $ xcrun simctl io booted screenshot ios/docs/screens/design-system-390x844.png          (1179×2556)
 $ SIMCTL_CHILD_QLH_DESIGN_GALLERY=sheet … → ios/docs/screens/design-system-sheet-390x844.png
 ```

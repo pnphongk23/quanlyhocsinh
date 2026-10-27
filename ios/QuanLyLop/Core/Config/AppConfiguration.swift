@@ -15,6 +15,9 @@ struct AppConfiguration: Sendable, Equatable {
     let bundleIdentifier: String
     let appVersion: String
     let buildNumber: String
+    /// Google Form that starts an account-deletion request; the single place to change it is
+    /// `DELETE_ACCOUNT_FORM_URL` in `Config/Base.xcconfig`.
+    var deleteAccountFormURL: URL? = nil
 }
 
 enum AppConfigurationError: Error, Sendable, Equatable {
@@ -31,11 +34,16 @@ extension AppConfiguration {
         static let bundleIdentifier = "CFBundleIdentifier"
         static let appVersion = "CFBundleShortVersionString"
         static let buildNumber = "CFBundleVersion"
+        static let deleteAccountFormURL = "DeleteAccountFormURL"
     }
 
     /// Keychain service holding the session token. One per environment, so Staging and Production
     /// sessions never mix; shared by the auth flow and the app frame's push registration.
-    var tokenStoreService: String { "vn.quanlylop.\(environment.rawValue)" }
+    var tokenStoreService: String { "\(bundleIdentifier).\(environment.rawValue)" }
+
+    /// Prefix of every identifier the app owns (Keychain service, defaults key, queue and log labels):
+    /// the bundle id the build was signed with, so no second identifier needs to be kept in sync.
+    static var identifierPrefix: String { Bundle.main.bundleIdentifier ?? "com.study.teacherthu" }
 
     static func load(bundle: Bundle = .main) -> Result<AppConfiguration, AppConfigurationError> {
         do {
@@ -72,7 +80,8 @@ extension AppConfiguration {
             apiBaseURL: apiBaseURL,
             bundleIdentifier: try string(InfoKey.bundleIdentifier),
             appVersion: try string(InfoKey.appVersion),
-            buildNumber: try string(InfoKey.buildNumber)
+            buildNumber: try string(InfoKey.buildNumber),
+            deleteAccountFormURL: (try? string(InfoKey.deleteAccountFormURL)).flatMap { URL(string: $0) }
         )
     }
 }

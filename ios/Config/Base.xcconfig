@@ -1,6 +1,9 @@
 // Cấu hình dùng chung cho mọi môi trường.
-// Bundle id TẠM cho bản nền, đổi ở đây khi có bundle id chính thức.
 PRODUCT_BUNDLE_IDENTIFIER = com.study.teacherthu
 
-MARKETING_VERSION = 0.1.0
+MARKETING_VERSION = 1.0.0
 CURRENT_PROJECT_VERSION = 1
+
+// Biểu mẫu yêu cầu xoá tài khoản (Google Form). Giá trị tạm: thay đúng một chỗ này khi có link.
+// Trong xcconfig, `//` mở đầu chú thích, nên viết URL bằng `https:/$()/...`.
+DELETE_ACCOUNT_FORM_URL = https:/$()/forms.gle/PENDING

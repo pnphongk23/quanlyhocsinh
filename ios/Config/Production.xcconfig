@@ -1,5 +1,6 @@
-// Môi trường production. Chưa có tên miền thật: thay API_BASE_URL khi có.
+// Môi trường production. Production dùng chung máy chủ với staging (người dùng chốt 2026-10-28);
+// khi có tên miền riêng, chỉ cần thay API_BASE_URL ở đây.
 #include "Base.xcconfig"
 
 APP_ENVIRONMENT = Production
-API_BASE_URL = https:/$()/api.invalid
+API_BASE_URL = https:/$()/qlh-staging-api.tolaphamnhuphong.workers.dev/v1

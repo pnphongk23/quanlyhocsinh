@@ -128,7 +128,7 @@ extension AppConfiguration {
     /// (invalid configuration screen and the debug screenshot harness).
     static let fallback = AppConfiguration(environment: .staging,
                                           apiBaseURL: URL(string: "https://staging.invalid")!,
-                                          bundleIdentifier: "vn.quanlylop.app",
+                                          bundleIdentifier: AppConfiguration.identifierPrefix,
                                           appVersion: "0", buildNumber: "0")
 }
 
@@ -166,6 +166,8 @@ final class AuthModel {
     private var returnToSettingsAfterRole = false
 
     private let identityStore: any CachedIdentityStore
+    /// Where "Xoá tài khoản" sends the user; nil only for placeholder configurations.
+    let deleteAccountFormURL: URL?
     private let storeFactory: (CacheScope) throws -> SQLiteStore
     private let isOnline: @MainActor () -> Bool
 
@@ -174,7 +176,8 @@ final class AuthModel {
          identityStore injectedIdentityStore: (any CachedIdentityStore)? = nil,
          storeFactory: ((CacheScope) throws -> SQLiteStore)? = nil,
          isOnline: @escaping @MainActor () -> Bool = { ConnectivityMonitor.shared.isOnline }) {
-        let service = "vn.quanlylop.\(configuration.environment.rawValue)"
+        let service = configuration.tokenStoreService
+        deleteAccountFormURL = configuration.deleteAccountFormURL
         let store = injectedTokenStore ?? KeychainTokenStore(service: service)
         tokenStore = store
         identityStore = injectedIdentityStore ?? KeychainCachedIdentityStore(service: service)

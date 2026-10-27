@@ -441,7 +441,7 @@ enum GuardianRepository {
     static func load() async throws -> GuardianDashboard {
         let result = AppConfiguration.load()
         guard case .success(let configuration) = result else { throw APIFailure.invalidURL }
-        let service = "vn.quanlylop.\(configuration.environment.rawValue)"
+        let service = configuration.tokenStoreService
         let tokenStore = KeychainTokenStore(service: service)
         guard try await tokenStore.token() != nil else { throw APIFailure.missingToken }
         return try await load(api: URLSessionAPIClient(configuration: configuration, tokenStore: tokenStore),
