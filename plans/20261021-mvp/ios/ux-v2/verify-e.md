@@ -10,7 +10,7 @@
 
 ## E2 — khôi phục phiên khi endpoint lỗi
 
-- Kết luận mã nguồn: **(ii), app khôi phục phiên qua API khi mở app và chuyển về đăng nhập nếu request lỗi**. `AuthService.swift:105-117` đọc token; nếu có token thì gọi `GET me`, catch đặt thông báo và `screen = .login`. `APIClient.swift:100` từ chối endpoint `http://...` bằng `invalidURL`, rồi lỗi đi vào catch khôi phục phiên. Keychain service theo môi trường vẫn là `vn.quanlylop.Staging` (`AppConfiguration.swift:36-38`). Điều này khớp ảnh endpoint lỗi được ghi ở `verify.md` lượt 2.
+- Kết luận mã nguồn: **(ii), app khôi phục phiên qua API khi mở app và chuyển về đăng nhập nếu request lỗi**. `AuthService.swift:105-117` đọc token; nếu có token thì gọi `GET me`, catch đặt thông báo và `screen = .login`. `APIClient.swift:100` từ chối endpoint `http://...` bằng `invalidURL`, rồi lỗi đi vào catch khôi phục phiên. Keychain service theo môi trường vẫn là `com.study.teacherthu.Staging` (`AppConfiguration.swift:36-38`). Điều này khớp ảnh endpoint lỗi được ghi ở `verify.md` lượt 2.
 - Build thường và build endpoint lỗi đều ký ad-hoc thành công với cùng cấu hình. Lượt đăng nhập thử mới trên iPhone 16 không vào màn lớp sau một lần submit; dừng theo giới hạn đăng nhập. Vì vậy lượt này **không xác nhận trực tiếp token còn trong Keychain** và không hoàn tất được phép thử cài đè. Kết luận (ii) có bằng chứng mạnh từ code và lượt xác minh trước, nhưng phép thử Keychain mới chưa độc lập xác nhận.
 
 ## E3 — khung “Đã lưu”
