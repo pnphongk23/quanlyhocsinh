@@ -62,7 +62,7 @@ Rủi ro số 1 cần giải quyết trong spec: băm mật khẩu tốn CPU, c�
 ### C. Source iOS (SwiftUI native)
 
 Chỉ chuẩn bị nền, chưa làm màn nghiệp vụ. Giao một worker Lính trong worktree `ios/`:
-- Dự án Xcode tạo bằng XcodeGen (`project.yml`, file text, ít token), target iOS 17+, SwiftUI, Swift 6, không phụ thuộc thư viện ngoài nếu chưa cần. Tên app tạm "Quản lý lớp", bundle id tạm `vn.quanlylop.app` (ghi rõ là tạm, dễ đổi).
+- Dự án Xcode tạo bằng XcodeGen (`project.yml`, file text, ít token), target iOS 17+, SwiftUI, Swift 6, không phụ thuộc thư viện ngoài nếu chưa cần. Tên app tạm "Quản lý lớp", bundle id tạm `com.study.teacherthu` (ghi rõ là tạm, dễ đổi).
 - App icon: sinh bằng script (Swift hoặc Python Pillow) ra 1024×1024 + asset catalog, thiết kế đơn giản (nền xanh chính #2B5CE6 như prototype, ký hiệu chữ/quyển sách), AccentColor, LaunchScreen.
 - Cấu trúc thư mục theo tính năng, lớp mạng gọi API (stub, chờ API spec), lớp lưu cục bộ (SwiftData hoặc SQLite, đề xuất trong 1 trang), localization tiếng Việt, môi trường staging/production qua xcconfig.
 - Xác minh: `xcodebuild` build cho simulator thành công, chạy thử trên simulator và chụp màn khởi động. Không cần chứng chỉ ký hay tài khoản Apple Developer ở bước này.
