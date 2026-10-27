@@ -6,7 +6,7 @@ Write-set: `ux-v2/shots/after/**`, `ux-v2/verify.md`, `/tmp/qlh-c-*`. KHÔNG s�
 
 ## Lần chạy lại (lượt 2) — đã biết
 - Lượt 1: Staging build/test xanh trên HEAD 114646a (151 test, 2 skip, 0 lỗi) ⇒ BỎ qua Bước 1; chỉ chạy lại test nếu bạn phải sửa gì (bạn không được sửa Swift).
-- Lượt 1 kẹt đăng nhập: chẩn đoán ở `diagnosis-login.md` ⇒ nhiều khả năng Maestro tap nút Đăng nhập khi bàn phím che. API và tài khoản đã kiểm: curl login = 200. DÙNG flow có sẵn đã chạy tốt ở lượt audit đầu: `ios/maestro/staging/01-login.yaml` (appId vn.quanlylop.app; nhập SĐT, mật khẩu, scrollUntilVisible `login.submit`, swipe, tap, chờ "Lớp của tôi"; tham số `-e STAGING_PHONE` và `-e STAGING_PASSWORD`, SĐT 9 số nội địa). Sao chép vào /tmp, thêm bước chụp ảnh. Đúng 1 lượt đăng nhập mỗi tài khoản/máy; nếu vẫn kẹt: dừng, ghi ảnh + log, báo — không thử lặp.
+- Lượt 1 kẹt đăng nhập: chẩn đoán ở `diagnosis-login.md` ⇒ nhiều khả năng Maestro tap nút Đăng nhập khi bàn phím che. API và tài khoản đã kiểm: curl login = 200. DÙNG flow có sẵn đã chạy tốt ở lượt audit đầu: `ios/maestro/staging/01-login.yaml` (appId com.study.teacherthu; nhập SĐT, mật khẩu, scrollUntilVisible `login.submit`, swipe, tap, chờ "Lớp của tôi"; tham số `-e STAGING_PHONE` và `-e STAGING_PASSWORD`, SĐT 9 số nội địa). Sao chép vào /tmp, thêm bước chụp ảnh. Đúng 1 lượt đăng nhập mỗi tài khoản/máy; nếu vẫn kẹt: dừng, ghi ảnh + log, báo — không thử lặp.
 - Ghi phát hiện UX mới vào verify.md: bàn phím che nút "Đăng nhập" (phím Enter có gửi form không?) — kiểm ô mật khẩu có `submitLabel`/`onSubmit` không (đọc AuthScreens.swift, AuthComponents.swift), mức Vừa.
 
 ## Bước 1 — test (1 lần)

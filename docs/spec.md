@@ -235,6 +235,8 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Chạy hai client dùng chung backend và API: app iOS native (SwiftUI) và PWA/web mobile; giao diện tiếng Việt. Android sau.
 - Bản web desktop cho giáo viên (đã chốt 2026-10-21): phần Chi tiết lớp gồm các tab Buổi học (điểm danh, nhận xét, bài tập về nhà), Bài kiểm tra, Điểm, Học sinh, Báo cáo, kèm đăng nhập và đăng ký workspace; thanh bên desktop có mục Lịch (giữa Lớp và Cài đặt), mở màn Lịch như trên mobile, bố cục theo desktop (đã chốt 2026-10-26); deploy web lên Cloudflare Pages staging.
 - Deploy: Cloudflare, chỉ môi trường staging; chưa đụng production (đã chốt 2026-10-21).
+- Xoá tài khoản (đã chốt 2026-10-28, yêu cầu của App Store): giáo viên và phụ huynh có nút "Xoá tài khoản" ở màn tài khoản; bấm, xác nhận rồi mở biểu mẫu Google Form gửi yêu cầu xoá, người vận hành xoá thủ công trong vòng 30 ngày. Không có API xoá tự động. Trang Privacy Policy và Support là trang tĩnh trên web staging, liên hệ chỉ qua biểu mẫu.
+- Bản gửi App Store dùng luôn máy chủ staging làm máy chủ chính (đã chốt 2026-10-28); bundle id iOS `com.study.teacherthu`.
 - Mascot Mít là lớp trang trí bổ sung cho đăng nhập, màn trống, thành công và lỗi; không đổi luồng hay nghiệp vụ. Chi tiết: `plans/20261021-mvp/design/mascot-v2/` (đã chốt 2026-10-22). Mỗi mức sao 0–5 của phiếu nhận xét có một dáng Mít riêng (thêm dáng 0, 4, 5 sao; đã chốt 2026-10-25).
 
 **Làm sau**

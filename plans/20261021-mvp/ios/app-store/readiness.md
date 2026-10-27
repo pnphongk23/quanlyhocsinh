@@ -14,7 +14,7 @@ Nguồn: `ios/QuanLyLop/Resources/Info.plist`, `*.entitlements`, `ios/Config/*.x
 | Mã hoá | Chỉ HTTPS của hệ thống, không có CryptoKit/CommonCrypto trong app |
 
 ## Thiếu hoặc cần quyết (xếp theo mức chặn)
-1. **Bundle id chính thức.** Đang là `com.study.teacherthu` (tạm, ghi trong `Base.xcconfig`); entitlements keychain còn nhắc cả `vn.quanlylop.app`. Cần người dùng chốt id và tài khoản Apple Developer. Chưa đổi gì theo brief.
+1. **Bundle id chính thức.** Đang là `com.study.teacherthu` (tạm, ghi trong `Base.xcconfig`); Đã chốt 2026-10-28 giữ id này, bỏ mọi tham chiếu id cũ (brief 99).
 2. **URL API production.** `Production.xcconfig` đang là `api.invalid`. Bản gửi duyệt phải trỏ tới Worker production thật, hiện chỉ có staging.
 3. **Xoá tài khoản trong app.** Apple (guideline 5.1.1(v)) bắt buộc nếu app cho tạo tài khoản. Giáo viên tự đăng ký workspace nên áp dụng. Spec, API và app chưa có chức năng này. Đây là việc phải làm, cần GL và người dùng quyết phạm vi (spec mục 8 chưa có), không tự thêm.
 4. **Support URL và Privacy Policy URL.** Chưa có trang nào (xem `metadata-vi.md` mục 7).
