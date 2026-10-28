@@ -4,6 +4,18 @@ Ngày: 2026-10-28 · Chỉ brainstorm, chưa đổi code/spec/architecture. Mọ
 
 Đã đọc: `AGENTS.md`, `docs/spec.md` (mục 4 nhận xét, mục 5.3 offline, mục 8 phạm vi), `docs/architecture.md`, `design/ux-v2/rules.md`, `design/tokens/tokens.css`, nháp App Privacy ở `plans/20261021-mvp/ios/app-store/metadata-vi.md` mục 9.
 
+## Quyết định (2026-10-28)
+
+Đã được người dùng quyết:
+- **Q1:** nhập danh sách chuyển sang Bản 1.2, chỉ dán chữ/CSV xử lý trên máy. Ảnh chụp để 1.3.
+- **Q8:** CHƯA dùng AI. Ý 2 chỉ làm tầng luật + khớp tên mờ trên máy. Mọi phần AI trong file này (phương án B/C của ý 2, ý 1-D, bước 5–6 của lộ trình, mục 5.3–5.4) là **chưa làm**, giữ lại chỉ để tham khảo.
+- **Q3:** "Quên mang vở" chỉ vào phần gõ thêm, không bỏ tích. Chỉ ánh xạ cụm độ chắc "Cao".
+- **Q4:** em không bị nhắc tên → tạo phiếu mặc định 5 sao; ô tick sẵn, bỏ chọn được; không đụng phiếu đã có.
+
+Tạm theo đề xuất, **chờ người dùng duyệt:** Q2 (chế độ thứ hai trong tab Nhận xét), Q5 (câu khen vào phần gõ thêm, chỉ khi giáo viên tick), Q6 (phiếu đã gửi: ý 3 cho sửa có xác nhận lần đầu; ý 2 mặc định bỏ qua), Q7 (chip chưa đạt dùng selected chuẩn), Q9 (cả lớp/tất cả: hỏi xác nhận), Q10 (20 học sinh chỉ cảnh báo), Q11 (xem trước hiện SĐT đầy đủ có kiểm định dạng), Q12 (bắt đầu sau khi 1.0 được duyệt).
+
+Phạm vi và tiêu chí xong của Bản 1.2: xem [scope-1.2.md](scope-1.2.md).
+
 ## 0. Tóm tắt (đọc phần này là đủ để quyết)
 
 | Ý | Đề xuất | Cần AI? | Offline | Bản |
