@@ -477,7 +477,7 @@ Phát hành: một `batch` ghi `report_publications` (bản chụp bất biến)
 
 ## 9. Phân quyền: tóm tắt
 
-Chi tiết từng vai trò × tài nguyên × hành động ở `authz-matrix.md`. Nguyên tắc: (1) mọi hàm trong `worker/src/db` nhận danh tính đã xác thực (membership, role, quyền, lớp được gán / con được liên kết) và tự gắn `workspace_id` + phạm vi; (2) quản trị luôn chỉ Admin và MVP không có endpoint quản trị nhân sự/role; (3) Phụ huynh chỉ đọc, chỉ con mình, chỉ nội dung đã gửi/phát hành; (4) quyền đổi hiệu lực ngay, vì mỗi request đọc lại role/lớp từ D1 (không cache quyền giữa các request).
+Chi tiết từng vai trò × tài nguyên × hành động ở `authz-matrix.md`. Nguyên tắc: (1) mọi hàm trong `worker/src/db` nhận danh tính đã xác thực (membership, role, quyền, lớp được gán / con được liên kết) và tự gắn `workspace_id` + phạm vi; (2) quản trị luôn chỉ Admin; endpoint quản trị nhân sự và quyền 2 role có từ bản 1.1 (mục 11), bản đầu thì không; (3) Phụ huynh chỉ đọc, chỉ con mình, chỉ nội dung đã gửi/phát hành; (4) quyền đổi hiệu lực ngay, vì mỗi request đọc lại role/lớp từ D1 (không cache quyền giữa các request).
 
 ## 10. Câu hỏi mở
 
@@ -502,3 +502,104 @@ Mỗi mục: điều spec chưa trả lời, mặc định tạm dùng trong tà
 - **Q15. Định nghĩa "vắng 2 buổi liên tiếp" (thêm khi rà B3).** Spec mục 8 chỉ ghi "cảnh báo vắng 2 buổi trong app", không nói `excused` (có phép) có tính là vắng, và buổi hủy có chen vào giữa hai buổi không. Tạm: tính ở client trên dữ liệu đã có (mục 5.4), **không** lưu cờ ở máy chủ; chưa chọn định nghĩa. Cần người dùng chốt (ảnh hưởng prototype và cả hai client).
 - **Q16. Cách đánh số buổi.** Spec mục 4: "Số buổi chỉ đếm buổi đã diễn ra"; prototype (`sessionNumber`) và thiết kế web đánh số mọi buổi chưa hủy, kể cả buổi sắp tới. Tạm theo prototype/thiết kế (số suy ra khi đọc, không lưu, không đếm buổi hủy). Cần người dùng xác nhận hoặc sửa spec cho khớp.
 - **Q17. Đổi lịch lặp khi buổi hôm nay đã có dữ liệu (thêm khi sửa M2, review r1).** Spec mục 4 / api-spec 5.1 chỉ nói "chỉ đổi buổi chưa diễn ra, giữ buổi đã diễn ra, đã hủy và buổi lẻ", không nói trường hợp buổi **hôm nay** còn `planned` nhưng đã có điểm danh/phiếu/BTVN. Tạm: giữ nguyên buổi hôm nay (đổi `origin='manual'`), áp lịch mới từ buổi kế tiếp, và không sinh buổi lặp mới cho bất kỳ ngày nào đã có buổi của lớp, nên không bao giờ có hai buổi cùng lớp trong cùng ngày vì đổi lịch. Cần người dùng xác nhận (nhất là khi lịch mới vẫn rơi vào hôm nay).
+
+## 11. Nhân sự và vai trò 1.1
+
+Nguồn: `docs/spec.md` mục 8 "Bản 1.1" và `plans/20261028-roles-permissions/scope.md`. Chốt hợp đồng 2026-10-28 (nhánh `mvp-backend-roles`, chưa deploy). **Chỉ thêm**: route, bảng và trường mới; response và hành vi cũ mà app 1.0 và web hiện tại dùng không đổi. Trường mới trong response cũ (nếu có) client cũ bỏ qua.
+
+### Khái niệm
+- **Nhân sự** = membership có role `admin`, `teacher` hoặc `assistant` (`scope_kind` ≠ `linked_students`) của workspace đang dùng. Mọi route dưới đây là `Admin` (vai trò đang dùng có `system_key = "admin"`); người khác `403 forbidden` `details.reason = "admin_required"`.
+- **Khai nhân sự (pending):** Admin khai SĐT chưa có tài khoản thì lưu một bản khai (bảng `staff_declarations`: workspace, SĐT chuẩn hoá, tên, role, danh sách lớp). Khi SĐT đó có tài khoản (đặt mật khẩu lần đầu qua `register-guardian`, hoặc đăng ký/đăng nhập sau này) máy chủ biến bản khai thành membership (`active`, lớp đã gán) rồi xoá bản khai. Số đã có tài khoản thì tạo membership ngay.
+- **Hiệu lực ngay:** mọi request đọc lại role, quyền, trạng thái và lớp được gán từ D1 (mục 9). Mọi thay đổi nhân sự/quyền tăng `scope_epoch` của membership bị ảnh hưởng nên lần đồng bộ kế tiếp trả `409 resync_required` (`scope_changed`).
+- Không xoá dữ liệu người đó đã tạo. Vô hiệu hoá chỉ đổi `memberships.status`.
+
+### Dạng `StaffMember`
+```json
+{ "id": "mem_7", "kind": "member", "user_id": "usr_7", "display_name": "Cô Lan", "phone": "+84900000007",
+  "role": { "id": "role_asst", "name": "Trợ giảng", "system_key": "assistant" },
+  "class_ids": ["cls_1", "cls_2"], "status": "active", "is_self": false,
+  "created_at": "2026-10-28T03:00:00.000Z", "version": 3 }
+```
+- `kind`: `member` (đã có tài khoản; `id` là `memberships.id`) hoặc `pending` (chưa có tài khoản; `id` là id bản khai, `user_id = null`).
+- `status`: `active` | `disabled` | `pending` (chỉ với `kind = pending`).
+- `class_ids`: lớp được gán (`member_classes`). Với role `admin` luôn `[]` (Admin thấy mọi lớp).
+- `phone` đầy đủ `+84…`: chỉ Admin gọi được các route này; client che một phần ở danh sách nếu muốn.
+- `display_name` của `member` là tên trong tài khoản; thêm SĐT đã có tài khoản thì giữ tên của họ, bỏ qua tên Admin nhập.
+
+### GET /staff
+`Admin`. `{ "items": [StaffMember…] }` — gồm Admin, Giáo viên, Trợ giảng (cả đã vô hiệu) và bản khai chờ, sắp theo `status` (active, pending, disabled) rồi tên. Không phân trang (workspace nhỏ).
+
+### POST /staff — thêm nhân sự bằng SĐT
+`Admin`. Giới hạn kích thước như mọi `POST` JSON.
+```json
+{ "phone": "0900000007", "display_name": "Cô Lan", "role": "assistant", "class_ids": ["cls_1"] }
+// 201 → StaffMember
+```
+- `role`: `teacher` | `assistant` (`422 validation_error` `details.fields.role = "invalid_role"`; không tạo Admin ở 1.1).
+- `display_name` bắt buộc 1–100 ký tự (`details.fields.display_name`), `phone` sai định dạng `details.fields.phone = "invalid_phone"`. `class_ids` tuỳ chọn (mặc định `[]`), mỗi id phải là lớp của workspace (`details.fields.class_ids = "unknown_class"`).
+- Số đã có tài khoản: tạo membership `active` ngay (`kind = member`). Số chưa có tài khoản: tạo bản khai (`kind = pending`, `status = pending`).
+- `409 conflict` `details.reason = "staff_exists"` khi SĐT đã là nhân sự của workspace này (Admin/Giáo viên/Trợ giảng, đang hoạt động, đã vô hiệu hoặc đang chờ). Số đã vô hiệu: `details.status = "disabled"` và `details.id` để Admin bật lại bằng `PATCH`.
+- Không gửi SMS hay thư mời.
+
+### PATCH /staff/{id}
+`Admin`. Mọi trường tuỳ chọn; có `base_version` thì kiểm như mục 0 (`409 version_conflict`).
+```json
+{ "role": "teacher", "class_ids": ["cls_1", "cls_3"], "status": "disabled", "display_name": "Cô Lan A", "base_version": 3 }
+// 200 → StaffMember
+```
+- `class_ids`: thay toàn bộ tập lớp được gán. Với role `admin`: `422` `details.fields.class_ids = "not_applicable"`.
+- `role`: `teacher` | `assistant`. Admin đổi role của chính mình hoặc Admin khác thành Giáo viên/Trợ giảng được, trừ khi đó là Admin hoạt động cuối cùng (`409`, bên dưới). Không thể nâng ai lên Admin.
+- `status`: `active` | `disabled`. Vô hiệu hoá: các lệnh/ request kế tiếp của membership đó bị từ chối (bảng dưới); phiên đăng nhập và tài khoản không bị xoá; dữ liệu cũ nguyên vẹn; bật lại bằng `status = "active"`.
+- `display_name`: chỉ với `kind = pending` (tài khoản đã có thì tên thuộc người dùng, `422 display_name: "owned_by_user"`).
+- `kind = pending` chỉ cho sửa `role`, `class_ids`, `display_name`; `status` khác `pending` ⇒ `422` `details.fields.status = "invalid_for_pending"`.
+- `409 conflict` `details.reason = "last_admin"` khi sẽ làm mất Admin hoạt động cuối cùng (hạ role hoặc vô hiệu hoá).
+- `404 not_found` nếu `id` không thuộc workspace.
+
+### DELETE /staff/{id}
+`Admin`. Chỉ xoá bản khai chờ (`kind = pending`): `204`. Với membership đã có tài khoản: `409 conflict` `details.reason = "not_pending"` (dùng `PATCH status = disabled`). Dành cho sửa nhầm SĐT.
+
+### GET /roles/permissions
+`Admin`. Quyền của hai role chỉnh được, 5 nhóm có tính năng (nhóm `lectures` không hiện, không đổi).
+```json
+{ "items": [
+  { "role": { "id": "role_teacher", "name": "Giáo viên", "system_key": "teacher" },
+    "permissions": { "classes": "write", "students": "write", "sessions_attendance": "write", "scores": "write", "comments_reports": "write" } },
+  { "role": { "id": "role_asst", "name": "Trợ giảng", "system_key": "assistant" },
+    "permissions": { "classes": "read", "students": "read", "sessions_attendance": "write", "scores": "read", "comments_reports": "write" } } ] }
+```
+
+### PUT /roles/{system_key}/permissions
+`Admin`. `system_key` là `teacher` hoặc `assistant`.
+```json
+{ "permissions": { "scores": "write", "comments_reports": "none" } }   // chỉ gửi nhóm cần đổi; 200 → một phần tử như GET
+```
+- Mức: `none` | `read` | `write`; nhóm hợp lệ: `classes`, `students`, `sessions_attendance`, `scores`, `comments_reports`. Nhóm khác (kể cả `lectures`) hoặc mức lạ: `422 validation_error` `details.fields.<nhóm> = "invalid"`. Body rỗng: `422`.
+- `system_key` khác (`admin`, `guardian`): `409 conflict` `details.reason = "role_not_editable"` (Admin cố định, role Phụ huynh không có màn chỉnh).
+- Hiệu lực ngay cho mọi membership role đó; tăng `scope_epoch` của chúng.
+- Mặc định: Giáo viên `write` cả 5 nhóm. Trợ giảng: `sessions_attendance` `write`, `comments_reports` `write`; `classes`, `students`, `scores` `read`; `lectures` `read` (giữ nguyên, không hiện). Workspace mới được seed theo bảng này; migration cập nhật workspace cũ **chỉ khi** quyền của role Trợ giảng còn đúng mặc định cũ (`comments_reports = read`, các nhóm khác như trên), tức Admin chưa từng sửa.
+
+### Đăng nhập lần đầu của nhân sự (không đổi hình dạng response)
+- `POST /auth/phone-check`: SĐT chưa có tài khoản mà có **bản khai nhân sự** (ở bất kỳ workspace nào) ⇒ `{ "next": "guardian_setup" }` như phụ huynh đã khai (giá trị `next` giữ nguyên để app 1.0 không vỡ; client 1.1 coi đây là "tự đặt mật khẩu lần đầu"). Thứ tự: đã có tài khoản ⇒ `login`; có bản khai nhân sự hoặc con được khai ⇒ `guardian_setup`; còn lại ⇒ `teacher_register`.
+- `POST /auth/register-guardian`: chấp nhận SĐT có con được khai **hoặc** có bản khai nhân sự. Một `batch` như cũ cho phần phụ huynh; phần nhân sự: tạo membership `active` + `member_classes` cho từng bản khai rồi xoá bản khai. `201` cùng hình dạng, `memberships` gồm cả vai trò nhân sự và phụ huynh; `active_membership_id` điền khi đúng một membership, nếu không `null` (chọn vai trò). SĐT không có khai nào: vẫn `403 forbidden` `details.reason = "phone_not_declared"`.
+- Bản khai còn treo cho SĐT đã có tài khoản (đăng ký workspace trực tiếp bằng `POST /auth/register`, hoặc Admin khai sau khi có tài khoản — trường hợp sau tạo membership ngay): `POST /auth/register` và `POST /auth/login` biến chúng thành membership trước khi trả response, nên `memberships` trong response đã có vai trò mới.
+
+### GET /me (đã có, dùng cho 1.1)
+Không đổi hình dạng: `memberships` là mọi vai trò đang hoạt động ở mọi workspace của người dùng, mỗi cái có `workspace`, `role`, `scope_epoch`, `permissions` (6 nhóm, mức hiệu lực của role đó). Client ẩn/khoá nút theo `permissions` của membership đang dùng và so `scope_epoch` với `epoch` đồng bộ. Thêm ở 1.1: **`class_ids`** trên membership nhân sự có `scope_kind = "assigned_classes"` (lớp được gán; Admin và Phụ huynh không có trường này). Khi membership phiên đang dùng bị vô hiệu: `active_membership_id` là `null` và membership đó vắng trong `memberships` ⇒ client về màn chọn vai trò hoặc báo "bạn không còn quyền ở workspace này".
+
+### Hiệu lực thu hồi
+| Tình huống | Kết quả |
+|---|---|
+| Membership đang dùng bị `disabled` | Request REST miền kế tiếp: `403 forbidden` `details.reason = "membership_required"`; `/me`, `/session/membership`, `/auth/*` vẫn dùng được để chọn vai trò khác. Lệnh `sync/push` của membership đó: bị từ chối như `403`, client giữ lệnh chờ và báo lỗi (spec mục 4). |
+| Role đổi hoặc quyền role đổi | Request kế tiếp dùng quyền mới; thiếu quyền ⇒ `403 forbidden` (đã thấy tài nguyên) hoặc `404` (ngoài phạm vi lớp). Đồng bộ trả `409 resync_required`. |
+| Gỡ lớp khỏi nhân sự | Lớp biến mất khỏi phạm vi; `404` cho tài nguyên của lớp đó; đồng bộ `resync_required`. |
+| Lớp do nhân sự tạo | Tự gán cho người tạo (đã có ở `POST /classes` và lệnh tạo lớp). |
+
+### Mã lỗi thêm
+| HTTP | `code` / `details.reason` | Khi nào |
+|---|---|---|
+| 403 | `forbidden` / `admin_required` | gọi route nhân sự/quyền role mà không phải Admin |
+| 409 | `conflict` / `staff_exists` | SĐT đã là nhân sự của workspace này |
+| 409 | `conflict` / `last_admin` | làm mất Admin hoạt động cuối cùng |
+| 409 | `conflict` / `role_not_editable` | sửa quyền role `admin`/`guardian` |
+| 409 | `conflict` / `not_pending` | `DELETE /staff/{id}` trên membership đã có tài khoản |
+| 422 | `validation_error` | `role`, `display_name`, `phone`, `class_ids`, `status`, nhóm/mức quyền sai (`details.fields`) |
