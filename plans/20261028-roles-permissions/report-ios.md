@@ -46,15 +46,15 @@ Chi tiết ở `review-ios-sol.md`. Commit sửa: `1e4b83d`, `51e7cf5` (nhánh `
 - Nút điểm khoá: tab Bài kiểm tra không có nút thêm (Điểm của trợ giảng mặc định read). Nhận xét: trạng thái rỗng vẫn ghi "Tạo bài kiểm tra đầu tiên…" dù không có nút tạo.
 - Vô hiệu hoá bằng Admin (PATCH `/staff/{membership_id}` status disabled): `sync/pull` trả 404; `/me` với token cũ trả 200 và `memberships` rỗng (không phải 403 `account_disabled` như web ghi nhận). Sửa điểm danh trong app khi đó: app quay về màn đăng nhập với "Bạn không còn quyền ở vai trò này. Hãy chọn vai trò khác hoặc liên hệ quản trị viên.", cache bản ghi xoá về 0, outbox giữ nguyên (5 lệnh `attendance.set` pending).
 - Bật lại, đăng nhập lại: outbox tự đẩy lên hết, server HS5 `late` version 2, cursor 9323; `scope_epoch` tăng 1→3 sau khoá/mở. Pull với epoch cũ trả 409 `resync_required` (app tự xử lý).
-- Lưu ý nhỏ: toast "Lỗi lưu — vui lòng thử lại" còn hiện sau khi bị đẩy về đăng nhập và sau khi đăng nhập lại; không chặn nhưng gây nhầm.
-- Chưa chạy live: đổi vai trò khi có nhiều membership (cần nhân sự thứ hai ở workspace khác); đã có test đơn vị (hai→một membership, app đóng).
+- Lỗi toast "Lỗi lưu — vui lòng thử lại" còn hiện sau khi bị đẩy về đăng nhập: nguyên nhân `AuthModel.hideRevokedIdentity` và `clearIdentityAndToken` không xoá `SyncStatusCenter` (chỉ đăng xuất thành công mới xoá). Lỗi có cả ở 1.0 (token hết hạn, thu hồi quyền). Đã sửa: hai nhánh gọi `syncStatus.reset()`; outbox giữ nguyên, lần đồng bộ sau tự báo lại. Commit `7fa43f0` trên `mvp-ios` (326 test, 0 lỗi) và cherry-pick `6a5779d` sang `mvp-ios-roles` (343 test, 0 lỗi). 2 test mới: thu hồi quyền và token hết hạn xoá toast.
+- Đổi vai trò khi có nhiều membership: chưa chạy live trên iOS (cần nhân sự thứ hai ở workspace khác). Chấp nhận theo GL: test đơn vị (hai→một membership, app đóng) cộng web live.
 - Dọn: `QA Trợ giảng thử` đã vô hiệu hoá; quyền vai trò đang ở mặc định spec (kiểm lại bằng GET); simulator đã tắt (0 máy booted), status bar đã xoá override; file tạm đã xoá.
 
 ## Phát hiện và đã sửa: thời gian chờ 429 bị ghi cứng 60 giây
 `AuthService.userMessage` (`AuthService.swift`, nhánh `status == 429`) luôn trả `LoginText.rateLimited(seconds: 60)` và bỏ qua `Retry-After` của máy chủ. Chỉ `/auth/phone-check` đọc `retryAfter` (`AuthService.swift:257-262`, mặc định 60 nếu thiếu). Vì vậy đặt mật khẩu lần đầu (`auth/register-guardian`), đăng ký, đăng nhập... khi bị giới hạn đăng ký theo IP (cửa sổ ~58 phút) vẫn báo "thử lại sau 1 phút": sai, người dùng thử lại sớm và lại dính 429. Đây là lỗi cũ của bản 1.0, không do bản 1.1; sửa gọn: truyền `retryAfter` vào `userMessage` và dùng chung với `LoginText.wait(seconds:)`. Đã sửa theo duyệt của GL: `userMessage` đọc `Retry-After` (mặc định 60 khi thiếu, làm tròn lên phút từ 60 giây) cho mọi 429 (đăng nhập, đăng ký, đặt mật khẩu). Test mới `RateLimitCopyTests` (3480 giây → "58 phút", thiếu header → "1 phút", 30 giây → "30 giây"). Commit `688644b` trên `mvp-ios` (1.0; full suite 324 test, 0 lỗi) và cherry-pick `ee214a2` sang `mvp-ios-roles` (full suite 341 test, 0 lỗi). Chạy trên thiết bị tạm riêng, không đụng simulator của slot.
 
 ## Còn lại
-- Đổi vai trò live với nhiều membership (cần nhân sự thứ hai).
+- Đổi vai trò nhiều membership chưa live trên iOS (GL chấp nhận unit test + web live).
 - Backlog 1.0 (QA footer điểm, sol-19, version_conflict…) không đụng.
 
 Status: DONE_WITH_CONCERNS
