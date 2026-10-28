@@ -683,8 +683,8 @@ final class AuthModel {
 
     private static func userMessage(_ error: Error) -> String {
         if let apiError = error as? APIFailure,
-           case .server(let status, let detail, _) = apiError {
-            if status == 429 { return LoginText.rateLimited(seconds: 60) }
+           case .server(let status, let detail, let retryAfter) = apiError {
+            if status == 429 { return LoginText.rateLimited(seconds: Int((retryAfter ?? 60).rounded(.up))) }
               if detail.code == "invalid_credentials" { return AuthCopy.invalidCredentials }
             return detail.localizedMessage
         }
