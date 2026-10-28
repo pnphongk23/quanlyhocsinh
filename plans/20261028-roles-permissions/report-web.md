@@ -23,7 +23,7 @@ Nhánh `mvp-web-roles` (worktree `mvp-web-roles`), commit `97615c3` + sửa sau 
 
 ## Chạy live trên staging (backend 1.1, Worker 421ef6af)
 
-Bản build local `mvp-web-roles` 21ac772 (không deploy Pages), Chromium qua proxy Playwright (staging chỉ cho origin web của nó). Script `live-web.mjs`, ảnh `shots-live/` (SĐT được che trong DOM trước khi chụp; chỉ có số giả). Kết quả: 31/32 mục pass, mục fail là dọn dẹp (bên dưới) cộng 3 chỗ lệch hợp đồng của BE.
+Bản build local `mvp-web-roles` 21ac772 (không deploy Pages), Chromium qua proxy Playwright (staging chỉ cho origin web của nó). Script `live-web.mjs`, ảnh `shots-live/` (SĐT được che trong DOM trước khi chụp; chỉ có số giả). Kết quả: mọi mục chức năng pass; hai mục script đánh fail là lệch hợp đồng của BE (mã lỗi, bên dưới) và một mục dọn dẹp chưa làm được. Chạy thành hai lượt (phần staff, rồi phần chéo workspace) vì bị rate limit đăng ký.
 
 Pass:
 - Admin thêm trợ giảng bằng SĐT mới (số giả) gán 1 lớp: bản khai `pending` có đúng `class_ids`.
