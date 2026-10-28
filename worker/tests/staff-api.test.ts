@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { call, clubToken, db, fakePhone, insertClass, insertMembership, insertSession, insertStudent, insertTest, insertUser, login, post, put } from './helpers';
+import { call, clubToken, db, fakePhone, insertClass, insertGuardianLink, insertMembership, insertSession, insertStudent, insertTest, insertUser, login, post, put } from './helpers';
 
 const uid = () => crypto.randomUUID();
 const command = (type: string, payload: unknown) => ({ id: uid(), type, payload, base_version: 0, created_at: new Date().toISOString() });
@@ -41,7 +41,7 @@ describe('staff management and role permissions', () => {
     expect((await call('/v1/me', {}, registration.body.token)).body.memberships[0].class_ids).toEqual([classId]);
   });
 
-  it('claims pending staff when a workspace account is registered', async () => {
+  it('claims pending staff on login after workspace registration', async () => {
     const admin = await registerWorkspace('Staff claim on register');
     const classId = await insertClass(admin.workspaceId, 'Assigned', admin.userId);
     const phone = fakePhone();
@@ -51,12 +51,17 @@ describe('staff management and role permissions', () => {
       headers: { 'cf-connecting-ip': `198.51.100.${ipCounter++}` },
     });
     expect(registration.status).toBe(201);
-    expect(registration.body.memberships).toHaveLength(2);
-    expect(registration.body.active_membership_id).toBeNull();
-    expect(await db.prepare('SELECT membership_id FROM auth_sessions WHERE user_id=? ORDER BY created_at DESC LIMIT 1')
-      .bind(registration.body.user.id).first()).toEqual({ membership_id: null });
+    expect(registration.body.memberships).toHaveLength(1);
+    expect(registration.body.memberships[0].role.system_key).toBe('admin');
+    const loggedIn = await login(phone, 'fake-password-123');
+    expect(loggedIn.status).toBe(200);
+    expect(loggedIn.body.memberships).toHaveLength(2);
+    expect(loggedIn.body.active_membership_id).toBeNull();
     expect(await db.prepare('SELECT id FROM staff_declarations WHERE id=?').bind(pending.body.id).first()).toBeNull();
-    expect(registration.body.memberships.map((member: any) => member.role.system_key).sort()).toEqual(['admin', 'teacher']);
+    expect(loggedIn.body.memberships.map((member: any) => member.role.system_key).sort()).toEqual(['admin', 'teacher']);
+    const staffMembership = loggedIn.body.memberships.find((member: any) => member.role.system_key === 'teacher');
+    expect(await db.prepare('SELECT class_id FROM member_classes WHERE membership_id=?').bind(staffMembership.id).first())
+      .toEqual({ class_id: classId });
   });
 
   it('claims a pending declaration for an existing account during login', async () => {
@@ -98,6 +103,8 @@ describe('staff management and role permissions', () => {
     expect((await call(`/v1/classes/${hidden}`, {}, token)).status).toBe(404);
     const snapshot = await call(`/v1/sync/snapshot/class?membership_id=${membershipId}`, {}, token);
     expect(snapshot.body.items.map((row: any) => row.id)).toEqual([assigned]);
+    const pull = await call('/v1/sync/pull', post({ membership_id: membershipId, cursor: null }), token);
+    expect(JSON.stringify(pull.body)).not.toContain(hidden);
 
     const push = await call('/v1/sync/push', post({ membership_id: membershipId, device_id: uid(), commands: [
       command('score.set', { test_id: testId, student_id: studentId, value: 8 }),
@@ -121,18 +128,30 @@ describe('staff management and role permissions', () => {
     const after = (await db.prepare('SELECT scope_epoch,version FROM memberships WHERE id=?').bind(membershipId).first<any>())!;
     expect(after.scope_epoch).toBe(before.scope_epoch + 1);
     expect((await call(`/v1/classes/${assigned}`, {}, token)).status).toBe(404);
+    const unassignedPull = await call('/v1/sync/pull', post({ membership_id: membershipId, cursor: null }), token);
+    expect(JSON.stringify(unassignedPull.body)).not.toContain(assigned);
 
     await call(`/v1/staff/${membershipId}`, { method: 'PATCH', body: JSON.stringify({ status: 'disabled' }) }, admin.token);
     const denied = await call('/v1/classes', {}, token);
     expect(denied.status).toBe(403);
-    expect(denied.body.error.details.reason).toBe('membership_required');
+    expect(denied.body.error.code).toBe('account_disabled');
     const duplicate = await call('/v1/staff', post({ phone, display_name: 'Again', role: 'teacher' }), admin.token);
     expect(duplicate.status).toBe(409);
     expect(duplicate.body.error.details).toMatchObject({ reason: 'staff_exists', status: 'disabled', id: membershipId });
-    const syncDenied = await call('/v1/sync/push', post({ membership_id: membershipId, device_id: uid(), commands: [] }), token);
-    expect(syncDenied.status).toBe(404);
-    await call(`/v1/staff/${membershipId}`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) }, admin.token);
-    expect((await call('/v1/classes', {}, token)).status).toBe(200);
+      const syncDenied = await call('/v1/sync/push', post({ membership_id: membershipId, device_id: uid(), commands: [] }), token);
+      expect(syncDenied.status).toBe(404);
+      const pullDenied = await call('/v1/sync/pull', post({ membership_id: membershipId, cursor: null }), token);
+      expect([403, 404]).toContain(pullDenied.status);
+      const other = await registerWorkspace('Staff same phone other workspace');
+      const otherStaff = await call('/v1/staff', post({ phone, display_name: 'Same phone', role: 'teacher' }), other.token);
+      expect(otherStaff.status).toBe(201);
+      const multiRoleLogin = await login(phone);
+      const otherMembership = multiRoleLogin.body.memberships.find((member: any) => member.workspace.id === other.workspaceId);
+      expect((await call('/v1/session/membership', put({ membership_id: otherMembership.id }), multiRoleLogin.body.token)).status).toBe(200);
+      expect((await call('/v1/classes', {}, multiRoleLogin.body.token)).status).toBe(200);
+      await call(`/v1/staff/${membershipId}`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) }, admin.token);
+      expect((await call('/v1/session/membership', put({ membership_id: membershipId }), multiRoleLogin.body.token)).status).toBe(200);
+      expect((await call('/v1/classes', {}, multiRoleLogin.body.token)).status).toBe(200);
   });
 
   it('applies role permissions, protects routes and preserves the final admin under parallel changes', async () => {
@@ -140,8 +159,12 @@ describe('staff management and role permissions', () => {
     const staffUserId = await insertUser(fakePhone());
     const staffMembership = await insertMembership(admin.workspaceId, staffUserId, admin.roles.teacher!);
     const staffToken = await clubToken(admin.workspaceId, staffUserId, staffMembership);
+    const scoreClass = await insertClass(admin.workspaceId, 'Score class', admin.userId);
+    const scoreStudent = await insertStudent(admin.workspaceId, scoreClass, 'Score learner', null, admin.userId);
+    const scoreTest = await insertTest(admin.workspaceId, scoreClass, admin.userId);
     const assistantUserId = await insertUser(fakePhone());
-    const assistantMembership = await insertMembership(admin.workspaceId, assistantUserId, admin.roles.assistant!);
+    const assistantMembership = await insertMembership(admin.workspaceId, assistantUserId, admin.roles.assistant!, [scoreClass]);
+    const assistantToken = await clubToken(admin.workspaceId, assistantUserId, assistantMembership);
     const assistantBefore = await db.prepare('SELECT scope_epoch FROM memberships WHERE id=?').bind(assistantMembership).first<any>();
     const nonAdminCalls = [
       call('/v1/staff', {}, staffToken),
@@ -160,12 +183,45 @@ describe('staff management and role permissions', () => {
     for (const permissions of [{ lectures: 'read' }, { scores: 'full' }]) {
       expect((await call('/v1/roles/teacher/permissions', put({ permissions }), admin.token)).status).toBe(422);
     }
+    expect((await call('/v1/roles/teacher/permissions', put({ permissions: {} }), admin.token)).status).toBe(422);
     expect((await call('/v1/roles/admin/permissions', put({ permissions: { scores: 'read' } }), admin.token))
+      .body.error.details.reason).toBe('role_not_editable');
+    const guardianUser = await insertUser(fakePhone());
+    const guardianRole = await db.prepare('SELECT id FROM roles WHERE workspace_id=? AND system_key=\'guardian\'')
+      .bind(admin.workspaceId).first<any>();
+    const guardianClass = await insertClass(admin.workspaceId, 'Guardian class', admin.userId);
+    const guardianStudent = await insertStudent(admin.workspaceId, guardianClass, 'Guardian learner', null, admin.userId);
+    await insertGuardianLink(admin.workspaceId, guardianUser, guardianStudent);
+    const guardianMembership = await insertMembership(admin.workspaceId, guardianUser, guardianRole.id);
+    const guardianToken = await clubToken(admin.workspaceId, guardianUser, guardianMembership);
+    const routePaths = [
+      ['/v1/staff', {}], ['/v1/staff', post({ phone: fakePhone(), display_name: 'Denied', role: 'teacher' })],
+      ['/v1/staff/nope', { method: 'PATCH', body: JSON.stringify({ status: 'disabled' }) }],
+      ['/v1/staff/nope', { method: 'DELETE' }], ['/v1/roles/permissions', {}],
+      ['/v1/roles/assistant/permissions', put({ permissions: { scores: 'write' } })],
+    ] as const;
+    for (const token of [staffToken, assistantToken, guardianToken]) {
+      for (const [path, init] of routePaths) {
+        const result = await call(path, init, token);
+        expect(result.status).toBe(403);
+        expect(result.body.error.details.reason).toBe('admin_required');
+      }
+    }
+    expect((await call('/v1/roles/guardian/permissions', put({ permissions: { scores: 'read' } }), admin.token))
       .body.error.details.reason).toBe('role_not_editable');
     expect((await call('/v1/roles/assistant/permissions', put({ permissions: { scores: 'write' } }), admin.token)).status).toBe(200);
     const assistantAfter = await db.prepare('SELECT scope_epoch FROM memberships WHERE id=?').bind(assistantMembership).first<any>();
     expect(assistantAfter.scope_epoch).toBe(assistantBefore.scope_epoch + 1);
+    const assistantScore = await call('/v1/sync/push', post({ membership_id: assistantMembership, device_id: uid(), commands: [
+      command('score.set', { test_id: scoreTest, student_id: scoreStudent, value: 8 }),
+    ] }), assistantToken);
+    expect(assistantScore.body.results[0].status).toBe('applied');
 
+    for (const change of [{ status: 'disabled' }, { role: 'teacher' }]) {
+      const lastAdmin = await call(`/v1/staff/${admin.membershipId}`, { method: 'PATCH', body: JSON.stringify(change) }, admin.token);
+      expect(lastAdmin.status).toBe(409);
+      expect(lastAdmin.body.error.details.reason).toBe('last_admin');
+    }
     const secondAdminUser = await insertUser(fakePhone());
     const secondAdminMembership = await insertMembership(admin.workspaceId, secondAdminUser, admin.roles.admin!);
     const secondAdminToken = await clubToken(admin.workspaceId, secondAdminUser, secondAdminMembership);
@@ -191,9 +247,13 @@ describe('staff management and role permissions', () => {
     const assistant = loggedIn.body.memberships.find((member: any) => member.workspace.id === second.workspaceId);
     const switched = await call('/v1/session/membership', put({ membership_id: assistant.id }), loggedIn.body.token);
     expect(switched.status).toBe(200);
+    expect((await call('/v1/me', {}, loggedIn.body.token)).body.memberships
+      .find((member: any) => member.workspace.id === second.workspaceId).permissions.scores).toBe('read');
     expect((await call('/v1/staff', {}, loggedIn.body.token)).status).toBe(403);
     const adminMembership = loggedIn.body.memberships.find((member: any) => member.workspace.id === first.workspaceId);
     await call('/v1/session/membership', put({ membership_id: adminMembership.id }), loggedIn.body.token);
     expect((await call('/v1/staff', {}, loggedIn.body.token)).status).toBe(200);
+    expect((await call('/v1/me', {}, loggedIn.body.token)).body.memberships
+      .find((member: any) => member.workspace.id === first.workspaceId).permissions.scores).toBe('write');
   });
 });
