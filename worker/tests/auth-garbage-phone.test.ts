@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { call, post } from './helpers';
+import { call, db, post } from './helpers';
 
 describe('garbage phone input', () => {
   it('is a 422 on register, register-guardian and phone-check', async () => {
@@ -41,6 +41,22 @@ describe('garbage phone input', () => {
     for (const raw of ['', '{', 'abc']) {
       const result = await call('/v1/auth/register', { method: 'POST', body: raw, headers: { 'cf-connecting-ip': `198.18.1.${++n}` } }, undefined);
       expect([raw, result.status < 500]).toEqual([raw, true]);
+    }
+  });
+
+  it('answers the first request after the register throttle window expires', async () => {
+    const ip = '198.18.9.9';
+    const key = `register:ip:${ip}`;
+    const old = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    const lockedPast = new Date(Date.now() - 60 * 1000).toISOString();
+    for (const [fails, locked] of [[1000, null], [1000, lockedPast], [5, lockedPast]] as const) {
+      await db.prepare('INSERT OR REPLACE INTO auth_throttle (key, fails, window_start, locked_until) VALUES (?, ?, ?, ?)')
+        .bind(key, fails, old, locked).run();
+      const result = await call('/v1/auth/register', {
+        ...post({ phone: 'abc', password: 'x', display_name: 'x', workspace_name: 'x' }),
+        headers: { 'cf-connecting-ip': ip },
+      });
+      expect([fails, locked === null, result.status]).toEqual([fails, locked === null, 422]);
     }
   });
 });
