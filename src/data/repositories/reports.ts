@@ -1,6 +1,6 @@
 import type { Report, ReportBatch } from "../types";
 import type { ApiBatchListItem, ApiBatchReportItem } from "../api/types";
-import { ApiError } from "../api/client";
+import { ApiError, rateLimitMessage } from "../api/client";
 import { getStore } from "../store";
 import { commitState } from "../outbox";
 import { canAccessClass, requireClassAccess, requirePermission } from "./access";
@@ -100,7 +100,7 @@ export function reportErrorMessage(cause: unknown, fallback: string): string {
     if (cause.status === 403) return "Bạn không có quyền thực hiện thao tác này.";
     if (cause.status === 404) return "Không tìm thấy dữ liệu. Tải lại trang rồi thử lại.";
     if (cause.status === 409 && code === "conflict") return "Báo cáo vừa được phát hành ở nơi khác. Tải lại rồi thử lại.";
-    if (cause.status === 429) return "Thao tác quá nhanh. Đợi một chút rồi thử lại.";
+    if (cause.status === 429) return rateLimitMessage(cause);
     return fallback;
   }
   if (cause instanceof TypeError || (typeof DOMException !== "undefined" && cause instanceof DOMException))

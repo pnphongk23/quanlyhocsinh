@@ -23,7 +23,6 @@ function takeTokenFromHash(): string | null {
 }
 
 export function resetFailureMessage(error: unknown): string {
-  if (error instanceof ApiError && error.status === 429) return "Bạn thử quá nhiều lần. Hãy chờ ít phút rồi thử lại.";
   return authFailureMessage(error);
 }
 

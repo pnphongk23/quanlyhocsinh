@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore, type FormEvent } from "react";
 import { setAccountEmail } from "../../data/auth";
-import { ApiError } from "../../data/api/client";
+import { ApiError, rateLimitMessage } from "../../data/api/client";
 import { getSession, subscribeSession } from "../../data/auth/session";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
@@ -15,7 +15,7 @@ export function emailSaveFailure(error: unknown): { password: string; email: str
   const none = { password: "", email: "", banner: "" };
   if (!(error instanceof ApiError)) return { ...none, banner: "Không thể kết nối. Hãy kiểm tra mạng rồi thử lại." };
   if (error.status === 401) return { ...none, password: "Mật khẩu hiện tại chưa đúng." };
-  if (error.status === 429) return { ...none, banner: "Bạn thử quá nhiều lần. Hãy chờ ít phút rồi thử lại." };
+  if (error.status === 429) return { ...none, banner: rateLimitMessage(error) };
   const email = emailFieldError(error);
   if (email) return { ...none, email };
   return { ...none, banner: "Không thể lưu email. Hãy thử lại." };

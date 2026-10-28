@@ -3,7 +3,7 @@ import { api, clearMembershipCache, clearUserCache } from "../sync";
 import { activateSession, activateMembershipCache, clearSession, getSession, setActiveMembershipId, setSessionUserEmail, updateMe } from "./session";
 import { beginLogout, cancelLogout, clearLogoutLock } from "../outbox";
 import { getStore } from "../store";
-import { ApiError, type PhoneCheckNext } from "../api/client";
+import { ApiError, rateLimitMessage, type PhoneCheckNext } from "../api/client";
 import { rememberEmail } from "./rememberedEmail";
 
 export async function login(phone: string, password: string): Promise<{ activeMembershipId: string | null; membershipCount: number }> {
@@ -93,7 +93,8 @@ export function authFailureMessage(error: unknown): string {
     if (error.status === 409 && reason === "phone_registered") return "Số điện thoại đã có tài khoản. Hãy đăng nhập.";
     if (error.status === 422 && (reason === "weak_password" || error.error.code === "weak_password")) return "Mật khẩu phải có ít nhất 8 ký tự.";
     if (error.status === 422 && error.error.details?.fields && typeof error.error.details.fields === "object" && "phone" in error.error.details.fields) return "Số điện thoại không hợp lệ.";
-    return ({ invalid_credentials: "Số điện thoại hoặc mật khẩu chưa đúng.", rate_limited: "Bạn thử đăng nhập quá nhiều lần. Hãy chờ rồi thử lại.", account_disabled: "Tài khoản đã bị vô hiệu hoá.", password_change_required: "Bạn cần đổi mật khẩu để tiếp tục." } as Record<string, string>)[error.error.code] ?? "Không thể hoàn thành yêu cầu.";
+    if (error.status === 429 || error.error.code === "rate_limited") return rateLimitMessage(error);
+    return ({ invalid_credentials: "Số điện thoại hoặc mật khẩu chưa đúng.", account_disabled: "Tài khoản đã bị vô hiệu hoá.", password_change_required: "Bạn cần đổi mật khẩu để tiếp tục." } as Record<string, string>)[error.error.code] ?? "Không thể hoàn thành yêu cầu.";
   }
   return "Không thể kết nối. Hãy kiểm tra mạng rồi thử lại.";
 }
