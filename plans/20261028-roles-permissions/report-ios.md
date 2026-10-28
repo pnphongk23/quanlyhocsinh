@@ -43,6 +43,9 @@ Chi tiết ở `review-ios-sol.md`. Commit sửa: `1e4b83d`, `51e7cf5` (nhánh `
 - Chưa chạy (cần đăng ký, chờ GL báo web xong để không dính giới hạn IP): nhân sự đặt mật khẩu lần đầu, chỉ thấy lớp được gán, điểm danh đồng bộ, nút điểm khoá, vô hiệu hoá/bật lại, đổi vai trò.
 - Nhân sự thử `QA Trợ giảng thử` (pending) còn trên staging, sẽ dọn khi xong.
 
+## Phát hiện (chưa sửa): thời gian chờ 429 bị ghi cứng 60 giây
+`AuthService.userMessage` (`AuthService.swift`, nhánh `status == 429`) luôn trả `LoginText.rateLimited(seconds: 60)` và bỏ qua `Retry-After` của máy chủ. Chỉ `/auth/phone-check` đọc `retryAfter` (`AuthService.swift:257-262`, mặc định 60 nếu thiếu). Vì vậy đặt mật khẩu lần đầu (`auth/register-guardian`), đăng ký, đăng nhập... khi bị giới hạn đăng ký theo IP (cửa sổ ~58 phút) vẫn báo "thử lại sau 1 phút": sai, người dùng thử lại sớm và lại dính 429. Đây là lỗi cũ của bản 1.0, không do bản 1.1; sửa gọn: truyền `retryAfter` vào `userMessage` và dùng chung với `LoginText.wait(seconds:)`. Chờ quyết định của GL.
+
 ## Còn lại
 - Phần live cần đăng ký (liệt kê trên) và dọn nhân sự thử.
 - Backlog 1.0 (QA footer điểm, sol-19, version_conflict…) không đụng.
