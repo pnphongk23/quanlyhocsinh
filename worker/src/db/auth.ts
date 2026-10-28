@@ -1,6 +1,7 @@
 import { conflict, forbidden, notFound, ApiError } from '../lib/errors';
 import { isoAfterMs, isoAt } from '../lib/time';
 import { classTeacherNameSql } from './class-teacher';
+import { mapTriggerError } from './authz';
 import type { PermGroup, PermLevel, Permissions, ScopeKind } from '../types';
 
 export const ROLE_SYSTEM_KEYS = ['admin', 'teacher', 'assistant', 'guardian'] as const;
@@ -48,7 +49,7 @@ export const DEFAULT_ROLES: RoleSeed[] = [
       sessions_attendance: 'write',
       scores: 'read',
       lectures: 'read',
-      comments_reports: 'read',
+        comments_reports: 'write',
     },
   },
   {
@@ -101,6 +102,7 @@ export interface MembershipSummary {
     scope_kind: ScopeKind;
   };
   students?: GuardianStudentSummary[];
+  class_ids?: string[];
 }
 
 export interface GuardianStudentSummary {
@@ -285,6 +287,20 @@ export async function getMe(
   const membershipRows = (memberships?.results ?? []) as MembershipJoinRow[];
   const membershipSummaries = addGuardianStudents(membershipRows.map(toMembershipSummary),
     (linkedStudents?.results ?? []) as GuardianStudentRow[]);
+  const staffMembershipIds = membershipRows
+    .filter((row) => row.scope_kind === 'assigned_classes')
+    .map((row) => row.id);
+  const classIdsByMembership = new Map<string, string[]>();
+  if (staffMembershipIds.length) {
+    const classes = await db.prepare(`SELECT membership_id, class_id FROM member_classes
+      WHERE membership_id IN (${staffMembershipIds.map(() => '?').join(',')}) ORDER BY class_id`)
+      .bind(...staffMembershipIds).all<{ membership_id: string; class_id: string }>();
+    for (const row of classes.results) {
+      const ids = classIdsByMembership.get(row.membership_id) ?? [];
+      ids.push(row.class_id);
+      classIdsByMembership.set(row.membership_id, ids);
+    }
+  }
   const roleIds = [...new Set(membershipRows.map((row) => row.role_id))];
 
   const permissionsByRole = new Map<string, Permissions>();
@@ -310,13 +326,17 @@ export async function getMe(
 
   return {
     user: toUserView(userRow),
-    active_membership_id: activeMembershipId,
-    memberships: membershipSummaries.map((membership, index) => ({
-      ...membership,
-      permissions:
-        permissionsByRole.get(membershipRows[index]!.role_id) ??
-        (Object.fromEntries(PERM_GROUPS.map((group) => [group, 'none'])) as Permissions),
-    })),
+      active_membership_id: activeMembershipId !== null && membershipRows.some((row) => row.id === activeMembershipId)
+        ? activeMembershipId
+        : null,
+      memberships: membershipSummaries.map((membership, index) => ({
+        ...membership,
+        ...(membership.role.scope_kind === 'assigned_classes'
+          ? { class_ids: classIdsByMembership.get(membership.id) ?? [] }
+          : {}),
+        permissions: permissionsByRole.get(membershipRows[index]!.role_id) ??
+          (Object.fromEntries(PERM_GROUPS.map((group) => [group, 'none'])) as Permissions),
+      })),
   };
 }
 
@@ -517,15 +537,58 @@ export async function hasGuardianPhoneDeclaration(db: D1Database, phone: string)
   return (await guardianWorkspacesForPhone(db, phone)).length > 0;
 }
 
+export async function hasStaffDeclaration(db: D1Database, phone: string): Promise<boolean> {
+  return Boolean(await db.prepare('SELECT 1 AS found FROM staff_declarations WHERE phone = ? LIMIT 1')
+    .bind(phone).first());
+}
+
+/** Claim pending staff declarations when their phone first receives an account. */
+export async function claimStaffDeclarations(db: D1Database, userId: string, phone: string): Promise<void> {
+  const declarations = await db.prepare(`SELECT d.id, d.workspace_id, d.role_id
+      FROM staff_declarations d JOIN users u ON u.phone = d.phone
+     WHERE d.phone = ? AND u.id = ? ORDER BY d.workspace_id, d.id`)
+    .bind(phone, userId).all<{ id: string; workspace_id: string; role_id: string }>();
+  if (!declarations.results.length) return;
+  const statements: D1PreparedStatement[] = [];
+  for (const declaration of declarations.results) {
+    const membershipId = crypto.randomUUID();
+    statements.push(db.prepare(`INSERT INTO memberships
+      (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version)
+      SELECT ?, ?, ?, ?, 'active', 1, created_at, 1 FROM staff_declarations WHERE id = ?`)
+      .bind(membershipId, declaration.workspace_id, userId, declaration.role_id, declaration.id));
+    statements.push(db.prepare(`INSERT INTO member_classes (workspace_id, membership_id, class_id, created_at)
+      SELECT workspace_id, ?, class_id, (SELECT created_at FROM staff_declarations WHERE id = ?)
+        FROM staff_declaration_classes WHERE declaration_id = ?`)
+      .bind(membershipId, declaration.id, declaration.id));
+    statements.push(db.prepare('DELETE FROM staff_declarations WHERE id = ?').bind(declaration.id));
+  }
+  try {
+    await db.batch(statements);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('memberships.user_id, memberships.workspace_id, memberships.role_id')) {
+      throw conflict('staff_exists');
+    }
+    throw mapTriggerError(error, conflict('conflict'));
+  }
+}
+
 /** Tạo tài khoản phụ huynh và liên kết mọi hồ sơ đã khai số điện thoại này. */
 export async function registerGuardian(
   db: D1Database,
   input: RegisterGuardianInput,
 ): Promise<void> {
   const workspaces = await guardianWorkspacesForPhone(db, input.phone);
-  if (!workspaces.length) throw forbidden({ reason: 'phone_not_declared' });
+  const declarations = await db.prepare(`SELECT id, workspace_id, role_id FROM staff_declarations
+    WHERE phone = ? ORDER BY workspace_id, id`).bind(input.phone)
+    .all<{ id: string; workspace_id: string; role_id: string }>();
+  if (!workspaces.length && !declarations.results.length) throw forbidden({ reason: 'phone_not_declared' });
   const membershipIds = new Map(workspaces.map((row) => [row.workspace_id, crypto.randomUUID()]));
-  const activeMembershipId = workspaces.length === 1 ? membershipIds.get(workspaces[0]!.workspace_id)! : null;
+  const staffMembershipIds = new Map(declarations.results.map((row) => [row.id, crypto.randomUUID()]));
+  const totalMemberships = workspaces.length + declarations.results.length;
+  const activeMembershipId = totalMemberships === 1
+    ? (workspaces.length ? membershipIds.get(workspaces[0]!.workspace_id)! : staffMembershipIds.get(declarations.results[0]!.id)!)
+    : null;
 
   const statements: D1PreparedStatement[] = [
     db.prepare(`INSERT INTO users
@@ -534,13 +597,24 @@ export async function registerGuardian(
        VALUES (?, ?, ?, ?, ?, 0, ?, 'active', ?, 1)`)
       .bind(input.userId, input.phone, input.displayName, input.email, input.passwordHash, input.now, input.now),
   ];
-  for (const row of workspaces) {
+    for (const row of workspaces) {
     statements.push(
       db.prepare(`INSERT INTO guardian_student (workspace_id, user_id, student_id, created_at)
         SELECT ?, ?, id, ? FROM students WHERE workspace_id = ? AND parent_phone = ?`)
         .bind(row.workspace_id, input.userId, input.now, row.workspace_id, input.phone),
-    );
-  }
+      );
+    }
+    for (const declaration of declarations.results) {
+      const membershipId = staffMembershipIds.get(declaration.id)!;
+      statements.push(db.prepare(`INSERT INTO memberships
+          (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version)
+        SELECT ?, workspace_id, ?, role_id, 'active', 1, ?, 1 FROM staff_declarations WHERE id = ?`)
+        .bind(membershipId, input.userId, input.now, declaration.id));
+      statements.push(db.prepare(`INSERT INTO member_classes (workspace_id, membership_id, class_id, created_at)
+        SELECT workspace_id, ?, class_id, ? FROM staff_declaration_classes WHERE declaration_id = ?`)
+        .bind(membershipId, input.now, declaration.id));
+      statements.push(db.prepare('DELETE FROM staff_declarations WHERE id = ?').bind(declaration.id));
+    }
   for (const row of workspaces) {
     statements.push(
       db.prepare(`INSERT INTO memberships

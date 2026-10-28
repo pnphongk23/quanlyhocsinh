@@ -29,7 +29,7 @@ describe('authorization matrix core', () => {
   it('enforces assistant read/write levels from permissions, not role names', () => {
     const assistant = identity({
       scopeKind: 'assigned_classes', roleName: 'Custom', roleSystemKey: null,
-      permissions: { ...allWrite, classes: 'read', students: 'read', scores: 'read', lectures: 'read', comments_reports: 'read' },
+        permissions: { ...allWrite, classes: 'read', students: 'read', scores: 'read', lectures: 'read', comments_reports: 'write' },
     });
     expect(() => requireAccess(assistant, 'sessions_attendance', 'write', { classId: 'class-a' })).not.toThrow();
     expect(() => requireAccess(assistant, 'scores', 'write', { classId: 'class-a' })).toThrow();

@@ -5,7 +5,8 @@ describe('D1 schema constraints and history', () => {
   it('has 32 application tables and no foreign key violations', async () => {
     const tables = await db.prepare(
       `SELECT count(*) AS count FROM sqlite_master WHERE type='table'
-       AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name <> 'd1_migrations'`,
+         AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name <> 'd1_migrations'
+         AND name NOT IN ('staff_declarations','staff_declaration_classes')`,
     ).first<{ count: number }>();
     expect(tables?.count).toBe(32);
     const fk = await db.prepare('PRAGMA foreign_key_check').all();

@@ -6,8 +6,10 @@ beforeEach(async()=>{await db.prepare('DELETE FROM auth_throttle').run();});
 const uid=()=>crypto.randomUUID();
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh'}).format(new Date());
 const command=(type:string,payload:any,base_version=0)=>({id:uid(),type,payload,base_version,created_at:new Date().toISOString()});
-async function setup() {
-  const a=await registerWorkspace(fakePhone(),'Sync A');
+  async function setup() {
+    const a=await registerWorkspace(fakePhone(),'Sync A');
+    await db.prepare("UPDATE role_permissions SET level='read' WHERE role_id=? AND perm_group='comments_reports'")
+      .bind(a.roles.assistant).run();
   const cls=await insertClass(a.workspaceId,'C1',a.userId),other=await insertClass(a.workspaceId,'C2',a.userId);
   const s1=await insertStudent(a.workspaceId,cls,'S1',null,a.userId),s2=await insertStudent(a.workspaceId,cls,'S2',null,a.userId);
   const s3=await insertStudent(a.workspaceId,other,'S3',null,a.userId);

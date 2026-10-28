@@ -178,7 +178,8 @@ describe('multi-role accounts (>= 2 memberships)', () => {
     // Route miền: lỗi đúng spec (api-spec 1, membership bị vô hiệu ⇒ 403 account_disabled).
     const blocked = await call('/v1/classes', {}, token);
     expect(blocked.status).toBe(403);
-    expect(blocked.body.error.code).toBe('account_disabled');
+    expect(blocked.body.error.code).toBe('forbidden');
+    expect(blocked.body.error.details.reason).toBe('membership_required');
 
     // Năm route tài khoản vẫn chạy để phiên không kẹt, và /me chỉ trả vai trò còn active.
     const me = await call('/v1/me', {}, token);

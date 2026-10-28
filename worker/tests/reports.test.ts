@@ -32,7 +32,7 @@ describe("reports routes and publication snapshots", () => {
     otherWorkspace: string;
   };
   beforeAll(async () => {
-    const ws = await registerWorkspace(fakePhone(), "reports workspace"),
+      const ws = await registerWorkspace(fakePhone(), "reports workspace"),
       classId = await insertClass(ws.workspaceId, "C1", ws.userId),
       studentId = await insertStudent(
         ws.workspaceId,
@@ -40,7 +40,9 @@ describe("reports routes and publication snapshots", () => {
         "Student fake",
         null,
         ws.userId,
-      );
+        );
+      await db.prepare("UPDATE role_permissions SET level='read' WHERE role_id=? AND perm_group='comments_reports'")
+        .bind(ws.roles.assistant).run();
     const teacherUser = await insertUser(fakePhone()),
       teacherMembership = await insertMembership(
         ws.workspaceId,

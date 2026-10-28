@@ -12,7 +12,9 @@ import {
   createSession,
   findActiveMembership,
   findUserByPhone,
+  hasStaffDeclaration,
   hasGuardianPhoneDeclaration,
+  claimStaffDeclarations,
   getMe,
   getUserById,
   getUserPhone,
@@ -136,7 +138,9 @@ authRoutes.post('/auth/phone-check', async (c) => {
   if (phone === null) throw validationError({ phone: 'invalid_phone' });
   await reservePhoneCheckThrottle(db, getClientIp(c.req.raw), phone);
   if (await findUserByPhone(db, phone)) return c.json({ next: 'login' });
-  return c.json({ next: await hasGuardianPhoneDeclaration(db, phone) ? 'guardian_setup' : 'teacher_register' });
+    return c.json({ next: await hasGuardianPhoneDeclaration(db, phone) || await hasStaffDeclaration(db, phone)
+      ? 'guardian_setup'
+      : 'teacher_register' });
 });
 
 authRoutes.post('/auth/register', async (c) => {
@@ -174,7 +178,7 @@ authRoutes.post('/auth/register', async (c) => {
   const now = nowIso();
   const expiresAt = isoAfterMs(SESSION_TTL_MS);
 
-  await registerWorkspace(db, {
+    await registerWorkspace(db, {
     workspaceId,
     userId,
     membershipId,
@@ -188,11 +192,17 @@ authRoutes.post('/auth/register', async (c) => {
     deviceLabel: null,
     now,
     expiresAt,
-    roleIds,
-  });
+      roleIds,
+    });
 
-  const adminRole = roleView('admin');
-  return c.json(
+    await claimStaffDeclarations(db, userId, phone);
+    const memberships = await listActiveMemberships(db, userId);
+    const activeMembershipId = memberships.length === 1 ? memberships[0]!.id : null;
+    if (activeMembershipId !== membershipId) {
+      await db.prepare('UPDATE auth_sessions SET membership_id = ? WHERE id = ?').bind(activeMembershipId, sessionId).run();
+    }
+
+    return c.json(
     {
       token,
       expires_at: expiresAt,
@@ -203,21 +213,8 @@ authRoutes.post('/auth/register', async (c) => {
         email,
         must_change_password: false,
       },
-      memberships: [
-        {
-          id: membershipId,
-          status: 'active',
-          scope_epoch: 1,
-          workspace: { id: workspaceId, name: workspaceName },
-          role: {
-            id: roleIds.admin,
-            name: adminRole.name,
-            system_key: adminRole.systemKey,
-            scope_kind: adminRole.scopeKind,
-          },
-        },
-      ],
-      active_membership_id: membershipId,
+        memberships,
+        active_membership_id: activeMembershipId,
     },
     201,
   );
@@ -239,7 +236,9 @@ authRoutes.post('/auth/register-guardian', async (c) => {
     const email = optionalEmail(body.email);
 
     if (await findUserByPhone(db, phone)) throw conflict('phone_registered');
-    if (!(await hasGuardianPhoneDeclaration(db, phone))) throw forbidden({ reason: 'phone_not_declared' });
+    if (!(await hasGuardianPhoneDeclaration(db, phone)) && !(await hasStaffDeclaration(db, phone))) {
+      throw forbidden({ reason: 'phone_not_declared' });
+    }
 
     const iterations = resolveIterations(c.env.PBKDF2_ITERATIONS);
   const passwordHash = await hashPassword(password, iterations);
@@ -261,7 +260,7 @@ authRoutes.post('/auth/register-guardian', async (c) => {
     now,
     expiresAt,
   });
-  const memberships = await listActiveMemberships(db, userId);
+    const memberships = await listActiveMemberships(db, userId);
   const activeMembershipId = memberships.length === 1 ? memberships[0]?.id ?? null : null;
 
   return c.json({
@@ -386,7 +385,8 @@ authRoutes.post('/auth/login', async (c) => {
 
   if (user.status !== 'active') throw accountDisabled();
 
-  const memberships = await listActiveMemberships(db, user.id);
+    await claimStaffDeclarations(db, user.id, user.phone);
+    const memberships = await listActiveMemberships(db, user.id);
 
   const activeMembershipId = memberships.length === 1 ? memberships[0]?.id ?? null : null;
   const sessionId = crypto.randomUUID();

@@ -19,7 +19,9 @@ describe('report batches by session range', () => {
     call(`/v1/classes/${f.classId}/report-batches`, post({ from_session_id: f.sessions[from], to_session_id: f.sessions[to], ...extra }), token);
 
   beforeAll(async () => {
-    const ws = await registerWorkspace(fakePhone(), 'report batches workspace');
+      const ws = await registerWorkspace(fakePhone(), 'report batches workspace');
+      await db.prepare("UPDATE role_permissions SET level='read' WHERE role_id=? AND perm_group='comments_reports'")
+        .bind(ws.roles.assistant).run();
     const classId = await insertClass(ws.workspaceId, 'C1', ws.userId);
     const otherClassId = await insertClass(ws.workspaceId, 'C2', ws.userId);
     const sessions = {
@@ -51,7 +53,9 @@ describe('report batches by session range', () => {
       return { membershipId, token: await clubToken(ws.workspaceId, user, membershipId) };
     };
     const guardianA = await guardian(students.a!);
-    const other = await registerWorkspace(fakePhone(), 'other batches workspace');
+      const other = await registerWorkspace(fakePhone(), 'other batches workspace');
+      await db.prepare("UPDATE role_permissions SET level='read' WHERE role_id=? AND perm_group='comments_reports'")
+        .bind(other.roles.assistant).run();
     const otherUser = await insertUser(fakePhone());
     const otherClass = await insertClass(other.workspaceId, 'CX', other.userId);
     f = {

@@ -13,7 +13,7 @@ export interface SessionRow {
   must_change_password: number;
 }
 
-export type AuthFailure = 'unauthorized' | 'account_disabled' | 'membership_required';
+export type AuthFailure = 'unauthorized' | 'account_disabled' | 'membership_required' | 'no_membership';
 
 export type AuthResult =
   | { ok: true; identity: Identity; session: SessionRow }
@@ -112,7 +112,7 @@ async function loadMembership(
     .prepare(
       `SELECT m.id, m.workspace_id, w.name AS workspace_name, m.status AS membership_status,
               m.scope_epoch, r.id AS role_id, r.name AS role_name, r.system_key,
-              r.scope_kind, m.user_id
+        r.scope_kind, m.user_id
          FROM memberships m
          JOIN workspaces w ON w.id = m.workspace_id
          JOIN roles r ON r.id = m.role_id
@@ -145,10 +145,10 @@ export async function authenticate(
   if (!authenticated.ok) return authenticated;
   const { session } = authenticated;
 
-  if (session.membership_id === null) return { ok: false, reason: 'membership_required' };
+  if (session.membership_id === null) return { ok: false, reason: 'no_membership' };
   const membership = await loadMembership(db, session.user_id, session.membership_id);
   if (!membership || membership.membership_status !== 'active') {
-    return { ok: false, reason: 'account_disabled' };
+    return { ok: false, reason: 'membership_required' };
   }
 
   const statements = [

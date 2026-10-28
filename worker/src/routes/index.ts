@@ -12,6 +12,7 @@ import { reportsRoutes } from './reports';
 import { syncRoutes } from './sync';
 import { notificationsRoutes } from './notifications';
 import { devicesRoutes } from './devices';
+import { staffRoutes } from './staff';
 import { requireAuth } from '../middleware/auth';
 
 export const apiRoutes = new Hono<AppEnv>();
@@ -38,4 +39,5 @@ stubs.route('/', reportsRoutes);
 stubs.route('/', syncRoutes);
 stubs.route('/', notificationsRoutes);
 stubs.route('/', devicesRoutes);
+stubs.route('/', staffRoutes);
 apiRoutes.route('/', stubs);
