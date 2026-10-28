@@ -18,8 +18,32 @@ Nhánh `mvp-web-roles` (worktree `mvp-web-roles`), commit `97615c3` + sửa sau 
 
 - `tsc --noEmit` sạch; vitest đầy đủ: 729 pass, 4 skip (trước 713). Test mới: `src/features/staff/staff.test.tsx` (mock API theo hợp đồng: không-Admin bị chặn, danh sách + ma trận, thêm, trùng số đã tắt, sửa/tắt/huỷ khai báo, last_admin, lưu quyền chỉ nhóm đổi, đặt mật khẩu lần đầu 2 vai trò → picker, 1 vai trò → tự chọn) và `staffModel.test.ts`.
 - Chromium với API giả (không số thật): ảnh mobile 390 và desktop 1440 ở `shots-web/` (Cài đặt, Nhân sự, sửa, thêm), không tràn ngang. Script `capture-web.mjs`.
-- Chưa chạy với backend thật (chờ GL báo đã deploy).
+- Đã chạy với backend thật, xem mục live bên dưới.
 - Không thấy test vitest flaky lần này.
+
+## Chạy live trên staging (backend 1.1, Worker 421ef6af)
+
+Bản build local `mvp-web-roles` 21ac772 (không deploy Pages), Chromium qua proxy Playwright (staging chỉ cho origin web của nó). Script `live-web.mjs`, ảnh `shots-live/` (SĐT được che trong DOM trước khi chụp; chỉ có số giả). Kết quả: 31/32 mục pass, mục fail là dọn dẹp (bên dưới) cộng 3 chỗ lệch hợp đồng của BE.
+
+Pass:
+- Admin thêm trợ giảng bằng SĐT mới (số giả) gán 1 lớp: bản khai `pending` có đúng `class_ids`.
+- Đăng xuất, SĐT đó vào màn "Đặt mật khẩu" trung tính (không nhắc con/phụ huynh), đặt mật khẩu xong tự vào `/lop` (một vai, `PUT /session/membership` tự gọi). Bản khai thành `member/active` giữ lớp.
+- `GET /me`: có `class_ids`, quyền mặc định Trợ giảng đúng (điểm danh/nhận xét sửa, lớp/học sinh/điểm đọc). UI chỉ thấy "1 lớp đang mở", không có nút tạo/sửa lớp; `POST /classes` 403.
+- Sync cursor thật: `attendance.set` applied; `pull` từ cursor snapshot (9289→9291, 9296→9298) trả đúng dòng điểm danh; pull tiếp từ cursor mới rỗng, `has_more=false`. `score.set` trả `rejected/forbidden`; màn điểm không có ô sửa được.
+- Admin vô hiệu hoá → lần gọi kế tiếp bị từ chối, UI về `/dang-nhap`; bật lại → đăng nhập lại vào `/lop` bình thường.
+- Chéo workspace: workspace B thêm số của Admin A làm trợ giảng (membership `active` ngay). A đăng nhập → `/chon-vai-tro` có "Quản trị viên" và "Trợ giảng"; chọn Trợ giảng thì chỉ thấy lớp của B, Cài đặt không có mục Nhân sự; "Đổi vai trò" quay lại Quản trị viên thấy lại lớp A và mục Nhân sự.
+
+Lệch so với hợp đồng (cho BE, web đã xử lý được cả hai):
+1. Membership duy nhất bị vô hiệu: `GET /classes` trả `403 account_disabled`, hợp đồng nói `403 forbidden` + `details.reason = "membership_required"`. Web xoá phiên và về đăng nhập, đúng ý đồ cho tài khoản chỉ có một vai; chưa kiểm khi tài khoản còn vai khác.
+2. `POST /sync/push` của membership bị vô hiệu trả `404`, hợp đồng nói `403`. Web coi 403 và 404 như nhau (giữ lệnh, `invalidateActiveMembership`).
+3. `POST /auth/register` với dữ liệu rác trả `500` thay vì 422 (chỉ thấy khi thử `phone: "abc"`).
+Ngoài ra: đăng ký bị rate limit chung (429, ~58 phút) sau vài lần đăng ký liên tiếp, gồm cả `register-guardian`.
+
+Dọn dẹp chưa xong hoàn toàn:
+- Nhân sự thử trong workspace smoke A đã vô hiệu hoá hết (script tự dọn; không xoá được thành viên đã có tài khoản).
+- Tài khoản smoke A vẫn còn membership "Trợ giảng" ở workspace thử B ("Không gian thử B"). Người thêm là Admin B (SĐT giả, mật khẩu ngẫu nhiên đã mất), A không tự rời được, nên đăng nhập smoke giờ qua `/chon-vai-tro`. Cần BE/GL vô hiệu hoá membership này (D1) hoặc chấp nhận bước chọn vai trò trong smoke. Có thể bổ sung "tự rời workspace" ở 1.2.
+- Bản ghi điểm danh `present` của 1 học sinh ở 1 buổi lớp smoke (do kiểm sync) vẫn còn.
+- Workspace thử B và vài tài khoản giả tồn tại trên staging.
 
 ## Hạn chế
 
@@ -36,5 +60,5 @@ Route guard Admin, ẩn/khoá theo quyền, `active_membership_id` null và tự
 - Test thêm 3 ca (403, đổi membership, khoá ma trận). tsc sạch, 729 pass.
 
 Status: DONE_WITH_CONCERNS
-Summary: Màn Nhân sự, ma trận quyền, đặt mật khẩu lần đầu trung tính và xử lý chọn vai trò xong, tsc + 729 test pass, ảnh Chromium với API giả. Chưa thử với backend thật.
-Concerns/Blockers: Cần backend 1.1 deployed để chạy thật; chưa có đổi vai trò cho hàng Admin.
+Summary: Web 1.1 xong, tsc + 729 test pass, chạy live staging pass toàn bộ kịch bản (sync cursor thật, vô hiệu/bật lại, chéo workspace).
+Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 404, register 500); tài khoản smoke còn membership Trợ giảng ở workspace thử B cần BE vô hiệu hoá; chưa có đổi vai trò cho hàng Admin.

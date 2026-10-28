@@ -36,7 +36,7 @@ const smokeClass = classes.find((x) => x.id === c.class_id) ?? classes[0];
 check('smoke admin sees its class', Boolean(smokeClass));
 
 // leftovers of earlier runs: cancel pending declarations, disable active test assistants
-for (const s of (await call('GET', '/staff', A.token)).body.items.filter((x) => x.display_name === 'Trợ giảng thử' && x.status !== 'disabled')) {
+for (const s of (await call('GET', '/staff', A.token)).body.items.filter((x) => x.role.system_key === 'assistant' && x.status !== 'disabled' && x.class_ids.includes(smokeClass.id))) {
   if (s.kind === 'pending') await call('DELETE', `/staff/${s.id}`, A.token);
   else await call('PATCH', `/staff/${s.id}`, A.token, { status: 'disabled', base_version: s.version });
 }
@@ -57,7 +57,7 @@ async function newCtx(opts) {
   return ctx;
 }
 const mask = () => {
-  const re = /\+?84\d{8,10}|0\d{9}/g;
+  const re = /\+?84(?:[ .]?\d){8,10}|0(?:[ .]?\d){9}/g;
   const run = () => { const w = document.createTreeWalker(document.body ?? document, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) if (re.test(n.nodeValue)) n.nodeValue = n.nodeValue.replace(re, '•••••••••'); };
   new MutationObserver(run).observe(document, { childList: true, subtree: true, characterData: true });
   document.addEventListener('DOMContentLoaded', run);
@@ -139,10 +139,10 @@ await shot(pa, '05-tro-giang-lop');
 check('class page shows no edit-class action for assistant', (await pa.getByText('Sửa lớp', { exact: true }).count()) === 0);
 
 // ---- sync push/pull with a real cursor
-const sessR = await call('GET', `/classes/${smokeClass.id}/sessions`, N1.token);
+const sessR = await call('GET', `/sync/snapshot/class_session?membership_id=${mN1.id}`, N1.token);
 const stuR = await call('GET', `/classes/${smokeClass.id}/students`, N1.token);
 console.log('sessions', sessR.status, sessR.body?.error?.code ?? '', 'students', stuR.status, stuR.body?.error?.code ?? '', stuR.body?.error?.details?.reason ?? '');
-const sessions = sessR.body?.items ?? [];
+const sessions = (sessR.body?.items ?? []).filter((s) => s.class_id === smokeClass.id);
 const students = (stuR.body?.items ?? []).filter((s) => s.status === 'active');
 check('assistant can list sessions and students of its class', sessions.length > 0 && students.length > 0, `s=${sessions.length} st=${students.length}`);
 const snap = (await call('GET', `/sync/snapshot?membership_id=${mN1.id}`, N1.token)).body;
@@ -175,7 +175,7 @@ if (tests.length) {
 
 // ---- Admin disables N1 -> next call 403 -> UI back to login
 staffA = (await call('GET', '/staff', A.token)).body.items;
-n1 = staffA.find((s) => s.display_name === 'Trợ giảng thử');
+n1 = staffA.find((s) => s.user_id === N1.me.user.id);
 check('pending became an active member after first password', n1 && n1.kind === 'member' && n1.status === 'active' && n1.class_ids.length === 1, `${n1?.kind}/${n1?.status}`);
 const dis = await call('PATCH', `/staff/${n1.id}`, A.token, { status: 'disabled', base_version: n1.version });
 check('admin disables the assistant', dis.status === 200 && dis.body.status === 'disabled', String(dis.status));
@@ -192,7 +192,7 @@ await shot(pa, '07-sau-khi-bi-vo-hieu-hoa');
 check('UI of the disabled assistant is sent to login / role picker', landed.includes('dang-nhap') || landed.includes('chon-vai-tro'), landed);
 
 // ---- re-enable
-n1 = (await call('GET', '/staff', A.token)).body.items.find((s) => s.display_name === 'Trợ giảng thử');
+n1 = (await call('GET', '/staff', A.token)).body.items.find((s) => s.user_id === N1.me.user.id);
 const en = await call('PATCH', `/staff/${n1.id}`, A.token, { status: 'active', base_version: n1.version });
 check('admin re-enables the assistant', en.status === 200 && en.body.status === 'active', String(en.status));
 await pa.goto(`${web}/dang-nhap`, { waitUntil: 'domcontentloaded' });
@@ -203,16 +203,21 @@ check('re-enabled assistant logs in and reaches the class list', new URL(pa.url(
 }
 // ---- cross workspace: admin A is added by workspace B as an assistant
 if (mode !== 'main') {
+const preExisting = (await call('GET', '/me', A.token)).body.memberships.some((m) => m.role.system_key === 'assistant');
+let B = null, addA = null;
+if (preExisting) console.log('note: smoke admin already has an assistant membership in a workspace B from an earlier run; reusing it');
+else {
 const phoneB = fakePhone(), passB = fakePass();
 const regB = await call('POST', '/auth/register', null, { phone: phoneB, password: passB, display_name: 'Chủ lớp B (thử)', workspace_name: 'Không gian thử B' });
 check('workspace B registered', regB.status === 201 || regB.status === 200, String(regB.status));
 if (!(regB.status === 201 || regB.status === 200)) { await browser.close(); process.exit(1); }
-const B = await apiLogin(phoneB, passB);
+B = await apiLogin(phoneB, passB);
 const adminB = B.me.memberships.find((m) => m.role.system_key === 'admin');
 await selectMembership(B.token, adminB.id);
 const bClass = await call('POST', '/classes', B.token, { name: 'Lớp thử B', weekdays: [2], start_time: '18:00' });
-const addA = await call('POST', '/staff', B.token, { phone: c.phone, display_name: 'Ignored', role: 'assistant', class_ids: bClass.body?.id ? [bClass.body.id] : [] });
+addA = await call('POST', '/staff', B.token, { phone: c.phone, display_name: 'Ignored', role: 'assistant', class_ids: bClass.body?.id ? [bClass.body.id] : [] });
 check('workspace B adds an existing account as assistant (active member right away)', addA.status === 201 && addA.body.kind === 'member', String(addA.status));
+}
 const ctxA2 = await newCtx({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 } });
 const pa2 = await page(ctxA2);
 await uiLogin(pa2, c.phone, c.password);
@@ -222,7 +227,7 @@ check('account with two roles is sent to the role picker', pickPath.includes('ch
 await shot(pa2, '08-chon-vai-tro-hai-vai');
 const roleButtons = pa2.locator('main button');
 const labels = (await roleButtons.allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim());
-check('picker lists Admin and Trợ giảng', labels.some((t) => /Admin/.test(t)) && labels.some((t) => /Trợ giảng/.test(t)), labels.join(' | ').slice(0, 120));
+check('picker lists Quản trị viên and Trợ giảng', labels.some((t) => /Quản trị/.test(t)) && labels.some((t) => /Trợ giảng/.test(t)), labels.join(' | ').slice(0, 120));
 await pa2.locator('main button', { hasText: 'Trợ giảng' }).first().click();
 await pa2.waitForURL((u) => u.pathname.startsWith('/lop'), { timeout: 20000 });
 await pa2.waitForTimeout(2500);
@@ -235,7 +240,7 @@ await shot(pa2, '10-cai-dat-tro-giang');
 check('assistant sees no Nhân sự entry in Settings', (await pa2.getByText('Nhân sự', { exact: true }).count()) === 0);
 await pa2.getByRole('button', { name: /Đổi vai trò/ }).click();
 await pa2.waitForURL((u) => u.pathname.includes('chon-vai-tro'), { timeout: 10000 });
-await pa2.locator('main button', { hasText: 'Admin' }).first().click();
+await pa2.locator('main button', { hasText: 'Quản trị' }).first().click();
 await pa2.waitForURL((u) => u.pathname.startsWith('/lop'), { timeout: 20000 });
 await pa2.waitForTimeout(2500);
 const bodyA = await pa2.locator('body').innerText();
@@ -246,12 +251,12 @@ await pa2.waitForTimeout(1200);
 check('admin sees Nhân sự entry again', (await pa2.getByText('Nhân sự').count()) > 0);
 
 // ---- cleanup B
-const staffB = (await call('GET', '/staff', B.token)).body.items;
-const aInB = staffB.find((s) => s.id === addA.body.id);
+const staffB = B ? (await call('GET', '/staff', B.token)).body.items : [];
+const aInB = addA ? staffB.find((s) => s.id === addA.body.id) : null;
 if (aInB) { const r = await call('PATCH', `/staff/${aInB.id}`, B.token, { status: 'disabled', base_version: aInB.version }); check('cleanup: A removed from workspace B', r.status === 200, String(r.status)); }
 }
 // ---- cleanup A
-n1 = (await call('GET', '/staff', A.token)).body.items.find((s) => s.display_name === 'Trợ giảng thử' && s.status !== 'disabled');
+n1 = (await call('GET', '/staff', A.token)).body.items.find((s) => s.role.system_key === 'assistant' && s.status !== 'disabled' && s.class_ids.includes(smokeClass.id));
 if (n1) { const r = await call('PATCH', `/staff/${n1.id}`, A.token, { status: 'disabled', base_version: n1.version }); check('cleanup: test assistant disabled in A', r.status === 200, String(r.status)); }
 const meA = (await call('GET', '/me', A.token)).body;
 check('cleanup: smoke admin back to a single membership', meA.memberships.filter((m) => m.status === 'active').length === 1);
