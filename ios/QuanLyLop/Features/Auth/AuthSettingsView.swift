@@ -133,6 +133,19 @@ struct AuthSettingsView: View {
                 }
             }
             .buttonStyle(.plain)
+            if membership?.role.systemKey == "admin" {
+                NavigationLink {
+                    StaffEntryView(model: model)
+                } label: {
+                    menuRow(String(localized: "feature.staff.nhan.su"), divider: true) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(AppColors.muted)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.staff")
+            }
               if model.memberships.count > 1, let membership {
                 Button { model.changeRoleFromSettings() } label: {
                     menuRow(String(localized: "feature.auth.oi.vai.tro")) {
@@ -152,7 +165,8 @@ struct AuthSettingsView: View {
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 
-    private func menuRow<Trailing: View>(_ title: String, @ViewBuilder trailing: () -> Trailing) -> some View {
+    private func menuRow<Trailing: View>(_ title: String, divider: Bool = false,
+                                         @ViewBuilder trailing: () -> Trailing) -> some View {
         HStack(spacing: 12) {
             Text(title).appText(AuthText.menuLabel).foregroundStyle(AppColors.text)
             Spacer(minLength: 0)
@@ -162,7 +176,7 @@ struct AuthSettingsView: View {
         .frame(minHeight: 60)
         .contentShape(Rectangle())
         .overlay(alignment: .top) {
-            if title == String(localized: "feature.auth.oi.vai.tro") { AppColors.divider.frame(height: 1) }
+            if divider || title == String(localized: "feature.auth.oi.vai.tro") { AppColors.divider.frame(height: 1) }
         }
     }
 

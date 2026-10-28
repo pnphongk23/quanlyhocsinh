@@ -66,6 +66,13 @@ struct TeacherRootView: View {
             await data.configure(auth: auth)
             await i4Data.configure(auth: auth)
         }
+        // A role, permission or class change found by the next `/me` rereads what this role may do.
+        .onChange(of: auth.activeMembership) { _, _ in
+            Task {
+                await data.configure(auth: auth)
+                await i4Data.configure(auth: auth)
+            }
+        }
     }
 }
 

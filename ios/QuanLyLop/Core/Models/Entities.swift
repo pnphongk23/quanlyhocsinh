@@ -413,6 +413,8 @@ struct Membership: Codable, Sendable, Equatable {
     let status: String?
     let scopeEpoch: Int?
     let permissions: [String:PermissionLevel]?
+    /// Classes assigned to a staff member (`assigned_classes` scope); absent for the admin and for guardians.
+    var classIds: [String]? = nil
 }
 
 struct User: Codable, Sendable, Equatable {

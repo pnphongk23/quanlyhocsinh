@@ -9,6 +9,7 @@ enum AuthCopy {
     static let passwordMismatch = String(localized: "feature.auth.mat.khau.nhap.lai.khong.khop")
     static let sameAsCurrent = String(localized: "feature.auth.mat.khau.moi.phai.khac.mat.khau.hien.tai")
     static let wrongCurrent = String(localized: "feature.auth.mat.khau.hien.tai.khong.ung")
+    static let roleRevoked = String(localized: "feature.auth.ban.khong.con.quyen.o.vai.tro.nay")
     static let logoutFailed = String(localized: "feature.auth.khong.the.ang.xuat")
     static let forgotPasswordDescription = String(localized: "feature.auth.nguoi.van.hanh.dat.lai.mat.khau")
     static let forgotPasswordStepOne = String(localized: "feature.auth.lien.he.nguoi.van.hanh")

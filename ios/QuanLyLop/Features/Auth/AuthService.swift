@@ -220,6 +220,11 @@ final class AuthModel {
     }
     func dismissLogoutBlock() { logoutBlock = nil }
 
+    /// Staff management calls go through the signed-in session; an admin changing their own role rereads `/me`.
+    func makeStaffStore() -> StaffStore {
+        StaffStore(api: api, didChangeSelf: { [weak self] in _ = await self?.revalidateIdentityWhileOnline() })
+    }
+
     /// Label under a role card: "Bé Gia Bảo" for guardians (children are not part of the
     /// auth payload, so the prototype's fallback "Phụ huynh" is used) and the workspace name
     /// for staff roles.
@@ -499,11 +504,18 @@ final class AuthModel {
     }
 
     private func installIdentity(_ current: CurrentIdentity, persist: Bool = true) async {
+        let previousActiveId = session?.activeMembershipId ?? identity?.activeMembershipId
+        let wasRevoked = previousActiveId.map { id in !current.memberships.contains { $0.id == id } } ?? false
         identity = current
+        // A fresh `/me` replaces the sign-in snapshot, so role, permission and class changes show without signing in again.
+        if let old = session {
+            session = AuthSession(token: old.token, expiresAt: old.expiresAt, user: current.user,
+                                  memberships: current.memberships, activeMembershipId: current.activeMembershipId)
+        }
         if persist { try? await identityStore.save(current) }
         if current.user.mustChangePassword {
             screen = .forcedPassword
-        } else if current.activeMembershipId == nil && current.memberships.isEmpty {
+        } else if current.activeMembershipId == nil && current.memberships.isEmpty && !wasRevoked {
             activeStore = nil; activeSync = nil
             screen = .main
         } else if let membershipId = current.activeMembershipId,
@@ -525,7 +537,13 @@ final class AuthModel {
             return
         } else {
             activeStore = nil; activeSync = nil
-            screen = .chooseRole
+            if wasRevoked && current.activeMembershipId == nil {
+                // The role in use was disabled: its cache stays on the device (pending commands included) but is hidden.
+                message = AuthCopy.roleRevoked
+                screen = current.memberships.contains { $0.status == "active" } ? .chooseRole : .login
+            } else {
+                screen = .chooseRole
+            }
         }
     }
 
@@ -546,6 +564,10 @@ final class AuthModel {
             let remaining = previous.memberships.filter { $0.id != revokedId }
             let filtered = CurrentIdentity(user: previous.user, activeMembershipId: nil, memberships: remaining)
             identity = filtered
+            if let old = session {
+                session = AuthSession(token: old.token, expiresAt: old.expiresAt, user: old.user,
+                                      memberships: remaining, activeMembershipId: nil)
+            }
             try? await identityStore.save(filtered)
             screen = remaining.isEmpty ? .login : .chooseRole
         } else {
