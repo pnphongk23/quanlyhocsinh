@@ -39,6 +39,7 @@ Chi tiết ở `review-ios-sol.md`. Commit sửa: `1e4b83d`, `51e7cf5` (nhánh `
 - Cài đặt, Nhân sự, Thêm nhân sự (số giả) → server tạo bản ghi `pending` vai trò assistant. Hình dạng `/staff`, `/classes?status=active` (`{items}`), `/roles/permissions` khớp mô hình.
 - Phát hiện khi chạy live: form thêm/sửa mở ở nửa màn nên danh sách lớp nằm dưới màn hình và chip không chọn được. Đã sửa: form mở toàn chiều cao (`51e7cf5`). Sau đó sửa nhân sự chờ, chọn lớp, lưu: server nhận `class_ids` 1 lớp, version 1→2.
 - Ma trận quyền: chạm trên app, server đổi quyền thật (Điểm của trợ giảng read→none). Đã trả về mặc định spec (trợ giảng: sessions_attendance và comments_reports write, classes/students/scores read; giáo viên write cả 5), kiểm lại bằng GET.
+- Màn đặt mật khẩu lần đầu của nhân sự (SĐT chờ đăng nhập): hiện đúng chữ trung tính "Số này đã được khai trong lớp. Đặt mật khẩu để vào ứng dụng." (xác nhận live). Bấm "Vào ứng dụng" lần đầu (12:2x) nhận 429, app hiện "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau 1 phút."; đã dừng, không thử lại, báo GL.
 - Chưa chạy (cần đăng ký, chờ GL báo web xong để không dính giới hạn IP): nhân sự đặt mật khẩu lần đầu, chỉ thấy lớp được gán, điểm danh đồng bộ, nút điểm khoá, vô hiệu hoá/bật lại, đổi vai trò.
 - Nhân sự thử `QA Trợ giảng thử` (pending) còn trên staging, sẽ dọn khi xong.
 
