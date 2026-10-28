@@ -56,6 +56,12 @@ Không tái hiện được; đây là toàn bộ bằng chứng còn lại (ch�
 - Lần cuối trước đó cùng endpoint (~11:06, body hợp lệ cùng cấu trúc) trả `429` `rate_limited` với `request_id` riêng; request hợp lệ sau đó (`phone` giả đúng định dạng) trả 201.
 - Có thể lần 500 trùng thời điểm hạn mức vừa hết; chưa loại trừ được. Cần gọi lại đúng body trên (có `-i`) để lấy `request_id` nếu BE muốn điều tra.
 
+## Deploy web 1.1 lên staging chính
+
+- Nguồn: `mvp-web-roles` d0c1bd9. `git log mvp-web-roles..mvp-web` chỉ còn ed00762 (sửa 429), chính là d0c1bd9 đã cherry-pick; có `public/privacy.html`, `public/support.html` và c16d1f1. tsc sạch, vitest 734 pass (4 skip), build đạt với `VITE_API_BASE_URL` trỏ API staging.
+- Deployment mới (Production, branch main): `d5f56343-dc52-44b0-ba16-a7cf5ebb7db4`. Deployment cũ để rollback: `6b088f5e-1c84-46e8-ab43-d5f1bf778800` (339a2b8).
+- Smoke trên https://qlh-staging-web.pages.dev (không dùng staging-appreview, không gọi register, không thêm nhân sự): `/` 200 "Quản lý lớp tiếng Anh"; `/privacy` 200 "Chính sách quyền riêng tư"; `/support` 200 "Hỗ trợ người dùng". Đăng nhập tài khoản smoke Admin vào `/lop` (không qua chọn vai trò); Cài đặt có mục Nhân sự; `/cai-dat/nhan-su` mở được danh sách, nút "Thêm nhân sự" và ma trận quyền. Ảnh mobile 390 (SĐT che): `shots-live/deploy-smoke-nhan-su-390.png`, script `smoke-deploy.mjs`.
+
 ## Hạn chế
 
 - Hàng Admin không đổi vai trò (hạ Admin) trên UI dù hợp đồng cho phép; chưa có trong phạm vi nên bỏ.
