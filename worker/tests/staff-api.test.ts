@@ -256,4 +256,30 @@ describe('staff management and role permissions', () => {
     expect((await call('/v1/me', {}, loggedIn.body.token)).body.memberships
       .find((member: any) => member.workspace.id === first.workspaceId).permissions.scores).toBe('write');
   });
+
+  it('rejects a second staff role for the same account even when requests race', async () => {
+    const admin = await registerWorkspace('Staff race roles');
+    const phone = fakePhone();
+    await insertUser(phone, 'Racing user');
+    const results = await Promise.all(['teacher', 'assistant'].map((role) =>
+      call('/v1/staff', post({ phone, display_name: 'Racing user', role, class_ids: [] }), admin.token)));
+    expect(results.map((result) => result.status).sort()).toEqual([201, 409]);
+    expect((await db.prepare(`SELECT COUNT(*) AS n FROM memberships m JOIN users u ON u.id=m.user_id
+      WHERE m.workspace_id=? AND u.phone=?`).bind(admin.workspaceId, phone).first<{ n: number }>())!.n).toBe(1);
+  });
+
+  it('does not let a stale concurrent update re-enable a disabled member', async () => {
+    const admin = await registerWorkspace('Staff race patch');
+    const phone = fakePhone();
+    await insertUser(phone, 'Patched user');
+    const created = await call('/v1/staff', post({ phone, display_name: 'x', role: 'assistant', class_ids: [] }), admin.token);
+    const [disable, retitle] = await Promise.all([
+      call(`/v1/staff/${created.body.id}`, { method: 'PATCH', body: JSON.stringify({ status: 'disabled' }) }, admin.token),
+      call(`/v1/staff/${created.body.id}`, { method: 'PATCH', body: JSON.stringify({ role: 'teacher' }) }, admin.token),
+    ]);
+    expect([disable.status, retitle.status].sort()).toEqual([200, 409]);
+    const row = await db.prepare('SELECT status,version FROM memberships WHERE id=?').bind(created.body.id)
+      .first<{ status: string; version: number }>();
+    expect(row!.version).toBe(2);
+  });
 });

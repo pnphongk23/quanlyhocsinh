@@ -553,8 +553,8 @@ export async function claimStaffDeclarations(db: D1Database, userId: string, pho
     const membershipId = crypto.randomUUID();
     statements.push(db.prepare(`INSERT INTO memberships
       (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version)
-      SELECT ?, ?, ?, ?, 'active', 1, created_at, 1 FROM staff_declarations WHERE id = ?`)
-      .bind(membershipId, declaration.workspace_id, userId, declaration.role_id, declaration.id));
+      SELECT ?, workspace_id, ?, role_id, 'active', 1, created_at, 1 FROM staff_declarations WHERE id = ?`)
+      .bind(membershipId, userId, declaration.id));
     statements.push(db.prepare(`INSERT INTO member_classes (workspace_id, membership_id, class_id, created_at)
       SELECT workspace_id, ?, class_id, (SELECT created_at FROM staff_declarations WHERE id = ?)
         FROM staff_declaration_classes WHERE declaration_id = ?`)
@@ -565,7 +565,8 @@ export async function claimStaffDeclarations(db: D1Database, userId: string, pho
     await db.batch(statements);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes('memberships.user_id, memberships.workspace_id, memberships.role_id')) {
+    if (message.includes('memberships.user_id, memberships.workspace_id, memberships.role_id') ||
+      message.includes('staff_exists')) {
       throw conflict('staff_exists');
     }
     throw mapTriggerError(error, conflict('conflict'));

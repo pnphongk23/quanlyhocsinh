@@ -1,6 +1,6 @@
 # Báo cáo backend — nhân sự và vai trò 1.1 (brief 100)
 
-Nhánh `mvp-backend-roles`, HEAD `61bf38d`. Chưa deploy, chưa merge, chưa chạy migration trên staging.
+Nhánh `mvp-backend-roles`, HEAD xem cuối báo cáo. Chưa deploy, chưa merge, chưa chạy migration trên staging.
 
 ## Đã làm
 - Hợp đồng: `api-spec.md` mục 11.
@@ -20,13 +20,29 @@ Nhánh `mvp-backend-roles`, HEAD `61bf38d`. Chưa deploy, chưa merge, chưa ch�
 Không lệch api-spec.
 
 ## Kiểm chứng
-`npx tsc --noEmit` sạch; `npx vitest run`: 36 file, 199 test đạt. Bao gồm: nhận khai báo qua guardian_setup và login, trợ giảng bị chặn sửa điểm qua sync, vô hiệu có hiệu lực lần gọi kế tiếp, Admin cuối cùng (kể cả song song), chỉ thấy lớp được gán, lớp nhân sự tạo tự gán, một SĐT Admin ở A + trợ giảng ở B đổi qua lại, migration chỉ nâng mặc định chưa sửa.
+`npx tsc --noEmit` sạch; `npx vitest run`: 36 file, 201 test đạt. Bao gồm: nhận khai báo qua guardian_setup và login, trợ giảng bị chặn sửa điểm qua sync, vô hiệu có hiệu lực lần gọi kế tiếp, Admin cuối cùng (kể cả song song), chỉ thấy lớp được gán, lớp nhân sự tạo tự gán, một SĐT Admin ở A + trợ giảng ở B đổi qua lại, migration chỉ nâng mặc định chưa sửa.
+
+## Review codex sol 6.1 (1 vòng, chỉ đọc)
+- High — PATCH `/staff/:id` đồng thời có thể bật lại người vừa bị vô hiệu: đã sửa, `UPDATE ... WHERE version = <đã đọc>`, 0 dòng đổi ⇒ 409 `version_conflict`; thay lớp cũng kèm điều kiện version. Có test song song.
+- High — claim khai báo dùng `role_id` đã đọc cũ: đã sửa, `claimStaffDeclarations` lấy `workspace_id`/`role_id` ngay trong câu INSERT từ bảng khai báo.
+- Medium — tạo nhân sự song song cùng SĐT khác vai trò: đã sửa bằng INSERT có `WHERE NOT EXISTS` (không dùng trigger để khỏi đổi hợp đồng đa vai trò cũ); có test song song.
+- Không tìm thấy leo thang quyền, lệch tương thích app 1.0 hay lỗi workspace chéo. Sol chưa kiểm khoá/rollback migration trên dữ liệu thật (xem kế hoạch dưới).
+
+## Kế hoạch deploy (chờ GL/người dùng duyệt cửa sổ)
+Từ `worker/`, mọi lệnh `--env staging --remote`; staging là server của app 1.0 nên chỉ chạy khi có cửa sổ.
+1. Merge `mvp-backend-roles` vào nhánh deploy (GL quyết), tsc + vitest sạch.
+2. Backup: `npx wrangler d1 export qlh-staging-db --env staging --remote --output ~/.config/qlh-backups/qlh-staging-db-pre-0013-<ngày>.sql`; kiểm file > 0 byte, `chmod 600`.
+3. Đếm trước: `SELECT COUNT(*)` trên users, workspaces, memberships, member_classes, roles, role_permissions, classes, students; ghi lại, kèm số role `assistant` còn bộ quyền mặc định cũ.
+4. Migrate: `npx wrangler d1 migrations apply qlh-staging-db --env staging --remote` (chỉ 0013: 2 bảng mới, 2 trigger, 1 UPDATE nhỏ trên `role_permissions`, không khoá lâu).
+5. Đếm sau: các bảng cũ không đổi số dòng; `staff_declarations`=0; `PRAGMA foreign_key_check` rỗng; số assistant được nâng `comments_reports=write` đúng bằng số đếm ở bước 3.
+6. Deploy Worker (`npx wrangler deploy --env staging`), ghi version id Worker TRƯỚC khi deploy để rollback; health 200.
+7. Smoke: login/phone-check/register-guardian cũ, `/me`, một lượt sync pull; tạo nhân sự thử trong workspace thử rồi xoá.
+Rollback: Worker — `npx wrangler rollback <id cũ> --env staging`. DB — migration chỉ thêm nên bản Worker cũ vẫn chạy được với schema mới; chỉ khi cần: `DROP TABLE staff_declaration_classes; DROP TABLE staff_declarations;` (+ trigger), và đặt lại `comments_reports=read` cho assistant từ danh sách bước 3; backup SQL là phương án cuối.
 
 ## Hạn chế
 - Không có route REST sửa điểm (điểm chỉ qua sync), nên "403 khi sửa điểm" kiểm qua `score.set`.
-- Chưa có vòng review sol độc lập (xin GL quyết có chạy trước gate không).
 - Trước khi chạy 0013 trên staging: cần backup + đếm bản ghi, GL duyệt.
 
 Status: DONE_WITH_CONCERNS
 Summary: Backend nhân sự/vai trò 1.1 xong trên nhánh riêng, tsc và 199 test đạt, additive-only; chờ GL gate và quyết định deploy.
-Concerns/Blockers: chưa có review sol; migration 0013 cần cửa sổ do GL duyệt.
+Concerns/Blockers: migration 0013 cần cửa sổ do GL duyệt.

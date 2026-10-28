@@ -132,10 +132,15 @@ export async function createStaff(db: D1Database, identity: Identity, input: Rec
     if (user) {
       const statements: D1PreparedStatement[] = [db.prepare(`INSERT INTO memberships
         (id,workspace_id,user_id,role_id,status,scope_epoch,created_at,version)
-        VALUES(?,?,?,?,'active',1,?,1)`).bind(id, identity.workspaceId, user.id, roleIdValue, now),
+        SELECT ?,?,?,?,'active',1,?,1 WHERE NOT EXISTS (
+          SELECT 1 FROM memberships m JOIN roles r ON r.id=m.role_id
+           WHERE m.workspace_id=? AND m.user_id=? AND r.system_key IN ('admin','teacher','assistant'))`)
+        .bind(id, identity.workspaceId, user.id, roleIdValue, now, identity.workspaceId, user.id),
         ...classIds.map((classId) => db.prepare(`INSERT INTO member_classes(workspace_id,membership_id,class_id,created_at)
-          VALUES(?,?,?,?)`).bind(identity.workspaceId, id, classId, now))];
-      await db.batch(statements);
+          SELECT ?,?,?,? WHERE EXISTS (SELECT 1 FROM memberships WHERE id=?)`)
+          .bind(identity.workspaceId, id, classId, now, id))];
+      const results = await db.batch(statements);
+      if (results[0]!.meta.changes === 0) throw conflict('staff_exists');
     } else {
       const statements: D1PreparedStatement[] = [db.prepare(`INSERT INTO staff_declarations
         (id,workspace_id,phone,display_name,role_id,created_by,created_at,version)
@@ -147,7 +152,8 @@ export async function createStaff(db: D1Database, identity: Identity, input: Rec
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('UNIQUE constraint failed: staff_declarations.workspace_id, staff_declarations.phone') ||
-      message.includes('memberships.user_id, memberships.workspace_id, memberships.role_id')) throw conflict('staff_exists');
+      message.includes('memberships.user_id, memberships.workspace_id, memberships.role_id') ||
+      message.includes('staff_exists')) throw conflict('staff_exists');
     throw error;
   }
   const row = await findStaff(db, identity.workspaceId, id);
@@ -202,13 +208,25 @@ export async function updateStaff(db: D1Database, identity: Identity, id: string
     }
   } else {
     statements.push(db.prepare(`UPDATE memberships SET role_id=?,status=?,scope_epoch=scope_epoch+1,version=version+1
-      WHERE id=? AND workspace_id=?`).bind(nextRoleId, nextStatus, id, identity.workspaceId));
-    if (classesChanged) statements.push(...statementsForClasses(db, identity.workspaceId, id, requestedClassIds!, now));
+      WHERE id=? AND workspace_id=? AND version=?`).bind(nextRoleId, nextStatus, id, identity.workspaceId, row.version));
+    if (classesChanged) {
+      const guard = 'EXISTS (SELECT 1 FROM memberships WHERE id=? AND version=?)';
+      statements.push(db.prepare(`DELETE FROM member_classes WHERE membership_id=? AND ${guard}`)
+        .bind(id, id, row.version + 1));
+      for (const classId of requestedClassIds!) {
+        statements.push(db.prepare(`INSERT INTO member_classes(workspace_id,membership_id,class_id,created_at)
+          SELECT ?,?,?,? WHERE ${guard}`).bind(identity.workspaceId, id, classId, now, id, row.version + 1));
+      }
+    }
   }
+  let results: D1Result[];
   try {
-    await db.batch(statements);
+    results = await db.batch(statements);
   } catch (error) {
     throw mapTriggerError(error, conflict('conflict'));
+  }
+  if (results[0]!.meta.changes === 0) {
+    throw new ApiError(409, 'conflict', 'Conflict.', { reason: 'version_conflict', current: { id, version: row.version } });
   }
   const updated = await findStaff(db, identity.workspaceId, id);
   if (!updated) throw notFound();
