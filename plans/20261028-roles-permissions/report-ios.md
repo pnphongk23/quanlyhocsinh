@@ -31,8 +31,8 @@ Chi tiết ở `review-ios-sol.md`. Commit sửa: `1e4b83d`, `51e7cf5` (nhánh `
 - Medium (ma trận quyền gửi song song): đã sửa. Các PUT chạy tuần tự, phản hồi cuối là trạng thái mới nhất. Chưa có test đảo thứ tự phản hồi.
 - Medium (còn 1 vai trò sau thu hồi tự chuyển workspace): đã sửa, có test.
 - Medium (mở app lại sau khi vai trò bị vô hiệu): đã sửa bằng cách so với identity đã lưu, có test.
-- Low (spacing/size số cứng): không đổi. Repo chưa có token spacing cho 2/8/12/16/24 và các màn hiện có (cài đặt, lớp) dùng cùng thang số; thêm token là việc riêng.
-- Test: 338, 0 lỗi (2 skipped).
+- Low (spacing số cứng): đã sửa theo GL. `--space-*` đã có sẵn trong `design/tokens/tokens.css` nên không thêm giá trị mới; iOS thêm `AppSpace.s2…s48` (bản chép của token, `Core/DesignSystem/Tokens.swift`) và `ios-mapping.md` ghi "Khớp". `StaffViews.swift` dùng `AppSpace`, commit `c316b3c`. Còn lại: icon chevron 16pt ở dòng "Nhân sự" trong `AuthSettingsView` giữ nguyên như các dòng cùng menu (chưa có token cỡ icon).
+- Test sau các commit trên: 338 test, 0 lỗi (2 skipped), TEST SUCCEEDED.
 
 ## Chạy live staging (backend 421ef6af, migration 0013), iPhone 16
 Đã chạy thật bằng Maestro, tài khoản admin workspace QA iOS:

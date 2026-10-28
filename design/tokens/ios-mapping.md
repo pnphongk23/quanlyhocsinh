@@ -14,7 +14,7 @@ Chỉ tài liệu. `Tokens.swift` (mvp-ios `ios/QuanLyLop/Core/DesignSystem/Toke
 | `--text-3xl` 30 (h1 desktop) | Chưa có | iOS không có desktop |
 | `--leading-tight/base`, `--weight-*` | `AppTextStyle.lineHeight`, `AppFontWeight` | Khớp |
 | `--card-pad` 16 | `AppMetrics.cardPaddingHorizontal` | iOS thêm `cardPaddingVertical` 14 (web giữ 14/18 cố định) |
-| `--space-2/4/8/12/16/20/24/32/48` | Chưa có (chỉ `fieldGap` 6) | Đề xuất `AppSpace` |
+| `--space-2/4/8/12/16/20/24/32/48` | `AppSpace.s2…s48` | Khớp |
 | `--page-x` 20, `--page-top` 12, `--page-bottom` 16, `--page-gap` 12, `--title-gap`, `--section-gap`, `--card-gap` | Chưa có | Đề xuất `AppLayout`; chỉ giá trị mobile |
 | `--shadow-sm/menu/frame/fab` | Chưa có | SwiftUI `.shadow` khi cần |
 | `--focus-ring` 3 | `AppMetrics.focusRing` | Khớp |
