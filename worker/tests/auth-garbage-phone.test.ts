@@ -20,4 +20,27 @@ describe('garbage phone input', () => {
       headers: { 'cf-connecting-ip': '203.0.113.250' } });
     expect(result.status).toBe(401);
   });
+
+  it('never answers register with a 5xx for malformed bodies', async () => {
+    const phone = '0912345678';
+    const base = { phone, password: 'fake-password-123', display_name: 'D', workspace_name: 'W' };
+    const variants: unknown[] = [
+      { ...base, phone: 'abc', password: 'x', display_name: 'x', workspace_name: 'x' },
+      { ...base, phone: 912345678 }, { ...base, phone: null }, { ...base, phone: undefined },
+      { ...base, workspace_name: '' }, { ...base, workspace_name: 'W'.repeat(500) }, { ...base, workspace_name: 5 },
+      { ...base, password: 'x' }, { ...base, password: 5 }, { ...base, password: null }, { ...base, display_name: 5 },
+      { ...base, display_name: 'D'.repeat(500) }, { ...base, email: 'not-an-email' }, { ...base, email: 5 },
+      [], 'text', 5, null,
+    ];
+    let n = 0;
+    for (const body of variants) {
+      const headers = { 'cf-connecting-ip': `198.18.0.${++n}` };
+      const result = await call('/v1/auth/register', { method: 'POST', body: JSON.stringify(body), headers }, undefined);
+      expect([JSON.stringify(body).slice(0, 60), result.status < 500]).toEqual([JSON.stringify(body).slice(0, 60), true]);
+    }
+    for (const raw of ['', '{', 'abc']) {
+      const result = await call('/v1/auth/register', { method: 'POST', body: raw, headers: { 'cf-connecting-ip': `198.18.1.${++n}` } }, undefined);
+      expect([raw, result.status < 500]).toEqual([raw, true]);
+    }
+  });
 });
