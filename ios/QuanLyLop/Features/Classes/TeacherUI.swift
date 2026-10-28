@@ -499,6 +499,7 @@ struct TeacherSheet<Content: View, Footer: View>: View {
     let title: String
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer
+    var detents: Set<PresentationDetent> = [.medium, .large]
     let close: () -> Void
 
     var body: some View {
@@ -522,7 +523,7 @@ struct TeacherSheet<Content: View, Footer: View>: View {
                 .padding(.bottom, 16)
         }
         .background(AppColors.surface)
-        .presentationDetents([.medium, .large])
+        .presentationDetents(detents)
         .presentationDragIndicator(.visible)
     }
 }

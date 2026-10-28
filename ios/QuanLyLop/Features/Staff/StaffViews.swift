@@ -187,6 +187,7 @@ struct StaffFormSheet: View {
                                           : String(localized: "feature.staff.sua.nhan.su"),
                      content: { form },
                      footer: { footer },
+                     detents: [.large],
                      close: close)
         .onAppear(perform: load)
         .confirmationDialog(confirmTitle, isPresented: $confirming, titleVisibility: .visible) {
