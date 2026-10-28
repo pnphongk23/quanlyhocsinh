@@ -46,3 +46,12 @@ Rollback: Worker — `npx wrangler rollback <id cũ> --env staging`. DB — migr
 Status: DONE_WITH_CONCERNS
 Summary: Backend nhân sự/vai trò 1.1 xong trên nhánh riêng, tsc và 199 test đạt, additive-only; chờ GL gate và quyết định deploy.
 Concerns/Blockers: migration 0013 cần cửa sổ do GL duyệt.
+
+## Kết quả deploy staging (28/10, người dùng duyệt)
+- Merge fast-forward `mvp-backend-roles` → `mvp-backend` (HEAD `6520600`); tsc sạch, vitest 36 file/201 test đạt.
+- Backup: `~/.config/qlh-backups/qlh-staging-db-pre-0013-20261028.sql` (~7,9 MB, chmod 600).
+- Đếm trước = sau: users 64, workspaces 33, memberships 58, member_classes 300, roles 132, role_permissions 792, classes 300, students 717. Assistant 33: `comments_reports` read 33→0, write 0→33 (đúng 33 cái còn mặc định). `staff_declarations`/`staff_declaration_classes` = 0. `PRAGMA foreign_key_check` rỗng.
+- Migration 0013 áp dụng, 7 lệnh, ~2 ms.
+- Worker: cũ `f8cb4ce5-8735-4d15-8a43-6d7acb4f16ce` (rollback id) → mới `421ef6af-1ec2-417e-9d0b-157c140e95e0`; health 200.
+- Smoke: tài khoản appreview giáo viên login 200 (đúng 1 lần ở lượt đầu; lượt chạy lại sau đó không login lại appreview, mỗi lần đều thành công, không sai mật khẩu), keys response cũ không đổi, `/me` 200, `/classes` 2 lớp, `phone-check` SĐT đã có → `login`. Workspace smoke BE: `/sync/snapshot` 200, `/me` 200, `phone-check` SĐT mới → `teacher_register`, tạo nhân sự chờ 201 `kind=pending`, `phone-check` → `guardian_setup`, `GET /staff` 200, `GET /roles/permissions` 200, huỷ bản khai 204, `phone-check` → `teacher_register`. `/sync/pull` với cursor/epoch giả trả 409 (resync, đúng hành vi cũ); `/sync/pull` và `/sync/push` với cursor thật chưa chạy lại trong smoke này.
+- Không có bước lệch, không rollback.
