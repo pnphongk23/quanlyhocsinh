@@ -67,6 +67,36 @@ final class RestoreSessionOfflineTests: XCTestCase {
         XCTAssertEqual(pendingCount, 1)
     }
 
+    func testRevokedMembershipClearsTheSaveErrorOfTheCutOffSession() async throws {
+        let center = SyncStatusCenter()
+        center.record(syncFailed: true, rejectedCommands: 0)
+        let api = AuthFixtureAPI(meResults: [.failure(.offline), .failure(.server(status: 403,
+            error: APIError(code: "account_disabled", message: nil, details: nil, requestId: nil), retryAfter: nil))])
+        let model = makeModel(api: api, token: InMemoryTokenStore(token: "fixture-session"), cache: MemoryIdentityStore(fixtureIdentity()),
+                              store: try SQLiteStore(path: ":memory:", scope: scope), online: true, status: center)
+        await model.restoreSession()
+        XCTAssertEqual(center.state, .error)
+
+        await model.synchronizeWhileActive()
+
+        XCTAssertEqual(model.screen, .login)
+        XCTAssertEqual(center.state, .synced)
+    }
+
+    func testExpiredTokenClearsTheSaveErrorOfTheCutOffSession() async throws {
+        let center = SyncStatusCenter()
+        center.record(syncFailed: true, rejectedCommands: 0)
+        let api = AuthFixtureAPI(meResults: [.failure(.server(status: 401,
+            error: APIError(code: "unauthorized", message: nil, details: nil, requestId: nil), retryAfter: nil))])
+        let model = makeModel(api: api, token: InMemoryTokenStore(token: "fixture-session"), cache: MemoryIdentityStore(fixtureIdentity()),
+                              store: try SQLiteStore(path: ":memory:", scope: scope), online: false, status: center)
+
+        await model.restoreSession()
+
+        XCTAssertEqual(model.screen, .login)
+        XCTAssertEqual(center.state, .synced)
+    }
+
     func testLogoutClearsTokenAndCachedIdentitySoReopeningShowsLogin() async throws {
         let cache = MemoryIdentityStore(fixtureIdentity())
         let token = InMemoryTokenStore(token: "fixture-session")
@@ -105,9 +135,9 @@ final class RestoreSessionOfflineTests: XCTestCase {
     }
 
     private func makeModel(api: AuthFixtureAPI, token: InMemoryTokenStore, cache: MemoryIdentityStore,
-                           store: SQLiteStore, online: Bool) -> AuthModel {
+                           store: SQLiteStore, online: Bool, status: SyncStatusCenter = .shared) -> AuthModel {
         AuthModel(configuration: .fallback, apiClient: api, tokenStore: token,
-                  identityStore: cache, storeFactory: { _ in store }, isOnline: { online })
+                  identityStore: cache, storeFactory: { _ in store }, isOnline: { online }, syncStatus: status)
     }
 
     private func fixtureIdentity() -> CurrentIdentity {
