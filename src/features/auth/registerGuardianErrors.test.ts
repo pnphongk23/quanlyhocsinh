@@ -24,6 +24,6 @@ describe("guardian registration errors", () => {
   it("explains an undeclared parent phone", () => {
     expect(registrationErrorMessage(
       new ApiError(403, { code: "forbidden", message: "x", request_id: "test", details: { reason: "phone_not_declared" } }),
-    )).toBe("Số điện thoại này chưa được giáo viên khai cho học sinh nào.");
+    )).toBe("Số điện thoại này chưa được khai trong hệ thống. Hãy liên hệ người quản lý lớp.");
   });
 });

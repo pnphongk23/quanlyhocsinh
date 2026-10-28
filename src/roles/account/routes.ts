@@ -31,6 +31,7 @@ export const accountRoutes: RouteObject[] = [
     },
     children: [
       { path: "/cai-dat", lazy: async () => ({ Component: (await import("../../features/settings/SettingsPage")).default }) },
+      { path: "/cai-dat/nhan-su", lazy: async () => ({ Component: (await import("../../features/staff/StaffPage")).default }) },
       { path: "/cai-dat/doi-mat-khau", lazy: async () => ({ Component: (await import("../../features/settings/ChangePasswordPage")).default }) },
     ],
   },

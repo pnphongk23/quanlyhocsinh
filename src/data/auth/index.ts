@@ -31,6 +31,11 @@ export async function registerParent(phone: string, password: string, displayNam
     const me = await api.request("GET /me", { authToken: result.token });
     await clearLogoutLock(result.user.id);
     await activateSession(result.token, result.user, me, result.active_membership_id, true);
+    // Số được khai làm nhân sự có thể trả nhiều vai trò (active_membership_id null): một vai thì vào thẳng, nhiều vai thì để màn chọn vai trò.
+    const activeMemberships = me.memberships.filter((membership) => membership.status === "active");
+    if (!getSession()?.activeMembershipId && activeMemberships.length === 1) {
+      try { await switchMembership(activeMemberships[0].id, me); } catch { /* Giữ phiên; màn chọn vai trò xử lý tiếp. */ }
+    }
 }
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   await api.request("POST /auth/change-password", { body: { current_password: currentPassword, new_password: newPassword } });

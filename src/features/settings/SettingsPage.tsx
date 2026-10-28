@@ -118,6 +118,7 @@ function useSettingsData() {
     memberships,
     current,
     multipleRoles: memberships.length > 1,
+    isAdminRole: current?.role.system_key === "admin",
     name,
     phone,
     roleLine,
@@ -130,7 +131,7 @@ function useSettingsData() {
 
 function SettingsMobile() {
   const navigate = useNavigate();
-  const { state, memberships, current, multipleRoles, name, phone, roleLine, guardian } =
+  const { state, memberships, current, multipleRoles, isAdminRole, name, phone, roleLine, guardian } =
     useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
@@ -209,6 +210,14 @@ function SettingsMobile() {
             <Icon name="chevron-right" />
           </span>
         </Link>
+        {isAdminRole && (
+          <Link to="/cai-dat/nhan-su" className={s.menuRow}>
+            Nhân sự
+            <span className={s.rowLock} aria-hidden="true">
+              <Icon name="chevron-right" />
+            </span>
+          </Link>
+        )}
         {multipleRoles && (
           <button
             type="button"
@@ -258,7 +267,7 @@ function SettingsMobile() {
 
 function SettingsDesktop() {
   const navigate = useNavigate();
-  const { state, memberships, current, multipleRoles, name, phone, roleLine, subtitleFor, guardian } =
+  const { state, memberships, current, multipleRoles, isAdminRole, name, phone, roleLine, subtitleFor, guardian } =
     useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
@@ -442,6 +451,20 @@ function SettingsDesktop() {
         </div>
 
         <div className={s.column}>
+          {isAdminRole && (
+            <section className={s.card} aria-label="Nhân sự">
+              <h2 className={s.cardHead}>Nhân sự</h2>
+              <p className={s.roleNote}>Thêm giáo viên, trợ giảng, giao lớp và chỉnh quyền theo vai trò.</p>
+              <div className={s.roleList}>
+                <Link to="/cai-dat/nhan-su" className={s.menuRow}>
+                  Quản lý nhân sự
+                  <span className={s.rowLock} aria-hidden="true">
+                    <Icon name="chevron-right" />
+                  </span>
+                </Link>
+              </div>
+            </section>
+          )}
           <section className={s.card} aria-label="Đổi mật khẩu và đăng xuất">
             <h2 className={s.cardHead}>Đổi mật khẩu</h2>
             <form className={s.formBody} onSubmit={savePassword} noValidate>
