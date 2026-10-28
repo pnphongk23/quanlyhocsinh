@@ -48,6 +48,13 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 }
+const DEFAULT_RETRY_SECONDS = 60;
+/** Câu báo chờ khi bị giới hạn tần suất: lấy thời gian máy chủ trả (mặc định 60 giây), từ 60 giây trở lên hiện theo phút. */
+export function rateLimitMessage(error: ApiError): string {
+  const seconds = error.retryAfter ?? DEFAULT_RETRY_SECONDS;
+  const wait = seconds >= 60 ? `${Math.ceil(seconds / 60)} phút` : `${Math.ceil(seconds)} giây`;
+  return `Bạn thử quá nhiều lần. Hãy chờ khoảng ${wait} rồi thử lại.`;
+}
 export function createApiClient(options: ApiClientOptions): ApiClient {
   const fetcher = options.fetch ?? fetch;
   return { request: async (endpoint, request = {}) => {
@@ -73,8 +80,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       const body = await response.json().catch(() => null) as unknown;
       if (!response.ok) {
         const err = body && typeof body === "object" && "error" in body ? (body as ApiErrorBody).error : { code: "unavailable", message: "Request failed", request_id: "" };
-        const retry = response.headers.get("Retry-After");
-        throw new ApiError(response.status, err, retry ? Number(retry) : undefined);
+        const retry = Number(response.headers.get("Retry-After") ?? (err.details as { retry_after?: unknown } | undefined)?.retry_after);
+        throw new ApiError(response.status, err, Number.isFinite(retry) && retry > 0 ? retry : undefined);
       }
       return body as ApiEndpoints[typeof endpoint]["response"];
     } finally { clearTimeout(timeout); }

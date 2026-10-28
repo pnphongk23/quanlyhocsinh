@@ -2,19 +2,18 @@ import { useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { lookupPasswordReset, requestPasswordReset } from "../../data/auth";
 import { rememberedEmailFor } from "../../data/auth/rememberedEmail";
-import { ApiError } from "../../data/api/client";
+import { ApiError, rateLimitMessage } from "../../data/api/client";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, Icon } from "../../shared/ui";
 import { EmailField, PhoneField, looksLikeEmail } from "./authUi";
 import s from "./auth.module.css";
 
-const RATE_LIMITED = "Bạn thử quá nhiều lần. Hãy chờ ít phút rồi thử lại.";
 const OFFLINE = "Không thể kết nối. Hãy kiểm tra mạng rồi thử lại.";
 
 /** Lỗi bước kiểm tra SĐT. */
 export function lookupFailureMessage(error: unknown): string {
   if (!(error instanceof ApiError)) return OFFLINE;
-  if (error.status === 429) return RATE_LIMITED;
+  if (error.status === 429) return rateLimitMessage(error);
   if (error.status === 422) return "Số điện thoại không hợp lệ.";
   return "Không thể hoàn thành yêu cầu.";
 }
@@ -29,7 +28,7 @@ export function requestFailure(error: unknown): { field: string; banner: string 
       : null;
   if (error.status === 422 && fieldCode === "email_mismatch") return { field: "Email không khớp email đã lưu.", banner: "" };
   if (error.status === 422 && fieldCode === "invalid_email") return { field: "Email chưa đúng định dạng.", banner: "" };
-  if (error.status === 429) return { field: "", banner: RATE_LIMITED };
+  if (error.status === 429) return { field: "", banner: rateLimitMessage(error) };
   if (error.status === 503) return { field: "", banner: "Chưa gửi được email lúc này. Hãy thử lại sau ít phút." };
   if (error.status === 404) return { field: "", banner: "Không có tài khoản dùng số điện thoại này." };
   if (error.status === 409) return { field: "", banner: "Tài khoản này chưa có email. Hãy liên hệ người vận hành để đặt lại mật khẩu." };

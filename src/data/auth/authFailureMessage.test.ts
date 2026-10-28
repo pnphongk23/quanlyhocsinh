@@ -16,3 +16,15 @@ describe("authFailureMessage", () => {
     );
   });
 });
+
+describe("429 dùng thời gian chờ của máy chủ", () => {
+  const limited = (retryAfter?: number) => new ApiError(429, { code: "rate_limited", message: "x", request_id: "r" }, retryAfter);
+  it("từ 60 giây hiện theo phút, làm tròn lên", () => {
+    expect(authFailureMessage(limited(3487))).toBe("Bạn thử quá nhiều lần. Hãy chờ khoảng 59 phút rồi thử lại.");
+    expect(authFailureMessage(limited(60))).toContain("1 phút");
+  });
+  it("dưới 60 giây hiện theo giây, thiếu giá trị thì mặc định 60 giây", () => {
+    expect(authFailureMessage(limited(20))).toContain("20 giây");
+    expect(authFailureMessage(limited())).toContain("1 phút");
+  });
+});

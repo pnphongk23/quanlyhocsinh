@@ -106,7 +106,7 @@ describe("email in settings", () => {
     click("Sửa email"); type("Email", "moi@example.com"); type("Mật khẩu hiện tại", "x");
     request.mockImplementation(async (endpoint: string) => { if (endpoint === "PUT /me/email") throw apiError(429, "rate_limited"); return defaults(endpoint); });
     click("Lưu email");
-    expect(await screen.findByText("Bạn thử quá nhiều lần. Hãy chờ ít phút rồi thử lại.", {}, slow)).toBeInTheDocument();
+    expect(await screen.findByText("Bạn thử quá nhiều lần. Hãy chờ khoảng 1 phút rồi thử lại.", {}, slow)).toBeInTheDocument();
   });
 
   it("saves a new email, updates the display and the remembered email", async () => {
@@ -223,7 +223,7 @@ describe("forgot password", () => {
       expect(screen.getByLabelText("Nhập email đã lưu")).toHaveValue("valid@example.com");
     });
 
-  it.each([[429, "rate_limited", "Bạn thử quá nhiều lần. Hãy chờ ít phút rồi thử lại."], [503, "mail_unavailable", "Chưa gửi được email lúc này. Hãy thử lại sau ít phút."]])("shows %i when sending the link", async (status, code, message) => {
+  it.each([[429, "rate_limited", "Bạn thử quá nhiều lần. Hãy chờ khoảng 1 phút rồi thử lại."], [503, "mail_unavailable", "Chưa gửi được email lúc này. Hãy thử lại sau ít phút."]])("shows %i when sending the link", async (status, code, message) => {
     lookup({ account: true, has_email: true, email_masked: "c***@example.com" }); page(); await next();
     await screen.findByLabelText("Nhập email đã lưu", {}, slow);
     request.mockImplementation(async (endpoint: string) => { if (endpoint === "POST /auth/password-reset/request") throw apiError(status, code); return defaults(endpoint); });
@@ -233,7 +233,7 @@ describe("forgot password", () => {
 
   it("shows 429 on the phone lookup", async () => {
     lookup(apiError(429, "rate_limited")); page(); await next();
-    expect(await screen.findByText("Bạn thử quá nhiều lần. Hãy chờ ít phút rồi thử lại.", {}, slow)).toBeInTheDocument();
+    expect(await screen.findByText("Bạn thử quá nhiều lần. Hãy chờ khoảng 1 phút rồi thử lại.", {}, slow)).toBeInTheDocument();
   });
 });
 
