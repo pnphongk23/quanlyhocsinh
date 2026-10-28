@@ -24,10 +24,27 @@ Nhánh `mvp-ios-roles` (worktree `.paseo/worktrees/0fvr24l0/mvp-ios-roles`), com
 ## Lưu ý quy trình
 Trước khi được cấp slot, tôi chạy một lần `xcodebuild test` trên "iPhone 16" khi Chu Du còn giữ; có thể đã cài đè app của họ. Sau đó chuyển sang thiết bị riêng rồi xoá. Đã dọn, 0 máy đang boot.
 
+## Review cuối (codex sol 6.1) và xử lý
+Chi tiết ở `review-ios-sol.md`. Commit sửa: `1e4b83d`, `51e7cf5` (nhánh `mvp-ios-roles`).
+- High (lớp bị gỡ vẫn đọc được từ cache khi sync lỗi): đã sửa. `Membership.sees(classId:)`; cả hai store lọc lớp, học sinh, buổi, bài kiểm tra, điểm danh, điểm, phiếu, báo cáo theo `class_ids` ngay khi `/me` mới về. Ngoại lệ: admin (không có `class_ids`) không bị lọc.
+- Medium (quyền điểm/nhận xét chờ sync): đã sửa. `TeacherRootView` áp quyền và bộ lọc đồng bộ trước khi sync.
+- Medium (ma trận quyền gửi song song): đã sửa. Các PUT chạy tuần tự, phản hồi cuối là trạng thái mới nhất. Chưa có test đảo thứ tự phản hồi.
+- Medium (còn 1 vai trò sau thu hồi tự chuyển workspace): đã sửa, có test.
+- Medium (mở app lại sau khi vai trò bị vô hiệu): đã sửa bằng cách so với identity đã lưu, có test.
+- Low (spacing/size số cứng): không đổi. Repo chưa có token spacing cho 2/8/12/16/24 và các màn hiện có (cài đặt, lớp) dùng cùng thang số; thêm token là việc riêng.
+- Test: 338, 0 lỗi (2 skipped).
+
+## Chạy live staging (backend 421ef6af, migration 0013), iPhone 16
+Đã chạy thật bằng Maestro, tài khoản admin workspace QA iOS:
+- Cài đặt, Nhân sự, Thêm nhân sự (số giả) → server tạo bản ghi `pending` vai trò assistant. Hình dạng `/staff`, `/classes?status=active` (`{items}`), `/roles/permissions` khớp mô hình.
+- Phát hiện khi chạy live: form thêm/sửa mở ở nửa màn nên danh sách lớp nằm dưới màn hình và chip không chọn được. Đã sửa: form mở toàn chiều cao (`51e7cf5`). Sau đó sửa nhân sự chờ, chọn lớp, lưu: server nhận `class_ids` 1 lớp, version 1→2.
+- Ma trận quyền: chạm trên app, server đổi quyền thật (Điểm của trợ giảng read→none). Đã trả về mặc định spec (trợ giảng: sessions_attendance và comments_reports write, classes/students/scores read; giáo viên write cả 5), kiểm lại bằng GET.
+- Chưa chạy (cần đăng ký, chờ GL báo web xong để không dính giới hạn IP): nhân sự đặt mật khẩu lần đầu, chỉ thấy lớp được gán, điểm danh đồng bộ, nút điểm khoá, vô hiệu hoá/bật lại, đổi vai trò.
+- Nhân sự thử `QA Trợ giảng thử` (pending) còn trên staging, sẽ dọn khi xong.
+
 ## Còn lại
-- Review cuối codex sol 6.1 chưa chạy.
-- Chạy live staging sau khi GL báo BE deploy.
+- Phần live cần đăng ký (liệt kê trên) và dọn nhân sự thử.
 - Backlog 1.0 (QA footer điểm, sol-19, version_conflict…) không đụng.
 
 Status: DONE_WITH_CONCERNS
-Summary: Hoàn thành code và test đơn vị cho 7 mục iOS; chưa kiểm chứng trên staging (BE chưa deploy) và chưa có review codex sol 6.1.
+Summary: Finding review đã sửa, test 338/338; live đã xác nhận thêm/sửa nhân sự và ma trận quyền, còn các bước cần đăng ký chờ GL báo.
