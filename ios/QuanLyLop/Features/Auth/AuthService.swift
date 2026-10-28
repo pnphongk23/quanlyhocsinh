@@ -170,12 +170,15 @@ final class AuthModel {
     let deleteAccountFormURL: URL?
     private let storeFactory: (CacheScope) throws -> SQLiteStore
     private let isOnline: @MainActor () -> Bool
+    private let syncStatus: SyncStatusCenter
 
     init(configuration: AppConfiguration, apiClient: (any APIClient)? = nil,
          tokenStore injectedTokenStore: (any TokenStore)? = nil,
          identityStore injectedIdentityStore: (any CachedIdentityStore)? = nil,
          storeFactory: ((CacheScope) throws -> SQLiteStore)? = nil,
-         isOnline: @escaping @MainActor () -> Bool = { ConnectivityMonitor.shared.isOnline }) {
+         isOnline: @escaping @MainActor () -> Bool = { ConnectivityMonitor.shared.isOnline },
+         syncStatus: SyncStatusCenter = .shared) {
+        self.syncStatus = syncStatus
         let service = configuration.tokenStoreService
         deleteAccountFormURL = configuration.deleteAccountFormURL
         let store = injectedTokenStore ?? KeychainTokenStore(service: service)
@@ -578,6 +581,8 @@ final class AuthModel {
             screen = .login
         }
         activeStore = nil; activeSync = nil
+        // The save error belongs to the session that was just cut off; queued commands stay in the outbox and the next sync reports again.
+        syncStatus.reset()
         message = Self.userMessage(error)
     }
 
@@ -586,6 +591,7 @@ final class AuthModel {
         try? await tokenStore.clear()
         session = nil; identity = nil
         activeStore = nil; activeSync = nil
+        syncStatus.reset()
     }
 
     nonisolated static func statusCode(_ error: Error) -> Int? {
