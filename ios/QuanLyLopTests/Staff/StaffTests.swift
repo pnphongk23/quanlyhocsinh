@@ -212,6 +212,44 @@ final class RevokedRoleTests: XCTestCase {
         XCTAssertNil(model.activeMembership)
     }
 
+    func testDisabledActiveRoleWithOneRoleLeftStillAsksBeforeSwitching() async throws {
+        let first = membership("a", workspace: "w1"), second = membership("b", workspace: "w2")
+        let api = MutableIdentityAPI(identity(active: "a", [first, second]))
+        let model = try model(api)
+        await model.restoreSession()
+
+        await api.set(identity(active: nil, [second]))
+        await model.synchronizeWhileActive()
+
+        XCTAssertEqual(model.screen, .chooseRole)
+        XCTAssertEqual(model.message, AuthCopy.roleRevoked)
+        XCTAssertNil(model.activeMembership)
+    }
+
+    func testRoleDisabledWhileAppWasClosedReturnsToSignIn() async throws {
+        let only = membership("a", workspace: "w1")
+        let cache = StaffIdentityBox()
+        await cache.save(identity(active: "a", [only]))
+        let api = MutableIdentityAPI(identity(active: nil, []))
+        let model = AuthModel(configuration: .fallback, apiClient: api, tokenStore: InMemoryTokenStore(token: "fixture-session"),
+                              identityStore: cache,
+                              storeFactory: { scope in try SQLiteStore(path: ":memory:", scope: scope) },
+                              isOnline: { true })
+
+        await model.restoreSession()
+
+        XCTAssertEqual(model.screen, .login)
+        XCTAssertEqual(model.message, AuthCopy.roleRevoked)
+    }
+
+    func testMembershipHidesClassesTakenOffTheStaffMember() {
+        var assigned = membership("a", workspace: "w1")
+        assigned.classIds = ["c1"]
+        XCTAssertTrue(assigned.sees(classId: "c1"))
+        XCTAssertFalse(assigned.sees(classId: "c2"))
+        XCTAssertTrue(membership("b", workspace: "w1").sees(classId: "c2"))
+    }
+
     func testDisabledOnlyRoleReturnsToSignIn() async throws {
         let only = membership("a", workspace: "w1")
         let api = MutableIdentityAPI(identity(active: "a", [only]))

@@ -193,8 +193,10 @@ final class AuthModel {
             return
         }
         do {
+            // Read before `/me` so a role disabled while the app was closed is still recognised as revoked.
+            let cachedActiveId = try? await identityStore.load()?.activeMembershipId
             let current = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
-            await installIdentity(current)
+            await installIdentity(current, previousActiveId: cachedActiveId)
         } catch {
             if Self.statusCode(error) == 401 {
                 await clearIdentityAndToken()
@@ -503,8 +505,8 @@ final class AuthModel {
         }
     }
 
-    private func installIdentity(_ current: CurrentIdentity, persist: Bool = true) async {
-        let previousActiveId = session?.activeMembershipId ?? identity?.activeMembershipId
+    private func installIdentity(_ current: CurrentIdentity, persist: Bool = true, previousActiveId restored: String? = nil) async {
+        let previousActiveId = session?.activeMembershipId ?? identity?.activeMembershipId ?? restored
         let wasRevoked = previousActiveId.map { id in !current.memberships.contains { $0.id == id } } ?? false
         identity = current
         // A fresh `/me` replaces the sign-in snapshot, so role, permission and class changes show without signing in again.
@@ -533,7 +535,7 @@ final class AuthModel {
                 message = Self.userMessage(error)
                 screen = .login
             }
-        } else if current.activeMembershipId == nil, await selectSoleMembership(current.memberships) {
+        } else if current.activeMembershipId == nil, !wasRevoked, await selectSoleMembership(current.memberships) {
             return
         } else {
             activeStore = nil; activeSync = nil

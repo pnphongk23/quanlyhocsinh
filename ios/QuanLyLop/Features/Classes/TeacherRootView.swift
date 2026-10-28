@@ -67,8 +67,13 @@ struct TeacherRootView: View {
             await i4Data.configure(auth: auth)
         }
         // A role, permission or class change found by the next `/me` rereads what this role may do.
-        .onChange(of: auth.activeMembership) { _, _ in
+        .onChange(of: auth.activeMembership) { _, membership in
+            // Flags and the class filter change first; the sync that follows can be slow or fail.
+            if let membership { data.applyPermissions(membership) }
+            _ = i4Data.bind(auth: auth)
             Task {
+                await data.reload()
+                await i4Data.refresh()
                 await data.configure(auth: auth)
                 await i4Data.configure(auth: auth)
             }

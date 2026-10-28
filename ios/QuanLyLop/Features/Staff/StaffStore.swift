@@ -15,6 +15,7 @@ final class StaffStore {
 
     private let api: any APIClient
     private(set) var isDemo = false
+    private var permissionTail: Task<Void, Never>?
     /// Called after a change that may alter the signed-in admin's own role or status, so the app rereads `/me`.
     private let didChangeSelf: @MainActor () async -> Void
 
@@ -85,8 +86,16 @@ final class StaffStore {
         var change = StaffPermissionSet()
         change[group] = level
         let body = UpdatePermissionsRequest(permissions: change)
-        let updated = try await api.send(try .json(method: .put, path: "roles/\(key.rawValue)/permissions", body: body),
-                                         as: StaffRolePermissions.self)
+        let path = "roles/\(key.rawValue)/permissions"
+        let request = try APIEndpoint.json(method: .put, path: path, body: body)
+        // Taps run one after another, so the last response is always the newest server state.
+        let previous = permissionTail
+        let call = Task { @MainActor in
+            _ = await previous?.value
+            return try await api.send(request, as: StaffRolePermissions.self)
+        }
+        permissionTail = Task { _ = try? await call.value }
+        let updated = try await call.value
         if let index = roles.firstIndex(where: { $0.roleKey == key }) { roles[index] = updated } else { roles.append(updated) }
     }
 

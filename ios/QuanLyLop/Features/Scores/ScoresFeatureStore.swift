@@ -40,6 +40,7 @@ final class I4FeatureStore: ObservableObject {
     private(set) var sendingSessionIDs: Set<String> = []
 
     private(set) var store: SQLiteStore?
+    private var visibleMembership: Membership?
     private(set) var api: (any APIClient)?
     private var deviceID: String { DeviceIdentity.current() }
 
@@ -75,7 +76,8 @@ final class I4FeatureStore: ObservableObject {
         await refresh()
     }
 
-    private func bind(auth: AuthModel) -> (SQLiteStore, URLSessionAPIClient)? {
+    /// Rebinds store, API and write flags without any network call, so a removed right applies at once.
+    func bind(auth: AuthModel) -> (SQLiteStore, URLSessionAPIClient)? {
         guard let activeStore = auth.activeStoreForLogout as? SQLiteStore,
               let membership = auth.activeMembership,
               case .success(let configuration) = AppConfiguration.load() else { return nil }
@@ -83,6 +85,7 @@ final class I4FeatureStore: ObservableObject {
                                              tokenStore: KeychainTokenStore(service: configuration.tokenStoreService))
         store = activeStore
         api = activeAPI
+        visibleMembership = membership
         canReadScores = allows(membership, group: "scores", write: false)
         canWriteScores = allows(membership, group: "scores", write: true)
         canReadCommentsReports = allows(membership, group: "comments_reports", write: false)
@@ -93,18 +96,23 @@ final class I4FeatureStore: ObservableObject {
     func refresh() async {
         guard let store else { return }
         do {
-            classes = try await store.records(Classroom.self, entity: "class")
-            students = try await store.records(Student.self, entity: "student")
-            sessions = try await store.classSessions()
-            attendance = try await store.records(Attendance.self, entity: "attendance")
-            tests = try await store.records(TestDefinition.self, entity: "test")
-            scores = try await store.records(Score.self, entity: "score")
-            slips = try await store.records(SessionSlip.self, entity: "slip")
-            sections = try await store.records(HomeworkSection.self, entity: "homework_section")
-            grades = try await store.records(HomeworkGrade.self, entity: "homework_grade")
-            publications = try await store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication").values
-            reports = try await store.records(StudentReport.self, entity: "report")
-            batches = try await store.records(ReportBatch.self, entity: "report_batch")
+            let restricted = visibleMembership?.classIds != nil
+            let seen: (String) -> Bool = { [visibleMembership] in visibleMembership?.sees(classId: $0) ?? true }
+            classes = try await store.records(Classroom.self, entity: "class").filter { seen($0.id) }
+            students = try await store.records(Student.self, entity: "student").filter { seen($0.classId) }
+            sessions = try await store.classSessions().filter { seen($0.classId) }
+            let sessionIds = Set(sessions.map(\.id))
+            let studentIds = Set(students.map(\.id))
+            attendance = try await store.records(Attendance.self, entity: "attendance").filter { !restricted || sessionIds.contains($0.sessionId) }
+            tests = try await store.records(TestDefinition.self, entity: "test").filter { seen($0.classId) }
+            let testIds = Set(tests.map(\.id))
+            scores = try await store.records(Score.self, entity: "score").filter { !restricted || testIds.contains($0.testId) }
+            slips = try await store.records(SessionSlip.self, entity: "slip").filter { !restricted || sessionIds.contains($0.sessionId) }
+            sections = try await store.records(HomeworkSection.self, entity: "homework_section").filter { seen($0.classId) }
+            grades = try await store.records(HomeworkGrade.self, entity: "homework_grade").filter { !restricted || studentIds.contains($0.studentId) }
+            publications = try await store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication").values.filter { seen($0.classId) }
+            reports = try await store.records(StudentReport.self, entity: "report").filter { seen($0.classId) }
+            batches = try await store.records(ReportBatch.self, entity: "report_batch").filter { seen($0.classId) }
             isReady = true
         } catch {
             errorMessage = String(localized: "feature.scores.khong.tai.uoc.du.lieu.a.luu")
