@@ -24,7 +24,6 @@ Nhánh `mvp-web-roles` (worktree `mvp-web-roles`), commit `97615c3` + sửa sau 
 ## Hạn chế
 
 - Hàng Admin không đổi vai trò (hạ Admin) trên UI dù hợp đồng cho phép; chưa có trong phạm vi nên bỏ.
-- 403 `membership_required` từ trang Nhân sự hiện chỉ báo lỗi; thu hồi đầy đủ chạy qua sync/`/me` như cũ.
 
 ## Review cuối (codex gpt-6.1-sol, chỉ đọc)
 
@@ -37,5 +36,5 @@ Route guard Admin, ẩn/khoá theo quyền, `active_membership_id` null và tự
 - Test thêm 3 ca (403, đổi membership, khoá ma trận). tsc sạch, 729 pass.
 
 Status: DONE_WITH_CONCERNS
-Summary: Màn Nhân sự, ma trận quyền, đặt mật khẩu lần đầu trung tính và xử lý chọn vai trò xong, tsc + 726 test pass, ảnh Chromium với API giả. Chưa thử với backend thật.
+Summary: Màn Nhân sự, ma trận quyền, đặt mật khẩu lần đầu trung tính và xử lý chọn vai trò xong, tsc + 729 test pass, ảnh Chromium với API giả. Chưa thử với backend thật.
 Concerns/Blockers: Cần backend 1.1 deployed để chạy thật; chưa có đổi vai trò cho hàng Admin.
