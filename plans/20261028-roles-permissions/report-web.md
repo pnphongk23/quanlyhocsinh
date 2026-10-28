@@ -45,6 +45,17 @@ Dọn dẹp chưa xong hoàn toàn:
 - Bản ghi điểm danh `present` của 1 học sinh ở 1 buổi lớp smoke (do kiểm sync) vẫn còn.
 - Workspace thử B và vài tài khoản giả tồn tại trên staging.
 
+### Tái hiện register 500
+
+Không tái hiện được; đây là toàn bộ bằng chứng còn lại (chỉ từ lệnh đã chạy, không gọi lại staging).
+
+- Thời điểm: khoảng 12:06 (+07) ngày 28/10/2026 (~05:06Z), ngay sau khi hết rate limit 429 (retry-after 3487s nhận lúc ~11:06).
+- Request: `POST https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1/auth/register`, một lệnh curl, header `content-type: application/json`, không có `Authorization`.
+- Body đã gửi: `{"phone":"abc","password":"[redacted]","display_name":"x","workspace_name":"x"}` (cả bốn field là chuỗi, không có `email`; mật khẩu là chuỗi 1 ký tự). Không có SĐT thật.
+- Status: `500`. Lệnh chạy với `-o /dev/null -w "%{http_code}"` nên **không lưu body response và không có `request_id`** của lần này.
+- Lần cuối trước đó cùng endpoint (~11:06, body hợp lệ cùng cấu trúc) trả `429` `rate_limited` với `request_id` riêng; request hợp lệ sau đó (`phone` giả đúng định dạng) trả 201.
+- Có thể lần 500 trùng thời điểm hạn mức vừa hết; chưa loại trừ được. Cần gọi lại đúng body trên (có `-i`) để lấy `request_id` nếu BE muốn điều tra.
+
 ## Hạn chế
 
 - Hàng Admin không đổi vai trò (hạ Admin) trên UI dù hợp đồng cho phép; chưa có trong phạm vi nên bỏ.
