@@ -161,8 +161,16 @@
 }
 /* iOS Safari: ô giờ/ngày có độ rộng riêng và căn giữa; ép theo khung và căn trái như ô chữ. */
 .input::-webkit-date-and-time-value {
-  min-height: 1.5em;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
   text-align: left;
+}
+.input[type="time"],
+.input[type="date"] {
+  display: flex;
+  align-items: center;
+  line-height: var(--leading-base);
 }
 .input::placeholder {
   color: var(--color-placeholder);
