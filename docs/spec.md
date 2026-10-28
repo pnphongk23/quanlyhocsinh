@@ -92,7 +92,7 @@ Giáo viên, Trợ giảng, Phụ huynh là role mặc định; Admin tạo thê
 - Người tạo luôn thấy bài giảng của mình (nội dung và tệp), không cần gắn buổi nào (đã chốt 2026-10-18), miễn là vai trò của họ còn nhóm Bài giảng ở mức Đọc trở lên. Người khác xem được bài giảng khi role có nhóm Bài giảng và có quyền xem một buổi đang dùng bài giảng đó; Admin thấy tất cả. Phụ huynh chỉ thấy bài giảng gắn với buổi của lớp con đang học.
 - Offline: tạo bài giảng mới và gắn vào buổi khi mất mạng được; sửa bài giảng đã có, tải tệp lên và xem tệp cần mạng (tránh xung đột khi nhiều người sửa chung một bài).
 
-**Phân quyền và role** (đề xuất, chờ duyệt)
+**Phân quyền và role** (phần nhân sự, ma trận 2 role mặc định và đổi vai trò đã chốt 2026-10-28 cho bản 1.1, phạm vi ở mục 8 "Bản 1.1"; role tuỳ chỉnh và chỉnh role phụ huynh vẫn chờ duyệt)
 - Quyền theo nhóm tính năng, mỗi nhóm ba mức: Không, Đọc, Sửa. Sáu nhóm tuỳ chỉnh được: Lớp, Học sinh, Buổi học và điểm danh, Điểm, Bài giảng, Nhận xét và báo cáo. "Sửa" gồm tạo, sửa, lưu trữ; không xoá cứng dữ liệu. Tạo, sửa, lưu trữ lớp và sửa lịch lặp thuộc nhóm Lớp; lớp mới tự gán cho người tạo.
 - Quản trị luôn chỉ Admin làm, cố định ở máy chủ, không có trong ma trận của role khác: thêm nhân sự (làm sau, không có luồng mời), tạo và sửa role, gán lớp cho nhân sự, đổi role, vô hiệu hoá tài khoản.
 - Admin tạo role, đặt tên, chọn loại role (nhân sự hoặc phụ huynh) rồi tick quyền từng nhóm. Loại role quyết định phạm vi dữ liệu và không đổi sau khi tạo. Role mặc định: Admin (cố định, không sửa), Giáo viên, Trợ giảng, Phụ huynh (ba role sau sửa được). Luôn còn ít nhất một Admin đang hoạt động.
@@ -239,6 +239,14 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Bản gửi App Store dùng luôn máy chủ staging làm máy chủ chính (đã chốt 2026-10-28); bundle id iOS `com.study.teacherthu`.
 - Mascot Mít là lớp trang trí bổ sung cho đăng nhập, màn trống, thành công và lỗi; không đổi luồng hay nghiệp vụ. Chi tiết: `plans/20261021-mvp/design/mascot-v2/` (đã chốt 2026-10-22). Mỗi mức sao 0–5 của phiếu nhận xét có một dáng Mít riêng (thêm dáng 0, 4, 5 sao; đã chốt 2026-10-25).
 
+**Bản 1.1** (đã chốt 2026-10-28, làm sau khi nộp App Store 1.0; chi tiết `plans/20261028-roles-permissions/scope.md`)
+- Nhân sự và vai trò, trên cả web và iOS, chỉ Admin quản lý: danh sách nhân sự; thêm nhân sự bằng SĐT với role Giáo viên hoặc Trợ giảng và gán lớp (không luồng mời, không SMS); đổi role, gán/gỡ lớp, vô hiệu hoá/bật lại, có hiệu lực ngay, không xoá dữ liệu người đó đã tạo, luôn còn ít nhất một Admin đang hoạt động.
+- Nhân sự đăng nhập lần đầu như phụ huynh: số đã được Admin khai mà chưa có tài khoản thì nhập SĐT xong vào màn tự đặt mật khẩu; số đã có tài khoản dùng mật khẩu cũ và có thêm vai trò. Một SĐT được thuộc nhiều workspace; sau đăng nhập chọn workspace và vai trò, đổi trong Cài đặt, mỗi lúc một vai trò.
+- Ma trận quyền chỉnh được cho role Giáo viên và Trợ giảng: 5 nhóm Lớp, Học sinh, Buổi học và điểm danh, Điểm, Nhận xét và báo cáo × Không/Đọc/Sửa (nhóm Bài giảng ẩn). Mặc định Giáo viên: Sửa cả 5 nhóm. Mặc định Trợ giảng: Buổi học và điểm danh Sửa; Nhận xét và báo cáo Sửa (gồm gửi phiếu, phát hành báo cáo); Lớp, Học sinh, Điểm Đọc. Admin cố định; role Phụ huynh không có màn chỉnh.
+- Giao diện ẩn hoặc khoá nút theo quyền của vai trò đang dùng; nhân sự chỉ thấy lớp được gán. Chỉ Admin thấy SĐT đầy đủ của nhân sự. Người bị vô hiệu hoá mất vai trò đó từ lần gọi API kế tiếp.
+- Không làm ở 1.1: role tuỳ chỉnh, phân công giáo viên chính/trợ giảng theo lớp, dạy thay, lịch dạy, lương, học phí, luồng mời.
+- Máy chủ staging đang phục vụ bản App Store 1.0: thay đổi API và migration phải tương thích ngược.
+
 **Làm sau**
 - Dời buổi, học bù (buổi lẻ đã làm ở bản đầu; dời một buổi sang ngày khác chưa làm); thêm học sinh từ lớp khác, chuyển lớp, hồ sơ học sinh chi tiết.
 - Nhận xét tổng hợp theo kỳ (có thể gợi ý bằng AI).
@@ -247,7 +255,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Màn lịch sử điểm danh và lịch sử sửa điểm.
 - Tải báo cáo dạng ảnh (bản đầu chỉ tải PDF, đã chốt 2026-10-25).
 - Bài giảng (thư viện, nhiều phần, tệp trên R2, gắn vào buổi học).
-- Màn quản lý nhân sự và role: thêm giáo viên, trợ giảng, tạo role tuỳ chỉnh, ma trận quyền, gán lớp. Không thiết kế hay triển khai luồng mời.
+- Role tuỳ chỉnh, chỉnh quyền role phụ huynh (nhân sự, ma trận 2 role mặc định và gán lớp đã chuyển lên Bản 1.1). Không thiết kế hay triển khai luồng mời.
 
 **Chưa nên làm**
 Học phí, chat với giáo viên, xin nghỉ trong app, nhập danh sách từ Excel, hiển thị lịch sử sửa điểm cho phụ huynh.
