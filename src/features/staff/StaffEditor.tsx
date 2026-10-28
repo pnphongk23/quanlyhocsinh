@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { StaffMember, StaffRoleKey } from "../../data/api/types";
-import { cancelPendingStaff, createStaff, staffErrorMessage, updateStaff } from "../../data/repositories/staff";
+import { cancelPendingStaff, createStaff, isRevokedError, staffErrorMessage, updateStaff } from "../../data/repositories/staff";
 import { normalizePhone } from "../../data/auth/phone";
 import { Button, Input, Modal, Segmented } from "../../shared/ui";
 import { ASSIGNABLE_ROLES, isAssignableRole, sameClassSet } from "./staffModel";
@@ -12,10 +12,14 @@ export interface StaffEditorProps {
   classes: { id: string; name: string }[];
   onClose: () => void;
   onChanged: () => void;
+  /** Ngoại tuyến thì không ghi được. */
+  online: boolean;
+  /** Máy chủ trả 403: quyền đã bị thu hồi. */
+  onForbidden: () => void;
   sheet?: boolean;
 }
 
-export function StaffEditor({ target, classes, onClose, onChanged, sheet }: StaffEditorProps) {
+export function StaffEditor({ target, classes, onClose, onChanged, online, onForbidden, sheet }: StaffEditorProps) {
   const member = target && target !== "new" ? target : null;
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
@@ -44,7 +48,7 @@ export function StaffEditor({ target, classes, onClose, onChanged, sheet }: Staf
   const toggleClass = (id: string) => setClassIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
   async function run(action: () => Promise<unknown>) {
-    if (busy) return;
+    if (busy || !online) return;
     setBusy(true);
     setError("");
     try {
@@ -52,6 +56,10 @@ export function StaffEditor({ target, classes, onClose, onChanged, sheet }: Staf
       onChanged();
       onClose();
     } catch (e) {
+      if (isRevokedError(e)) {
+        onForbidden();
+        return;
+      }
       setError(staffErrorMessage(e));
     } finally {
       setBusy(false);
@@ -71,9 +79,9 @@ export function StaffEditor({ target, classes, onClose, onChanged, sheet }: Staf
       await updateStaff(member.id, body);
     });
 
-  const canSave = member
+  const canSave = online && (member
     ? !isAdminRow && (role !== member.role.system_key || !sameClassSet(classIds, member.class_ids) || (pending && name.trim() !== member.display_name && name.trim() !== ""))
-    : Boolean(normalized) && name.trim() !== "";
+    : Boolean(normalized) && name.trim() !== "");
   const title = member ? member.display_name : "Thêm nhân sự";
 
   return (
@@ -87,14 +95,14 @@ export function StaffEditor({ target, classes, onClose, onChanged, sheet }: Staf
           {member && !member.is_self && member.status !== "pending" && (
             <Button
               variant={member.status === "disabled" ? "secondary" : "danger"}
-              disabled={busy}
+              disabled={busy || !online}
               onClick={() => void run(() => updateStaff(member.id, { status: member.status === "disabled" ? "active" : "disabled", base_version: member.version }))}
             >
               {member.status === "disabled" ? "Bật lại" : "Tắt quyền"}
             </Button>
           )}
           {pending && member && (
-            <Button variant="danger" disabled={busy} onClick={() => void run(() => cancelPendingStaff(member.id))}>
+            <Button variant="danger" disabled={busy || !online} onClick={() => void run(() => cancelPendingStaff(member.id))}>
               Huỷ khai báo
             </Button>
           )}

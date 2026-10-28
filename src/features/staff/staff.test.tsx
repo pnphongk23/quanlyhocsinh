@@ -181,6 +181,51 @@ describe("Nhân sự (Admin)", () => {
   });
 });
 
+describe("Nhân sự: thu hồi quyền và trạng thái", () => {
+  it("drops the list and editor when a write returns 403", async () => {
+    await startAs([adminMembership], "m-admin");
+    request.mockImplementation(async (endpoint: string) => {
+      if (endpoint === "GET /staff") return { items: members };
+      if (endpoint === "GET /roles/permissions") return { items: perms() };
+      if (endpoint === "GET /me") return me([adminMembership], "m-admin");
+      throw apiError(403, "forbidden", { reason: "admin_required" });
+    });
+    renderPage();
+    fireEvent.click((await screen.findByText("Cô Hoa")).closest("button")!);
+    fireEvent.click(screen.getByRole("button", { name: "Tắt quyền" }));
+    await waitFor(() => expect(screen.queryByText("Cô Hoa")).toBeNull());
+    expect(screen.queryByText("+84900000002")).toBeNull();
+    expect(screen.getByRole("alert").textContent).toMatch(/Chỉ Admin/);
+  });
+
+  it("reloads when the active membership changes", async () => {
+    await startAs([adminMembership, { ...adminMembership, id: "m-admin-b" }], "m-admin");
+    renderPage();
+    await screen.findByText("Cô Hoa");
+    expect(calls("GET /staff")).toHaveLength(1);
+    const { updateMe } = await import("../../data/auth/session");
+    await updateMe(me([adminMembership, { ...adminMembership, id: "m-admin-b" }], "m-admin-b"));
+    await waitFor(() => expect(calls("GET /staff")).toHaveLength(2));
+  });
+
+  it("locks the matrix cells while a save is in flight", async () => {
+    await startAs([adminMembership], "m-admin");
+    let release: () => void = () => undefined;
+    request.mockImplementation(async (endpoint: string) => {
+      if (endpoint === "GET /staff") return { items: members };
+      if (endpoint === "GET /roles/permissions") return { items: perms() };
+      await new Promise<void>((r) => { release = r; });
+      return { ...perms()[1], permissions: { ...perms()[1].permissions, scores: "write" } };
+    });
+    renderPage();
+    const asst = await screen.findByRole("region", { name: "Quyền Trợ giảng" });
+    fireEvent.click(within(within(asst).getByRole("tablist", { name: "Trợ giảng: Điểm" })).getByRole("tab", { name: "Sửa" }));
+    fireEvent.click(within(asst).getByRole("button", { name: "Lưu quyền" }));
+    await waitFor(() => expect(within(asst).getByRole("tablist", { name: "Trợ giảng: Học sinh" }).querySelector("[aria-disabled=true]")).toBeTruthy());
+    release();
+  });
+});
+
 describe("Đặt mật khẩu lần đầu của nhân sự", () => {
   const registerResponse = (memberships: MeResponse["memberships"], active: string | null) => ({ token: "tok", expires_at: "2099-01-01T00:00:00Z", user, memberships, active_membership_id: active });
 

@@ -20,6 +20,9 @@ const FIELD_MESSAGES: Record<string, string> = {
   invalid_for_pending: "Việc này chưa dùng được khi người đó chưa đặt mật khẩu.",
 };
 
+/** 403 từ API nhân sự: quyền Admin (hoặc membership) đã bị thu hồi phía máy chủ. */
+export const isRevokedError = (error: unknown): boolean => error instanceof ApiError && error.status === 403;
+
 /** Câu báo lỗi cho người dùng; không kèm SĐT hay nội dung nhận xét. */
 export function staffErrorMessage(error: unknown): string {
   if (!(error instanceof ApiError)) return "Không thể kết nối. Hãy kiểm tra mạng rồi thử lại.";

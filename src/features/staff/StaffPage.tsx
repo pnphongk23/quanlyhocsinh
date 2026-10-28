@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import type { RolePermissionsItem, StaffMember } from "../../data/api/types";
-import { getSession } from "../../data/auth/session";
+import { checkSessionInBackground, getSession } from "../../data/auth/session";
 import { useAccess } from "../../data/repositories/access";
-import { listRolePermissions, listStaff, staffErrorMessage } from "../../data/repositories/staff";
+import { isRevokedError, listRolePermissions, listStaff, staffErrorMessage } from "../../data/repositories/staff";
 import { useStore } from "../../data/store";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useOnline } from "../../shared/hooks/useOnline";
@@ -25,20 +25,42 @@ export default function StaffPage() {
   const classes = store.classes.map((c) => ({ id: c.id, name: c.name }));
   const classNames = new Map(classes.map((c) => [c.id, c.name]));
 
+  const membershipId = access.member?.id ?? null;
+  const latest = useRef(membershipId);
+  latest.current = membershipId;
+
+  /** Máy chủ báo mất quyền: bỏ dữ liệu nhạy cảm, đóng editor, làm mới phiên để về màn đúng. */
+  const dropAccess = useCallback(() => {
+    setStaff(null);
+    setRoles([]);
+    setTarget(null);
+    setError("Chỉ Admin mới quản lý được nhân sự.");
+    void checkSessionInBackground();
+  }, []);
+
   const load = useCallback(async () => {
+    const forMembership = latest.current;
     setError("");
     try {
       const [members, perms] = await Promise.all([listStaff(), listRolePermissions()]);
+      if (latest.current !== forMembership) return;
       setStaff(members);
       setRoles(perms);
     } catch (e) {
-      setError(staffErrorMessage(e));
+      if (latest.current !== forMembership) return;
+      if (isRevokedError(e)) dropAccess();
+      else setError(staffErrorMessage(e));
     }
-  }, []);
+  }, [dropAccess]);
 
+  // Dữ liệu thuộc đúng một membership: đổi vai trò/workspace thì bỏ cái cũ rồi tải lại.
   useEffect(() => {
+    setStaff(null);
+    setRoles([]);
+    setTarget(null);
+    setError("");
     if (access.isAdmin) void load();
-  }, [access.isAdmin, load]);
+  }, [membershipId, access.isAdmin, load]);
 
   if (!getSession()) return <Navigate to="/dang-nhap" replace />;
   if (!access.isAdmin) return <NoAccess what="mục nhân sự" />;
@@ -90,11 +112,11 @@ export default function StaffPage() {
           <section className={s.card} aria-label="Phân quyền">
             <h2 className={s.cardHead}>Quyền theo vai trò</h2>
             <p className={s.hint}>Admin luôn có toàn quyền. Quyền mới có hiệu lực ngay với mọi người cùng vai trò.</p>
-            <PermissionMatrix items={roles} online={online} onSaved={replaceRole} />
+            <PermissionMatrix items={roles} online={online} onSaved={replaceRole} onForbidden={dropAccess} />
           </section>
         </div>
       )}
-      <StaffEditor target={target} classes={classes} sheet={!desktop} onClose={() => setTarget(null)} onChanged={() => void load()} />
+      <StaffEditor target={target} classes={classes} online={online} sheet={!desktop} onForbidden={dropAccess} onClose={() => setTarget(null)} onChanged={() => void load()} />
     </main>
   );
 }
