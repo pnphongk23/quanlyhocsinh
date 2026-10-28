@@ -589,7 +589,7 @@ Không đổi hình dạng: `memberships` là mọi vai trò đang hoạt độn
 ### Hiệu lực thu hồi
 | Tình huống | Kết quả |
 |---|---|
-| Membership đang dùng bị `disabled` | Request REST miền kế tiếp: `403 forbidden` `details.reason = "membership_required"`; `/me`, `/session/membership`, `/auth/*` vẫn dùng được để chọn vai trò khác. Lệnh `sync/push` của membership đó: bị từ chối như `403`, client giữ lệnh chờ và báo lỗi (spec mục 4). |
+| Membership đang dùng bị `disabled` | Request REST miền kế tiếp: `403 account_disabled` (giữ nguyên hành vi của app 1.0; client 1.1 phải xử lý cả `403 account_disabled` lẫn `403 forbidden` + `details.reason = "membership_required"`). `/me`, `/session/membership`, `/auth/*` vẫn dùng được để chọn vai trò khác. `sync/push` và `sync/pull` của membership đó: `404 not_found` (hành vi cũ, app 1.0 dựa vào); client giữ lệnh chờ và báo lỗi (spec mục 4). |
 | Role đổi hoặc quyền role đổi | Request kế tiếp dùng quyền mới; thiếu quyền ⇒ `403 forbidden` (đã thấy tài nguyên) hoặc `404` (ngoài phạm vi lớp). Đồng bộ trả `409 resync_required`. |
 | Gỡ lớp khỏi nhân sự | Lớp biến mất khỏi phạm vi; `404` cho tài nguyên của lớp đó; đồng bộ `resync_required`. |
 | Lớp do nhân sự tạo | Tự gán cho người tạo (đã có ở `POST /classes` và lệnh tạo lớp). |
