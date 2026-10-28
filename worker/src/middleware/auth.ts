@@ -79,13 +79,11 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
       }
       session = sessionResult.session;
       identity = sessionIdentity(session);
-      } else if (result.reason === 'account_disabled') {
-        throw accountDisabled();
-      } else if (result.reason === 'membership_required') {
-        throw forbidden({ reason: 'membership_required' });
-      } else {
-        throw forbidden({ reason: 'membership_required' });
-      }
+    } else if (result.reason === 'account_disabled') {
+      throw accountDisabled();
+    } else {
+      throw forbidden({ reason: 'membership_required' });
+    }
   }
   c.set('identity', identity);
 

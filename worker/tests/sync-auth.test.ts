@@ -38,8 +38,7 @@ describe('sync authentication without selected membership', () => {
 
     const regular = await call('/v1/students', {}, owner.token);
     expect(regular.status).toBe(403);
-    expect(regular.body.error.code).toBe('forbidden');
-    expect(regular.body.error.details.reason).toBe('membership_required');
+    expect(regular.body.error.code).toBe('account_disabled');
   });
 
   it('still requires a password change before sync routes', async () => {

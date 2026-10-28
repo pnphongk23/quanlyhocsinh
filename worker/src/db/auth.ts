@@ -49,7 +49,7 @@ export const DEFAULT_ROLES: RoleSeed[] = [
       sessions_attendance: 'write',
       scores: 'read',
       lectures: 'read',
-        comments_reports: 'write',
+      comments_reports: 'write',
     },
   },
   {
@@ -326,17 +326,16 @@ export async function getMe(
 
   return {
     user: toUserView(userRow),
-      active_membership_id: activeMembershipId !== null && membershipRows.some((row) => row.id === activeMembershipId)
-        ? activeMembershipId
-        : null,
-      memberships: membershipSummaries.map((membership, index) => ({
-        ...membership,
-        ...(membership.role.scope_kind === 'assigned_classes'
-          ? { class_ids: classIdsByMembership.get(membership.id) ?? [] }
-          : {}),
-        permissions: permissionsByRole.get(membershipRows[index]!.role_id) ??
-          (Object.fromEntries(PERM_GROUPS.map((group) => [group, 'none'])) as Permissions),
-      })),
+    active_membership_id: activeMembershipId,
+    memberships: membershipSummaries.map((membership, index) => ({
+      ...membership,
+      ...(membership.role.scope_kind === 'assigned_classes'
+        ? { class_ids: classIdsByMembership.get(membership.id) ?? [] }
+        : {}),
+      permissions:
+        permissionsByRole.get(membershipRows[index]!.role_id) ??
+        (Object.fromEntries(PERM_GROUPS.map((group) => [group, 'none'])) as Permissions),
+    })),
   };
 }
 
@@ -597,24 +596,24 @@ export async function registerGuardian(
        VALUES (?, ?, ?, ?, ?, 0, ?, 'active', ?, 1)`)
       .bind(input.userId, input.phone, input.displayName, input.email, input.passwordHash, input.now, input.now),
   ];
-    for (const row of workspaces) {
+  for (const row of workspaces) {
     statements.push(
       db.prepare(`INSERT INTO guardian_student (workspace_id, user_id, student_id, created_at)
         SELECT ?, ?, id, ? FROM students WHERE workspace_id = ? AND parent_phone = ?`)
         .bind(row.workspace_id, input.userId, input.now, row.workspace_id, input.phone),
-      );
-    }
-    for (const declaration of declarations.results) {
-      const membershipId = staffMembershipIds.get(declaration.id)!;
-      statements.push(db.prepare(`INSERT INTO memberships
-          (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version)
-        SELECT ?, workspace_id, ?, role_id, 'active', 1, ?, 1 FROM staff_declarations WHERE id = ?`)
-        .bind(membershipId, input.userId, input.now, declaration.id));
-      statements.push(db.prepare(`INSERT INTO member_classes (workspace_id, membership_id, class_id, created_at)
-        SELECT workspace_id, ?, class_id, ? FROM staff_declaration_classes WHERE declaration_id = ?`)
-        .bind(membershipId, input.now, declaration.id));
-      statements.push(db.prepare('DELETE FROM staff_declarations WHERE id = ?').bind(declaration.id));
-    }
+    );
+  }
+  for (const declaration of declarations.results) {
+    const membershipId = staffMembershipIds.get(declaration.id)!;
+    statements.push(db.prepare(`INSERT INTO memberships
+        (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version)
+      SELECT ?, workspace_id, ?, role_id, 'active', 1, ?, 1 FROM staff_declarations WHERE id = ?`)
+      .bind(membershipId, input.userId, input.now, declaration.id));
+    statements.push(db.prepare(`INSERT INTO member_classes (workspace_id, membership_id, class_id, created_at)
+      SELECT workspace_id, ?, class_id, ? FROM staff_declaration_classes WHERE declaration_id = ?`)
+      .bind(membershipId, input.now, declaration.id));
+    statements.push(db.prepare('DELETE FROM staff_declarations WHERE id = ?').bind(declaration.id));
+  }
   for (const row of workspaces) {
     statements.push(
       db.prepare(`INSERT INTO memberships

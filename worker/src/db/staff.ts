@@ -127,7 +127,7 @@ export async function createStaff(db: D1Database, identity: Identity, input: Rec
   const roleIdValue = await roleId(db, identity.workspaceId, role);
   const user = await db.prepare('SELECT id FROM users WHERE phone=?').bind(phone).first<{ id: string }>();
   const id = crypto.randomUUID();
-    const now = nowIso();
+  const now = nowIso();
   try {
     if (user) {
       const statements: D1PreparedStatement[] = [db.prepare(`INSERT INTO memberships

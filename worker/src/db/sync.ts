@@ -60,9 +60,8 @@ export async function syncIdentity(db: D1Database,current: Identity,membershipId
   if (current.mustChangePassword) throw passwordChangeRequired();
   const m=await one(db,`SELECT m.*,r.name role_name,r.system_key,r.scope_kind,w.name workspace_name
     FROM memberships m JOIN roles r ON r.id=m.role_id JOIN workspaces w ON w.id=m.workspace_id
-      WHERE m.id=? AND m.user_id=?`,id(membershipId),current.userId);
-    if (!m) throw notFound();
-    if (m.status !== 'active') throw notFound();
+    WHERE m.id=? AND m.user_id=? AND m.status='active'`,id(membershipId),current.userId);
+  if (!m) throw notFound();
   const guardian=m.scope_kind==='linked_students';
   const rows=await db.batch([
     db.prepare('SELECT perm_group,level FROM role_permissions WHERE role_id=?').bind(m.role_id),
