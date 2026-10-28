@@ -102,7 +102,7 @@ struct StaffListView: View {
 
     private var permissionsEntry: some View {
         AppListRow {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: AppSpace.s2) {
                 Text(String(localized: "feature.staff.phan.quyen")).appText(AppText.subheading).foregroundStyle(AppColors.text)
                 Text(String(localized: "feature.staff.quyen.cua.giao.vien.va.tro.giang"))
                     .appText(AppText.muted).foregroundStyle(AppColors.muted)
@@ -116,12 +116,12 @@ struct StaffListView: View {
         if store.members.isEmpty, case .failed(let message) = store.phase {
             TeacherErrorBanner(message: message) { Task { await store.load() } }
         } else if store.members.isEmpty, store.phase != .loaded {
-            HStack(spacing: 12) {
+            HStack(spacing: AppSpace.s12) {
                 AppSpinner()
                 Text(String(localized: "feature.staff.ang.tai.nhan.su")).appText(AppText.body).foregroundStyle(AppColors.muted)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
+            .padding(.vertical, AppSpace.s24)
         } else {
             if case .failed(let message) = store.phase {
                 TeacherErrorBanner(message: message) { Task { await store.load() } }
@@ -143,8 +143,8 @@ struct StaffListView: View {
         let status = StaffLabel.status(member.status)
         return AppListRow {
             TeacherAvatar(name: member.displayName)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: AppSpace.s2) {
+                HStack(spacing: AppSpace.s8) {
                     Text(member.displayName).appText(AppText.subheading).foregroundStyle(AppColors.text)
                     Spacer(minLength: 0)
                     TeacherStatusPill(text: status.text, tone: status.tone)
@@ -212,7 +212,7 @@ struct StaffFormSheet: View {
                 TeacherField(label: String(localized: "feature.staff.so.dien.thoai"), text: $phone,
                              placeholder: "0900 000 000", keyboard: .phonePad, identifier: "staff.phone")
             }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: AppSpace.s8) {
                 Text(String(localized: "feature.staff.vai.tro")).appText(AppText.label).foregroundStyle(AppColors.text)
                 AppSegmented(options: StaffRoleKey.allCases.map { .init(value: $0.rawValue, label: StaffLabel.role($0)) },
                              value: role?.rawValue ?? "") { value in
@@ -224,26 +224,26 @@ struct StaffFormSheet: View {
             if let member, !isPending { statusButton(member) }
             if let member, isPending { cancelDeclaration(member) }
         }
-        .padding(.bottom, 16)
+        .padding(.bottom, AppSpace.s16)
     }
 
     private func readOnly(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppSpace.s8) {
             Text(label).appText(AppText.label).foregroundStyle(AppColors.text)
             Text(value).appText(AppText.body).foregroundStyle(AppColors.text)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, AppSpace.s16)
                 .frame(maxWidth: .infinity, minHeight: AppMetrics.inputHeight, alignment: .leading)
                 .background(AppColors.neutralSoft, in: RoundedRectangle(cornerRadius: AppRadius.control))
         }
     }
 
     private var classPicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppSpace.s8) {
             Text(String(localized: "feature.staff.lop.uoc.gan")).appText(AppText.label).foregroundStyle(AppColors.text)
             if store.classes.isEmpty {
                 Text(String(localized: "feature.staff.chua.co.lop.nao")).appText(AppText.muted).foregroundStyle(AppColors.muted)
             } else {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: AppSpace.s8) {
                     ForEach(store.classes) { klass in
                         Button {
                             if classIds.contains(klass.id) { classIds.remove(klass.id) } else { classIds.insert(klass.id) }
@@ -347,11 +347,11 @@ struct StaffPermissionsView: View {
                 if store.roles.isEmpty, case .failed(let message) = store.permissionsPhase {
                     TeacherErrorBanner(message: message) { Task { await store.loadPermissions() } }
                 } else if store.roles.isEmpty, store.permissionsPhase != .loaded {
-                    HStack(spacing: 12) {
+                    HStack(spacing: AppSpace.s12) {
                         AppSpinner()
                         Text(String(localized: "feature.staff.ang.tai.quyen")).appText(AppText.body).foregroundStyle(AppColors.muted)
                     }
-                    .frame(maxWidth: .infinity).padding(.vertical, 24)
+                    .frame(maxWidth: .infinity).padding(.vertical, AppSpace.s24)
                 } else {
                     ForEach(store.roles) { role in roleSection(role) }
                 }
@@ -371,7 +371,7 @@ struct StaffPermissionsView: View {
         AppSection(title: StaffLabel.role(role.role)) {
             VStack(spacing: TeacherMetrics.listGap) {
                 ForEach(StaffPermissionGroup.allCases) { group in
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: AppSpace.s8) {
                         Text(StaffLabel.group(group)).appText(AppText.label).foregroundStyle(AppColors.text)
                         AppSegmented(options: [PermissionLevel.none, .read, .write].map { .init(value: $0.rawValue, label: StaffLabel.level($0)) },
                                      value: (role.permissions[group] ?? .none).rawValue) { value in

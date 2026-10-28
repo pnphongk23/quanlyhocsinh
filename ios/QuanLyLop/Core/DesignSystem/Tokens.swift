@@ -48,6 +48,19 @@ enum AppRadius {
     static let segment: CGFloat = 10
 }
 
+/// `--space-*` in design/tokens/tokens.css.
+enum AppSpace {
+    static let s2: CGFloat = 2
+    static let s4: CGFloat = 4
+    static let s8: CGFloat = 8
+    static let s12: CGFloat = 12
+    static let s16: CGFloat = 16
+    static let s20: CGFloat = 20
+    static let s24: CGFloat = 24
+    static let s32: CGFloat = 32
+    static let s48: CGFloat = 48
+}
+
 /// `--tap`, button sizes, input height and paddings measured in ui.module.css.
 enum AppMetrics {
     static let tap: CGFloat = 44
