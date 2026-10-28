@@ -130,23 +130,16 @@
   }
 }
 
-/* Sửa lớp (modal): mobile chỉ nút chính tràn ngang, desktop Huỷ + Lưu căn phải */
+/* Sửa lớp (modal): Huỷ (phụ) bên trái, Lưu (chính) bên phải, cách nhau --space-8; mobile hai nút chia đều, desktop căn phải */
 .modalActions {
   display: grid;
-}
-
-.modalActions .cancel {
-  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
 }
 
 @media (min-width: 1024px) {
   .modalActions {
     display: flex;
     justify-content: flex-end;
-    gap: var(--space-8);
-  }
-
-  .modalActions .cancel {
-    display: inline-flex;
   }
 }

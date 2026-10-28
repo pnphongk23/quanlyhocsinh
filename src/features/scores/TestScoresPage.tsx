@@ -523,7 +523,7 @@ function EditTestModal({
     : "";
   return (
     <>
-      <Modal title="Sửa bài kiểm tra" open onClose={closeNow}
+      <Modal title="Sửa bài kiểm tra" open sheet onClose={closeNow}
         beforeClose={guard.beforeClose}>
         <form
           className={s.form}

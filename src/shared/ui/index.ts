@@ -6,6 +6,7 @@ export { Pill } from "./Pill";
 export { Segmented } from "./Segmented";
 export { PageHeader } from "./PageHeader";
 export { Icon } from "./Icon";
+export { BackButton } from "./BackButton";
 export { Field, Input } from "./Field";
 export { Modal } from "./Modal";
 export { Sheet } from "./Sheet";

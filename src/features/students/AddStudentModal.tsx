@@ -47,6 +47,7 @@ export default function AddStudentModal({
       <Modal
         title="Thêm học sinh"
         open
+        sheet
         onClose={closeNow}
         beforeClose={guard.beforeClose}
         footer={

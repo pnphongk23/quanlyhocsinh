@@ -7,7 +7,7 @@ import {
 } from "../../data/repositories/sessions";
 import { SaveStatus, useSaveStatus } from "../../shared/SaveStatus";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { Button, Input, UnsavedChangesDialog } from "../../shared/ui";
+import { BackButton, Button, Input, UnsavedChangesDialog } from "../../shared/ui";
 import { WeekdayPicker } from "./WeekdayPicker";
 import { useUnsavedCloseGuard } from "../../shared/hooks/useUnsavedCloseGuard";
 import s from "./editClassSchedule.module.css";
@@ -62,6 +62,8 @@ export function EditClassSchedule({
     const dialog = dialogRef.current;
     if (dialog && !dialog.open) {
       dialog.showModal();
+      // Tránh vòng focus trên nút đầu tiên khi mở bằng chạm.
+      dialog.focus({ preventScroll: true });
     }
   }, []);
 
@@ -143,6 +145,7 @@ export function EditClassSchedule({
       ref={dialogRef}
       id="edit-class-schedule"
       className={s.dialog}
+      tabIndex={-1}
       aria-labelledby="edit-class-schedule-title"
       onCancel={(event) => {
         event.preventDefault();
@@ -152,9 +155,7 @@ export function EditClassSchedule({
     >
       <div className={s.frame}>
         <header className={s.header}>
-          <Button variant="ghost" size="md" onClick={close}>
-            Quay lại
-          </Button>
+          <BackButton onClick={close} />
           <h2 id="edit-class-schedule-title">Sửa lịch học</h2>
         </header>
         <form className={s.form} onSubmit={submit}>

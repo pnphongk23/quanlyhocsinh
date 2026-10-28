@@ -108,7 +108,12 @@ export function useAnimatedDialog(
       pendingClose.current = null;
       finishedClose.current = null;
       dialog.removeAttribute("data-closing");
-      if (!dialog.open) dialog.showModal();
+      if (!dialog.open) {
+        dialog.showModal();
+        // Focus vào hộp thoại thay vì nút đầu tiên: chạm mở không hiện vòng focus, bàn phím vẫn Tab được.
+        dialog.tabIndex = -1;
+        dialog.focus({ preventScroll: true });
+      }
       return;
     }
     if (!dialog.open) return;

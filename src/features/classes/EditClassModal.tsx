@@ -56,7 +56,7 @@ export function EditClassModal({
     : "";
   return (
     <>
-      <Modal title="Sửa lớp" open onClose={closeNow}
+      <Modal title="Sửa lớp" open sheet onClose={closeNow}
         beforeClose={guard.beforeClose}>
         <form className={s.form} onSubmit={submit}>
           <Input
@@ -86,7 +86,7 @@ export function EditClassModal({
           <div className={s.modalActions}>
             <Button
               type="button"
-              variant="secondary"
+              variant="ghost"
               disabled={action.saving}
               onClick={() => {
                 // Sạch thì đóng ngay (không chạy animation ra); dở thì hỏi.
