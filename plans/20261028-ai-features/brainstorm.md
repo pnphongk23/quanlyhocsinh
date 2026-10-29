@@ -16,6 +16,8 @@ Tạm theo đề xuất, **chờ người dùng duyệt:** Q2 (chế độ thứ
 
 Phạm vi và tiêu chí xong của Bản 1.2: xem [scope-1.2.md](scope-1.2.md).
 
+**Face ID (2026-10-29):** người dùng chọn **chưa làm**. Đã phân tích hai hướng: (1) Face ID chỉ khoá app, phiên giữ nguyên, chỉ iOS, không đổi backend; (2) Face ID thay bước gõ mật khẩu bằng token riêng cho từng thiết bị (server lưu băm, gắn `device_id`, thu hồi khi đổi mật khẩu hoặc đăng xuất), cần bảng và endpoint mới. Không lưu mật khẩu trong Keychain. Mật khẩu vẫn là gốc và đường dự phòng. Khi làm lại thì viết scope riêng và sửa spec mục 6 (câu "Face ID không gọi trực tiếp được" chỉ đúng cho web/PWA, app iOS native gọi được).
+
 ## 0. Tóm tắt (đọc phần này là đủ để quyết)
 
 | Ý | Đề xuất | Cần AI? | Offline | Bản |

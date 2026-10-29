@@ -258,6 +258,7 @@ Ký hiệu thiết kế (TK) chỉ là tình trạng màn thiết kế: ✓ đã
 - Dời buổi, học bù (buổi lẻ đã làm ở bản đầu; dời một buổi sang ngày khác chưa làm); thêm học sinh từ lớp khác, chuyển lớp, hồ sơ học sinh chi tiết.
 - Nhận xét tổng hợp theo kỳ (có thể gợi ý bằng AI).
 - Giao diện tiếng Anh, passkey.
+- Đăng nhập/khoá app bằng Face ID (iOS; đã phân tích hai hướng, người dùng chọn chưa làm 2026-10-29; xem [brainstorm.md](../plans/20261028-ai-features/brainstorm.md)).
 - Thông báo qua Zalo hoặc SMS.
 - Màn lịch sử điểm danh và lịch sử sửa điểm.
 - Tải báo cáo dạng ảnh (bản đầu chỉ tải PDF, đã chốt 2026-10-25).
