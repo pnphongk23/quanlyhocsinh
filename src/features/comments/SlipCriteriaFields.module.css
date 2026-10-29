@@ -268,3 +268,38 @@
     grid-row: auto;
   }
 }
+
+/* CriteriaMode places this editor in a 380px column on wide desktop screens. */
+.compact {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.compact .starPanel,
+.compact .criteriaGroup,
+.compact .commentBlock {
+  grid-column: 1;
+  grid-row: auto;
+}
+
+.compact .criteriaList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compact .criterion,
+.compact .criterionOn {
+  min-height: var(--tap-desktop);
+}
+
+.compact .homeworkCriterion {
+  flex-wrap: wrap;
+}
+
+.compact .homeworkCriterion .criterionLabel {
+  flex: 1 1 auto;
+}
+
+.compact .autoLabel {
+  flex-basis: 100%;
+  margin-left: calc(var(--criteria-check-size) + var(--space-8));
+  white-space: normal;
+}

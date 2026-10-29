@@ -115,6 +115,18 @@ describe("TicketEditor tự lưu khi rời ô ghi chú (desktop)", () => {
     expect(screen.getByTestId("slip-homework-auto-label")).toHaveTextContent("Buổi trước chưa có BTVN");
   });
 
+  it("áp dụng layout compact riêng cho panel tiêu chí", () => {
+    const seed = createSeed();
+    replaceStore(seed);
+    const student = seed.students.find((item) => item.id === studentId)!;
+    const row: TicketRow = {
+      student, comment: null, stars: null, attended: true, status: "none", sentAt: null,
+      previousHomework: { state: "first", session: null, totalSections: 0, gradedSections: 0, ungradedSections: 0 },
+    };
+    const { container } = render(<TicketEditor session={getSession(sessionId)!} row={row} homework={{ state: "first", sections: [] }} compact />);
+    expect(container.querySelector('[data-testid="slip-star-panel"]')?.parentElement).toHaveAttribute("data-layout", "compact");
+  });
+
   it("câu sửa tay chưa lưu vẫn giữ trạng thái Chưa lưu khi ghi chú được lưu", async () => {
     renderEditor();
     fireEvent.change(screen.getByTestId("slip-generated-comment"), { target: { value: "Câu đang sửa" } });

@@ -15,6 +15,7 @@ export function SlipCriteriaFields({
   hwManual,
   sent,
   disabled,
+  compact = false,
   onCriteriaChange,
   onCommentChange,
   onCommentBlur,
@@ -30,6 +31,7 @@ export function SlipCriteriaFields({
   hwManual: boolean;
   sent: boolean;
   disabled: boolean;
+  compact?: boolean;
   onCriteriaChange: (value: number, index: number) => void;
   onCommentChange: (value: string) => void;
   onCommentBlur?: () => void;
@@ -42,7 +44,11 @@ export function SlipCriteriaFields({
   const stars = isLegacyScale ? starsFromCriteria(criteria) : starsFromCriteria(visibleCriteria);
 
   return (
-    <section className={s.ticketFields} aria-label="Phiếu nhận xét">
+    <section
+      className={`${s.ticketFields}${compact ? ` ${s.compact}` : ""}`}
+      data-layout={compact ? "compact" : "default"}
+      aria-label="Phiếu nhận xét"
+    >
       <div className={s.starPanel} data-testid="slip-star-panel">
         <div className={s.mascotWrap} data-testid="slip-mascot">
           <Mascot pose={starPose(stars, scale)} cssSize="var(--empty-mascot-compact)" />

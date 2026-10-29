@@ -63,11 +63,13 @@ export default function TicketEditor({
   session,
   row,
   homework,
+  compact = false,
   readOnly = false,
 }: {
   session: Session;
   row: TicketRow;
   homework: SheetHomework;
+  compact?: boolean;
   readOnly?: boolean;
 }) {
   const access = useAccess();
@@ -215,6 +217,7 @@ export default function TicketEditor({
         hwManual={manualHomework}
         sent={slipFrozenForAutoUpdate(row.status)}
         disabled={!canWrite}
+        compact={compact}
         onCriteriaChange={updateCriteria}
         onCommentChange={changeComment}
         onCommentBlur={commitComment}

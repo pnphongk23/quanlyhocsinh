@@ -270,6 +270,7 @@ export default function CommentsDesktop({
                 session={session}
                 row={selected}
                 homework={selectedHomework}
+                compact={mode === "criteria"}
                 readOnly={!canWrite}
             />
             ) : (
