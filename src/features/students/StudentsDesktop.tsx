@@ -19,6 +19,8 @@ import ClassDesktopHeader from "../class-space/ClassDesktopHeader";
 import s from "./StudentsDesktop.module.css";
 import d from "../class-space/desktop.module.css";
 import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
+import ImportStudentsDialog from "./ImportStudentsDialog";
+import ImportStudentsAction from "./ImportStudentsAction";
 
 /**
  * Tỉ lệ chuyên cần dạng "17/18": số buổi có đi học (Có mặt / Muộn / Có phép —
@@ -64,6 +66,7 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
   const [phoneFor, setPhoneFor] = useState<Student | null>(null);
   const [leavingStudent, setLeavingStudent] = useState<Student | null>(null);
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   if (!klass) return null;
 
@@ -97,10 +100,11 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
         classId={classId}
         klass={klass}
         actions={
-          canWrite ? (
-            <Button size="md" onClick={() => setAdding(true)}>
-              + Thêm học sinh
-            </Button>
+            canWrite ? (
+              <div style={{ display: "flex", gap: "var(--space-8)" }}>
+                <ImportStudentsAction classId={classId} canWrite={canWrite} onClick={() => setImporting(true)} />
+                <Button size="md" onClick={() => setAdding(true)}>+ Thêm học sinh</Button>
+              </div>
           ) : undefined
         }
       />
@@ -194,9 +198,10 @@ export default function StudentsDesktop({ classId }: { classId: string }) {
         )}
       </div>
 
-      {adding && (
-        <AddStudentModal classId={classId} onClose={() => setAdding(false)} />
-      )}
+        {adding && (
+          <AddStudentModal classId={classId} onClose={() => setAdding(false)} />
+        )}
+        {importing && <ImportStudentsDialog classId={classId} existing={students} onClose={() => setImporting(false)} />}
       {phoneFor && (
         <PhoneModal student={phoneFor} onClose={() => setPhoneFor(null)} />
       )}

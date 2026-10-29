@@ -20,6 +20,18 @@ export async function createStudent(input:Omit<Student,"id"|"status"|"leftAt">):
   await commitRemote(identity,"student",remote,undefined,()=>commitState("students",item.id,d=>{d.students=[...d.students.filter(s=>s.id!==item.id),item];}));
   return item;
 }
+/** Tạo một học sinh bằng ID do giao diện giữ qua các lần thử lại. */
+export async function createStudentWithId(id:string,input:Omit<Student,"id"|"status"|"leftAt">):Promise<Student> {
+  requirePermission("students","write");requireClassAccess(input.classId);
+  if(!input.name.trim())throw new Error("Nhập tên học sinh.");
+  if(typeof navigator!=="undefined"&&!navigator.onLine)throw new Error("Cần có mạng để thêm học sinh.");
+  const body={name:input.name,parent_phone:input.parentPhone||undefined,enrolled_at:input.enrolledAt};
+  const identity=identityKey();
+  const remote:any=await api.request(`POST /classes/${input.classId}/students` as any,{body:{id,...body} as any});
+  const item=asView(remote);
+  await commitRemote(identity,"student",remote,undefined,()=>commitState("students",item.id,d=>{d.students=[...d.students.filter(s=>s.id!==item.id),item];}));
+  return item;
+}
 async function patchStudent(id:string,patch:Partial<Pick<Student,"name"|"parentPhone"|"status"|"leftAt">>):Promise<void> {const current=getStudent(id);if(!current)throw new Error("Không tìm thấy học sinh.");requirePermission("students","write");requireClassAccess(current.classId);if(typeof navigator!=="undefined"&&!navigator.onLine)throw new Error("Cập nhật học sinh cần kết nối mạng.");const body={...(patch.name?{name:patch.name}:{}),...(patch.parentPhone!==undefined?{parent_phone:patch.parentPhone}:{}),...(patch.status?{status:"left" as const,left_at:patch.leftAt}:{} )};const identity=identityKey();const remote:any=await api.request(`PATCH /students/${id}` as any,{body} as any);const next=asView(remote);await commitRemote(identity,"student",remote,undefined,()=>commitState("student",id,d=>{d.students=d.students.map(s=>s.id===id?next:s);}));}
 export async function updateStudent(id:string,patch:Partial<Pick<Student,"name">>):Promise<void> {if(patch.name!==undefined&&!patch.name.trim())throw new Error("Nhập tên học sinh.");await patchStudent(id,patch);}
 export async function updateStudentPhone(id:string,parentPhone:string):Promise<void> {const phone=parentPhone.trim();if(phone&&!/^[0-9+().\s-]{6,20}$/.test(phone))throw new Error("Số điện thoại không hợp lệ.");await patchStudent(id,{parentPhone:phone});}

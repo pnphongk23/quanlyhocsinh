@@ -24,6 +24,8 @@ import {
   Sheet,
 } from "../../shared/ui";
 import AddStudentModal from "./AddStudentModal";
+import ImportStudentsDialog from "./ImportStudentsDialog";
+import ImportStudentsAction from "./ImportStudentsAction";
 import StudentsDesktop from "./StudentsDesktop";
 import s from "./students.module.css";
 import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
@@ -37,6 +39,7 @@ export default function StudentsPage() {
   const active = students.filter((student) => student.status === "active");
   const absenceWarnings = active.filter((student) => studentAbsenceWarning(student.id)).length;
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [leavingId, setLeavingId] = useState<string | null>(null);
   const saved = useSavedPeek();
   // Đóng tay hoặc mở học sinh khác: bỏ lần đóng đang chờ của học sinh cũ.
@@ -76,9 +79,12 @@ export default function StudentsPage() {
     <main className={s.page}>
       <SaveStatus />
 
-      <p className={s.stats} aria-label="Thống kê học sinh">
-        {active.length} đang học · {students.length - active.length} đã nghỉ (giữ lịch sử) · {absenceWarnings} vắng 2 buổi liền
-      </p>
+        <div className={s.summaryRow}>
+          <p className={s.stats} aria-label="Thống kê học sinh">
+            {active.length} đang học · {students.length - active.length} đã nghỉ (giữ lịch sử) · {absenceWarnings} vắng 2 buổi liền
+          </p>
+          <ImportStudentsAction classId={classId} canWrite={canWrite} onClick={() => setImporting(true)} />
+        </div>
 
       {error && <p role="alert" className={s.error}>{error}</p>}
       {students.length === 0 ? (
@@ -113,9 +119,10 @@ export default function StudentsPage() {
         <Fab label="Thêm học sinh" onClick={() => { setAdding(true); setError(""); }} />
       )}
 
-      {adding && (
-        <AddStudentModal classId={classId} onClose={() => setAdding(false)} />
-      )}
+        {adding && (
+          <AddStudentModal classId={classId} onClose={() => setAdding(false)} />
+        )}
+        {importing && <ImportStudentsDialog classId={classId} existing={students} onClose={() => setImporting(false)} />}
 
       <Modal title="Đánh dấu học sinh đã nghỉ?" open={Boolean(leavingId)} onClose={() => setLeavingId(null)}>
         <div className={s.confirmation}>
