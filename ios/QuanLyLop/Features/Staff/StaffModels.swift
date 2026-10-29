@@ -22,7 +22,7 @@ struct StaffMember: Codable, Sendable, Equatable, Identifiable {
     let id: String
     let kind: Kind
     let userId: String?
-    /// The server sends `null` for a member whose account never set a name; the list then shows the masked phone.
+    /// Empty when the server sends `null`: an account that never set a name (`isUnnamed`).
     let displayName: String
     let phone: String
     let role: StaffRoleRef
@@ -31,6 +31,7 @@ struct StaffMember: Codable, Sendable, Equatable, Identifiable {
     let isSelf: Bool
     let version: Int?
 
+    var isUnnamed: Bool { displayName.isEmpty }
     var isAdmin: Bool { role.systemKey == "admin" }
     var roleKey: StaffRoleKey? { role.systemKey.flatMap(StaffRoleKey.init(rawValue:)) }
 }
@@ -42,8 +43,8 @@ extension StaffMember {
         kind = try values.decode(Kind.self, forKey: .kind)
         userId = try values.decodeIfPresent(String.self, forKey: .userId)
         phone = try values.decode(String.self, forKey: .phone)
-        let name = try values.decodeIfPresent(String.self, forKey: .displayName)?.trimmingCharacters(in: .whitespacesAndNewlines)
-        displayName = name.flatMap { $0.isEmpty ? nil : $0 } ?? StaffStore.maskedPhone(phone)
+        displayName = try values.decodeIfPresent(String.self, forKey: .displayName)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         role = try values.decode(StaffRoleRef.self, forKey: .role)
         classIds = try values.decodeIfPresent([String].self, forKey: .classIds) ?? []
         status = try values.decode(Status.self, forKey: .status)

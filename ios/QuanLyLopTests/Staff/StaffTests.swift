@@ -37,7 +37,7 @@ final class StaffStoreTests: XCTestCase {
         XCTAssertEqual(queries.last, ["status": "active"])
     }
 
-    func testMemberWithoutNameStillLoadsAndShowsTheMaskedPhone() async {
+    func testMemberWithoutNameStillLoadsAndIsMarkedUnnamed() async {
         let nameless = #"{"id":"mem_9","kind":"member","user_id":"usr_9","display_name":null,"phone":"+84900000009","role":{"id":"role_asst","name":"Trợ giảng","system_key":"assistant"},"class_ids":["cls_1"],"status":"disabled","is_self":false,"created_at":"2026-10-28T03:00:00.000Z","version":4}"#
         let blank = #"{"id":"mem_10","kind":"member","user_id":"usr_10","display_name":"  ","phone":"+84900000010","role":{"id":"role_asst","name":"Trợ giảng","system_key":"assistant"},"class_ids":[],"status":"active","is_self":false,"version":1}"#
         let api = RecordingAPI { endpoint in
@@ -49,9 +49,20 @@ final class StaffStoreTests: XCTestCase {
 
         XCTAssertEqual(store.phase, .loaded)
         XCTAssertEqual(store.members.map(\.id), ["mem_7", "mem_9", "mem_10"])
-        XCTAssertEqual(store.members[1].displayName, StaffStore.maskedPhone("+84900000009"))
-        XCTAssertEqual(store.members[2].displayName, StaffStore.maskedPhone("+84900000010"))
+        XCTAssertEqual(store.members.map(\.isUnnamed), [false, true, true])
+        XCTAssertEqual(store.members[1].displayName, "")
+        XCTAssertEqual(store.members[2].displayName, "")
         XCTAssertEqual(store.members[1].status, .disabled)
+    }
+
+    func testUnnamedMembersSortAfterNamedOnesOfTheSameStatus() throws {
+        func member(_ id: String, name: String?) throws -> StaffMember {
+            let value = name.map { "\"\($0)\"" } ?? "null"
+            let json = #"{"id":"\#(id)","kind":"member","user_id":"u","display_name":\#(value),"phone":"+84900000011","role":{"id":"r","name":"Trợ giảng","system_key":"assistant"},"class_ids":[],"status":"active","is_self":false,"version":1}"#
+            return try WireJSON.decoder().decode(StaffMember.self, from: Data(json.utf8))
+        }
+        let sorted = StaffStore.sorted([try member("none", name: nil), try member("zed", name: "Zed"), try member("amy", name: "Amy")])
+        XCTAssertEqual(sorted.map(\.id), ["amy", "zed", "none"])
     }
 
     func testUnreadableStaffDataIsNotReportedAsAConnectionProblem() {

@@ -1256,6 +1256,18 @@
         }
       }
     },
+    "feature.staff.chua.at.ten" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa đặt tên"
+          }
+        }
+      }
+    },
     "feature.staff.du.lieu.nhan.su.khong.doc.duoc" : {
       "comment" : "Chuỗi hiển thị trong Features/Staff.",
       "extractionState" : "manual",

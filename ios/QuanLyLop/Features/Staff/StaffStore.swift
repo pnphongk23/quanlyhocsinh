@@ -109,7 +109,8 @@ final class StaffStore {
             switch status { case .active: 0; case .pending: 1; case .disabled: 2 }
         }
         return members.sorted {
-            (rank($0.status), $0.displayName.localizedLowercase) < (rank($1.status), $1.displayName.localizedLowercase)
+            (rank($0.status), $0.isUnnamed ? 1 : 0, $0.displayName.localizedLowercase)
+                < (rank($1.status), $1.isUnnamed ? 1 : 0, $1.displayName.localizedLowercase)
         }
     }
 

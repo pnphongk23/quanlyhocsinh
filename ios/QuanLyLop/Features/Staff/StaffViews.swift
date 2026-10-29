@@ -142,10 +142,14 @@ struct StaffListView: View {
     private func row(_ member: StaffMember) -> some View {
         let status = StaffLabel.status(member.status)
         return AppListRow {
-            TeacherAvatar(name: member.displayName)
+            StaffAvatar(member: member)
             VStack(alignment: .leading, spacing: AppSpace.s2) {
                 HStack(spacing: AppSpace.s8) {
-                    Text(member.displayName).appText(AppText.subheading).foregroundStyle(AppColors.text)
+                    if member.isUnnamed {
+                        Text(String(localized: "feature.staff.chua.at.ten")).appText(AppText.subheading).foregroundStyle(AppColors.muted)
+                    } else {
+                        Text(member.displayName).appText(AppText.subheading).foregroundStyle(AppColors.text)
+                    }
                     Spacer(minLength: 0)
                     TeacherStatusPill(text: status.text, tone: status.tone)
                 }
@@ -204,7 +208,8 @@ struct StaffFormSheet: View {
             if nameEditable {
                 TeacherField(label: String(localized: "feature.staff.ten"), text: $name, identifier: "staff.name")
             } else if let member {
-                readOnly(String(localized: "feature.staff.ten"), member.displayName)
+                readOnly(String(localized: "feature.staff.ten"),
+                         member.isUnnamed ? String(localized: "feature.staff.chua.at.ten") : member.displayName)
             }
             if let member {
                 readOnly(String(localized: "feature.staff.so.dien.thoai"), AuthFormat.phone(member.phone))
@@ -401,4 +406,21 @@ struct StaffEntryView: View {
     init(model: AuthModel) { _store = State(initialValue: model.makeStaffStore()) }
 
     var body: some View { StaffListView(store: store) }
+}
+
+/// Initials for a named member; a person glyph when the account never set a name.
+private struct StaffAvatar: View {
+    let member: StaffMember
+
+    var body: some View {
+        if member.isUnnamed {
+            Image(systemName: "person.fill")
+                .foregroundStyle(AppColors.muted)
+                .frame(width: AppMetrics.tap - AppSpace.s4, height: AppMetrics.tap - AppSpace.s4)
+                .background(AppColors.primarySoft, in: Circle())
+                .accessibilityHidden(true)
+        } else {
+            TeacherAvatar(name: member.displayName)
+        }
+    }
 }
