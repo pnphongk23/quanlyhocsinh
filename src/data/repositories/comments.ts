@@ -48,6 +48,14 @@ export function planRegradedSlip(sectionId:string,studentId:string,level:Homewor
 }
 /** Chờ ghi bền; ghi lỗi ⇒ ném lỗi gốc và phiếu trở lại như trước. */
 export const saveSessionCommentDurable=(input:{sessionId:string;studentId:string;stars?:StarLevel|null;criteria?:number;comment?:string|null;note?:string;hwManual?:boolean}):Promise<Comment>=>runDurably(planComment(input));
+/** Toggles one criterion while preserving the separately typed note. */
+export function toggleSlipCriterionDurable(sessionId:string,studentId:string,index:number):Promise<Comment>{
+  if(!Number.isInteger(index)||index<0||index>4)throw new RangeError("invalid_criterion");
+  const old=getSessionComment(sessionId,studentId);
+  if(old&&old.scale!==5)throw new Error("Phiếu thang cũ không thể sửa.");
+  const criteria=(old?.criteria??(old?31:defaultSlipCriteria(previousHomeworkGrades(getStore(),sessionId,studentId))))^(1<<index);
+  return runDurably(planComment({sessionId,studentId,criteria,comment:generatedSlipSentence(criteria),note:old?.note??"",...(index===4?{hwManual:true}:{})}));
+}
 /** Lúc ghi bền đọc lại phiếu: nếu đã gửi hoặc đang chờ gửi (vừa gửi, hoặc vừa kéo từ máy khác) thì bỏ qua, không ghi đè và không hoàn lại. */
 function guardUnsent(plan:WritePlan<Comment>,sessionId:string,studentId:string):WritePlan<Comment>{
   let skipped=false;

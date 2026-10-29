@@ -5,6 +5,7 @@ import {
   homeworkGradeLevel,
   homeworkSectionsFor,
   leftStudentsForSession,
+  previousHomeworkGrades,
   ungradedHomeworkNotice,
 } from "../../data/homework";
 import { useAccess } from "../../data/repositories/access";
@@ -34,6 +35,7 @@ import {
 } from "./commentsModel";
 import s from "./CommentsDesktop.module.css";
 import d from "../class-space/desktop.module.css";
+import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 
 /**
  * Tab Nhận xét trên web desktop (ảnh 04): danh sách em + khung soạn phiếu nằm
@@ -53,6 +55,7 @@ export default function CommentsDesktop({
   const online = useOnline();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<TicketFilter>("all");
+  const [mode, setMode] = useState<"student" | "criteria">("student");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [dialogError, setDialogError] = useState("");
 
@@ -79,6 +82,7 @@ export default function CommentsDesktop({
 
   useEffect(() => {
     setConfirmOpen(false);
+    setMode("student");
   }, [sessionId]);
 
   useEffect(() => {
@@ -153,8 +157,8 @@ export default function CommentsDesktop({
       : null;
 
   return (
-    <div className={d.page}>
-      {tabBar(
+      <div className={d.page}>
+        {tabBar(
         canWrite ? (
           <>
             <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="md" />
@@ -176,10 +180,21 @@ export default function CommentsDesktop({
             )}
           </>
         ) : undefined,
-      )}
+        )}
 
-      <div className={d.split}>
-        <section className={s.listColumn}>
+        <CriteriaModeToggle mode={mode} onChange={setMode} />
+
+        <div className={mode === "criteria" ? `${d.split} ${s.criteriaSplit}` : d.split}>
+          {mode === "criteria" ? <section className={s.listColumn}>
+            <CriteriaMode
+              sessionId={sessionId}
+              rows={rows}
+              canWrite={canWrite}
+              selectedStudentId={selected?.student.id}
+              onSelectStudent={selectStudent}
+              previousGrades={(studentId) => previousHomeworkGrades(state, sessionId, studentId)}
+            />
+          </section> : <section className={s.listColumn}>
           <div className={s.listCard}>
             <div className={d.segmented + " " + s.filters}>
               {TICKET_FILTERS.map((value) => (
@@ -239,9 +254,9 @@ export default function CommentsDesktop({
               Phiếu chỉ gồm học sinh đang học vào ngày {formatDayMonth(session.date)}. Có {rows.length} em.
             </p>
           )}
-        </section>
+          </section>}
 
-        <section className={s.editorColumn}>
+          <section className={s.editorColumn}>
           {selected && selectedHomework ? (
             <TicketEditor
                 key={`${sessionId}:${selected.student.id}`}
@@ -250,7 +265,7 @@ export default function CommentsDesktop({
                 homework={selectedHomework}
                 readOnly={!canWrite}
             />
-          ) : (
+            ) : (
             <p className={d.muted14}>Chọn một em để soạn phiếu.</p>
           )}
         </section>

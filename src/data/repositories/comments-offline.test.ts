@@ -122,6 +122,34 @@ describe("phiếu nhận xét khi mất mạng", () => {
     expect((await db.outbox.toArray()).map((row) => row.type)).toContain("slip.send");
   });
 
+  it("tạo phiếu mặc định rồi bỏ tiêu chí vào outbox khi chạm chip lúc offline", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const { toggleSlipCriterionDurable } = await import("./comments");
+    const result = await toggleSlipCriterionDurable("6a-session-7", "6a-student-1", 0);
+    expect(result.criteria).toBe(30);
+    expect(result.stars).toBe(4);
+    expect(result.comment).toBe("Con ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp, ngồi học ngoan ngoãn, không mất trật tự và hoàn thành tốt bài tập về nhà, nhưng chưa chú ý nghe giảng.");
+    const [command] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(command.payload).toMatchObject({ session_id: "6a-session-7", student_id: "6a-student-1", criteria: 30, note: "" });
+  });
+
+  it("giữ phần gõ thêm và bật hw_manual khi đổi BTVN bằng chip", async () => {
+    const { getStore } = await import("../store");
+    const state = getStore();
+    state.comments.push({ id: "existing", classId: "6a", sessionId: "6a-session-7", studentId: "6a-student-1", criteria: 15, comment: "Câu đã sửa tay", scale: 5, stars: 4, note: "Ghi thêm", hwManual: false, status: "sent", sendQueued: false, sentAt: "2026-10-14T00:00:00.000Z", updatedAt: "", createdAt: "" });
+    replaceStore(state);
+    const { toggleSlipCriterionDurable } = await import("./comments");
+    const result = await toggleSlipCriterionDurable("6a-session-7", "6a-student-1", 4);
+    expect(result).toMatchObject({ criteria: 31, stars: 5, note: "Ghi thêm", hwManual: true, status: "sent", comment: "Con chú ý nghe giảng, ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp, ngồi học ngoan ngoãn, không mất trật tự và hoàn thành tốt bài tập về nhà." });
+    expect((await db.outbox.toArray()).find((row) => row.type === "slip.set")?.payload).toMatchObject({ criteria: 31, note: "Ghi thêm", hw_manual: true });
+  });
+
+  it("không sửa phiếu thang 3 cũ", async () => {
+    const { toggleSlipCriterionDurable } = await import("./comments");
+    expect(() => toggleSlipCriterionDurable("6a-session-7", "6a-student-0", 1)).toThrow("Phiếu thang cũ");
+    expect((await db.outbox.toArray()).filter((row) => row.type === "slip.set")).toHaveLength(0);
+  });
+
   it("cập nhật riêng note giữ nguyên phiếu năm sao và bỏ criteria khỏi payload", async () => {
     const { getStore } = await import("../store");
     const state = getStore();

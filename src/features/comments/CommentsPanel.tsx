@@ -5,6 +5,7 @@ import {
   homeworkGradeLevel,
   homeworkSectionsFor,
   leftStudentsForSession,
+  previousHomeworkGrades,
   ungradedHomeworkNotice,
   type TicketRow,
 } from "../../data/homework";
@@ -39,6 +40,7 @@ import {
   type TicketFilter,
 } from "./commentsModel";
 import s from "./CommentsPanel.module.css";
+import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 
 function Star({ size = 16 }: { size?: number }) {
   return (
@@ -159,6 +161,7 @@ export default function CommentsPanel({
   const online = useOnline();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<TicketFilter>("all");
+  const [mode, setMode] = useState<"student" | "criteria">("student");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [dialogError, setDialogError] = useState("");
   const [error, setError] = useState("");
@@ -189,6 +192,7 @@ export default function CommentsPanel({
     setError("");
     setDialogError("");
     setConfirmOpen(false);
+    setMode("student");
   }, [sessionId]);
 
   // Có mạng trở lại: gửi các phiếu đang "Chờ mạng" (ảnh 44).
@@ -345,16 +349,29 @@ export default function CommentsPanel({
 
   return (
     <section className={s.panel}>
-      {leftStudents.length > 0 && (
+        {leftStudents.length > 0 && (
         <p className={s.infoBanner}>
           <InfoIcon />
           <span>
             Phiếu chỉ gồm học sinh đang học vào ngày {formatDayMonth(sessionDate)}. Có {rows.length} em.
           </span>
         </p>
-      )}
+        )}
 
-      <div className={s.filters} role="group" aria-label="Lọc phiếu nhận xét">
+        <CriteriaModeToggle mode={mode} onChange={setMode} />
+
+        {mode === "criteria" ? (
+          <CriteriaMode
+            sessionId={sessionId}
+            rows={rows}
+            canWrite={canWrite}
+            selectedStudentId={openStudentId}
+            onSelectStudent={openStudent}
+            previousGrades={(studentId) => previousHomeworkGrades(state, sessionId, studentId)}
+          />
+        ) : <>
+
+        <div className={s.filters} role="group" aria-label="Lọc phiếu nhận xét">
         {TICKET_FILTERS.map((value) => (
           <button
             key={value}
@@ -374,7 +391,7 @@ export default function CommentsPanel({
         </p>
       )}
 
-      <ul className={s.list}>
+        <ul className={s.list}>
         {visibleRows.length ? (
           visibleRows.map(ticketRow)
         ) : (
@@ -383,7 +400,8 @@ export default function CommentsPanel({
           </li>
         )}
         {filter === "all" && leftStudents.map(leftCard)}
-      </ul>
+        </ul>
+        </>}
 
       {canWrite && (
         <div className={s.footerGroup}>

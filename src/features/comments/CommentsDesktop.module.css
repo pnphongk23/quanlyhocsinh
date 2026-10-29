@@ -8,6 +8,24 @@
   min-width: 0;
 }
 
+.criteriaSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  align-items: start;
+  gap: var(--space-16);
+}
+
+.criteriaSplit .listColumn {
+  width: auto;
+  flex: initial;
+}
+
+.criteriaSplit .editorColumn {
+  position: sticky;
+  top: var(--space-24);
+  align-self: start;
+}
+
 .listCard {
   background: var(--color-surface);
   border-radius: var(--radius-card);
