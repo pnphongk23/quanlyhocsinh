@@ -5,8 +5,8 @@
 .desktop .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 .card { border-radius: var(--radius-card); background: var(--color-surface); padding: var(--card-pad); display: grid; gap: var(--space-12); }
 .cardHead { font-size: var(--text-lg); font-weight: var(--weight-bold); }
-.banner { padding: var(--space-12) var(--space-16); border-radius: var(--radius-control); background: var(--color-warning-soft); color: var(--color-warning); font-size: var(--text-base); font-weight: var(--weight-semibold); }
-.errorBlock { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); padding: var(--space-12) var(--space-16); border-radius: var(--radius-control); background: var(--state-error-bg); color: var(--state-error-fg); }
+.banner { padding: var(--space-12) var(--space-16); border: 1px solid var(--card-pending-border); border-radius: var(--radius-control); background: var(--card-pending-bg); color: var(--card-pending-fg); font-size: var(--text-base); font-weight: var(--weight-semibold); }
+.errorBlock { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); padding: var(--space-12) var(--space-16); border: 1px solid var(--card-error-border); border-radius: var(--radius-control); background: var(--card-error-bg); color: var(--card-error-fg); }
 .error { padding: var(--space-8) var(--space-12); border-radius: var(--radius-control); background: var(--state-error-bg); color: var(--state-error-fg); font-size: var(--text-base); }
 .hint { font-size: var(--text-sm); color: var(--color-muted); line-height: var(--leading-base); }
 .list { list-style: none; margin: 0; padding: 0; display: grid; }

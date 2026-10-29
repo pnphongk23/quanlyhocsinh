@@ -55,8 +55,8 @@
   color: var(--color-text);
 }
 .danger {
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
 }
 .ghost {
   background: transparent;
@@ -128,20 +128,20 @@
   color: var(--color-muted);
 }
 .pillSuccess {
-  background: var(--color-success-soft);
-  color: var(--color-success);
+  background: var(--state-success-bg);
+  color: var(--state-success-fg);
 }
 .pillWarning {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
 }
 .pillError {
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
 }
 .pillPrimary {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 /* Ô nhập */
@@ -582,8 +582,8 @@
   color: var(--color-on-primary);
 }
 .confirmDiscard {
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
 }
 .confirmStay {
   background: var(--color-neutral-soft);

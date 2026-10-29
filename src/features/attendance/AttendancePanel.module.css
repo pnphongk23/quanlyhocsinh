@@ -151,18 +151,18 @@
 }
 
 .present {
-  --status-bg: var(--color-success-soft);
-  --status-fg: var(--color-success);
+  --status-bg: var(--state-success-bg);
+  --status-fg: var(--state-success-fg);
 }
 
 .late {
-  --status-bg: var(--color-warning-soft);
-  --status-fg: var(--color-warning);
+  --status-bg: var(--state-pending-bg);
+  --status-fg: var(--state-pending-fg);
 }
 
 .absent {
-  --status-bg: var(--color-error-soft);
-  --status-fg: var(--color-error);
+  --status-bg: var(--state-error-bg);
+  --status-fg: var(--state-error-fg);
 }
 
 .unmarked {
@@ -206,7 +206,7 @@
   color: var(--color-muted);
 }
 
-/* Băng lỗi lưu: 78 — nền đỏ nhạt, nút "Thử lại" đặc */
+/* Băng lỗi lưu */
 .saveError {
   display: flex;
   align-items: center;
@@ -214,8 +214,9 @@
   min-height: 52px;
   padding: 0 var(--space-8) 0 var(--space-16);
   border-radius: var(--radius-button);
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
   font-size: var(--text-md);
   font-weight: 600;
 }
@@ -236,8 +237,8 @@
   padding: 0 var(--space-16);
   border: 0;
   border-radius: var(--radius-button);
-  background: var(--color-error);
-  color: #fff;
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
   font-size: var(--text-md);
   font-weight: 600;
 }
@@ -246,8 +247,9 @@
   margin: 0;
   padding: 10px var(--space-12);
   border-radius: var(--radius-button);
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
   font-size: var(--text-md);
 }
 

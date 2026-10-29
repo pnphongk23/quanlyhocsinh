@@ -10,16 +10,16 @@
   overflow-wrap: anywhere;
 }
 .unsaved {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
 }
 .local {
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
 }
 .synced {
-  background: var(--color-success-soft);
-  color: var(--color-success);
+  background: var(--state-success-bg);
+  color: var(--state-success-fg);
 }
 .error {
   background: var(--state-error-bg);

@@ -174,12 +174,14 @@
   line-height: 1.4;
 }
 .bannerError {
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
 }
 .bannerWarn {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  border: 1px solid var(--card-pending-border);
+  background: var(--card-pending-bg);
+  color: var(--card-pending-fg);
 }
 .bannerInfo {
   background: var(--color-primary-soft);
@@ -351,7 +353,7 @@
 }
 .checkOk .checkDot {
   border-color: transparent;
-  background: var(--color-success-soft);
+  background: var(--state-success-bg);
 }
 
 /* ------------------------------------------------------- nút quay lại + bước */

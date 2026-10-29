@@ -209,8 +209,8 @@
   align-items: center;
   padding: var(--space-4) 10px;
   border-radius: var(--radius-pill);
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
   font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
@@ -250,16 +250,16 @@
   cursor: not-allowed;
 }
 .level_excellent {
-  background: var(--color-success-soft);
-  color: var(--color-success);
+  background: var(--state-success-bg);
+  color: var(--state-success-fg);
 }
 .level_done {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 .level_not_done {
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
 }
 
 /* Thông báo rỗng / buổi hủy (55, 56) */
@@ -300,8 +300,9 @@
   gap: var(--space-8);
   padding: var(--space-12) 14px;
   border-radius: var(--radius-card);
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  border: 1px solid var(--card-pending-border);
+  background: var(--card-pending-bg);
+  color: var(--card-pending-fg);
   font-size: var(--text-md);
   line-height: 1.45;
 }
@@ -385,8 +386,9 @@
   gap: var(--space-8);
   padding: 10px 14px;
   border-radius: var(--radius-button);
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
   font-size: var(--text-md);
   font-weight: 600;
 }
@@ -546,8 +548,9 @@
   margin: 0;
   padding: 10px var(--space-12);
   border-radius: var(--radius-button);
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
   font-size: var(--text-md);
   font-weight: 600;
 }
@@ -572,8 +575,8 @@
   font-weight: 600;
 }
 .deleteButton {
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
 }
 .deleteButtonDisabled {
   background: var(--color-neutral-soft);
@@ -593,13 +596,14 @@
   gap: 6px;
   padding: var(--space-12);
   border-radius: var(--radius-button);
-  background: var(--color-error-soft);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
 }
 .confirmTitle {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
-  color: var(--color-error);
+  color: var(--card-error-fg);
 }
 .confirmText {
   margin: 0;

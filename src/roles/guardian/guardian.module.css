@@ -528,8 +528,9 @@
   margin: 0;
   padding: 10px 12px;
   border-radius: 12px;
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  border: 1px solid var(--card-pending-border);
+  background: var(--card-pending-bg);
+  color: var(--card-pending-fg);
   font-size: var(--text-md);
   font-weight: 600;
   line-height: 1.45;

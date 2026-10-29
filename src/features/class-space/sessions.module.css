@@ -270,13 +270,14 @@
 .error {
   padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
   font-weight: 600;
 }
 
 .statePanel p {
-  color: var(--color-error);
+  color: var(--card-error-fg);
 }
 
 .statePanel {
@@ -285,7 +286,9 @@
   gap: var(--space-12);
   padding: var(--space-20);
   border-radius: var(--radius-card);
-  background: var(--color-error-soft);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
 }
 
 .statePanel h2 {

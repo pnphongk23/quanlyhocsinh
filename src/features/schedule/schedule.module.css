@@ -78,13 +78,15 @@
   line-height: 1.4;
 }
 .offline {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  border: 1px solid var(--card-pending-border);
+  background: var(--card-pending-bg);
+  color: var(--card-pending-fg);
 }
 .errorBanner {
   padding-right: var(--space-8);
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
 }
 .errorText {
   flex: 1;
@@ -224,20 +226,20 @@
   color: var(--color-muted);
 }
 .toneSuccess {
-  background: var(--color-success-soft);
-  color: var(--color-success);
+  background: var(--state-success-bg);
+  color: var(--state-success-fg);
 }
 .toneWarning {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
 }
 .toneError {
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
 }
 .tonePrimary {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
 }
 
 /* Nhóm "Chưa điểm danh" / "Sắp tới" / ngày đang chọn */

@@ -41,7 +41,8 @@
   margin: 0;
   padding: 10px 12px;
   border-radius: var(--radius-control);
-  background: var(--state-error-bg);
-  color: var(--state-error-fg);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
   font-size: var(--text-sm);
 }

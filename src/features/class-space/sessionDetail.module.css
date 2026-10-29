@@ -139,8 +139,9 @@
   margin: 0;
   padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
   font-size: var(--text-md);
   font-weight: 600;
   line-height: 1.5;

@@ -57,21 +57,21 @@
 }
 
 .on_present {
-  background: var(--color-success-soft);
-  color: var(--color-success);
-  box-shadow: inset 0 0 0 1.5px var(--color-success);
+  background: var(--state-success-bg);
+  color: var(--state-success-fg);
+  box-shadow: none;
 }
 
 .on_late {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
-  box-shadow: inset 0 0 0 1.5px var(--color-warning);
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
+  box-shadow: none;
 }
 
 .on_absent {
-  background: var(--color-error-soft);
-  color: var(--color-error);
-  box-shadow: inset 0 0 0 1.5px var(--color-error);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
+  box-shadow: none;
 }
 
 .countRow {

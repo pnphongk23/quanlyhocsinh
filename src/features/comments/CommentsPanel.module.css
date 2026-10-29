@@ -181,8 +181,9 @@
   margin: 0;
   padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
-  background: var(--color-error-soft);
-  color: var(--color-error);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
   font-size: var(--text-md);
   font-weight: 600;
   line-height: 1.5;
@@ -337,8 +338,8 @@
   flex: none;
   padding: 6px var(--space-12);
   border-radius: var(--radius-pill);
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
   font-size: var(--text-sm);
   font-weight: 600;
   white-space: nowrap;
@@ -592,8 +593,9 @@
 }
 
 .statSkip {
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  border: 1px solid var(--card-pending-border);
+  background: var(--card-pending-bg);
+  color: var(--card-pending-fg);
 }
 
 .statSend strong,
@@ -612,8 +614,9 @@
 .confirmWarning {
   padding: 10px var(--space-12);
   border-radius: var(--radius-button);
-  background: var(--color-warning-soft);
-  color: var(--color-warning);
+  border: 1px solid var(--card-pending-border);
+  background: var(--card-pending-bg);
+  color: var(--card-pending-fg);
   font-size: var(--text-md);
   line-height: 1.5;
 }

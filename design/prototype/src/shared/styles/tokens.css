@@ -102,6 +102,10 @@
   /* Vùng bấm và kích thước */
   --tap: 44px;              /* mobile tối thiểu */
   --tap-desktop: 36px;
+  --criteria-check-size: 20px;
+  --criteria-check-icon-size: 12px;
+  --comment-star-size: 24px;
+  --dialog-action-gap: 8px; /* giữa các nút trong hộp xác nhận */
   --control-h: 52px;        /* ô nhập */
   --button-h-sm: 44px;
   --button-h-md: 48px;
@@ -137,18 +141,27 @@
   --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
 
   /* Trạng thái thành phần (bảng state contract: design/ux-v2/rules.md mục 6) */
-  --state-selected-bg: var(--color-primary-soft); /* đang chọn: nền, không viền */
-  --state-selected-fg: var(--color-primary-ink);
+  --state-selected-bg: var(--color-primary); /* đang chọn: nền, không viền */
+  --state-selected-fg: var(--color-on-primary);
   --state-hover-bg: var(--color-neutral-soft);
   --state-pressed-bg: var(--color-border);
   --state-focus-ring: var(--focus-ring);
   --state-disabled-opacity: 0.5;                  /* thành phần không có nền riêng (hàng, thẻ, ô) */
-  --state-success-bg: var(--color-success-soft);
-  --state-success-fg: var(--color-success);
-  --state-error-bg: var(--color-error-soft);
-  --state-error-fg: var(--color-error);
-  --state-pending-bg: var(--color-warning-soft);  /* đã lưu trên máy, chờ đồng bộ */
-  --state-pending-fg: var(--color-warning);
+  --state-success-bg: var(--color-success);
+  --state-success-fg: var(--color-on-primary);
+  --state-error-bg: var(--color-error);
+  --state-error-fg: var(--color-on-primary);
+  --state-pending-bg: var(--color-warning);  /* đã lưu trên máy, chờ đồng bộ */
+  --state-pending-fg: var(--color-on-primary);
+  --card-success-bg: var(--color-success-soft);
+  --card-success-border: var(--color-success);
+  --card-success-fg: var(--color-success);
+  --card-error-bg: var(--color-error-soft);
+  --card-error-border: var(--color-error);
+  --card-error-fg: var(--color-error);
+  --card-pending-bg: var(--color-warning-soft);
+  --card-pending-border: var(--color-warning);
+  --card-pending-fg: var(--color-warning);
   --dur-loading-min: 400ms;   /* loading hiện tối thiểu (lưu cục bộ); trùng SAVE_MIN_VISIBLE_MS */
   --dur-success-hold: 1600ms; /* giữ "Đã lưu"; trùng SAVE_SUCCESS_HOLD_MS */
   --empty-mascot: 96px;
