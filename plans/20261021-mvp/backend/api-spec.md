@@ -524,6 +524,7 @@ Nguồn: `docs/spec.md` mục 8 "Bản 1.1" và `plans/20261028-roles-permission
 - `status`: `active` | `disabled` | `pending` (chỉ với `kind = pending`).
 - `class_ids`: lớp được gán (`member_classes`). Với role `admin` luôn `[]` (Admin thấy mọi lớp).
 - `phone` đầy đủ `+84…`: chỉ Admin gọi được các route này; client che một phần ở danh sách nếu muốn.
+- **`display_name` có thể là `null`** (kiểu chuỗi hoặc `null`): `member` mà tài khoản chưa đặt tên (ví dụ tài khoản tạo bằng đặt lại mật khẩu của Admin) trả `null`; client phải decode nullable và hiển thị SĐT thay thế. `kind = pending` luôn có tên.
 - `display_name` của `member` là tên trong tài khoản; thêm SĐT đã có tài khoản thì giữ tên của họ, bỏ qua tên Admin nhập.
 
 ### GET /staff
