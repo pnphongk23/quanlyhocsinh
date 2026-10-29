@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>So sánh màu trạng thái</title>
+  <link id="design-tokens" rel="stylesheet" href="./tokens-before.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: var(--page-top) var(--page-x) var(--page-bottom); background: var(--color-bg); color: var(--color-text); font: var(--weight-regular) var(--text-base)/var(--leading-base) var(--font-sans); }
+    main { width: min(100%, var(--form-max)); margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); margin-bottom: var(--section-gap); }
+    h1 { margin: 0; font-size: var(--text-xl); line-height: var(--leading-tight); }
+    .version { color: var(--color-muted); font-size: var(--text-sm); }
+    section { display: grid; gap: var(--card-gap); margin-bottom: var(--section-gap); }
+    h2 { margin: 0; font-size: var(--text-lg); line-height: var(--leading-tight); }
+    .segmented { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-control); background: var(--color-neutral-soft); }
+    .segment { min-height: var(--tap); padding: var(--space-8) var(--space-12); border: 0; border-radius: var(--radius-button); background: transparent; color: var(--color-muted); font: var(--weight-semibold) var(--text-control)/var(--leading-base) var(--font-sans); }
+    .segment.selected, .selected-chip { background: var(--state-selected-bg); color: var(--state-selected-fg); }
+    .row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-8); }
+    .badge { display: inline-flex; align-items: center; min-height: var(--tap); padding: var(--space-8) var(--space-12); border-radius: var(--radius-pill); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .success { background: var(--state-success-bg); color: var(--state-success-fg); }
+    .error { background: var(--state-error-bg); color: var(--state-error-fg); }
+    .pending { background: var(--state-pending-bg); color: var(--state-pending-fg); }
+    .card { display: grid; gap: var(--space-4); min-height: var(--tap); padding: var(--card-pad); border: 1px solid; border-radius: var(--radius-card); font-weight: var(--weight-semibold); }
+    .card-success { background: var(--card-success-bg, var(--color-success-soft)); border-color: var(--card-success-border, transparent); color: var(--card-success-fg, var(--color-success)); }
+    .card-error { background: var(--card-error-bg, var(--color-error-soft)); border-color: var(--card-error-border, transparent); color: var(--card-error-fg, var(--color-error)); }
+    .card-pending { background: var(--card-pending-bg, var(--color-warning-soft)); border-color: var(--card-pending-border, transparent); color: var(--card-pending-fg, var(--color-warning)); }
+    .card small { font-size: var(--text-sm); font-weight: var(--weight-regular); }
+    .button { min-height: var(--button-h-md); padding: var(--space-8) var(--space-16); border: 0; border-radius: var(--radius-button); background: var(--color-primary); color: var(--color-on-primary); font: var(--weight-semibold) var(--text-control)/var(--leading-base) var(--font-sans); }
+    .chip { min-height: var(--tap); padding: var(--space-8) var(--space-12); border: 0; border-radius: var(--radius-chip); background: var(--color-neutral-soft); color: var(--color-text); font: var(--weight-semibold) var(--text-control)/var(--leading-base) var(--font-sans); }
+    .sample-grid { display: grid; gap: var(--space-8); }
+    @media (min-width: 1024px) { body { padding: var(--page-top) var(--page-x) var(--page-bottom); } main { width: min(100%, var(--content-max)); } .sample-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Màu trạng thái</h1>
+      <span class="version" id="version">Bản trước</span>
+    </header>
+
+    <section aria-labelledby="segment-title">
+      <h2 id="segment-title">Chuyển chế độ</h2>
+      <div class="segmented" role="tablist" aria-label="Thời gian">
+        <button class="segment selected" role="tab" aria-selected="true">Ngày</button>
+        <button class="segment" role="tab" aria-selected="false">Tháng</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="badge-title">
+      <h2 id="badge-title">Trạng thái</h2>
+      <div class="row">
+        <span class="badge success">✓ Đã gửi</span>
+        <span class="badge error">! Cần sửa</span>
+        <span class="badge pending">◷ Chờ đồng bộ</span>
+      </div>
+    </section>
+
+    <section aria-labelledby="card-title">
+      <h2 id="card-title">Thẻ kết quả</h2>
+      <div class="sample-grid">
+        <article class="card card-success"><span>Đã hoàn thành</span><small>Phiếu nhận xét đã được gửi.</small></article>
+        <article class="card card-error"><span>Cần kiểm tra</span><small>Không thể lưu thay đổi.</small></article>
+        <article class="card card-pending"><span>Đang chờ mạng</span><small>Đã lưu trên máy, sẽ đồng bộ.</small></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="control-title">
+      <h2 id="control-title">Nút và chip chọn</h2>
+      <div class="row">
+        <button class="button">Lưu thay đổi</button>
+        <button class="chip selected-chip" aria-pressed="true">Thu</button>
+        <button class="chip" aria-pressed="false">Tươi</button>
+      </div>
+    </section>
+  </main>
+  <script>
+    const version = new URLSearchParams(location.search).get('palette') === 'after' ? 'after' : 'before';
+    document.getElementById('design-tokens').href = `./tokens-${version}.css`;
+      document.getElementById('version').textContent = version === 'after' ? 'Đặc vừa phải' : 'Bản trước';
+    document.documentElement.dataset.palette = version;
+  </script>
+</body>
+</html>
