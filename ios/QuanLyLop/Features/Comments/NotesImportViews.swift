@@ -59,6 +59,38 @@ struct NotesImportSheet: View {
     }
 }
 
+/// What the teacher sees after saving a notes import: success, or which slips the server refused and a retry.
+struct NotesImportResultBanner: View {
+    let saved: Int
+    let failedNames: [String]
+    let retrying: Bool
+    let retry: () -> Void
+    let dismiss: () -> Void
+
+    var body: some View {
+        let failed = !failedNames.isEmpty
+        VStack(alignment: .leading, spacing: AppSpace.s8) {
+            Text(NotesImportText.saved(saved, failed: failedNames.count))
+                .appText(AppText.label)
+                .foregroundStyle(failed ? AppState.cardPendingFg : AppState.cardSuccessFg)
+                .accessibilityIdentifier("notes.result")
+            if failed {
+                Text(NotesImportText.failedNames + failedNames.joined(separator: ", "))
+                    .appText(AppText.body).foregroundStyle(AppColors.text)
+                Text(NotesImportText.failedHint).appText(AppText.muted).foregroundStyle(AppColors.muted)
+                AppButton(title: NotesImportText.retry, variant: .primary, size: .large, action: retry)
+                    .disabled(retrying)
+                    .accessibilityIdentifier("notes.retry")
+            }
+            AppButton(title: NotesImportText.dismissResult, variant: .neutral, size: .large, action: dismiss)
+                .accessibilityIdentifier("notes.result.dismiss")
+        }
+        .padding(AppSpace.s12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .appStatusCard(failed ? .pending : .success, radius: AppRadius.row)
+    }
+}
+
 /// Banner above "Theo tiêu chí" while a notes draft is open: what will change and what needs the teacher's eye.
 struct NotesImportReview: View {
     let draft: NotesImportDraft
@@ -147,11 +179,12 @@ struct NotesImportDemo: View {
                 NotesImportSheet(initialText: NotesImportDemoData.text, onAnalyze: { _, _ in }, close: {})
             }
         } else {
+            NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpace.s12) {
                     if kind == "notes-result" {
-                        Text(NotesImportText.saved(5, failed: 2)).appText(AppText.label).foregroundStyle(AppColors.text)
-                            .accessibilityIdentifier("notes.result")
+                        NotesImportResultBanner(saved: 5, failedNames: [NotesImportDemoData.names[2], NotesImportDemoData.names[4]],
+                                                retrying: false, retry: {}, dismiss: {})
                     }
                     CriteriaModeView(rows: rows, sections: [], grades: [], canWrite: true, save: { _, _, _ in nil }, draft: $draft)
                 }
@@ -166,6 +199,9 @@ struct NotesImportDemo: View {
                         AppButton(title: NotesImportText.discard, variant: .neutral, size: .large) {}
                     }
                 }
+            }
+            .navigationTitle(CriteriaModeText.byCriterion)
+            .navigationBarTitleDisplayMode(.inline)
             }
         }
     }

@@ -129,4 +129,59 @@ final class NotesImportFlowTests: XCTestCase {
         XCTAssertEqual(fields["student_id"], .string("s2"))
         XCTAssertEqual(fields["criteria"], .number(30))
     }
+
+    /// Refuses the slip of one student until told otherwise.
+    private final class RejectingAPI: APIClient, @unchecked Sendable {
+        let baseURL = URL(string: "https://fixture.invalid/v1")!
+        private let lock = NSLock()
+        private var refused: String?
+        init(refusing student: String) { refused = student }
+        func acceptAll() { lock.withLock { refused = nil } }
+
+        func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+            let json: String
+            switch endpoint.path {
+            case "sync/push":
+                let body = try JSONSerialization.jsonObject(with: endpoint.body ?? Data()) as? [String: Any]
+                let refusing = lock.withLock { refused }
+                let results = (body?["commands"] as? [[String: Any]] ?? []).compactMap { command -> String? in
+                    guard let id = command["id"] as? String else { return nil }
+                    let student = (command["payload"] as? [String: Any])?["student_id"] as? String
+                    if student == refusing {
+                        return "{\"id\":\"\(id)\",\"status\":\"rejected\",\"error\":{\"code\":\"forbidden\",\"message\":null}}"
+                    }
+                    return "{\"id\":\"\(id)\",\"status\":\"applied\",\"version\":1}"
+                }.joined(separator: ",")
+                json = "{\"epoch\":1,\"cursor\":1,\"results\":[\(results)]}"
+            case "sync/pull":
+                json = "{\"cursor\":1,\"epoch\":1,\"has_more\":false,\"server_time\":\"fixture\",\"upserts\":{},\"deleted\":[]}"
+            default:
+                throw APIFailure.offline
+            }
+            return try WireJSON.decoder().decode(type, from: Data(json.utf8))
+        }
+    }
+
+    func testRefusedSlipsAreNamedByIdAndCanBeSentAgain() async throws {
+        let api = RejectingAPI(refusing: "s2")
+        let store = try await store(students: 3)
+        let data = I4FeatureStore(store: store, api: api)
+        await data.refresh()
+        let draft = draft("Mất tập trung: Em s1", roster: roster(3))
+
+        let first = await data.saveNotesImport(sessionID: "session", saves: draft.saves, includeSent: false)
+
+        XCTAssertNil(first.error)
+        XCTAssertEqual(first.saved, 2)
+        XCTAssertEqual(first.rejectedStudentIDs, ["s2"])
+
+        api.acceptAll()
+        let retry = await data.saveNotesImport(sessionID: "session", saves: draft.saves.filter { $0.studentID == "s2" },
+                                               includeSent: false)
+
+        XCTAssertEqual(retry.saved, 1)
+        XCTAssertTrue(retry.rejectedStudentIDs.isEmpty)
+        let pending = try await store.pendingCommands()
+        XCTAssertTrue(pending.isEmpty)
+    }
 }

@@ -21,7 +21,10 @@ struct SessionCommentsView: View {
     /// Suggestions from "Nhập từ ghi chú"; nothing is stored until the teacher saves.
     @State private var notesDraft: NotesImportDraft?
     @State private var notesController = AppSaveController()
-    @State private var notesResult: String?
+    /// The last notes save: how many slips went through and which the server refused, kept for a retry.
+    @State private var notesResult: NotesSaveResult?
+    @State private var notesRetrying = false
+    @State private var notesIncludeSent = false
 
     init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.sessionID = sessionID
@@ -118,8 +121,9 @@ struct SessionCommentsView: View {
                     modeSwitch
                 }
                 if let notesResult {
-                    Text(notesResult).appText(AppText.label).foregroundStyle(AppColors.text)
-                        .accessibilityIdentifier("notes.result")
+                    NotesImportResultBanner(saved: notesResult.saved, failedNames: notesResult.failedNames,
+                                            retrying: notesRetrying, retry: { Task { await retryNotes() } },
+                                            dismiss: { self.notesResult = nil })
                 }
                 switch mode {
                 case .byStudent:
@@ -175,8 +179,30 @@ struct SessionCommentsView: View {
         guard let draft = notesDraft else { return }
         let outcome = await data.saveNotesImport(sessionID: sessionID, saves: draft.saves, includeSent: draft.options.includeSent)
         if let error = outcome.error { throw I4SaveFailure(message: error) }
-        notesResult = NotesImportText.saved(outcome.saved, failed: outcome.rejected)
+        notesIncludeSent = draft.options.includeSent
+        record(outcome, from: draft.saves)
         notesDraft = nil
+        await saveStatusSource?.refresh()
+    }
+
+    private func record(_ outcome: I4FeatureStore.NotesImportOutcome, from saves: [NotesImportSave]) {
+        let failedIDs = Set(outcome.rejectedStudentIDs)
+        let names = rows.filter { failedIDs.contains($0.student.id) }.map(\.student.name)
+        notesResult = NotesSaveResult(saved: outcome.saved, failedNames: names,
+                                      failedSaves: saves.filter { failedIDs.contains($0.studentID) })
+    }
+
+    private func retryNotes() async {
+        guard let previous = notesResult, !previous.failedSaves.isEmpty, !notesRetrying else { return }
+        notesRetrying = true
+        let outcome = await data.saveNotesImport(sessionID: sessionID, saves: previous.failedSaves, includeSent: notesIncludeSent)
+        notesRetrying = false
+        if outcome.error != nil { return }
+        let again = NotesSaveResult(saved: previous.saved + outcome.saved, failedNames: [], failedSaves: [])
+        record(outcome, from: previous.failedSaves)
+        if let latest = notesResult {
+            notesResult = NotesSaveResult(saved: again.saved, failedNames: latest.failedNames, failedSaves: latest.failedSaves)
+        }
         await saveStatusSource?.refresh()
     }
 
@@ -467,6 +493,12 @@ struct SessionCommentsView: View {
             }
         )
     }
+}
+
+struct NotesSaveResult: Equatable {
+    let saved: Int
+    let failedNames: [String]
+    let failedSaves: [NotesImportSave]
 }
 
 enum CommentsMode: String { case byStudent, byCriterion }

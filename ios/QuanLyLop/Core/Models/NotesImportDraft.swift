@@ -160,5 +160,9 @@ enum NotesImportText {
     static func saved(_ saved: Int, failed: Int) -> String {
         failed == 0 ? "Đã lưu \(saved) phiếu" : "Đã lưu \(saved), \(failed) phiếu lỗi"
     }
+    static let failedNames = "Phiếu lỗi: "
+    static let failedHint = "Máy chủ chưa nhận các phiếu này. Bấm thử lại để gửi lại đúng các phiếu đó."
+    static let retry = "Thử lại phiếu lỗi"
+    static let dismissResult = "Đóng"
     static func ambiguousLine(_ raw: String, _ candidates: [String]) -> String { "\(raw): \(candidates.joined(separator: " / "))" }
 }

@@ -412,23 +412,27 @@ final class I4FeatureStore: ObservableObject {
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
     }
 
-    /// What saving a notes import did: slips written on this device, and how many of them the server then refused.
+    /// What saving a notes import did: slips written on this device, and the students whose slip the server then refused
+    /// (their ids only, never names or content in a log).
     struct NotesImportOutcome: Equatable {
         let saved: Int
-        let rejected: Int
+        let rejectedStudentIDs: [String]
         let error: String?
+        var rejected: Int { rejectedStudentIDs.count }
     }
 
     /// Saves the reviewed notes import in one go: every slip and its `slip.set` are written in one transaction (all or
     /// none), then one sync pushes them (the coordinator splits at its batch limit). The state of each slip is read
-    /// again just before the write; a sent slip is left alone unless the teacher allowed editing it. Commands the
-    /// server refuses are counted from the change in the rejected total, never listed by name or content.
+    /// again just before the write; a sent slip is left alone unless the teacher allowed editing it. A command the
+    /// server refuses stays in the outbox as rejected; the same save can be sent again for those students.
     func saveNotesImport(sessionID: String, saves: [NotesImportSave], includeSent: Bool) async -> NotesImportOutcome {
-        let failed = NotesImportOutcome(saved: 0, rejected: 0, error: String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc"))
+        let failed = NotesImportOutcome(saved: 0, rejectedStudentIDs: [], error: String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc"))
+        let nothing = NotesImportOutcome(saved: 0, rejectedStudentIDs: [], error: nil)
         guard let store else { return failed }
-        guard !sendingSessionIDs.contains(sessionID) else { return NotesImportOutcome(saved: 0, rejected: 0, error: nil) }
+        guard !sendingSessionIDs.contains(sessionID) else { return nothing }
         await refresh()
         var entries: [(value: SessionSlip, key: String, command: PendingCommand?)] = []
+        var studentByKey: [String: String] = [:]
         for save in saves {
             let old = slip(sessionID: sessionID, studentID: save.studentID)
             guard !(old?.status == .sent && !includeSent), !CriteriaModeRules.isLocked(old),
@@ -440,15 +444,16 @@ final class I4FeatureStore: ObservableObject {
                 : .noteOnly
             guard let write = slipWrite(sessionID: sessionID, student: student, grading: grading, note: save.note) else { continue }
             entries.append((write.row, write.command.recordKey, write.command))
+            studentByKey[write.command.recordKey] = save.studentID
         }
-        guard !entries.isEmpty else { return NotesImportOutcome(saved: 0, rejected: 0, error: nil) }
+        guard !entries.isEmpty else { return nothing }
         do {
-            let before = (try? await store.rejectedCommandCount()) ?? 0
             try await store.writeAll(entries)
             await syncIfNeeded()
-            let rejected = max(((try? await store.rejectedCommandCount()) ?? 0) - before, 0)
+            let queued = (try? await store.queuedCommands()) ?? []
+            let rejected = queued.filter { $0.state == "rejected" }.compactMap { studentByKey[$0.command.recordKey] }
             await refresh()
-            return NotesImportOutcome(saved: entries.count - rejected, rejected: rejected, error: nil)
+            return NotesImportOutcome(saved: entries.count - rejected.count, rejectedStudentIDs: rejected.sorted(), error: nil)
         } catch { return failed }
     }
 
