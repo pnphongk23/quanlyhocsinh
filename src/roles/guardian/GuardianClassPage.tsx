@@ -22,6 +22,9 @@ import GuardianIcon from "./GuardianIcon";
 import GuardianNoChild from "./guardianEmpty";
 import g from "./guardian.module.css";
 
+/** Trang chủ chỉ hiện vài buổi gần nhất; phần còn lại nằm trong lịch. */
+const UPCOMING_LIMIT = 3;
+
 /**
  * PH · Lớp học của con (tab 1): đầu lớp, số nhanh, lối vào Điểm/Báo cáo và
  * danh sách buổi sắp tới. Lịch đầy đủ giữ cả các buổi đã qua.
@@ -49,9 +52,9 @@ export default function GuardianClassPage() {
   const attendance = canAttendance ? (overview?.attendance ?? null) : null;
   const latestScore = canScores ? (overview?.recentScores[0] ?? null) : null;
   const reportMonth = canReports ? (publishedReportMonths(studentId)[0] ?? null) : null;
-  const upcoming = childScheduleSessions(studentId).filter(
-    (session) => session.date >= todayISO(),
-  );
+  const upcoming = childScheduleSessions(studentId)
+    .filter((session) => session.date >= todayISO())
+    .slice(0, UPCOMING_LIMIT);
 
   return (
     <div className={g.page}>

@@ -85,10 +85,18 @@ describe("PH · Lớp học của con (tab 1)", () => {
       seedGuardian();
       const state = createSeed();
       state.homeworkSections.push({ id: "fixture-upcoming-homework", sessionId: "6a-extra-session", kind: "reading", title: "Đọc bài", description: "" });
+      const template = state.sessions.find((session) => session.id === "6a-session-8")!;
+      state.sessions.push(
+        { ...template, id: "6a-late-1", date: "2026-11-20" },
+        { ...template, id: "6a-late-2", date: "2026-11-27" },
+      );
       replaceStore(state);
       switchRole(MEMBER_IDS.lanGuardian);
       const html = renderPage(<GuardianClassPage />);
       expect(html).toContain("Tiếng Anh giao tiếp 6A");
+      // Chỉ 3 buổi gần nhất ở trang chủ; các buổi sau nằm trong "Tất cả".
+      expect(html).not.toContain('href="/ph/buoi/6a-late-1"');
+      expect(html).not.toContain('href="/ph/buoi/6a-late-2"');
       expect(html).toContain("Thứ Hai, Thứ Tư · 18:00");
       expect(html).toContain("Giáo viên Cô Lan");
     expect(html).toContain("Chuyên cần tháng 10");
