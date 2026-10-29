@@ -20,6 +20,7 @@ GIÁO VIÊN
 • Nhận xét sau buổi: chấm theo 5 tiêu chí, mỗi tiêu chí đạt được một sao. Câu nhận xét tự sinh, sửa tay được, thêm ghi chú riêng cho từng em. Gán mặc định cho cả lớp rồi chỉ chỉnh những em cần.
 • Bài tập về nhà: giao theo từng phần, chấm từng em ở buổi sau, kết quả đi cùng phiếu nhận xét.
 • Báo cáo theo tháng: tự chọn khoảng buổi, xem trước, phát hành cho phụ huynh và tải PDF ngay trên máy.
+• Cộng tác: chủ không gian làm việc thêm giáo viên hoặc trợ giảng bằng số điện thoại, gán lớp và chỉnh quyền từng vai trò. Mỗi người chỉ thấy lớp được gán và dùng đúng quyền của mình; ai có nhiều vai trò thì chọn và đổi trong Cài đặt.
 • Làm việc khi mạng yếu: điểm danh, nhập điểm, soạn nhận xét và chấm bài tập ghi được ngay cả khi mất mạng, tự đồng bộ khi có mạng trở lại.
 
 PHỤ HUYNH
@@ -45,6 +46,8 @@ Cách đăng nhập (hai bước):
 1. Nhập số điện thoại rồi bấm "Tiếp tục".
 2. Nếu số đã có tài khoản, app hiện ô mật khẩu, nhập mật khẩu rồi bấm "Đăng nhập".
 Số chưa có tài khoản và đã được giáo viên khai cho học sinh sẽ vào màn tự đặt mật khẩu lần đầu (phụ huynh). Số còn lại vào màn đăng ký không gian làm việc cho giáo viên.
+
+Tài khoản giáo viên demo là chủ không gian làm việc: vào Cài đặt → Nhân sự để xem danh sách, thêm nhân sự bằng số điện thoại, gán lớp, đổi vai trò, vô hiệu hoá; mở Phân quyền để chỉnh quyền hai vai trò Giáo viên và Trợ giảng. Người có nhiều vai trò chọn vai trò sau khi đăng nhập và đổi trong Cài đặt. Tài khoản trợ giảng demo là tuỳ chọn (chỉ thấy lớp được gán, không sửa được điểm, lớp, học sinh).
 
 Lưu ý:
 - Đăng nhập, gửi phiếu nhận xét và phát hành báo cáo cần kết nối mạng; điểm danh, nhập điểm và soạn nhận xét ghi được khi mất mạng rồi tự đồng bộ.

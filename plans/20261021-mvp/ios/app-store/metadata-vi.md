@@ -2,7 +2,7 @@
 
 Trạng thái: BẢN NHÁP để người dùng duyệt. Chỉ chuẩn bị, chưa tạo app, chưa upload, chưa submit. Số trong ngoặc là số ký tự đếm bằng script (App Store tính ký tự Unicode).
 
-Phạm vi nội dung: đúng `docs/spec.md` mục 8 "Bản đầu". Không nhắc học phí, bài giảng, nhân sự, role, lương, tải ảnh báo cáo, giao diện tiếng Anh, passkey, Zalo/SMS. Không nhắc thông báo đẩy vì app iOS chưa gắn Firebase Messaging (xem mục Kiểm tra sẵn sàng).
+Phạm vi nội dung: đúng `docs/spec.md` mục 8 "Bản đầu". Có nhắc nhân sự, vai trò và phân quyền (gộp vào bản đầu 2026-10-29). Không nhắc học phí, bài giảng, role tuỳ chỉnh, phân công theo lớp, lương, tải ảnh báo cáo, giao diện tiếng Anh, passkey, Zalo/SMS. Không nhắc thông báo đẩy vì app iOS chưa gắn Firebase Messaging (xem mục Kiểm tra sẵn sàng).
 
 ## 1. Tên app (≤30)
 
@@ -24,7 +24,7 @@ Phạm vi nội dung: đúng `docs/spec.md` mục 8 "Bản đầu". Không nhắ
 
 Điểm danh bằng một lần vuốt, nhận xét 5 tiêu chí kèm sao, chấm bài tập về nhà và gửi phiếu cho phụ huynh. Ghi được cả khi mạng lớp học chập chờn.
 
-## 4. Mô tả (≤4000) (1640)
+## 4. Mô tả (≤4000) (1875)
 
 Dành cho giáo viên tiếng Anh dạy lớp riêng và phụ huynh theo dõi con.
 
@@ -35,6 +35,7 @@ GIÁO VIÊN
 • Nhận xét sau buổi: chấm theo 5 tiêu chí, mỗi tiêu chí đạt được một sao. Câu nhận xét tự sinh, sửa tay được, thêm ghi chú riêng cho từng em. Gán mặc định cho cả lớp rồi chỉ chỉnh những em cần.
 • Bài tập về nhà: giao theo từng phần, chấm từng em ở buổi sau, kết quả đi cùng phiếu nhận xét.
 • Báo cáo theo tháng: tự chọn khoảng buổi, xem trước, phát hành cho phụ huynh và tải PDF ngay trên máy.
+• Cộng tác: chủ không gian làm việc thêm giáo viên hoặc trợ giảng bằng số điện thoại, gán lớp và chỉnh quyền từng vai trò. Mỗi người chỉ thấy lớp được gán và dùng đúng quyền của mình; ai có nhiều vai trò thì chọn và đổi trong Cài đặt.
 • Làm việc khi mạng yếu: điểm danh, nhập điểm, soạn nhận xét và chấm bài tập ghi được ngay cả khi mất mạng, tự đồng bộ khi có mạng trở lại.
 
 PHỤ HUYNH
@@ -101,9 +102,12 @@ Cách đăng nhập (hai bước):
 2. Nếu số đã có tài khoản, app hiện ô mật khẩu, nhập mật khẩu rồi bấm "Đăng nhập" (hoặc phím Return trên bàn phím).
 Số chưa có tài khoản và đã được giáo viên khai cho học sinh sẽ vào màn tự đặt mật khẩu lần đầu (phụ huynh). Số còn lại vào màn đăng ký không gian làm việc cho giáo viên.
 
-Tài khoản demo giáo viên: [cần tài khoản reviewer]
+Tài khoản demo giáo viên (chủ không gian làm việc): [cần tài khoản reviewer]
 Tài khoản demo phụ huynh: [cần tài khoản reviewer]
 (Mỗi tài khoản có lớp, học sinh, buổi học và phiếu nhận xét mẫu. Dữ liệu giả.)
+Tài khoản demo trợ giảng (tuỳ chọn, không bắt buộc): [cần tài khoản reviewer]. Chỉ thấy lớp được gán, không sửa được điểm, lớp, học sinh.
+
+Nhân sự và vai trò: đăng nhập tài khoản giáo viên demo (chủ không gian), vào Cài đặt → Nhân sự để xem danh sách, thêm nhân sự bằng số điện thoại, gán lớp, đổi vai trò, vô hiệu hoá; mở Phân quyền để chỉnh quyền hai vai trò Giáo viên và Trợ giảng. Người có nhiều vai trò chọn vai trò sau khi đăng nhập và đổi trong Cài đặt.
 
 Lưu ý:
 - Đăng nhập, gửi phiếu nhận xét và phát hành báo cáo cần kết nối mạng; điểm danh, nhập điểm và soạn nhận xét ghi được khi mất mạng rồi tự đồng bộ.
@@ -112,15 +116,6 @@ Lưu ý:
 
 Không ghi SĐT hay mật khẩu thật vào file này. Tài khoản reviewer phải tạo trên môi trường production khi có.
 
-## Đề xuất bổ sung khi gộp phân quyền (chờ người dùng duyệt, chưa áp dụng)
+## Áp dụng khi gộp phân quyền (người dùng duyệt 2026-10-29)
 
-Từ 2026-10-29 bản nộp đầu tiên có nhân sự, ma trận quyền, chọn/đổi vai trò (`docs/spec.md` mục 8 "Bản đầu"). Dòng "Phạm vi nội dung" ở đầu file và các mục 4, 10 hiện vẫn ghi "Không nhắc ... nhân sự, role"; cần sửa cho khớp nếu duyệt. Nháp, không phải mô tả đã chốt:
-
-**Mô tả (mục 4), thêm trong khối GIÁO VIÊN, trước dòng "Làm việc khi mạng yếu":**
-• Cộng tác: chủ không gian làm việc thêm giáo viên hoặc trợ giảng bằng số điện thoại, gán lớp và chỉnh quyền từng vai trò. Mỗi người chỉ thấy lớp được gán và dùng đúng quyền của mình; ai có nhiều vai trò thì chọn và đổi trong Cài đặt.
-
-**Ghi chú cho App Review (mục 10), thêm:**
-- Tài khoản demo trợ giảng (tuỳ chọn, không bắt buộc; tài khoản giáo viên demo đủ để duyệt màn Nhân sự): [cần tài khoản reviewer] (chỉ thấy lớp được gán, không sửa được điểm, lớp, học sinh; dữ liệu giả). Tài khoản demo giáo viên là chủ không gian: vào Cài đặt → Nhân sự để thêm, gán lớp, đổi vai trò, chỉnh quyền.
-- Người dùng có nhiều vai trò chọn vai trò sau khi đăng nhập và đổi trong Cài đặt.
-
-Cần kiểm lại trước khi nộp: đường dẫn "Cài đặt → Nhân sự" đúng tên màn trong app; App Privacy (mục 9) không đổi vì nhân sự chỉ thêm tên và SĐT do Admin nhập, cùng loại dữ liệu đã khai; ảnh chụp màn hình App Store có cần thêm màn nhân sự không.
+Đã áp dụng vào dòng "Phạm vi nội dung", mục 4 (thêm dòng "Cộng tác", số ký tự cập nhật) và mục 10, đồng bộ sang `asc-fill-prompt.md`. Tên màn đã đối chiếu code iOS (`mvp-ios-roles`): "Nhân sự" là hàng trong Cài đặt chỉ hiện với vai trò Admin (`AuthSettingsView.swift`, chuỗi `feature.staff.nhan.su`); "Phân quyền" là màn mở từ danh sách Nhân sự (`StaffViews.swift`, chuỗi `feature.staff.phan.quyen`); đổi vai trò nằm trong Cài đặt khi có nhiều hơn một vai trò. App Privacy (mục 9) không đổi: nhân sự chỉ thêm tên và SĐT do Admin nhập, cùng loại dữ liệu đã khai. Còn mở: ảnh chụp màn hình App Store chưa thêm màn Nhân sự (không bắt buộc); cần tài khoản reviewer.
