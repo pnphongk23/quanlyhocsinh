@@ -166,6 +166,10 @@
   --dur-success-hold: 1600ms; /* giữ "Đã lưu"; trùng SAVE_SUCCESS_HOLD_MS */
   --empty-mascot: 96px;
   --empty-mascot-compact: 56px;
+  --textarea-min: 200px;      /* hộp dán nhiều dòng (nhập danh sách, nhập từ ghi chú) */
+  --chip-grid-min: 132px;     /* bề rộng tối thiểu chip tên trong lưới "Theo tiêu chí" */
+  --date-col: 64px;           /* cột ngày ở thẻ buổi học của phụ huynh */
+  --row-chevron-size: 12px;   /* mũi tên cuối thẻ dòng */
 
   /* Bảng điểm: độ rộng cột và bước kéo */
   --grid-col-name-min: 140px;
