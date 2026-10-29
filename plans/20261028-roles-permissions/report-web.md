@@ -79,3 +79,12 @@ Route guard Admin, ẩn/khoá theo quyền, `active_membership_id` null và tự
 Status: DONE_WITH_CONCERNS
 Summary: Web 1.1 xong, tsc + 729 test pass, chạy live staging pass toàn bộ kịch bản (sync cursor thật, vô hiệu/bật lại, chéo workspace).
 Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 404, register 500); tài khoản smoke còn membership Trợ giảng ở workspace thử B cần BE vô hiệu hoá; chưa có đổi vai trò cho hàng Admin.
+
+## Deploy web bản 1.2 (nhận xét theo tiêu chí, nhập từ ghi chú, nhập danh sách, quyền Gửi nhận xét) lên staging
+
+- Ngày: 2026-10-30. Nhánh `mvp-web`, commit `a969be7`. Build với `VITE_API_BASE_URL` staging, `wrangler pages deploy dist --project-name qlh-staging-web --branch main`.
+- Deployment mới (Production): `862e3631-ff48-4f71-8f54-9999157a05dc` (https://862e3631.qlh-staging-web.pages.dev).
+- Rollback: `d5f56343-dc52-44b0-ba16-a7cf5ebb7db4` (web 1.1, commit d0c1bd9). Trước đó nữa: `6b088f5e-1c84-46e8-ab43-d5f1bf778800`.
+- Kiểm trước deploy: tsc sạch, vitest 807 pass (4 skip), build + check-bundle pass.
+- Smoke sau deploy (`plans/20261028-ai-features/smoke-deploy-12.mjs`, tài khoản QA web admin sẵn có, chỉ đọc, không bấm Lưu/Thêm/Gửi): `/`, `/privacy`, `/support` đều 200. Chromium và WebKit (iPhone 13 390 và 1440): đăng nhập, tab Nhận xét → "Theo tiêu chí", "Nhập từ ghi chú" tới xem trước, "Nhập danh sách" tới xem trước, Cài đặt → Nhân sự có hàng "Gửi nhận xét". Ảnh trong `shots-web/deploy-smoke/`.
+- Console: Chromium 0 lỗi. WebKit 4 lỗi cùng loại "due to access control checks" cho `GET /v1/sync/snapshot` và `/v1/sync/pull` (khi điều hướng trang). OPTIONS preflight tới API trả 204 với `access-control-allow-origin` đúng origin, dữ liệu vẫn hiện đủ trong ảnh; nhiều khả năng là fetch bị huỷ khi `page.goto` (WebKit báo huỷ cross-origin là lỗi access control), chưa xác nhận trên Safari iOS thật.
