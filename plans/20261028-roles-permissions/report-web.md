@@ -88,3 +88,12 @@ Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 4
 - Kiểm trước deploy: tsc sạch, vitest 807 pass (4 skip), build + check-bundle pass.
 - Smoke sau deploy (`plans/20261028-ai-features/smoke-deploy-12.mjs`, tài khoản QA web admin sẵn có, chỉ đọc, không bấm Lưu/Thêm/Gửi): `/`, `/privacy`, `/support` đều 200. Chromium và WebKit (iPhone 13 390 và 1440): đăng nhập, tab Nhận xét → "Theo tiêu chí", "Nhập từ ghi chú" tới xem trước, "Nhập danh sách" tới xem trước, Cài đặt → Nhân sự có hàng "Gửi nhận xét". Ảnh trong `shots-web/deploy-smoke/`.
 - Console: Chromium 0 lỗi. WebKit 4 lỗi cùng loại "due to access control checks" cho `GET /v1/sync/snapshot` và `/v1/sync/pull` (khi điều hướng trang). OPTIONS preflight tới API trả 204 với `access-control-allow-origin` đúng origin, dữ liệu vẫn hiện đủ trong ảnh; nhiều khả năng là fetch bị huỷ khi `page.goto` (WebKit báo huỷ cross-origin là lỗi access control), chưa xác nhận trên Safari iOS thật.
+
+## Deploy màn phụ huynh (lịch học của con) lên staging
+
+- Commit mvp-web: `c75ebe3` (Buổi sắp tới + Lịch học của con), `dec7402` (trang chủ giới hạn 3 buổi gần nhất). Chưa push.
+- Deployment mới (Production): `63de3ecc-1579-453e-8084-9a990d090877` (https://63de3ecc.qlh-staging-web.pages.dev), alias https://qlh-staging-web.pages.dev.
+- Rollback: `862e3631-ff48-4f71-8f54-9999157a05dc` (bản web 1.2), trước đó `d5f56343-dc52-44b0-ba16-a7cf5ebb7db4`.
+- Kiểm trước deploy: tsc sạch, vitest toàn bộ 814 qua/4 bỏ qua, build OK; test giới hạn 3 buổi fail khi nới giới hạn.
+- Smoke trên alias chính (tài khoản QA phụ huynh, `shots-web/guardian-shots.mjs`, ảnh `plans/20261021-mvp/web/guardian-schedule/`): trang chủ đúng 3 buổi + "Tất cả", `/ph/lich` Tháng/Ngày, tháng ngoài cửa sổ gọi `GET /calendar`. Console lỗi: 0 ở cả Chromium và WebKit.
+- Log mạng WebKit trên alias: không có response ≥400; các request `requestfailed` đều `errorText = "cancelled"` (`/sync/snapshot/{class,class_session,attendance,student}` khi script `page.goto` chuyển trang giữa lúc đang tải, và `/calendar` khi chuyển tháng nhanh bị huỷ bằng AbortController). Chromium tương ứng `net::ERR_ABORTED`. Không có lỗi CORS/access control trong lượt này.
