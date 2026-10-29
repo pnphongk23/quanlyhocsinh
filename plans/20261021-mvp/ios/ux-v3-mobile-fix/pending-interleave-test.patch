@@ -1,0 +1,104 @@
+diff --git a/ios/QuanLyLop/Core/Storage/SQLiteStore.swift b/ios/QuanLyLop/Core/Storage/SQLiteStore.swift
+index f16758b..339fd9d 100644
+--- a/ios/QuanLyLop/Core/Storage/SQLiteStore.swift
++++ b/ios/QuanLyLop/Core/Storage/SQLiteStore.swift
+@@ -50,6 +50,9 @@ actor SQLiteStore: LocalStore {
+     nonisolated let scope: CacheScope
+     private let db: SQLiteConnection
+     private var observers: [UUID: AsyncStream<Void>.Continuation] = [:]
++    /// Tests only: runs inside `writeFetched`, after the removed-key check and before the INSERT.
++    private var beforeFetchedInsert: (@Sendable () -> Void)?
++    func setBeforeFetchedInsert(_ hook: (@Sendable () -> Void)?) { beforeFetchedInsert = hook }
+ 
+     init(path: String, scope: CacheScope) throws {
+         self.scope = scope
+@@ -335,6 +338,7 @@ actor SQLiteStore: LocalStore {
+             for guarded in [key] + owners {
+                 if try !db.execute("SELECT 1 FROM removed WHERE scope=? AND key=?", [scope.storageKey, guarded]).isEmpty { return false }
+             }
++            beforeFetchedInsert?()
+             try db.execute("INSERT INTO records(scope,key,entity,version,json) VALUES(?,?,?,?,?) ON CONFLICT(scope,key) DO UPDATE SET json=excluded.json,version=excluded.version,entity=excluded.entity",
+                 [scope.storageKey, key, entity, String(tree["version"]?.int ?? 0), json])
+             return true
+diff --git a/ios/QuanLyLopTests/Guardian/GuardianDeletedReportTests.swift b/ios/QuanLyLopTests/Guardian/GuardianDeletedReportTests.swift
+index 6ea7f92..dae6c27 100644
+--- a/ios/QuanLyLopTests/Guardian/GuardianDeletedReportTests.swift
++++ b/ios/QuanLyLopTests/Guardian/GuardianDeletedReportTests.swift
+@@ -149,6 +149,68 @@ final class GuardianDeletedReportTests: XCTestCase {
+         }
+     }
+ 
++    private func twoStoresOnOneFile() async throws -> (refresh: SQLiteStore, sync: SQLiteStore, cleanup: () -> Void) {
++        let path = NSTemporaryDirectory() + "core-\(UUID().uuidString).sqlite"
++        let refresh = try SQLiteStore(path: path, scope: scope)
++        let sync = try SQLiteStore(path: path, scope: scope)
++        try await sync.installSnapshot([:], position: SyncPosition(cursor: 0, epoch: 1))
++        let student = Student(id: "st1", classId: "c1", name: "Trần Gia Bảo", parentPhone: nil,
++                              enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
++        try await sync.write(student, forKey: RecordKey(entity: "student", k1: student.id).storageKey, enqueueing: nil)
++        return (refresh, sync, { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: path + suffix) } })
++    }
++
++    private func assertNoPublication(in stores: [SQLiteStore], file: StaticString = #filePath, line: UInt = #line) async throws {
++        for store in stores {
++            let cached = try await cachedReportIDs(store)
++            XCTAssertTrue(cached.isEmpty, file: file, line: line)
++            let dashboard = try await GuardianRepository.dashboard(from: store)
++            XCTAssertTrue(dashboard.children.flatMap(\.publishedReports).isEmpty, file: file, line: line)
++        }
++    }
++
++    /// The fetched write stops between its removed-key check and its INSERT while the other store tries to commit
++    /// the removal. Either the removal waits until the INSERT is done and then deletes the row, or the write
++    /// sees the mark: the record must be gone at the end.
++    func testRemovalRacingTheFetchedWriteBetweenCheckAndInsertLeavesNothing() async throws {
++        let stores = try await twoStoresOnOneFile()
++        defer { stores.cleanup() }
++        let pub = try publication(report: "r-race")
++        let key = RecordKey(entity: "report_publication", k1: pub.id).storageKey
++        let rendezvous = Rendezvous()
++        await stores.refresh.setBeforeFetchedInsert { rendezvous.reached.signal(); rendezvous.go.wait() }
++
++        let write = Task { try await stores.refresh.writeFetched(pub, forKey: key) }
++        await Task.detached { rendezvous.reached.wait() }.value
++        let removal = Task {
++            try await stores.sync.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
++                                                 deleted: [RecordKey(entity: "report_publication", k1: pub.id)]))
++        }
++        // Long enough for a removal that is not held back by the write to commit.
++        try await Task.sleep(for: .milliseconds(400))
++        rendezvous.go.signal()
++        _ = try await write.value
++        try await removal.value
++
++        try await assertNoPublication(in: [stores.refresh, stores.sync])
++    }
++
++    /// Only the report the publication belongs to was removed: its late publication must not be written either.
++    func testMarkOnTheOwningReportAloneBlocksALateFetchedWrite() async throws {
++        let stores = try await twoStoresOnOneFile()
++        defer { stores.cleanup() }
++        let pub = try publication(report: "r-owner")
++        let key = RecordKey(entity: "report_publication", k1: pub.id).storageKey
++        let owner = RecordKey(entity: "report", k1: pub.reportId).storageKey
++        try await stores.sync.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
++                                             deleted: [RecordKey(entity: "report", k1: pub.reportId)]))
++
++        let written = try await stores.refresh.writeFetched(pub, forKey: key, guarding: [owner])
++
++        XCTAssertFalse(written)
++        try await assertNoPublication(in: [stores.refresh, stores.sync])
++    }
++
+     func testRemovalThroughAnotherStoreAlsoRemovesWhatWasFetchedJustBefore() async throws {
+         let path = NSTemporaryDirectory() + "core-\(UUID().uuidString).sqlite"
+         defer { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: path + suffix) } }
+@@ -251,3 +313,8 @@ private struct LatchedAPI: APIClient {
+         do { return try WireJSON.decoder().decode(type, from: Data(json.utf8)) } catch { throw APIFailure.decoding }
+     }
+ }
++
++private final class Rendezvous: @unchecked Sendable {
++    let reached = DispatchSemaphore(value: 0)
++    let go = DispatchSemaphore(value: 0)
++}
