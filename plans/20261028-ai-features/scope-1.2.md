@@ -32,7 +32,7 @@ Trạng thái: NHÁP, chờ người dùng duyệt. Chưa ghi vào `docs/spec.md
 6. Kết quả mở chế độ "Theo tiêu chí" với chip chọn sẵn và banner "Gợi ý từ ghi chú, kiểm tra rồi Lưu". **Không ghi gì cho tới khi bấm Lưu.** Chip, tiêu chí của từng cụm đều đổi được; thấy rõ "N phiếu sẽ đổi, M phiếu mới".
 7. Ô tick sẵn "Tạo phiếu mặc định cho các em còn lại", bỏ chọn được:
    - Dùng đúng quy tắc "Gán tất cả mặc định" (spec mục 4): đủ 5 tiêu chí, BTVN theo kết quả chấm (nên có thể 4 sao), câu tự sinh theo app.
-   - **Bỏ qua em Vắng.** Em chưa điểm danh vẫn được tạo (đề xuất, chờ duyệt, xem câu hỏi mở).
+   - **Bỏ qua em Vắng.** Em chưa điểm danh vẫn được tạo (đã chốt).
    - Không đụng phiếu đã có.
    - Dùng lại logic `planAssignDefaultSlips`/`composePlans` sẵn có thay vì viết lại.
 8. Từ khoá "cả lớp / tất cả / còn lại": chỉ cảnh báo trong xem trước, không tự áp; giáo viên tự chạm chọn.
@@ -76,7 +76,7 @@ Trạng thái: NHÁP, chờ người dùng duyệt. Chưa ghi vào `docs/spec.md
 - Tab Nhận xét thứ tư, đổi 5 tiêu chí, đổi quy tắc câu tự sinh.
 - Tự mở rộng "cả lớp"; khớp mờ cho tên dưới 4 ký tự; tự tích lại khi chạy lại; tự đoán nghĩa các cụm không chắc.
 - Đo CPU staging cho lô lưu nhiều phiếu (người dùng quyết không cần). Rủi ro còn lại: kiến trúc mục 9 vẫn ghi 50 lô nhỏ chưa đo; chấp nhận vì lớp dưới 20 em.
-- Quyền riêng cho phát hành báo cáo (xem câu hỏi mở).
+- Quyền riêng cho phát hành báo cáo (giữ như 1.1).
 
 ## Riêng tư
 - Không ghi tên, SĐT, nội dung nhận xét vào log, kể cả lỗi lô và hộp thoại kết quả.
@@ -89,10 +89,10 @@ Trạng thái: NHÁP, chờ người dùng duyệt. Chưa ghi vào `docs/spec.md
 - Vượt 20 em chỉ cảnh báo.
 - Bắt đầu sau khi 1.0 được duyệt. Thứ tự: D (quyền riêng gửi, vì đụng backend) và A trước, B sau, C song song.
 
-## Câu hỏi còn mở
-1. Em **chưa điểm danh** khi tạo phiếu mặc định ở B.7: tạo (đề xuất) hay bỏ qua như em Vắng?
-2. Quyền riêng chỉ cho **gửi phiếu**, hay cũng gồm **phát hành báo cáo** (hiện thuộc nhóm Nhận xét và báo cáo)? Đề xuất: chỉ gửi phiếu, giữ báo cáo như 1.1 trừ khi bạn muốn tách.
-3. Trợ giảng đã dùng 1.1 đang có quyền gửi (theo mặc định cũ): khi 1.2 ra, bỏ quyền gửi của Trợ giảng hiện có hay giữ nguyên chỉ áp mặc định cho Trợ giảng mới? Đề xuất: áp cho mọi Trợ giảng, Admin chỉnh lại được.
+## Quyết định về các câu mở (2026-10-29, người dùng chọn theo đề xuất)
+1. Em chưa điểm danh vẫn được tạo phiếu mặc định ở B.7; chỉ bỏ qua em Vắng.
+2. Quyền "Gửi nhận xét" riêng chỉ gồm gửi phiếu (từng phiếu và "Gửi phiếu cả lớp"). Phát hành báo cáo giữ nguyên như 1.1 (thuộc Nhận xét và báo cáo).
+3. Áp mặc định mới (Trợ giảng không có quyền gửi) cho mọi Trợ giảng, kể cả đã tạo ở 1.1; Admin chỉnh lại được trong ma trận.
 
 ## Tác động tài liệu (cập nhật cùng thay đổi khi duyệt, không làm trong bản nháp này)
 - `docs/spec.md`: mục 4 (tab Nhận xét có "Theo tiêu chí", "Nhập từ ghi chú"; quyền "Gửi nhận xét" riêng, sửa mặc định Trợ giảng của 1.1), mục 5.3 (offline: A, B dùng được; nhập danh sách **cần mạng**), mục 8 (thêm "Bản 1.2"; chuyển "nhập danh sách từ Excel" khỏi "Chưa nên làm" thành dán chữ/CSV; ảnh ở 1.3; AI "chưa làm").
