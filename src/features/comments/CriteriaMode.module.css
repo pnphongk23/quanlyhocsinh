@@ -68,12 +68,15 @@ button.chip {
   color: var(--state-selected-fg);
 }
 
-.absent {
-  opacity: var(--state-disabled-opacity);
-}
-
-.legacy {
-  opacity: var(--state-disabled-opacity);
+.absent::after {
+  content: "Vắng";
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  border: 1px dashed currentColor;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
 }
 
 .warning,
@@ -87,8 +90,9 @@ button.chip {
 }
 
 .previewBanner {
-  background: var(--state-selected-bg);
-  color: var(--state-selected-fg);
+  border: 1px solid var(--color-border);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
 }
 
 .previewSummary {

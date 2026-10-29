@@ -387,6 +387,10 @@
   opacity: 0.6;
 }
 
+.starOptionOn:disabled {
+  opacity: 1;
+}
+
 /* 41: hộp câu mẫu cố định */
 .templateBox {
   display: flex;

@@ -60,7 +60,7 @@
 }
 
 .starValue {
-  color: var(--state-selected-fg);
+  color: var(--color-text);
   font-size: var(--text-base);
   font-weight: var(--weight-bold);
   white-space: nowrap;
@@ -113,9 +113,13 @@
   color: var(--state-selected-fg);
 }
 
-.criterion:disabled,
-.criterionOn:disabled {
+.criterion:disabled {
   opacity: var(--state-disabled-opacity);
+  cursor: default;
+}
+
+.criterionOn:disabled {
+  opacity: 1;
   cursor: default;
 }
 
