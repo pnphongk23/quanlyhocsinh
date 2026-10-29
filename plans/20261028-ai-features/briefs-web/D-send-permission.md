@@ -1,0 +1,13 @@
+# Web D: UI quyền "Gửi nhận xét"
+
+Đọc `briefs-web/common.md` trước, rồi scope-1.2.md mục "D. Quyền". Hợp đồng API: chạy `git -C /Users/phamnhuphong/Git/quanlyhocsinh show d87e941` (api-spec). Tóm tắt: khoá thứ 7 `send_comments` trong cùng object `permissions` (có ở /me, login, register-guardian, đổi membership, GET /roles/permissions); giá trị chỉ "none"|"write" ("read" bị 422); `PUT /roles/{teacher|assistant}/permissions` nhận `{"send_comments":"write"|"none"}`; mặc định Admin/Teacher write, Assistant none, Parent none (không sửa được); thiếu khoá (máy chủ cũ) → coi như theo `comments_reports` (write → được gửi). Gửi phiếu = lệnh sync `slip.send` (gồm "Gửi phiếu cả lớp"); thiếu quyền máy chủ từ chối forbidden và không em nào được gửi.
+
+Sở hữu file: `src/data/api/types.ts`, `src/data/repositories/access.ts` (+ test), `src/features/staff/**` (ma trận + `staffModel`), phần nút gửi trong `src/features/comments/**` (nút "Gửi phiếu cả lớp", gửi từng phiếu trong `TicketEditor`/danh sách; chỉ sửa điều kiện hiển thị, không đụng phần B đang thêm `NotesImport*`, `notesParser`, `CriteriaMode`), lối vào "Nhập danh sách" ở `src/features/students/*` (chỉ điều kiện hiển thị). KHÔNG commit.
+
+Yêu cầu:
+1. Kiểu `StaffPermissions`/permissions thêm `send_comments`; `can()`/`useAccess` có điểm kiểm "gửi nhận xét" (mặc định theo quy tắc thiếu khoá ở trên); mọi điểm vào gửi phiếu ẩn (không chỉ khoá) khi thiếu quyền, vẫn soạn/Gán mặc định/tích được. Kiểm các điểm gửi khác (tìm `sendSessionTicketsDurable`, `slip.send`, nút "Gửi") để không sót.
+2. Thiếu quyền mà vẫn bị máy chủ từ chối forbidden (quyền vừa bị thu hồi): hiện thông báo tiếng Việt theo cơ chế lỗi sẵn có, giữ phiếu ở trạng thái chưa gửi.
+3. Ma trận phân quyền (`PermissionMatrix.tsx`, `staffModel`): thêm hàng "Gửi nhận xét" cho Giáo viên/Trợ giảng, chỉ 2 mức "Không"/"Sửa" (không có "Đọc"); `changedPermissions` chỉ gửi khoá thay đổi; hiển thị đúng khi server cũ không trả khoá (theo `comments_reports`). Thêm hàng ở mọi nơi hiển thị quyền (hàng nhân sự/chi tiết vai nếu có) và nếu có bảng ma trận ở docs (`docs/spec.md` mục nhân sự và phân quyền, `docs/architecture.md`) kiểm xem cần sửa; báo cáo nếu docs chưa khớp, không tự đổi spec.
+4. "Nhập danh sách" ẩn khi thiếu Học sinh: Sửa hoặc lớp chưa gán (nếu C chưa làm đủ); chip tiêu chí/"Nhập từ ghi chú" cần Nhận xét: Sửa (kiểm lại cùng quy tắc, không đụng file B đang viết).
+5. Test: `access` (đủ vai × có/thiếu khoá), ma trận (hàng mới, lưu `send_comments` đúng payload, không 422 với giá trị hợp lệ), ẩn nút gửi theo quyền (Trợ giảng mặc định không thấy), lỗi forbidden khi gửi.
+Báo cáo chi tiết: `/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261028-ai-features/briefs-web/report-D.md`.
