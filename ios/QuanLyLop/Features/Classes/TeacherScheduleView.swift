@@ -257,6 +257,9 @@ struct TeacherScheduleView: View {
         }
     }
 
+    /// The dot under a day number: exactly the days whose list is not empty.
+    static func marksDay<Row>(_ date: String, in grouped: [String: [Row]]) -> Bool { !(grouped[date] ?? []).isEmpty }
+
     struct DayCell: Hashable {
         let date: String
         let inMonth: Bool
@@ -267,7 +270,7 @@ struct TeacherScheduleView: View {
         if !cell.inMonth {
             Color.clear.frame(maxWidth: .infinity).frame(minHeight: AppMetrics.tap)
         } else {
-            let hasSessions = !(entriesByDate[cell.date] ?? []).isEmpty
+            let hasSessions = Self.marksDay(cell.date, in: entriesByDate)
             let selected = cell.date == selectedDate
             let isToday = cell.date == today
             Button { selectedDate = cell.date } label: {
@@ -275,7 +278,7 @@ struct TeacherScheduleView: View {
                     Text("\(cell.day)")
                         .appText(AppTextStyle(size: 15, weight: selected ? .bold : .medium, lineHeight: 22.5))
                     Circle()
-                        .fill(selected ? AppColors.onPrimary : (hasSessions ? AppColors.primary : .clear))
+                        .fill(hasSessions ? (selected ? AppColors.onPrimary : AppColors.primary) : .clear)
                         .frame(width: 5, height: 5)
                 }
                 .foregroundStyle(selected ? AppColors.onPrimary : AppColors.text)

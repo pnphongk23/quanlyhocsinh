@@ -141,11 +141,11 @@ struct TeacherTabBar: View {
                 Text(item.label)
                     .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
             }
-              .foregroundStyle(active ? AppState.selectedFg : AppColors.muted)
+              .foregroundStyle(active ? AppColors.primaryInk : AppColors.muted)
               .frame(maxWidth: .infinity, minHeight: 56)
               .padding(.horizontal, 8)
               .padding(.top, 8)
-              .background(active ? AppState.selectedBg : .clear,
+              .background(active ? AppColors.primarySoft : .clear,
                           in: RoundedRectangle(cornerRadius: AppRadius.segment))
             .contentShape(Rectangle())
         }

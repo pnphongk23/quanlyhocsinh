@@ -204,7 +204,10 @@ struct TeacherAttendanceView: View {
             } else {
                 content
                     .offset(x: swipeOffset(for: student))
-                    .background(alignment: .trailing) { swipeActions(student, current: value.status) }
+                    .background(alignment: .trailing) {
+                        // Only while the row is open or dragged: at rest the buttons would bleed through the rounded corners.
+                        if swipeOffset(for: student) != 0 { swipeActions(student, current: value.status) }
+                    }
                     .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
                     .simultaneousGesture(swipeGesture(student))
             }

@@ -98,3 +98,13 @@ final class StateColorTokenTests: XCTestCase {
         XCTAssertEqual(AppState.cardPendingFg, AppColors.warning)
     }
 }
+
+final class TeacherScheduleDotTests: XCTestCase {
+    func testADayHasADotExactlyWhenItsListIsNotEmpty() {
+        let grouped = ["2026-10-30": [1], "2026-10-31": [2, 3], "2026-11-01": []]
+        for date in ["2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"] {
+            XCTAssertEqual(TeacherScheduleView.marksDay(date, in: grouped), !(grouped[date] ?? []).isEmpty, date)
+        }
+        XCTAssertFalse(TeacherScheduleView.marksDay("2026-10-29", in: grouped))
+    }
+}
