@@ -27,8 +27,11 @@ struct GuardianUpcomingSection: View {
     let openSession: (GuardianSessionRow) -> Void
     let openAll: () -> Void
 
+    /// The home page shows this many; the rest is behind "Tất cả" (same as the web home).
+    static let homeLimit = 3
+
     private var rows: [GuardianSessionRow] {
-        GuardianScheduleRules.upcoming(child.sessionRows, today: TeacherFormat.todayISO(), limit: 3)
+        GuardianScheduleRules.upcoming(child.sessionRows, today: TeacherFormat.todayISO(), limit: Self.homeLimit)
     }
 
     var body: some View {

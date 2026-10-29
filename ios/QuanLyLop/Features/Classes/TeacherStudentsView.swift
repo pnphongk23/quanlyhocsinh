@@ -6,6 +6,7 @@ struct TeacherStudentsView: View {
     let classID: String
     @Bindable var data: TeacherFeatureData
     @State private var showingAdd = false
+    @State private var showingImport = false
     @State private var leaving: Student?
     @State private var editingPhone: Student?
     @State private var error: String?
@@ -25,6 +26,10 @@ struct TeacherStudentsView: View {
                 Text(statsLine)
                     .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.9))
                     .foregroundStyle(AppColors.muted)
+                if data.canWriteStudents {
+                    AppButton(title: StudentImportText.entry, systemImage: "square.and.arrow.down", variant: .secondary) { showingImport = true }
+                        .accessibilityIdentifier("students.import")
+                }
                 if let error { TeacherErrorBanner(message: error) }
                 if students.isEmpty {
                     AppEmptyState(title: String(localized: "feature.classes.chua.co.hoc.sinh")) {
@@ -53,6 +58,7 @@ struct TeacherStudentsView: View {
             }
         }
         .sheet(isPresented: $showingAdd) { addSheet }
+        .sheet(isPresented: $showingImport) { StudentImportSheet(classID: classID, data: data) }
         .sheet(item: $editingPhone) { student in phoneSheet(student) }
         .confirmationDialog(String(localized: "feature.classes.anh.dau.hoc.sinh.a.nghi"),
                             isPresented: leavingBinding, titleVisibility: .visible, presenting: leaving) { student in

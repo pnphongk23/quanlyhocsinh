@@ -104,6 +104,9 @@ enum DemoScreens {
                       .session(classID: TeacherDemoData.classID, sessionID: "demo-session-8")]
             }
             return AnyView(TeacherRootView(demoData: data, initialRoutes: routes).environment(model))
+        case "import-input", "import-preview", "import-result":
+            model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
+            return AnyView(StudentImportDemo(kind: name).environment(model))
           case "scores", "score-grid", "homework", "comments", "reports", "reports-error":
               return AnyView(DemoI4Screen(kind: name))
           case "guardian", "guardian-empty", "guardian-schedule", "guardian-picker":

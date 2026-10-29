@@ -61,6 +61,13 @@ final class GuardianScheduleRulesTests: XCTestCase {
         XCTAssertEqual(GuardianScheduleRules.upcoming(rows, today: "2026-10-29", limit: 2).map(\.id), ["today", "soon"])
     }
 
+    func testHomeShowsAtMostThreeUpcomingSessions() {
+        let rows = (1...6).map { row("s\($0)", "2026-11-0\($0)") }
+        XCTAssertEqual(GuardianUpcomingSection.homeLimit, 3)
+        XCTAssertEqual(GuardianScheduleRules.upcoming(rows, today: "2026-10-29", limit: GuardianUpcomingSection.homeLimit).map(\.id),
+                       ["s1", "s2", "s3"])
+    }
+
     func testByDateGroupsSessionsOfTheSameDayByTime() {
         let grouped = GuardianScheduleRules.byDate([row("b", "2026-10-30", "19:00"), row("a", "2026-10-30", "17:00"),
                                                     row("c", "2026-10-31")])

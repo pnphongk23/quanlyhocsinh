@@ -234,11 +234,12 @@ final class TeacherFeatureData {
         await refresh()
     }
 
-    func addStudent(id: String, to classID: String, name: String, parentPhone: String?) async throws {
+    /// `refreshing: false` is for the list import, which reloads once after the last student.
+    func addStudent(id: String, to classID: String, name: String, parentPhone: String?, refreshing: Bool = true) async throws {
         let request = TeacherStudentRequest(id: id.lowercased(), name: name.trimmingCharacters(in: .whitespacesAndNewlines), parentPhone: parentPhone?.nilIfBlank, enrolledAt: Self.todayString)
         let value = try await send(.post, path: "classes/\(classID)/students", body: request, as: Student.self)
         try await cache(value, entity: "student")
-        await refresh()
+        if refreshing { await refresh() }
     }
 
     func updateStudent(_ student: Student, parentPhone: String?) async throws {
