@@ -121,13 +121,15 @@
 }
 
 .success {
-  background: var(--state-success-bg);
-  color: var(--state-success-fg);
+  background: var(--card-success-bg);
+  border: 1px solid var(--card-success-border);
+  color: var(--card-success-fg);
 }
 
 .error {
-  background: var(--state-error-bg);
-  color: var(--state-error-fg);
+  background: var(--card-error-bg);
+  border: 1px solid var(--card-error-border);
+  color: var(--card-error-fg);
 }
 
 .visuallyHidden {
