@@ -184,4 +184,36 @@ final class NotesImportFlowTests: XCTestCase {
         let pending = try await store.pendingCommands()
         XCTAssertTrue(pending.isEmpty)
     }
+
+    func testHomeworkChipRoundTripStillSetsTheManualFlag() {
+        var people = roster(1)
+        people[0].slip = NotesImportRules.SlipInfo(state: .draft, isLegacy: false, unmetMask: 1 << 4, note: "")
+        var draft = draft("", roster: people, options: .init())
+        XCTAssertTrue(draft.saves.isEmpty)
+        draft.toggle(studentID: "s1", criterion: 4)
+        draft.toggle(studentID: "s1", criterion: 4)
+        XCTAssertEqual(draft.saves.count, 1)
+        XCTAssertEqual(draft.saves.first?.hwManual, true)
+        XCTAssertEqual(draft.saves.first?.criteriaChanged, true)
+    }
+
+    func testOfflineSaveReportsSlipsWaitingForTheServer() async throws {
+        let store = try await store(students: 2)
+        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .offline))
+        await data.refresh()
+        let draft = draft("Mất tập trung: Em s1", roster: roster(2))
+        let outcome = await data.saveNotesImport(sessionID: "session", saves: draft.saves, includeSent: false)
+        XCTAssertEqual(outcome.waiting, 2)
+        XCTAssertTrue(outcome.rejectedStudentIDs.isEmpty)
+    }
+
+    func testSlipSentSinceThePreviewIsCountedNotDropped() async throws {
+        let store = try await store(students: 2, slips: [slipRecord("s1", status: "sent")])
+        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .offline))
+        await data.refresh()
+        let draft = draft("Mất tập trung: Em s1, Em s2", roster: roster(2))
+        let outcome = await data.saveNotesImport(sessionID: "session", saves: draft.saves, includeSent: false)
+        XCTAssertEqual(outcome.skippedSent, 1)
+        XCTAssertEqual(outcome.saved, 1)
+    }
 }

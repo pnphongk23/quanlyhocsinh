@@ -63,6 +63,8 @@ struct NotesImportSheet: View {
 struct NotesImportResultBanner: View {
     let saved: Int
     let failedNames: [String]
+    var waiting = 0
+    var skippedSent = 0
     let retrying: Bool
     let retry: () -> Void
     let dismiss: () -> Void
@@ -74,6 +76,12 @@ struct NotesImportResultBanner: View {
                 .appText(AppText.label)
                 .foregroundStyle(failed ? AppState.cardPendingFg : AppState.cardSuccessFg)
                 .accessibilityIdentifier("notes.result")
+            if waiting > 0 {
+                Text(NotesImportText.queued(waiting)).appText(AppText.muted).foregroundStyle(AppColors.muted)
+            }
+            if skippedSent > 0 {
+                Text(NotesImportText.sentSince(skippedSent)).appText(AppText.muted).foregroundStyle(AppColors.muted)
+            }
             if failed {
                 Text(NotesImportText.failedNames + failedNames.joined(separator: ", "))
                     .appText(AppText.body).foregroundStyle(AppColors.text)

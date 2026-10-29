@@ -122,6 +122,7 @@ struct SessionCommentsView: View {
                 }
                 if let notesResult {
                     NotesImportResultBanner(saved: notesResult.saved, failedNames: notesResult.failedNames,
+                                            waiting: notesResult.waiting, skippedSent: notesResult.skippedSent,
                                             retrying: notesRetrying, retry: { Task { await retryNotes() } },
                                             dismiss: { self.notesResult = nil })
                 }
@@ -189,7 +190,8 @@ struct SessionCommentsView: View {
         let failedIDs = Set(outcome.rejectedStudentIDs)
         let names = rows.filter { failedIDs.contains($0.student.id) }.map(\.student.name)
         notesResult = NotesSaveResult(saved: outcome.saved, failedNames: names,
-                                      failedSaves: saves.filter { failedIDs.contains($0.studentID) })
+                                      failedSaves: saves.filter { failedIDs.contains($0.studentID) },
+                                      waiting: outcome.waiting, skippedSent: outcome.skippedSent)
     }
 
     private func retryNotes() async {
@@ -201,7 +203,8 @@ struct SessionCommentsView: View {
         let again = NotesSaveResult(saved: previous.saved + outcome.saved, failedNames: [], failedSaves: [])
         record(outcome, from: previous.failedSaves)
         if let latest = notesResult {
-            notesResult = NotesSaveResult(saved: again.saved, failedNames: latest.failedNames, failedSaves: latest.failedSaves)
+            notesResult = NotesSaveResult(saved: again.saved, failedNames: latest.failedNames, failedSaves: latest.failedSaves,
+                                          waiting: latest.waiting, skippedSent: latest.skippedSent)
         }
         await saveStatusSource?.refresh()
     }
@@ -499,6 +502,8 @@ struct NotesSaveResult: Equatable {
     let saved: Int
     let failedNames: [String]
     let failedSaves: [NotesImportSave]
+    var waiting = 0
+    var skippedSent = 0
 }
 
 enum CommentsMode: String { case byStudent, byCriterion }

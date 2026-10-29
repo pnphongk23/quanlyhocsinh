@@ -418,6 +418,11 @@ final class I4FeatureStore: ObservableObject {
         let saved: Int
         let rejectedStudentIDs: [String]
         let error: String?
+        /// Written here but not yet confirmed by the server (offline, or the sync did not finish): a later refusal
+        /// shows through the app's save-error pill.
+        var waiting = 0
+        /// Slips left out because they were sent after the preview was made.
+        var skippedSent = 0
         var rejected: Int { rejectedStudentIDs.count }
     }
 
@@ -433,9 +438,11 @@ final class I4FeatureStore: ObservableObject {
         await refresh()
         var entries: [(value: SessionSlip, key: String, command: PendingCommand?)] = []
         var studentByKey: [String: String] = [:]
+        var skippedSent = 0
         for save in saves {
             let old = slip(sessionID: sessionID, studentID: save.studentID)
-            guard !(old?.status == .sent && !includeSent), !CriteriaModeRules.isLocked(old),
+            if old?.status == .sent, !includeSent { skippedSent += 1; continue }
+            guard !CriteriaModeRules.isLocked(old),
                   let student = students.first(where: { $0.id == save.studentID }) else { continue }
             let grading: SlipGrading = save.criteriaChanged
                 ? .criteria(SlipRules.allCriteria & ~save.unmetMask,
@@ -446,14 +453,16 @@ final class I4FeatureStore: ObservableObject {
             entries.append((write.row, write.command.recordKey, write.command))
             studentByKey[write.command.recordKey] = save.studentID
         }
-        guard !entries.isEmpty else { return nothing }
+        guard !entries.isEmpty else { return NotesImportOutcome(saved: 0, rejectedStudentIDs: [], error: nil, skippedSent: skippedSent) }
         do {
             try await store.writeAll(entries)
             await syncIfNeeded()
             let queued = (try? await store.queuedCommands()) ?? []
             let rejected = queued.filter { $0.state == "rejected" }.compactMap { studentByKey[$0.command.recordKey] }
+            let waiting = queued.filter { $0.state != "rejected" && studentByKey[$0.command.recordKey] != nil }.count
             await refresh()
-            return NotesImportOutcome(saved: entries.count - rejected.count, rejectedStudentIDs: rejected.sorted(), error: nil)
+            return NotesImportOutcome(saved: entries.count - rejected.count, rejectedStudentIDs: rejected.sorted(), error: nil,
+                                      waiting: waiting, skippedSent: skippedSent)
         } catch { return failed }
     }
 

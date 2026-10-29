@@ -20,10 +20,12 @@ struct NotesImportDraft: Equatable, Sendable {
         var appendNote: [String]
         let isNew: Bool
         var hwManual: Bool
+        /// The teacher tapped the homework chip, so the criterion is hand-set even if it ends where it began.
+        var hwTouched = false
         let existingNote: String
 
         /// Whether saving would write something for this student.
-        var hasEffect: Bool { isNew || unmet != baseUnmet || !appendNote.isEmpty }
+        var hasEffect: Bool { isNew || unmet != baseUnmet || !appendNote.isEmpty || hwTouched }
     }
 
     let result: NotesImportRules.Result
@@ -78,7 +80,7 @@ struct NotesImportDraft: Equatable, Sendable {
                                                 isNew: student.slip == nil, hwManual: false,
                                                 existingNote: student.slip?.note ?? "")
         entry.unmet ^= 1 << criterion
-        if criterion == NotesImportRules.homeworkIndex { entry.hwManual = true }
+        if criterion == NotesImportRules.homeworkIndex { entry.hwManual = true; entry.hwTouched = true }
         entries[studentID] = entry
     }
 
@@ -102,7 +104,7 @@ struct NotesImportDraft: Equatable, Sendable {
                 .filter { !$0.isEmpty }.joined(separator: " ")
             return NotesImportSave(studentID: id, unmetMask: entry.unmet, note: note,
                                    hwManual: entry.hwManual ? true : nil,
-                                   criteriaChanged: entry.isNew || entry.unmet != entry.baseUnmet)
+                                   criteriaChanged: entry.isNew || entry.unmet != entry.baseUnmet || entry.hwTouched)
         }
     }
 
@@ -156,6 +158,8 @@ enum NotesImportText {
 
     static func counts(changing: Int, new: Int) -> String { "\(changing) phiếu sẽ đổi, \(new) phiếu mới" }
     static func skipped(_ count: Int) -> String { "\(count) phiếu bỏ qua" }
+    static func queued(_ count: Int) -> String { "\(count) phiếu đã lưu trên máy, chờ đồng bộ với máy chủ" }
+    static func sentSince(_ count: Int) -> String { "\(count) phiếu bỏ qua vì đã gửi từ lúc xem gợi ý" }
     static func handEdited(_ count: Int) -> String { "\(count) phiếu có câu sửa tay sẽ được viết lại từ tiêu chí" }
     static func saved(_ saved: Int, failed: Int) -> String {
         failed == 0 ? "Đã lưu \(saved) phiếu" : "Đã lưu \(saved), \(failed) phiếu lỗi"
