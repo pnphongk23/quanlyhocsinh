@@ -69,7 +69,7 @@ struct GuardianScheduleCard: View {
                     Text(lead).appDynamicText(AppText.label).foregroundStyle(AppColors.text)
                     Text(TeacherFormat.dayMonth(row.session.date)).appDynamicText(AppText.muted).foregroundStyle(AppColors.muted)
                 }
-                .frame(width: 64, alignment: .leading)
+                .frame(width: AppMetrics.dateColumn, alignment: .leading)
                 Text(row.session.startTime)
                     .appDynamicText(AppText.subheading)
                     .foregroundStyle(AppColors.text)
@@ -82,7 +82,7 @@ struct GuardianScheduleCard: View {
                     if let slip = row.sentSlip { GuardianStars(slip: slip, size: 14) }
                 }
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: AppMetrics.rowChevronSize, weight: .semibold))
                     .foregroundStyle(AppColors.muted)
             }
             .padding(.horizontal, AppMetrics.cardPaddingHorizontal)

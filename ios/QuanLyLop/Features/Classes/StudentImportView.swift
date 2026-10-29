@@ -62,7 +62,7 @@ struct StudentImportSheet: View {
                 .foregroundStyle(AppColors.text)
                 .scrollContentBackground(.hidden)
                 .padding(AppSpace.s12)
-                .frame(minHeight: 200)
+                .frame(minHeight: AppMetrics.textAreaMin)
                 .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.control))
                 .overlay(RoundedRectangle(cornerRadius: AppRadius.control)
                     .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))

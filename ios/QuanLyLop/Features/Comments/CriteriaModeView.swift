@@ -65,7 +65,7 @@ struct CriteriaModeView: View {
                 AppPill(title: CriteriaModeText.unmetCount(CriteriaModeRules.unmetCount(chips)),
                         tone: CriteriaModeRules.unmetCount(chips) == 0 ? .success : .warning)
             }
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: AppSpace.s8, alignment: .top)],
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: AppMetrics.chipGridMin), spacing: AppSpace.s8, alignment: .top)],
                       alignment: .leading, spacing: AppSpace.s8) {
                 ForEach(chips) { chip in
                     chipButton(chip, criterion: criterion)

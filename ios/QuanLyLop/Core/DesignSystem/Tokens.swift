@@ -251,6 +251,14 @@ extension AppMetrics {
     /// `--empty-mascot` / `--empty-mascot-compact`.
     static let emptyMascot: CGFloat = 96
     static let emptyMascotCompact: CGFloat = 56
+    /// `--textarea-min`: multi-line paste box.
+    static let textAreaMin: CGFloat = 200
+    /// `--chip-grid-min`: narrowest name chip in the criteria grid.
+    static let chipGridMin: CGFloat = 132
+    /// `--date-col`: date column of a guardian session card.
+    static let dateColumn: CGFloat = 64
+    /// `--row-chevron-size`: arrow at the end of a card row.
+    static let rowChevronSize: CGFloat = 12
     /// Mít next to the template sentence of the comment sheet (web `CommentTicketSheet`, 72 px).
     static let ticketMascot: CGFloat = 72
 }
