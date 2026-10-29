@@ -29,7 +29,7 @@ describe('auth flows', () => {
        JOIN role_permissions p ON p.role_id=r.id WHERE r.workspace_id=? ORDER BY r.system_key,p.perm_group`,
     ).bind(workspaceId).all<{ system_key: string; scope_kind: string; perm_group: string; level: string }>();
     expect(new Set(roles.map((role) => role.system_key))).toEqual(new Set(['admin','teacher','assistant','guardian']));
-    expect(roles).toHaveLength(24);
+    expect(roles).toHaveLength(28);
     const me = await call('/v1/me', {}, registered.body.token);
     expect(me.status).toBe(200);
     expect(me.body.memberships).toHaveLength(1);

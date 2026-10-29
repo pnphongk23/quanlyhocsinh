@@ -21,6 +21,7 @@ const allWrite: Permissions = {
   scores: 'write',
   lectures: 'write',
   comments_reports: 'write',
+  send_comments: 'write',
 };
 
 export const DEFAULT_ROLES: RoleSeed[] = [
@@ -49,7 +50,8 @@ export const DEFAULT_ROLES: RoleSeed[] = [
       sessions_attendance: 'write',
       scores: 'read',
       lectures: 'read',
-      comments_reports: 'write',
+        comments_reports: 'write',
+        send_comments: 'none',
     },
   },
   {
@@ -63,7 +65,8 @@ export const DEFAULT_ROLES: RoleSeed[] = [
       sessions_attendance: 'read',
       scores: 'read',
       lectures: 'none',
-      comments_reports: 'read',
+        comments_reports: 'read',
+        send_comments: 'none',
     },
   },
 ];
@@ -75,6 +78,7 @@ const PERM_GROUPS: PermGroup[] = [
   'scores',
   'lectures',
   'comments_reports',
+  'send_comments',
 ];
 
 export interface UserRow {

@@ -1,5 +1,5 @@
 import type { Identity, Permissions, PermGroup } from '../types';
-import { ApiError, notFound, validationError, conflict, errorBody, passwordChangeRequired } from '../lib/errors';
+import { ApiError, notFound, validationError, conflict, forbidden, errorBody, passwordChangeRequired } from '../lib/errors';
 import { assertStaffWrite, requireAccess, mapTriggerError } from './authz';
 
 type Row = Record<string, any>;
@@ -70,7 +70,7 @@ export async function syncIdentity(db: D1Database,current: Identity,membershipId
       : db.prepare('SELECT class_id FROM member_classes WHERE workspace_id=? AND membership_id=?').bind(m.workspace_id,m.id),
     db.prepare('SELECT student_id FROM guardian_student WHERE workspace_id=? AND user_id=?').bind(m.workspace_id,current.userId),
   ]);
-  const permissions=Object.fromEntries(['classes','students','sessions_attendance','scores','lectures','comments_reports'].map(g=>[g,'none'])) as Permissions;
+  const permissions=Object.fromEntries(['classes','students','sessions_attendance','scores','lectures','comments_reports','send_comments'].map(g=>[g,'none'])) as Permissions;
   for (const r of rows[0]!.results as Row[]) permissions[r.perm_group as PermGroup]=r.level;
   return {...current,membershipId:m.id,workspaceId:m.workspace_id,workspaceName:m.workspace_name,
     roleId:m.role_id,roleName:m.role_name,roleSystemKey:m.system_key,scopeKind:m.scope_kind,
@@ -284,6 +284,9 @@ export async function push(db:D1Database,i:SyncIdentity,commands:Command[],reque
       try {
         if (Date.parse(c.created_at)<Date.now()-90*86400000) throw validationError(undefined,'command_expired');
         assertStaffWrite(i);
+        if (c.type === 'slip.send' && i.permissions.send_comments !== 'write') {
+          throw forbidden();
+        }
         const entity=c.type==='homework.grade.set' ? 'homework_grade' : c.type.split('.')[0]!;
         const plan=cells[entity] && c.type.endsWith('.set') ? await cellPlan(db,i,c,entity) : await objectPlan(db,i,c);
         if (plan.result.status==='rejected') plan.result.error.request_id=requestId;

@@ -5,7 +5,7 @@ import type { Identity, PermGroup, PermLevel } from '../types';
 import { mapTriggerError } from './authz';
 
 const EDITABLE_GROUPS: PermGroup[] = [
-  'classes', 'students', 'sessions_attendance', 'scores', 'comments_reports',
+  'classes', 'students', 'sessions_attendance', 'scores', 'comments_reports', 'send_comments',
 ];
 const STAFF_ROLES = ['teacher', 'assistant'] as const;
 type StaffRole = (typeof STAFF_ROLES)[number];
@@ -256,7 +256,7 @@ export async function getRolePermissions(db: D1Database, identity: Identity) {
   for (const key of STAFF_ROLES) {
     const role = await editableRole(db, identity, key);
     const rows = await db.prepare(`SELECT perm_group,level FROM role_permissions WHERE role_id=?
-      AND perm_group IN ('classes','students','sessions_attendance','scores','comments_reports') ORDER BY perm_group`)
+      AND perm_group IN ('classes','students','sessions_attendance','scores','comments_reports','send_comments') ORDER BY perm_group`)
       .bind(role.id).all<{ perm_group: string; level: string }>();
     items.push({ role: { id: role.id, name: role.name, system_key: role.system_key },
       permissions: Object.fromEntries(rows.results.map((row) => [row.perm_group, row.level])) });
@@ -271,7 +271,8 @@ export async function updateRolePermissions(db: D1Database, identity: Identity, 
   if (!entries.length) throw validationError(undefined, 'permissions_required');
   const updates: Array<[PermGroup, PermLevel]> = [];
   for (const [group, level] of entries) {
-    if (!EDITABLE_GROUPS.includes(group as PermGroup) || !['none', 'read', 'write'].includes(String(level))) {
+      if (!EDITABLE_GROUPS.includes(group as PermGroup) || !['none', 'read', 'write'].includes(String(level)) ||
+        (group === 'send_comments' && !['none', 'write'].includes(String(level)))) {
       throw validationError({ [group]: 'invalid' });
     }
     updates.push([group as PermGroup, level as PermLevel]);

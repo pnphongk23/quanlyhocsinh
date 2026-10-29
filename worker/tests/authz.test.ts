@@ -5,7 +5,7 @@ import { call } from './helpers';
 
 const allWrite: Permissions = {
   classes: 'write', students: 'write', sessions_attendance: 'write',
-  scores: 'write', lectures: 'write', comments_reports: 'write',
+  scores: 'write', lectures: 'write', comments_reports: 'write', send_comments: 'write',
 };
 
 function identity(overrides: Partial<Identity> = {}): Identity {
@@ -39,7 +39,7 @@ describe('authorization matrix core', () => {
   it('limits guardians to linked children and read-only permissions', () => {
     const guardian = identity({
       scopeKind: 'linked_students',
-      permissions: { classes: 'none', students: 'none', sessions_attendance: 'read', scores: 'read', lectures: 'none', comments_reports: 'read' },
+      permissions: { classes: 'none', students: 'none', sessions_attendance: 'read', scores: 'read', lectures: 'none', comments_reports: 'read', send_comments: 'none' },
     });
     expect(() => requireAccess(guardian, 'students', 'read', { classId: 'class-a', studentId: 'student-a' })).not.toThrow();
     expect(() => requireAccess(guardian, 'scores', 'read', { studentId: 'student-a' })).not.toThrow();

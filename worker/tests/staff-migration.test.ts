@@ -23,6 +23,8 @@ describe('migration 0013 staff roles', () => {
         .bind(customized.roles.assistant),
       db.prepare(`UPDATE role_permissions SET level='write' WHERE role_id=? AND perm_group='scores'`)
         .bind(customized.roles.assistant),
+      db.prepare("DELETE FROM role_permissions WHERE role_id IN (?,?) AND perm_group='send_comments'")
+        .bind(untouched.roles.assistant, customized.roles.assistant),
       db.prepare('DROP TRIGGER IF EXISTS staff_declaration_role_bi'),
       db.prepare('DROP TRIGGER IF EXISTS staff_declaration_role_bu'),
       db.prepare('DROP TABLE IF EXISTS staff_declaration_classes'),

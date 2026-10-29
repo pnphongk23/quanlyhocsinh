@@ -30,6 +30,7 @@ const PERM_GROUPS: PermGroup[] = [
   'scores',
   'lectures',
   'comments_reports',
+  'send_comments',
 ];
 
 export async function findSessionByTokenHash(
@@ -82,7 +83,7 @@ export function sessionIdentity(session: SessionRow): Identity {
     scopeEpoch: 0,
     permissions: {
       classes: 'none', students: 'none', sessions_attendance: 'none',
-      scores: 'none', lectures: 'none', comments_reports: 'none',
+      scores: 'none', lectures: 'none', comments_reports: 'none', send_comments: 'none',
     },
     classIds: [],
     linkedStudentIds: [],

@@ -4,7 +4,8 @@ export type PermGroup =
   | 'sessions_attendance'
   | 'scores'
   | 'lectures'
-  | 'comments_reports';
+  | 'comments_reports'
+  | 'send_comments';
 
 export type PermLevel = 'none' | 'read' | 'write';
 

@@ -114,7 +114,7 @@ describe('staff management and role permissions', () => {
     ] }), token);
     expect(push.status).toBe(200);
     expect(push.body.results.map((result: any) => result.error?.code ?? result.status))
-      .toEqual(['forbidden', 'applied', 'applied', 'applied']);
+      .toEqual(['forbidden', 'applied', 'applied', 'forbidden']);
 
     const teacherRole = await call(`/v1/staff/${membershipId}`, { method: 'PATCH', body: JSON.stringify({ role: 'teacher' }) }, admin.token);
     expect(teacherRole.status).toBe(200);
