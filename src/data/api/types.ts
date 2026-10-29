@@ -10,6 +10,8 @@ export interface ApiMembership {
   id: string;
   workspace: { id: string; name: string };
   role: { id: string; name: string; system_key: string | null; scope_kind: ScopeKind };
+  /** Lớp được giao, chỉ có khi `scope_kind = "assigned_classes"` (GET /me). */
+  class_ids?: string[];
   /** Guardian-only scope supplied by login/register-guardian/GET /me. */
   students?: Array<{
     id: string;
@@ -19,6 +21,27 @@ export interface ApiMembership {
     teacher_name: string | null;
   }>;
 }
+/** Vai trò gán được cho nhân sự (Admin không gán qua API). */
+export type StaffRoleKey = "teacher" | "assistant";
+export type StaffStatus = "active" | "disabled" | "pending";
+export type StaffPermissionGroup = "classes" | "students" | "sessions_attendance" | "scores" | "comments_reports";
+export type StaffPermissions = Record<StaffPermissionGroup, PermissionLevel>;
+export interface StaffMember {
+  id: string;
+  kind: "member" | "pending";
+  user_id: string | null;
+  display_name: string;
+  phone: string;
+  role: { id: string; name: string; system_key: string | null };
+  class_ids: string[];
+  status: StaffStatus;
+  is_self: boolean;
+  created_at: string;
+  version: number;
+}
+export interface StaffCreateBody { phone: string; display_name: string; role: StaffRoleKey; class_ids?: string[] }
+export interface StaffPatchBody { role?: StaffRoleKey; class_ids?: string[]; status?: "active" | "disabled"; display_name?: string; base_version?: number }
+export interface RolePermissionsItem { role: { id: string; name: string; system_key: string | null }; permissions: StaffPermissions }
 export interface MeResponse {
   user: ApiUser; active_membership_id: string | null;
   memberships: (ApiMembership & { status: "active" | "disabled"; scope_epoch: number; permissions: Record<PermissionGroup, PermissionLevel> })[];

@@ -1,4 +1,4 @@
-import type { ApiErrorBody, ApiClass, ApiStudent, ApiSession, ApiReport, LoginResponse, MeResponse, Page, PushRequest, PushResponse, PullResponse, SnapshotResponse, ReportPreview } from "./types";
+import type { ApiErrorBody, ApiClass, ApiStudent, ApiSession, ApiReport, LoginResponse, MeResponse, Page, PushRequest, PushResponse, PullResponse, SnapshotResponse, ReportPreview, StaffMember, StaffCreateBody, StaffPatchBody, StaffPermissions, RolePermissionsItem } from "./types";
 export type PhoneCheckNext = "login" | "guardian_setup" | "teacher_register";
 export interface ApiClientOptions { baseUrl: string; getToken: () => string | null; fetch?: typeof fetch }
 export interface RequestOptions<Body> { body?: Body; query?: Record<string, string | number | undefined>; signal?: AbortSignal; requestId?: string; authToken?: string; /** Public endpoint: never attach a stored Bearer token. */ anonymous?: boolean }
@@ -18,12 +18,18 @@ export type ApiEndpoints = {
   "PUT /session/membership": Endpoint<{ active_membership_id: string; device_registration_cleared: true }, { membership_id: string }>;
   "GET /classes": Endpoint<{ items: ApiClass[] }>;
   "POST /classes": Endpoint<ApiClass, { id?: string; name: string; weekdays: number[]; start_time: string }>;
+  "GET /staff": Endpoint<{ items: StaffMember[] }>;
+  "POST /staff": Endpoint<StaffMember, StaffCreateBody>;
+  "GET /roles/permissions": Endpoint<{ items: RolePermissionsItem[] }>;
   "POST /sync/push": Endpoint<PushResponse, PushRequest>;
   "GET /sync/pull": Endpoint<PullResponse>;
   "GET /sync/snapshot": Endpoint<SnapshotResponse>;
     "GET /calendar": Endpoint<{ items: ApiSession[] }>;
     } & { [P in `PATCH /sessions/${string}`]: Endpoint<ApiSession, { date?: string; start_time?: string; note?: string; base_version?: number }> }
-      & { [P in `PATCH /classes/${string}`]: Endpoint<ApiClass, { name?: string; weekdays?: number[]; start_time?: string; status?: "archived" }> }
+      & { [P in `PATCH /staff/${string}`]: Endpoint<StaffMember, StaffPatchBody> }
+    & { [P in `DELETE /staff/${string}`]: Endpoint<void> }
+    & { [P in `PUT /roles/${string}/permissions`]: Endpoint<RolePermissionsItem, { permissions: Partial<StaffPermissions> }> }
+    & { [P in `PATCH /classes/${string}`]: Endpoint<ApiClass, { name?: string; weekdays?: number[]; start_time?: string; status?: "archived" }> }
     & { [P in `GET /sync/snapshot/${string}`]: Endpoint<{ items: unknown[]; next_after: string | null }> }
     & { [P in `POST /classes/${string}/students`]: Endpoint<ApiStudent, { id?: string; name: string; parent_phone?: string; enrolled_at: string }> }
     & { [P in `PATCH /students/${string}`]: Endpoint<ApiStudent, { name?: string; parent_phone?: string; status?: "left"; left_at?: string }> }

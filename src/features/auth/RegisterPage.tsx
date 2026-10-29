@@ -6,6 +6,7 @@ import { nationalPhoneDisplay } from "../../data/auth/phone";
 import { getSession } from "../../data/auth/session";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { Button, Icon } from "../../shared/ui";
+import { landingPathForSession } from "./landingPath";
 import { CheckRow, EmailField, PasswordField, PasswordStrength, PhoneField, emailFieldError, looksLikeEmail } from "./authUi";
 import s from "./auth.module.css";
 
@@ -19,7 +20,7 @@ export function registrationErrorMessage(error: unknown): string {
     return "Số điện thoại đã có tài khoản. Hãy đăng nhập.";
   }
   if (error instanceof ApiError && error.status === 403 && error.error.details?.reason === "phone_not_declared") {
-    return "Số điện thoại này chưa được giáo viên khai cho học sinh nào.";
+    return "Số điện thoại này chưa được khai trong hệ thống. Hãy liên hệ người quản lý lớp.";
   }
   return authFailureMessage(error);
 }
@@ -63,8 +64,7 @@ export default function RegisterPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!(await action.submit())) return;
-    const memberships = getSession()?.me.memberships ?? [];
-    navigate(guardian ? (memberships.length > 1 ? "/chon-vai-tro" : "/ph") : "/lop", { replace: true });
+    navigate(guardian ? landingPathForSession(getSession()) : "/lop", { replace: true });
   }
 
   return (
@@ -94,7 +94,7 @@ export default function RegisterPage() {
           <PasswordField label="Mật khẩu" value={password} onChange={setField("password")} autoComplete="new-password" id="register-password" hint={<PasswordStrength password={password} />} />
           <div className={s.checks}><CheckRow ok={password.length >= 8}>Tối thiểu 8 ký tự</CheckRow></div>
           <PasswordField label="Nhập lại mật khẩu" value={confirm} onChange={setField("confirm")} autoComplete="new-password" id="register-confirm" error={mismatch} errorText={mismatch ? "Mật khẩu nhập lại không khớp." : undefined} />
-          <p className={s.note}>{guardian ? "Con sẽ tự hiện ở đây khi hồ sơ học sinh có đúng số điện thoại này." : "Người tạo là quản trị viên đầu tiên của không gian làm việc."}</p>
+          <p className={s.note}>{guardian ? "Đặt mật khẩu lần đầu để vào ứng dụng. Các vai trò được khai cho số này sẽ hiện sau khi đăng nhập." : "Người tạo là quản trị viên đầu tiên của không gian làm việc."}</p>
           <Button type="submit" size="lg" block className={s.submitAction} disabled={!action.canSave} loading={loading} done={action.justSaved}>{guardian ? "Vào ứng dụng" : "Tạo không gian làm việc"}</Button>
         </form>
       </div>
