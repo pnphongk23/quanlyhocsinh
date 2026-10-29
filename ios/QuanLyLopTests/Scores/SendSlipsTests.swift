@@ -519,7 +519,7 @@ final class SendSlipsTests: XCTestCase {
 }
 
 /// Answers the sync endpoints and one `slip.send` push; `pushedCommandTypes` shows what reached the wire.
-private final class SlipPushAPI: APIClient, @unchecked Sendable {
+final class SlipPushAPI: APIClient, @unchecked Sendable {
     enum Mode { case offline, pushFails, sentAll, slowSentAll, sentOnlyA }
 
     let baseURL = URL(string: "https://fixture.invalid/v1")!
@@ -570,7 +570,7 @@ private final class SlipPushAPI: APIClient, @unchecked Sendable {
 
 
 /// Answers every pushed command as applied and counts the sync requests.
-private final class CountingAPI: APIClient, @unchecked Sendable {
+final class CountingAPI: APIClient, @unchecked Sendable {
     let baseURL = URL(string: "https://fixture.invalid/v1")!
     private let lock = NSLock()
     private var pushes = 0

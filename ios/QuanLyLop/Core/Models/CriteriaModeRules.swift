@@ -13,7 +13,13 @@ enum CriteriaModeRules {
         let isSent: Bool
         let isAbsent: Bool
         var id: String { studentID }
-        var isEditable: Bool { !isLegacy }
+        /// An old three-star slip cannot be edited; a chip of the notes draft can also be closed for other reasons.
+        let isEditable: Bool
+
+        init(studentID: String, name: String, unmet: Bool, isLegacy: Bool, isSent: Bool, isAbsent: Bool, isEditable: Bool? = nil) {
+            self.studentID = studentID; self.name = name; self.unmet = unmet; self.isLegacy = isLegacy
+            self.isSent = isSent; self.isAbsent = isAbsent; self.isEditable = isEditable ?? !isLegacy
+        }
     }
 
     /// An old three-star slip with stars keeps its scale; an unscored old draft has nothing to protect.

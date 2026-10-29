@@ -9,6 +9,8 @@ struct CriteriaModeView: View {
     let canWrite: Bool
     /// Saves one tap; returns an error text, nil when it was written.
     let save: (String, I4FeatureStore.SlipGrading, String) async -> String?
+    /// Suggestions from "Nhập từ ghi chú": while set, chips show it and a tap changes it, nothing is written.
+    @Binding var draft: NotesImportDraft?
 
     @State private var busy: Set<String> = []
     @State private var acknowledged: Set<CriteriaModeRules.Warning> = []
@@ -27,6 +29,7 @@ struct CriteriaModeView: View {
             Text(CriteriaModeText.hint)
                 .appText(AppText.muted)
                 .foregroundStyle(AppColors.muted)
+            if let draft { NotesImportReview(draft: draft, handEdited: handEditedCount(draft)) }
             if let failure {
                 Text(failure).appText(AppText.label).foregroundStyle(AppColors.error)
             }
@@ -49,7 +52,7 @@ struct CriteriaModeView: View {
     }
 
     private func group(_ criterion: Int) -> some View {
-        let chips = CriteriaModeRules.chips(rows: rows, criterion: criterion, sections: sections, grades: grades)
+        let chips = shownChips(criterion)
         return VStack(alignment: .leading, spacing: AppSpace.s12) {
             HStack(alignment: .firstTextBaseline, spacing: AppSpace.s8) {
                 VStack(alignment: .leading, spacing: AppSpace.s2) {
@@ -73,6 +76,24 @@ struct CriteriaModeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
         .accessibilityIdentifier("criteria.group.\(criterion)")
+    }
+
+    private func shownChips(_ criterion: Int) -> [CriteriaModeRules.Chip] {
+        let chips = CriteriaModeRules.chips(rows: rows, criterion: criterion, sections: sections, grades: grades)
+        guard let draft else { return chips }
+        return chips.map { chip in
+            guard let unmet = draft.unmet(for: chip.studentID) else {
+                return CriteriaModeRules.Chip(studentID: chip.studentID, name: chip.name, unmet: chip.unmet, isLegacy: chip.isLegacy,
+                                              isSent: chip.isSent, isAbsent: chip.isAbsent, isEditable: draft.isEditable(studentID: chip.studentID))
+            }
+            return CriteriaModeRules.Chip(studentID: chip.studentID, name: chip.name, unmet: unmet & (1 << criterion) != 0,
+                                          isLegacy: chip.isLegacy, isSent: chip.isSent, isAbsent: chip.isAbsent,
+                                          isEditable: draft.isEditable(studentID: chip.studentID))
+        }
+    }
+
+    private func handEditedCount(_ draft: NotesImportDraft) -> Int {
+        draft.handEditedCount { id in CriteriaModeRules.overwritesHandEditedSentence(rows.first { $0.student.id == id }?.slip) }
     }
 
     private func chipButton(_ chip: CriteriaModeRules.Chip, criterion: Int) -> some View {
@@ -102,6 +123,10 @@ struct CriteriaModeView: View {
     }
 
     private func tap(_ chip: CriteriaModeRules.Chip, criterion: Int) {
+        if draft != nil {
+            draft?.toggle(studentID: chip.studentID, criterion: criterion)
+            return
+        }
         let slip = rows.first { $0.student.id == chip.studentID }?.slip
         let needed = CriteriaModeRules.warnings(slip: slip, acknowledged: acknowledged)
         if needed.isEmpty {

@@ -142,7 +142,7 @@ extension TeacherScreenshotTests {
                 previousHomework: I4HomeworkSummary(total: 0, graded: 0), previousDate: nil, previousHadSections: false)
         }
         let view = ScrollView {
-            CriteriaModeView(rows: rows, sections: [], grades: [], canWrite: true) { _, _, _ in nil }
+            CriteriaModeView(rows: rows, sections: [], grades: [], canWrite: true, save: { _, _, _ in nil }, draft: .constant(nil))
                 .padding(AppSpace.s16)
         }
         .background(AppColors.background)

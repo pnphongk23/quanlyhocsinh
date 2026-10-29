@@ -107,6 +107,9 @@ enum DemoScreens {
         case "import-input", "import-preview", "import-result":
             model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
             return AnyView(StudentImportDemo(kind: name).environment(model))
+        case "notes-input", "notes-review":
+            model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
+            return AnyView(NotesImportDemo(kind: name).environment(model))
           case "scores", "score-grid", "homework", "comments", "reports", "reports-error":
               return AnyView(DemoI4Screen(kind: name))
           case "guardian", "guardian-empty", "guardian-schedule", "guardian-picker":

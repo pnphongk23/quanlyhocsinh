@@ -17,6 +17,11 @@ struct SessionCommentsView: View {
     @State private var defaultsController = AppSaveController()
     @State private var defaultsError: String?
     @State private var saveStatusSource: AppSaveStatusSource?
+    @State private var showingNotesImport = false
+    /// Suggestions from "Nhập từ ghi chú"; nothing is stored until the teacher saves.
+    @State private var notesDraft: NotesImportDraft?
+    @State private var notesController = AppSaveController()
+    @State private var notesResult: String?
 
     init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
         self.sessionID = sessionID
@@ -75,6 +80,9 @@ struct SessionCommentsView: View {
         .sheet(item: $target) { target in
             ticketSheet(target)
         }
+        .sheet(isPresented: $showingNotesImport) {
+            NotesImportSheet(onAnalyze: analyzeNotes) { showingNotesImport = false }
+        }
         .overlay {
             if showingSend { sendDialog }
             if showingDefaults { defaultsDialog }
@@ -105,7 +113,14 @@ struct SessionCommentsView: View {
                 AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.e.nhan.xet"))
             } else {
                 if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
-                modeSwitch
+                if notesDraft == nil {
+                    if data.canWriteCommentsReports { notesImportButton }
+                    modeSwitch
+                }
+                if let notesResult {
+                    Text(notesResult).appText(AppText.label).foregroundStyle(AppColors.text)
+                        .accessibilityIdentifier("notes.result")
+                }
                 switch mode {
                 case .byStudent:
                     filters
@@ -128,12 +143,41 @@ struct SessionCommentsView: View {
 
     private var criteriaMode: some View {
         let sections = previousSession.map { data.sections(sessionID: $0.id) } ?? []
-        return CriteriaModeView(rows: rows, sections: sections, grades: data.grades, canWrite: data.canWriteCommentsReports) { id, grading, note in
+        return CriteriaModeView(rows: rows, sections: sections, grades: data.grades, canWrite: data.canWriteCommentsReports,
+                                save: { id, grading, note in
             guard let student = rows.first(where: { $0.student.id == id })?.student else { return CriteriaModeText.saveFailed }
             let error = await data.saveSlip(sessionID: sessionID, student: student, grading: grading, note: note)
             await saveStatusSource?.refresh()
             return error
+        }, draft: $notesDraft)
+    }
+
+    private var notesImportButton: some View {
+        AppButton(title: NotesImportText.entry, systemImage: "text.badge.plus", variant: .secondary) {
+            notesResult = nil
+            showingNotesImport = true
         }
+        .accessibilityIdentifier("comment.importNotes")
+    }
+
+    private func analyzeNotes(_ text: String, options: NotesImportRules.Options) {
+        guard let session else { return }
+        let sections = previousSession.map { data.sections(sessionID: $0.id) } ?? []
+        let roster = NotesImportRoster.build(rows: rows, others: data.otherMembers(of: session), sections: sections,
+                                             grades: data.grades)
+        let result = NotesImportRules.analyze(text, students: roster, options: options)
+        notesDraft = NotesImportDraft(result: result, students: roster, options: options)
+        mode = .byCriterion
+        showingNotesImport = false
+    }
+
+    private func saveNotesDraft() async throws {
+        guard let draft = notesDraft else { return }
+        let outcome = await data.saveNotesImport(sessionID: sessionID, saves: draft.saves, includeSent: draft.options.includeSent)
+        if let error = outcome.error { throw I4SaveFailure(message: error) }
+        notesResult = NotesImportText.saved(outcome.saved, failed: outcome.rejected)
+        notesDraft = nil
+        await saveStatusSource?.refresh()
     }
 
     private var filters: some View {
@@ -219,23 +263,32 @@ struct SessionCommentsView: View {
 
     private var footer: some View {
         TeacherPinnedBar {
-            if sendAvailability == .needsNetwork {
-                Text(String(localized: "comments.send.needs_network", table: "Teacher"))
-                    .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
-                    .foregroundStyle(AppColors.muted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("comment.sendClass.disabledReason")
+            if let draft = notesDraft {
+                AppSaveButton(title: NotesImportText.save, controller: notesController, identifier: "notes.save") {
+                    try await saveNotesDraft()
+                }
+                .disabled(draft.effectCount == 0)
+                AppButton(title: NotesImportText.discard, variant: .neutral, size: .large) { notesDraft = nil }
+                    .accessibilityIdentifier("notes.discard")
+            } else {
+                if sendAvailability == .needsNetwork {
+                    Text(String(localized: "comments.send.needs_network", table: "Teacher"))
+                        .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
+                        .foregroundStyle(AppColors.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("comment.sendClass.disabledReason")
+                }
+                AppButton(title: SlipSheetText.defaultsButton, variant: .neutral, size: .large) { showingDefaults = true }
+                    .disabled(defaultSlipCount == 0 || sendController.phase == .saving)
+                    .accessibilityIdentifier("comment.assignDefaults")
+                AppButton(
+                    title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),
+                    systemImage: "paperplane",
+                    size: .large
+                ) { showingSend = true }
+                    .disabled(sendAvailability != .ready)
+                    .accessibilityIdentifier("comment.sendClass")
             }
-            AppButton(title: SlipSheetText.defaultsButton, variant: .neutral, size: .large) { showingDefaults = true }
-                .disabled(defaultSlipCount == 0 || sendController.phase == .saving)
-                .accessibilityIdentifier("comment.assignDefaults")
-            AppButton(
-                title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),
-                systemImage: "paperplane",
-                size: .large
-            ) { showingSend = true }
-                .disabled(sendAvailability != .ready)
-                .accessibilityIdentifier("comment.sendClass")
         }
     }
 

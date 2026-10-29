@@ -1,0 +1,1777 @@
+{
+  "version": 1,
+  "purpose": "Ca kiểm thử vàng cho bộ phân tích 'Nhập từ ghi chú'. Web và iOS chép nguyên file vào test và so khớp từng trường expect. Dữ liệu giả, không SĐT thật.",
+  "rules": {
+    "normalize": "Chuẩn hoá để so khớp: NFD, bỏ dấu kết hợp, chữ thường, đ→d, mọi ký tự không phải chữ/số thành khoảng trắng, gộp khoảng trắng, cắt hai đầu.",
+    "parseLine": "Bỏ dòng chỉ có khoảng trắng. Dòng không có ':' vào unparsedLines (cắt hai đầu). Cụm lý do = phần trước dấu ':' đầu tiên (gộp khoảng trắng, cắt hai đầu); phần sau là danh sách tên.",
+    "splitNames": "Tách tên theo ',' ';' '/' và từ ' và ' (không phân biệt hoa/thường), cắt hai đầu, bỏ mục rỗng.",
+    "nameTiers": "Chỉ xét em có enrollment=active vào ngày buổi. T1: chuẩn hoá bằng họ tên đầy đủ. T2: một từ bằng tên riêng (từ cuối). T3: từ 2 từ trở lên là dãy liên tiếp trong họ tên. T4: một từ dài ≥4 ký tự có khoảng cách Levenshtein =1 so với tên riêng. Dừng ở tầng đầu có ≥1 ứng viên: 1 ứng viên = matched, ≥2 = ambiguous (không tự chọn). Không ai ở active: thử lại trên em left/not_enrolled_yet, có thì status excluded (reason left | not_enrolled_yet), không thì unmatched. Khớp em attendance=absent thêm warnings ['absent'].",
+    "phraseToCriterion": "Chuẩn hoá cụm rồi kiểm chuỗi con theo từ điển dictionary. Đúng 1 tiêu chí: criterion=đó, flags rỗng. ≥2 tiêu chí: criterion null, flags [multi_criteria, needs_review]. Không tiêu chí: nếu chứa từ khoá khen (praiseKeywords) và không có từ phủ định (negationWords) thì flags [praise], ngược lại flags [needs_review]. Cụm không ánh xạ không bỏ tích tiêu chí nào.",
+    "appendNote": "Cụm không ánh xạ (không phải khen) và cụm khen khi options.includePraise=true: câu = cụm đã gộp khoảng trắng, viết hoa chữ đầu, thêm '.' nếu chưa kết thúc bằng . ! ?. Nối vào cuối phần gõ thêm theo thứ tự dòng. Bỏ câu nếu chuẩn hoá của câu đã nằm trong chuẩn hoá của phần gõ thêm hiện có hoặc đã được nối trong lần dán này.",
+    "wholeClass": "Nếu bất kỳ mục tên trong dòng chứa wholeClassKeywords thì cả dòng không áp cho ai: mục chứa từ khoá status whole_class, các mục còn lại status held, flags thêm whole_class, warnings của kết quả có whole_class.",
+    "changes": "Mỗi em matched ở dòng không whole_class gom thành một thay đổi (sắp theo studentId). uncheck = tiêu chí do chữ yêu cầu bỏ tích (theo thứ tự tiêu chí). hwManual=true nếu có yêu cầu homework. Phiếu mới: nền uncheckedAfter có homework nếu previousHomework=not_done (chấm BTVN), rồi hợp với uncheck. Phiếu có sẵn: nền = unchecked của phiếu. starsAfter = 5 − số tiêu chí chưa đạt. isNewSlip=true khi em chưa có phiếu. Phiếu có sẵn mà không có tiêu chí mới bị bỏ tích và không có câu mới thì không phải thay đổi (skipped no_change).",
+    "skipReasons": "legacy_scale (phiếu thang 3, luôn bỏ qua); sent_slip, queued_send (bỏ qua trừ khi options.includeSent); praise_not_applied (em chỉ bị nêu ở dòng khen khi chưa bật); no_change.",
+    "defaultSlips": "Khi options.createDefaultsForRest: mọi em active chưa có phiếu, không phải attendance=absent, không có trong changes, không nằm trong ứng viên của tên ambiguous thì được tạo phiếu mặc định (tích đủ, BTVN theo previousHomework, nên starsAfter có thể 4). Em ambiguous vào defaultSlipsDeferred; em absent vào defaultSlipsSkipped. Không có tuỳ chọn thì không có ba trường này.",
+    "writes": "Không ghi gì khi chưa bấm Lưu; kết quả này chỉ là xem trước. Mọi thay đổi và phiếu mặc định lưu trong một yêu cầu đồng bộ."
+  },
+  "dictionary": {
+    "keywordsNormalized": {
+      "attention": [
+        "mat tap trung",
+        "khong chu y",
+        "lo dang",
+        "chua chu y"
+      ],
+      "order": [
+        "noi chuyen rieng",
+        "lam on",
+        "dua nghich",
+        "mat trat tu"
+      ],
+      "homework": [
+        "chua hoan thanh bai tap",
+        "chua hoan thanh btvn",
+        "khong lam bai tap",
+        "khong lam btvn",
+        "chua lam bai tap",
+        "chua lam btvn"
+      ]
+    },
+    "praiseKeywords": [
+      "phat bieu",
+      "hang hai",
+      "tien bo",
+      "xuat sac",
+      "rat tot",
+      "lam tot"
+    ],
+    "negationWords": [
+      "khong",
+      "chua",
+      "it"
+    ],
+    "wholeClassKeywords": [
+      "ca lop",
+      "tat ca",
+      "con lai",
+      "hau het"
+    ]
+  },
+  "criteriaOrder": [
+    "attention",
+    "notes",
+    "participation",
+    "order",
+    "homework"
+  ],
+  "roster": {
+    "sessionDate": "2026-10-20",
+    "students": [
+      {
+        "id": "s01",
+        "fullName": "Nguyễn Anh Thư",
+        "attendance": "present",
+        "enrollment": "active"
+      },
+      {
+        "id": "s02",
+        "fullName": "Trần Minh Thu",
+        "attendance": "present",
+        "enrollment": "active"
+      },
+      {
+        "id": "s03",
+        "fullName": "Lê Thị Tươi",
+        "attendance": "present",
+        "enrollment": "active",
+        "slip": {
+          "state": "draft",
+          "scale": 5,
+          "unchecked": [
+            "order"
+          ],
+          "note": "Quên mang vở."
+        }
+      },
+      {
+        "id": "s04",
+        "fullName": "Đỗ Minh Chiến",
+        "attendance": "present",
+        "enrollment": "active"
+      },
+      {
+        "id": "s05",
+        "fullName": "Vũ Hữu Đức",
+        "attendance": "late",
+        "enrollment": "active"
+      },
+      {
+        "id": "s06",
+        "fullName": "Phạm Thanh Hương",
+        "attendance": "present",
+        "enrollment": "active"
+      },
+      {
+        "id": "s07",
+        "fullName": "Hoàng Gia Tiên",
+        "attendance": "present",
+        "enrollment": "active"
+      },
+      {
+        "id": "s08",
+        "fullName": "Trần Văn Hùng",
+        "attendance": "present",
+        "enrollment": "active"
+      },
+      {
+        "id": "s09",
+        "fullName": "Phạm Quốc Hùng",
+        "attendance": "present",
+        "enrollment": "active"
+      },
+      {
+        "id": "s10",
+        "fullName": "Ngô Bảo An",
+        "attendance": "present",
+        "enrollment": "active"
+      },
+      {
+        "id": "s11",
+        "fullName": "Bùi Khánh Vy",
+        "attendance": "present",
+        "enrollment": "active"
+      },
+      {
+        "id": "s12",
+        "fullName": "Đặng Quang Huy",
+        "attendance": "absent",
+        "enrollment": "active"
+      },
+      {
+        "id": "s13",
+        "fullName": "Lý Mai Lan",
+        "attendance": "not_marked",
+        "enrollment": "active"
+      },
+      {
+        "id": "s14",
+        "fullName": "Phan Thế Nam",
+        "attendance": "present",
+        "enrollment": "left"
+      },
+      {
+        "id": "s15",
+        "fullName": "Cao Tuấn Kiệt",
+        "attendance": "not_marked",
+        "enrollment": "not_enrolled_yet"
+      },
+      {
+        "id": "s16",
+        "fullName": "Trịnh Bảo Châu",
+        "attendance": "present",
+        "enrollment": "active",
+        "slip": {
+          "state": "sent",
+          "scale": 5,
+          "unchecked": [],
+          "note": ""
+        }
+      },
+      {
+        "id": "s17",
+        "fullName": "Mai Thảo Nguyên",
+        "attendance": "present",
+        "enrollment": "active",
+        "slip": {
+          "state": "draft",
+          "scale": 3,
+          "unchecked": []
+        }
+      },
+      {
+        "id": "s18",
+        "fullName": "Võ Ngọc Hân",
+        "attendance": "present",
+        "enrollment": "active",
+        "slip": {
+          "state": "queued_send",
+          "scale": 5,
+          "unchecked": [],
+          "note": ""
+        }
+      }
+    ],
+    "previousHomework": {
+      "s04": "excellent",
+      "s06": "done",
+      "s07": "not_done"
+    }
+  },
+  "cases": [
+    {
+      "id": "scope-example",
+      "title": "Ví dụ ba dòng trong scope: THu trùng tên chưa chọn, Tươi đã có phiếu nháp, BTVN do chữ nhập",
+      "input": "Mất tập trung trong giờ: THu, tươi\nQuên mang vở: Chiến, ĐỨC\nChưa hoàn thành bài tập về nhà: Hương, Tiên",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung trong giờ",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "THu",
+                "status": "ambiguous",
+                "studentIds": [
+                  "s01",
+                  "s02"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "tươi",
+                "status": "matched",
+                "studentIds": [
+                  "s03"
+                ],
+                "tier": "T2"
+              }
+            ]
+          },
+          {
+            "phrase": "Quên mang vở",
+            "criterion": null,
+            "flags": [
+              "needs_review"
+            ],
+            "names": [
+              {
+                "raw": "Chiến",
+                "status": "matched",
+                "studentIds": [
+                  "s04"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "ĐỨC",
+                "status": "matched",
+                "studentIds": [
+                  "s05"
+                ],
+                "tier": "T2"
+              }
+            ]
+          },
+          {
+            "phrase": "Chưa hoàn thành bài tập về nhà",
+            "criterion": "homework",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Hương",
+                "status": "matched",
+                "studentIds": [
+                  "s06"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Tiên",
+                "status": "matched",
+                "studentIds": [
+                  "s07"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s03",
+            "slipState": "draft",
+            "isNewSlip": false,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention",
+              "order"
+            ],
+            "starsAfter": 3
+          },
+          {
+            "studentId": "s04",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [],
+            "appendNote": [
+              "Quên mang vở."
+            ],
+            "hwManual": false,
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s05",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [],
+            "appendNote": [
+              "Quên mang vở."
+            ],
+            "hwManual": false,
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s06",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "homework"
+            ],
+            "appendNote": [],
+            "hwManual": true,
+            "uncheckedAfter": [
+              "homework"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s07",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "homework"
+            ],
+            "appendNote": [],
+            "hwManual": true,
+            "uncheckedAfter": [
+              "homework"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "middle-name-disambiguates",
+      "title": "Tên đệm + tên riêng phân biệt hai em cùng tên không dấu",
+      "input": "Mất tập trung: Anh Thư, Minh Thu",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Anh Thư",
+                "status": "matched",
+                "studentIds": [
+                  "s01"
+                ],
+                "tier": "T3"
+              },
+              {
+                "raw": "Minh Thu",
+                "status": "matched",
+                "studentIds": [
+                  "s02"
+                ],
+                "tier": "T3"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s01",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s02",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "duplicate-given-name",
+      "title": "Hai em cùng tên Hùng: không tự chọn, không có thay đổi",
+      "input": "Nói chuyện riêng: HÙNG",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Nói chuyện riêng",
+            "criterion": "order",
+            "flags": [],
+            "names": [
+              {
+                "raw": "HÙNG",
+                "status": "ambiguous",
+                "studentIds": [
+                  "s08",
+                  "s09"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "full-name-absent",
+      "title": "Họ tên đầy đủ khớp em Vắng: vẫn đề xuất, kèm cảnh báo absent",
+      "input": "Không chú ý: Đặng Quang Huy",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Không chú ý",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Đặng Quang Huy",
+                "status": "matched",
+                "studentIds": [
+                  "s12"
+                ],
+                "tier": "T1",
+                "warnings": [
+                  "absent"
+                ]
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s12",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "left-and-not-enrolled",
+      "title": "Em đã nghỉ và em chưa vào lớp vào ngày buổi không là ứng viên",
+      "input": "Mất tập trung: Nam, Kiệt, Vy",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Nam",
+                "status": "excluded",
+                "studentIds": [
+                  "s14"
+                ],
+                "reason": "left"
+              },
+              {
+                "raw": "Kiệt",
+                "status": "excluded",
+                "studentIds": [
+                  "s15"
+                ],
+                "reason": "not_enrolled_yet"
+              },
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s11",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "fuzzy-and-short-names",
+      "title": "Sai một ký tự khớp mờ cho tên từ 4 ký tự; tên ngắn không khớp mờ; tên ngắn khớp đúng vẫn được",
+      "input": "Mất tập trung: Huonq, Vi, An",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Huonq",
+                "status": "matched",
+                "studentIds": [
+                  "s06"
+                ],
+                "tier": "T4"
+              },
+              {
+                "raw": "Vi",
+                "status": "unmatched",
+                "studentIds": [],
+                "reason": "no_match"
+              },
+              {
+                "raw": "An",
+                "status": "matched",
+                "studentIds": [
+                  "s10"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s06",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s10",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "middle-name-alone-no-match",
+      "title": "Một từ trùng tên đệm của em khác không khớp",
+      "input": "Mất tập trung: Anh",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Anh",
+                "status": "unmatched",
+                "studentIds": [],
+                "reason": "no_match"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "whole-class-held",
+      "title": "Từ khoá cả lớp / tất cả: không tự mở rộng, giữ nguyên các tên cùng dòng",
+      "input": "Mất tập trung: cả lớp\nLàm ồn: tất cả trừ Hùng, Lan",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [
+              "whole_class"
+            ],
+            "names": [
+              {
+                "raw": "cả lớp",
+                "status": "whole_class",
+                "studentIds": []
+              }
+            ]
+          },
+          {
+            "phrase": "Làm ồn",
+            "criterion": "order",
+            "flags": [
+              "whole_class"
+            ],
+            "names": [
+              {
+                "raw": "tất cả trừ Hùng",
+                "status": "whole_class",
+                "studentIds": []
+              },
+              {
+                "raw": "Lan",
+                "status": "held",
+                "studentIds": []
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [],
+        "skipped": [],
+        "warnings": [
+          "whole_class"
+        ]
+      }
+    },
+    {
+      "id": "praise-default-off",
+      "title": "Câu khen không thêm vào phần gõ thêm khi chưa bật",
+      "input": "Phát biểu hăng hái: Lan, Vy\nMất tập trung: Vy",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Phát biểu hăng hái",
+            "criterion": null,
+            "flags": [
+              "praise"
+            ],
+            "names": [
+              {
+                "raw": "Lan",
+                "status": "matched",
+                "studentIds": [
+                  "s13"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          },
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s11",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [
+          {
+            "studentId": "s13",
+            "reason": "praise_not_applied"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "praise-on",
+      "title": "Bật thêm câu khen: nối vào phần gõ thêm, không bỏ tích tiêu chí",
+      "input": "Phát biểu hăng hái: Lan, Vy\nMất tập trung: Vy",
+      "options": {
+        "includePraise": true
+      },
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Phát biểu hăng hái",
+            "criterion": null,
+            "flags": [
+              "praise"
+            ],
+            "names": [
+              {
+                "raw": "Lan",
+                "status": "matched",
+                "studentIds": [
+                  "s13"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          },
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s11",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [
+              "Phát biểu hăng hái."
+            ],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s13",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [],
+            "appendNote": [
+              "Phát biểu hăng hái."
+            ],
+            "hwManual": false,
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "negated-praise-needs-review",
+      "title": "Có phủ định thì không phải câu khen: vào phần gõ thêm kèm Cần xem",
+      "input": "Không phát biểu: Lan",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Không phát biểu",
+            "criterion": null,
+            "flags": [
+              "needs_review"
+            ],
+            "names": [
+              {
+                "raw": "Lan",
+                "status": "matched",
+                "studentIds": [
+                  "s13"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s13",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [],
+            "appendNote": [
+              "Không phát biểu."
+            ],
+            "hwManual": false,
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "multi-criteria-phrase",
+      "title": "Cụm khớp hai tiêu chí: không tự chọn, vào phần gõ thêm",
+      "input": "Nói chuyện riêng, mất tập trung: Vy",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Nói chuyện riêng, mất tập trung",
+            "criterion": null,
+            "flags": [
+              "multi_criteria",
+              "needs_review"
+            ],
+            "names": [
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s11",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [],
+            "appendNote": [
+              "Nói chuyện riêng, mất tập trung."
+            ],
+            "hwManual": false,
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "unmapped-ghi-bai",
+      "title": "Không ghi bài không nằm trong từ điển độ chắc cao: chỉ phần gõ thêm",
+      "input": "Không ghi bài: Vy",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Không ghi bài",
+            "criterion": null,
+            "flags": [
+              "needs_review"
+            ],
+            "names": [
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s11",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [],
+            "appendNote": [
+              "Không ghi bài."
+            ],
+            "hwManual": false,
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "sent-queued-legacy-skipped",
+      "title": "Phiếu đã gửi, đang chờ gửi, thang 3 cũ bị bỏ qua mặc định",
+      "input": "Mất tập trung: Châu, Nguyên, Hân",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Châu",
+                "status": "matched",
+                "studentIds": [
+                  "s16"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Nguyên",
+                "status": "matched",
+                "studentIds": [
+                  "s17"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Hân",
+                "status": "matched",
+                "studentIds": [
+                  "s18"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [],
+        "skipped": [
+          {
+            "studentId": "s16",
+            "reason": "sent_slip"
+          },
+          {
+            "studentId": "s17",
+            "reason": "legacy_scale"
+          },
+          {
+            "studentId": "s18",
+            "reason": "queued_send"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "sent-queued-included",
+      "title": "Bật sửa phiếu đã gửi/chờ gửi; thang 3 cũ vẫn không sửa được",
+      "input": "Mất tập trung: Châu, Nguyên, Hân",
+      "options": {
+        "includeSent": true
+      },
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Châu",
+                "status": "matched",
+                "studentIds": [
+                  "s16"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Nguyên",
+                "status": "matched",
+                "studentIds": [
+                  "s17"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Hân",
+                "status": "matched",
+                "studentIds": [
+                  "s18"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s16",
+            "slipState": "sent",
+            "isNewSlip": false,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s18",
+            "slipState": "queued_send",
+            "isNewSlip": false,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [
+          {
+            "studentId": "s17",
+            "reason": "legacy_scale"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "rerun-no-duplicate-note",
+      "title": "Dán lại: câu đã có trong phần gõ thêm thì không nối trùng",
+      "input": "Quên mang vở: Tươi",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Quên mang vở",
+            "criterion": null,
+            "flags": [
+              "needs_review"
+            ],
+            "names": [
+              {
+                "raw": "Tươi",
+                "status": "matched",
+                "studentIds": [
+                  "s03"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [],
+        "skipped": [
+          {
+            "studentId": "s03",
+            "reason": "no_change"
+          }
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "id": "duplicate-sentence-in-one-paste",
+      "title": "Hai dòng giống nhau trong một lần dán: chỉ nối một lần",
+      "input": "Quên bút: Vy\nQuên bút: Vy",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Quên bút",
+            "criterion": null,
+            "flags": [
+              "needs_review"
+            ],
+            "names": [
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          },
+          {
+            "phrase": "Quên bút",
+            "criterion": null,
+            "flags": [
+              "needs_review"
+            ],
+            "names": [
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s11",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [],
+            "appendNote": [
+              "Quên bút."
+            ],
+            "hwManual": false,
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "blank-unparsed-delimiters",
+      "title": "Dòng trống bỏ qua, dòng không có dấu hai chấm báo riêng, tách tên theo , ; / và",
+      "input": "\n  \nHôm nay lớp hơi ồn\nLàm ồn: Lan,, ,Vy ;  Huy / Nam và Kiệt",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Làm ồn",
+            "criterion": "order",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Lan",
+                "status": "matched",
+                "studentIds": [
+                  "s13"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Huy",
+                "status": "matched",
+                "studentIds": [
+                  "s12"
+                ],
+                "tier": "T2",
+                "warnings": [
+                  "absent"
+                ]
+              },
+              {
+                "raw": "Nam",
+                "status": "excluded",
+                "studentIds": [
+                  "s14"
+                ],
+                "reason": "left"
+              },
+              {
+                "raw": "Kiệt",
+                "status": "excluded",
+                "studentIds": [
+                  "s15"
+                ],
+                "reason": "not_enrolled_yet"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [
+          "Hôm nay lớp hơi ồn"
+        ],
+        "changes": [
+          {
+            "studentId": "s11",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "order"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "order"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s12",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "order"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "order"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s13",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "order"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "order"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": [
+          "unparsed_lines"
+        ]
+      }
+    },
+    {
+      "id": "defaults-for-rest",
+      "title": "Tạo phiếu mặc định cho các em còn lại: bỏ em Vắng, bỏ em đã có phiếu, BTVN theo chấm",
+      "input": "Mất tập trung: Vy",
+      "options": {
+        "createDefaultsForRest": true
+      },
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Vy",
+                "status": "matched",
+                "studentIds": [
+                  "s11"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s11",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": [],
+        "defaultSlips": [
+          {
+            "studentId": "s01",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s02",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s04",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s05",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s06",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s07",
+            "uncheckedAfter": [
+              "homework"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s08",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s09",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s10",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s13",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          }
+        ],
+        "defaultSlipsDeferred": [],
+        "defaultSlipsSkipped": [
+          {
+            "studentId": "s12",
+            "reason": "absent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "defaults-defer-ambiguous",
+      "title": "Em còn đang trùng tên chưa chọn thì hoãn, chưa tạo phiếu mặc định",
+      "input": "Mất tập trung: THu",
+      "options": {
+        "createDefaultsForRest": true
+      },
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "THu",
+                "status": "ambiguous",
+                "studentIds": [
+                  "s01",
+                  "s02"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [],
+        "skipped": [],
+        "warnings": [],
+        "defaultSlips": [
+          {
+            "studentId": "s04",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s05",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s06",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s07",
+            "uncheckedAfter": [
+              "homework"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s08",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s09",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s10",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s11",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          },
+          {
+            "studentId": "s13",
+            "uncheckedAfter": [],
+            "starsAfter": 5
+          }
+        ],
+        "defaultSlipsDeferred": [
+          "s01",
+          "s02"
+        ],
+        "defaultSlipsSkipped": [
+          {
+            "studentId": "s12",
+            "reason": "absent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "homework-manual-and-two-lines",
+      "title": "BTVN do chữ nhập là đổi tay; một em ở hai dòng gom thành một thay đổi",
+      "input": "Chưa hoàn thành BTVN: Chiến, Hương\nKhông chú ý: Chiến",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Chưa hoàn thành BTVN",
+            "criterion": "homework",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Chiến",
+                "status": "matched",
+                "studentIds": [
+                  "s04"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "Hương",
+                "status": "matched",
+                "studentIds": [
+                  "s06"
+                ],
+                "tier": "T2"
+              }
+            ]
+          },
+          {
+            "phrase": "Không chú ý",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Chiến",
+                "status": "matched",
+                "studentIds": [
+                  "s04"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s04",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention",
+              "homework"
+            ],
+            "appendNote": [],
+            "hwManual": true,
+            "uncheckedAfter": [
+              "attention",
+              "homework"
+            ],
+            "starsAfter": 3
+          },
+          {
+            "studentId": "s06",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "homework"
+            ],
+            "appendNote": [],
+            "hwManual": true,
+            "uncheckedAfter": [
+              "homework"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "case-accents-spacing",
+      "title": "Hoa/thường, bỏ dấu, khoảng trắng thừa quanh dấu hai chấm và dấu phân cách",
+      "input": "  MẤT   TẬP TRUNG :  chien ,  DUC  ; hương ",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "MẤT TẬP TRUNG",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "chien",
+                "status": "matched",
+                "studentIds": [
+                  "s04"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "DUC",
+                "status": "matched",
+                "studentIds": [
+                  "s05"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "hương",
+                "status": "matched",
+                "studentIds": [
+                  "s06"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s04",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s05",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          },
+          {
+            "studentId": "s06",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "same-student-twice-in-line",
+      "title": "Một em viết hai lần trong dòng chỉ tính một thay đổi",
+      "input": "Mất tập trung: Hương, huong",
+      "options": {},
+      "expect": {
+        "lines": [
+          {
+            "phrase": "Mất tập trung",
+            "criterion": "attention",
+            "flags": [],
+            "names": [
+              {
+                "raw": "Hương",
+                "status": "matched",
+                "studentIds": [
+                  "s06"
+                ],
+                "tier": "T2"
+              },
+              {
+                "raw": "huong",
+                "status": "matched",
+                "studentIds": [
+                  "s06"
+                ],
+                "tier": "T2"
+              }
+            ]
+          }
+        ],
+        "unparsedLines": [],
+        "changes": [
+          {
+            "studentId": "s06",
+            "slipState": "none",
+            "isNewSlip": true,
+            "uncheck": [
+              "attention"
+            ],
+            "appendNote": [],
+            "hwManual": false,
+            "uncheckedAfter": [
+              "attention"
+            ],
+            "starsAfter": 4
+          }
+        ],
+        "skipped": [],
+        "warnings": []
+      }
+    }
+  ]
+}

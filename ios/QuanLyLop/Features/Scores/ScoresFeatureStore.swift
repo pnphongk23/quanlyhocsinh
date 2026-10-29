@@ -408,6 +408,46 @@ final class I4FeatureStore: ObservableObject {
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
     }
 
+    /// What saving a notes import did: slips written on this device, and how many of them the server then refused.
+    struct NotesImportOutcome: Equatable {
+        let saved: Int
+        let rejected: Int
+        let error: String?
+    }
+
+    /// Saves the reviewed notes import in one go: every slip and its `slip.set` are written in one transaction (all or
+    /// none), then one sync pushes them (the coordinator splits at its batch limit). The state of each slip is read
+    /// again just before the write; a sent slip is left alone unless the teacher allowed editing it. Commands the
+    /// server refuses are counted from the change in the rejected total, never listed by name or content.
+    func saveNotesImport(sessionID: String, saves: [NotesImportSave], includeSent: Bool) async -> NotesImportOutcome {
+        let failed = NotesImportOutcome(saved: 0, rejected: 0, error: String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc"))
+        guard let store else { return failed }
+        guard !sendingSessionIDs.contains(sessionID) else { return NotesImportOutcome(saved: 0, rejected: 0, error: nil) }
+        await refresh()
+        var entries: [(value: SessionSlip, key: String, command: PendingCommand?)] = []
+        for save in saves {
+            let old = slip(sessionID: sessionID, studentID: save.studentID)
+            guard !(old?.status == .sent && !includeSent), !CriteriaModeRules.isLocked(old),
+                  let student = students.first(where: { $0.id == save.studentID }) else { continue }
+            let grading: SlipGrading = save.criteriaChanged
+                ? .criteria(SlipRules.allCriteria & ~save.unmetMask,
+                            comment: SlipRules.generatedSentence(criteria: SlipRules.allCriteria & ~save.unmetMask),
+                            hwManual: save.hwManual)
+                : .noteOnly
+            guard let write = slipWrite(sessionID: sessionID, student: student, grading: grading, note: save.note) else { continue }
+            entries.append((write.row, write.command.recordKey, write.command))
+        }
+        guard !entries.isEmpty else { return NotesImportOutcome(saved: 0, rejected: 0, error: nil) }
+        do {
+            let before = (try? await store.rejectedCommandCount()) ?? 0
+            try await store.writeAll(entries)
+            await syncIfNeeded()
+            let rejected = max(((try? await store.rejectedCommandCount()) ?? 0) - before, 0)
+            await refresh()
+            return NotesImportOutcome(saved: entries.count - rejected, rejected: rejected, error: nil)
+        } catch { return failed }
+    }
+
     enum SendOutcome: Equatable {
         case sent(Int)
         /// The server sent some slips and left others out (stars removed, or already sent elsewhere).
