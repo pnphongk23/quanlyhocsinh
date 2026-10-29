@@ -259,7 +259,8 @@ export async function getRolePermissions(db: D1Database, identity: Identity) {
       AND perm_group IN ('classes','students','sessions_attendance','scores','comments_reports','send_comments') ORDER BY perm_group`)
       .bind(role.id).all<{ perm_group: string; level: string }>();
     items.push({ role: { id: role.id, name: role.name, system_key: role.system_key },
-      permissions: Object.fromEntries(rows.results.map((row) => [row.perm_group, row.level])) });
+      permissions: { ...Object.fromEntries(EDITABLE_GROUPS.map((group) => [group, 'none'])),
+        ...Object.fromEntries(rows.results.map((row) => [row.perm_group, row.level])) } });
   }
   return { items };
 }
@@ -271,14 +272,14 @@ export async function updateRolePermissions(db: D1Database, identity: Identity, 
   if (!entries.length) throw validationError(undefined, 'permissions_required');
   const updates: Array<[PermGroup, PermLevel]> = [];
   for (const [group, level] of entries) {
-      if (!EDITABLE_GROUPS.includes(group as PermGroup) || !['none', 'read', 'write'].includes(String(level)) ||
-        (group === 'send_comments' && !['none', 'write'].includes(String(level)))) {
+    if (!EDITABLE_GROUPS.includes(group as PermGroup) || !['none', 'read', 'write'].includes(String(level)) ||
+      (group === 'send_comments' && !['none', 'write'].includes(String(level)))) {
       throw validationError({ [group]: 'invalid' });
     }
     updates.push([group as PermGroup, level as PermLevel]);
   }
-  const statements: D1PreparedStatement[] = updates.map(([group, level]) => db.prepare(`UPDATE role_permissions SET level=?
-    WHERE role_id=? AND perm_group=?`).bind(level, role.id, group));
+  const statements: D1PreparedStatement[] = updates.map(([group, level]) => db.prepare(`INSERT INTO role_permissions(role_id,perm_group,level) VALUES(?,?,?)
+    ON CONFLICT(role_id,perm_group) DO UPDATE SET level=excluded.level`).bind(role.id, group, level));
   statements.push(db.prepare('UPDATE roles SET version=version+1 WHERE id=?').bind(role.id));
   statements.push(db.prepare('UPDATE memberships SET scope_epoch=scope_epoch+1,version=version+1 WHERE role_id=?')
     .bind(role.id));

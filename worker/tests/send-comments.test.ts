@@ -123,4 +123,14 @@ describe('send_comments permission', () => {
     await expect(db.prepare(`UPDATE role_permissions SET level='write' WHERE role_id=? AND perm_group='scores'`)
       .bind(f.owner.roles.guardian!).run()).rejects.toThrow();
   });
+
+  it('grants send_comments to a role whose row was never created (workspace made by an older Worker)', async () => {
+    const f = await setup('Send comments missing row');
+    await db.prepare("DELETE FROM role_permissions WHERE role_id=? AND perm_group='send_comments'").bind(f.owner.roles.teacher!).run();
+    const before = await call('/v1/roles/permissions', {}, f.owner.token);
+    expect(before.body.items[0].permissions.send_comments).toBe('none');
+    const granted = await call('/v1/roles/teacher/permissions', put({ permissions: { send_comments: 'write' } }), f.owner.token);
+    expect(granted.status).toBe(200);
+    expect(granted.body.permissions.send_comments).toBe('write');
+  });
 });
