@@ -38,7 +38,7 @@ struct AuthSettingsView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.control))
+                        .appStatusCard(.error, radius: AppRadius.control)
                         .padding(.top, 16)
                 }
                 logoutButton

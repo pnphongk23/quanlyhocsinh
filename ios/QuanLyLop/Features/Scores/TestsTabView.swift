@@ -410,7 +410,7 @@ struct TestScoresView: View {
 
     private func fieldBackground(studentID: String, invalid: Bool, missing: Bool) -> Color {
         if invalid { return AppState.errorBg }
-        if focusedStudentID == studentID { return AppState.selectedBg }
+        if focusedStudentID == studentID { return AppColors.primarySoft }
         return missing ? AppColors.surface : AppColors.background
     }
 
@@ -433,7 +433,7 @@ struct TestScoresView: View {
                 .padding(.leading, 16)
                 .padding(.trailing, 8)
                 .frame(minHeight: 52)
-                .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: 12))
+                .appStatusCard(.error, radius: 12)
             }
             if invalidCount > 0 {
                 Text(String(localized: "feature.scores.sua.1.o.loi.e.luu.iem"))
@@ -510,7 +510,7 @@ struct TestEditorView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: 12))
+                    .appStatusCard(.error, radius: 12)
                 }
               AppSaveButton(title: String(localized: "feature.scores.tao.bai.va.nhap.iem"), controller: saveController, identifier: "test.save") {
                   try await save()
@@ -626,7 +626,7 @@ struct TestFormSheet: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: 12))
+                .appStatusCard(.error, radius: 12)
             }
               AppSaveButton(title: String(localized: "feature.scores.luu.thay.oi"), controller: saveController, identifier: "test.save") {
                   try await save()

@@ -108,7 +108,7 @@ struct AppSaveStatus: View {
                 AppPill(title: String(localized: "ds.status.pending", table: "DesignSystem"), tone: .warning)
             case .offline:
                 label(String(localized: "ds.status.offline", table: "DesignSystem"), systemImage: "wifi.slash",
-                      color: AppState.pendingFg)
+                      color: AppState.cardPendingFg)
             case .error:
                 AppPill(title: String(localized: "status.save.error"), tone: .error)
             }

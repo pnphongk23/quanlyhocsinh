@@ -244,6 +244,8 @@ struct GuardianStars: View {
                 Text(String.localizedStringWithFormat(String(localized: "guardian.stars.outOf", table: "Reports"), level, scale))
                     .appDynamicText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
                     .foregroundStyle(AppColors.muted)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .padding(.leading, 4)
             }
         }
@@ -347,13 +349,13 @@ struct GuardianChildPickerSheet: View {
                 }
                 Spacer(minLength: 0)
                 if active {
-                    Image(systemName: "checkmark").foregroundStyle(AppState.selectedFg)
+                    Image(systemName: "checkmark").foregroundStyle(AppColors.primaryInk)
                 }
             }
             .padding(.horizontal, AppSpace.s12)
             .padding(.vertical, AppSpace.s8)
             .frame(maxWidth: .infinity, minHeight: AppMetrics.tap, alignment: .leading)
-            .background(active ? AppState.selectedBg : AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.row))
+            .background(active ? AppColors.primarySoft : AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.row))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? [.isSelected] : [])
@@ -478,7 +480,7 @@ struct GuardianNoteBox: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(String(localized: "feature.guardian.ieu.co.muon.chia.se"))
                 .appDynamicText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 22.5))
-                .foregroundStyle(AppColors.warning)
+                .foregroundStyle(AppState.cardPendingFg)
             Text(text)
                 .appDynamicText(AppTextStyle(size: 15, weight: .regular, lineHeight: 23.25))
                 .foregroundStyle(Self.bodyInk)
@@ -487,7 +489,7 @@ struct GuardianNoteBox: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.warningSoft, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        .appStatusCard(.pending, radius: AppRadius.card)
     }
 }
 

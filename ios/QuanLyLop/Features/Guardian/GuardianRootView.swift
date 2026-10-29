@@ -77,7 +77,7 @@ struct GuardianRootView: View {
             .tabItem { Label(GuardianTab.settings.label, systemImage: GuardianTab.settings.systemImage) }
             .tag(GuardianTab.settings)
         }
-        .tint(AppState.selectedFg)
+        .tint(AppColors.primaryInk)
         .onChange(of: selectedChildID) { _, _ in
             classesPath = []
             commentsPath = []
@@ -120,12 +120,10 @@ struct GuardianRootView: View {
                 shortcut(String(localized: "guardian.scores", table: "Guardian"), icon: "chart.bar", action: { classesPath.append(.scores) })
                 shortcut(String(localized: "feature.guardian.bao.cao"), icon: "doc.text", action: { classesPath.append(.report) })
             }
-            GuardianUpcomingSection(child: child) { classesPath.append(.schedule) }
+            GuardianUpcomingSection(child: child,
+                                    openSession: { classesPath.append($0.destination) },
+                                    openAll: { classesPath.append(.schedule) })
                 .padding(.top, AppMetrics.sectionGap - TeacherMetrics.contentGap)
-            AppSection(title: String(localized: "guardian.sessionList", table: "Guardian")) {
-                GuardianSessionListPage(child: child) { row in classesPath.append(row.destination) }
-            }
-            .padding(.top, AppMetrics.sectionGap - TeacherMetrics.contentGap)
         }
     }
 
@@ -204,7 +202,7 @@ struct GuardianRootView: View {
                 .navigationTitle(String(localized: "guardian.scores", table: "Guardian"))
                 .navigationBarTitleDisplayMode(.inline)
             case .schedule:
-                GuardianScheduleView(child: child)
+                GuardianScheduleView(child: child) { classesPath.append($0.destination) }
             case .report:
                 GuardianReportView(child: child)
                 .navigationTitle(String(localized: "feature.guardian.bao.cao"))

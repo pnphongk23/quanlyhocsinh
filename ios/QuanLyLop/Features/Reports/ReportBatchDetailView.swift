@@ -208,7 +208,7 @@ struct ReportBatchDetailView: View {
         .padding(.horizontal, TeacherMetrics.contentGap)
         .padding(.vertical, TeacherMetrics.listGap)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(active ? AppState.selectedBg : AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.row))
+        .background(active ? AppColors.primarySoft : AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.row))
     }
 
     private func commentValue(_ row: Row) -> String { drafts[row.id] ?? row.record.generalComment }

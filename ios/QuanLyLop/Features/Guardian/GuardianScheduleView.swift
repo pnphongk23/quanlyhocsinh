@@ -9,6 +9,11 @@ enum GuardianScheduleRules {
         return limit.map { Array(sorted.prefix($0)) } ?? sorted
     }
 
+    /// The dot under a day number: exactly the days whose list is not empty.
+    static func hasSessions(on date: String, in byDate: [String: [GuardianSessionRow]]) -> Bool {
+        !(byDate[date] ?? []).isEmpty
+    }
+
     static func byDate(_ rows: [GuardianSessionRow]) -> [String: [GuardianSessionRow]] {
         Dictionary(grouping: rows, by: { $0.session.date }).mapValues {
             $0.sorted { $0.session.startTime < $1.session.startTime }
@@ -19,6 +24,7 @@ enum GuardianScheduleRules {
 /// "Buổi sắp tới": the next sessions of the selected child with "Tất cả" opening the whole schedule.
 struct GuardianUpcomingSection: View {
     let child: GuardianChildData
+    let openSession: (GuardianSessionRow) -> Void
     let openAll: () -> Void
 
     private var rows: [GuardianSessionRow] {
@@ -39,7 +45,9 @@ struct GuardianUpcomingSection: View {
                 AppEmptyState(title: String(localized: "guardian.upcoming.empty", table: "Guardian"), size: .compact)
             } else {
                 VStack(spacing: TeacherMetrics.listGap) {
-                    ForEach(rows) { GuardianScheduleCard(row: $0, lead: TeacherFormat.weekdayName($0.session.date)) }
+                    ForEach(rows) { row in
+                        GuardianScheduleCard(row: row, lead: TeacherFormat.weekdayName(row.session.date)) { openSession(row) }
+                    }
                 }
             }
         }
@@ -49,33 +57,48 @@ struct GuardianUpcomingSection: View {
 struct GuardianScheduleCard: View {
     let row: GuardianSessionRow
     let lead: String
+    let open: () -> Void
 
     var body: some View {
-        HStack(spacing: AppSpace.s12) {
-            VStack(alignment: .leading, spacing: AppSpace.s2) {
-                Text(lead).appDynamicText(AppText.label).foregroundStyle(AppColors.text)
-                Text(TeacherFormat.dayMonth(row.session.date)).appDynamicText(AppText.muted).foregroundStyle(AppColors.muted)
+        Button(action: open) {
+            HStack(spacing: AppSpace.s12) {
+                VStack(alignment: .leading, spacing: AppSpace.s2) {
+                    Text(lead).appDynamicText(AppText.label).foregroundStyle(AppColors.text)
+                    Text(TeacherFormat.dayMonth(row.session.date)).appDynamicText(AppText.muted).foregroundStyle(AppColors.muted)
+                }
+                .frame(width: 64, alignment: .leading)
+                Text(row.session.startTime)
+                    .appDynamicText(AppText.subheading)
+                    .foregroundStyle(AppColors.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .trailing, spacing: AppSpace.s2) {
+                    Text(row.statusLabel)
+                        .appDynamicText(AppText.caption)
+                        .foregroundStyle(row.statusColor)
+                        .lineLimit(1)
+                    if let slip = row.sentSlip { GuardianStars(slip: slip, size: 14) }
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(AppColors.muted)
             }
-            .frame(width: 64, alignment: .leading)
-            Text(row.session.startTime)
-                .appDynamicText(AppText.subheading)
-                .foregroundStyle(AppColors.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text(row.statusLabel)
-                .appDynamicText(AppText.caption)
-                .foregroundStyle(row.statusColor)
-                .lineLimit(1)
+            .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+            .padding(.vertical, AppSpace.s12)
+            .frame(maxWidth: .infinity, minHeight: AppMetrics.tap, alignment: .leading)
+            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+            .contentShape(RoundedRectangle(cornerRadius: AppRadius.card))
         }
-        .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
-        .padding(.vertical, AppSpace.s12)
-        .frame(maxWidth: .infinity, minHeight: AppMetrics.tap, alignment: .leading)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        .buttonStyle(.plain)
+        .accessibilityLabel(String.localizedStringWithFormat(
+            String(localized: "feature.guardian.mo.phieu.buoi.hoc.buoi"),
+            SessionLabel.title(for: row.session)))
     }
 }
 
 /// "Lịch học của con": the child's sessions by day or by month, like the teacher's schedule.
 struct GuardianScheduleView: View {
     let child: GuardianChildData
+    let openSession: (GuardianSessionRow) -> Void
     @State private var mode = "day"
     @State private var selectedDate = TeacherFormat.todayISO()
     @State private var visibleYear = TeacherFormat.components(TeacherFormat.todayISO()).year
@@ -120,7 +143,7 @@ struct GuardianScheduleView: View {
             if !upcoming.isEmpty {
                 AppSection(title: String(localized: "guardian.upcoming.title", table: "Guardian")) {
                     VStack(spacing: TeacherMetrics.listGap) {
-                        ForEach(upcoming) { GuardianScheduleCard(row: $0, lead: TeacherFormat.weekdayName($0.session.date)) }
+                        ForEach(upcoming) { card($0) }
                     }
                 }
             }
@@ -159,9 +182,13 @@ struct GuardianScheduleView: View {
             AppEmptyState(title: String(localized: "feature.classes.khong.co.buoi.hoc"), size: .compact)
         } else {
             VStack(spacing: TeacherMetrics.listGap) {
-                ForEach(dateRows) { GuardianScheduleCard(row: $0, lead: TeacherFormat.weekdayName($0.session.date)) }
+                ForEach(dateRows) { card($0) }
             }
         }
+    }
+
+    private func card(_ row: GuardianSessionRow) -> some View {
+        GuardianScheduleCard(row: row, lead: TeacherFormat.weekdayName(row.session.date)) { openSession(row) }
     }
 
     private func navButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
@@ -220,13 +247,13 @@ struct GuardianScheduleView: View {
         if !cell.inMonth {
             Color.clear.frame(maxWidth: .infinity).frame(minHeight: AppMetrics.tap)
         } else {
-            let has = !(byDate[cell.date] ?? []).isEmpty
+            let has = GuardianScheduleRules.hasSessions(on: cell.date, in: byDate)
             let selected = cell.date == selectedDate
             Button { selectedDate = cell.date } label: {
                 VStack(spacing: AppSpace.s2) {
                     Text("\(cell.day)").appText(AppText.chip)
                     Circle()
-                        .fill(selected ? AppColors.onPrimary : (has ? AppColors.primary : .clear))
+                        .fill(has ? (selected ? AppColors.onPrimary : AppColors.primary) : .clear)
                         .frame(width: 5, height: 5)
                 }
                 .foregroundStyle(selected ? AppColors.onPrimary : AppColors.text)

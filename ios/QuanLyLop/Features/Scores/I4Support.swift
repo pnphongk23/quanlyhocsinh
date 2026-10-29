@@ -155,21 +155,30 @@ struct I4Banner: View {
         .padding(.horizontal, horizontal)
         .padding(.vertical, vertical)
         .background(background, in: RoundedRectangle(cornerRadius: AppRadius.button))
+        .overlay { if let border { RoundedRectangle(cornerRadius: AppRadius.button).strokeBorder(border, lineWidth: AppState.cardBorderWidth) } }
+    }
+
+    private var border: Color? {
+        switch tone {
+        case .info: nil
+        case .warning: AppState.cardPendingBorder
+        case .error: AppState.cardErrorBorder
+        }
     }
 
     private var foreground: Color {
         switch tone {
         case .info: AppColors.primaryInk
-        case .warning: AppColors.warning
-        case .error: AppColors.error
+        case .warning: AppState.cardPendingFg
+        case .error: AppState.cardErrorFg
         }
     }
 
     private var background: Color {
         switch tone {
         case .info: AppColors.primarySoft
-        case .warning: AppColors.warningSoft
-        case .error: AppColors.errorSoft
+        case .warning: AppState.cardPendingBg
+        case .error: AppState.cardErrorBg
         }
     }
 }

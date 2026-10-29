@@ -348,11 +348,11 @@ struct SessionCommentsView: View {
     private func warningText(_ text: String) -> some View {
         Text(text)
             .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
-            .foregroundStyle(AppColors.warning)
+            .foregroundStyle(AppState.cardPendingFg)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(AppColors.warningSoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
+            .appStatusCard(.pending, radius: AppRadius.button)
     }
 
     private func open(_ student: Student) {
@@ -582,10 +582,10 @@ struct I4TicketSheet: View {
 
     private var unsavedStatus: some View {
         HStack(spacing: TeacherMetrics.slipChipGap) {
-            Circle().fill(AppState.pendingFg).frame(width: TeacherMetrics.slipUnsavedDotSize, height: TeacherMetrics.slipUnsavedDotSize)
+            Circle().fill(AppState.cardPendingFg).frame(width: TeacherMetrics.slipUnsavedDotSize, height: TeacherMetrics.slipUnsavedDotSize)
             Text(SlipSheetText.unsaved)
                 .appText(AppText.label)
-                .foregroundStyle(AppState.pendingFg)
+                .foregroundStyle(AppState.cardPendingFg)
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("comment.unsaved")

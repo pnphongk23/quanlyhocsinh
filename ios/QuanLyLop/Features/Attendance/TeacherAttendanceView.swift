@@ -303,18 +303,16 @@ struct TeacherAttendanceView: View {
 
     private func pillTone(_ status: AttendanceStatus?) -> Color {
         switch status {
-        case .present: AppColors.success
-        case .late: AppColors.warning
-        case .absent: AppColors.error
+        case .present, .late, .absent: AppState.selectedFg
         case nil: AppColors.muted
         }
     }
 
     private func pillBackground(_ status: AttendanceStatus?) -> Color {
         switch status {
-        case .present: AppColors.successSoft
-        case .late: AppColors.warningSoft
-        case .absent: AppColors.errorSoft
+        case .present: AppState.successBg
+        case .late: AppState.pendingBg
+        case .absent: AppState.errorBg
         case nil: AppColors.neutralSoft
         }
     }

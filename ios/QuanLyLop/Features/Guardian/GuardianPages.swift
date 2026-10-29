@@ -73,67 +73,6 @@ struct GuardianOverviewPage: View {
     }
 }
 
-/// The class tab's session list is the entry point to both published slips and assigned homework.
-struct GuardianSessionListPage: View {
-    let child: GuardianChildData
-    let openSession: (GuardianSessionRow) -> Void
-
-    private var rowsByMonth: [(month: String, rows: [GuardianSessionRow])] {
-        let groups = Dictionary(grouping: child.sessionRows, by: \.month)
-        return groups.keys.sorted(by: >).map { month in
-            (month, groups[month] ?? [])
-        }
-    }
-
-    var body: some View {
-        if rowsByMonth.isEmpty {
-            AppEmptyState(title: String(localized: "feature.guardian.chua.co.buoi.hoc.nao.trong.thang.nay"),
-                          size: .compact)
-        } else {
-            VStack(alignment: .leading, spacing: AppMetrics.sectionGap) {
-                ForEach(rowsByMonth, id: \.month) { group in
-                    AppSection(title: GuardianFormat.monthLabel(group.month)) {
-                        VStack(spacing: TeacherMetrics.listGap) {
-                            ForEach(group.rows) { row in sessionRow(row) }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func sessionRow(_ row: GuardianSessionRow) -> some View {
-        Button { openSession(row) } label: {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(GuardianFormat.sessionPrefix(row.session))
-                        .appDynamicText(AppText.segment)
-                        .foregroundStyle(AppColors.text)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(row.statusLabel)
-                        .appDynamicText(AppText.caption)
-                        .foregroundStyle(row.statusColor)
-                }
-                if let slip = row.sentSlip {
-                    GuardianStars(slip: slip)
-                }
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AppColors.muted)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(minHeight: AppMetrics.tap)
-            .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
-            .contentShape(RoundedRectangle(cornerRadius: AppRadius.card))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(String.localizedStringWithFormat(
-            String(localized: "feature.guardian.mo.phieu.buoi.hoc.buoi"),
-            SessionLabel.title(for: row.session)))
-    }
-}
-
 // MARK: - PH · Điểm số
 
 struct GuardianScoresPage: View {

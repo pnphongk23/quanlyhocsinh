@@ -54,7 +54,7 @@ struct AppButtonStyle: ButtonStyle {
         case .secondary: return pressed ? AppState.pressedBg : AppColors.primarySoft
         case .surface: return AppColors.surface
         case .neutral: return AppColors.background
-        case .danger: return pressed ? AppState.pressedBg : AppState.errorBg
+        case .danger: return AppState.errorBg
         case .ghost: return .clear
         }
     }
@@ -175,7 +175,7 @@ struct AppCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
             .padding(.vertical, AppMetrics.cardPaddingVertical)
-            .background(selected ? AppState.selectedBg : AppColors.surface,
+            .background(selected ? AppColors.primarySoft : AppColors.surface,
                         in: RoundedRectangle(cornerRadius: AppRadius.card))
     }
 }
@@ -267,23 +267,58 @@ struct AppPill: View {
             .fixedSize(horizontal: true, vertical: false)
     }
 
+    /// Status badges are solid with white text; neutral and primary stay soft.
     private var foreground: Color {
         switch tone {
         case .neutral: AppColors.muted
-        case .success: AppColors.success
-        case .warning: AppColors.warning
-        case .error: AppColors.error
+        case .success: AppState.successFg
+        case .warning: AppState.pendingFg
+        case .error: AppState.errorFg
         case .primary: AppColors.primaryInk
         }
     }
     private var background: Color {
         switch tone {
         case .neutral: AppColors.neutralSoft
-        case .success: AppColors.successSoft
-        case .warning: AppColors.warningSoft
-        case .error: AppColors.errorSoft
+        case .success: AppState.successBg
+        case .warning: AppState.pendingBg
+        case .error: AppState.errorBg
         case .primary: AppColors.primarySoft
         }
+    }
+}
+
+/// `--card-*`: the soft fill of a large status card, with a 1 px border in the strong colour.
+enum AppStatusTone: Sendable {
+    case success, error, pending
+
+    var background: Color {
+        switch self {
+        case .success: AppState.cardSuccessBg
+        case .error: AppState.cardErrorBg
+        case .pending: AppState.cardPendingBg
+        }
+    }
+    var border: Color {
+        switch self {
+        case .success: AppState.cardSuccessBorder
+        case .error: AppState.cardErrorBorder
+        case .pending: AppState.cardPendingBorder
+        }
+    }
+    var foreground: Color {
+        switch self {
+        case .success: AppState.cardSuccessFg
+        case .error: AppState.cardErrorFg
+        case .pending: AppState.cardPendingFg
+        }
+    }
+}
+
+extension View {
+    func appStatusCard(_ tone: AppStatusTone, radius: CGFloat) -> some View {
+        background(tone.background, in: RoundedRectangle(cornerRadius: radius))
+            .overlay(RoundedRectangle(cornerRadius: radius).strokeBorder(tone.border, lineWidth: AppState.cardBorderWidth))
     }
 }
 
@@ -318,18 +353,13 @@ extension HomeworkLevel {
         case .notDone: String(localized: "design.homework.notDone")
         }
     }
-    var foreground: Color {
-        switch self {
-        case .excellent: AppColors.success
-        case .done: AppColors.primaryInk
-        case .notDone: AppColors.error
-        }
-    }
+    /// The selected button is solid with white text, like every other selected state.
+    var foreground: Color { AppState.selectedFg }
     var background: Color {
         switch self {
-        case .excellent: AppColors.successSoft
-        case .done: AppColors.primarySoft
-        case .notDone: AppColors.errorSoft
+        case .excellent: AppState.successBg
+        case .done: AppState.selectedBg
+        case .notDone: AppState.errorBg
         }
     }
     var pillTone: AppPill.Tone {

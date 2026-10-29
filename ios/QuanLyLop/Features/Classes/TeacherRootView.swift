@@ -61,7 +61,7 @@ struct TeacherRootView: View {
             .tabItem { Label(String(localized: "feature.classes.cai.at"), systemImage: "slider.horizontal.3") }
             .tag(TeacherTab.settings)
         }
-        .tint(AppState.selectedFg)
+        .tint(AppColors.primaryInk)
         .task {
             await data.configure(auth: auth)
             await i4Data.configure(auth: auth)
@@ -309,7 +309,7 @@ struct TeacherClassListView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(String(localized: "classes.tasks.attendance", table: "Teacher"))
-                        .appText(AppText.heading).foregroundStyle(AppState.pendingFg)
+                        .appText(AppText.heading).foregroundStyle(AppState.cardPendingFg)
                     Text("\(classroom.name) · \(TeacherFeatureData.sessionPrefix(session))")
                         .appText(AppText.muted).foregroundStyle(AppColors.muted)
                 }
@@ -317,7 +317,7 @@ struct TeacherClassListView: View {
                 Image(systemName: "chevron.right").foregroundStyle(AppColors.muted)
             }
             .padding(TeacherMetrics.cardPadding)
-            .background(AppState.pendingBg, in: RoundedRectangle(cornerRadius: AppRadius.card))
+            .appStatusCard(.pending, radius: AppRadius.card)
         }
     }
 

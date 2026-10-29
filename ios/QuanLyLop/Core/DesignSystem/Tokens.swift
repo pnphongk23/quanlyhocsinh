@@ -210,18 +210,29 @@ private struct AppTextModifier: ViewModifier {
 
 /// `--state-*` in tokens.css (state contract: `design/ux-v2/rules.md` mục 6).
 enum AppState {
-    static let selectedBg = AppColors.primarySoft
-    static let selectedFg = AppColors.primaryInk
+    static let selectedBg = AppColors.primary
+    static let selectedFg = AppColors.onPrimary
     static let hoverBg = AppColors.neutralSoft
     static let pressedBg = AppColors.border
     static let disabledOpacity: Double = 0.5
-    static let successBg = AppColors.successSoft
-    static let successFg = AppColors.success
-    static let errorBg = AppColors.errorSoft
-    static let errorFg = AppColors.error
+    static let successBg = AppColors.success
+    static let successFg = AppColors.onPrimary
+    static let errorBg = AppColors.error
+    static let errorFg = AppColors.onPrimary
     /// Saved on the device, not on the server yet.
-    static let pendingBg = AppColors.warningSoft
-    static let pendingFg = AppColors.warning
+    static let pendingBg = AppColors.warning
+    static let pendingFg = AppColors.onPrimary
+    /// `--card-*`: large cards keep the soft fill, with a 1 px border and text in the strong colour.
+    static let cardSuccessBg = AppColors.successSoft
+    static let cardSuccessBorder = AppColors.success
+    static let cardSuccessFg = AppColors.success
+    static let cardErrorBg = AppColors.errorSoft
+    static let cardErrorBorder = AppColors.error
+    static let cardErrorFg = AppColors.error
+    static let cardPendingBg = AppColors.warningSoft
+    static let cardPendingBorder = AppColors.warning
+    static let cardPendingFg = AppColors.warning
+    static let cardBorderWidth: CGFloat = 1
     /// `scale(0.98)` while a button or card is pressed.
     static let pressedScale: CGFloat = 0.98
 }

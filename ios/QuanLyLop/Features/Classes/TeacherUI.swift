@@ -353,9 +353,9 @@ struct TeacherStatusPill: View {
     private var foreground: Color {
         switch tone {
         case .neutral: AppColors.muted
-        case .success: AppColors.success
-        case .warning: AppColors.warning
-        case .error: AppColors.error
+        case .success: AppState.successFg
+        case .warning: AppState.pendingFg
+        case .error: AppState.errorFg
         case .primary: AppColors.primaryInk
         }
     }
@@ -363,9 +363,9 @@ struct TeacherStatusPill: View {
     private var background: Color {
         switch tone {
         case .neutral: AppColors.neutralSoft
-        case .success: AppColors.successSoft
-        case .warning: AppColors.warningSoft
-        case .error: AppColors.errorSoft
+        case .success: AppState.successBg
+        case .warning: AppState.pendingBg
+        case .error: AppState.errorBg
         case .primary: AppColors.primarySoft
         }
     }
@@ -416,12 +416,11 @@ struct TeacherTextTabs: View {
                   .lineLimit(1)
                   .fixedSize(horizontal: !fillsWidth, vertical: false)
                   .frame(maxWidth: fillsWidth ? .infinity : nil)
-                  .padding(.horizontal, fillsWidth ? 4 : 8)
+                  .padding(.horizontal, fillsWidth ? AppSpace.s4 : AppSpace.s12)
+                  .frame(height: AppMetrics.tap - AppSpace.s8)
+                  .background(active ? AppState.selectedBg : .clear, in: RoundedRectangle(cornerRadius: AppRadius.button))
                   .frame(height: 48)
                   .contentShape(Rectangle())
-                  .overlay(alignment: .bottom) {
-                      (active ? AppColors.primary : .clear).frame(height: AppMetrics.borderWidth * 2)
-                  }
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(active ? [.isSelected] : [])
@@ -562,6 +561,6 @@ struct TeacherErrorBanner: View {
         .padding(.trailing, retry == nil ? 16 : 8)
         .padding(.vertical, retry == nil ? 12 : 0)
         .frame(minHeight: retry == nil ? nil : 52)
-        .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
+        .appStatusCard(.error, radius: AppRadius.button)
     }
 }

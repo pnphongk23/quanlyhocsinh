@@ -67,4 +67,34 @@ final class GuardianScheduleRulesTests: XCTestCase {
         XCTAssertEqual(grouped["2026-10-30"]?.map(\.id), ["a", "b"])
         XCTAssertEqual(grouped.count, 2)
     }
+
+    func testADayHasADotExactlyWhenItsListIsNotEmpty_includingTheSelectedDayWithNoSession() {
+        let grouped = GuardianScheduleRules.byDate([row("a", "2026-10-30"), row("b", "2026-10-31", status: .cancelled)])
+        for date in ["2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"] {
+            XCTAssertEqual(GuardianScheduleRules.hasSessions(on: date, in: grouped), !(grouped[date] ?? []).isEmpty, date)
+        }
+        XCTAssertFalse(GuardianScheduleRules.hasSessions(on: "2026-10-29", in: grouped), "today without a session has no dot")
+        XCTAssertTrue(GuardianScheduleRules.hasSessions(on: "2026-10-31", in: grouped), "a cancelled session still counts")
+    }
+}
+
+final class StateColorTokenTests: XCTestCase {
+    func testSelectedAndStatusBadgesAreSolidWithWhiteText() {
+        XCTAssertEqual(AppState.selectedBg, AppColors.primary)
+        XCTAssertEqual(AppState.selectedFg, AppColors.onPrimary)
+        XCTAssertEqual(AppState.successBg, AppColors.success)
+        XCTAssertEqual(AppState.errorBg, AppColors.error)
+        XCTAssertEqual(AppState.pendingBg, AppColors.warning)
+        for fg in [AppState.successFg, AppState.errorFg, AppState.pendingFg] { XCTAssertEqual(fg, AppColors.onPrimary) }
+    }
+
+    func testStatusCardsKeepTheSoftFillWithAStrongBorderAndText() {
+        XCTAssertEqual(AppState.cardSuccessBg, AppColors.successSoft)
+        XCTAssertEqual(AppState.cardSuccessBorder, AppColors.success)
+        XCTAssertEqual(AppState.cardSuccessFg, AppColors.success)
+        XCTAssertEqual(AppState.cardErrorBg, AppColors.errorSoft)
+        XCTAssertEqual(AppState.cardErrorBorder, AppColors.error)
+        XCTAssertEqual(AppState.cardPendingBg, AppColors.warningSoft)
+        XCTAssertEqual(AppState.cardPendingFg, AppColors.warning)
+    }
 }

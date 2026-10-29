@@ -525,7 +525,7 @@ struct HomeworkSectionEditor: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.button))
+                        .appStatusCard(.error, radius: AppRadius.button)
                 }
                 if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind) }
                     AppSaveButton(title: editingSection == nil ? String(localized: "feature.homework.luu.phan")

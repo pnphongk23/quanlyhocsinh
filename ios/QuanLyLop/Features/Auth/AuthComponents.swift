@@ -124,20 +124,29 @@ struct AuthBanner: View {
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(background, in: RoundedRectangle(cornerRadius: AppRadius.control))
+            .overlay { if let border { RoundedRectangle(cornerRadius: AppRadius.control).strokeBorder(border, lineWidth: AppState.cardBorderWidth) } }
             .padding(.top, 22)
+    }
+
+    private var border: Color? {
+        switch tone {
+        case .error: AppState.cardErrorBorder
+        case .warning: AppState.cardPendingBorder
+        case .info: nil
+        }
     }
 
     private var foreground: Color {
         switch tone {
-        case .error: AppColors.error
-        case .warning: AppColors.warning
+        case .error: AppState.cardErrorFg
+        case .warning: AppState.cardPendingFg
         case .info: AppColors.primaryInk
         }
     }
     private var background: Color {
         switch tone {
-        case .error: AppColors.errorSoft
-        case .warning: AppColors.warningSoft
+        case .error: AppState.cardErrorBg
+        case .warning: AppState.cardPendingBg
         case .info: AppColors.primarySoft
         }
     }
