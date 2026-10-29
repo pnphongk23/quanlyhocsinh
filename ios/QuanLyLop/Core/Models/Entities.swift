@@ -413,6 +413,11 @@ struct Membership: Codable, Sendable, Equatable {
     let status: String?
     let scopeEpoch: Int?
     let permissions: [String:PermissionLevel]?
+    /// Classes assigned to a staff member (`assigned_classes` scope); absent for the admin and for guardians.
+    var classIds: [String]? = nil
+
+    /// False once a class has been taken off this staff member; cached rows of that class stay on disk but are hidden.
+    func sees(classId: String) -> Bool { classIds?.contains(classId) ?? true }
 }
 
 struct User: Codable, Sendable, Equatable {

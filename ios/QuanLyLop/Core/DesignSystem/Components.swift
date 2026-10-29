@@ -551,8 +551,8 @@ enum LoginText {
     }
     static let changePhone = "Đổi số điện thoại"
     static let guardianSetupTitle = "Đặt mật khẩu"
-    static let guardianSetupDescription = "Số này đã được giáo viên khai cho học sinh. Đặt mật khẩu để vào ứng dụng."
+    static let guardianSetupDescription = "Số này đã được khai trong lớp. Đặt mật khẩu để vào ứng dụng."
     static let guardianSetupSubmit = "Vào ứng dụng"
-    static let phoneNotDeclared = "Số này chưa được giáo viên khai cho học sinh nào. Hãy nhờ giáo viên thêm số vào hồ sơ học sinh."
+    static let phoneNotDeclared = "Số này chưa được khai trong lớp nào. Hãy nhờ giáo viên hoặc quản trị viên thêm số của bạn."
 }
 

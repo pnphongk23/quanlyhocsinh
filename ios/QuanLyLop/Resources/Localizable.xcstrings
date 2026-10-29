@@ -1016,6 +1016,618 @@
         }
       }
     },
+    "feature.auth.ban.khong.con.quyen.o.vai.tro.nay" : {
+      "comment" : "Chuỗi hiển thị trong Features/Auth.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn không còn quyền ở vai trò này. Hãy chọn vai trò khác hoặc liên hệ quản trị viên."
+          }
+        }
+      }
+    },
+    "feature.staff.a.vo.hieu.hoa" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã vô hiệu hoá"
+          }
+        }
+      }
+    },
+    "feature.staff.ang.hoat.ong" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang hoạt động"
+          }
+        }
+      }
+    },
+    "feature.staff.ang.tai.nhan.su" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang tải nhân sự"
+          }
+        }
+      }
+    },
+    "feature.staff.ang.tai.quyen" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang tải quyền"
+          }
+        }
+      }
+    },
+    "feature.staff.bat.lai" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bật lại"
+          }
+        }
+      }
+    },
+    "feature.staff.buoi.hoc.va.diem.danh" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buổi học và điểm danh"
+          }
+        }
+      }
+    },
+    "feature.staff.can.ket.noi.mang.de.thuc.hien" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần kết nối mạng để thực hiện việc này."
+          }
+        }
+      }
+    },
+    "feature.staff.chi.quan.tri.vien.moi.lam.duoc" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ quản trị viên mới làm được việc này."
+          }
+        }
+      }
+    },
+    "feature.staff.cho.dang.nhap" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chờ đăng nhập"
+          }
+        }
+      }
+    },
+    "feature.staff.chua.co.lop.nao" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa có lớp nào đang hoạt động."
+          }
+        }
+      }
+    },
+    "feature.staff.chua.gan.lop" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa gán lớp"
+          }
+        }
+      }
+    },
+    "feature.staff.diem" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Điểm"
+          }
+        }
+      }
+    },
+    "feature.staff.du.lieu.da.thay.doi.tai.lai.va.thu.lai" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dữ liệu đã thay đổi. Kéo xuống để tải lại rồi thử lại."
+          }
+        }
+      }
+    },
+    "feature.staff.giao.vien" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giáo viên"
+          }
+        }
+      }
+    },
+    "feature.staff.hoc.sinh" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Học sinh"
+          }
+        }
+      }
+    },
+    "feature.staff.huy" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Huỷ"
+          }
+        }
+      }
+    },
+    "feature.staff.huy.ban.khai" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Huỷ bản khai"
+          }
+        }
+      }
+    },
+    "feature.staff.huy.ban.khai.nhan.su.nay" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Huỷ bản khai nhân sự này?"
+          }
+        }
+      }
+    },
+    "feature.staff.khong" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không"
+          }
+        }
+      }
+    },
+    "feature.staff.khong.the.ket.noi.dich.vu" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể kết nối dịch vụ. Vui lòng thử lại."
+          }
+        }
+      }
+    },
+    "feature.staff.khong.tim.thay.nhan.su.nay" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không tìm thấy nhân sự này."
+          }
+        }
+      }
+    },
+    "feature.staff.lop" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lớp"
+          }
+        }
+      }
+    },
+    "feature.staff.lop.uoc.gan" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lớp được gán"
+          }
+        }
+      }
+    },
+    "feature.staff.luu" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lưu"
+          }
+        }
+      }
+    },
+    "feature.staff.nguoi.nay.da.co.tai.khoan" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Người này đã có tài khoản. Hãy vô hiệu hoá thay vì huỷ bản khai."
+          }
+        }
+      }
+    },
+    "feature.staff.nhan.su" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhân sự"
+          }
+        }
+      }
+    },
+    "feature.staff.nhan.xet.va.bao.cao" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhận xét và báo cáo"
+          }
+        }
+      }
+    },
+    "feature.staff.oc" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đọc"
+          }
+        }
+      }
+    },
+    "feature.staff.phai.con.it.nhat.mot.quan.tri.vien" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phải còn ít nhất một quản trị viên đang hoạt động."
+          }
+        }
+      }
+    },
+    "feature.staff.phan.quyen" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phân quyền"
+          }
+        }
+      }
+    },
+    "feature.staff.quan.tri.vien" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quản trị viên"
+          }
+        }
+      }
+    },
+    "feature.staff.quan.tri.vien.luon.co.moi.quyen" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quản trị viên luôn có mọi quyền. Vai trò Phụ huynh chỉ xem nội dung đã gửi."
+          }
+        }
+      }
+    },
+    "feature.staff.quyen.cua.giao.vien.va.tro.giang" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quyền của Giáo viên và Trợ giảng"
+          }
+        }
+      }
+    },
+    "feature.staff.so.dien.thoai" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số điện thoại"
+          }
+        }
+      }
+    },
+    "feature.staff.so.dien.thoai.chua.dung" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số điện thoại chưa đúng. Nhập số di động 10 chữ số, ví dụ 0900 000 001."
+          }
+        }
+      }
+    },
+    "feature.staff.so.lop.duoc.gan" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld lớp"
+          }
+        }
+      }
+    },
+    "feature.staff.so.nay.da.la.nhan.su.cua.lop" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số này đã có trong danh sách nhân sự."
+          }
+        }
+      }
+    },
+    "feature.staff.so.nhan.su.dang.hoat.dong" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld nhân sự · %lld đang hoạt động"
+          }
+        }
+      }
+    },
+    "feature.staff.sua" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sửa"
+          }
+        }
+      }
+    },
+    "feature.staff.sua.nhan.su" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sửa nhân sự"
+          }
+        }
+      }
+    },
+    "feature.staff.tat.ca.cac.lop" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tất cả các lớp"
+          }
+        }
+      }
+    },
+    "feature.staff.ten" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tên"
+          }
+        }
+      }
+    },
+    "feature.staff.them.nhan.su" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm nhân sự"
+          }
+        }
+      }
+    },
+    "feature.staff.thong.tin.chua.hop.le" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông tin chưa hợp lệ. Hãy kiểm tra lại."
+          }
+        }
+      }
+    },
+    "feature.staff.tro.giang" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trợ giảng"
+          }
+        }
+      }
+    },
+    "feature.staff.vai.tro" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vai trò"
+          }
+        }
+      }
+    },
+    "feature.staff.vai.tro.nay.khong.chinh.duoc" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vai trò này không chỉnh được."
+          }
+        }
+      }
+    },
+    "feature.staff.vo.hieu.hoa" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vô hiệu hoá"
+          }
+        }
+      }
+    },
+    "feature.staff.vo.hieu.hoa.nhan.su.nay" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vô hiệu hoá nhân sự này?"
+          }
+        }
+      }
+    },
+    "feature.staff.vui.long.nhap.ten" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vui lòng nhập tên."
+          }
+        }
+      }
+    },
     "feature.auth.chua.the.ang.xuat" : {
       "comment" : "Chuỗi hiển thị trong Features/Auth.",
       "extractionState" : "manual",

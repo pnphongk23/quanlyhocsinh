@@ -109,6 +109,7 @@ final class TeacherFeatureData {
     private(set) var saveStatusSource: AppSaveStatusSource?
 
     private var store: SQLiteStore?
+    private var visibleMembership: Membership?
     private var api: (any APIClient)?
     private var sync: SyncCoordinator?
     private var observer: Task<Void, Never>?
@@ -142,6 +143,19 @@ final class TeacherFeatureData {
         isReady = true
     }
 
+    /// Reads what the role may do from the membership; runs before any network call so a removed right takes effect at once.
+    func applyPermissions(_ membership: Membership) {
+        visibleMembership = membership
+        canReadClasses = allows(membership, group: "classes", write: false)
+        canWriteClasses = allows(membership, group: "classes", write: true)
+        canReadStudents = allows(membership, group: "students", write: false)
+        canWriteStudents = allows(membership, group: "students", write: true)
+        canReadAttendance = allows(membership, group: "sessions_attendance", write: false)
+        canWriteAttendance = allows(membership, group: "sessions_attendance", write: true)
+        canReadScores = allows(membership, group: "scores", write: false)
+        canReadReports = allows(membership, group: "comments_reports", write: false)
+    }
+
     func configure(auth: AuthModel) async {
         guard let membership = auth.activeMembership,
               let store = auth.activeStoreForLogout as? SQLiteStore,
@@ -153,14 +167,7 @@ final class TeacherFeatureData {
         sync = auth.activeSync
         roleName = membership.role.name
         displayName = auth.currentUser?.displayName ?? membership.role.name
-        canReadClasses = allows(membership, group: "classes", write: false)
-        canWriteClasses = allows(membership, group: "classes", write: true)
-        canReadStudents = allows(membership, group: "students", write: false)
-        canWriteStudents = allows(membership, group: "students", write: true)
-        canReadAttendance = allows(membership, group: "sessions_attendance", write: false)
-        canWriteAttendance = allows(membership, group: "sessions_attendance", write: true)
-        canReadScores = allows(membership, group: "scores", write: false)
-        canReadReports = allows(membership, group: "comments_reports", write: false)
+        applyPermissions(membership)
 
         if observer == nil {
             observer = Task { [weak self, store] in
@@ -187,12 +194,16 @@ final class TeacherFeatureData {
     func reload() async {
         guard let store else { return }
         do {
-            classes = try await store.records(Classroom.self, entity: "class").sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            students = try await store.records(Student.self, entity: "student")
-            sessions = try await store.classSessions().sorted { ($0.date, $0.startTime) < ($1.date, $1.startTime) }
-            attendance = try await store.records(Attendance.self, entity: "attendance")
-            tests = try await store.records(TestDefinition.self, entity: "test").filter { !$0.archived }
-            scores = try await store.records(Score.self, entity: "score")
+            let restricted = visibleMembership?.classIds != nil
+            let seen: (String) -> Bool = { [visibleMembership] in visibleMembership?.sees(classId: $0) ?? true }
+            classes = try await store.records(Classroom.self, entity: "class").filter { seen($0.id) }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            students = try await store.records(Student.self, entity: "student").filter { seen($0.classId) }
+            sessions = try await store.classSessions().filter { seen($0.classId) }.sorted { ($0.date, $0.startTime) < ($1.date, $1.startTime) }
+            let sessionIds = Set(sessions.map(\.id))
+            attendance = try await store.records(Attendance.self, entity: "attendance").filter { !restricted || sessionIds.contains($0.sessionId) }
+            tests = try await store.records(TestDefinition.self, entity: "test").filter { !$0.archived && seen($0.classId) }
+            let testIds = Set(tests.map(\.id))
+            scores = try await store.records(Score.self, entity: "score").filter { !restricted || testIds.contains($0.testId) }
             isReady = true
         } catch {
             errorMessage = String(localized: "feature.classes.khong.oc.uoc.du.lieu.tren.thiet.bi")

@@ -73,6 +73,19 @@ enum DemoScreens {
             // Ảnh 09 của P2: tài khoản có ba vai trò (quản trị viên, giáo viên, phụ huynh).
             model.applyDemo(memberships: [admin, teacher, guardian], activeID: teacher.id, screen: .chooseRole)
             return AnyView(DemoAuthFlow(model: model).environment(model))
+        case "settings-admin":
+            model.applyDemo(memberships: [admin, teacher], activeID: admin.id, screen: .settings)
+            return AnyView(DemoAuthFlow(model: model).environment(model))
+        case "staff-list", "staff-add", "staff-edit", "staff-permissions":
+            model.applyDemo(memberships: [admin], activeID: admin.id, screen: .settings)
+            let store = StaffStore(demo: true)
+            switch name {
+            case "staff-permissions":
+                return AnyView(NavigationStack { StaffPermissionsView(store: store) }.environment(model))
+            default:
+                let editor: StaffEditor? = name == "staff-add" ? .add : name == "staff-edit" ? .edit(store.members[2]) : nil
+                return AnyView(NavigationStack { StaffListView(store: store, initialEditor: editor) }.environment(model))
+            }
         case "settings-teacher":
             model.applyDemo(memberships: [teacher, guardian], activeID: teacher.id, screen: .settings)
             return AnyView(DemoAuthFlow(model: model).environment(model))
