@@ -78,10 +78,15 @@ struct UpdateStaffRequest: Encodable, Sendable {
     var baseVersion: Int?
 }
 
-/// The five permission groups an admin can set for the teacher and assistant roles.
+/// The permission groups an admin can set for the teacher and assistant roles: five with features, then
+/// "Gửi nhận xét", which only takes none or write.
 enum StaffPermissionGroup: String, CaseIterable, Sendable, Identifiable {
     case classes, students, sessionsAttendance = "sessions_attendance", scores, commentsReports = "comments_reports"
+    case sendComments = "send_comments"
     var id: String { rawValue }
+
+    /// Levels the admin can pick for this group.
+    var levels: [PermissionLevel] { self == .sendComments ? [.none, .write] : [.none, .read, .write] }
 }
 
 struct StaffPermissionSet: Codable, Sendable, Equatable {
@@ -90,6 +95,7 @@ struct StaffPermissionSet: Codable, Sendable, Equatable {
     var sessionsAttendance: PermissionLevel?
     var scores: PermissionLevel?
     var commentsReports: PermissionLevel?
+    var sendComments: PermissionLevel?
 
     subscript(group: StaffPermissionGroup) -> PermissionLevel? {
         get {
@@ -99,6 +105,7 @@ struct StaffPermissionSet: Codable, Sendable, Equatable {
             case .sessionsAttendance: sessionsAttendance
             case .scores: scores
             case .commentsReports: commentsReports
+            case .sendComments: sendComments
             }
         }
         set {
@@ -108,6 +115,7 @@ struct StaffPermissionSet: Codable, Sendable, Equatable {
             case .sessionsAttendance: sessionsAttendance = newValue
             case .scores: scores = newValue
             case .commentsReports: commentsReports = newValue
+            case .sendComments: sendComments = newValue
             }
         }
     }

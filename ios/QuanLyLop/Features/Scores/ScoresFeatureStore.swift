@@ -31,6 +31,7 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var canWriteScores = false
     @Published private(set) var canReadCommentsReports = false
     @Published private(set) var canWriteCommentsReports = false
+    @Published private(set) var canSendComments = false
     @Published private(set) var isReady = false
     @Published var errorMessage: String?
     /// The test just created, until the screen that created it has opened its score entry ("Tạo bài và nhập điểm").
@@ -61,6 +62,7 @@ final class I4FeatureStore: ObservableObject {
         self.attendance = attendance
         canReadCommentsReports = true
         canWriteCommentsReports = true
+        canSendComments = true
         isReady = true
     }
 #endif
@@ -93,6 +95,8 @@ final class I4FeatureStore: ObservableObject {
         canWriteScores = allows(membership, group: "scores", write: true)
         canReadCommentsReports = allows(membership, group: "comments_reports", write: false)
         canWriteCommentsReports = allows(membership, group: "comments_reports", write: true)
+        canSendComments = allows(membership, group: "comments_reports", write: true)
+            && allows(membership, group: "send_comments", write: true)
         return (activeStore, activeAPI)
     }
 
@@ -702,9 +706,7 @@ final class I4FeatureStore: ObservableObject {
     }
 
     private func allows(_ membership: Membership, group: String, write: Bool) -> Bool {
-        if membership.role.scopeKind == .workspace { return true }
-        guard let level = membership.permissions?[group] else { return false }
-        return level == .write || (!write && level == .read)
+        membership.allows(group: group, write: write)
     }
 }
 

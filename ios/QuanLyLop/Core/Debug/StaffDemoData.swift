@@ -22,10 +22,10 @@ extension StaffStore {
         let roles = [
             StaffRolePermissions(role: role("teacher", "Giáo viên"),
                                  permissions: StaffPermissionSet(classes: .write, students: .write, sessionsAttendance: .write,
-                                                                 scores: .write, commentsReports: .write)),
+                                                                 scores: .write, commentsReports: .write, sendComments: .write)),
             StaffRolePermissions(role: role("assistant", "Trợ giảng"),
                                  permissions: StaffPermissionSet(classes: .read, students: .read, sessionsAttendance: .write,
-                                                                 scores: .read, commentsReports: .write)),
+                                                                 scores: .read, commentsReports: .write, sendComments: PermissionLevel.none)),
         ]
         seedDemo(members: members, classes: classes, roles: roles)
     }

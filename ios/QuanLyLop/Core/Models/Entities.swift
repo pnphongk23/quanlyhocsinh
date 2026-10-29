@@ -25,6 +25,7 @@ enum ScopeKind: String, Codable, Sendable { case workspace, assignedClasses = "a
 enum PermissionLevel: String, Codable, Sendable { case none, read, write }
 enum PermissionGroup: String, Codable, Sendable, CaseIterable {
     case classes, students, sessionsAttendance = "sessions_attendance", scores, lectures, commentsReports = "comments_reports"
+    case sendComments = "send_comments"
 }
 enum Stars: Int, Codable, Sendable, CaseIterable {
     case one = 1, two, three
@@ -415,6 +416,15 @@ struct Membership: Codable, Sendable, Equatable {
     let permissions: [String:PermissionLevel]?
     /// Classes assigned to a staff member (`assigned_classes` scope); absent for the admin and for guardians.
     var classIds: [String]? = nil
+
+    /// Whether this membership may read or write a permission group. The admin may do everything; a missing
+    /// "send_comments" row (an older server) follows `comments_reports`.
+    func allows(group: String, write: Bool) -> Bool {
+        if role.scopeKind == .workspace { return true }
+        let level = permissions?[group] ?? (group == PermissionGroup.sendComments.rawValue ? permissions?[PermissionGroup.commentsReports.rawValue] : nil)
+        guard let level else { return false }
+        return level == .write || (!write && level == .read)
+    }
 
     /// False once a class has been taken off this staff member; cached rows of that class stay on disk but are hidden.
     func sees(classId: String) -> Bool { classIds?.contains(classId) ?? true }

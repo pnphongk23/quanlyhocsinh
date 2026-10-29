@@ -97,3 +97,9 @@ enum CriteriaModeText {
     static let cancel = "Quay lại"
     static let saveFailed = "Không lưu được phiếu."
 }
+
+/// Fixed Vietnamese text of the "Gửi nhận xét" permission.
+enum SendCommentsText {
+    static let group = "Gửi nhận xét"
+    static let hint = "Cho phép gửi phiếu cho phụ huynh. Không có quyền này vẫn soạn và gán mặc định được."
+}

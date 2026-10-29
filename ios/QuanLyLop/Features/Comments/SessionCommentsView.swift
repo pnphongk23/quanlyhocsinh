@@ -271,7 +271,7 @@ struct SessionCommentsView: View {
                 AppButton(title: NotesImportText.discard, variant: .neutral, size: .large) { notesDraft = nil }
                     .accessibilityIdentifier("notes.discard")
             } else {
-                if sendAvailability == .needsNetwork {
+                if data.canSendComments, sendAvailability == .needsNetwork {
                     Text(String(localized: "comments.send.needs_network", table: "Teacher"))
                         .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 19.5))
                         .foregroundStyle(AppColors.muted)
@@ -281,13 +281,15 @@ struct SessionCommentsView: View {
                 AppButton(title: SlipSheetText.defaultsButton, variant: .neutral, size: .large) { showingDefaults = true }
                     .disabled(defaultSlipCount == 0 || sendController.phase == .saving)
                     .accessibilityIdentifier("comment.assignDefaults")
-                AppButton(
-                    title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),
-                    systemImage: "paperplane",
-                    size: .large
-                ) { showingSend = true }
-                    .disabled(sendAvailability != .ready)
-                    .accessibilityIdentifier("comment.sendClass")
+                if data.canSendComments {
+                    AppButton(
+                        title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.ca.lop"), String(describing: (sendableRows.count))),
+                        systemImage: "paperplane",
+                        size: .large
+                    ) { showingSend = true }
+                        .disabled(sendAvailability != .ready)
+                        .accessibilityIdentifier("comment.sendClass")
+                }
             }
         }
     }

@@ -439,9 +439,7 @@ final class TeacherFeatureData {
     }
 
     private func allows(_ membership: Membership, group: String, write: Bool) -> Bool {
-        if membership.role.scopeKind == .workspace { return true }
-        guard let level = membership.permissions?[group] else { return false }
-        return level == .write || (!write && level == .read)
+        membership.allows(group: group, write: write)
     }
 
     static var todayString: String { TeacherSessionForm.day(.now) }

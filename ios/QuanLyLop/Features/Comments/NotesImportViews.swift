@@ -119,17 +119,26 @@ struct NotesImportDemo: View {
 
     init(kind: String) {
         self.kind = kind
-        let rows = NotesImportDemoData.names.enumerated().map { index, name in
-            I4TicketRow(student: Student(id: "s\(index)", classId: "c", name: name, parentPhone: nil, enrolledAt: "2026-09-01",
-                                         leftAt: nil, status: .active, version: 1),
-                        slip: nil, attendance: index == 3 ? .absent : nil,
-                        previousHomework: I4HomeworkSummary(total: 0, graded: 0), previousDate: nil, previousHadSections: false)
+        func make(_ slips: [String: SessionSlip]) -> [I4TicketRow] {
+            NotesImportDemoData.names.enumerated().map { index, name in
+                I4TicketRow(student: Student(id: "s\(index)", classId: "c", name: name, parentPhone: nil, enrolledAt: "2026-09-01",
+                                             leftAt: nil, status: .active, version: 1),
+                            slip: slips["s\(index)"], attendance: index == 3 ? .absent : nil,
+                            previousHomework: I4HomeworkSummary(total: 0, graded: 0), previousDate: nil, previousHadSections: false)
+            }
         }
-        self.rows = rows
-        let roster = NotesImportRoster.build(rows: rows, others: [], sections: [], grades: [])
+        let roster = NotesImportRoster.build(rows: make([:]), others: [], sections: [], grades: [])
         let options = NotesImportRules.Options(createDefaultsForRest: true)
         let result = NotesImportRules.analyze(NotesImportDemoData.text, students: roster, options: options)
-        _draft = State(initialValue: kind == "notes-review" ? NotesImportDraft(result: result, students: roster, options: options) : nil)
+        let draft = NotesImportDraft(result: result, students: roster, options: options)
+        // After saving, the chips show the slips the draft wrote.
+        let saved = Dictionary(uniqueKeysWithValues: draft.saves.map { save in
+            let bits = SlipRules.allCriteria & ~save.unmetMask
+            return (save.studentID, SessionSlip(sessionId: "s", studentId: save.studentID, stars: SlipRules.stars(criteria: bits),
+                                                criteria: bits, note: save.note, status: .draft, sentAt: nil, version: 1, updatedAt: "x"))
+        })
+        rows = make(kind == "notes-result" ? saved : [:])
+        _draft = State(initialValue: kind.hasPrefix("notes-review") ? draft : nil)
     }
 
     var body: some View {
@@ -139,10 +148,25 @@ struct NotesImportDemo: View {
             }
         } else {
             ScrollView {
-                CriteriaModeView(rows: rows, sections: [], grades: [], canWrite: true, save: { _, _, _ in nil }, draft: $draft)
-                    .padding(AppSpace.s16)
+                VStack(alignment: .leading, spacing: AppSpace.s12) {
+                    if kind == "notes-result" {
+                        Text(NotesImportText.saved(5, failed: 2)).appText(AppText.label).foregroundStyle(AppColors.text)
+                            .accessibilityIdentifier("notes.result")
+                    }
+                    CriteriaModeView(rows: rows, sections: [], grades: [], canWrite: true, save: { _, _, _ in nil }, draft: $draft)
+                }
+                .padding(AppSpace.s16)
             }
+            .defaultScrollAnchor(kind == "notes-review-bottom" ? .bottom : .top)
             .background(AppColors.background)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if kind == "notes-review-bottom" {
+                    TeacherPinnedBar {
+                        AppButton(title: NotesImportText.save, variant: .primary, size: .large) {}
+                        AppButton(title: NotesImportText.discard, variant: .neutral, size: .large) {}
+                    }
+                }
+            }
         }
     }
 }

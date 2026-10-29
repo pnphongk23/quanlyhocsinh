@@ -173,6 +173,29 @@ final class StaffStoreTests: XCTestCase {
         XCTAssertEqual(body, ["permissions": ["scores": "read"]])
     }
 
+    func testSendCommentsLoadsAndSavesAsItsOwnKeyWithNoReadLevel() async throws {
+        let assistant = #"{"role":{"id":"role_assistant","name":"Trợ giảng","system_key":"assistant"},"permissions":{"comments_reports":"write","send_comments":"none"}}"#
+        let updated = #"{"role":{"id":"role_assistant","name":"Trợ giảng","system_key":"assistant"},"permissions":{"comments_reports":"write","send_comments":"write"}}"#
+        let api = RecordingAPI { endpoint in
+            endpoint.method == .put ? Data(updated.utf8) : Data(#"{"items":[\#(assistant)]}"#.utf8)
+        }
+        let store = store(api)
+
+        await store.loadPermissions()
+        XCTAssertEqual(store.roles.first?.permissions[.sendComments], PermissionLevel.none)
+        XCTAssertEqual(StaffPermissionGroup.sendComments.levels, [.none, .write])
+        XCTAssertEqual(StaffPermissionGroup.scores.levels, [.none, .read, .write])
+
+        try await store.setLevel(.assistant, group: .sendComments, level: .write)
+
+        XCTAssertEqual(store.roles.first?.permissions[.sendComments], .write)
+        let sent = await api.requests
+        let request = try XCTUnwrap(sent.last)
+        XCTAssertEqual(request.path, "roles/assistant/permissions")
+        let body = try JSONSerialization.jsonObject(with: try XCTUnwrap(request.body)) as? NSDictionary
+        XCTAssertEqual(body, ["permissions": ["send_comments": "write"]])
+    }
+
     func testServerReasonsMapToDistinctMessages() {
         func failure(_ status: Int, _ code: String, reason: String) -> APIFailure {
             .server(status: status, error: APIError(code: code, message: nil, details: .object(["reason": .string(reason)]), requestId: nil), retryAfter: nil)

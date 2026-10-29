@@ -39,6 +39,7 @@ enum StaffLabel {
         case .sessionsAttendance: String(localized: "feature.staff.buoi.hoc.va.diem.danh")
         case .scores: String(localized: "feature.staff.diem")
         case .commentsReports: String(localized: "feature.staff.nhan.xet.va.bao.cao")
+        case .sendComments: SendCommentsText.group
         }
     }
 
@@ -378,7 +379,10 @@ struct StaffPermissionsView: View {
                 ForEach(StaffPermissionGroup.allCases) { group in
                     VStack(alignment: .leading, spacing: AppSpace.s8) {
                         Text(StaffLabel.group(group)).appText(AppText.label).foregroundStyle(AppColors.text)
-                        AppSegmented(options: [PermissionLevel.none, .read, .write].map { .init(value: $0.rawValue, label: StaffLabel.level($0)) },
+                        if group == .sendComments {
+                            Text(SendCommentsText.hint).appText(AppText.muted).foregroundStyle(AppColors.muted)
+                        }
+                        AppSegmented(options: group.levels.map { .init(value: $0.rawValue, label: StaffLabel.level($0)) },
                                      value: (role.permissions[group] ?? .none).rawValue) { value in
                             guard let key = role.roleKey, let level = PermissionLevel(rawValue: value) else { return }
                             Task { await set(key, group, level) }
