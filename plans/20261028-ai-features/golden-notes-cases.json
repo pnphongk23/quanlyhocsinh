@@ -1045,26 +1045,15 @@
           }
         ],
         "unparsedLines": [],
-        "changes": [
-          {
-            "studentId": "s17",
-            "slipState": "draft",
-            "isNewSlip": false,
-            "uncheck": [
-              "attention"
-            ],
-            "appendNote": [],
-            "hwManual": false,
-            "uncheckedAfter": [
-              "attention"
-            ],
-            "starsAfter": 4
-          }
-        ],
+        "changes": [],
         "skipped": [
           {
             "studentId": "s16",
             "reason": "sent_slip"
+          },
+          {
+            "studentId": "s17",
+            "reason": "legacy_scale"
           },
           {
             "studentId": "s18",
@@ -1132,20 +1121,6 @@
             "starsAfter": 4
           },
           {
-            "studentId": "s17",
-            "slipState": "draft",
-            "isNewSlip": false,
-            "uncheck": [
-              "attention"
-            ],
-            "appendNote": [],
-            "hwManual": false,
-            "uncheckedAfter": [
-              "attention"
-            ],
-            "starsAfter": 4
-          },
-          {
             "studentId": "s18",
             "slipState": "queued_send",
             "isNewSlip": false,
@@ -1160,7 +1135,12 @@
             "starsAfter": 4
           }
         ],
-        "skipped": [],
+        "skipped": [
+          {
+            "studentId": "s17",
+            "reason": "legacy_scale"
+          }
+        ],
         "warnings": []
       }
     },
