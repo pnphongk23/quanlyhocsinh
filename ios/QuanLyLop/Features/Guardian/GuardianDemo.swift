@@ -36,7 +36,7 @@ enum GuardianDemo {
                          origin: .manual, isMakeup: true, status: .cancelled, note: nil, version: 1),
             ClassSession(id: "bao-9", classId: classA, date: "2026-10-19", startTime: "18:00",
                          origin: .recurring, isMakeup: false, status: .planned, note: nil, version: 1)
-        ]
+        ] + upcoming(classA)
         let attendances = [
             attendance("bao-5", .present), attendance("bao-6", .present),
             attendance("bao-7", .present), attendance("bao-8", .absent)
@@ -117,6 +117,27 @@ enum GuardianDemo {
 
         // Prototype default: the first linked child (ảnh 15 selects “Gia Bảo” first).
         return GuardianDashboard(children: [baoData, ngocData])
+    }
+
+    /// Sessions a few days after the device date, so "Buổi sắp tới" has rows whenever the shot is taken.
+    private static func upcoming(_ classID: String) -> [ClassSession] {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        func day(_ offset: Int) -> String {
+            formatter.string(from: Calendar.current.date(byAdding: .day, value: offset, to: Date()) ?? Date())
+        }
+        return [
+            ClassSession(id: "bao-next-1", classId: classID, date: day(1), startTime: "18:00",
+                         origin: .recurring, isMakeup: false, status: .planned, note: nil, version: 1),
+            ClassSession(id: "bao-next-2", classId: classID, date: day(3), startTime: "18:00",
+                         origin: .recurring, isMakeup: false, status: .cancelled, note: nil, version: 1),
+            ClassSession(id: "bao-next-3", classId: classID, date: day(4), startTime: "17:00",
+                         origin: .manual, isMakeup: true, status: .planned, note: nil, version: 1),
+            ClassSession(id: "bao-next-4", classId: classID, date: day(8), startTime: "18:00",
+                         origin: .recurring, isMakeup: false, status: .planned, note: nil, version: 1)
+        ]
     }
 
     private static func session(_ id: String, _ classID: String, _ date: String,

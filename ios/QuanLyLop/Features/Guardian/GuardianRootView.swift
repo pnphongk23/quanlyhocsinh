@@ -84,8 +84,21 @@ struct GuardianRootView: View {
         }
         .background(AppColors.background.ignoresSafeArea())
         .preferredColorScheme(.light)
-        .sheet(isPresented: $showingChildPicker) { childPicker }
-        .task { await load() }
+        .sheet(isPresented: $showingChildPicker) {
+            childPicker.presentationDetents([.height(childPickerHeight), .large])
+        }
+        .task {
+            await load()
+            #if DEBUG
+            // `selectedChildID` settling clears the stacks, so seed the demo route after it.
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            switch DemoFlag.screen {
+            case "guardian-schedule": classesPath = [.schedule]
+            case "guardian-picker": showingChildPicker = true
+            default: break
+            }
+            #endif
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await load() } }
         }
@@ -221,6 +234,11 @@ struct GuardianRootView: View {
             .disabled(children.count < 2)
             .accessibilityIdentifier("guardian.childSwitcher")
         }
+    }
+
+    /// Header plus one row per child, so a family of two does not get a screen-high sheet.
+    private var childPickerHeight: CGFloat {
+        AppSpace.s48 * 2 + CGFloat(children.count) * (AppMetrics.tap + AppSpace.s24)
     }
 
     private var childPicker: some View {

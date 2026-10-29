@@ -106,7 +106,7 @@ enum DemoScreens {
             return AnyView(TeacherRootView(demoData: data, initialRoutes: routes).environment(model))
           case "scores", "score-grid", "homework", "comments", "reports", "reports-error":
               return AnyView(DemoI4Screen(kind: name))
-          case "guardian", "guardian-empty":
+          case "guardian", "guardian-empty", "guardian-schedule", "guardian-picker":
             model.applyDemo(memberships: [guardian], activeID: guardian.id, screen: .main)
             return AnyView(GuardianRootView(model: model).environment(model))
         default:
@@ -162,7 +162,29 @@ private struct DemoI4Screen: View {
         let model = AuthModel(configuration: .fallback)
         model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
         _model = State(initialValue: model)
-        if kind == "reports-error" {
+        if kind == "homework" {
+            let sessions = TeacherDemoData.makeSessions()
+            let roster = TeacherDemoData.students.filter { ["demo-student-0", "demo-student-2"].contains($0.id) }
+            let students = roster + [Student(
+                id: "demo-student-long", classId: TeacherDemoData.classID,
+                name: String(localized: "auth.demo.longName", table: "Teacher"), parentPhone: nil,
+                enrolledAt: TeacherDemoData.addDays(-50), leftAt: nil, status: .active, version: 1)]
+            // The session before the open one (day -2) is the one graded: its homework has three parts.
+            func part(_ id: String, _ kind: HomeworkKind, _ title: String) -> HomeworkSection {
+                HomeworkSection(id: id, classId: TeacherDemoData.classID, sessionId: "demo-session-7",
+                                kind: kind, title: title, description: "", version: 1)
+            }
+            let sections = [part("demo-hw-vocab", .vocabulary, "Unit 5 · Food"),
+                            part("demo-hw-speaking", .speaking, "Tell a story"),
+                            part("demo-hw-exercise", .exercise, "Workbook 38–39")]
+            let grades = students.suffix(1).map {
+                HomeworkGrade(sectionId: "demo-hw-vocab", studentId: $0.id, level: .done, version: 1,
+                              updatedAt: "2026-10-27T11:00:00.000Z")
+            }
+            _data = StateObject(wrappedValue: I4FeatureStore(
+                demoClasses: [TeacherDemoData.classroom], students: students, sessions: sessions,
+                attendance: TeacherDemoData.attendance(for: sessions), sections: sections, grades: grades))
+        } else if kind == "reports-error" {
             let sessions = TeacherDemoData.makeSessions()
             _data = StateObject(wrappedValue: I4FeatureStore(
                 demoClasses: [TeacherDemoData.classroom], students: TeacherDemoData.students,
@@ -189,7 +211,7 @@ private struct DemoI4Screen: View {
                                     AppEmptyState(title: String(localized: "feature.auth.chua.co.bai.kiem.tra"))
                                 }
                             case "homework":
-                                SessionHomeworkView(sessionID: data.defaultSession?.id ?? "fixture-session", data: data)
+                                SessionHomeworkView(sessionID: "demo-session-8", data: data)
                             case "comments":
                                 SessionCommentsView(sessionID: data.defaultSession?.id ?? "fixture-session", data: data)
                             default:

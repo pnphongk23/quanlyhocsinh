@@ -296,6 +296,12 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "T2 · 19/10" } }
       }
     },
+    "auth.demo.longName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Nguyễn Hoàng Thiên Phương Anh Thư" } }
+      }
+    },
     "slip.criterion.listen" : {
       "extractionState" : "manual",
       "localizations" : {
