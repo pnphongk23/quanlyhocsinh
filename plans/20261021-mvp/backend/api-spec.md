@@ -11,7 +11,7 @@ Giá trị trong ví dụ là giả: SĐT `+84900000001`, mật khẩu `example-
 - **Xác thực:** `Authorization: Bearer <token>` cho cả iOS và web (token từ `/auth/login`). Lý do không dùng cookie: web chạy ở Cloudflare Pages, API ở miền khác ⇒ cookie bên thứ ba bị Safari chặn; token lưu ở Keychain (iOS) hoặc IndexedDB (web). Nếu sau này đặt API cùng miền với web thì có thể thêm cookie `HttpOnly`.
 - **Header tuỳ chọn:** `X-Client: ios/1.0.0 | web/1.0.0`, `X-Request-Id: <uuid>` (máy chủ sinh nếu thiếu, trả lại ở mọi response).
 - **Vai trò đang dùng:** phiên mang `active_membership_id`. Các endpoint REST dùng vai trò đó. Endpoint đồng bộ nhận `membership_id` rõ ràng (hàng đợi giữ vai trò lúc tạo lệnh, spec architecture mục 4) và máy chủ kiểm membership thuộc user và còn hoạt động.
-- **Quyền:** kiểm ở máy chủ cho mọi endpoint; giao diện ẩn nút chỉ để dễ dùng. Cách viết trong mục "Ai gọi": `Public` (không cần đăng nhập) · `Mọi người dùng đã đăng nhập` · `<nhóm>:<mức>` = vai trò có nhóm quyền đó ở mức đó **và** tài nguyên nằm trong phạm vi (lớp được gán / Admin thấy tất cả) · `Admin` · `Phụ huynh` = vai trò phạm vi `linked_students` với con được liên kết. Tên nhóm: `classes`, `students`, `sessions_attendance`, `scores`, `lectures`, `comments_reports`.
+- **Quyền:** kiểm ở máy chủ cho mọi endpoint; giao diện ẩn nút chỉ để dễ dùng. Cách viết trong mục "Ai gọi": `Public` (không cần đăng nhập) · `Mọi người dùng đã đăng nhập` · `<nhóm>:<mức>` = vai trò có nhóm quyền đó ở mức đó **và** tài nguyên nằm trong phạm vi (lớp được gán / Admin thấy tất cả) · `Admin` · `Phụ huynh` = vai trò phạm vi `linked_students` với con được liên kết. Tên nhóm: `classes`, `students`, `sessions_attendance`, `scores`, `lectures`, `comments_reports`, và `send_comments` (quyền riêng "Gửi nhận xét", chỉ có mức `none` \| `write`, xem mục 11).
 - **Tài nguyên ngoài phạm vi:** trả `404 not_found` (không lộ sự tồn tại). Có quyền xem nhưng thiếu mức sửa: `403 forbidden`.
 - **Khi `must_change_password = true`:** mọi endpoint trừ `/auth/change-password`, `/auth/logout`, `/me` trả `403 password_change_required`.
 - **Cache:** mọi response của `/auth/*` có `Cache-Control: no-store`.
@@ -139,7 +139,7 @@ Ai gọi: mọi người dùng đã đăng nhập (kể cả khi `password_chang
   "active_membership_id": "mem_1",
   "memberships": [ { "id": "mem_1", "status": "active", "scope_epoch": 3, "workspace": {…},
       "role": { "id": "role_admin", "name": "Admin", "scope_kind": "workspace", "system_key": "admin" },
-      "permissions": { "classes": "write", "students": "write", "sessions_attendance": "write", "scores": "write", "lectures": "write", "comments_reports": "write" } } ] }
+      "permissions": { "classes": "write", "students": "write", "sessions_attendance": "write", "scores": "write", "lectures": "write", "comments_reports": "write", "send_comments": "write" } } ] }
 ```
 Client dùng `permissions` để ẩn/khóa nút và `scope_epoch` để so với `epoch` đồng bộ.
 
@@ -308,7 +308,7 @@ Nhóm quyền yêu cầu mức `write` (và lớp trong phạm vi). Mọi lệnh
 | `test.delete` | `id` | phiên bản bài | `scores` | chưa có điểm ⇒ xoá hẳn; đã có điểm (kể cả 0) ⇒ `archived = 1`. Kết quả cho biết `outcome: "deleted" \| "archived"` |
 | `score.set` | `test_id, student_id, value (0..max, bước 0,5) \| null` | phiên bản ô | `scores` | bài chưa lưu trữ; `invalid_score_step` nếu không là bội 0,5 (vd 7,3); `invalid_score` nếu âm/không phải số; `score_above_max`; `null` = "Chưa có điểm" |
 | `slip.set` | `session_id, student_id, stars(1..3)\|null, note` | phiên bản ô | `comments_reports` | em đang học vào ngày buổi; sau khi đã gửi vẫn sửa được, giữ `sent` |
-| `slip.send` | `session_id, student_ids[]` (≤ 50) | — | `comments_reports` | từng em: cần `stars`; bỏ qua em đã gửi. Kết quả `sent[]`, `skipped[{student_id, reason}]` (`stars_required`, `already_sent`). Tạo thông báo; phát lại kết quả chấm BTVN vừa lộ ra |
+| `slip.send` | `session_id, student_ids[]` (≤ 50) | — | `comments_reports` **và** `send_comments` (thiếu `send_comments`: lệnh `rejected` `forbidden`) | từng em: cần `stars`; bỏ qua em đã gửi. Kết quả `sent[]`, `skipped[{student_id, reason}]` (`stars_required`, `already_sent`). Tạo thông báo; phát lại kết quả chấm BTVN vừa lộ ra |
 | `homework.assign` | `session_id, sections[{id, kind, title, description}]` (1..4 phần mới) | 0 cho từng phần | `comments_reports` | một lần giao atomic: validate toàn bộ phần và quyền trước, tạo các phần + inbox theo command_id cùng batch; lỗi bất kỳ rollback cả lệnh, không tạo thông báo; retry không giao/gửi trùng |
 | `homework.section.upsert` | `id, session_id, kind, title, description` | 0 nếu tạo, phiên bản phần nếu sửa | `comments_reports` | buổi chưa hủy; một phần mỗi `kind` mỗi buổi; tạo một phần tương đương một lần giao, sửa phần đã có không tạo push |
 | `homework.section.delete` | `id` | phiên bản phần | `comments_reports` | `section_has_grades` nếu đã có em được chấm |
@@ -559,29 +559,30 @@ Nguồn: `docs/spec.md` mục 8 "Bản 1.1" và `plans/20261028-roles-permission
 `Admin`. Chỉ xoá bản khai chờ (`kind = pending`): `204`. Với membership đã có tài khoản: `409 conflict` `details.reason = "not_pending"` (dùng `PATCH status = disabled`). Dành cho sửa nhầm SĐT.
 
 ### GET /roles/permissions
-`Admin`. Quyền của hai role chỉnh được, 5 nhóm có tính năng (nhóm `lectures` không hiện, không đổi).
+`Admin`. Quyền của hai role chỉnh được: 5 nhóm có tính năng + `send_comments` (nhóm `lectures` không hiện, không đổi).
 ```json
 { "items": [
   { "role": { "id": "role_teacher", "name": "Giáo viên", "system_key": "teacher" },
-    "permissions": { "classes": "write", "students": "write", "sessions_attendance": "write", "scores": "write", "comments_reports": "write" } },
+    "permissions": { "classes": "write", "students": "write", "sessions_attendance": "write", "scores": "write", "comments_reports": "write", "send_comments": "write" } },
   { "role": { "id": "role_asst", "name": "Trợ giảng", "system_key": "assistant" },
-    "permissions": { "classes": "read", "students": "read", "sessions_attendance": "write", "scores": "read", "comments_reports": "write" } } ] }
+    "permissions": { "classes": "read", "students": "read", "sessions_attendance": "write", "scores": "read", "comments_reports": "write", "send_comments": "none" } } ] }
 ```
 
 ### PUT /roles/{system_key}/permissions
 `Admin`. `system_key` là `teacher` hoặc `assistant`.
 ```json
-{ "permissions": { "scores": "write", "comments_reports": "none" } }   // chỉ gửi nhóm cần đổi; 200 → một phần tử như GET
+{ "permissions": { "scores": "write", "send_comments": "write" } }   // chỉ gửi nhóm cần đổi; 200 → một phần tử như GET
 ```
-- Mức: `none` | `read` | `write`; nhóm hợp lệ: `classes`, `students`, `sessions_attendance`, `scores`, `comments_reports`. Nhóm khác (kể cả `lectures`) hoặc mức lạ: `422 validation_error` `details.fields.<nhóm> = "invalid"`. Body rỗng: `422`.
+- Mức: `none` | `read` | `write`; nhóm hợp lệ: `classes`, `students`, `sessions_attendance`, `scores`, `comments_reports`, `send_comments`. `send_comments` chỉ nhận `none` \| `write` (`read` ⇒ `422` `details.fields.send_comments = "invalid"`). Nhóm khác (kể cả `lectures`) hoặc mức lạ: `422 validation_error` `details.fields.<nhóm> = "invalid"`. Body rỗng: `422`.
 - `system_key` khác (`admin`, `guardian`): `409 conflict` `details.reason = "role_not_editable"` (Admin cố định, role Phụ huynh không có màn chỉnh).
 - Hiệu lực ngay cho mọi membership role đó; tăng `scope_epoch` của chúng.
-- Mặc định: Giáo viên `write` cả 5 nhóm. Trợ giảng: `sessions_attendance` `write`, `comments_reports` `write`; `classes`, `students`, `scores` `read`; `lectures` `read` (giữ nguyên, không hiện). Workspace mới được seed theo bảng này; migration cập nhật workspace cũ **chỉ khi** quyền của role Trợ giảng còn đúng mặc định cũ (`comments_reports = read`, các nhóm khác như trên), tức Admin chưa từng sửa.
+- **Quyền "Gửi nhận xét" (`send_comments`, Bản 1.2):** quyền riêng, tách khỏi `comments_reports` (soạn/sửa phiếu, "Gán tất cả mặc định", phát hành báo cáo giữ nguyên ở `comments_reports`). Chọn khoá thứ 7 trong cùng ma trận `permissions` (không phải boolean riêng) để mọi nơi đã trả `permissions` (`/me`, `/auth/login`, `/auth/register-guardian`, `/auth/session/membership`, `GET /roles/permissions`) hiện nó với cùng hình dạng chuỗi, client cũ bỏ qua khoá lạ; mức chỉ `none` hoặc `write` vì không có nghĩa "đọc". Máy chủ chặn mọi đường gửi phiếu (hiện chỉ có lệnh đồng bộ `slip.send`, kể cả "Gửi phiếu cả lớp" là `slip.send` nhiều em): thiếu quyền ⇒ lệnh `rejected` `forbidden`, không gửi em nào. Phụ huynh không có (`none`). Mặc định: Admin và Giáo viên `write`, Trợ giảng `none`.
+- Mặc định: Giáo viên `write` cả 5 nhóm + `send_comments`. Trợ giảng: `sessions_attendance` `write`, `comments_reports` `write`; `classes`, `students`, `scores` `read`; `lectures` `read` (giữ nguyên, không hiện), `send_comments` `none`. Workspace mới được seed theo bảng này; migration cập nhật workspace cũ **chỉ khi** quyền của role Trợ giảng còn đúng mặc định cũ (`comments_reports = read`, các nhóm khác như trên), tức Admin chưa từng sửa. Riêng `send_comments`, migration thêm hàng cho **mọi** role của **mọi** workspace: Admin/Giáo viên `write`, Trợ giảng và Phụ huynh `none` (áp cả Trợ giảng đã được Admin chỉnh; người dùng đã duyệt).
 
 ### Đăng nhập lần đầu của nhân sự (không đổi hình dạng response)
 - `POST /auth/phone-check`: SĐT chưa có tài khoản mà có **bản khai nhân sự** (ở bất kỳ workspace nào) ⇒ `{ "next": "guardian_setup" }` như phụ huynh đã khai (giá trị `next` giữ nguyên để app 1.0 không vỡ; client 1.1 coi đây là "tự đặt mật khẩu lần đầu"). Thứ tự: đã có tài khoản ⇒ `login`; có bản khai nhân sự hoặc con được khai ⇒ `guardian_setup`; còn lại ⇒ `teacher_register`.
 - `POST /auth/register-guardian`: chấp nhận SĐT có con được khai **hoặc** có bản khai nhân sự. Một `batch` như cũ cho phần phụ huynh; phần nhân sự: tạo membership `active` + `member_classes` cho từng bản khai rồi xoá bản khai. `201` cùng hình dạng, `memberships` gồm cả vai trò nhân sự và phụ huynh; `active_membership_id` điền khi đúng một membership, nếu không `null` (chọn vai trò). SĐT không có khai nào: vẫn `403 forbidden` `details.reason = "phone_not_declared"`.
-- Bản khai còn treo cho SĐT đã có tài khoản (đăng ký workspace trực tiếp bằng `POST /auth/register`, hoặc Admin khai sau khi có tài khoản — trường hợp sau tạo membership ngay): `POST /auth/register` và `POST /auth/login` biến chúng thành membership trước khi trả response, nên `memberships` trong response đã có vai trò mới.
+- Bản khai còn treo cho SĐT đã có tài khoản (đăng ký workspace trực tiếp bằng `POST /auth/register`, hoặc Admin khai sau khi có tài khoản — trường hợp sau tạo membership ngay): `POST /auth/login` biến chúng thành membership trước khi trả response, nên `memberships` trong response đã có vai trò mới; `POST /auth/register` không đổi (bản khai được nhận ở lần đăng nhập kế tiếp).
 
 ### GET /me (đã có, dùng cho 1.1)
 Không đổi hình dạng: `memberships` là mọi vai trò đang hoạt động ở mọi workspace của người dùng, mỗi cái có `workspace`, `role`, `scope_epoch`, `permissions` (6 nhóm, mức hiệu lực của role đó). Client ẩn/khoá nút theo `permissions` của membership đang dùng và so `scope_epoch` với `epoch` đồng bộ. Thêm ở 1.1: **`class_ids`** trên membership nhân sự có `scope_kind = "assigned_classes"` (lớp được gán; Admin và Phụ huynh không có trường này). Khi membership phiên đang dùng bị vô hiệu: `active_membership_id` là `null` và membership đó vắng trong `memberships` ⇒ client về màn chọn vai trò hoặc báo "bạn không còn quyền ở workspace này".
