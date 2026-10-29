@@ -2,6 +2,8 @@
 
 Trạng thái: ĐÃ DUYỆT 2026-10-28 (người dùng), đã ghi vào `docs/spec.md` mục 8 "Bản 1.1". Chốt hướng 2026-10-28: phương án A (gọn), nhân sự đăng nhập như phụ huynh, màn quản lý có ở cả web và iOS, nộp App Store 1.0 trước rồi làm ở 1.1 trên nhánh riêng, cho phép một SĐT thuộc nhiều workspace, trợ giảng dùng ma trận sẵn có.
 
+Trạng thái cập nhật 2026-10-29: gộp vào bản đầu (1.0), không còn làm ở 1.1; phạm vi dưới đây giữ nguyên.
+
 ## Làm
 1. **Danh sách nhân sự** (chỉ Admin): tên, SĐT che một phần, role, số lớp được gán, trạng thái (Đang hoạt động / Đã vô hiệu hoá).
 2. **Thêm nhân sự bằng SĐT**: nhập tên + SĐT, chọn role Giáo viên hoặc Trợ giảng, chọn lớp (tuỳ chọn). Không có luồng mời, không gửi SMS.

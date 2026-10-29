@@ -111,3 +111,16 @@ Lưu ý:
 - Ứng dụng không thu thập dữ liệu để theo dõi hay quảng cáo.
 
 Không ghi SĐT hay mật khẩu thật vào file này. Tài khoản reviewer phải tạo trên môi trường production khi có.
+
+## Đề xuất bổ sung khi gộp phân quyền (chờ người dùng duyệt, chưa áp dụng)
+
+Từ 2026-10-29 bản nộp đầu tiên có nhân sự, ma trận quyền, chọn/đổi vai trò (`docs/spec.md` mục 8 "Bản đầu"). Dòng "Phạm vi nội dung" ở đầu file và các mục 4, 10 hiện vẫn ghi "Không nhắc ... nhân sự, role"; cần sửa cho khớp nếu duyệt. Nháp, không phải mô tả đã chốt:
+
+**Mô tả (mục 4), thêm trong khối GIÁO VIÊN, trước dòng "Làm việc khi mạng yếu":**
+• Cộng tác: chủ không gian làm việc thêm giáo viên hoặc trợ giảng bằng số điện thoại, gán lớp và chỉnh quyền từng vai trò. Mỗi người chỉ thấy lớp được gán và dùng đúng quyền của mình; ai có nhiều vai trò thì chọn và đổi trong Cài đặt.
+
+**Ghi chú cho App Review (mục 10), thêm:**
+- Tài khoản demo trợ giảng: [cần tài khoản reviewer] (chỉ xem lớp được gán, không có quyền gửi phiếu nhận xét; dữ liệu giả). Tài khoản demo giáo viên là chủ không gian: vào Cài đặt → Nhân sự để thêm, gán lớp, đổi vai trò, chỉnh quyền.
+- Người dùng có nhiều vai trò chọn vai trò sau khi đăng nhập và đổi trong Cài đặt.
+
+Cần kiểm lại trước khi nộp: đường dẫn "Cài đặt → Nhân sự" đúng tên màn trong app; App Privacy (mục 9) không đổi vì nhân sự chỉ thêm tên và SĐT do Admin nhập, cùng loại dữ liệu đã khai; ảnh chụp màn hình App Store có cần thêm màn nhân sự không.

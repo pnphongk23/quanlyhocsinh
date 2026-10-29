@@ -8,7 +8,7 @@ Trạng thái: ĐÃ DUYỆT 2026-10-29 (người dùng), đã ghi vào `docs/spe
 3. Thiếu quyền thì **ẩn** giao diện (không chỉ khoá). **Quyền "Gửi nhận xét" là quyền riêng**, tách khỏi quyền soạn nhận xét; Trợ giảng mặc định **không có** quyền này.
 4. Lưu cả đợt trong **một request**; chia lô tối đa 50 lệnh làm ở client. Không gửi mỗi học sinh một request. Không đo CPU staging cho bản này.
 5. Trợ giảng gửi phiếu được hay không **do phân quyền**: "Gửi nhận xét" là một quyền trong ma trận Admin chỉnh; mặc định Trợ giảng không có (giữ như trên).
-6. **Rủi ro đã chấp nhận:** app iOS 1.0 (đã lên App Store) không biết quyền mới nên vẫn hiện nút gửi phiếu cho Trợ giảng; bấm thì máy chủ từ chối (403) và app hiện lỗi. Không sửa app 1.0.
+6. **Rủi ro đã chấp nhận:** app iOS bản đầu không biết quyền mới nên vẫn hiện nút gửi phiếu cho Trợ giảng; bấm thì máy chủ từ chối (403) và app hiện lỗi. Không sửa app bản đầu.
 
 ## Làm
 
@@ -69,7 +69,7 @@ Trạng thái: ĐÃ DUYỆT 2026-10-29 (người dùng), đã ghi vào `docs/spe
    | "Gửi phiếu cả lớp", gửi phiếu | **Quyền "Gửi nhận xét" riêng** (mới) |
 
 3. **Quyền "Gửi nhận xét" là quyền riêng:** có thể soạn phiếu mà không gửi được. Mặc định Giáo viên **có**, Trợ giảng **không có**. Không có quyền này thì ẩn nút "Gửi phiếu cả lớp" và gửi từng phiếu; vẫn soạn, "Gán tất cả mặc định", tích/bỏ tích được.
-4. Đây là **thay đổi hợp đồng quyền** (hiện spec mục 8 Bản 1.1 ghi Trợ giảng Sửa Nhận xét "gồm gửi phiếu, phát hành báo cáo"; kiến trúc cố định 6 nhóm × 3 mức). Cần: cờ quyền mới ở `role_permissions` (hoặc tương đương) thêm vào, migration chỉ thêm, role Giáo viên/Admin hiện có tự có quyền, kiểm ở máy chủ tại điểm gửi phiếu, màn ma trận Admin thêm một dòng cho 2 role Giáo viên/Trợ giảng, cập nhật giá trị mặc định 1.1. Tương thích 1.0: app 1.0 không biết cờ này, nên với Giáo viên/Admin hành vi cũ giữ nguyên.
+4. Đây là **thay đổi hợp đồng quyền** (hiện spec mục 8 (nhân sự và phân quyền, bản đầu) ghi Trợ giảng Sửa Nhận xét "gồm gửi phiếu, phát hành báo cáo"; kiến trúc cố định 6 nhóm × 3 mức). Cần: cờ quyền mới ở `role_permissions` (hoặc tương đương) thêm vào, migration chỉ thêm, role Giáo viên/Admin hiện có tự có quyền, kiểm ở máy chủ tại điểm gửi phiếu, màn ma trận Admin thêm một dòng cho 2 role Giáo viên/Trợ giảng, cập nhật giá trị mặc định 1.1. Tương thích bản đầu: app bản đầu không biết cờ này, nên với Giáo viên/Admin hành vi cũ giữ nguyên.
 
 ## Không làm
 - Mọi phần AI: gọi nhà cung cấp AI, ánh xạ/nhập bằng AI, endpoint hay secret AI, công tắc/đồng ý AI, đổi App Privacy và trang privacy. Ghi **"chưa làm"**.
@@ -78,7 +78,7 @@ Trạng thái: ĐÃ DUYỆT 2026-10-29 (người dùng), đã ghi vào `docs/spe
 - Tab Nhận xét thứ tư, đổi 5 tiêu chí, đổi quy tắc câu tự sinh.
 - Tự mở rộng "cả lớp"; khớp mờ cho tên dưới 4 ký tự; tự tích lại khi chạy lại; tự đoán nghĩa các cụm không chắc.
 - Đo CPU staging cho lô lưu nhiều phiếu (người dùng quyết không cần). Rủi ro còn lại: kiến trúc mục 9 vẫn ghi 50 lô nhỏ chưa đo; chấp nhận vì lớp dưới 20 em.
-- Quyền riêng cho phát hành báo cáo (giữ như 1.1).
+- Quyền riêng cho phát hành báo cáo (giữ như bản đầu).
 
 ## Riêng tư
 - Không ghi tên, SĐT, nội dung nhận xét vào log, kể cả lỗi lô và hộp thoại kết quả.
@@ -93,16 +93,16 @@ Trạng thái: ĐÃ DUYỆT 2026-10-29 (người dùng), đã ghi vào `docs/spe
 
 ## Quyết định về các câu mở (2026-10-29, người dùng chọn theo đề xuất)
 1. Em chưa điểm danh vẫn được tạo phiếu mặc định ở B.7; chỉ bỏ qua em Vắng.
-2. Quyền "Gửi nhận xét" riêng chỉ gồm gửi phiếu (từng phiếu và "Gửi phiếu cả lớp"). Phát hành báo cáo giữ nguyên như 1.1 (thuộc Nhận xét và báo cáo).
-3. Áp mặc định mới (Trợ giảng không có quyền gửi) cho mọi Trợ giảng, kể cả đã tạo ở 1.1; Admin chỉnh lại được trong ma trận.
+2. Quyền "Gửi nhận xét" riêng chỉ gồm gửi phiếu (từng phiếu và "Gửi phiếu cả lớp"). Phát hành báo cáo giữ nguyên như bản đầu (thuộc Nhận xét và báo cáo).
+3. Áp mặc định mới (Trợ giảng không có quyền gửi) cho mọi Trợ giảng, kể cả đã tạo ở bản đầu; Admin chỉnh lại được trong ma trận.
 
 ## Tác động tài liệu (cập nhật cùng thay đổi khi duyệt, không làm trong bản nháp này)
-- `docs/spec.md`: mục 4 (tab Nhận xét có "Theo tiêu chí", "Nhập từ ghi chú"; quyền "Gửi nhận xét" riêng, sửa mặc định Trợ giảng của 1.1), mục 5.3 (offline: A, B dùng được; nhập danh sách **cần mạng**), mục 8 (thêm "Bản 1.2"; chuyển "nhập danh sách từ Excel" khỏi "Chưa nên làm" thành dán chữ/CSV; ảnh ở 1.3; AI "chưa làm").
+- `docs/spec.md`: mục 4 (tab Nhận xét có "Theo tiêu chí", "Nhập từ ghi chú"; quyền "Gửi nhận xét" riêng, sửa mặc định Trợ giảng của bản đầu), mục 5.3 (offline: A, B dùng được; nhập danh sách **cần mạng**), mục 8 (thêm "Bản 1.2"; chuyển "nhập danh sách từ Excel" khỏi "Chưa nên làm" thành dán chữ/CSV; ảnh ở 1.3; AI "chưa làm").
 - `docs/architecture.md`: mục 4 (quyền Gửi nhận xét riêng, migration chỉ thêm), mục 5 (danh sách "Cần mạng" thêm nhập danh sách). Không có endpoint nhập mới.
 
 ## Tiêu chí xong
 - A: chạm chip bỏ tích đúng tiêu chí của đúng em, đúng số sao và câu; giữ phần gõ thêm; web và iOS cùng kết quả với cùng dữ liệu; dùng được khi mất mạng và đồng bộ lại đúng; em chưa có phiếu được tạo mặc định; BTVN đổi tay thì giữ tay; phiếu thang cũ không sửa; phiếu đã gửi/chờ gửi hỏi xác nhận; chỉ liệt kê em đang học vào ngày buổi.
 - B: với ví dụ ba dòng ("Mất tập trung trong giờ: THu, tươi" / "Quên mang vở: Chiến, ĐỨC" / "Chưa hoàn thành bài tập về nhà: Hương, Tiên") xem trước hiện Thu, Tươi bỏ tích Chú ý nghe giảng; Hương, Tiên bỏ tích BTVN; Chiến, Đức giữ nguyên tích và có "Quên mang vở" ở phần gõ thêm; chưa ghi gì khi chưa bấm Lưu; trùng tên không tự chọn; dán lại cùng đoạn không nối trùng; phiếu mặc định bỏ qua em Vắng và BTVN theo chấm; toàn bộ thay đổi đi trong **một** request đồng bộ (kiểm bằng test đếm request), lô ≤ 50 lệnh; lệnh bị từ chối hiện lỗi, không mất phần còn lại; không có cuộc gọi mạng khi phân tích; bộ ca vàng cho cùng kết quả web và iOS.
 - C: dán 20 dòng có số thứ tự và SĐT nhiều dạng → xem trước đúng, tạo đủ khi có mạng, hiện tiến độ; mất mạng giữa chừng → dừng, "Thử lại phần còn lại" không tạo trùng; bảng quyết định trùng tên/SĐT đúng cả ba ca; SĐT sai bị đánh dấu, không tạo âm thầm; offline thì nút khoá; vượt 20 em chỉ cảnh báo.
-- D: Trợ giảng mặc định (không có Gửi nhận xét, Học sinh Đọc): thấy và dùng A, B; **không thấy** nút "Nhập danh sách" và nút gửi phiếu; gọi thẳng API gửi hoặc tạo học sinh trả 403. Giáo viên: thấy đủ. Admin bật quyền gửi cho Trợ giảng thì nút hiện lại. App 1.0 chạy không đổi với Giáo viên/Admin.
+- D: Trợ giảng mặc định (không có Gửi nhận xét, Học sinh Đọc): thấy và dùng A, B; **không thấy** nút "Nhập danh sách" và nút gửi phiếu; gọi thẳng API gửi hoặc tạo học sinh trả 403. Giáo viên: thấy đủ. Admin bật quyền gửi cho Trợ giảng thì nút hiện lại. App bản đầu chạy không đổi với Giáo viên/Admin.
 - Web và iOS cùng làm; test đơn vị cho bộ phân tích, khớp tên, từ điển, gom lệnh; test phân quyền backend cho quyền mới; QA chạy kịch bản trên máy thật hoặc mô phỏng.
