@@ -114,7 +114,7 @@ final class StaffStore {
     }
 
     /// "+84 900 000 007" becomes "+84 900 ••• 007": the list shows only part of the number.
-    static func maskedPhone(_ raw: String) -> String {
+    nonisolated static func maskedPhone(_ raw: String) -> String {
         let digits = AuthFormat.national(raw)
         guard digits.count == 9 else { return raw }
         return "+84 \(digits.prefix(3)) ••• \(digits.suffix(3))"
@@ -148,6 +148,8 @@ final class StaffStore {
                 }
             default: return detail.localizedMessage
             }
+        case .decoding:
+            return String(localized: "feature.staff.du.lieu.nhan.su.khong.doc.duoc")
         default:
             return String(localized: "feature.staff.khong.the.ket.noi.dich.vu")
         }

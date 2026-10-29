@@ -15,9 +15,14 @@ struct StaffMember: Codable, Sendable, Equatable, Identifiable {
     enum Kind: String, Codable, Sendable { case member, pending }
     enum Status: String, Codable, Sendable { case active, disabled, pending }
 
+    private enum CodingKeys: String, CodingKey {
+        case id, kind, userId, displayName, phone, role, classIds, status, isSelf, version
+    }
+
     let id: String
     let kind: Kind
     let userId: String?
+    /// The server sends `null` for a member whose account never set a name; the list then shows the masked phone.
     let displayName: String
     let phone: String
     let role: StaffRoleRef
@@ -28,6 +33,23 @@ struct StaffMember: Codable, Sendable, Equatable, Identifiable {
 
     var isAdmin: Bool { role.systemKey == "admin" }
     var roleKey: StaffRoleKey? { role.systemKey.flatMap(StaffRoleKey.init(rawValue:)) }
+}
+
+extension StaffMember {
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        kind = try values.decode(Kind.self, forKey: .kind)
+        userId = try values.decodeIfPresent(String.self, forKey: .userId)
+        phone = try values.decode(String.self, forKey: .phone)
+        let name = try values.decodeIfPresent(String.self, forKey: .displayName)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        displayName = name.flatMap { $0.isEmpty ? nil : $0 } ?? StaffStore.maskedPhone(phone)
+        role = try values.decode(StaffRoleRef.self, forKey: .role)
+        classIds = try values.decodeIfPresent([String].self, forKey: .classIds) ?? []
+        status = try values.decode(Status.self, forKey: .status)
+        isSelf = try values.decodeIfPresent(Bool.self, forKey: .isSelf) ?? false
+        version = try values.decodeIfPresent(Int.self, forKey: .version)
+    }
 }
 
 struct StaffList: Decodable, Sendable { let items: [StaffMember] }

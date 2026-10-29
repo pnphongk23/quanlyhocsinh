@@ -44,7 +44,7 @@ struct AuthSettingsView: View {
                 logoutButton
                     .padding(.top, 16)
                 deleteAccountButton
-                    .padding(.top, 12)
+                    .padding(.top, AppSpace.s8)
             }
         }
         .sheet(item: logoutBlockBinding) { block in
@@ -195,11 +195,10 @@ struct AuthSettingsView: View {
     private var deleteAccountButton: some View {
         Button { showingDeleteAccount = true } label: {
             Text(String(localized: "feature.auth.xoa.tai.khoan"))
-                .appText(AuthText.logout)
-                .foregroundStyle(AppColors.error)
+                .appText(AppText.muted)
+                .foregroundStyle(AppColors.muted)
                 .frame(maxWidth: .infinity)
-                .frame(minHeight: 56)
-                .background(AppColors.errorSoft, in: RoundedRectangle(cornerRadius: AppRadius.control))
+                .frame(minHeight: AppMetrics.tap)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("settings.delete-account")

@@ -1256,6 +1256,18 @@
         }
       }
     },
+    "feature.staff.du.lieu.nhan.su.khong.doc.duoc" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không đọc được danh sách nhân sự. Vui lòng cập nhật ứng dụng hoặc thử lại sau."
+          }
+        }
+      }
+    },
     "feature.staff.khong.the.ket.noi.dich.vu" : {
       "comment" : "Chuỗi hiển thị trong Features/Staff.",
       "extractionState" : "manual",

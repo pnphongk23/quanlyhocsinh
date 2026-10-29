@@ -37,6 +37,29 @@ final class StaffStoreTests: XCTestCase {
         XCTAssertEqual(queries.last, ["status": "active"])
     }
 
+    func testMemberWithoutNameStillLoadsAndShowsTheMaskedPhone() async {
+        let nameless = #"{"id":"mem_9","kind":"member","user_id":"usr_9","display_name":null,"phone":"+84900000009","role":{"id":"role_asst","name":"Trợ giảng","system_key":"assistant"},"class_ids":["cls_1"],"status":"disabled","is_self":false,"created_at":"2026-10-28T03:00:00.000Z","version":4}"#
+        let blank = #"{"id":"mem_10","kind":"member","user_id":"usr_10","display_name":"  ","phone":"+84900000010","role":{"id":"role_asst","name":"Trợ giảng","system_key":"assistant"},"class_ids":[],"status":"active","is_self":false,"version":1}"#
+        let api = RecordingAPI { endpoint in
+            endpoint.path == "staff" ? Data(#"{"items":[\#(Self.member),\#(nameless),\#(blank)]}"#.utf8) : Data(#"{"items":[]}"#.utf8)
+        }
+        let store = store(api)
+
+        await store.load()
+
+        XCTAssertEqual(store.phase, .loaded)
+        XCTAssertEqual(store.members.map(\.id), ["mem_7", "mem_9", "mem_10"])
+        XCTAssertEqual(store.members[1].displayName, StaffStore.maskedPhone("+84900000009"))
+        XCTAssertEqual(store.members[2].displayName, StaffStore.maskedPhone("+84900000010"))
+        XCTAssertEqual(store.members[1].status, .disabled)
+    }
+
+    func testUnreadableStaffDataIsNotReportedAsAConnectionProblem() {
+        let decoding = StaffStore.message(for: APIFailure.decoding)
+        XCTAssertNotEqual(decoding, StaffStore.message(for: APIFailure.badStatus(code: 502)))
+        XCTAssertNotEqual(decoding, StaffStore.message(for: APIFailure.offline))
+    }
+
     func testLoadFailureKeepsTheMessageAndNoMembers() async {
         let store = store(RecordingAPI { _ in throw APIFailure.offline })
         await store.load()
