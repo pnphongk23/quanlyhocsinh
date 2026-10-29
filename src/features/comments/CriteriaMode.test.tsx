@@ -58,4 +58,26 @@ describe("CriteriaMode", () => {
     expect(confirmation).toHaveBeenCalledTimes(1);
     expect(toggle).toHaveBeenCalledTimes(2);
   });
+
+  it("keeps skipped sent slips non-interactive until includeSent is enabled and shares confirmation and custom-comment warning", () => {
+    const rows = buildTicketRows(createSeed(), "6a-session-7");
+    const row = rows[3];
+    row.comment = { id: "sent", classId: row.student.classId, sessionId: "6a-session-7", studentId: row.student.id, criteria: 31, comment: "Teacher edited this", scale: 5, stars: 5, note: "", hwManual: false, status: "sent", sendQueued: false, sentAt: "2026-10-14", updatedAt: "", createdAt: "" };
+    row.status = "sent";
+    const onToggle = vi.fn();
+    const confirmation = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { rerender } = render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite preview={{ onToggle }} />);
+    expect(screen.queryByRole("button", { name: new RegExp(row.student.name) })).not.toBeInTheDocument();
+    rerender(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite preview={{ includeSent: true, onToggle }} />);
+    fireEvent.click(screen.getAllByRole("button", { name: new RegExp(row.student.name) })[0]);
+    expect(confirmation).toHaveBeenCalledTimes(1);
+    expect(onToggle).toHaveBeenCalledWith(row.student.id, 0);
+    expect(screen.getByText(/Câu nhận xét đã được sửa tay/)).toBeVisible();
+  });
+
+  it("counts unmet students from preview criteria", () => {
+    const rows = buildTicketRows(createSeed(), "6a-session-7");
+    render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite preview={{ criteriaByStudent: { [rows[0].student.id]: 30 } }} />);
+    expect(screen.getAllByText("1 em chưa đạt")).toHaveLength(2);
+  });
 });

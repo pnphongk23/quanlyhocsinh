@@ -14,8 +14,8 @@ export function criteriaForRow(row: TicketRow): number {
   return row.comment.criteria ?? 31;
 }
 
-export function criteriaUnmetCount(rows: TicketRow[], index: number, initialCriteria: (row: TicketRow) => number = () => 31): number {
-  return rows.filter((row) => ((row.comment ? criteriaForRow(row) : initialCriteria(row)) & (1 << index)) === 0).length;
+export function criteriaUnmetCount(rows: TicketRow[], index: number, initialCriteria: (row: TicketRow) => number = () => 31, previewCriteria?: Record<string, number>): number {
+  return rows.filter((row) => ((previewCriteria?.[row.student.id] ?? (row.comment ? criteriaForRow(row) : initialCriteria(row))) & (1 << index)) === 0).length;
 }
 
 export function canToggleCriterion(row: TicketRow): boolean {

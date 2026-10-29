@@ -11,6 +11,7 @@ export interface CriteriaPreview {
   banner?: string;
   summary?: string;
   criteriaByStudent?: Record<string, number>;
+  includeSent?: boolean;
   onToggle?: (studentId: string, criterionIndex: number) => void;
 }
 
@@ -60,20 +61,29 @@ export default function CriteriaMode({
 
   async function toggle(row: TicketRow, index: number) {
     if (!canWrite || !canToggleCriterion(row)) return;
-    if ((row.status === "sent" || row.status === "queued") && !sentConfirmShown.current) {
-      if (!window.confirm("Phiếu đã gửi hoặc đang chờ gửi. Bạn vẫn muốn sửa?")) return;
-      sentConfirmShown.current = true;
-    }
-    if (rowHasCustomComment(row) && !customWarningShown.current) {
-      customWarningShown.current = true;
-      setShowCustomWarning(true);
-    }
+    if (!confirmSent(row)) return;
+    warnCustomComment(row);
     onSelectStudent?.(row.student.id);
     setError("");
     try {
       await toggleSlipCriterionDurable(sessionId, row.student.id, index);
     } catch {
       setError("Không lưu được thay đổi. Hãy thử lại.");
+    }
+  }
+
+  function confirmSent(row: TicketRow): boolean {
+    if ((row.status === "sent" || row.status === "queued") && !sentConfirmShown.current) {
+      if (!window.confirm("Phiếu đã gửi hoặc đang chờ gửi. Bạn vẫn muốn sửa?")) return false;
+      sentConfirmShown.current = true;
+    }
+    return true;
+  }
+
+  function warnCustomComment(row: TicketRow) {
+    if (rowHasCustomComment(row) && !customWarningShown.current) {
+      customWarningShown.current = true;
+      setShowCustomWarning(true);
     }
   }
 
@@ -89,7 +99,7 @@ export default function CriteriaMode({
         <section className={s.group} key={criterion}>
           <div className={s.groupHead}>
             <h2>{index === 4 ? "Hoàn thành BTVN" : criterion}</h2>
-            <span className={s.count}>{criteriaUnmetCount(rows, index, initialCriteria)} em chưa đạt</span>
+              <span className={s.count}>{criteriaUnmetCount(rows, index, initialCriteria, preview?.criteriaByStudent)} em chưa đạt</span>
           </div>
           {index === 4 && <Pill tone="neutral">Theo chấm BTVN</Pill>}
           <p className={s.hint}>Chạm để đánh dấu chưa đạt</p>
@@ -99,9 +109,10 @@ export default function CriteriaMode({
                 const criteria = preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForRow(row) : initialCriteria(row));
               const unachieved = (criteria & (1 << index)) === 0;
                 const selected = unachieved;
-              const sent = row.status === "sent" || row.status === "queued";
-              const label = `${row.student.name}${sent ? " · Đã gửi" : ""}${legacy ? " · Phiếu thang cũ" : ""}`;
-              return canWrite && !legacy ? (
+                const sent = row.status === "sent" || row.status === "queued";
+                const blockedSentPreview = !!preview && sent && !preview.includeSent;
+                const label = `${row.student.name}${sent ? " · Đã gửi" : ""}${legacy ? " · Phiếu thang cũ" : ""}`;
+                return canWrite && !legacy && !blockedSentPreview ? (
                 <button
                   key={row.student.id}
                   type="button"
@@ -109,7 +120,13 @@ export default function CriteriaMode({
                   aria-pressed={selected}
                   aria-label={label}
                   aria-current={row.student.id === selectedStudentId ? "true" : undefined}
-                    onClick={() => preview?.onToggle ? preview.onToggle(row.student.id, index) : void toggle(row, index)}
+                      onClick={() => {
+                        if (preview?.onToggle) {
+                          if (!confirmSent(row)) return;
+                          warnCustomComment(row);
+                          preview.onToggle(row.student.id, index);
+                        } else void toggle(row, index);
+                      }}
                 >
                   {row.student.name}{sent && <small>Đã gửi</small>}
                 </button>

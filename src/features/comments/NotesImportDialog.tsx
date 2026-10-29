@@ -11,7 +11,7 @@ import s from "./notesImport.module.css";
 
 const criterionKeys: NoteCriterion[] = ["attention", "notes", "participation", "order", "homework"];
 const criterionLabels = ["Chú ý nghe giảng", "Ghi chép đầy đủ", "Tham gia hoạt động sôi nổi", "Không mất trật tự", "Hoàn thành BTVN"];
-type DraftChange = { criteria: number; note: string; hwManual: boolean; isNew: boolean; isDefault: boolean };
+type DraftChange = { uncheckMask: number; appendNote: string[]; hwManual: boolean; isNew: boolean; isDefault: boolean };
 
 function nameFor(studentId: string, rows: TicketRow[]): string {
   return rows.find(row => row.student.id === studentId)?.student.name ?? studentId;
@@ -33,7 +33,7 @@ export default function NotesImportDialog({ sessionId, rows, attendance, previou
   const [drafts, setDrafts] = useState<Record<string, DraftChange>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState<{ saved: number; errors: number } | null>(null);
+  const [saved, setSaved] = useState<{ locallySaved: number; waiting: number; applied: number; rejected: number } | null>(null);
 
   const roster: NoteRosterStudent[] = useMemo(() => rows.map(row => {
     const mark = attendance.find(item => item.sessionId === sessionId && item.studentId === row.student.id);
@@ -55,16 +55,13 @@ export default function NotesImportDialog({ sessionId, rows, attendance, previou
     const rowById = new Map(rows.map(row => [row.student.id, row]));
     for (const change of result.changes) {
       const row = rowById.get(change.studentId);
-      const existing = row?.comment?.note ?? "";
-      const additions = change.appendNote.filter(line => !normalizeNoteText(existing).includes(normalizeNoteText(line)));
-      const note = [existing.trim(), ...additions].filter(Boolean).join("\n");
-      next[change.studentId] = { criteria: 31 & ~change.uncheckedAfter.reduce((mask, c) => mask | (1 << criterionKeys.indexOf(c)), 0), note, hwManual: change.hwManual || row?.comment?.hwManual === true, isNew: change.isNewSlip, isDefault: false };
-    }
-    for (const item of result.defaultSlips ?? []) {
-      const row = rowById.get(item.studentId);
-      const grades = previousGrades(item.studentId) ?? [];
-      next[item.studentId] = { criteria: defaultSlipCriteria(grades), note: row?.comment?.note ?? "", hwManual: false, isNew: true, isDefault: true };
-    }
+        const uncheckMask = change.uncheck.reduce((mask, c) => mask | (1 << criterionKeys.indexOf(c)), 0);
+        const additions = change.appendNote.filter(line => !normalizeNoteText(row?.comment?.note ?? "").includes(normalizeNoteText(line)));
+        next[change.studentId] = { uncheckMask, appendNote: additions, hwManual: change.hwManual, isNew: change.isNewSlip, isDefault: false };
+      }
+      for (const item of result.defaultSlips ?? []) {
+        next[item.studentId] = { uncheckMask: 0, appendNote: [], hwManual: false, isNew: true, isDefault: true };
+      }
     return next;
   }
 
@@ -100,15 +97,16 @@ export default function NotesImportDialog({ sessionId, rows, attendance, previou
     if (!row || row.comment?.scale === 3) return;
     setDrafts(current => {
       const existing = current[studentId];
-      const baseline = row.comment?.criteria ?? (row.comment?.stars == null ? defaultSlipCriteria(previousGrades(studentId)) : (1 << row.comment.stars) - 1);
-      return { ...current, [studentId]: { criteria: (existing?.criteria ?? baseline) ^ (1 << index), note: existing?.note ?? row.comment?.note ?? "", hwManual: index === 4 ? true : existing?.hwManual ?? row.comment?.hwManual ?? false, isNew: existing?.isNew ?? !row.comment, isDefault: existing?.isDefault ?? false } };
+        const baseline = row.comment?.criteria ?? (row.comment?.stars == null ? defaultSlipCriteria(previousGrades(studentId)) : (1 << row.comment.stars) - 1);
+        const draft = existing ?? { uncheckMask: 0, appendNote: [], hwManual: false, isNew: !row.comment, isDefault: false };
+        return { ...current, [studentId]: { ...draft, uncheckMask: ((baseline & ~draft.uncheckMask) & (1 << index)) === 0 ? draft.uncheckMask & ~(1 << index) : draft.uncheckMask | (1 << index), hwManual: index === 4 ? true : draft.hwManual, isNew: draft.isNew, isDefault: false } };
     });
   }
 
   const baselineByStudent = new Map(rows.map(row => [row.student.id, row.comment?.criteria ?? (row.comment?.stars == null ? defaultSlipCriteria(previousGrades(row.student.id)) : (1 << row.comment.stars) - 1)]));
   const dirtyDrafts = Object.entries(drafts).filter(([studentId, draft]) => {
     const row = rows.find(item => item.student.id === studentId);
-    return draft.isNew || draft.criteria !== baselineByStudent.get(studentId) || draft.note !== (row?.comment?.note ?? "") || draft.hwManual !== (row?.comment?.hwManual ?? false);
+    return draft.isNew || draft.uncheckMask !== 0 || draft.appendNote.length > 0 || draft.hwManual;
   });
   const newCount = dirtyDrafts.filter(([, value]) => value.isNew).length;
   const changeCount = dirtyDrafts.length - newCount;
@@ -117,13 +115,13 @@ export default function NotesImportDialog({ sessionId, rows, attendance, previou
     setBusy(true);
     setError("");
     try {
-        const result = await saveNotesImportDurable(sessionId, dirtyDrafts.map(([studentId, value]) => ({
-          studentId,
-          ...(value.isNew || value.criteria !== baselineByStudent.get(studentId) ? { criteria: value.criteria } : {}),
-          note: value.note,
-          hwManual: value.hwManual,
-          ...(value.isDefault ? { isDefault: true } : {}),
-        })));
+          const result = await saveNotesImportDurable(sessionId, dirtyDrafts.map(([studentId, value]) => ({
+            studentId,
+            ...(!value.isDefault && value.uncheckMask ? { uncheckMask: value.uncheckMask } : {}),
+            ...(value.appendNote.length ? { appendNote: value.appendNote } : {}),
+            ...(value.hwManual ? { hwManual: true } : {}),
+            ...(value.isDefault ? { isDefault: true } : {}),
+          })));
         resetSessionDrafts(sessionId);
         setSaved(result);
       setText("");
@@ -135,12 +133,13 @@ export default function NotesImportDialog({ sessionId, rows, attendance, previou
     }
   }
 
-  const previewCriteria = Object.fromEntries(rows.map(row => [row.student.id, drafts[row.student.id]?.criteria ?? baselineByStudent.get(row.student.id)!]));
+  const previewCriteria = Object.fromEntries(rows.map(row => [row.student.id, (baselineByStudent.get(row.student.id) ?? 31) & ~(drafts[row.student.id]?.uncheckMask ?? 0)]));
   const criteriaPreview = parsed ? {
     banner: "Gợi ý từ ghi chú, kiểm tra rồi Lưu",
       summary: `${changeCount} phiếu sẽ đổi, ${newCount} phiếu mới${(parsed.skipped.length + (parsed.defaultSlipsSkipped?.length ?? 0)) ? ` · ${parsed.skipped.length + (parsed.defaultSlipsSkipped?.length ?? 0)} phiếu bỏ qua` : ""}`,
     criteriaByStudent: previewCriteria,
-    onToggle: toggleCriterion,
+      onToggle: toggleCriterion,
+      includeSent,
   } : undefined;
 
   return <Modal open sheet onClose={onClose} title="Nhập từ ghi chú" footer={
@@ -150,7 +149,7 @@ export default function NotesImportDialog({ sessionId, rows, attendance, previou
     </div>
   }>
     <div className={s.body}>
-        {saved !== null && <p className={s.success} role="status">Đã lưu {saved.saved} phiếu, {saved.errors} phiếu lỗi.</p>}
+          {saved !== null && <p className={s.success} role="status">Lưu cục bộ: {saved.locallySaved} · Chờ đồng bộ: {saved.waiting} · Đã áp dụng: {saved.applied} · Bị từ chối: {saved.rejected}</p>}
       {!parsed ? <>
         <label className={s.label} htmlFor="notes-import-text">Dán ghi chú theo dạng “Lý do: tên, tên”</label>
           <textarea id="notes-import-text" className={s.textarea} value={text} onChange={event => { setText(event.target.value); setOverrides({}); }} rows={8} />

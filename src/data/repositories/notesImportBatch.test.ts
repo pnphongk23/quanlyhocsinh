@@ -57,7 +57,7 @@ describe("nhập ghi chú theo lô", () => {
       return { cursor: 0, epoch: 1, has_more: false, server_time: "2026-10-29T00:00:00Z", upserts: {}, deleted: [] } as never;
     });
     const { saveNotesImportDurable } = await import("./comments");
-    await saveNotesImportDurable("6a-session-7", Array.from({ length: 20 }, (_, index) => ({ studentId: `extra-${index}`, criteria: 30, note: "", hwManual: false })));
+      await saveNotesImportDurable("6a-session-7", Array.from({ length: 20 }, (_, index) => ({ studentId: `extra-${index}`, uncheckMask: 1 })));
     await sync.syncNow();
     expect(pushed).toEqual([20]);
   });
@@ -75,20 +75,52 @@ describe("nhập ghi chú theo lô", () => {
       return { cursor: 0, epoch: 1, has_more: false, server_time: "2026-10-29T00:00:00Z", upserts: {}, deleted: [] } as never;
     });
     const { saveNotesImportDurable } = await import("./comments");
-    await saveNotesImportDurable("6a-session-7", Array.from({ length: 120 }, (_, index) => ({ studentId: `extra-${index}`, criteria: 30, note: "", hwManual: false })));
+      await saveNotesImportDurable("6a-session-7", Array.from({ length: 120 }, (_, index) => ({ studentId: `extra-${index}`, uncheckMask: 1 })));
     await sync.syncNow();
     expect(pushed).toEqual([50, 50, 20]);
   });
 
-  it("giữ lệnh bị máy chủ từ chối và trả số phiếu lỗi", async () => {
+  it("giữ lệnh bị máy chủ từ chối và tách số phiếu bị từ chối khỏi số lưu cục bộ", async () => {
     await setup(1);
     const sync = await import("../sync");
     vi.spyOn(sync.api, "request").mockImplementation(async endpoint => endpoint === "POST /sync/push"
       ? { epoch: 1, cursor: 0, results: [{ id: (await db.outbox.toArray())[0].id, status: "rejected", error: { code: "forbidden", message: "Forbidden", request_id: "fixture" } }] } as never
       : { cursor: 0, epoch: 1, has_more: false, server_time: "2026-10-29T00:00:00Z", upserts: {}, deleted: [] } as never);
     const { saveNotesImportDurable } = await import("./comments");
-    const result = await saveNotesImportDurable("6a-session-7", [{ studentId: "extra-0", criteria: 30, note: "", hwManual: false }]);
-    expect(result).toEqual({ saved: 0, errors: 1 });
-    expect((await db.outbox.toArray()).map(row => row.status)).toEqual(["rejected"]);
+      const result = await saveNotesImportDurable("6a-session-7", [{ studentId: "extra-0", uncheckMask: 1 }]);
+      expect(result).toEqual({ locallySaved: 1, waiting: 0, applied: 0, rejected: 1 });
+      expect((await db.outbox.toArray()).map(row => row.status)).toEqual(["rejected"]);
+  });
+
+  it("rebases removals and appended notes on the latest slip at save time", async () => {
+    await setup(1);
+    const state = createSeed();
+    state.students.push({ id: "extra-0", classId: "6a", name: "Học sinh thêm", parentPhone: "", enrolledAt: "2026-01-01", leftAt: null, status: "active" });
+    state.comments.push({ id: "6a-session-7:extra-0", classId: "6a", sessionId: "6a-session-7", studentId: "extra-0", criteria: 31, comment: null, scale: 5, stars: 5, note: "Ghi chú mới từ máy khác\nCâu đã có", hwManual: false, status: "draft", sendQueued: false, sentAt: null, updatedAt: "", createdAt: "", version: 8 } as never);
+    replaceStore(state);
+    const sync = await import("../sync");
+    let payload: Record<string, unknown> | undefined;
+    vi.spyOn(sync.api, "request").mockImplementation(async (endpoint, options) => {
+      if (endpoint === "POST /sync/push") {
+        const commands = (options as { body: { commands: Array<{ id: string; payload: Record<string, unknown> }> } }).body.commands;
+        payload = commands[0].payload;
+        return { epoch: 1, cursor: 0, results: commands.map(command => ({ id: command.id, status: "applied", version: 9 })) } as never;
+      }
+      return { cursor: 0, epoch: 1, has_more: false, server_time: "2026-10-29T00:00:00Z", upserts: {}, deleted: [] } as never;
+    });
+    const { saveNotesImportDurable } = await import("./comments");
+    const result = await saveNotesImportDurable("6a-session-7", [{ studentId: "extra-0", uncheckMask: 1, appendNote: ["Câu đã có", "Câu mới từ bản dán"] }]);
+    expect(payload).toMatchObject({ criteria: 30, note: "Ghi chú mới từ máy khác\nCâu đã có\nCâu mới từ bản dán" });
+    expect(result).toEqual({ locallySaved: 1, waiting: 0, applied: 1, rejected: 0 });
+  });
+
+  it("reports commands left pending after a network failure as waiting for sync", async () => {
+    await setup(1);
+    const sync = await import("../sync");
+    vi.spyOn(sync.api, "request").mockRejectedValue(new Error("network unavailable"));
+    const { saveNotesImportDurable } = await import("./comments");
+    const result = await saveNotesImportDurable("6a-session-7", [{ studentId: "extra-0", uncheckMask: 1 }]);
+    expect(result).toEqual({ locallySaved: 1, waiting: 1, applied: 0, rejected: 0 });
+    expect((await db.outbox.toArray()).map(row => row.status)).toEqual(["pending"]);
   });
 });

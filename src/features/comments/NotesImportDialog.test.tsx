@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { buildTicketRows } from "../../data/homework";
@@ -18,7 +18,7 @@ vi.mock("../../data/repositories/access", async original => ({
 }));
 
 beforeEach(() => {
-  mocks.saveNotes.mockReset().mockResolvedValue(1);
+    mocks.saveNotes.mockReset().mockResolvedValue({ locallySaved: 1, waiting: 1, applied: 0, rejected: 0 });
   mocks.canWrite = false;
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
@@ -42,9 +42,10 @@ describe("Nhập từ ghi chú", () => {
     expect(mocks.saveNotes).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
     expect(mocks.saveNotes).toHaveBeenCalledTimes(1);
-    expect(mocks.saveNotes.mock.calls[0][0]).toBe("6a-session-7");
-    expect(mocks.saveNotes.mock.calls[0][1]).toHaveLength(7);
-    expect(mocks.saveNotes.mock.calls[0][1]).toContainEqual(expect.objectContaining({ studentId: "6a-student-0" }));
+      expect(mocks.saveNotes.mock.calls[0][0]).toBe("6a-session-7");
+      expect(mocks.saveNotes.mock.calls[0][1]).toHaveLength(7);
+      expect(mocks.saveNotes.mock.calls[0][1]).toContainEqual(expect.objectContaining({ studentId: "6a-student-0" }));
+      await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Lưu cục bộ: 1 · Chờ đồng bộ: 1 · Đã áp dụng: 0 · Bị từ chối: 0"));
   });
 
   it("ẩn nút nhập khi thiếu quyền sửa", () => {

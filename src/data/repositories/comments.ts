@@ -10,6 +10,7 @@ import { scheduleSync, syncNow } from "../sync";
 import { db, getCacheIdentity, identityKey, stored } from "../db";
 import { todayISO } from "../../shared/date";
 const key=(sessionId:string,studentId:string)=>`${sessionId}:${studentId}`;
+const normalizeNoteForDuplicateCheck=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/gi,"d").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").replace(/\s+/g," ").trim();
 export const listComments=(classId:string):Comment[]=>getStore().comments.filter(c=>c.classId===classId);
 export function listSessionComments(sessionId:string):Comment[]{return getStore().comments.filter(c=>c.sessionId===sessionId);}
 export function getSessionComment(sessionId:string,studentId:string):Comment|null{return getStore().comments.find(c=>c.sessionId===sessionId&&c.studentId===studentId)??null;}
@@ -51,21 +52,32 @@ export function planRegradedSlip(sectionId:string,studentId:string,level:Homewor
 /** Chờ ghi bền; ghi lỗi ⇒ ném lỗi gốc và phiếu trở lại như trước. */
 export const saveSessionCommentDurable=(input:{sessionId:string;studentId:string;stars?:StarLevel|null;criteria?:number;comment?:string|null;note?:string;hwManual?:boolean}):Promise<Comment>=>runDurably(planComment(input));
 
-export interface NotesImportWrite { studentId: string; criteria?: number; note: string; hwManual: boolean; isDefault?: boolean }
+export interface NotesImportWrite { studentId: string; uncheckMask?: number; appendNote?: string[]; hwManual?: boolean; isDefault?: boolean }
 /** Save a complete notes import locally in one transaction, then let sync batch commands in groups of 50. */
-export async function saveNotesImportDurable(sessionId: string, changes: NotesImportWrite[]): Promise<{ saved: number; errors: number }> {
+export async function saveNotesImportDurable(sessionId: string, changes: NotesImportWrite[]): Promise<{ locallySaved: number; waiting: number; applied: number; rejected: number }> {
   requirePermission("comments_reports","write");
   requireSessionAccess(sessionId);
-  const regularPlans=changes.filter(change=>!change.isDefault).map(change=>planComment({sessionId,studentId:change.studentId,criteria:change.criteria,note:change.note,hwManual:change.hwManual}));
-  const defaultPlan=planAssignDefaultSlips(sessionId,changes.filter(change=>change.isDefault).map(({studentId,criteria,note,hwManual})=>({studentId,criteria,note,hwManual})));
+  const regularPlans=changes.filter(change=>!change.isDefault).flatMap(change=>{
+    const old=getSessionComment(sessionId,change.studentId);
+    const baseline=old?.criteria??(old?.stars==null?defaultSlipCriteria(previousHomeworkGrades(getStore(),sessionId,change.studentId)):(1<<old.stars)-1);
+    const uncheckMask=change.uncheckMask??0;
+    const criteria=baseline&~uncheckMask;
+    const oldNote=old?.note??"";
+    const additions=(change.appendNote??[]).filter(line=>!normalizeNoteForDuplicateCheck(oldNote).includes(normalizeNoteForDuplicateCheck(line)));
+    const note=[oldNote.trim(),...additions].filter(Boolean).join("\n");
+    return [planComment({sessionId,studentId:change.studentId,...(uncheckMask||!old?{criteria}:{}),note,...(change.hwManual===true?{hwManual:true}:{})})];
+  });
+  const defaultPlan=planAssignDefaultSlips(sessionId,changes.filter(change=>change.isDefault).map(({studentId})=>({studentId})));
   const regularGroup=composePlans(regularPlans,regularPlans.length);
   const combined=composePlans([regularGroup,defaultPlan],regularPlans.length+defaultPlan.result);
   const batchEntries=[...regularPlans.map(plan=>plan.batchEntry),...defaultPlan.batchEntries];
   await runDurably({...combined,persist:()=>persistSlipCommands(batchEntries)});
   await syncNow();
   const commandIds=new Set(batchEntries.map(entry=>entry.command.id));
-  const rejected=await db.outbox.where("identity").equals(identityKey()).and(row=>commandIds.has(row.id)&&row.status==="rejected").count();
-  return { saved: batchEntries.length - rejected, errors: rejected };
+    const remaining=await db.outbox.where("identity").equals(identityKey()).and(row=>commandIds.has(row.id)).toArray();
+    const rejected=remaining.filter(row=>row.status==="rejected").length;
+    const waiting=remaining.filter(row=>row.status==="pending"||row.status==="sending").length;
+    return { locallySaved: batchEntries.length, waiting, applied: batchEntries.length-rejected-waiting, rejected };
 }
 /** Toggles one criterion while preserving the separately typed note. */
 export function toggleSlipCriterionDurable(sessionId:string,studentId:string,index:number):Promise<Comment>{
