@@ -6,6 +6,7 @@ struct SessionCommentsView: View {
     @ObservedObject var data: I4FeatureStore
     @Environment(AuthModel.self) private var auth
     @State private var filter: TicketFilter = .all
+    @State private var mode: CommentsMode = .byStudent
     @State private var target: TicketTarget?
     @State private var showingSend = false
     @State private var sendError: String?
@@ -104,11 +105,34 @@ struct SessionCommentsView: View {
                 AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.e.nhan.xet"))
             } else {
                 if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
-                filters
-                list
+                modeSwitch
+                switch mode {
+                case .byStudent:
+                    filters
+                    list
+                case .byCriterion:
+                    criteriaMode
+                }
             }
         } else {
             AppEmptyState(title: String(localized: "feature.comments.khong.tim.thay.buoi.hoc.e.nhan.xet"))
+        }
+    }
+
+    private var modeSwitch: some View {
+        AppSegmented(options: [.init(value: CommentsMode.byStudent.rawValue, label: CriteriaModeText.byStudent),
+                               .init(value: CommentsMode.byCriterion.rawValue, label: CriteriaModeText.byCriterion)],
+                     value: mode.rawValue) { mode = CommentsMode(rawValue: $0) ?? .byStudent }
+            .accessibilityIdentifier("comment.mode")
+    }
+
+    private var criteriaMode: some View {
+        let sections = previousSession.map { data.sections(sessionID: $0.id) } ?? []
+        return CriteriaModeView(rows: rows, sections: sections, grades: data.grades, canWrite: data.canWriteCommentsReports) { id, grading, note in
+            guard let student = rows.first(where: { $0.student.id == id })?.student else { return CriteriaModeText.saveFailed }
+            let error = await data.saveSlip(sessionID: sessionID, student: student, grading: grading, note: note)
+            await saveStatusSource?.refresh()
+            return error
         }
     }
 
@@ -389,6 +413,8 @@ struct SessionCommentsView: View {
         )
     }
 }
+
+enum CommentsMode: String { case byStudent, byCriterion }
 
 struct TicketTarget: Identifiable {
     let session: ClassSession

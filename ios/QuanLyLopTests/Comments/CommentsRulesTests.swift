@@ -251,3 +251,68 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertFalse(SlipRules.hasUnsavedChanges(hasSlip: false, current: opening, opening: opening, lastSaved: opening))
     }
 }
+
+final class CriteriaModeRulesTests: XCTestCase {
+    private func student(_ id: String) -> Student {
+        Student(id: id, classId: "c", name: "HS \(id)", parentPhone: nil, enrolledAt: "2026-01-01", leftAt: nil, status: .active, version: 1)
+    }
+
+    private func slip(_ id: String, criteria: Int? = SlipRules.allCriteria, comment: String? = nil, hwManual: Bool = false,
+                      status: SlipStatus = .draft, stars: Int? = nil, scale: Int? = nil) -> SessionSlip {
+        SessionSlip(sessionId: "s", studentId: id, stars: stars ?? criteria.map { SlipRules.stars(criteria: $0) },
+                    criteria: criteria, comment: comment, scale: scale, hwManual: hwManual, note: "ghi chú",
+                    status: status, sentAt: nil, version: 2, updatedAt: "x")
+    }
+
+    private func row(_ id: String, slip: SessionSlip?, attendance: AttendanceStatus? = nil) -> I4TicketRow {
+        I4TicketRow(student: student(id), slip: slip, attendance: attendance,
+                    previousHomework: I4HomeworkSummary(total: 0, graded: 0), previousDate: nil, previousHadSections: false)
+    }
+
+    func testStudentWithoutASlipShowsTheDefaultAndATapUnticksOnlyThatCriterion() {
+        let none: I4FeatureStore.SlipGrading? = CriteriaModeRules.tapGrading(slip: nil, criterion: 3, sections: [], grades: [], studentID: "a")
+        let expected = SlipRules.allCriteria & ~(1 << 3)
+        XCTAssertEqual(none, .criteria(expected, comment: SlipRules.generatedSentence(criteria: expected), hwManual: nil))
+    }
+
+    func testTappingAnUnmetChipTicksItAgainAndKeepsTheOthers() {
+        let before = SlipRules.allCriteria & ~(1 << 0) & ~(1 << 2)
+        let grading = CriteriaModeRules.tapGrading(slip: slip("a", criteria: before), criterion: 0, sections: [], grades: [], studentID: "a")
+        let after = before | 1
+        XCTAssertEqual(grading, .criteria(after, comment: SlipRules.generatedSentence(criteria: after), hwManual: nil))
+    }
+
+    func testHomeworkTapMarksTheFlagByHandOtherGroupsDoNot() {
+        guard case .criteria(_, _, let flag)? = CriteriaModeRules.tapGrading(slip: slip("a"), criterion: 4, sections: [], grades: [], studentID: "a")
+        else { return XCTFail("expected a criteria grading") }
+        XCTAssertEqual(flag, true)
+    }
+
+    func testLegacySlipWithStarsIsLockedButAnUnscoredOldDraftIsNot() {
+        let legacy = slip("a", criteria: nil, stars: 2, scale: SessionSlip.legacyScale)
+        XCTAssertNil(CriteriaModeRules.tapGrading(slip: legacy, criterion: 1, sections: [], grades: [], studentID: "a"))
+        let chip = CriteriaModeRules.chips(rows: [row("a", slip: legacy)], criterion: 1, sections: [], grades: []).first
+        XCTAssertEqual(chip?.isLegacy, true)
+        XCTAssertEqual(chip?.unmet, false)
+        let draft = slip("b", criteria: nil, stars: nil, scale: SessionSlip.legacyScale)
+        XCTAssertNotNil(CriteriaModeRules.tapGrading(slip: draft, criterion: 1, sections: [], grades: [], studentID: "b"))
+    }
+
+    func testChipsCountUnmetAndMarkSentAndAbsent() {
+        let rows = [row("a", slip: slip("a", criteria: SlipRules.allCriteria & ~2, status: .sent), attendance: .absent),
+                    row("b", slip: nil), row("c", slip: slip("c", criteria: SlipRules.allCriteria & ~2))]
+        let chips = CriteriaModeRules.chips(rows: rows, criterion: 1, sections: [], grades: [])
+        XCTAssertEqual(CriteriaModeRules.unmetCount(chips), 2)
+        XCTAssertEqual(chips.first?.isSent, true)
+        XCTAssertEqual(chips.first?.isAbsent, true)
+    }
+
+    func testWarningsAskOncePerKind() {
+        let edited = slip("a", comment: "Con rất tốt.", status: .sent)
+        XCTAssertEqual(Set(CriteriaModeRules.warnings(slip: edited, acknowledged: [])), [.sent, .handEdited])
+        XCTAssertEqual(CriteriaModeRules.warnings(slip: edited, acknowledged: [.sent]), [.handEdited])
+        let generated = slip("b", comment: SlipRules.generatedSentence(criteria: SlipRules.allCriteria))
+        XCTAssertTrue(CriteriaModeRules.warnings(slip: generated, acknowledged: []).isEmpty)
+        XCTAssertTrue(CriteriaModeRules.warnings(slip: nil, acknowledged: []).isEmpty)
+    }
+}

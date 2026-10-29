@@ -82,8 +82,8 @@ extension TeacherScreenshotTests {
     }
 
     /// `ImageRenderer` leaves a `ScrollView` empty, so the sheet is hosted in a real window and drawn from it.
-    private static func snapshot<V: View>(_ view: V, to url: URL) throws {
-        let frame = CGRect(x: 0, y: 0, width: 390, height: 844)
+    static func snapshot<V: View>(_ view: V, to url: URL, height: CGFloat = 844) throws {
+        let frame = CGRect(x: 0, y: 0, width: 390, height: height)
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let window = UIWindow(windowScene: scene)
         window.frame = frame
@@ -115,5 +115,39 @@ private extension TeacherFeatureData {
         case .classListEmpty, .studentsEmpty, .scheduleEmpty: TeacherDemoData.emptyData()
         default: self
         }
+    }
+}
+
+extension TeacherScreenshotTests {
+    /// The criteria mode of the comments tab with synthetic students, drawn at 390 wide.
+    func testRenderCriteriaMode() throws {
+        guard let directory = ProcessInfo.processInfo.environment["QLH_CRITERIA_DIR"] else {
+            throw XCTSkip("QLH_CRITERIA_DIR not set: screenshot run only")
+        }
+        let names = ["Nguyễn Gia Hân", "Trần Minh Khôi", "Lê Bảo An", "Phạm Thu Hà", "Đỗ Quang Huy", "Võ Mai Chi"]
+        func slip(_ id: String, _ criteria: Int?, status: SlipStatus = .draft, stars: Int? = nil, scale: Int? = nil) -> SessionSlip {
+            SessionSlip(sessionId: "s", studentId: id, stars: stars ?? criteria.map { SlipRules.stars(criteria: $0) },
+                        criteria: criteria, scale: scale, note: "", status: status, sentAt: nil, version: 1, updatedAt: "x")
+        }
+        let slips: [String: SessionSlip] = [
+            "1": slip("1", 0b11101), "2": slip("2", 0b10111, status: .sent), "3": slip("3", 0b01111),
+            "5": slip("5", nil, stars: 2, scale: SessionSlip.legacyScale)
+        ]
+        let rows = names.enumerated().map { index, name -> I4TicketRow in
+            let id = String(index)
+            return I4TicketRow(
+                student: Student(id: id, classId: "c", name: name, parentPhone: nil, enrolledAt: "2026-09-01", leftAt: nil,
+                                 status: .active, version: 1),
+                slip: slips[id], attendance: index == 3 ? .absent : nil,
+                previousHomework: I4HomeworkSummary(total: 0, graded: 0), previousDate: nil, previousHadSections: false)
+        }
+        let view = ScrollView {
+            CriteriaModeView(rows: rows, sections: [], grades: [], canWrite: true) { _, _, _ in nil }
+                .padding(AppSpace.s16)
+        }
+        .background(AppColors.background)
+        let folder = URL(fileURLWithPath: directory, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Self.snapshot(view, to: folder.appendingPathComponent("criteria-mode.png"), height: 1500)
     }
 }
