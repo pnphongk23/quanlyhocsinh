@@ -49,6 +49,7 @@ function storeSelectedChild(studentId: string): void {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   if (nativeShowModal) Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: nativeShowModal });
   else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
@@ -78,7 +79,9 @@ function renderPath(path: string, route: string, node: ReactElement): string {
 }
 
 describe("PH · Lớp học của con (tab 1)", () => {
-    it("đầu lớp, số nhanh, hai lối vào và danh sách buổi theo tháng, không có trung bình", () => {
+    it("đầu lớp, số nhanh, hai lối vào và chỉ các buổi từ hôm nay", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-15T12:00:00"));
       seedGuardian();
       const state = createSeed();
       state.homeworkSections.push({ id: "fixture-upcoming-homework", sessionId: "6a-extra-session", kind: "reading", title: "Đọc bài", description: "" });
@@ -98,22 +101,18 @@ describe("PH · Lớp học của con (tab 1)", () => {
     expect(html).toContain('href="/ph/diem"');
     expect(html).toContain('href="/ph/bao-cao"');
     expect(html).toContain("<strong>Báo cáo</strong>");
-    // Danh sách buổi: nhóm tháng, mới nhất trước, nhãn điểm danh, sao, Mới, buổi huỷ.
-    expect(html).toContain("Tháng 10/2026");
-    expect(html).toContain('href="/ph/buoi/6a-session-7"');
-      expect(html).toContain("T4 · 14/10");
-    expect(html).toContain("Vắng");
-    expect(html).toContain("Có mặt");
-    expect(html).toContain("3 sao");
-    expect(html).toContain("Mới");
-      expect(html).toContain("T6 · 16/10");
-    expect(html).toContain("Đã huỷ");
-    // Buổi sắp tới đã có BTVN vẫn vào danh sách để phụ huynh xem đề.
-    expect(html).toContain('href="/ph/buoi/6a-extra-session"');
-    expect(html).toContain("Sắp học");
-      expect(html.indexOf("T4 · 14/10")).toBeLessThan(
-        html.indexOf("T2 · 12/10"),
-    );
+      expect(html).toContain("Buổi sắp tới");
+      expect(html).toContain('href="/ph/lich"');
+      expect(html).not.toContain('href="/ph/buoi/6a-session-7"');
+      expect(html).not.toContain("T4 · 14/10");
+      expect(html).toContain('href="/ph/buoi/6a-extra-cancelled"');
+      expect(html).toContain("Đã huỷ");
+      expect(html).toContain('href="/ph/buoi/6a-session-8"');
+      expect(html).toContain("Sắp học");
+      expect(html).toContain('href="/ph/buoi/6a-extra-session"');
+      expect(html).toContain("Học bù");
+      expect(html.indexOf("16/10")).toBeLessThan(html.indexOf("19/10"));
+      expect(html.indexOf("19/10")).toBeLessThan(html.indexOf("25/10"));
     // Không còn tab Điểm danh riêng, không có nút sửa/gửi: phụ huynh chỉ đọc.
     expect(html).not.toContain("Lưu");
     expect(html).not.toContain("Gửi");

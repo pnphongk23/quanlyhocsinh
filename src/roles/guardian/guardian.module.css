@@ -89,6 +89,9 @@
   min-width: 0;
   padding: var(--row-pad-y) var(--card-pad);
 }
+.statWide {
+  grid-column: 1 / -1;
+}
 .statLabel {
   text-wrap: balance;
   color: var(--color-muted);
@@ -585,17 +588,6 @@
   gap: 2px;
   min-width: 0;
 }
-.monthGroup {
-  display: grid;
-  gap: var(--space-8);
-  min-width: 0;
-}
-.monthHeading {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
 .sessionRow {
   display: flex;
   align-items: center;
@@ -615,6 +607,138 @@
   align-items: center;
   gap: var(--space-8);
   min-height: 24px;
+}
+
+/* Lịch học của con */
+.schedulePage {
+  display: grid;
+  gap: var(--card-gap);
+  width: 100%;
+  max-width: var(--form-max);
+  min-width: 0;
+}
+.scheduleCalendar,
+.scheduleList {
+  display: grid;
+  gap: var(--card-gap);
+  min-width: 0;
+}
+.scheduleMonthHead,
+.scheduleDaySwitch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-width: 0;
+}
+.scheduleMonthHead h2,
+.scheduleList h2 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.scheduleMonthHead button,
+.scheduleDaySwitch > button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0 var(--space-8);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-primary-ink);
+}
+.scheduleDaySwitch strong {
+  min-width: 0;
+  font-size: var(--text-base);
+  text-align: center;
+}
+.scheduleDaySwitch .scheduleToday {
+  width: auto;
+  color: var(--color-primary-ink);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: stretch;
+  width: 100%;
+}
+.calendarWeekday {
+  display: grid;
+  min-height: var(--tap);
+  place-items: center;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.calendarDay,
+.calendarDayBlank {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--tap);
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+.calendarDaySelected {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
+}
+.calendarDay {
+  position: relative;
+}
+.calendarDot {
+  position: absolute;
+  bottom: var(--space-4);
+  width: var(--space-4);
+  height: var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+}
+.calendarDaySelected .calendarDot {
+  background: var(--color-on-primary);
+}
+.scheduleList {
+  margin-top: var(--space-8);
+}
+.scheduleNetwork {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--card-pad);
+  border-radius: var(--radius-card);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
+  font-size: var(--text-md);
+}
+.scheduleNetwork p {
+  margin: 0;
+}
+.scheduleNetwork button {
+  min-height: var(--tap);
+  padding: 0 var(--space-12);
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--state-error-fg);
+  font-weight: 600;
+}
+.scheduleLoading {
+  display: grid;
+  min-height: var(--tap);
+  place-items: center;
 }
 
 /* Tab Nhận xét của cô */
@@ -662,6 +786,12 @@
 }
 
 @media (min-width: 1024px) {
+  .scheduleMonthHead button,
+  .scheduleDaySwitch > button,
+  .scheduleNetwork button {
+    min-width: var(--tap-desktop);
+    min-height: var(--tap-desktop);
+  }
   .classLayout {
     grid-template-columns: minmax(0, 1fr) 380px;
   }

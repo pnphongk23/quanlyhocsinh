@@ -50,6 +50,14 @@ export function childSessions(studentId: string): Session[] {
     .sort(compareSessions);
 }
 
+/** Buổi của lịch lớp con trong khoảng ngày vào lớp..rời lớp, mọi trạng thái. */
+export function childScheduleSessions(studentId: string): Session[] {
+  const child = childOf(studentId);
+  return getStore()
+    .sessions.filter((session) => inClassWindow(child, session))
+    .sort(compareSessions);
+}
+
 /** Các tháng có buổi đã diễn ra của con, mới nhất trước ("2026-10"). */
 export function childMonths(studentId: string): string[] {
   const months = childSessions(studentId)

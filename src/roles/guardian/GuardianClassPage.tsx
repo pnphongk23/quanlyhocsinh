@@ -1,48 +1,30 @@
 import { Link } from "react-router-dom";
 import { getChildOverview } from "../../data/repositories/guardian";
 import { useAccess } from "../../data/repositories/access";
-import { sessionPrefix } from "../../data/repositories/sessions";
 import { Card, PageHeader } from "../../shared/ui";
 import { motionClass } from "../../shared/motion";
+import { todayISO } from "../../shared/date";
 import { useGuardianContext } from "./guardianContext";
 import {
   childClassInfo,
-  childSessionFeed,
+  childScheduleSessions,
   defaultChildMonth,
   publishedReportMonths,
-  type ChildSessionItem,
 } from "./guardianRead";
-import { seenSessionIds } from "./guardianSeen";
 import {
-  attendanceText,
-  attendanceTone,
   monthLabel,
-  monthYearLabel,
   scheduleText,
   scoreText,
   weekdayDayMonth,
 } from "./guardianFormat";
-import { ChildEmpty, GuardianPill, StarRow } from "./guardianUi";
+import { ChildEmpty, GuardianPill } from "./guardianUi";
 import GuardianIcon from "./GuardianIcon";
 import GuardianNoChild from "./guardianEmpty";
 import g from "./guardian.module.css";
 
-/** Nhóm buổi theo tháng, giữ thứ tự mới nhất trước của danh sách. */
-function groupByMonth(items: ChildSessionItem[]) {
-  const groups: Array<{ month: string; items: ChildSessionItem[] }> = [];
-  for (const item of items) {
-    const month = item.session.date.slice(0, 7);
-    const last = groups[groups.length - 1];
-    if (last && last.month === month) last.items.push(item);
-    else groups.push({ month, items: [item] });
-  }
-  return groups;
-}
-
 /**
- * PH · Lớp học của con (tab 1): đầu lớp và số nhanh, hai lối vào Điểm và Báo
- * cáo tháng, rồi danh sách buổi theo tháng. Điểm danh theo buổi nằm ngay trong
- * danh sách nên không còn màn Điểm danh riêng.
+ * PH · Lớp học của con (tab 1): đầu lớp, số nhanh, lối vào Điểm/Báo cáo và
+ * danh sách buổi sắp tới. Lịch đầy đủ giữ cả các buổi đã qua.
  */
 export default function GuardianClassPage() {
   const access = useAccess();
@@ -67,9 +49,9 @@ export default function GuardianClassPage() {
   const attendance = canAttendance ? (overview?.attendance ?? null) : null;
   const latestScore = canScores ? (overview?.recentScores[0] ?? null) : null;
   const reportMonth = canReports ? (publishedReportMonths(studentId)[0] ?? null) : null;
-  const feed = childSessionFeed(studentId);
-  const seen = seenSessionIds(studentId);
-  const groups = groupByMonth(feed);
+  const upcoming = childScheduleSessions(studentId).filter(
+    (session) => session.date >= todayISO(),
+  );
 
   return (
     <div className={g.page}>
@@ -87,8 +69,8 @@ export default function GuardianClassPage() {
 
           {(attendance || canScores) && (
             <div className={g.statRow}>
-              {attendance && (
-                <Card className={g.statCard}>
+                {attendance && (
+                  <Card className={`${g.statCard}${!canScores ? ` ${g.statWide}` : ""}`}>
                   <span className={g.statLabel}>
                     Chuyên cần {monthLabel(month).toLowerCase()}
                   </span>
@@ -98,8 +80,8 @@ export default function GuardianClassPage() {
                   <span className={g.statSub}>
                     buổi · {attendance.late} muộn, {attendance.absent} vắng
                   </span>
-                </Card>
-              )}
+                  </Card>
+                )}
               {canScores && (
                 <Card className={g.statCard}>
                   <span className={g.statLabel}>Bài kiểm tra mới nhất</span>
@@ -152,50 +134,32 @@ export default function GuardianClassPage() {
           )}
         </aside>
 
-        <section className={g.classSessions} aria-label="Danh sách buổi học">
-          {groups.length === 0 && (
-            <ChildEmpty title="Chưa có buổi học nào">
-              <p>Buổi học hiện ở đây sau khi lớp học buổi đầu tiên.</p>
-            </ChildEmpty>
-          )}
-          {groups.map((group) => (
-            <div key={group.month} className={g.monthGroup}>
-              <h2 className={g.monthHeading}>{monthYearLabel(group.month)}</h2>
+          <section className={g.classSessions} aria-label="Danh sách buổi học">
+            <div className={g.cardHead}>
+              <h2>Buổi sắp tới</h2>
+              <Link to="/ph/lich" className={g.linkPrimary}>Tất cả</Link>
+            </div>
+            {upcoming.length === 0 ? (
+              <ChildEmpty title="Chưa có buổi học sắp tới" />
+            ) : (
               <ul className={g.rowList}>
-                {group.items.map((item) => {
-                  const isNew = item.stars !== null && !seen.has(item.session.id);
+                {upcoming.map((session) => {
+                  const status = session.status === "cancelled"
+                    ? "Đã huỷ"
+                    : session.makeup
+                      ? "Học bù"
+                      : session.status === "planned" ? "Sắp học" : "Đã học";
                   return (
-                    <li key={item.session.id}>
+                    <li key={session.id}>
                       <Link
-                        to={`/ph/buoi/${item.session.id}`}
+                        to={`/ph/buoi/${session.id}`}
                         className={`${g.sessionRow} ${motionClass.pressable}`}
                       >
                         <span className={g.rowMain}>
-                          <span className={g.rowTitle}>
-                              {sessionPrefix(item.session)}
-                          </span>
+                          <span className={g.rowTitle}>{weekdayDayMonth(session.date)}</span>
                           <span className={g.sessionMeta}>
-                            {item.cancelled ? (
-                              <GuardianPill tone="neutral">Đã huỷ</GuardianPill>
-                            ) : item.upcoming ? (
-                              <GuardianPill tone="neutral">Sắp học</GuardianPill>
-                            ) : item.attendance ? (
-                              <GuardianPill
-                                tone={attendanceTone(item.attendance)}
-                              >
-                                {attendanceText[item.attendance]}
-                              </GuardianPill>
-                            ) : (
-                              canAttendance && (
-                                <span className={g.hint}>Chưa điểm danh</span>
-                              )
-                            )}
-                            {item.stars !== null && (
-                              <StarRow level={item.stars} size={16} />
-                            )}
-                            {isNew && (
-                              <GuardianPill tone="primary">Mới</GuardianPill>
-                            )}
+                            <span className={g.muted}>{session.time ?? ""}</span>
+                            <GuardianPill tone="neutral">{status}</GuardianPill>
                           </span>
                         </span>
                         <GuardianIcon name="chevron-right" size={18} />
@@ -204,9 +168,8 @@ export default function GuardianClassPage() {
                   );
                 })}
               </ul>
-            </div>
-          ))}
-        </section>
+            )}
+          </section>
       </div>
     </div>
   );
