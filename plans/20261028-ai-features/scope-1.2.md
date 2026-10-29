@@ -1,12 +1,14 @@
 # Bản 1.2: nhận xét theo tiêu chí, nhận xét chung → phiếu từng em, nhập danh sách
 
-Trạng thái: NHÁP, chờ người dùng duyệt. Chưa ghi vào `docs/spec.md` mục 8. Nguồn: [brainstorm.md](brainstorm.md) (mục "Quyết định"). Đã qua một lượt review độc lập; người dùng đã chốt các điểm review ngày 2026-10-29 (ghi ở mục "Quyết định bổ sung"). Không dùng AI ở bản này.
+Trạng thái: ĐÃ DUYỆT 2026-10-29 (người dùng), đã ghi vào `docs/spec.md` mục 4, 5.3, 8 ("Bản 1.2") và `docs/architecture.md` mục 4, 5. Nguồn: [brainstorm.md](brainstorm.md) (mục "Quyết định"). Đã qua một lượt review độc lập; người dùng đã chốt các điểm review ngày 2026-10-29 (ghi ở mục "Quyết định bổ sung"). Không dùng AI ở bản này.
 
 ## Quyết định bổ sung (2026-10-29, người dùng)
 1. Tạo học sinh hàng loạt **chỉ online** (tạo học sinh hiện gọi REST, không có lệnh trong hàng đợi).
 2. Phiếu mặc định theo đúng quy tắc "Gán tất cả mặc định": tích đủ 5 tiêu chí, riêng BTVN theo kết quả chấm nên có thể ra 4 sao. Khi gán mặc định ở tính năng này thì **bỏ qua em Vắng**.
 3. Thiếu quyền thì **ẩn** giao diện (không chỉ khoá). **Quyền "Gửi nhận xét" là quyền riêng**, tách khỏi quyền soạn nhận xét; Trợ giảng mặc định **không có** quyền này.
 4. Lưu cả đợt trong **một request**; chia lô tối đa 50 lệnh làm ở client. Không gửi mỗi học sinh một request. Không đo CPU staging cho bản này.
+5. Trợ giảng gửi phiếu được hay không **do phân quyền**: "Gửi nhận xét" là một quyền trong ma trận Admin chỉnh; mặc định Trợ giảng không có (giữ như trên).
+6. **Rủi ro đã chấp nhận:** app iOS 1.0 (đã lên App Store) không biết quyền mới nên vẫn hiện nút gửi phiếu cho Trợ giảng; bấm thì máy chủ từ chối (403) và app hiện lỗi. Không sửa app 1.0.
 
 ## Làm
 
