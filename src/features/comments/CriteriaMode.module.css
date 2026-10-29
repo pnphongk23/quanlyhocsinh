@@ -77,11 +77,22 @@ button.chip {
 }
 
 .warning,
-.error {
+.error,
+.previewBanner,
+.previewSummary {
   margin: 0;
   padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
   font-size: var(--text-md);
+}
+
+.previewBanner {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
+}
+
+.previewSummary {
+  color: var(--color-muted);
 }
 
 .warning {

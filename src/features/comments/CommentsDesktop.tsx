@@ -36,6 +36,7 @@ import {
 import s from "./CommentsDesktop.module.css";
 import d from "../class-space/desktop.module.css";
 import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
+import NotesImportDialog from "./NotesImportDialog";
 
 /**
  * Tab Nhận xét trên web desktop (ảnh 04): danh sách em + khung soạn phiếu nằm
@@ -56,11 +57,13 @@ export default function CommentsDesktop({
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<TicketFilter>("all");
   const [mode, setMode] = useState<"student" | "criteria">("student");
-  const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [notesImportOpen, setNotesImportOpen] = useState(false);
   const [dialogError, setDialogError] = useState("");
 
-  const session = getSession(sessionId);
-  const canWrite = access.can("comments_reports", "write") && !readOnly;
+    const session = getSession(sessionId);
+    const canWrite = access.can("comments_reports", "write") && !readOnly;
+    const canSend = access.can("send_comments", "write") && !readOnly;
   const rows = buildTicketRows(state, sessionId);
   const visibleRows = filterTicketRows(rows, filter);
   const requestedId = searchParams.get("student");
@@ -81,7 +84,8 @@ export default function CommentsDesktop({
   const leftStudents = leftStudentsForSession(state, sessionId);
 
   useEffect(() => {
-    setConfirmOpen(false);
+      setConfirmOpen(false);
+      setNotesImportOpen(false);
     setMode("student");
   }, [sessionId]);
 
@@ -159,10 +163,12 @@ export default function CommentsDesktop({
   return (
       <div className={d.page}>
         {tabBar(
-        canWrite ? (
-          <>
-            <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="md" />
-            <Button
+          canWrite ? (
+              <>
+                <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="md" />
+                <Button size="md" variant="surface" onClick={() => setNotesImportOpen(true)}>Nhập từ ghi chú</Button>
+              {canSend && <>
+              <Button
               size="md"
               disabled={sendButtonDisabled(count, !online)}
               aria-describedby={!online ? "comments-desktop-send-offline-hint" : undefined}
@@ -173,12 +179,13 @@ export default function CommentsDesktop({
             >
               {sendButtonLabel(count, !online)}
             </Button>
-            {!online && (
-              <p id="comments-desktop-send-offline-hint" className={s.networkHint}>
-                Cần có mạng để gửi phiếu
-              </p>
-            )}
-          </>
+              {!online && (
+                <p id="comments-desktop-send-offline-hint" className={s.networkHint}>
+                  Cần có mạng để gửi phiếu
+                </p>
+              )}
+              </>}
+            </>
         ) : undefined,
         )}
 
@@ -271,8 +278,8 @@ export default function CommentsDesktop({
         </section>
       </div>
 
-      <SendTicketsDialog
-        open={confirmOpen}
+        <SendTicketsDialog
+          open={confirmOpen && canSend}
         sessionLabel={sessionPrefix(session)}
         sendCount={dialogInfo.current.sendCount}
         skipped={dialogInfo.current.skipped}
@@ -284,8 +291,15 @@ export default function CommentsDesktop({
           setConfirmOpen(false);
           setDialogError("");
         }}
-      />
-    </div>
+        />
+        {notesImportOpen && <NotesImportDialog
+          sessionId={sessionId}
+          rows={rows}
+          attendance={state.attendance}
+          previousGrades={(studentId) => previousHomeworkGrades(state, sessionId, studentId)}
+          onClose={() => setNotesImportOpen(false)}
+        />}
+      </div>
   );
 }
 

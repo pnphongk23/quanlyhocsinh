@@ -41,6 +41,7 @@ import {
 } from "./commentsModel";
 import s from "./CommentsPanel.module.css";
 import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
+import NotesImportDialog from "./NotesImportDialog";
 
 function Star({ size = 16 }: { size?: number }) {
   return (
@@ -162,12 +163,14 @@ export default function CommentsPanel({
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<TicketFilter>("all");
   const [mode, setMode] = useState<"student" | "criteria">("student");
-  const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [notesImportOpen, setNotesImportOpen] = useState(false);
   const [dialogError, setDialogError] = useState("");
   const [error, setError] = useState("");
 
-  const session = getSession(sessionId);
-  const canWrite = access.can("comments_reports", "write") && !readOnly;
+    const session = getSession(sessionId);
+    const canWrite = access.can("comments_reports", "write") && !readOnly;
+    const canSend = access.can("send_comments", "write") && !readOnly;
   const rows = buildTicketRows(state, sessionId);
   const counts = ticketCounts(rows);
   const visibleRows = filterTicketRows(rows, filter);
@@ -191,7 +194,8 @@ export default function CommentsPanel({
   useEffect(() => {
     setError("");
     setDialogError("");
-    setConfirmOpen(false);
+      setConfirmOpen(false);
+      setNotesImportOpen(false);
     setMode("student");
   }, [sessionId]);
 
@@ -403,16 +407,18 @@ export default function CommentsPanel({
         </ul>
         </>}
 
-      {canWrite && (
-        <div className={s.footerGroup}>
-          {!online && (
-            <p id="comments-send-offline-hint" className={s.networkHint}>
-              Cần có mạng để gửi phiếu
-            </p>
-          )}
-          <div className={s.footer}>
-            <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="lg" />
-            <Button
+        {canWrite && (
+          <div className={s.footerGroup}>
+            {canSend && !online && (
+              <p id="comments-send-offline-hint" className={s.networkHint}>
+                Cần có mạng để gửi phiếu
+              </p>
+            )}
+              <div className={s.footer}>
+                <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="lg" />
+                <Button size="lg" variant="surface" onClick={() => setNotesImportOpen(true)}>Nhập từ ghi chú</Button>
+              {canSend && (
+              <Button
               size="lg"
               disabled={sendButtonDisabled(count, !online)}
               aria-describedby={!online ? "comments-send-offline-hint" : undefined}
@@ -420,13 +426,14 @@ export default function CommentsPanel({
                 setDialogError("");
                 setConfirmOpen(true);
               }}
-            >
-              <SendIcon />
-              {sendButtonLabel(count, !online)}
-            </Button>
+              >
+                <SendIcon />
+                {sendButtonLabel(count, !online)}
+              </Button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {openRow && sheetHomework && (
         <CommentTicketSheet
@@ -439,8 +446,8 @@ export default function CommentsPanel({
         />
       )}
 
-      <SendTicketsDialog
-        open={confirmOpen}
+        <SendTicketsDialog
+          open={confirmOpen && canSend}
         sessionLabel={sessionPrefix(session)}
         sendCount={dialogInfo.current.sendCount}
         skipped={dialogInfo.current.skipped}
@@ -448,11 +455,18 @@ export default function CommentsPanel({
         error={dialogError}
         busy={sending.saving}
         onConfirm={() => void confirmAndClose()}
-        onClose={() => {
-          setConfirmOpen(false);
-          setDialogError("");
-        }}
-      />
-    </section>
+          onClose={() => {
+            setConfirmOpen(false);
+            setDialogError("");
+          }}
+        />
+        {notesImportOpen && <NotesImportDialog
+          sessionId={sessionId}
+          rows={rows}
+          attendance={state.attendance}
+          previousGrades={(studentId) => previousHomeworkGrades(state, sessionId, studentId)}
+          onClose={() => setNotesImportOpen(false)}
+        />}
+      </section>
   );
 }

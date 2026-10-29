@@ -4,15 +4,16 @@ import { isRevokedError, saveRolePermissions, staffErrorMessage } from "../../da
 import { PERMISSION_GROUPS } from "../../data/repositories/access";
 import type { PermissionLevel } from "../../data/types";
 import { Button, Segmented } from "../../shared/ui";
-import { LEVEL_OPTIONS, changedPermissions, isAssignableRole } from "./staffModel";
+import { LEVEL_OPTIONS, SEND_COMMENTS_OPTIONS, changedPermissions, isAssignableRole, withSendCommentsFallback } from "./staffModel";
 import s from "./staff.module.css";
 
 function RolePermissions({ item, online, onSaved, onForbidden }: { item: RolePermissionsItem; online: boolean; onSaved: (item: RolePermissionsItem) => void; onForbidden: () => void }) {
-  const [draft, setDraft] = useState<StaffPermissions>(item.permissions);
+  const savedPermissions = withSendCommentsFallback(item.permissions);
+  const [draft, setDraft] = useState<StaffPermissions>(savedPermissions);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => setDraft(item.permissions), [item]);
-  const diff = changedPermissions(item.permissions, draft);
+  useEffect(() => setDraft(withSendCommentsFallback(item.permissions)), [item]);
+  const diff = changedPermissions(savedPermissions, draft);
   const dirty = Object.keys(diff).length > 0;
   const key = item.role.system_key as StaffRoleKey;
 
@@ -35,7 +36,7 @@ function RolePermissions({ item, online, onSaved, onForbidden }: { item: RolePer
   return (
     <section className={s.roleCard} aria-label={`Quyền ${item.role.name}`}>
       <h3 className={s.roleTitle}>{item.role.name}</h3>
-      {PERMISSION_GROUPS.map((group) => (
+        {PERMISSION_GROUPS.map((group) => (
         <div key={group.id} className={s.matrixRow}>
           <span className={s.matrixLabel}>{group.label}</span>
           <Segmented
@@ -46,7 +47,17 @@ function RolePermissions({ item, online, onSaved, onForbidden }: { item: RolePer
             onChange={(v) => setDraft((d) => ({ ...d, [group.id]: v as PermissionLevel }))}
           />
         </div>
-      ))}
+        ))}
+        <div className={s.matrixRow}>
+          <span className={s.matrixLabel}>Gửi nhận xét</span>
+          <Segmented
+            label={`${item.role.name}: Gửi nhận xét`}
+            options={SEND_COMMENTS_OPTIONS}
+            value={draft.send_comments}
+            disabled={!online || busy}
+            onChange={(v) => setDraft((d) => ({ ...d, send_comments: v as "none" | "write" }))}
+          />
+        </div>
       {error && <p className={s.error} role="alert">{error}</p>}
       <div className={s.matrixActions}>
         <Button disabled={!dirty || !online} loading={busy} onClick={() => void save()}>Lưu quyền</Button>

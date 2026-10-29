@@ -1,4 +1,4 @@
-import type { PermissionGroup, PermissionLevel, HomeworkKind, HomeworkLevel, SlipScale, StarLevel } from "../types";
+import type { CorePermissionGroup, PermissionLevel, HomeworkKind, HomeworkLevel, SlipScale, StarLevel } from "../types";
 /** Wire types from api-spec.md; dates YYYY-MM-DD, timestamps UTC, weekdays ISO 1..7. */
 export type ScopeKind = "workspace" | "assigned_classes" | "linked_students";
 export interface ApiErrorBody {
@@ -13,19 +13,21 @@ export interface ApiMembership {
   /** Lớp được giao, chỉ có khi `scope_kind = "assigned_classes"` (GET /me). */
   class_ids?: string[];
   /** Guardian-only scope supplied by login/register-guardian/GET /me. */
-  students?: Array<{
-    id: string;
-    name: string;
-    class_id: string;
-    class_name: string;
-    teacher_name: string | null;
-  }>;
+    students?: Array<{
+      id: string;
+      name: string;
+      class_id: string;
+      class_name: string;
+      teacher_name: string | null;
+    }>;
+    permissions: ApiPermissions;
 }
 /** Vai trò gán được cho nhân sự (Admin không gán qua API). */
 export type StaffRoleKey = "teacher" | "assistant";
 export type StaffStatus = "active" | "disabled" | "pending";
-export type StaffPermissionGroup = "classes" | "students" | "sessions_attendance" | "scores" | "comments_reports";
-export type StaffPermissions = Record<StaffPermissionGroup, PermissionLevel>;
+export type StaffPermissionGroup = Exclude<CorePermissionGroup, "lectures"> | "send_comments";
+export type StaffPermissions = Record<Exclude<CorePermissionGroup, "lectures">, PermissionLevel> & { send_comments: "none" | "write" };
+export type ApiPermissions = Record<CorePermissionGroup, PermissionLevel> & { send_comments?: "none" | "write" };
 export interface StaffMember {
   id: string;
   kind: "member" | "pending";
@@ -44,7 +46,7 @@ export interface StaffPatchBody { role?: StaffRoleKey; class_ids?: string[]; sta
 export interface RolePermissionsItem { role: { id: string; name: string; system_key: string | null }; permissions: StaffPermissions }
 export interface MeResponse {
   user: ApiUser; active_membership_id: string | null;
-  memberships: (ApiMembership & { status: "active" | "disabled"; scope_epoch: number; permissions: Record<PermissionGroup, PermissionLevel> })[];
+    memberships: (ApiMembership & { status: "active" | "disabled"; scope_epoch: number })[];
 }
 export interface LoginResponse { token: string; expires_at: string; user: ApiUser; memberships: ApiMembership[]; active_membership_id: string | null }
 interface Versioned { version: number }

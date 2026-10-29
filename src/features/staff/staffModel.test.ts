@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StaffMember } from "../../data/api/types";
-import { changedPermissions, sameClassSet, statusBadge } from "./staffModel";
+import { changedPermissions, sameClassSet, statusBadge, withSendCommentsFallback } from "./staffModel";
 
 const base: StaffMember = {
   id: "m1", kind: "member", user_id: "u1", display_name: "Cô Lan", phone: "+84900000007",
@@ -14,10 +14,16 @@ describe("staffModel", () => {
     expect(statusBadge({ ...base, status: "disabled" })?.label).toBe("Đã tắt quyền");
   });
   it("sends only the changed permission groups", () => {
-    const saved = { classes: "read", students: "read", sessions_attendance: "write", scores: "read", comments_reports: "write" } as const;
-    expect(changedPermissions(saved, { ...saved, scores: "write", comments_reports: "none" })).toEqual({ scores: "write", comments_reports: "none" });
-    expect(changedPermissions(saved, { ...saved })).toEqual({});
-  });
+      const saved = { classes: "read", students: "read", sessions_attendance: "write", scores: "read", comments_reports: "write", lectures: "read", send_comments: "none" } as const;
+      expect(changedPermissions(saved, { ...saved, scores: "write", comments_reports: "none", send_comments: "write" })).toEqual({ scores: "write", comments_reports: "none", send_comments: "write" });
+      expect(changedPermissions(saved, { ...saved })).toEqual({});
+    });
+    it("infers the legacy send permission from comments when the key is absent", () => {
+      const legacy = { classes: "read", students: "read", sessions_attendance: "write", scores: "read", comments_reports: "write", lectures: "read" } as const;
+      expect(withSendCommentsFallback(legacy as never).send_comments).toBe("write");
+      expect(withSendCommentsFallback({ ...legacy, comments_reports: "read" } as never).send_comments).toBe("none");
+      expect(withSendCommentsFallback({ ...legacy, send_comments: "none" } as never).send_comments).toBe("none");
+    });
   it("compares class sets ignoring order", () => {
     expect(sameClassSet(["a", "b"], ["b", "a"])).toBe(true);
     expect(sameClassSet(["a"], ["a", "b"])).toBe(false);

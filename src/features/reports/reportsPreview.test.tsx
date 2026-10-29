@@ -202,6 +202,7 @@ describe("danh sách đợt báo cáo", () => {
     state.auth?.memberIds.push(MEMBER_IDS.trang);
     state.activeMemberId = MEMBER_IDS.trang;
     state.members.find((member) => member.id === MEMBER_IDS.trang)!.classIds = ["6a"];
+    state.roles.find((role) => role.id === ROLE_IDS.assistant)!.permissions.comments_reports = "none";
     replaceStore(state);
     expect(renderStatic()).toContain("Bạn không có quyền xem báo cáo");
   });

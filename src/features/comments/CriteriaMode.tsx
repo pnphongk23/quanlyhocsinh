@@ -8,8 +8,10 @@ import { canToggleCriterion, criteriaForRow, criteriaUnmetCount, rowHasCustomCom
 import s from "./CriteriaMode.module.css";
 
 export interface CriteriaPreview {
-  chips?: Array<{ studentId: string; criterionIndex: number }>;
   banner?: string;
+  summary?: string;
+  criteriaByStudent?: Record<string, number>;
+  onToggle?: (studentId: string, criterionIndex: number) => void;
 }
 
 export function CriteriaModeToggle({ mode, onChange }: { mode: "student" | "criteria"; onChange: (mode: "student" | "criteria") => void }) {
@@ -47,7 +49,6 @@ export default function CriteriaMode({
   const [showCustomWarning, setShowCustomWarning] = useState(false);
   const customWarningShown = useRef(false);
   const sentConfirmShown = useRef(false);
-  void preview;
   const initialCriteria = (row: TicketRow) => defaultSlipCriteria(previousGrades(row.student.id));
 
   useEffect(() => {
@@ -79,8 +80,10 @@ export default function CriteriaMode({
   if (!rows.length) return <EmptyState title="Chưa có học sinh trong buổi học này" />;
 
   return (
-    <div className={s.root}>
-        {showCustomWarning && <p className={s.warning}>Câu nhận xét đã được sửa tay; lần chạm này sẽ thay bằng câu tự sinh theo tiêu chí.</p>}
+      <div className={s.root}>
+          {preview?.banner && <p className={s.previewBanner}>{preview.banner}</p>}
+          {preview?.summary && <p className={s.previewSummary}>{preview.summary}</p>}
+          {showCustomWarning && <p className={s.warning}>Câu nhận xét đã được sửa tay; lần chạm này sẽ thay bằng câu tự sinh theo tiêu chí.</p>}
       {error && <p className={s.error} role="alert">{error}</p>}
       {SLIP_CRITERIA.map((criterion, index) => (
         <section className={s.group} key={criterion}>
@@ -93,7 +96,7 @@ export default function CriteriaMode({
           <div className={s.chips}>
             {rows.map((row) => {
               const legacy = !canToggleCriterion(row);
-              const criteria = row.comment ? criteriaForRow(row) : initialCriteria(row);
+                const criteria = preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForRow(row) : initialCriteria(row));
               const unachieved = (criteria & (1 << index)) === 0;
                 const selected = unachieved;
               const sent = row.status === "sent" || row.status === "queued";
@@ -106,7 +109,7 @@ export default function CriteriaMode({
                   aria-pressed={selected}
                   aria-label={label}
                   aria-current={row.student.id === selectedStudentId ? "true" : undefined}
-                  onClick={() => void toggle(row, index)}
+                    onClick={() => preview?.onToggle ? preview.onToggle(row.student.id, index) : void toggle(row, index)}
                 >
                   {row.student.name}{sent && <small>Đã gửi</small>}
                 </button>

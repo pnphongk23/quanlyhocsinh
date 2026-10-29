@@ -21,7 +21,7 @@ if (typeof dialogProto.showModal !== "function") {
 }
 
 const user = { id: "u-admin", phone: "+84900000001", display_name: "Cô Lan", must_change_password: false };
-const full = { classes: "write", students: "write", sessions_attendance: "write", scores: "write", lectures: "write", comments_reports: "write" } as const;
+const full = { classes: "write", students: "write", sessions_attendance: "write", scores: "write", lectures: "write", comments_reports: "write", send_comments: "write" } as const;
 const adminMembership = { id: "m-admin", status: "active" as const, scope_epoch: 1, workspace: { id: "w1", name: "Lớp cô Lan" }, role: { id: "r-admin", name: "Admin", system_key: "admin", scope_kind: "workspace" as const }, permissions: full };
 const teacherMembership = { ...adminMembership, id: "m-teacher", role: { id: "r-teacher", name: "Giáo viên", system_key: "teacher", scope_kind: "assigned_classes" as const }, class_ids: ["c1"] };
 const guardianMembership = { ...adminMembership, id: "m-guardian", role: { id: "r-g", name: "Phụ huynh", system_key: null, scope_kind: "linked_students" as const }, students: [] };
@@ -32,8 +32,8 @@ const staff = (patch: Partial<StaffMember> & Pick<StaffMember, "id">): StaffMemb
   class_ids: [], status: "active", is_self: false, created_at: "2026-10-28T00:00:00Z", version: 3, ...patch,
 });
 const perms = (): RolePermissionsItem[] => [
-  { role: { id: "r-teacher", name: "Giáo viên", system_key: "teacher" }, permissions: { classes: "write", students: "write", sessions_attendance: "write", scores: "write", comments_reports: "write" } },
-  { role: { id: "r-asst", name: "Trợ giảng", system_key: "assistant" }, permissions: { classes: "read", students: "read", sessions_attendance: "write", scores: "read", comments_reports: "write" } },
+    { role: { id: "r-teacher", name: "Giáo viên", system_key: "teacher" }, permissions: { classes: "write", students: "write", sessions_attendance: "write", scores: "write", comments_reports: "write", send_comments: "write" } },
+    { role: { id: "r-asst", name: "Trợ giảng", system_key: "assistant" }, permissions: { classes: "read", students: "read", sessions_attendance: "write", scores: "read", comments_reports: "write", send_comments: "none" } },
 ];
 let members: StaffMember[];
 const apiError = (status: number, code: string, details?: Record<string, unknown>) => new ApiError(status, { code, message: "x", request_id: "t", details });
@@ -74,7 +74,10 @@ describe("Nhân sự (Admin)", () => {
     expect(screen.getByText("Chờ đặt mật khẩu")).toBeTruthy();
     expect(screen.getByText("Cô Lan (bạn)")).toBeTruthy();
     const asst = screen.getByRole("region", { name: "Quyền Trợ giảng" });
-    expect(within(asst).getAllByRole("tablist")).toHaveLength(5);
+      expect(within(asst).getAllByRole("tablist")).toHaveLength(6);
+      const sendComments = within(asst).getByRole("tablist", { name: "Trợ giảng: Gửi nhận xét" });
+      expect(within(sendComments).getByRole("tab", { name: "Không", selected: true })).toBeTruthy();
+      expect(within(sendComments).queryByRole("tab", { name: "Đọc" })).toBeNull();
     expect(screen.getByRole("region", { name: "Quyền Giáo viên" })).toBeTruthy();
   });
 
@@ -149,21 +152,22 @@ describe("Nhân sự (Admin)", () => {
     expect(screen.queryByRole("button", { name: "Lưu" })).toBeNull();
   });
 
-  it("saves only the changed permission groups of a role", async () => {
+    it("saves only changed permissions, including the send-comments permission", async () => {
     await startAs([adminMembership], "m-admin");
     request.mockImplementation(async (endpoint: string) => {
       if (endpoint === "GET /staff") return { items: members };
       if (endpoint === "GET /roles/permissions") return { items: perms() };
-      if (endpoint === "PUT /roles/assistant/permissions") return { ...perms()[1], permissions: { ...perms()[1].permissions, scores: "write", comments_reports: "none" } };
+        if (endpoint === "PUT /roles/assistant/permissions") return { ...perms()[1], permissions: { ...perms()[1].permissions, scores: "write", comments_reports: "none", send_comments: "write" } };
       throw new Error(endpoint);
     });
     renderPage();
     const asst = await screen.findByRole("region", { name: "Quyền Trợ giảng" });
     fireEvent.click(within(within(asst).getByRole("tablist", { name: "Trợ giảng: Điểm" })).getByRole("tab", { name: "Sửa" }));
-    fireEvent.click(within(within(asst).getByRole("tablist", { name: "Trợ giảng: Nhận xét và báo cáo" })).getByRole("tab", { name: "Không" }));
+      fireEvent.click(within(within(asst).getByRole("tablist", { name: "Trợ giảng: Nhận xét và báo cáo" })).getByRole("tab", { name: "Không" }));
+      fireEvent.click(within(within(asst).getByRole("tablist", { name: "Trợ giảng: Gửi nhận xét" })).getByRole("tab", { name: "Sửa" }));
     fireEvent.click(within(asst).getByRole("button", { name: "Lưu quyền" }));
     await waitFor(() => expect(calls("PUT /roles/assistant/permissions")).toHaveLength(1));
-    expect((calls("PUT /roles/assistant/permissions")[0][1] as { body: unknown }).body).toEqual({ permissions: { scores: "write", comments_reports: "none" } });
+      expect((calls("PUT /roles/assistant/permissions")[0][1] as { body: unknown }).body).toEqual({ permissions: { scores: "write", comments_reports: "none", send_comments: "write" } });
   });
 
   it("explains a last-admin conflict", async () => {

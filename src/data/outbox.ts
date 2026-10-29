@@ -98,6 +98,39 @@ export async function persistScoreCommands(entries: Array<{ parts: Array<string 
     throw new Error("Không lưu được vào bộ nhớ trên thiết bị.");
   }
 }
+
+/** Persist an imported set of slips and its sync commands in one local transaction. */
+export async function persistSlipCommands(entries: Array<{ parts: Array<string | number | null>; wireRecord: Record<string, unknown>; command: SyncCommand }>): Promise<void> {
+  if (!entries.length) return;
+  const identity = identityKey(); const cache = getCacheIdentity(); if (!cache) throw new Error("Đăng nhập để lưu thay đổi.");
+  const prepared = entries.map(({ parts, wireRecord, command }) => ({
+    key: rowKey("slip", parts), wireRecord, command,
+    row: { id: command.id, identity, type: command.type, payload: command.payload, base_version: ("base_version" in command && command.base_version !== undefined ? command.base_version : 0), membership_id: cache.membershipId, created_at: command.created_at, status: "pending" as const, cell_key: keyForCommand(command), entity_key: rowKey("slip", parts) } as OutboxRow,
+  }));
+  try {
+    await db.transaction("rw", [db.slips, db.outbox, db.meta], async () => {
+      if (await db.meta.get(logoutLockKey(cache.userId))) throw new Error("Đang đăng xuất, thử lại sau.");
+      for (const item of prepared) {
+        await db.slips.put(stored("slip", item.key, item.wireRecord) as any);
+        const cellKey = item.row.cell_key;
+        const matching = cellKey ? await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "pending").first() : undefined;
+        const payload = matching ? mergeSlipPayload(matching.payload, item.row.payload) as OutboxRow["payload"] : item.row.payload;
+        const row = matching ? { ...item.row, payload, base_version: matching.base_version } : item.row;
+        if (matching) await db.outbox.delete(matching.id);
+        if (cellKey) await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "rejected").delete();
+        await db.outbox.put(row);
+      }
+    });
+    setSaveStatus("local");
+    const pending = prepared.map(({ row }) => ({ id: row.id, entity: row.type, recordId: row.entity_key!, createdAt: row.created_at }));
+    commitState("pending", "slips", draft => { draft.pending = [...draft.pending.filter(item => !pending.some(next => next.entity === item.entity && next.recordId === item.recordId)), ...pending]; });
+    scheduleSync();
+  } catch (error) {
+    setSaveStatus("error");
+    if (error instanceof Error && error.message === "Đang đăng xuất, thử lại sau.") throw error;
+    throw new Error("Không lưu được vào bộ nhớ trên thiết bị.");
+  }
+}
 export async function pendingCommandCount(): Promise<number> {
   const cache = getCacheIdentity();
   if (!cache) return 0;

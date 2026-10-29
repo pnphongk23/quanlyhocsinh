@@ -165,7 +165,10 @@ export type PermissionGroup =
   | "sessions_attendance"
   | "scores"
   | "lectures"
-  | "comments_reports";
+  | "comments_reports"
+  | "send_comments";
+
+export type CorePermissionGroup = Exclude<PermissionGroup, "send_comments">;
 
 export type PermissionLevel = "none" | "read" | "write";
 
@@ -177,7 +180,9 @@ export interface Role {
   kind: RoleKind;
   /** System roles (Admin) cannot be edited or deleted. */
   system: boolean;
-  permissions: Record<PermissionGroup, PermissionLevel>;
+  permissions: Record<CorePermissionGroup, PermissionLevel> & {
+    send_comments?: "none" | "write";
+  };
 }
 
 export interface Member {

@@ -35,7 +35,17 @@ export function switchRole(memberId: string): void {
 
 export function isAdmin(): boolean { return getActiveRole()?.system===true; }
 
-export function can(group: PermissionGroup, level: "read" | "write"): boolean { const p=getActiveRole()?.permissions[group]; return level==="read"?p==="read"||p==="write":p==="write"; }
+export function permissionAllows(permissions: Role["permissions"] | undefined, group: PermissionGroup, level: "read" | "write"): boolean {
+  if (group === "send_comments" && level === "read") return false;
+  const value = group === "send_comments"
+    ? permissions?.send_comments ?? (permissions?.comments_reports === "write" ? "write" : "none")
+    : permissions?.[group];
+  return level === "read" ? value === "read" || value === "write" : value === "write";
+}
+
+export function can(group: PermissionGroup, level: "read" | "write"): boolean {
+  return permissionAllows(getActiveRole()?.permissions, group, level);
+}
 
 export function requirePermission(group: PermissionGroup, level: "read" | "write"): void { if(!can(group,level)) throw new Error("Bạn không có quyền thực hiện thao tác này."); }
 

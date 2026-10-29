@@ -9,6 +9,7 @@ const subjects: Record<string, string> = {
   "score.set": "Điểm",
   "attendance.set": "Điểm danh",
   "slip.set": "Nhận xét",
+  "slip.send": "Phiếu nhận xét",
   "homework.grade.set": "Chấm bài tập",
 };
 
