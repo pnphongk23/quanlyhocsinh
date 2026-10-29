@@ -10,10 +10,7 @@ struct GuardianOverviewPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-            HStack(spacing: 8) {
-                attendanceCard
-                Color.clear.frame(maxWidth: .infinity)
-            }
+            attendanceCard
             if let note = child.teacherNote {
                 GuardianNoteBox(text: note)
             }

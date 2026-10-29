@@ -589,10 +589,49 @@ final class I4FeatureStore: ObservableObject {
                            note: slip(sessionID: next.id, studentID: student.id)?.note ?? "")
     }
 
-    /// Marks one level for every student of the session in a single list action.
+    /// Marks one level for every student in one local write and one sync, like the web: the grades (and the next
+    /// session's draft slips that follow them) are queued together, so offline they wait as a group and online they
+    /// leave in a single push instead of one request per student.
     func gradeAll(_ section: HomeworkSection, students: [Student], level: HomeworkLevel) async {
+        guard let store, !students.isEmpty else { return }
+        var entries: [(value: HomeworkGrade, key: String, command: PendingCommand?)] = []
         for student in students {
-            await grade(section, student: student, level: level)
+            let old = grade(sectionID: section.id, studentID: student.id)
+            let row = HomeworkGrade(sectionId: section.id, studentId: student.id, level: level,
+                                    version: old?.version ?? 0, updatedAt: Self.now)
+            let payload = object([
+                "section_id": .string(section.id),
+                "student_id": .string(student.id),
+                "level": .string(level.rawValue)
+            ])
+            let command = PendingCommand(recordKey: key("homework_grade", section.id, student.id),
+                                         baseVersion: old?.version ?? 0, kind: "homework.grade.set", payload: payload)
+            entries.append((row, command.recordKey, command))
+        }
+        do {
+            try await store.writeAll(entries)
+            await refresh()
+            let slipEntries = regradedSlipWrites(of: section, students: students)
+            if !slipEntries.isEmpty { try await store.writeAll(slipEntries) }
+            await syncIfNeeded()
+            await refresh()
+        } catch { errorMessage = String(localized: "feature.scores.khong.luu.uoc.ket.qua.cham") }
+    }
+
+    /// The `slip.set` writes that bring each student's draft slip in the next session in line with the grades now saved.
+    private func regradedSlipWrites(of section: HomeworkSection,
+                                    students: [Student]) -> [(value: SessionSlip, key: String, command: PendingCommand?)] {
+        guard let graded = session(id: section.sessionId),
+              let next = HomeworkRules.gradingPlan(sessions(in: graded.classId), after: graded).session else { return [] }
+        return students.compactMap { student in
+            guard let change = HomeworkRules.regradedSlip(slip: slip(sessionID: next.id, studentID: student.id),
+                                                          sections: sections(sessionID: graded.id), grades: grades,
+                                                          studentID: student.id),
+                  let write = slipWrite(sessionID: next.id, student: student,
+                                        grading: .criteria(change.criteria, comment: change.comment),
+                                        note: slip(sessionID: next.id, studentID: student.id)?.note ?? "")
+            else { return nil }
+            return (write.row, write.command.recordKey, write.command)
         }
     }
 

@@ -145,6 +145,8 @@ final class AuthModel {
     private(set) var isLocked = false
     private(set) var logoutBlock: LogoutBlock?
     private(set) var message: String?
+    /// The role row being opened; the role screen shows a spinner on it and locks the others.
+    private(set) var selectingMembershipID: String?
     private(set) var recoveryPhone = ""
     enum LoginStep: Equatable { case phone, password }
     private(set) var loginStep: LoginStep = .phone
@@ -412,6 +414,9 @@ final class AuthModel {
     @discardableResult
     func selectMembership(_ membership: Membership) async -> Bool {
         guard let currentUser = session?.user ?? identity?.user else { return false }
+        guard selectingMembershipID == nil else { return false }
+        selectingMembershipID = membership.id
+        defer { selectingMembershipID = nil }
         message = nil
         do {
             let scopeStore = try makeStore(user: currentUser, membershipId: "")

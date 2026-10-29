@@ -45,6 +45,36 @@
         }
       }
     },
+    "guardian.schedule.title" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lịch học của con"
+          }
+        }
+      }
+    },
+    "guardian.upcoming.title" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buổi sắp tới"
+          }
+        }
+      }
+    },
+    "guardian.upcoming.empty" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa có buổi học sắp tới"
+          }
+        }
+      }
+    },
     "guardian.childPicker.title" : {
       "localizations" : {
         "vi" : {

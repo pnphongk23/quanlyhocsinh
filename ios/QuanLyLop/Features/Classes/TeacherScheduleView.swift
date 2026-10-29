@@ -257,7 +257,7 @@ struct TeacherScheduleView: View {
         }
     }
 
-    private struct DayCell: Hashable {
+    struct DayCell: Hashable {
         let date: String
         let inMonth: Bool
         let day: Int
@@ -386,7 +386,7 @@ struct TeacherScheduleView: View {
         selectedDate = TeacherFormat.iso(year: year, month: month, day: day)
     }
 
-    private static func daysInMonth(_ year: Int, _ month: Int) -> Int {
+    static func daysInMonth(_ year: Int, _ month: Int) -> Int {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh") ?? .current
         var components = DateComponents()
@@ -397,7 +397,7 @@ struct TeacherScheduleView: View {
         return range.count
     }
 
-    private static func addDays(_ iso: String, _ amount: Int) -> String {
+    static func addDays(_ iso: String, _ amount: Int) -> String {
         let parts = TeacherFormat.components(iso)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh") ?? .current
@@ -412,7 +412,7 @@ struct TeacherScheduleView: View {
     }
 
     /// `monthGrid` + `trimMonthWeeks` of `sessionGroups.ts`.
-    private static func trimmedWeeks(_ year: Int, _ month: Int) -> [[DayCell]] {
+    static func trimmedWeeks(_ year: Int, _ month: Int) -> [[DayCell]] {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh") ?? .current
         calendar.firstWeekday = 2

@@ -369,6 +369,8 @@ struct AppHomeworkLevelControl: View {
                     Text(option.label)
                         .appText(AppText.homeworkLevel)
                         .multilineTextAlignment(.center)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .foregroundStyle(selected ? option.foreground : AppColors.muted)
                         .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
                         .padding(.horizontal, 4).padding(.vertical, 2)
@@ -441,11 +443,13 @@ struct AppSheet<Content: View, Footer: View>: View {
             ScrollView { content.padding(.horizontal, 24) }
                 .scrollDismissesKeyboard(.interactively)
 
-            VStack(spacing: 8) { footer }
-                .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 16)
-                .overlay(alignment: .top) {
-                    AppColors.border.frame(height: 1)
-                }
+            if Footer.self != EmptyView.self {
+                VStack(spacing: 8) { footer }
+                    .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 16)
+                    .overlay(alignment: .top) {
+                        AppColors.border.frame(height: 1)
+                    }
+            }
         }
         .background(AppColors.surface)
         .presentationDetents([.medium, .large])

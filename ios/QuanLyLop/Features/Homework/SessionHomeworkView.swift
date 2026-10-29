@@ -143,68 +143,76 @@ struct SessionHomeworkView: View {
         }
     }
 
-    /// One row picks the part being graded; the class-wide mark sits in the row's own menu.
+    /// The parts of last session's homework as a row of chips (name and graded count); the class-wide mark sits in
+    /// the menu beside the summary line.
     private func partPicker(_ progress: I4SectionProgress, session: ClassSession) -> some View {
         let giving = previousSession
         let summary = String.localizedStringWithFormat(
             String(localized: "homework.grading.summary", table: "Teacher"),
             I4Format.dayMonth(giving?.date ?? session.date),
             String(progress.summary.graded), String(progress.summary.total))
-        return HStack(spacing: 4) {
-            Menu {
-                Picker(selection: Binding(get: { progress.section.kind }, set: { selectedKind = $0 })) {
+        return VStack(alignment: .leading, spacing: AppSpace.s8) {
+            HStack(spacing: AppSpace.s4) {
+                Text(summary)
+                    .appText(AppText.muted)
+                    .foregroundStyle(AppColors.muted)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if data.canWriteCommentsReports { bulkMenu(progress) }
+            }
+            ScrollView(.horizontal) {
+                HStack(spacing: AppSpace.s8) {
                     ForEach(previousProgress) { option in
-                        Text(HomeworkRules.partLabel(option.section)).tag(option.section.kind)
+                        partChip(option, selected: option.section.kind == progress.section.kind)
                     }
-                } label: {
-                    Text(String(localized: "homework.part.picker.a11y", table: "Teacher"))
+                }
+            }
+            .scrollIndicators(.hidden)
+            .accessibilityIdentifier("homework.partPicker")
+        }
+        .padding(.horizontal, AppMetrics.cardPaddingHorizontal)
+        .padding(.vertical, AppSpace.s12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+    }
+
+    private func partChip(_ option: I4SectionProgress, selected: Bool) -> some View {
+        Button { selectedKind = option.section.kind } label: {
+            Text("\(HomeworkRules.partLabel(option.section)) · \(option.summary.graded)/\(option.summary.total)")
+                .appText(AppText.chip)
+                .foregroundStyle(selected ? AppState.selectedFg : AppColors.text)
+                .lineLimit(1)
+                .padding(.horizontal, AppSpace.s16)
+                .frame(minHeight: AppMetrics.tap)
+                .background(selected ? AppState.selectedBg : AppColors.background,
+                            in: RoundedRectangle(cornerRadius: AppRadius.chip))
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
+        .accessibilityLabel(String(localized: "homework.part.picker.a11y", table: "Teacher"))
+    }
+
+    private func bulkMenu(_ progress: I4SectionProgress) -> some View {
+        Menu {
+            Button {
+                Task {
+                    await data.gradeAll(progress.section, students: students, level: .done)
+                    error = data.errorMessage
+                    await saveStatusSource?.refresh()
                 }
             } label: {
-                HStack(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(summary)
-                            .appText(AppTextStyle(size: 13, weight: .regular, lineHeight: 18.85))
-                            .foregroundStyle(AppColors.muted)
-                            .lineLimit(1)
-                        Text(HomeworkRules.partLabel(progress.section))
-                            .appText(AppTextStyle(size: 16, weight: .semiBold, lineHeight: 22))
-                            .foregroundStyle(AppColors.text)
-                            .lineLimit(1)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(AppColors.muted)
-                }
-                .padding(.leading, 16)
-                .frame(maxWidth: .infinity, minHeight: AppMetrics.buttonHeightLarge, alignment: .leading)
+                Label(String(localized: "feature.homework.anh.dau.ca.lop.hoan.thanh"), systemImage: "checkmark.circle")
+            }
+            .accessibilityIdentifier("homework.grade.bulk")
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 18, weight: .regular))
+                .foregroundStyle(AppColors.muted)
+                .frame(width: AppMetrics.tap, height: AppMetrics.tap)
                 .contentShape(Rectangle())
-            }
-            .accessibilityLabel(String(localized: "homework.part.picker.a11y", table: "Teacher"))
-            if data.canWriteCommentsReports {
-                Menu {
-                    Button {
-                        Task {
-                            await data.gradeAll(progress.section, students: students, level: .done)
-                            error = data.errorMessage
-                            await saveStatusSource?.refresh()
-                        }
-                    } label: {
-                        Label(String(localized: "feature.homework.anh.dau.ca.lop.hoan.thanh"), systemImage: "checkmark.circle")
-                    }
-                    .accessibilityIdentifier("homework.grade.bulk")
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 18, weight: .regular))
-                        .foregroundStyle(AppColors.muted)
-                        .frame(width: AppMetrics.tap, height: AppMetrics.tap)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityLabel(String(localized: "homework.part.more.a11y", table: "Teacher"))
-            }
         }
-        .padding(.trailing, 4)
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+        .accessibilityLabel(String(localized: "homework.part.more.a11y", table: "Teacher"))
     }
 
     private func studentCard(_ section: HomeworkSection, student: Student) -> some View {
@@ -217,25 +225,18 @@ struct SessionHomeworkView: View {
                 Text(student.name)
                     .appText(AppTextStyle(size: 15, weight: .semiBold, lineHeight: 19.5))
                     .foregroundStyle(AppColors.text)
+                    .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                HStack(spacing: 4) {
-                    if absent {
-                        Text(String(localized: "feature.homework.vang.buoi.giao.bai"))
-                            .appText(AppTextStyle(size: 12, weight: .semiBold, lineHeight: 18))
-                            .foregroundStyle(AppColors.warning)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(AppColors.warningSoft, in: Capsule())
-                    }
-                    if level == nil {
-                        Text(String(localized: "feature.homework.chua.cham"))
-                            .appText(AppTextStyle(size: 13, weight: .semiBold, lineHeight: 19.5))
-                            .foregroundStyle(AppColors.muted)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 4)
-                            .background(AppColors.neutralSoft, in: Capsule())
-                    }
+                if level == nil {
+                    AppPill(title: String(localized: "feature.homework.chua.cham"), tone: .neutral)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
+            }
+            if absent {
+                AppPill(title: String(localized: "feature.homework.vang.buoi.giao.bai"), tone: .warning)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             AppHomeworkLevelControl(level: level, isEnabled: data.canWriteCommentsReports) { newLevel in
                 Task {

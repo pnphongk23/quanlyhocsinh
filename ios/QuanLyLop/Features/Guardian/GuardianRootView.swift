@@ -22,6 +22,7 @@ enum GuardianTab: String, CaseIterable, Identifiable {
 enum GuardianDetail: Hashable {
     case ticket(String)
     case scores
+    case schedule
     case report
 }
 
@@ -106,6 +107,8 @@ struct GuardianRootView: View {
                 shortcut(String(localized: "guardian.scores", table: "Guardian"), icon: "chart.bar", action: { classesPath.append(.scores) })
                 shortcut(String(localized: "feature.guardian.bao.cao"), icon: "doc.text", action: { classesPath.append(.report) })
             }
+            GuardianUpcomingSection(child: child) { classesPath.append(.schedule) }
+                .padding(.top, AppMetrics.sectionGap - TeacherMetrics.contentGap)
             AppSection(title: String(localized: "guardian.sessionList", table: "Guardian")) {
                 GuardianSessionListPage(child: child) { row in classesPath.append(row.destination) }
             }
@@ -143,7 +146,6 @@ struct GuardianRootView: View {
     private func rootPage<Content: View>(title: String,
                                          @ViewBuilder content: @escaping (GuardianChildData) -> Content) -> some View {
         GuardianScroll {
-            updatedLine
             if isLoading && dashboard == nil {
                 ProgressView().frame(maxWidth: .infinity, minHeight: 160)
             } else if let child {
@@ -188,6 +190,8 @@ struct GuardianRootView: View {
                 }
                 .navigationTitle(String(localized: "guardian.scores", table: "Guardian"))
                 .navigationBarTitleDisplayMode(.inline)
+            case .schedule:
+                GuardianScheduleView(child: child)
             case .report:
                 GuardianReportView(child: child)
                 .navigationTitle(String(localized: "feature.guardian.bao.cao"))
@@ -205,26 +209,6 @@ struct GuardianRootView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    @ViewBuilder private var updatedLine: some View {
-        if let dashboard {
-            Text(updatedText(dashboard))
-                .appDynamicText(AppTextStyle(size: 12, weight: .regular, lineHeight: 18))
-                .foregroundStyle(AppColors.muted)
-        }
-    }
-
-    private func updatedText(_ dashboard: GuardianDashboard) -> String {
-        guard let updatedAt = dashboard.updatedAt else {
-            return dashboard.isOffline ? String(localized: "reports.guardian.offline", table: "Reports") : ""
-        }
-        let formatted = updatedAt.formatted(Date.FormatStyle(date: .numeric, time: .shortened)
-            .locale(Locale(identifier: "vi_VN")))
-        if dashboard.isOffline {
-            return String.localizedStringWithFormat(String(localized: "reports.guardian.offlineSince", table: "Reports"), formatted)
-        }
-        return String.localizedStringWithFormat(String(localized: "guardian.updatedAt", table: "Guardian"), formatted)
-    }
-
     @ViewBuilder private var childSwitcher: some View {
         if let child {
             Button { if children.count > 1 { showingChildPicker = true } } label: {
@@ -240,35 +224,14 @@ struct GuardianRootView: View {
     }
 
     private var childPicker: some View {
-        NavigationStack {
-            List(children, id: \.student.id) { item in
-                Button {
-                    selectedChildID = item.student.id
-                    months[item.student.id] = nil
-                    showingChildPicker = false
-                } label: {
-                    HStack(spacing: 12) {
-                        Text(AppInitials.of(item.student.name)).frame(width: 40, height: 40).background(AppColors.primarySoft, in: Circle())
-                        VStack(alignment: .leading) {
-                            Text(item.student.name).foregroundStyle(AppColors.text)
-                            Text(item.className).foregroundStyle(AppColors.muted)
-                        }
-                        Spacer()
-                          if item.student.id == child?.student.id {
-                              Image(systemName: "checkmark").foregroundStyle(AppState.selectedFg)
-                          }
-                      }
-                      .frame(minHeight: 44)
-                      .padding(.horizontal, 12)
-                      .background(item.student.id == child?.student.id ? AppState.selectedBg : AppColors.surface,
-                                  in: RoundedRectangle(cornerRadius: AppRadius.row))
-                  }.buttonStyle(.plain)
-            }
-            .navigationTitle(String(localized: "guardian.childPicker.title", table: "Guardian"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(String(localized: "feature.auth.ong")) { showingChildPicker = false } } }
-        }
-        .presentationDetents([.medium, .large])
+        GuardianChildPickerSheet(children: children.map { .init(id: $0.student.id, name: $0.student.name, className: $0.className) },
+                                 selectedID: child?.student.id,
+                                 select: { id in
+                                     selectedChildID = id
+                                     months[id] = nil
+                                     showingChildPicker = false
+                                 },
+                                 close: { showingChildPicker = false })
     }
 
     private func month(for child: GuardianChildData) -> String {

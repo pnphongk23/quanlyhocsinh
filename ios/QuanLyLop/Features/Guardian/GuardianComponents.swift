@@ -292,6 +292,75 @@ struct GuardianScroll<Content: View>: View {
     }
 }
 
+// MARK: - Chọn con (sheet)
+
+/// The "Chọn con" sheet: the app's standard sheet with one selectable row per child. A long name wraps to two
+/// lines; the class name stays on one.
+struct GuardianChildPickerSheet: View {
+    struct Item: Identifiable, Equatable { let id: String; let name: String; let className: String }
+
+    let children: [Item]
+    let selectedID: String?
+    let select: (String) -> Void
+    let close: () -> Void
+
+    var body: some View {
+        AppSheet(title: String(localized: "guardian.childPicker.title", table: "Guardian")) {
+            rows
+        } footer: {
+            EmptyView()
+        } close: {
+            close()
+        }
+        .accessibilityIdentifier("guardian.childPicker")
+    }
+
+    /// The selectable rows alone, so a test can measure them without the sheet's scroll view.
+    var rows: some View {
+        VStack(spacing: AppSpace.s8) {
+            ForEach(children) { item in
+                row(item)
+            }
+        }
+        .padding(.bottom, AppSpace.s24)
+    }
+
+    private func row(_ item: Item) -> some View {
+        let active = item.id == selectedID
+        return Button { select(item.id) } label: {
+            HStack(spacing: AppSpace.s12) {
+                Text(AppInitials.of(item.name))
+                    .appText(AppText.caption)
+                    .foregroundStyle(AppColors.primaryInk)
+                    .frame(width: AppMetrics.tap - AppSpace.s4, height: AppMetrics.tap - AppSpace.s4)
+                    .background(active ? AppColors.surface : AppColors.primarySoft, in: Circle())
+                VStack(alignment: .leading, spacing: AppSpace.s2) {
+                    Text(item.name)
+                        .appText(AppText.label)
+                        .foregroundStyle(AppColors.text)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    Text(item.className)
+                        .appText(AppText.muted)
+                        .foregroundStyle(AppColors.muted)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                if active {
+                    Image(systemName: "checkmark").foregroundStyle(AppState.selectedFg)
+                }
+            }
+            .padding(.horizontal, AppSpace.s12)
+            .padding(.vertical, AppSpace.s8)
+            .frame(maxWidth: .infinity, minHeight: AppMetrics.tap, alignment: .leading)
+            .background(active ? AppState.selectedBg : AppColors.background, in: RoundedRectangle(cornerRadius: AppRadius.row))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? [.isSelected] : [])
+        .accessibilityIdentifier("guardian.childPicker.row.\(item.id)")
+    }
+}
+
 // MARK: - Chọn con (`.chips`, `.chip`, ảnh 15)
 
 struct GuardianChildChips: View {

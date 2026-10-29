@@ -32,8 +32,9 @@ actor SessionController {
         let result = try await api.send(try .json(method: .put, path: "session/membership", body: Selection(membershipId: id)), as: MembershipSelection.self)
         await push.clearDeliveredNotifications()
         status.reset()
-        // Registration failure only loses push, not the acknowledged identity change.
-        _ = try? await push.register(membershipId: result.activeMembershipId)
+        // Push registration does not gate opening the role: a failure only loses push, not the identity change.
+        let registrar = push
+        Task { _ = try? await registrar.register(membershipId: result.activeMembershipId) }
         return result
     }
 }

@@ -220,6 +220,29 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertNil(fields["hw_manual"], "the flag is left as it is")
     }
 
+    func testMarkingTheWholeClassDoneLeavesInOneSyncPushWithOneGradePerStudent() async throws {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
+            "class_session": [session("before", date: "2026-10-19")],
+            "homework_section": [part("p", session: "before")]
+        ], deleted: []))
+        let api = CountingAPI()
+        let data = I4FeatureStore(store: store, api: api)
+        await data.refresh()
+        let section = try XCTUnwrap(data.sections(sessionID: "before").first)
+        let students = ["a", "b", "c", "d"].map {
+            Student(id: $0, classId: "c", name: $0, parentPhone: nil, enrolledAt: "2026-09-01", leftAt: nil,
+                    status: .active, version: 1)
+        }
+
+        await data.gradeAll(section, students: students, level: .done)
+
+        XCTAssertEqual(api.pushRequests, 1, "one request for the whole class, not one per student")
+        XCTAssertEqual(api.pushedCommandCount, 4)
+        XCTAssertEqual(Set(data.grades(sectionID: section.id).map(\.studentId)), ["a", "b", "c", "d"])
+        XCTAssertTrue(data.grades(sectionID: section.id).allSatisfy { $0.level == .done })
+    }
+
     func testAssignAllDefaultsWritesCriteriaWithTheirSentenceAndClearsTheManualFlag() async throws {
         let (store, data) = try await seededWithHandSentence()
         try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [

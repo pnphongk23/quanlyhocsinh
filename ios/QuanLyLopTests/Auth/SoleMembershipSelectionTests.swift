@@ -70,6 +70,41 @@ final class SoleMembershipSelectionTests: XCTestCase {
         XCTAssertEqual(calls, ["GET me"])
     }
 
+    func testTappingARoleTwiceSendsOneSelectionAndMarksTheRowWhileItRuns() async throws {
+        let api = SelectionAPI(me: identity([membership(), membership(id: "second")]), delayNanoseconds: 300_000_000)
+        let model = try model(api: api, cache: IdentityBox(nil))
+        await model.restoreSession()
+        XCTAssertEqual(model.screen, .chooseRole)
+        XCTAssertNil(model.selectingMembershipID)
+
+        let target = try XCTUnwrap(model.memberships.first { $0.id == "late-member" })
+        let first = Task { await model.selectMembership(target) }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(model.selectingMembershipID, "late-member", "the tapped row shows its spinner")
+        let second = await model.selectMembership(target)
+        XCTAssertFalse(second, "a second tap while the first runs does nothing")
+        let opened = await first.value
+
+        XCTAssertTrue(opened)
+        XCTAssertNil(model.selectingMembershipID)
+        let calls = await api.calls
+        XCTAssertEqual(calls.filter { $0 == "PUT session/membership" }.count, 1)
+    }
+
+    func testFailedRoleSelectionReopensTheRowsWithAMessage() async throws {
+        let api = SelectionAPI(me: identity([membership(), membership(id: "second")]), selectionFails: true)
+        let model = try model(api: api, cache: IdentityBox(nil))
+        await model.restoreSession()
+        let target = try XCTUnwrap(model.memberships.first)
+
+        let opened = await model.selectMembership(target)
+
+        XCTAssertFalse(opened)
+        XCTAssertNil(model.selectingMembershipID)
+        XCTAssertNotNil(model.message)
+        XCTAssertEqual(model.screen, .chooseRole)
+    }
+
     func testFailedSelectionFallsBackToTheRoleScreenWithoutRetrying() async throws {
         let api = SelectionAPI(me: identity([membership()]), selectionFails: true)
         let model = try model(api: api, cache: IdentityBox(nil))
@@ -98,11 +133,13 @@ private actor SelectionAPI: APIClient {
     nonisolated let baseURL = URL(string: "https://fixture.invalid/v1")!
     private let me: CurrentIdentity
     private let selectionFails: Bool
+    private let delayNanoseconds: UInt64
     private(set) var calls: [String] = []
 
-    init(me: CurrentIdentity, selectionFails: Bool = false) {
+    init(me: CurrentIdentity, selectionFails: Bool = false, delayNanoseconds: UInt64 = 0) {
         self.me = me
         self.selectionFails = selectionFails
+        self.delayNanoseconds = delayNanoseconds
     }
 
     func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
@@ -111,6 +148,7 @@ private actor SelectionAPI: APIClient {
         case "me":
             return try WireJSON.decoder().decode(type, from: try WireJSON.encoder().encode(me))
         case "session/membership":
+            if delayNanoseconds > 0 { try? await Task.sleep(nanoseconds: delayNanoseconds) }
             if selectionFails { throw APIFailure.offline }
             let body = #"{"active_membership_id":"late-member","device_registration_cleared":false}"#
             return try WireJSON.decoder().decode(type, from: Data(body.utf8))

@@ -266,7 +266,9 @@ struct AuthRolePickerView: View {
     }
 
     private func roleCard(_ membership: Membership) -> some View {
-        Button { Task { await model.selectMembership(membership) } } label: {
+        let busy = model.selectingMembershipID
+        let isOpening = busy == membership.id
+        return Button { Task { await model.selectMembership(membership) } } label: {
             HStack(spacing: 14) {
                 Text(AuthRoleBadge.initials(membership.role))
                     .font(AppFont.font(size: 17, weight: .bold))
@@ -282,16 +284,23 @@ struct AuthRolePickerView: View {
                         .foregroundStyle(AppColors.muted)
                 }
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(AppColors.muted)
+                if isOpening {
+                    ProgressView().tint(AppColors.primary)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(AppColors.muted)
+                }
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.row))
+            .opacity(busy != nil && !isOpening ? AppState.disabledOpacity : 1)
         }
         .buttonStyle(.plain)
+        .disabled(busy != nil)
+        .accessibilityIdentifier("role.row.\(membership.id)")
     }
 
     private func roleSubtitle(for membership: Membership) -> String {
