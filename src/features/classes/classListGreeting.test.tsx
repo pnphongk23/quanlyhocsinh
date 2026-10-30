@@ -10,6 +10,8 @@ import { activateSession, clearSession } from "../../data/auth/session";
 import { replaceStore } from "../../data/store";
 import { createSeed } from "../../test/fixtures/seed";
 import { greetingFor, initialsOf } from "../../shared/personName";
+import s from "./classes.module.css";
+import tokens from "../../../design/tokens/tokens.json";
 
 const full = { classes: "write", students: "write", sessions_attendance: "write", scores: "write", lectures: "write", comments_reports: "write", send_comments: "write" } as const;
 const membership = {
@@ -18,12 +20,13 @@ const membership = {
   permissions: full, class_ids: [] as string[],
 };
 
-async function startAs(displayName: string) {
+async function startAs(displayName: string, includeClasses = false) {
   const user = { id: "u1", phone: "+84900000001", display_name: displayName, must_change_password: false };
   const me: MeResponse = { user, active_membership_id: membership.id, memberships: [membership] };
   await clearSession();
   await activateSession("tok", user, me, membership.id);
-  replaceStore({ ...createSeed(), classes: [] });
+  const seed = createSeed();
+  replaceStore({ ...seed, classes: includeClasses ? seed.classes : [] });
 }
 const renderPage = () => render(<MemoryRouter><ClassListPage /></MemoryRouter>);
 
@@ -55,5 +58,38 @@ describe("tên hiển thị", () => {
     expect(initialsOf("")).toBe("");
     expect(initialsOf("Thu")).toBe("T");
     expect(initialsOf(" an  nhiên ")).toBe("AN");
+  });
+});
+
+describe("thẻ lớp được chọn", () => {
+  it("dùng màu chữ và chip theo token on-accent trên desktop", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+    });
+    await startAs("QA teacher", true);
+    renderPage();
+
+    const link = document.querySelector('a[href="/lop/6a/buoi-hoc"]')!;
+    const card = link.firstElementChild;
+    expect(card?.className).toContain(s.classCardSelected);
+    expect(card?.querySelector(`.${s.cardSchedule}`)).not.toBeNull();
+    expect([...card!.querySelectorAll(`.${s.chips} > span`)].every((chip) => chip.className.includes(s.selectedChip))).toBe(true);
+  });
+
+  it("đạt tương phản chữ thường WCAG AA cho nền accent và chip", () => {
+    const luminance = (hex: string) => {
+      const rgb = hex.match(/[\da-f]{2}/gi)!.map((value) => parseInt(value, 16) / 255);
+      const linear = rgb.map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+      return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+    };
+    const contrast = (foreground: string, background: string) => {
+      const a = luminance(foreground);
+      const b = luminance(background);
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    };
+    const foreground = tokens.color["color-on-accent"];
+    expect(contrast(foreground, tokens.color["color-primary"])).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(foreground, tokens.color["color-primary-ink"])).toBeGreaterThanOrEqual(4.5);
   });
 });

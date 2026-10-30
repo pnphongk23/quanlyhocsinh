@@ -99,8 +99,8 @@
 }
 
 .classCardSelected {
-  background: var(--state-selected-bg);
-  color: var(--state-selected-fg);
+  background: var(--state-selected-accent-bg);
+  color: var(--state-selected-accent-fg);
 }
 
 .cardTitle {
@@ -119,6 +119,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.classCardSelected .cardSchedule {
+  color: var(--color-on-accent);
+}
+
 .cardNext {
   margin-top: -6px;
   font-size: var(--text-md);
@@ -131,6 +135,12 @@
   gap: var(--space-8);
   font-size: var(--text-md);
   font-variant-numeric: tabular-nums;
+}
+
+.classCardSelected .selectedChip {
+  border: 1px solid var(--state-selected-accent-chip-border);
+  background: var(--state-selected-accent-chip-bg);
+  color: var(--color-on-accent);
 }
 
 @media (min-width: 1024px) {

@@ -23,6 +23,8 @@ Màu, bo góc, chuyển động giữ nguyên giá trị.
 | `--fab-*`, `--fab-pad`, `:root[data-has-fab]` | FAB neo màn hình và chừa đáy nội dung |
 | `--dur-press` | Thay 100ms ghi cứng |
 | `--state-selected-*`, `--state-hover-bg`, `--state-pressed-bg`, `--state-focus-ring`, `--state-disabled-opacity`, `--state-success-*`, `--state-error-*`, `--state-pending-*` | Trạng thái thành phần dùng chung; bảng ở `design/ux-v2/rules.md` mục 6. Giá trị lấy từ token màu có sẵn |
+| `--color-on-accent`, `--state-selected-accent-*` | Chữ trắng và chip tối trong thẻ lớp được chọn trên nền accent; không đổi màu chọn chung của nav, lịch và chip |
+| `--dialog-action-gap`, `--card-success/error/pending-*`, `--dur-error-hold`, `--textarea-min`, `--chip-grid-min`, `--date-col`, `--row-chevron-size` | Token đã dùng trong web, đưa về nguồn chuẩn để đồng bộ bản chép |
 | `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms | Loading tối thiểu và thời gian giữ "Đã lưu" |
 | `--empty-mascot` 96px, `--empty-mascot-compact` 56px | Cỡ Mít trong `EmptyState` |
 | `--criteria-check-size` 20px, `--criteria-check-icon-size` 12px, `--comment-star-size` 24px | Kích thước tick tiêu chí và sao trong phiếu nhận xét |

@@ -58,13 +58,12 @@ function ClassCard({
   const rate = classAttendanceRate(item.id);
   const today = todayISO();
   const next = nextSessionOf(getStore(), item.id, today);
+  const accentSelected = desktop && selected;
 
   return (
     <Link to={`/lop/${item.id}/buoi-hoc`} className={s.classLink}>
       <div
-        className={
-          s.classCard + (desktop && selected ? " " + s.classCardSelected : "")
-        }
+        className={s.classCard + (accentSelected ? " " + s.classCardSelected : "")}
       >
         <h2 className={s.cardTitle}>{item.name}</h2>
         <p className={s.cardSchedule}>{scheduleText(item)}</p>
@@ -75,10 +74,10 @@ function ClassCard({
           </p>
         )}
         <div className={s.chips}>
-          <Chip>
+          <Chip className={accentSelected ? s.selectedChip : ""}>
             <b>{students.length}</b> học sinh
           </Chip>
-          <Chip>
+          <Chip className={accentSelected ? s.selectedChip : ""}>
             Chuyên cần <b>{rate === null ? "—" : `${Math.round(rate)}%`}</b>
           </Chip>
         </div>

@@ -24,6 +24,7 @@
   --color-primary-ink: #1e43b8;
   --color-primary-soft: #e8eefe;
   --color-on-primary: #ffffff;
+  --color-on-accent: #ffffff;
   --color-success: #14663f;
   --color-success-soft: #e7f6ec;
   --color-warning: #8a5300;
@@ -102,9 +103,10 @@
   /* Vùng bấm và kích thước */
   --tap: 44px;              /* mobile tối thiểu */
   --tap-desktop: 36px;
-  --criteria-check-size: 20px;
-  --criteria-check-icon-size: 12px;
-  --comment-star-size: 24px;
+    --criteria-check-size: 20px;
+    --criteria-check-icon-size: 12px;
+    --comment-star-size: 24px;
+  --dialog-action-gap: 8px; /* khoảng giữa các nút xác nhận */
   --control-h: 52px;        /* ô nhập */
   --button-h-sm: 44px;
   --button-h-md: 48px;
@@ -142,6 +144,10 @@
   /* Trạng thái thành phần (bảng state contract: design/ux-v2/rules.md mục 6) */
   --state-selected-bg: var(--color-primary-soft); /* đang chọn: nền, không viền */
   --state-selected-fg: var(--color-primary-ink);
+  --state-selected-accent-bg: var(--color-primary);
+  --state-selected-accent-fg: var(--color-on-accent);
+  --state-selected-accent-chip-bg: var(--color-primary-ink);
+  --state-selected-accent-chip-border: var(--color-primary-ink);
   --state-hover-bg: var(--color-neutral-soft);
   --state-pressed-bg: var(--color-border);
   --state-focus-ring: var(--focus-ring);
@@ -152,10 +158,24 @@
   --state-error-fg: var(--color-error);
   --state-pending-bg: var(--color-warning-soft);  /* đã lưu trên máy, chờ đồng bộ */
   --state-pending-fg: var(--color-warning);
+  --card-success-bg: var(--color-success-soft);
+  --card-success-border: var(--color-success);
+  --card-success-fg: var(--color-success);
+  --card-error-bg: var(--color-error-soft);
+  --card-error-border: var(--color-error);
+  --card-error-fg: var(--color-error);
+  --card-pending-bg: var(--color-warning-soft);
+  --card-pending-border: var(--color-warning);
+  --card-pending-fg: var(--color-warning);
   --dur-loading-min: 400ms;   /* loading hiện tối thiểu (lưu cục bộ); trùng SAVE_MIN_VISIBLE_MS */
   --dur-success-hold: 1600ms; /* giữ "Đã lưu"; trùng SAVE_SUCCESS_HOLD_MS */
+  --dur-error-hold: 4800ms;   /* giữ lỗi tải lại trước khi tự ẩn */
   --empty-mascot: 96px;
   --empty-mascot-compact: 56px;
+  --textarea-min: 200px;
+  --chip-grid-min: 132px;
+  --date-col: 64px;
+  --row-chevron-size: 12px;
 
   /* Bảng điểm: độ rộng cột và bước kéo */
   --grid-col-name-min: 140px;
