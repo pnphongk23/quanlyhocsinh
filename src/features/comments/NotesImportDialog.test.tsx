@@ -4,6 +4,8 @@ import { MemoryRouter } from "react-router-dom";
 import { buildTicketRows } from "../../data/homework";
 import { createSeed } from "../../test/fixtures/seed";
 import { replaceStore } from "../../data/store";
+vi.mock("../../shared/featureFlags", () => ({ FEATURE_NOTES_IMPORT: true }));
+
 import NotesImportDialog from "./NotesImportDialog";
 import CommentsPanel from "./CommentsPanel";
 
@@ -53,5 +55,13 @@ describe("Nhập từ ghi chú", () => {
     replaceStore(state);
     render(<MemoryRouter><CommentsPanel classId="6a" sessionId="6a-session-7" /></MemoryRouter>);
     expect(screen.queryByRole("button", { name: "Nhập từ ghi chú" })).not.toBeInTheDocument();
+  });
+
+  it("hiện nút nhập khi có quyền sửa và cờ tính năng bật", () => {
+    const state = createSeed();
+    replaceStore(state);
+    mocks.canWrite = true;
+    render(<MemoryRouter><CommentsPanel classId="6a" sessionId="6a-session-7" /></MemoryRouter>);
+    expect(screen.getByRole("button", { name: "Nhập từ ghi chú" })).toBeInTheDocument();
   });
 });

@@ -42,6 +42,7 @@ import {
 import s from "./CommentsPanel.module.css";
 import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 import NotesImportDialog from "./NotesImportDialog";
+import { FEATURE_NOTES_IMPORT } from "../../shared/featureFlags";
 
 function Star({ size = 16 }: { size?: number }) {
   return (
@@ -416,7 +417,7 @@ export default function CommentsPanel({
             )}
               <div className={s.footer}>
                 <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="lg" />
-                <Button size="lg" variant="surface" onClick={() => setNotesImportOpen(true)}>Nhập từ ghi chú</Button>
+                {FEATURE_NOTES_IMPORT && <Button size="lg" variant="surface" onClick={() => setNotesImportOpen(true)}>Nhập từ ghi chú</Button>}
               {canSend && (
               <Button
               size="lg"

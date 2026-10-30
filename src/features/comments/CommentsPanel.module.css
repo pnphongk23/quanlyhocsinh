@@ -192,6 +192,7 @@
 /* 40: nút gửi cả lớp dính đáy màn, cao 52 */
 .footer {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-8);
   padding: var(--space-8) 0;
   background: var(--color-bg);
@@ -214,7 +215,8 @@
 }
 
 .footer > button {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   border-radius: var(--radius-button);
 }
 

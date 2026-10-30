@@ -37,6 +37,7 @@ import s from "./CommentsDesktop.module.css";
 import d from "../class-space/desktop.module.css";
 import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 import NotesImportDialog from "./NotesImportDialog";
+import { FEATURE_NOTES_IMPORT } from "../../shared/featureFlags";
 
 /**
  * Tab Nhận xét trên web desktop (ảnh 04): danh sách em + khung soạn phiếu nằm
@@ -166,7 +167,7 @@ export default function CommentsDesktop({
           canWrite ? (
               <>
                 <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="md" />
-                <Button size="md" variant="surface" onClick={() => setNotesImportOpen(true)}>Nhập từ ghi chú</Button>
+                {FEATURE_NOTES_IMPORT && <Button size="md" variant="surface" onClick={() => setNotesImportOpen(true)}>Nhập từ ghi chú</Button>}
               {canSend && <>
               <Button
               size="md"
