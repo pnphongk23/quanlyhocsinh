@@ -122,6 +122,8 @@ export default function AttendanceDesktop({
   const counts = STATES.map(
     (status) => rows.filter((row) => row.status === status).length,
   );
+  const unmarkedCount = rows.filter((row) => row.status === null).length;
+  const allUnmarked = rows.length > 0 && unmarkedCount === rows.length;
   const warnings = students.filter((student) => studentAbsenceWarning(student.id));
 
   function setRow(studentId: string, patch: Partial<Draft>) {
@@ -243,19 +245,27 @@ export default function AttendanceDesktop({
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-            <div className={s.countRow}>
-              <span>
-                <b className={s.countPresent}>{counts[0]}</b> Có mặt
-              </span>
-              <span>
-                <b className={s.countLate}>{counts[1]}</b> Muộn
-              </span>
-              <span>
-                <b className={s.countAbsent}>{counts[2]}</b> Vắng
-              </span>
-            </div>
+                </tbody>
+              </table>
+              <div className={s.countRow}>
+                {allUnmarked ? (
+                  <span>
+                    Chưa điểm danh <b>{unmarkedCount}</b> em
+                  </span>
+                ) : (
+                  <>
+                    <span>
+                      <b className={s.countPresent}>{counts[0]}</b> Có mặt
+                    </span>
+                    <span>
+                      <b className={s.countLate}>{counts[1]}</b> Muộn
+                    </span>
+                    <span>
+                      <b className={s.countAbsent}>{counts[2]}</b> Vắng
+                    </span>
+                  </>
+                )}
+              </div>
           </div>
           <p className={d.muted13}>
             {sessionPrefix(session)}

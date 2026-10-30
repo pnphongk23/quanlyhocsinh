@@ -81,6 +81,8 @@ export default function AttendancePanel({
       ),
     [rows, viewOnly, stored],
   );
+  const unmarkedCount = students.length - counts.reduce((total, count) => total + count, 0);
+  const allUnmarked = students.length > 0 && unmarkedCount === students.length;
 
   const storedRows = Object.fromEntries(
     students.map((student) => {
@@ -198,11 +200,16 @@ export default function AttendancePanel({
           web 89: nút nằm cùng hàng với tiêu đề, tóm tắt 4 trạng thái trong thẻ */}
       {!viewOnly && (
       <div className={s.summaryRow}>
-        {!desktop && !readOnly && (
-          <p className={s.summary}>
-            <b>{counts[2]}</b> vắng mặt
-          </p>
-        )}
+        {!desktop && !readOnly &&
+          (allUnmarked ? (
+            <p className={`${s.summary} ${s.summaryUnmarked}`}>
+              Chưa điểm danh <b>{unmarkedCount}</b> em
+            </p>
+          ) : (
+            <p className={s.summary}>
+              <b>{counts[2]}</b> vắng mặt
+            </p>
+          ))}
         <div className={s.summaryActions}>
           {!viewOnly && (
             <Button
@@ -263,10 +270,16 @@ export default function AttendancePanel({
                 {sessionPrefix(session)}
                 {session.time ? ` · ${session.time}` : ""}
               </p>
-              <p className={s.cardSummary}>
-                <b>{counts[0]}</b> có mặt · <b>{counts[1]}</b> muộn ·{" "}
-                <b>{counts[2]}</b> vắng
-              </p>
+              {allUnmarked ? (
+                <p className={`${s.cardSummary} ${s.cardSummaryUnmarked}`}>
+                  Chưa điểm danh <b>{unmarkedCount}</b> em
+                </p>
+              ) : (
+                <p className={s.cardSummary}>
+                  <b>{counts[0]}</b> có mặt · <b>{counts[1]}</b> muộn ·{" "}
+                  <b>{counts[2]}</b> vắng
+                </p>
+              )}
             </div>
           )}
           <div className={desktop ? s.rosterCard : s.rosterList}>

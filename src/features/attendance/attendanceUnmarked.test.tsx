@@ -27,13 +27,26 @@ beforeEach(() => {
 const statusButtons = () => screen.getAllByRole("button", { name: /: .*Bấm để đổi$/ });
 
 describe("điểm danh buổi mới (mobile)", () => {
-  it("mỗi em hiện Chưa điểm danh, không có Có mặt sẵn, và 0 vắng mặt", () => {
+  it("hiện số em chưa điểm danh thay cho số vắng ban đầu", () => {
     const buttons = statusButtons();
     expect(buttons.length).toBeGreaterThan(1);
     for (const button of buttons) expect(button).toHaveTextContent("Chưa điểm danh");
     expect(screen.queryByText("Có mặt", { selector: "span" })).toBeNull();
-    expect(screen.getByText("vắng mặt").closest("p")).toHaveTextContent("0 vắng mặt");
+    expect(document.querySelector('p[class*="summary"]')).toHaveTextContent(`Chưa điểm danh ${buttons.length} em`);
+    expect(screen.queryByText("vắng mặt")).toBeNull();
     expect(screen.getByRole("button", { name: "Lưu điểm danh" })).toBeDisabled();
+  });
+
+  it("đếm vắng từ 0 sau khi đặt Có mặt cho một em", () => {
+    fireEvent.click(statusButtons()[0]);
+    expect(screen.getByText("vắng mặt").closest("p")).toHaveTextContent("0 vắng mặt");
+  });
+
+  it("đếm em được đặt Vắng sau khi thay đổi trạng thái", () => {
+    fireEvent.click(statusButtons()[0]);
+    fireEvent.click(statusButtons()[0]);
+    expect(statusButtons()[0]).toHaveTextContent("Vắng");
+    expect(screen.getByText("vắng mặt").closest("p")).toHaveTextContent("1 vắng mặt");
   });
 
   it("không ghi bản ghi nào khi chưa bấm", () => {
@@ -45,6 +58,7 @@ describe("điểm danh buổi mới (mobile)", () => {
     const total = statusButtons().length;
     fireEvent.click(screen.getByRole("button", { name: "Tất cả có mặt" }));
     for (const button of statusButtons()) expect(button).toHaveTextContent("Có mặt");
+    expect(screen.getByText("vắng mặt").closest("p")).toHaveTextContent("0 vắng mặt");
     const saveButton = screen.getByRole("button", { name: "Lưu điểm danh" });
     expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
