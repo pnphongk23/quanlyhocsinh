@@ -187,6 +187,8 @@ struct StaffFormSheet: View {
     private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var nameError: String? {
         if trimmedName.count > StaffNameRules.maxLength { return String(localized: "feature.staff.ten.toi.a.100.ky.tu") }
+        // Clearing a name that was there is flagged at once, with the text the server gives for the same case.
+        if trimmedName.isEmpty, name != (member?.displayName ?? "") { return String(localized: "feature.staff.vui.long.nhap.ten") }
         return saveController.error.flatMap(StaffStore.nameError(for:))
     }
 
