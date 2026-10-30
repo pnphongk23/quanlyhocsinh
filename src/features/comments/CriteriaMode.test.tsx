@@ -96,6 +96,13 @@ describe("CriteriaMode", () => {
   it("counts unmet students from preview criteria", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7");
     render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite preview={{ criteriaByStudent: { [rows[0].student.id]: 30 } }} />);
-    expect(screen.getAllByText("1 em chưa đạt")).toHaveLength(2);
+    expect(screen.getAllByText("6 em chưa có phiếu")).toHaveLength(5);
+  });
+
+  it("renders the no-slip badge text", () => {
+    const rows = buildTicketRows(createSeed(), "6a-session-7").slice(0, 3);
+    rows.forEach((row) => { row.comment = null; });
+    render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite />);
+    expect(screen.getAllByText("3 em chưa có phiếu")).toHaveLength(5);
   });
 });

@@ -4,7 +4,7 @@ import { toggleSlipCriterionDurable } from "../../data/repositories/comments";
 import { defaultSlipCriteria } from "../../data/slip";
 import type { HomeworkGrade } from "../../data/types";
 import { EmptyState, Pill, Segmented } from "../../shared/ui";
-import { canToggleCriterion, criteriaForRow, criteriaUnmetCount, rowHasCustomComment, SLIP_CRITERIA } from "./criteriaModel";
+import { canToggleCriterion, criteriaBadge, criteriaForRow, rowHasCustomComment, SLIP_CRITERIA } from "./criteriaModel";
 import s from "./CriteriaMode.module.css";
 
 export interface CriteriaPreview {
@@ -99,7 +99,7 @@ export default function CriteriaMode({
         <section className={s.group} key={criterion}>
           <div className={s.groupHead}>
             <h2>{index === 4 ? "Hoàn thành BTVN" : criterion}</h2>
-              <span className={s.count}>{criteriaUnmetCount(rows, index, initialCriteria, preview?.criteriaByStudent)} em chưa đạt</span>
+                <span className={s.count}>{criteriaBadge(rows, index, initialCriteria, preview?.criteriaByStudent).label}</span>
           </div>
           {index === 4 && <Pill tone="neutral">Theo chấm BTVN</Pill>}
           <p className={s.hint}>Chạm để bỏ chọn em chưa đạt</p>

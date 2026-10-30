@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { TicketRow } from "../../data/homework";
 import { createSeed } from "../../test/fixtures/seed";
 import { defaultSlipCriteria, generatedSlipSentence, starsFromCriteria } from "../../data/slip";
-import { canToggleCriterion, criteriaForRow, criteriaRowsForSession, criteriaUnmetCount, rowHasCustomComment } from "./criteriaModel";
+import { canToggleCriterion, criteriaBadge, criteriaForRow, criteriaRowsForSession, criteriaUnmetCount, rowHasCustomComment } from "./criteriaModel";
 
 function row(criteria: number, options: Partial<NonNullable<TicketRow["comment"]>> = {}): TicketRow {
   const seed = createSeed();
@@ -37,6 +37,30 @@ describe("criteria mode model", () => {
     expect(defaultSlipCriteria(grades)).toBe(15);
     const withoutSlip = { ...row(31), comment: null };
     expect(criteriaUnmetCount([withoutSlip], 4, () => defaultSlipCriteria(grades))).toBe(1);
+  });
+
+  it("labels students without a slip before counting unmet criteria", () => {
+    const noSlip = (id: string) => ({ ...row(31), student: { ...row(31).student, id }, comment: null });
+    const studentsWithoutSlips = [noSlip("no-slip-1"), noSlip("no-slip-2"), noSlip("no-slip-3")];
+    expect(criteriaBadge(studentsWithoutSlips, 0)).toEqual({ kind: "no-ticket", count: 3, label: "3 em chưa có phiếu" });
+  });
+
+  it("labels a class with slips and no unmet criteria as all met", () => {
+    expect(criteriaBadge([row(31), row(31)], 0)).toEqual({ kind: "all-met", count: 0, label: "Cả lớp đạt" });
+  });
+
+  it("counts unmet students when everyone has a slip", () => {
+    expect(criteriaBadge([row(30), row(30), row(31)], 0)).toEqual({ kind: "unmet", count: 2, label: "2 em chưa đạt" });
+  });
+
+  it("prioritizes students without a slip when the class also has unmet criteria", () => {
+    const mixed = [row(30), { ...row(31), student: { ...row(31).student, id: "no-slip" }, comment: null }];
+    expect(criteriaBadge(mixed, 0)).toEqual({ kind: "no-ticket", count: 1, label: "1 em chưa có phiếu" });
+  });
+
+  it("treats preview criteria as an existing slip", () => {
+    const noSlip = { ...row(31), comment: null };
+    expect(criteriaBadge([noSlip], 0, undefined, { [noSlip.student.id]: 31 })).toEqual({ kind: "all-met", count: 0, label: "Cả lớp đạt" });
   });
 
   it("lists only students enrolled on the session date, including joins and departures on that day", () => {
