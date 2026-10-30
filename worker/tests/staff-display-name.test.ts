@@ -45,6 +45,18 @@ describe('staff display name per workspace', () => {
     expect(await db.prepare('SELECT display_name FROM users WHERE id=?').bind(teacher.userId).first()).toEqual({ display_name: null });
   });
 
+  it('stores the Admin-entered name when adding a phone that already has an account', async () => {
+    const workspace = await registerWorkspace('Name add existing');
+    const phone = fakePhone();
+    const userId = await insertUser(phone, 'Account name');
+    const created = await call('/v1/staff', post({ phone, display_name: '  Cô Hoa  ', role: 'assistant' }), workspace.token);
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ kind: 'member', display_name: 'Cô Hoa' });
+    expect(await db.prepare('SELECT display_name FROM users WHERE id=?').bind(userId).first()).toEqual({ display_name: 'Account name' });
+    const token = await clubToken(workspace.workspaceId, userId, created.body.id);
+    expect((await call('/v1/me', {}, token)).body.memberships[0].display_name).toBe('Cô Hoa');
+  });
+
   it('lets an Admin rename themselves and shows the new name in /me', async () => {
     const workspace = await registerWorkspace('Name self');
     const self = (await call('/v1/staff', {}, workspace.token)).body.items.find((row: any) => row.is_self);

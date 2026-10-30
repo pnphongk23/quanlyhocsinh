@@ -131,11 +131,11 @@ export async function createStaff(db: D1Database, identity: Identity, input: Rec
   try {
     if (user) {
       const statements: D1PreparedStatement[] = [db.prepare(`INSERT INTO memberships
-        (id,workspace_id,user_id,role_id,status,scope_epoch,created_at,version)
-        SELECT ?,?,?,?,'active',1,?,1 WHERE NOT EXISTS (
+        (id,workspace_id,user_id,role_id,status,scope_epoch,created_at,version,display_name)
+        SELECT ?,?,?,?,'active',1,?,1,? WHERE NOT EXISTS (
           SELECT 1 FROM memberships m JOIN roles r ON r.id=m.role_id
            WHERE m.workspace_id=? AND m.user_id=? AND r.system_key IN ('admin','teacher','assistant'))`)
-        .bind(id, identity.workspaceId, user.id, roleIdValue, now, identity.workspaceId, user.id),
+        .bind(id, identity.workspaceId, user.id, roleIdValue, now, displayName, identity.workspaceId, user.id),
         ...classIds.map((classId) => db.prepare(`INSERT INTO member_classes(workspace_id,membership_id,class_id,created_at)
           SELECT ?,?,?,? WHERE EXISTS (SELECT 1 FROM memberships WHERE id=?)`)
           .bind(identity.workspaceId, id, classId, now, id))];

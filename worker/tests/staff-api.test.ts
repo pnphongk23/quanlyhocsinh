@@ -92,9 +92,9 @@ describe('staff management and role permissions', () => {
     const testId = await insertTest(admin.workspaceId, assigned, admin.userId);
     const phone = fakePhone();
     const userId = await insertUser(phone, 'Existing user');
-    const created = await call('/v1/staff', post({ phone, display_name: 'Ignored name', role: 'assistant', class_ids: [assigned] }), admin.token);
+    const created = await call('/v1/staff', post({ phone, display_name: 'Admin chosen name', role: 'assistant', class_ids: [assigned] }), admin.token);
     expect(created.status).toBe(201);
-    expect(created.body).toMatchObject({ kind: 'member', user_id: userId, display_name: 'Existing user', status: 'active' });
+    expect(created.body).toMatchObject({ kind: 'member', user_id: userId, display_name: 'Admin chosen name', status: 'active' });
     const token = (await login(phone)).body.token as string;
     const me = await call('/v1/me', {}, token);
     const membershipId = created.body.id as string;
