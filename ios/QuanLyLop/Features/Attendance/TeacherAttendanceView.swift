@@ -129,7 +129,7 @@ struct TeacherAttendanceView: View {
             } else {
                 HStack(spacing: 0) {
                     Text("\(absentCount)")
-                        .appText(AppTextStyle(size: 14, weight: .bold, lineHeight: 21))
+                        .appText(AppText.label)
                         .foregroundStyle(AppColors.error)
                     Text(String(localized: "feature.attendance.vang.mat")).appText(AppText.muted).foregroundStyle(AppColors.muted)
                 }
