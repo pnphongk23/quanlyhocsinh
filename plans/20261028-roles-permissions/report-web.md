@@ -97,3 +97,12 @@ Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 4
 - Kiểm trước deploy: tsc sạch, vitest toàn bộ 814 qua/4 bỏ qua, build OK; test giới hạn 3 buổi fail khi nới giới hạn.
 - Smoke trên alias chính (tài khoản QA phụ huynh, `shots-web/guardian-shots.mjs`, ảnh `plans/20261021-mvp/web/guardian-schedule/`): trang chủ đúng 3 buổi + "Tất cả", `/ph/lich` Tháng/Ngày, tháng ngoài cửa sổ gọi `GET /calendar`. Console lỗi: 0 ở cả Chromium và WebKit.
 - Log mạng WebKit trên alias: không có response ≥400; các request `requestfailed` đều `errorText = "cancelled"` (`/sync/snapshot/{class,class_session,attendance,student}` khi script `page.goto` chuyển trang giữa lúc đang tải, và `/calendar` khi chuyển tháng nhanh bị huỷ bằng AbortController). Chromium tương ứng `net::ERR_ABORTED`. Không có lỗi CORS/access control trong lượt này.
+
+## Lời chào theo tên người đăng nhập (trang Lớp) + đồng bộ token
+
+- Lỗi: `ClassListPage` ghi cứng "Xin chào, cô Lan" và avatar "CL" (sót từ prototype). Sửa: lời chào "Xin chào, {display_name}" (không thêm cô/thầy; không có tên thì "Xin chào"), avatar lấy chữ cái đầu hai từ cuối của tên (cùng hàm với Cài đặt, đưa vào `src/shared/personName.ts`), không có tên thì biểu tượng.
+- Quét `src/` (bỏ test/fixture/comment): không còn dữ liệu mẫu hiện ra UI thật. Còn lại chỉ là placeholder gợi ý trong ô nhập ("Cô Lan", "Lớp của cô Lan" ở đăng ký; "1. Nguyễn Thị An 0912 345 678" ở nhập danh sách) và `src/data/seed.ts` chỉ re-export fixture cho test, không được import từ code chạy thật.
+- Commit mvp-web: `c763869` (đồng bộ 4 token), `5460d55` (lời chào). Chưa push.
+- Kiểm trước deploy: tsc sạch, vitest 817 qua/4 bỏ qua, build OK.
+- Deployment mới (Production): `0af926de-3829-400d-8640-54dc66719086` (https://0af926de.qlh-staging-web.pages.dev). Rollback: `63de3ecc-1579-453e-8084-9a990d090877`, trước đó `862e3631-ff48-4f71-8f54-9999157a05dc`.
+- Ảnh trước/sau mobile 390 (tài khoản QA smoke): `plans/20261021-mvp/web/greeting/classes-before-390.png` (staging cũ: "Xin chào, cô Lan", "CL"), `classes-after-390.png` (preview local), `classes-live-after-390.png` (alias sau deploy: "Xin chào, {tên QA}").
