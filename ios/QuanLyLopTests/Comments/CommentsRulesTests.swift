@@ -298,6 +298,22 @@ final class CriteriaModeRulesTests: XCTestCase {
         XCTAssertNotNil(CriteriaModeRules.tapGrading(slip: draft, criterion: 1, sections: [], grades: [], studentID: "b"))
     }
 
+    func testChipLookIsPaleWithoutASlipEvenWhenHomeworkIsNotDone() {
+        let part = HomeworkSection(id: "p", classId: "c", sessionId: "before", kind: .vocabulary, title: "Từ vựng",
+                                   description: "", version: 1)
+        let notDone = HomeworkGrade(sectionId: "p", studentId: "a", level: .notDone, version: 1,
+                                    updatedAt: "2026-10-25T10:00:00.000Z")
+        let rows = [row("a", slip: nil), row("b", slip: slip("b", criteria: SlipRules.allCriteria & ~2)),
+                    row("c", slip: slip("c", criteria: SlipRules.allCriteria))]
+        for criterion in 0..<5 {
+            let chips = CriteriaModeRules.chips(rows: rows, criterion: criterion, sections: [part], grades: [notDone])
+            XCTAssertEqual(chips[0].look, .noSlip, "criterion \(criterion)")
+            XCTAssertEqual(chips[2].look, .met, "criterion \(criterion)")
+        }
+        let chips = CriteriaModeRules.chips(rows: rows, criterion: 1, sections: [part], grades: [notDone])
+        XCTAssertEqual(chips[1].look, .unmet)
+    }
+
     func testChipsCountUnmetAndMarkSentAndAbsent() {
         let rows = [row("a", slip: slip("a", criteria: SlipRules.allCriteria & ~2, status: .sent), attendance: .absent),
                     row("b", slip: nil), row("c", slip: slip("c", criteria: SlipRules.allCriteria & ~2))]

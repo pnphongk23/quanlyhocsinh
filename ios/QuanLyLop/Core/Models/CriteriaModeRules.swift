@@ -18,11 +18,16 @@ enum CriteriaModeRules {
         /// An old three-star slip cannot be edited; a chip of the notes draft can also be closed for other reasons.
         let isEditable: Bool
 
+        var look: ChipLook { !hasSlip ? .noSlip : unmet ? .unmet : .met }
+
         init(studentID: String, name: String, unmet: Bool, isLegacy: Bool, isSent: Bool, isAbsent: Bool, hasSlip: Bool = true, isEditable: Bool? = nil) {
             self.studentID = studentID; self.name = name; self.unmet = unmet; self.isLegacy = isLegacy
             self.isSent = isSent; self.isAbsent = isAbsent; self.hasSlip = hasSlip; self.isEditable = isEditable ?? !isLegacy
         }
     }
+
+    /// How a chip is painted: a student without a slip is always the pale default, whatever the criteria say.
+    enum ChipLook: Equatable { case met, unmet, noSlip }
 
     /// An old three-star slip with stars keeps its scale; an unscored old draft has nothing to protect.
     static func isLocked(_ slip: SessionSlip?) -> Bool {

@@ -108,7 +108,7 @@ struct CriteriaModeView: View {
             VStack(spacing: AppSpace.s2) {
                 Text(chip.name)
                     .appText(AppText.chip)
-                    .foregroundStyle(chip.unmet ? AppColors.text : chip.hasSlip ? AppState.selectedFg : AppColors.primaryInk)
+                    .foregroundStyle({ switch chip.look { case .unmet: AppColors.text; case .met: AppState.selectedFg; case .noSlip: AppColors.primaryInk } }())
                     .lineLimit(1)
                 if let mark {
                     Text(mark).appText(AppText.caption).foregroundStyle(AppColors.muted)
@@ -116,7 +116,7 @@ struct CriteriaModeView: View {
             }
             .padding(.horizontal, AppMetrics.chipPaddingHorizontal)
             .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
-            .background(chip.unmet ? AppColors.background : chip.hasSlip ? AppState.selectedBg : AppColors.primarySoft,
+            .background({ switch chip.look { case .unmet: AppColors.background; case .met: AppState.selectedBg; case .noSlip: AppColors.primarySoft } }(),
                         in: RoundedRectangle(cornerRadius: AppRadius.chip))
             .opacity(chip.isLegacy || chip.isAbsent ? AppState.disabledOpacity : 1)
         }
