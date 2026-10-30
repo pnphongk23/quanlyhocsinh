@@ -33,6 +33,8 @@ struct StaffMember: Codable, Sendable, Equatable, Identifiable {
 
     var isUnnamed: Bool { displayName.isEmpty }
     var isAdmin: Bool { role.systemKey == "admin" }
+    /// An Admin opening their own row can only change the name: no role, classes or disabling themselves.
+    var editsNameOnly: Bool { isSelf && isAdmin }
     var roleKey: StaffRoleKey? { role.systemKey.flatMap(StaffRoleKey.init(rawValue:)) }
 }
 

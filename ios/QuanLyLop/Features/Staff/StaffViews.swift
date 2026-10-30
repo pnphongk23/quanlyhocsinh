@@ -220,19 +220,25 @@ struct StaffFormSheet: View {
                 TeacherField(label: String(localized: "feature.staff.so.dien.thoai"), text: $phone,
                              placeholder: "0900 000 000", keyboard: .phonePad, identifier: "staff.phone")
             }
-            VStack(alignment: .leading, spacing: AppSpace.s8) {
-                Text(String(localized: "feature.staff.vai.tro")).appText(AppText.label).foregroundStyle(AppColors.text)
-                AppSegmented(options: StaffRoleKey.allCases.map { .init(value: $0.rawValue, label: StaffLabel.role($0)) },
-                             value: role?.rawValue ?? "") { value in
-                    if let key = StaffRoleKey(rawValue: value) { role = key }
-                }
-                .accessibilityIdentifier("staff.role")
-            }
+            if !nameOnly { roleField }
             if !isAdmin { classPicker }
-            if let member, !isPending { statusButton(member) }
+            if let member, !isPending, !nameOnly { statusButton(member) }
             if let member, isPending { cancelDeclaration(member) }
         }
         .padding(.bottom, AppSpace.s16)
+    }
+
+    private var nameOnly: Bool { member?.editsNameOnly ?? false }
+
+    private var roleField: some View {
+        VStack(alignment: .leading, spacing: AppSpace.s8) {
+            Text(String(localized: "feature.staff.vai.tro")).appText(AppText.label).foregroundStyle(AppColors.text)
+            AppSegmented(options: StaffRoleKey.allCases.map { .init(value: $0.rawValue, label: StaffLabel.role($0)) },
+                         value: role?.rawValue ?? "") { value in
+                if let key = StaffRoleKey(rawValue: value) { role = key }
+            }
+            .accessibilityIdentifier("staff.role")
+        }
     }
 
     private func readOnly(_ label: String, _ value: String) -> some View {

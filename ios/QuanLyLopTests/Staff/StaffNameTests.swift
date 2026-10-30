@@ -93,3 +93,15 @@ final class StaffNameTests: XCTestCase {
                                          membership: membership(nil)))
     }
 }
+
+extension StaffNameTests {
+    func testOnlyAnAdminsOwnRowIsNameOnly() throws {
+        func member(key: String, isSelf: Bool) throws -> StaffMember {
+            let json = #"{"id":"m","kind":"member","user_id":"u","display_name":"A","phone":"+84900000001","role":{"id":"r","name":"R","system_key":"\#(key)"},"class_ids":[],"status":"active","is_self":\#(isSelf),"version":1}"#
+            return try WireJSON.decoder().decode(StaffMember.self, from: Data(json.utf8))
+        }
+        XCTAssertTrue(try member(key: "admin", isSelf: true).editsNameOnly)
+        XCTAssertFalse(try member(key: "admin", isSelf: false).editsNameOnly)
+        XCTAssertFalse(try member(key: "teacher", isSelf: false).editsNameOnly)
+    }
+}
