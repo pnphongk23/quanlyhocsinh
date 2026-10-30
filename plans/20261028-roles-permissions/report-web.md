@@ -126,3 +126,9 @@ Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 4
 - Commit mvp-web `bd5d7db`: ô "Tên hiển thị" mở cho Admin với mọi nhân sự (kể cả chính mình, dòng Admin chỉ sửa tên); gửi `display_name` + `base_version` khi đổi; 422 hiện tại ô (rỗng / tối đa 100), 409 như lỗi version cũ; Admin tự đổi tên thì refetch `GET /me` để Cài đặt/lời chào đổi theo; `display_name` null (chưa có tên) không còn làm vỡ màn hình.
 - Kiểm chứng: tsc OK, vitest 826 passed / 4 skipped, build OK. Smoke staging bằng QA admin: PATCH tự đổi tên rồi đổi lại đều 200, Cài đặt hiện đúng tên. Ảnh 390: `plans/20261021-mvp/web/staff-name-edit/`.
 - Deployment: `06509c13-fd54-48e1-9914-72b6b9080597`. Rollback: `22da9b3a-ce2b-4716-905c-8d31fe337334`.
+
+## Deploy staging — UI feedback round 5 (hash 960d696)
+
+- Deployment id: `e0423355-1c73-42c3-bf87-75db9bd5e2da` (qlh-staging-web, commit 960d696 on mvp-web).
+- Rollback id: `06509c13-fd54-48e1-9914-72b6b9080597`.
+- Gates: tsc sạch, vitest 857 qua / 4 skip, sol review vòng 2 xanh (0 major). Bản này chưa xác minh trên iPhone thật (ngày/giờ Thêm buổi lẻ).
