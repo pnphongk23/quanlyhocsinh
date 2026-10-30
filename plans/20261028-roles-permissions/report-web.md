@@ -120,3 +120,9 @@ Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 4
 - Kiểm chứng: tsc OK, vitest 822 passed / 4 skipped, build OK. Ảnh 390 trước/sau (giả lập display_name rỗng): `plans/20261021-mvp/web/settings-empty-name/`.
 - Deployment: `22da9b3a-ce2b-4716-905c-8d31fe337334` (qlh-staging-web, main). Rollback: `9ae26a9d-0980-4e70-807b-c98bd73c5924`.
 - Cài đặt hiện chưa có đường tự sửa tên cho bất kỳ vai trò nào (chỉ xem).
+
+## Admin sửa tên nhân sự (deploy staging)
+
+- Commit mvp-web `bd5d7db`: ô "Tên hiển thị" mở cho Admin với mọi nhân sự (kể cả chính mình, dòng Admin chỉ sửa tên); gửi `display_name` + `base_version` khi đổi; 422 hiện tại ô (rỗng / tối đa 100), 409 như lỗi version cũ; Admin tự đổi tên thì refetch `GET /me` để Cài đặt/lời chào đổi theo; `display_name` null (chưa có tên) không còn làm vỡ màn hình.
+- Kiểm chứng: tsc OK, vitest 826 passed / 4 skipped, build OK. Smoke staging bằng QA admin: PATCH tự đổi tên rồi đổi lại đều 200, Cài đặt hiện đúng tên. Ảnh 390: `plans/20261021-mvp/web/staff-name-edit/`.
+- Deployment: `06509c13-fd54-48e1-9914-72b6b9080597`. Rollback: `22da9b3a-ce2b-4716-905c-8d31fe337334`.
