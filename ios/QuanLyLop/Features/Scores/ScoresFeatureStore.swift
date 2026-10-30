@@ -76,10 +76,8 @@ final class I4FeatureStore: ObservableObject {
     var defaultSession: ClassSession? { sessions.first(where: { $0.status != .cancelled }) }
 
     func configure(auth: AuthModel) async {
-        guard let (activeStore, activeAPI) = bind(auth: auth) else { return }
-        do { try await SyncCoordinator(api: activeAPI, store: activeStore, deviceId: deviceID).synchronize() }
-        catch { errorMessage = String(localized: "feature.scores.khong.the.ong.bo.du.lieu.vui.long.thu.lai") }
-        await refresh()
+      guard bind(auth: auth) != nil else { return }
+      await refresh()
     }
 
     /// Rebinds store, API and write flags without any network call, so a removed right applies at once.

@@ -63,9 +63,10 @@ struct TeacherScheduleView: View {
     }
 
     var body: some View {
-        TeacherScroll {
-            VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-                TeacherSegmented(options: [.init(id: "day", label: String(localized: "feature.classes.ngay")), .init(id: "month", label: String(localized: "feature.classes.thang"))],
+          TeacherScroll {
+              VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
+                  if let error = data.errorMessage { TeacherErrorBanner(message: error) }
+                  TeacherSegmented(options: [.init(id: "day", label: String(localized: "feature.classes.ngay")), .init(id: "month", label: String(localized: "feature.classes.thang"))],
                                  value: view) { changeView($0) }
                 filterChips
                 if view == "day" { dayView } else { monthView }
@@ -75,8 +76,9 @@ struct TeacherScheduleView: View {
             .padding(.bottom, 24)
         }
         .background(AppColors.background.ignoresSafeArea())
-        .navigationTitle(String(localized: "feature.classes.lich"))
-        .navigationBarTitleDisplayMode(.large)
+          .navigationTitle(String(localized: "feature.classes.lich"))
+          .navigationBarTitleDisplayMode(.large)
+          .refreshable { await data.refresh() }
     }
 
     // MARK: Ngày | Tháng

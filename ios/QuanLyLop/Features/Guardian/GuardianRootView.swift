@@ -28,7 +28,6 @@ enum GuardianDetail: Hashable {
 
 struct GuardianRootView: View {
     var model: AuthModel? = nil
-    @Environment(\.scenePhase) private var scenePhase
     @State private var dashboard: GuardianDashboard?
     @State private var selectedChildID: String?
     @State private var tab: GuardianTab = .classes
@@ -98,9 +97,6 @@ struct GuardianRootView: View {
             default: break
             }
             #endif
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await load() } }
         }
         .onChange(of: model?.syncRevision) { _, _ in
             Task { await rebuildFromCache() }
@@ -173,7 +169,7 @@ struct GuardianRootView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { childSwitcher } }
-        .refreshable { await load() }
+          .refreshable { await load(manualSync: true) }
     }
 
     private func shortcut(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
@@ -254,7 +250,7 @@ struct GuardianRootView: View {
         if let stored = months[child.student.id], child.months.contains(stored) { return stored }
         return child.defaultMonth
     }
-    @MainActor private func load() async {
+      @MainActor private func load(manualSync: Bool = false) async {
         isLoading = true
         defer { isLoading = false }
         if let demo = GuardianDemo.dashboard { dashboard = demo; selectFirstChild(demo); errorMessage = nil; return }
@@ -263,10 +259,19 @@ struct GuardianRootView: View {
             selectedChildID = nil
             errorMessage = nil
             return
-        }
-        do {
-            let next = try await GuardianRepository.load()
-            dashboard = next; selectFirstChild(next); errorMessage = nil
+          }
+          do {
+              let next: GuardianDashboard
+              var syncSucceeded = true
+              if let model, model.isSyncEligible, model.activeSQLiteStore != nil {
+                  if manualSync { syncSucceeded = (await model.synchronizeWhileActive()).succeeded }
+                  guard let identity = model.identity, let store = model.activeSQLiteStore else { return }
+                  next = try await GuardianRepository.load(identity: identity, store: store)
+              } else {
+                  next = try await GuardianRepository.load()
+              }
+              dashboard = next; selectFirstChild(next)
+              errorMessage = syncSucceeded ? nil : String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai")
         } catch { errorMessage = String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai") }
     }
     /// A background sync changed the cache (a deleted report, for one): redraw from it, no request.

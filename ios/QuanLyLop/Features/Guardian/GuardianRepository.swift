@@ -452,25 +452,34 @@ enum GuardianRepository {
     /// so a guardian who opens the app offline still reads the cached data with its "updated at" time.
     static func load(api: any APIClient, identityStore: any CachedIdentityStore,
                      storeFactory: (CacheScope) throws -> SQLiteStore = { try SQLiteStore.open(scope: $0) },
-                     defaults: UserDefaults = .standard) async throws -> GuardianDashboard {
+                     defaults: UserDefaults = .standard,
+                     knownIdentity: CurrentIdentity? = nil,
+                     knownStore: SQLiteStore? = nil,
+                     synchronize: Bool = true) async throws -> GuardianDashboard {
         let identity: CurrentIdentity
-        do {
-            identity = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
-        } catch {
-            guard AuthModel.isRecoverable(error), let cached = try? await identityStore.load() else { throw error }
-            identity = cached
+        if let knownIdentity {
+            identity = knownIdentity
+        } else {
+            do {
+                identity = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
+            } catch {
+                guard AuthModel.isRecoverable(error), let cached = try? await identityStore.load() else { throw error }
+                identity = cached
+            }
         }
         guard let membershipID = identity.activeMembershipId,
               let membership = identity.memberships.first(where: { $0.id == membershipID }),
               membership.role.scopeKind == .linkedStudents else { throw APIFailure.badStatus(code: 403) }
 
         let scope = CacheScope(userId: identity.user.id, workspaceId: membership.workspace.id, membershipId: membership.id)
-        let store = try storeFactory(scope)
-        let sync = syncCoordinator(api: api, store: store, defaults: defaults)
+        let store = try knownStore ?? storeFactory(scope)
         var refreshed = true
-        do { try await sync.synchronize() } catch {
-            guard try await store.position() != nil else { throw error }
-            refreshed = false
+        if synchronize {
+            let sync = syncCoordinator(api: api, store: store, defaults: defaults)
+            do { _ = try await sync.synchronize() } catch {
+                guard try await store.position() != nil else { throw error }
+                refreshed = false
+            }
         }
         if refreshed {
             let studentIDs = try await store.records(Student.self, entity: "student").map(\.id)
@@ -482,6 +491,15 @@ enum GuardianRepository {
             return GuardianDashboard(children: base.children)
         }
         return GuardianDashboard(children: base.children, updatedAt: GuardianFreshness.last(scope, defaults: defaults), isOffline: true)
+    }
+
+    static func load(identity: CurrentIdentity, store: SQLiteStore) async throws -> GuardianDashboard {
+        let configuration = try AppConfiguration.load().get()
+        let tokenStore = KeychainTokenStore(service: configuration.tokenStoreService)
+        guard try await tokenStore.token() != nil else { throw APIFailure.missingToken }
+        return try await load(api: URLSessionAPIClient(configuration: configuration, tokenStore: tokenStore),
+                              identityStore: KeychainCachedIdentityStore(service: configuration.tokenStoreService),
+                              knownIdentity: identity, knownStore: store, synchronize: false)
     }
 
     /// Rebuilds the dashboard from what the cache holds now, without a request: a sync that applied a

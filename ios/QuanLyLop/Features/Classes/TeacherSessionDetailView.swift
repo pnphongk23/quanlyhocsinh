@@ -34,7 +34,12 @@ struct TeacherSessionDetailView: View {
                     .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
             }
         }
-        .background(AppColors.background.ignoresSafeArea())
+          .background(AppColors.background.ignoresSafeArea())
+          .refreshable {
+              await data.refresh()
+              await i4Data.refresh()
+              error = data.errorMessage ?? i4Data.errorMessage
+          }
         .navigationTitle(session.map { TeacherFeatureData.sessionPrefix($0) } ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)

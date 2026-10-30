@@ -179,7 +179,8 @@ final class TeacherFeatureData {
                   }
             }
         }
-        await refresh()
+        await reload()
+        await saveStatusSource?.refresh()
     }
 
     func refresh() async {
