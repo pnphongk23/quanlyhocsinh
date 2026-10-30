@@ -5,9 +5,9 @@ import XCTest
 /// the pending outbox when the network comes back. `/me` runs at identity sync boundaries.
 @MainActor
 final class AuthSyncTriggerTests: XCTestCase {
-    private func membership(_ id: String) -> Membership {
+    private func membership(_ id: String, scopeKind: ScopeKind = .assignedClasses) -> Membership {
         Membership(id: id, workspace: Workspace(id: "ws-\(id)", name: "W"),
-                   role: Role(id: "role", name: "Teacher", systemKey: nil, scopeKind: .assignedClasses),
+                   role: Role(id: "role", name: "Teacher", systemKey: nil, scopeKind: scopeKind),
                    status: "active", scopeEpoch: 1, permissions: [:])
     }
 
@@ -135,6 +135,208 @@ final class AuthSyncTriggerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(pullCount, 3)
     }
 
+    /// One synchronize that has to send two batches (the outbox holds more than one request can carry)
+    /// must pull after each push, not once at the end. The earlier two-session-write case above cannot
+    /// see that: each of its syncs sent a single batch.
+    func testOneSyncPullsAfterEveryPushWhenTwoBatchesGoOut() async throws {
+        let only = membership("a")
+        let api = SyncTriggerAPI(identity: identity(active: "a", memberships: [only]), pushSucceeds: true)
+        let model = makeModel(api: api, online: true)
+        await model.restoreSession()
+        await model.synchronizeOnSessionEntry()
+        guard let store = model.activeSQLiteStore else { return XCTFail("expected an active store") }
+        // One more than the per-request limit, so this one synchronize pushes two batches.
+        for index in 0..<51 {
+            let key = RecordKey(entity: "score", k1: "test-\(index)", k2: "student").storageKey
+            try await store.write(Score(testId: "test-\(index)", studentId: "student", value: 7,
+                                        version: 0, updatedAt: "fixture"),
+                                  forKey: key,
+                                  enqueueing: PendingCommand(recordKey: key, baseVersion: 0,
+                                                             kind: "score.set", payload: .object([:])))
+        }
+
+        let pushesBefore = await api.pushCalls()
+        let pullsBefore = await api.pullCalls()
+        await model.synchronizePendingCommandsIfNeeded()
+
+        let order = await api.syncOrder()
+        let steps = order.filter { $0 != "sync/snapshot" }
+        XCTAssertEqual(Array(steps.suffix(5)), ["sync/push", "sync/pull", "sync/push", "sync/pull", "sync/pull"],
+                       "each batch is followed by its own pull: \(order)")
+        XCTAssertEqual(pushesBefore, 0)
+        let pushes = await api.pushCalls()
+        XCTAssertEqual(pushes, 2, "the 51 queued commands take two requests")
+        let pulls = await api.pullCalls()
+        XCTAssertEqual(pulls - pullsBefore, 3, "one pull after each batch plus the closing pull")
+    }
+
+    /// R3-1: a password sign-in used to leave the in-memory identity empty (`/me` was skipped for the
+    /// entry sync), so the guardian page had nothing to load until some other screen refreshed `/me`.
+    func testFreshGuardianLoginInstallsIdentitySoTheEntrySyncAndThePageWork() async throws {
+        let guardian = membership("guardian", scopeKind: .linkedStudents)
+        let current = identity(active: "guardian", memberships: [guardian])
+        let session = AuthSession(token: "login-token", expiresAt: "2099-01-01T00:00:00.000Z",
+                                  user: current.user, memberships: [guardian], activeMembershipId: "guardian")
+        let api = SyncTriggerAPI(identity: current, loginSession: session)
+        let model = AuthModel(configuration: .fallback, apiClient: api,
+                              tokenStore: InMemoryTokenStore(),
+                              identityStore: MemoryIdentityStore(nil),
+                              storeFactory: { scope in try SQLiteStore(path: ":memory:", scope: scope) },
+                              isOnline: { true })
+
+        try await model.login(phone: "0900000000", password: "strong-pass-1")
+
+        XCTAssertEqual(model.screen, .main)
+        XCTAssertEqual(model.identity?.activeMembershipId, "guardian", "the sign-in response is installed as the identity")
+        var meCalls = await api.meCalls()
+        XCTAssertEqual(meCalls, 0, "a fresh sign-in does not read `/me` again")
+
+        await model.synchronizeOnSessionEntry()
+
+        meCalls = await api.meCalls()
+        XCTAssertEqual(meCalls, 0, "the entry sync trusts the server-confirmed sign-in")
+        guard let store = model.activeSQLiteStore else { return XCTFail("expected the guardian store") }
+        XCTAssertTrue(model.hasSuccessfulSync(for: store.scope))
+        let child = Student(id: "child", classId: "class", name: "Trần Gia Bảo", parentPhone: nil,
+                            enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
+        try await store.write(child, forKey: RecordKey(entity: "student", k1: child.id, k2: "").storageKey,
+                              enqueueing: nil)
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "guardian-login-identity-tests"))
+        defaults.removePersistentDomain(forName: "guardian-login-identity-tests")
+        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
+            try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
+                                              defaults: defaults, knownIdentity: identity, knownStore: store,
+                                              synchronize: false, syncSucceeded: syncSucceeded,
+                                              isSuperseded: isSuperseded)
+        }
+
+        let loaded = await root.load()
+
+        XCTAssertNotNil(loaded, "the page has an identity to load with")
+        XCTAssertEqual(loaded?.dashboard?.children.map(\.student.id), ["child"])
+        XCTAssertNil(loaded?.errorMessage, "the entry sync succeeded, so the cache is not shown as offline")
+        defaults.removePersistentDomain(forName: "guardian-login-identity-tests")
+    }
+
+    /// R3-2: the manual refresh re-reads `/me`, which may switch the role, so the page must load with the
+    /// identity AND the store installed after it instead of the store captured before the request.
+    func testManualRefreshLoadsTheRoleAndStoreThatMeReturned() async throws {
+        let old = membership("old")
+        let new = membership("new", scopeKind: .linkedStudents)
+        let api = SyncTriggerAPI(identities: [identity(active: "old", memberships: [old]),
+                                              identity(active: "new", memberships: [new])])
+        let model = makeModel(api: api, online: true)
+        await model.restoreSession()
+        XCTAssertEqual(model.identity?.activeMembershipId, "old")
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "guardian-manual-refresh-tests"))
+        defaults.removePersistentDomain(forName: "guardian-manual-refresh-tests")
+        var loadedIdentity: CurrentIdentity?
+        var loadedScope: CacheScope?
+        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
+            loadedIdentity = identity
+            loadedScope = store.scope
+            return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
+                                                     defaults: defaults, knownIdentity: identity, knownStore: store,
+                                                     synchronize: false, syncSucceeded: syncSucceeded,
+                                                     isSuperseded: isSuperseded)
+        }
+
+        _ = await root.load(manualSync: true)
+
+        XCTAssertEqual(loadedIdentity?.activeMembershipId, "new", "the loader sees the role `/me` returned")
+        XCTAssertEqual(loadedScope?.membershipId, "new")
+        XCTAssertEqual(loadedScope, model.activeSQLiteStore?.scope, "the loader reads that role's own store")
+        defaults.removePersistentDomain(forName: "guardian-manual-refresh-tests")
+    }
+
+    /// R3-3: a load that started earlier must not write over a newer one that already finished.
+    func testSupersededLoadDoesNotReplaceTheNewerResult() async throws {
+        let guardian = membership("guardian", scopeKind: .linkedStudents)
+        let api = SyncTriggerAPI(identity: identity(active: "guardian", memberships: [guardian]))
+        let model = makeModel(api: api, online: true)
+        await model.restoreSession()
+        await model.synchronizeOnSessionEntry()
+        guard let store = model.activeSQLiteStore else { return XCTFail("expected the guardian store") }
+        let scope = store.scope
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "guardian-superseded-load-tests"))
+        defaults.removePersistentDomain(forName: "guardian-superseded-load-tests")
+        GuardianFreshness.record(scope, at: Date(timeIntervalSince1970: 1_700_000_000), defaults: defaults)
+        let html = Student(id: "child", classId: "class", name: "Trần Gia Bảo", parentPhone: nil,
+                           enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
+        try await store.write(html, forKey: RecordKey(entity: "student", k1: html.id, k2: "").storageKey,
+                              enqueueing: nil)
+        let gate = PauseGate()
+        var loads = 0
+        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
+            loads += 1
+            if loads == 1 { await gate.pauseUntilReleased() }
+            return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
+                                                     defaults: defaults, knownIdentity: identity, knownStore: store,
+                                                     synchronize: false, syncSucceeded: syncSucceeded,
+                                                     isSuperseded: isSuperseded)
+        }
+
+        let older = Task { await root.load() }
+        await gate.waitUntilEntered()
+        let newer = await root.load()
+        // The older load reads a cache the newer one never saw, so it would be visible if it won.
+        let second = Student(id: "second", classId: "class", name: "Trần Gia Ngọc", parentPhone: nil,
+                             enrolledAt: "2026-10-02", leftAt: nil, status: .active, version: 1)
+        try await store.write(second, forKey: RecordKey(entity: "student", k1: second.id, k2: "").storageKey,
+                              enqueueing: nil)
+        await gate.release()
+        let olderResult = await older.value
+
+        XCTAssertNil(olderResult, "a superseded load applies nothing")
+        XCTAssertEqual(newer?.dashboard?.children.map(\.student.id), ["child"])
+        XCTAssertEqual(root.accepted.dashboard?.children.map(\.student.id), ["child"],
+                       "the screen keeps the newer result")
+        XCTAssertEqual(root.accepted.dashboard?.updatedAt, newer?.dashboard?.updatedAt)
+        defaults.removePersistentDomain(forName: "guardian-superseded-load-tests")
+    }
+
+    /// R3-3b: when the newer sync failed, the older (successful) result arriving later must not make the
+    /// cache look fresher than the last successful refresh.
+    func testLateSuccessfulLoadDoesNotRaiseFreshnessAfterANewerFailedSync() async throws {
+        let guardian = membership("guardian", scopeKind: .linkedStudents)
+        let api = SyncTriggerAPI(identity: identity(active: "guardian", memberships: [guardian]))
+        let model = makeModel(api: api, online: true)
+        await model.restoreSession()
+        await model.synchronizeOnSessionEntry()
+        guard let store = model.activeSQLiteStore else { return XCTFail("expected the guardian store") }
+        let scope = store.scope
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "guardian-late-freshness-tests"))
+        defaults.removePersistentDomain(forName: "guardian-late-freshness-tests")
+        let oldDate = Date(timeIntervalSince1970: 1_700_000_000)
+        GuardianFreshness.record(scope, at: oldDate, defaults: defaults)
+        let gate = PauseGate()
+        var loads = 0
+        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
+            loads += 1
+            if loads == 1 { await gate.pauseUntilReleased() }
+            return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
+                                                     defaults: defaults, knownIdentity: identity, knownStore: store,
+                                                     synchronize: false, syncSucceeded: syncSucceeded,
+                                                     isSuperseded: isSuperseded)
+        }
+
+        let older = Task { await root.load() }
+        await gate.waitUntilEntered()
+        await api.failSync(true)
+        _ = await model.synchronizeWhileActive()
+        let newer = await root.load()
+        await gate.release()
+        let olderResult = await older.value
+
+        XCTAssertNil(olderResult, "the late result is dropped")
+        XCTAssertTrue(try XCTUnwrap(newer?.dashboard).isOffline)
+        XCTAssertEqual(newer?.dashboard?.updatedAt, oldDate)
+        XCTAssertEqual(root.accepted.dashboard?.updatedAt, oldDate)
+        XCTAssertEqual(GuardianFreshness.last(scope, defaults: defaults), oldDate,
+                       "a superseded load does not record a refresh")
+        defaults.removePersistentDomain(forName: "guardian-late-freshness-tests")
+    }
+
     func testGuardianEntrySyncCompletionRefreshesOfflineDashboardAndFailureKeepsFreshness() async throws {
         let only = Membership(id: "guardian", workspace: Workspace(id: "ws-guardian", name: "W"),
                               role: Role(id: "role", name: "Guardian", systemKey: nil, scopeKind: .linkedStudents),
@@ -144,7 +346,7 @@ final class AuthSyncTriggerTests: XCTestCase {
         defaults.removePersistentDomain(forName: "guardian-entry-sync-tests")
         let oldDate = Date(timeIntervalSince1970: 1_700_000_000)
         let scope = CacheScope(userId: guardian.user.id, workspaceId: only.workspace.id, membershipId: only.id)
-        let gate = SyncGate()
+        let gate = PauseGate()
         let api = SyncTriggerAPI(identity: guardian, snapshotGate: gate)
         let model = makeModel(api: api, online: true)
         await model.restoreSession()
@@ -155,11 +357,12 @@ final class AuthSyncTriggerTests: XCTestCase {
         XCTAssertNotNil(model.activeSQLiteStore)
         GuardianFreshness.record(scope, at: oldDate, defaults: defaults)
         var loadFailure: String?
-        let root = GuardianRootView(model: model) { identity, store, syncSucceeded in
+        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
             do {
                 return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
                                                          defaults: defaults, knownIdentity: identity, knownStore: store,
-                                                         synchronize: false, syncSucceeded: syncSucceeded)
+                                                         synchronize: false, syncSucceeded: syncSucceeded,
+                                                         isSuperseded: isSuperseded)
             } catch {
                 loadFailure = String(describing: error)
                 throw error
@@ -185,14 +388,15 @@ final class AuthSyncTriggerTests: XCTestCase {
 
         defaults.removePersistentDomain(forName: "guardian-entry-sync-tests")
         GuardianFreshness.record(scope, at: oldDate, defaults: defaults)
-        let failedGate = SyncGate()
+        let failedGate = PauseGate()
         let failedAPI = SyncTriggerAPI(identity: guardian, snapshotGate: failedGate, snapshotFails: true)
         let failedModel = makeModel(api: failedAPI, online: true)
         await failedModel.restoreSession()
-        let failedRoot = GuardianRootView(model: failedModel) { identity, store, syncSucceeded in
+        let failedRoot = GuardianRootView(model: failedModel) { identity, store, syncSucceeded, isSuperseded in
             try await GuardianRepository.load(api: failedAPI, identityStore: MemoryIdentityStore(identity),
                                               defaults: defaults, knownIdentity: identity, knownStore: store,
-                                              synchronize: false, syncSucceeded: syncSucceeded)
+                                              synchronize: false, syncSucceeded: syncSucceeded,
+                                              isSuperseded: isSuperseded)
         }
         let failedEntry = Task { await failedModel.synchronizeOnSessionEntry() }
         await failedGate.waitUntilEntered()
@@ -215,14 +419,17 @@ private actor MemoryIdentityStore: CachedIdentityStore {
     func clear() { value = nil }
 }
 
-/// Serves `/me`, role switching and an empty-but-successful sync feed, counting the sync requests.
+/// Serves `/me`, sign-in, role switching and an empty-but-successful sync feed, counting the sync requests.
 private actor SyncTriggerAPI: APIClient {
     nonisolated let baseURL = URL(string: "https://fixture.invalid/v1")!
     private var identity: CurrentIdentity
     private let identityResponses: [CurrentIdentity]
+    private let loginSession: AuthSession?
     private let pushSucceeds: Bool
-    private let snapshotGate: SyncGate?
-    private let snapshotFails: Bool
+    private let snapshotGate: PauseGate?
+    private var snapshotFails: Bool
+    /// Fails pulls too, for a sync that must lose after the cache position is already stored.
+    private var syncFails = false
     private var snapshots = 0
     private var pulls = 0
     private var pushes = 0
@@ -230,10 +437,11 @@ private actor SyncTriggerAPI: APIClient {
     private var syncRequests: [String] = []
     private var syncMembershipRequests: [String] = []
 
-    init(identity: CurrentIdentity, pushSucceeds: Bool = false, snapshotGate: SyncGate? = nil,
-         snapshotFails: Bool = false) {
+    init(identity: CurrentIdentity, pushSucceeds: Bool = false, snapshotGate: PauseGate? = nil,
+         snapshotFails: Bool = false, loginSession: AuthSession? = nil) {
           self.identity = identity
           self.identityResponses = []
+          self.loginSession = loginSession
           self.pushSucceeds = pushSucceeds
           self.snapshotGate = snapshotGate
           self.snapshotFails = snapshotFails
@@ -241,10 +449,13 @@ private actor SyncTriggerAPI: APIClient {
     init(identities: [CurrentIdentity]) {
         self.identity = identities[0]
           self.identityResponses = identities
+          self.loginSession = nil
           self.pushSucceeds = false
           self.snapshotGate = nil
           self.snapshotFails = false
     }
+
+    func failSync(_ fail: Bool) { syncFails = fail }
 
     func snapshotCalls() -> Int { snapshots }
     func pullCalls() -> Int { pulls }
@@ -262,6 +473,11 @@ private actor SyncTriggerAPI: APIClient {
               let response = identityResponses.isEmpty ? identity : identityResponses[min(mes, identityResponses.count - 1)]
               mes += 1
               return try encode(response)
+          case "auth/login":
+              guard let loginSession else { throw APIFailure.offline }
+              return try encode(loginSession)
+          case let path where path.hasSuffix("/reports"):
+              return try encode(StudentReportFixture())
           case "session/membership":
               let body = try WireJSON.decoder().decode(JSONValue.self, from: endpoint.body ?? Data())
               let requested = body["membership_id"]?.string ?? ""
@@ -275,6 +491,7 @@ private actor SyncTriggerAPI: APIClient {
               snapshots += 1
               return try encode(SnapshotManifest(cursor: 0, epoch: 1, window: .init(from: "2026-07-01", to: "2026-12-01"), entities: []))
           case "sync/pull":
+              if syncFails { throw APIFailure.offline }
               syncRequests.append(endpoint.path)
               syncMembershipRequests.append(endpoint.query["membership_id"] ?? "")
               pulls += 1
@@ -293,7 +510,7 @@ private actor SyncTriggerAPI: APIClient {
     }
 }
 
-private actor SyncGate {
+private actor PauseGate {
     private var entered = false
     private var released = false
     private var entryContinuation: CheckedContinuation<Void, Never>?
@@ -325,4 +542,10 @@ private struct PushFixtureRequest: Decodable {
 
 private struct PushFixtureCommand: Decodable {
     let id: UUID
+}
+
+/// An empty published-report list for the guardian history read.
+private struct StudentReportFixture: Encodable {
+    let items: [String] = []
+    let nextCursor: String? = nil
 }

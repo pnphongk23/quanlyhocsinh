@@ -450,13 +450,16 @@ enum GuardianRepository {
 
     /// `/me` failing for a network or server reason falls back to the identity the app last confirmed,
     /// so a guardian who opens the app offline still reads the cached data with its "updated at" time.
+    /// `isSuperseded` lets the screen cancel the write of `updatedAt` when a newer load took over while
+    /// this one was reading (a late result must not make the cache look fresher than it is).
     static func load(api: any APIClient, identityStore: any CachedIdentityStore,
                      storeFactory: (CacheScope) throws -> SQLiteStore = { try SQLiteStore.open(scope: $0) },
                      defaults: UserDefaults = .standard,
                      knownIdentity: CurrentIdentity? = nil,
                      knownStore: SQLiteStore? = nil,
                      synchronize: Bool = true,
-                     syncSucceeded: Bool = false) async throws -> GuardianDashboard {
+                     syncSucceeded: Bool = false,
+                     isSuperseded: @MainActor () -> Bool = { false }) async throws -> GuardianDashboard {
         let identity: CurrentIdentity
         if let knownIdentity {
             identity = knownIdentity
@@ -488,8 +491,9 @@ enum GuardianRepository {
         let studentIDs = try await store.records(Student.self, entity: "student").map(\.id)
         let historyRefreshed = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: studentIDs)
           let refreshed = didSyncSucceed && historyRefreshed
+        let superseded = await isSuperseded()
         let base = try await dashboard(from: store)
-        if refreshed {
+        if refreshed && !superseded {
             GuardianFreshness.record(scope, defaults: defaults)
             return GuardianDashboard(children: base.children)
         }
@@ -497,14 +501,15 @@ enum GuardianRepository {
     }
 
     static func load(identity: CurrentIdentity, store: SQLiteStore,
-                     syncSucceeded: Bool = false) async throws -> GuardianDashboard {
+                     syncSucceeded: Bool = false,
+                     isSuperseded: @MainActor () -> Bool = { false }) async throws -> GuardianDashboard {
         let configuration = try AppConfiguration.load().get()
         let tokenStore = KeychainTokenStore(service: configuration.tokenStoreService)
         guard try await tokenStore.token() != nil else { throw APIFailure.missingToken }
         return try await load(api: URLSessionAPIClient(configuration: configuration, tokenStore: tokenStore),
                               identityStore: KeychainCachedIdentityStore(service: configuration.tokenStoreService),
                               knownIdentity: identity, knownStore: store, synchronize: false,
-                              syncSucceeded: syncSucceeded)
+                              syncSucceeded: syncSucceeded, isSuperseded: isSuperseded)
     }
 
     /// Rebuilds the dashboard from what the cache holds now, without a request: a sync that applied a

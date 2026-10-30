@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 
 enum GuardianTab: String, CaseIterable, Identifiable {
@@ -31,28 +32,60 @@ struct GuardianLoadOutcome {
     let errorMessage: String?
 }
 
+/// The screen's load bookkeeping. Every load takes a token, and only the newest one may write: a
+/// result that arrives after a newer load (or a newer sync) started is dropped instead of replacing
+/// fresher state, and it also stops recording "updated at" so the cache never looks fresher than it is.
+@MainActor @Observable
+final class GuardianLoadState {
+    private(set) var dashboard: GuardianDashboard?
+    private(set) var errorMessage: String?
+    private var generation = 0
+
+    /// Starts a load and returns the token it must present to write.
+    func begin() -> Int {
+        generation += 1
+        return generation
+    }
+
+    func isCurrent(_ token: Int) -> Bool { token == generation }
+
+    /// Applies a result only while it is still the newest one; false means it was superseded.
+    func apply(_ token: Int, _ outcome: GuardianLoadOutcome) -> Bool {
+        guard isCurrent(token) else { return false }
+        dashboard = outcome.dashboard
+        errorMessage = outcome.errorMessage
+        return true
+    }
+}
+
 struct GuardianRootView: View {
-    typealias DashboardLoader = @MainActor (CurrentIdentity, SQLiteStore, Bool) async throws -> GuardianDashboard
+    typealias DashboardLoader = @MainActor (CurrentIdentity, SQLiteStore, Bool, @MainActor () -> Bool) async throws -> GuardianDashboard
 
     var model: AuthModel? = nil
     private let loadDashboard: DashboardLoader
-    @State private var dashboard: GuardianDashboard?
+    @State private var loads = GuardianLoadState()
     @State private var selectedChildID: String?
     @State private var tab: GuardianTab = .classes
     @State private var classesPath: [GuardianDetail] = []
     @State private var commentsPath: [GuardianDetail] = []
     @State private var months: [String: String] = [:]
-    @State private var errorMessage: String?
     @State private var isLoading = true
     @State private var showingChildPicker = false
 
-    init(model: AuthModel? = nil, loadDashboard: @escaping DashboardLoader = { identity, store, syncSucceeded in
-        try await GuardianRepository.load(identity: identity, store: store, syncSucceeded: syncSucceeded)
+    init(model: AuthModel? = nil, loadDashboard: @escaping DashboardLoader = { identity, store, syncSucceeded, isSuperseded in
+        try await GuardianRepository.load(identity: identity, store: store, syncSucceeded: syncSucceeded,
+                                          isSuperseded: isSuperseded)
     }) {
         self.model = model
         self.loadDashboard = loadDashboard
     }
 
+    private var dashboard: GuardianDashboard? { loads.dashboard }
+    private var errorMessage: String? { loads.errorMessage }
+    /// What the screen accepted from the newest load; an older load leaves this untouched.
+    var accepted: GuardianLoadOutcome {
+        GuardianLoadOutcome(dashboard: loads.dashboard, errorMessage: loads.errorMessage)
+    }
     private var children: [GuardianChildData] { dashboard?.children ?? [] }
     private var child: GuardianChildData? {
         guard let dashboard else { return nil }
@@ -266,55 +299,76 @@ struct GuardianRootView: View {
         return child.defaultMonth
     }
     @MainActor func load(manualSync: Bool = false) async -> GuardianLoadOutcome? {
+        let token = loads.begin()
         isLoading = true
         defer { isLoading = false }
         if model == nil, let demo = GuardianDemo.dashboard {
-            dashboard = demo; selectFirstChild(demo); errorMessage = nil
-            return GuardianLoadOutcome(dashboard: demo, errorMessage: nil)
+            let outcome = GuardianLoadOutcome(dashboard: demo, errorMessage: nil)
+            guard loads.apply(token, outcome) else { return nil }
+            selectFirstChild(demo)
+            return outcome
         }
         if model?.activeMembership == nil && model?.memberships.isEmpty == true {
-            dashboard = GuardianDashboard(children: [])
+            let outcome = GuardianLoadOutcome(dashboard: GuardianDashboard(children: []), errorMessage: nil)
+            guard loads.apply(token, outcome) else { return nil }
             selectedChildID = nil
-            errorMessage = nil
-            return GuardianLoadOutcome(dashboard: dashboard, errorMessage: nil)
+            return outcome
         }
         do {
             let next: GuardianDashboard
             var syncSucceeded = false
-            if let model, model.isSyncEligible, let store = model.activeSQLiteStore {
+            if let model, model.isSyncEligible, model.activeSQLiteStore != nil {
                 if manualSync { syncSucceeded = (await model.synchronizeWhileActive()).succeeded }
-                guard let identity = model.identity else { return nil }
+                // The sync above re-reads `/me`, which may switch or revoke the role. The identity and
+                // the store must still be a matching pair and this load must still be the newest one,
+                // so a revoked role stops here instead of reading the previous role's cache.
+                guard loads.isCurrent(token),
+                      let identity = model.identity,
+                      let scope = Self.cacheScope(for: identity),
+                      let store = model.activeSQLiteStore,
+                      store.scope == scope,
+                      model.isSyncEligible else { return nil }
                 if !manualSync { syncSucceeded = model.syncResult(for: store.scope) == true }
-                next = try await loadDashboard(identity, store, syncSucceeded)
+                next = try await loadDashboard(identity, store, syncSucceeded,
+                                               { [loads] in !loads.isCurrent(token) })
             } else {
                 next = try await GuardianRepository.load()
             }
-            dashboard = next; selectFirstChild(next)
             let loadError = next.isOffline
                 ? String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai")
                 : nil
-            errorMessage = loadError
-            return GuardianLoadOutcome(dashboard: next, errorMessage: loadError)
+            let outcome = GuardianLoadOutcome(dashboard: next, errorMessage: loadError)
+            guard loads.apply(token, outcome) else { return nil }
+            selectFirstChild(next)
+            return outcome
         } catch {
             let loadError = String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai")
-            errorMessage = loadError
-            return GuardianLoadOutcome(dashboard: dashboard, errorMessage: loadError)
+            let outcome = GuardianLoadOutcome(dashboard: loads.dashboard, errorMessage: loadError)
+            guard loads.apply(token, outcome) else { return nil }
+            return outcome
         }
     }
     @MainActor func syncRevisionDidChange() async -> GuardianLoadOutcome? {
         guard let model, let store = model.activeSQLiteStore,
               model.syncResult(for: store.scope) != nil else {
             await rebuildFromCache()
-            return dashboard.map { GuardianLoadOutcome(dashboard: $0, errorMessage: errorMessage) }
+            return loads.dashboard.map { GuardianLoadOutcome(dashboard: $0, errorMessage: loads.errorMessage) }
         }
         return await load()
     }
     /// A background sync changed the cache (a deleted report, for one): redraw from it, no request.
     @MainActor private func rebuildFromCache() async {
-        guard let store = model?.activeSQLiteStore, let current = dashboard else { return }
+        let token = loads.begin()
+        guard let store = model?.activeSQLiteStore, let current = loads.dashboard else { return }
         guard let next = try? await GuardianRepository.reload(from: store, keeping: current) else { return }
-        dashboard = next
+        guard loads.apply(token, GuardianLoadOutcome(dashboard: next, errorMessage: loads.errorMessage)) else { return }
         selectFirstChild(next)
+    }
+    /// The scope an identity points at; nil once no active role is left (a revoked role).
+    private static func cacheScope(for identity: CurrentIdentity) -> CacheScope? {
+        guard let id = identity.activeMembershipId,
+              let membership = identity.memberships.first(where: { $0.id == id }) else { return nil }
+        return CacheScope(userId: identity.user.id, workspaceId: membership.workspace.id, membershipId: id)
     }
     private func selectFirstChild(_ dashboard: GuardianDashboard) {
         if let selectedChildID, dashboard.children.contains(where: { $0.student.id == selectedChildID }) { return }

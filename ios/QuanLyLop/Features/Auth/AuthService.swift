@@ -307,19 +307,7 @@ final class AuthModel {
             let request = AuthCredentials(phone: domesticPhone(phone), password: password, deviceLabel: "iPhone")
             let endpoint = try APIEndpoint.json(method: .post, path: "auth/login", body: request, requiresAuthentication: false)
             let result = try await api.send(endpoint, as: AuthSession.self)
-            try await tokenStore.setToken(result.token)
-            identityValidatedForEntrySync = true
-            session = result
-            try? await identityStore.save(Self.currentIdentity(from: result))
-            if result.user.mustChangePassword { screen = .forcedPassword }
-              else if result.activeMembershipId == nil && result.memberships.isEmpty { screen = .main }
-              else if result.activeMembershipId == nil {
-                if !(await selectSoleMembership(result.memberships)) { screen = .chooseRole }
-            }
-            else {
-                try await prepareStore(for: result.user, membershipId: result.activeMembershipId!)
-                screen = .main
-            }
+            try await adoptSignIn(result)
         } catch {
             if let failure = error as? APIFailure, case .server(let status, _, _) = failure, status == 429 { isLocked = true }
             message = Self.userMessage(error)
@@ -337,14 +325,7 @@ final class AuthModel {
                                               workspaceName: workspace.trimmingCharacters(in: .whitespacesAndNewlines))
             let endpoint = try APIEndpoint.json(method: .post, path: "auth/register", body: request, requiresAuthentication: false)
             let result = try await api.send(endpoint, as: AuthSession.self)
-            try await tokenStore.setToken(result.token)
-            identityValidatedForEntrySync = true
-            session = result
-            try? await identityStore.save(Self.currentIdentity(from: result))
-            if let membership = result.activeMembershipId {
-                try await prepareStore(for: result.user, membershipId: membership)
-                screen = .main
-            } else { screen = .chooseRole }
+            try await adoptSignIn(result)
         } catch { message = Self.userMessage(error); throw error }
     }
 
@@ -356,17 +337,8 @@ final class AuthModel {
             let request = GuardianRegistrationRequest(phone: domesticPhone(loginPhone), password: password)
             let endpoint = try APIEndpoint.json(method: .post, path: "auth/register-guardian",
                                                 body: request, requiresAuthentication: false)
-              let result = try await api.send(endpoint, as: AuthSession.self)
-              try await tokenStore.setToken(result.token)
-              session = result
-              try? await identityStore.save(Self.currentIdentity(from: result))
-            if result.user.mustChangePassword { screen = .forcedPassword }
-            else if result.activeMembershipId == nil && result.memberships.isEmpty { screen = .main }
-            else if result.activeMembershipId == nil { screen = .chooseRole }
-            else {
-                try await prepareStore(for: result.user, membershipId: result.activeMembershipId!)
-                screen = .main
-            }
+            let result = try await api.send(endpoint, as: AuthSession.self)
+            try await adoptSignIn(result)
         } catch {
             if let failure = error as? APIFailure, case .server(let status, let detail, _) = failure,
                status == 403, detail.details?["reason"]?.string == "phone_not_declared" {
@@ -570,6 +542,17 @@ final class AuthModel {
             }
             return false
         }
+    }
+
+    /// A sign-in answer (`/auth/login`, `/auth/register`, `/auth/register-guardian`) is server-confirmed, so its
+    /// identity is installed through the same path as `/me` before the entry sync is marked validated: without
+    /// it the in-memory identity stays empty for a fresh sign-in and the guardian page has nothing to load.
+    private func adoptSignIn(_ result: AuthSession) async throws {
+        try await tokenStore.setToken(result.token)
+        // The previous account's identity must not decide whether the new role looks revoked.
+        identity = nil
+        session = result
+        await installIdentity(Self.currentIdentity(from: result), validated: true)
     }
 
     private func installIdentity(_ current: CurrentIdentity, persist: Bool = true,
