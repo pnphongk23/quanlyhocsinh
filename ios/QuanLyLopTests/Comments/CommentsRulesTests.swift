@@ -293,9 +293,18 @@ final class CriteriaModeRulesTests: XCTestCase {
         XCTAssertNil(CriteriaModeRules.tapGrading(slip: legacy, criterion: 1, sections: [], grades: [], studentID: "a"))
         let chip = CriteriaModeRules.chips(rows: [row("a", slip: legacy)], criterion: 1, sections: [], grades: []).first
         XCTAssertEqual(chip?.isLegacy, true)
-        XCTAssertEqual(chip?.unmet, false)
+        XCTAssertEqual(chip?.unmet, true)
         let draft = slip("b", criteria: nil, stars: nil, scale: SessionSlip.legacyScale)
         XCTAssertNotNil(CriteriaModeRules.tapGrading(slip: draft, criterion: 1, sections: [], grades: [], studentID: "b"))
+    }
+
+    func testGroupWithALegacySlipIsNeverAllMet() {
+        let legacy = slip("a", criteria: nil, stars: 3, scale: SessionSlip.legacyScale)
+        let rows = [row("a", slip: legacy), row("b", slip: slip("b", criteria: SlipRules.allCriteria))]
+        let chips = CriteriaModeRules.chips(rows: rows, criterion: 1, sections: [], grades: [])
+        XCTAssertEqual(CriteriaModeRules.summary(chips), .unmet(1))
+        XCTAssertNotEqual(CriteriaModeText.summary(CriteriaModeRules.summary(chips)), "Cả lớp đạt")
+        XCTAssertEqual(chips[0].isEditable, false)
     }
 
     func testChipLookIsPaleWithoutASlipEvenWhenHomeworkIsNotDone() {

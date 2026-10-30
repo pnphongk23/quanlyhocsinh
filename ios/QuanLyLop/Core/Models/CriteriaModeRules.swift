@@ -7,6 +7,7 @@ enum CriteriaModeRules {
     struct Chip: Identifiable, Equatable {
         let studentID: String
         let name: String
+        /// An old three-star slip has no criteria data, so it counts as not met.
         let unmet: Bool
         /// Old three-star slip: shown dimmed and cannot be edited.
         let isLegacy: Bool
@@ -49,7 +50,7 @@ enum CriteriaModeRules {
             let locked = isLocked(row.slip)
             let criteria = effectiveCriteria(slip: row.slip, sections: sections, grades: grades, studentID: row.student.id)
             return Chip(studentID: row.student.id, name: row.student.name,
-                        unmet: !locked && !SlipRules.isMet(criteria, index: criterion),
+                        unmet: locked || !SlipRules.isMet(criteria, index: criterion),
                         isLegacy: locked, isSent: row.isSent, isAbsent: row.attendance == .absent, hasSlip: row.slip != nil)
         }
     }
