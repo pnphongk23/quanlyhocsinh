@@ -117,7 +117,7 @@ struct SessionCommentsView: View {
             } else {
                 if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
                 if notesDraft == nil {
-                    if data.canWriteCommentsReports { notesImportButton }
+                    if NotesImportAvailability.showsEntry(canWrite: data.canWriteCommentsReports) { notesImportButton }
                     modeSwitch
                 }
                 if let notesResult {

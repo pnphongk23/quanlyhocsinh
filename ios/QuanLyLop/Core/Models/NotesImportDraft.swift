@@ -131,6 +131,14 @@ struct NotesImportDraft: Equatable, Sendable {
     }
 }
 
+/// Switch for the "Nhập từ ghi chú" entry in the comments tab. It is off while the feature is paused: the button
+/// is the only way in, so nothing else changes and the rules, draft and save code stay tested.
+enum NotesImportAvailability {
+    static let enabled = false
+
+    static func showsEntry(canWrite: Bool, enabled: Bool = enabled) -> Bool { enabled && canWrite }
+}
+
 /// Fixed Vietnamese text of "Nhập từ ghi chú".
 enum NotesImportText {
     static let entry = "Nhập từ ghi chú"

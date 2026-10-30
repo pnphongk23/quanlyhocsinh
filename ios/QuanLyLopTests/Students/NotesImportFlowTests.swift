@@ -216,4 +216,11 @@ final class NotesImportFlowTests: XCTestCase {
         XCTAssertEqual(outcome.skippedSent, 1)
         XCTAssertEqual(outcome.saved, 1)
     }
+
+    func testEntryNeedsTheSwitchAndWritePermission() {
+        XCTAssertFalse(NotesImportAvailability.enabled, "paused: the comments tab shows no entry")
+        XCTAssertFalse(NotesImportAvailability.showsEntry(canWrite: true))
+        XCTAssertTrue(NotesImportAvailability.showsEntry(canWrite: true, enabled: true))
+        XCTAssertFalse(NotesImportAvailability.showsEntry(canWrite: false, enabled: true))
+    }
 }

@@ -190,7 +190,7 @@ private struct DemoI4Screen: View {
             _data = StateObject(wrappedValue: I4FeatureStore(
                 demoClasses: [TeacherDemoData.classroom], students: students, sessions: sessions,
                 attendance: TeacherDemoData.attendance(for: sessions), sections: sections, grades: grades))
-        } else if kind == "reports-error" {
+        } else if kind == "reports-error" || kind == "comments" {
             let sessions = TeacherDemoData.makeSessions()
             _data = StateObject(wrappedValue: I4FeatureStore(
                 demoClasses: [TeacherDemoData.classroom], students: TeacherDemoData.students,
