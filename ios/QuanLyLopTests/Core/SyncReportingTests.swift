@@ -68,7 +68,7 @@ final class SyncReportingTests: XCTestCase {
         try await store.apply(PullPage(cursor: 5, epoch: 3, hasMore: false, serverTime: "fixture", upserts: [:], deleted: []))
         try await store.write(1, forKey: command.recordKey, enqueueing: command)
         let request = try APIEndpoint.json(method: .post, path: "sync/push",
-            body: PushRequest(membershipId: scope.membershipId, deviceId: deviceId, commands: [command.wire]))
+            body: PushRequest(membershipId: scope.membershipId, deviceId: deviceId, commands: [command.currentContract.wire]))
         let malformed = Data("{\"epoch\":3,\"cursor\":9,\"results\":[{\"id\":\"\(command.id.uuidString.lowercased())\",\"status\":\"conflict\"}]}".utf8)
         let pull = PullPage(cursor: 5, epoch: 3, hasMore: false, serverTime: "fixture", upserts: [:], deleted: [])
         let api = StubAPIClient(baseURL: baseURL(), fixtures: [
@@ -88,9 +88,9 @@ final class SyncReportingTests: XCTestCase {
         let store = try store(), center = SyncStatusCenter(), command = attendanceCommand()
         do {
             // No fixtures at all: the first request fails, exactly like being offline.
-            try await SyncCoordinator(api: StubAPIClient(baseURL: baseURL()), store: store,
+            try await SyncCoordinator(api: OfflineAPI(), store: store,
                                       deviceId: deviceId, status: center).synchronize(now: now)
-            XCTFail("a sync without fixtures must fail")
+            XCTFail("a sync without a network must fail")
         } catch {}
         XCTAssertEqual(center.state, .error)
 
@@ -171,5 +171,14 @@ final class SyncReportingTests: XCTestCase {
         XCTAssertEqual(fields["comment"], .string("Con học rất tốt."))
         XCTAssertEqual(fields["hw_manual"], .bool(true))
         XCTAssertEqual(fields["note"], .string("Nhắc con ghi bài"))
+    }
+}
+
+/// Simulates a device without a network so a failed sync is a transient error, not a 404 the
+/// recovery gate would remember for an hour.
+private struct OfflineAPI: APIClient {
+    let baseURL = URL(string: "https://fixture.invalid/v1")!
+    func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+        throw APIFailure.offline
     }
 }
