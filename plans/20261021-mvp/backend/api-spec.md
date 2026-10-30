@@ -525,7 +525,7 @@ Nguồn: `docs/spec.md` mục 8 "Bản 1.1" và `plans/20261028-roles-permission
 - `class_ids`: lớp được gán (`member_classes`). Với role `admin` luôn `[]` (Admin thấy mọi lớp).
 - `phone` đầy đủ `+84…`: chỉ Admin gọi được các route này; client che một phần ở danh sách nếu muốn.
 - **`display_name` có thể là `null`** (kiểu chuỗi hoặc `null`): `member` mà tài khoản chưa đặt tên (ví dụ tài khoản tạo bằng đặt lại mật khẩu của Admin) trả `null`; client phải decode nullable và hiển thị SĐT thay thế. `kind = pending` luôn có tên.
-- `display_name` của `member` là **tên trong workspace này**: `memberships.display_name` do Admin đặt, nếu chưa đặt thì rơi về tên tài khoản (`users.display_name`). Đổi tên ở workspace A không đổi tên người đó ở workspace B. Khi bản khai chờ trở thành membership, tên Admin đã nhập chuyển sang `memberships.display_name`. Thêm SĐT đã có tài khoản: tên Admin nhập vẫn bị bỏ qua, hiển thị tên tài khoản cho tới khi Admin sửa bằng `PATCH`.
+- `display_name` của `member` là **tên trong workspace này**: `memberships.display_name` do Admin đặt, nếu chưa đặt thì rơi về tên tài khoản (`users.display_name`). Đổi tên ở workspace A không đổi tên người đó ở workspace B. Khi bản khai chờ trở thành membership, tên Admin đã nhập chuyển sang `memberships.display_name`. Thêm SĐT đã có tài khoản: tên Admin nhập lưu luôn vào `memberships.display_name` của membership mới (không đổi `users.display_name`).
 
 ### GET /staff
 `Admin`. `{ "items": [StaffMember…] }` — gồm Admin, Giáo viên, Trợ giảng (cả đã vô hiệu) và bản khai chờ, sắp theo `status` (active, pending, disabled) rồi tên. Không phân trang (workspace nhỏ).
