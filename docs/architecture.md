@@ -8,12 +8,18 @@ Hợp đồng backend đã qua review tổng thể (APPROVED) nằm ở `plans/2
 
 ## 1. Mục tiêu và ràng buộc
 
-- Hai client dùng chung một backend và một API (đã chốt 2026-10-21): app iOS native (SwiftUI, ưu tiên iPhone) và PWA/web (React, Android sau). Bản web desktop cho giáo viên thuộc Bản đầu (đã chốt 2026-10-21): phần Chi tiết lớp gồm các tab Buổi học (điểm danh, nhận xét, bài tập về nhà), Bài kiểm tra, Điểm, Học sinh, Báo cáo, kèm đăng nhập và đăng ký workspace; deploy web lên Cloudflare Pages staging.
+- Hai client dùng chung một backend và một API (đã chốt 2026-10-21): app iOS native (SwiftUI, ưu tiên iPhone) và PWA/web (React, Android sau). Bản web desktop cho giáo viên thuộc Bản đầu (đã chốt 2026-10-21): phần Chi tiết lớp gồm các tab Buổi học (điểm danh, nhận xét, bài tập về nhà), Bài kiểm tra, Điểm, Học sinh, Báo cáo, kèm đăng nhập và đăng ký workspace; deploy web lên Cloudflare Pages.
 - Mạng ở lớp học chập chờn: gọn nhẹ, thao tác tại lớp dùng được khi mất mạng. API thiết kế sẵn cho đồng bộ offline (mục 5) cho cả hai client.
-- Deploy: Cloudflare, chỉ môi trường staging trước; chưa đụng production (đã chốt 2026-10-21).
+- Deploy: Cloudflare, có môi trường production và development riêng.
 - Đội nhỏ: ít thành phần phải vận hành, chạy trên gói miễn phí; chỉ cân nhắc gói trả phí nếu sau này vượt giới hạn.
 - Phân quyền kiểm tra ở máy chủ, không tin máy khách.
 - Nhiều nhân sự dùng chung một workspace; quyền theo role tuỳ chỉnh và phạm vi lớp được gán (spec mục 4).
+
+### Môi trường
+
+- **Production:** các tài nguyên hiện mang tên `qlh-staging-*` vì URL Workers đã được phát hành cho bản App Store 1.0: Worker `qlh-staging-api`, D1 `qlh-staging-db`, Pages `qlh-staging-web`. Giữ nguyên tên và URL; trong Wrangler đây vẫn là `env.staging`.
+- **Development:** Worker `qlh-dev-api`, D1 `qlh-dev-db`, Pages `qlh-dev-web` (Wrangler `env.dev`). QA và kiểm thử tự động chỉ chạy trên dev.
+- Trước mọi deploy production cần xin General Lead và tạo bản sao lưu D1 trước migration bằng `wrangler d1 export` hoặc Time Travel bookmark.
 
 ## 2. Stack
 
@@ -30,7 +36,7 @@ Hợp đồng backend đã qua review tổng thể (APPROVED) nằm ở `plans/2
 | Báo cáo và PDF | App/web đọc báo cáo từ bản chụp dữ liệu máy chủ lưu khi phát hành. Khi người dùng bấm "Tải PDF", client tạo file (tải ảnh để Làm sau) trên thiết bị để chia sẻ hoặc in; không lưu file trên máy chủ và không tải lên | Tạo file báo cáo trên máy chủ |
 | Lưu file | MVP không lưu tệp báo cáo trên máy chủ. Tệp bài giảng có thể dùng R2 khi triển khai tính năng này sau MVP | Link công khai |
 | Push | FCM HTTP v1: iOS native đi **FCM → APNs** bằng SDK Firebase Messaging, PWA/web dùng FCM web token; OAuth access token ký RS256 từ service account trong secret, cache trong D1 khoảng 50 phút; payload chỉ có loại + mã tham chiếu; inbox, device token và deliveries lưu D1 (đã chốt 2026-10-21). Firebase chỉ dùng cho FCM | OneSignal |
-| Hosting | Cloudflare Pages (web tĩnh, không giới hạn) cùng Worker và D1. Chỉ dựng staging trước, chưa đụng production (đã chốt 2026-10-21); không binding R2 trong MVP | VPS |
+| Hosting | Cloudflare Pages (web tĩnh, không giới hạn) cùng Worker và D1 ở production (`qlh-staging-*`) và development (`qlh-dev-*`); không binding R2 trong MVP | VPS |
 | Lỗi | Sentry tải lười + log máy chủ, lọc SĐT và nội dung nhận xét | ELK tự host |
 
 Chỗ hai review khác nhau và đã chọn: dùng chỉ Dexie (không TanStack Query), ngân sách JS 200 KB gzip. Báo cáo xem trong app/web từ bản chụp khi phát hành; PDF được tạo trên thiết bị khi bấm tải, không tải lên hay lưu trên máy chủ. Ngân sách 200 KB và Dexie là của web; client iOS dùng SwiftData hoặc SQLite (**chưa chốt**) và không bị ràng buộc ngân sách này.
