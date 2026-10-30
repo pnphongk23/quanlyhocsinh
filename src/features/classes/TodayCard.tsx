@@ -53,7 +53,7 @@ function BacklogRow({ item }: { item: BacklogItem }) {
         className={s.task + " " + s.backlogTask}
       >
         <span className={s.backlogText}>
-          <span className={s.backlogTaskTitle}>{BACKLOG_TASK_LABELS[item.task.kind]}</span>
+            <span className={s.backlogTaskTitle}>{item.task.backlogLabel ?? BACKLOG_TASK_LABELS[item.task.kind]}</span>
           <span className={s.backlogSub}>{item.className} · {formatDayMonth(item.session.date)}</span>
         </span>
         {item.task.students !== undefined && <span className={s.backlogCount}>{item.task.students} em</span>}

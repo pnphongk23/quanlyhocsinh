@@ -154,7 +154,7 @@ describe("việc còn dở", () => {
     expect(far.backlog).toEqual([]);
   });
 
-  it("buổi đã qua còn planned báo điểm danh chưa lưu; gộp theo loại, mỗi loại một nhóm", () => {
+    it("buổi đã qua còn planned báo điểm danh chưa lưu; gộp theo loại, mỗi loại một nhóm", () => {
     const last = state.sessions.find((s) => s.id === "6a-session-7")!;
     last.status = "planned";
     const today = dayBefore(last.date, 1);
@@ -164,10 +164,33 @@ describe("việc còn dở", () => {
     expect(groups.map((g) => g.kind)).toEqual([...new Set(groups.map((g) => g.kind))]);
     expect(groups.flatMap((g) => g.items)).toHaveLength(agenda.backlog.length);
     expect(groups.every((g) => g.items.every((i) => i.task.kind === g.kind))).toBe(true);
-    expect(groups[0].kind).toBe("attendance");
-  });
+      expect(groups[0].kind).toBe("attendance");
+    });
 
-  it("thu gọn backlog lấy tối đa 2 việc theo ưu tiên điểm danh, phiếu, BTVN", () => {
+    it("buổi held có 1/N bản ghi giữ nhãn chưa điểm danh đủ trong backlog", () => {
+      const session = state.sessions.find((item) => item.id === "6a-session-7")!;
+      session.status = "held";
+      const roster = state.students.filter(
+        (student) => student.classId === session.classId && student.enrolledAt <= session.date && (student.leftAt === null || student.leftAt >= session.date),
+      );
+      expect(roster.length).toBeGreaterThan(1);
+      state.attendance = state.attendance.filter((record) => record.sessionId !== session.id);
+      state.attendance.push({
+        id: "test-attendance-partial-backlog",
+        sessionId: session.id,
+        studentId: roster[0].id,
+        status: "present",
+        note: "",
+        lateAt: null,
+      });
+
+      const item = buildTodayAgenda(state, dayBefore(session.date, 1)).backlog.find((entry) => entry.session.id === session.id && entry.task.kind === "attendance");
+
+      expect(item?.task.label).toBe("Điểm danh chưa xong");
+      expect(item?.task.backlogLabel).toBe("Chưa điểm danh đủ");
+    });
+
+    it("thu gọn backlog lấy tối đa 2 việc theo ưu tiên điểm danh, phiếu, BTVN", () => {
     const agenda = buildTodayAgenda(state, "2026-10-30");
     const backlog = [
       agenda.backlog.find((item) => item.task.kind === "homework")!,

@@ -20,6 +20,8 @@ export interface TodayTask {
   tab: SessionTab;
   /** Số em còn việc (phiếu chưa gửi, BTVN chưa chấm); điểm danh thì không có. */
   students?: number;
+  /** Nhãn riêng cho backlog khi buổi đã lưu điểm danh nhưng roster còn thiếu trạng thái. */
+  backlogLabel?: string;
 }
 
 export interface TodayEntry {
@@ -107,8 +109,15 @@ function tasksFor(state: StoreState, session: Session, today: string): TodayTask
   // Buổi chưa tới chưa có gì để làm.
   if (session.date > today) return [];
   const tasks: TodayTask[] = [];
-  if (session.status === "planned" || hasUnmarkedStudents(state, session))
-    tasks.push({ kind: "attendance", label: "Điểm danh chưa xong", tab: "diem-danh" });
+    const hasUnmarked = hasUnmarkedStudents(state, session);
+    const attendanceIncomplete = session.status === "held" && hasUnmarked;
+    if (session.status === "planned" || hasUnmarked)
+      tasks.push({
+        kind: "attendance",
+        label: "Điểm danh chưa xong",
+        ...(attendanceIncomplete ? { backlogLabel: "Chưa điểm danh đủ" } : {}),
+        tab: "diem-danh",
+      });
   const unsent = buildTicketRows(state, session.id).filter(
     (row) => row.status !== "sent",
   ).length;

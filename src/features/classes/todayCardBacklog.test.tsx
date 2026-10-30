@@ -5,12 +5,12 @@ import type { Session } from "../../data/types";
 import { TodayCard } from "./TodayCard";
 import type { BacklogItem, TodayAgenda } from "./todayModel";
 
-const item = (n: number, kind: BacklogItem["task"]["kind"]): BacklogItem => ({
+const item = (n: number, kind: BacklogItem["task"]["kind"], backlogLabel?: string): BacklogItem => ({
   session: { id: `s${kind}${n}`, classId: `c${n}`, date: `2026-10-${String(10 + n).padStart(2, "0")}` } as Session,
   classId: `c${n}`,
   className: `Lớp ${n}`,
   prefix: `Buổi ${n}`,
-  task: { kind, label: kind, tab: kind === "attendance" ? "diem-danh" : "nhan-xet", students: kind === "attendance" ? undefined : n },
+  task: { kind, label: kind, ...(backlogLabel ? { backlogLabel } : {}), tab: kind === "attendance" ? "diem-danh" : "nhan-xet", students: kind === "attendance" ? undefined : n },
 });
 const agenda = (backlog: BacklogItem[]): TodayAgenda => ({ date: "2026-10-30", backlog, entries: [], next: null });
 const renderCard = (backlog: BacklogItem[]) => render(<MemoryRouter><TodayCard agenda={agenda(backlog)} /></MemoryRouter>);
@@ -48,5 +48,14 @@ describe("Việc còn dở theo nhóm", () => {
     const backlog = screen.getByRole("region", { name: "Việc còn dở" });
     expect(within(backlog).getAllByRole("link")).toHaveLength(2);
     expect(within(backlog).queryByRole("button", { name: /Xem thêm/ })).toBeNull();
+  });
+
+  it("hiện nhãn điểm danh chưa đủ khi thu gọn và mở rộng backlog", () => {
+    renderCard([item(1, "attendance", "Chưa điểm danh đủ"), item(2, "tickets"), item(3, "homework")]);
+    const backlog = screen.getByRole("region", { name: "Việc còn dở" });
+    expect(within(backlog).getAllByRole("link")[0]).toHaveTextContent("Chưa điểm danh đủ");
+
+    fireEvent.click(within(backlog).getByRole("button", { name: "Xem thêm (1)" }));
+    expect(within(backlog).getAllByRole("link")[0]).toHaveTextContent("Chưa điểm danh đủ");
   });
 });
