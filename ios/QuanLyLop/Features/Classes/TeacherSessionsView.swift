@@ -296,7 +296,6 @@ struct TeacherExtraSessionSheet: View {
                     if let source = data.saveStatusSource { AppSaveStatus(kind: source.kind) }
                 }
             }
-            AppButton(title: String(localized: "feature.classes.ong"), variant: .secondary, size: .large) { dismiss() }
         } close: {
             dismiss()
         }
