@@ -65,6 +65,6 @@ Quy tắc:
 - **Chờ đồng bộ**: dữ liệu đã lưu trên máy nhưng chưa đẩy lên: `SaveStatus` hiện pill "Chờ đồng bộ" (`--state-pending-*`) khi kéo dài hơn 1 s; khi offline hiện "Đã lưu trên máy · sẽ đồng bộ khi có mạng".
 - **Empty duy nhất có Mít**: chỉ `EmptyState` (Mít + tiêu đề + mô tả + hành động tuỳ chọn). Khung nhỏ/lọc rỗng dùng `size="compact"` (`--empty-mascot-compact`); mặc định `--empty-mascot`. Không tự viết empty khác, không dùng Mít ở chỗ khác ngoài empty/trạng thái chờ và khung sao của phiếu nhận xét (dáng `sao-0`…`sao-5` theo số sao, cỡ `--empty-mascot-compact`).
 
-## 7. Danh sách gộp theo nhóm
-- Mục gộp theo loại (vd. "Việc còn dở" ở trang Lớp), đã chốt 2026-10-30: mặc định thu gọn, mỗi nhóm chỉ hiện một dòng gồm tên nhóm, số lượng và chevron. Chạm vào thì mở ra, tối đa 2 dòng; còn nữa thì có nút chữ "Xem thêm (N)" để mở rộng và "Thu gọn" để gập lại. Mở/gập dùng quy tắc expand ở mục 4; vùng bấm theo mục 2.
+## 7. Danh sách việc còn dở
+- Mục việc còn dở (vd. "Việc còn dở" ở trang Lớp), đã chốt 2026-10-30, web và iOS giống nhau: mặc định chỉ hiện tối đa 2 việc tính chung mọi nhóm, ưu tiên theo thứ tự Điểm danh → Phiếu → BTVN. Mỗi dòng gồm tiêu đề loại việc và dòng phụ "lớp · ngày". Bên dưới có nút chữ "Xem thêm (N)" với N là tổng số việc còn lại; bấm thì mở danh sách đầy đủ (có thể gộp theo nhóm) và có "Thu gọn" để gập lại.
 - "Gán tất cả mặc định" dùng kiểu **Nút phụ** (mục 6): nền `--color-primary-soft`, chữ `--color-primary-ink`.
