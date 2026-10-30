@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node src/test/check-bundle.mjs",
+    "build": "tsc --noEmit && vite build && node src/test/check-bundle.mjs dist staging",
+    "build:dev": "tsc --noEmit && vite build --mode dev --outDir dist-dev && node src/test/check-bundle.mjs dist-dev dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:click": "node scripts/ui-click-check.mjs",

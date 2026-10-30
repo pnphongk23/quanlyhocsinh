@@ -37,7 +37,7 @@ it.skipIf(process.env.QLH_STAGING_SMOKE !== "1")(
       const configuredBase = new URL(config.api);
       expect(configuredBase.pathname.replace(/\/$/, "")).toMatch(/\/v1$/);
       console.log(`STAGING_SMOKE api_base=${configuredBase.host}${configuredBase.pathname}`);
-      vi.stubEnv("VITE_API_BASE_URL", config.api);
+      vi.stubEnv("VITE_API_BASE", config.api);
       sessionStorage.clear();
       localStorage.removeItem("qlh.session.v1");
       vi.resetModules();

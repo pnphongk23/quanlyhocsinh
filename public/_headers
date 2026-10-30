@@ -1,8 +1,8 @@
 /sw.js
   Cache-Control: no-cache
-  Content-Security-Policy: default-src 'self'; connect-src 'self' https://qlh-staging-api.tolaphamnhuphong.workers.dev; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://qlh-staging-api.tolaphamnhuphong.workers.dev https://qlh-dev-api.tolaphamnhuphong.workers.dev; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
 /manifest.webmanifest
   Cache-Control: no-cache
-  Content-Security-Policy: default-src 'self'; connect-src 'self' https://qlh-staging-api.tolaphamnhuphong.workers.dev; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://qlh-staging-api.tolaphamnhuphong.workers.dev https://qlh-dev-api.tolaphamnhuphong.workers.dev; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
 /*
-  Content-Security-Policy: default-src 'self'; connect-src 'self' https://qlh-staging-api.tolaphamnhuphong.workers.dev; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://qlh-staging-api.tolaphamnhuphong.workers.dev https://qlh-dev-api.tolaphamnhuphong.workers.dev; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'

@@ -25,7 +25,7 @@ Node 22.19+; dependency cùng major với prototype, lockfile độc lập ở g
 
 ## Lớp dữ liệu W-1 đợt B
 
-- `data/api/client.ts` gửi JSON, Bearer token, request ID, timeout và chuẩn hoá lỗi; base URL lấy từ `VITE_API_BASE_URL`, mặc định staging.
+- `data/api/client.ts` gửi JSON, Bearer token, request ID, timeout và chuẩn hoá lỗi; base URL lấy từ `VITE_API_BASE`, mặc định staging.
 - Token phiên web lưu trong `sessionStorage` (giới hạn bảo vệ của web: JavaScript cùng origin vẫn có thể đọc token); cache thực thể và hàng đợi ghi tách theo user/workspace/membership trong Dexie.
 - `data/sync.ts` tải snapshot/pull, đẩy lệnh tối đa 50 mỗi request, giữ lệnh bị từ chối và kích hoạt đồng bộ khi mở/online/focus/định kỳ.
 - Tạo PDF/ảnh là trách nhiệm UI trên thiết bị. Client và repository không tải PDF lên hoặc xuống, không dùng R2.

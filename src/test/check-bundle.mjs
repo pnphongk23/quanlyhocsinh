@@ -1,7 +1,10 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import assert from "node:assert/strict";
-const manifest = JSON.parse(readFileSync("dist/.vite/manifest.json", "utf8"));
+const outDir = process.argv[2] ?? "dist";
+const target = process.argv[3] ?? "staging";
+const manifest = JSON.parse(readFileSync(`${outDir}/.vite/manifest.json`, "utf8"));
 const entry = Object.keys(manifest).find((key) => manifest[key].isEntry);
 assert(entry, "Missing entry in Vite manifest");
 function closure(keys) {
@@ -19,7 +22,7 @@ function measure(keys) {
   const chunks = closure(keys).map((key) => manifest[key]);
   const jsFiles = new Set(chunks.map((chunk) => chunk.file).filter((file) => file.endsWith(".js")));
   const cssFiles = new Set(chunks.flatMap((chunk) => chunk.css ?? []));
-  const sum = (files) => [...files].reduce((total, file) => total + gzipSync(readFileSync(`dist/${file}`)).byteLength, 0);
+  const sum = (files) => [...files].reduce((total, file) => total + gzipSync(readFileSync(join(outDir, file))).byteLength, 0);
   return { jsGzipBytes: sum(jsFiles), cssGzipBytes: sum(cssFiles), files: [...jsFiles] };
 }
 const initial = measure([entry]);
@@ -34,4 +37,10 @@ assert(!closure([shellKeys[0]]).includes(shellKeys[1]), "Staff shell includes gu
 assert(!closure([shellKeys[1]]).includes(shellKeys[0]), "Guardian shell includes staff shell");
 const firstRoutes = ["src/features/classes/ClassListPage.tsx", "src/roles/guardian/GuardianClassPage.tsx"];
 for (const key of firstRoutes) assert(manifest[key]?.isDynamicEntry, `${key} must be a lazy first route`);
+const jsFiles = readdirSync(outDir, { recursive: true }).filter((file) => typeof file === "string" && file.endsWith(".js"));
+const bundle = jsFiles.map((file) => readFileSync(join(outDir, file), "utf8")).join("\n");
+const stagingUrl = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
+const devUrl = "https://qlh-dev-api.tolaphamnhuphong.workers.dev/v1";
+assert(bundle.includes(target === "dev" ? devUrl : stagingUrl), `Expected ${target} API URL in ${outDir} bundle`);
+assert(!bundle.includes(target === "dev" ? stagingUrl : devUrl), `Unexpected other API URL in ${outDir} bundle`);
 console.log(JSON.stringify({ initial, staffFirstRoute: measure([entry, shellKeys[0], firstRoutes[0]]), guardianFirstRoute: measure([entry, shellKeys[1], firstRoutes[1]]) }, null, 2));
