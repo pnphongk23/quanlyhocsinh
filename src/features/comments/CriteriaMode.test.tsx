@@ -42,6 +42,23 @@ describe("CriteriaMode", () => {
     expect(chipsOf(full.student.name).every((chip) => !/provisional/.test(chip.className))).toBe(true);
   });
 
+  it("keeps every no-slip chip pale even when prior homework was not done", () => {
+    const rows = buildTicketRows(createSeed(), "6a-session-7");
+    const row = rows[0];
+    const noHomeworkRow = rows[1];
+    row.comment = null;
+    noHomeworkRow.comment = null;
+    render(<CriteriaMode sessionId="6a-session-7" rows={[row, noHomeworkRow]} canWrite previousGrades={(studentId) => studentId === row.student.id ? [{ sectionId: "reading", studentId, level: "not_done" }] : []} />);
+    const chipsOf = (student: typeof row) => screen.getAllByRole("button", { name: new RegExp(`^${student.student.name}`) });
+    const unfinishedHomeworkChips = chipsOf(row);
+    const noHomeworkChips = chipsOf(noHomeworkRow);
+    expect(unfinishedHomeworkChips).toHaveLength(5);
+    expect(noHomeworkChips).toHaveLength(5);
+    expect([...unfinishedHomeworkChips, ...noHomeworkChips].every((chip) => /provisional/.test(chip.className) && !/selected/.test(chip.className))).toBe(true);
+    expect(unfinishedHomeworkChips[4]).toHaveAttribute("aria-pressed", "false");
+    expect(noHomeworkChips[4]).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("hides editable chip buttons without write access", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7");
     render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite={false} />);
@@ -61,6 +78,17 @@ describe("CriteriaMode", () => {
     render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite />);
     expect(screen.getAllByText("Phiếu thang cũ").length).toBeGreaterThan(0);
     expect(screen.queryAllByRole("button", { name: /Nguyễn Minh Anh.*Phiếu thang cũ/ })).toHaveLength(0);
+    expect(screen.getAllByText("Nguyễn Minh Anh").every((chip) => !/selected/.test(chip.className))).toBe(true);
+  });
+
+  it("keeps no-criteria slips unmet in the chip display", () => {
+    const rows = buildTicketRows(createSeed(), "6a-session-7");
+    rows[0].comment = { ...rows[0].comment!, scale: 5, criteria: null, stars: 5 };
+    render(<CriteriaMode sessionId="6a-session-7" rows={[rows[0]]} canWrite />);
+    const chips = screen.getAllByText("Nguyễn Minh Anh");
+    expect(chips.length).toBeGreaterThan(0);
+    expect(chips.every((chip) => !/selected/.test(chip.className))).toBe(true);
+    expect(screen.getAllByText("1 em chưa đạt")).toHaveLength(5);
   });
 
   it("asks once per screen before changing sent slips", () => {

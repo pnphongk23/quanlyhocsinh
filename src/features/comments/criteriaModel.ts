@@ -10,8 +10,10 @@ export function criteriaRowsForSession(state: StoreState, sessionId: string): Ti
 
 export function criteriaForRow(row: TicketRow): number {
   if (!row.comment) return 31;
-  if (row.comment.scale === 3) return Math.max(0, (1 << (row.stars ?? 3)) - 1);
-  return row.comment.criteria ?? 31;
+  // Legacy slips only carry a star score, not per-criterion results.
+  // Missing criteria must count as unmet instead of being inferred as achieved.
+  if (row.comment.scale === 3 || row.comment.criteria == null) return 0;
+  return row.comment.criteria;
 }
 
 export function criteriaUnmetCount(rows: TicketRow[], index: number, initialCriteria: (row: TicketRow) => number = () => 31, previewCriteria?: Record<string, number>): number {
@@ -28,7 +30,7 @@ export function criteriaBadge(rows: TicketRow[], index: number, initialCriteria:
 }
 
 export function canToggleCriterion(row: TicketRow): boolean {
-  return !row.comment || row.comment.scale === 5;
+  return !row.comment || (row.comment.scale !== 3 && row.comment.criteria != null);
 }
 
 export function rowHasCustomComment(row: TicketRow): boolean {

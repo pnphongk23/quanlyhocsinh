@@ -28,6 +28,7 @@ describe("criteria mode model", () => {
 
   it("locks legacy scale slips while sent and queued slips remain editable", () => {
     expect(canToggleCriterion(row(7, { scale: 3, criteria: null, stars: 2 }))).toBe(false);
+    expect(canToggleCriterion(row(31, { scale: 5, criteria: null, stars: 5 }))).toBe(false);
     expect(canToggleCriterion(row(15, { status: "sent" }))).toBe(true);
     expect(canToggleCriterion(row(15, { sendQueued: true }))).toBe(true);
   });
@@ -51,6 +52,19 @@ describe("criteria mode model", () => {
 
   it("counts unmet students when everyone has a slip", () => {
     expect(criteriaBadge([row(30), row(30), row(31)], 0)).toEqual({ kind: "unmet", count: 2, label: "2 em chưa đạt" });
+  });
+
+  it("counts legacy star-only slips as unmet rather than achieved", () => {
+    const legacy = row(31, { scale: 3, criteria: null, stars: 3 });
+    expect(criteriaForRow(legacy)).toBe(0);
+    expect(criteriaUnmetCount([legacy], 0)).toBe(1);
+    expect(criteriaBadge([legacy], 0)).toEqual({ kind: "unmet", count: 1, label: "1 em chưa đạt" });
+  });
+
+  it("counts slips without per-criterion data as unmet rather than achieved", () => {
+    const noCriteria = row(31, { scale: 5, criteria: null, stars: 5 });
+    expect(criteriaBadge([noCriteria], 0)).toEqual({ kind: "unmet", count: 1, label: "1 em chưa đạt" });
+    expect(criteriaBadge([noCriteria], 0, undefined, {})).toEqual({ kind: "unmet", count: 1, label: "1 em chưa đạt" });
   });
 
   it("prioritizes students without a slip when the class also has unmet criteria", () => {
