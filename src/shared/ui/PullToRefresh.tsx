@@ -3,33 +3,42 @@ import { Spinner } from "./Spinner";
 import s from "./pullToRefresh.module.css";
 
 export function PullToRefresh({ controller }: { controller: PullToRefreshController }) {
-  const visible = controller.message !== "";
   return (
-    <div
-      className={s.indicator}
-      data-state={controller.state}
-      style={{ "--pull-distance": `${controller.distance}px` } as React.CSSProperties}
-      aria-hidden={!visible && controller.distance === 0}
-    >
-      <span role="status" aria-live="polite" aria-atomic="true">
-        {controller.state === "loading" && <span aria-hidden="true"><Spinner /></span>}
-        {controller.message}
-      </span>
+    <div className={s.mobileOnly}>
+      <div
+        className={s.indicator}
+        data-state={controller.state}
+        style={{ "--pull-distance": `${controller.distance}px` } as React.CSSProperties}
+        aria-hidden="true"
+      >
+        <span>
+          {controller.state === "loading" && <Spinner />}
+          {controller.message}
+        </span>
+      </div>
+      <span role="status" aria-live="polite" aria-atomic="true" className={s.visuallyHidden}>{controller.liveMessage}</span>
     </div>
   );
 }
 
 export function RefreshButton({ controller, className = "" }: { controller: PullToRefreshController; className?: string }) {
+  const loading = controller.state === "loading";
+  const result = controller.state === "ok" || controller.state === "offline" || controller.state === "error";
   return (
-    <button
-      type="button"
-      className={`${s.button} ${className}`.trim()}
-      onClick={() => void controller.refresh()}
-      disabled={controller.state === "loading"}
-      aria-busy={controller.state === "loading"}
-    >
-      {controller.state === "loading" && <Spinner />}
-      {controller.state === "loading" ? "Đang tải…" : "Tải lại"}
-    </button>
+    <span className={s.action}>
+      <button
+        type="button"
+        className={`${s.button} ${className}`.trim()}
+        onClick={() => void controller.refresh()}
+        disabled={loading}
+        aria-busy={loading}
+      >
+        {loading && <Spinner />}
+        {loading ? "Đang tải…" : "Tải lại"}
+      </button>
+      <span role="status" aria-live="polite" aria-atomic="true" className={s.actionStatus} data-state={controller.state}>
+        {result ? controller.message : ""}
+      </span>
+    </span>
   );
 }

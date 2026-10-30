@@ -30,8 +30,6 @@
   visibility: hidden;
 }
 
-.indicator[aria-hidden="true"] { display: none; }
-
 .indicator[data-state="loading"] > span,
 .indicator[data-state="ok"] > span,
 .indicator[data-state="offline"] > span,
@@ -45,8 +43,35 @@
   background: var(--state-error-bg);
 }
 
-.button {
+.mobileOnly { display: contents; }
+
+.visuallyHidden {
+  position: absolute;
+  width: var(--space-2);
+  height: var(--space-2);
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.action {
   display: none;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.actionStatus {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.actionStatus[data-state="offline"],
+.actionStatus[data-state="error"] {
+  color: var(--state-error-fg);
+}
+
+.button {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-8);
@@ -79,15 +104,6 @@
 }
 
 @media (min-width: 1024px) {
-  .button { display: inline-flex; }
-  .indicator {
-    position: static;
-    height: auto;
-    justify-content: flex-end;
-  }
-  .indicator > span {
-    min-height: var(--tap-desktop);
-    box-shadow: none;
-    transform: none;
-  }
+  .action { display: inline-flex; }
+  .mobileOnly { display: none; }
 }

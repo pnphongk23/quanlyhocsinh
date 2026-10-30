@@ -8,11 +8,16 @@ export interface PullToRefreshController {
   state: RefreshState;
   distance: number;
   message: string;
+  /** Thông báo cho trình đọc màn hình: không gồm "Kéo xuống…" để tránh ồn khi chạm lệch. */
+  liveMessage: string;
   refresh: () => Promise<void>;
 }
 
-function tokenPixels(name: string): number {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name);
+const DEFAULT_HOLD_MS = 1600;
+const ERROR_HOLD_FACTOR = 3;
+
+function tokenValue(name: string): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const value = Number.parseFloat(raw);
   return Number.isFinite(value) ? value : 0;
 }
@@ -26,76 +31,100 @@ function scrollIsAtTop(target: EventTarget | null, boundary: HTMLElement): boole
   return true;
 }
 
+function insideOpenDialog(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest("dialog[open], [role=dialog]") !== null;
+}
+
+function messageFor(state: RefreshState): string {
+  switch (state) {
+    case "loading": return "Đang tải…";
+    case "ok": return "Đã tải lại";
+    case "offline": return "Không có mạng, chưa tải lại được";
+    case "error": return "Không tải lại được. Hãy thử lại.";
+    case "pulling": return "Kéo xuống để tải lại";
+    default: return "";
+  }
+}
+
 export function usePullToRefresh(onRefresh: () => Promise<RefreshResult>): PullToRefreshController {
-  const containerNode = useRef<HTMLElement | null>(null);
-  const containerRef = useCallback<RefCallback<HTMLElement>>((node) => { containerNode.current = node; }, []);
-  const [state, setState] = useState<RefreshState>("idle");
-  const [distance, setDistance] = useState(0);
+  const [node, setNode] = useState<HTMLElement | null>(null);
+  const containerRef = useCallback<RefCallback<HTMLElement>>((element) => { setNode(element); }, []);
+  const [state, setStateValue] = useState<RefreshState>("idle");
+  const [distance, setDistanceValue] = useState(0);
+  const stateRef = useRef<RefreshState>("idle");
+  const distanceRef = useRef(0);
   const startY = useRef<number | null>(null);
-  const activePull = useRef(false);
+  const onRefreshRef = useRef(onRefresh);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  onRefreshRef.current = onRefresh;
+
+  const setState = useCallback((next: RefreshState) => { stateRef.current = next; setStateValue(next); }, []);
+  const setDistance = useCallback((next: number) => { distanceRef.current = next; setDistanceValue(next); }, []);
+  const clearHide = useCallback(() => {
+    if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = undefined; }
+  }, []);
 
   const refresh = useCallback(async () => {
-    if (state === "loading") return;
+    if (stateRef.current === "loading") return;
+    clearHide();
     setState("loading");
     setDistance(0);
+    let next: RefreshState;
     try {
-      const result = await onRefresh();
-      setState(result.status === "ok" ? "ok" : result.status === "offline" ? "offline" : "error");
+      const result = await onRefreshRef.current();
+      next = result.status === "ok" ? "ok" : result.status === "offline" ? "offline" : "error";
     } catch {
-      setState("error");
+      next = "error";
     }
-  }, [onRefresh, state]);
+    setState(next);
+    const hold = tokenValue("--dur-success-hold") || DEFAULT_HOLD_MS;
+    hideTimer.current = setTimeout(() => {
+      hideTimer.current = undefined;
+      if (stateRef.current === next) setState("idle");
+    }, next === "ok" ? hold : hold * ERROR_HOLD_FACTOR);
+  }, [clearHide, setDistance, setState]);
+
+  useEffect(() => clearHide, [clearHide]);
 
   useEffect(() => {
-    const root = containerNode.current;
-    if (!root) return;
-    const threshold = tokenPixels("--space-48");
-    const maxDistance = threshold + tokenPixels("--space-24");
+    if (!node) return;
+    const root = node;
+    const reset = () => {
+      startY.current = null;
+      setDistance(0);
+      if (stateRef.current === "pulling") setState("idle");
+    };
 
     const onTouchStart = (event: TouchEvent) => {
-      if (window.matchMedia("(min-width: 1024px)").matches || event.touches.length !== 1 || state === "loading") return;
-      if (!scrollIsAtTop(event.target, root)) return;
+      if (window.matchMedia("(min-width: 1024px)").matches || event.touches.length !== 1 || stateRef.current === "loading") return;
+      if (insideOpenDialog(event.target) || !scrollIsAtTop(event.target, root)) return;
       startY.current = event.touches[0].clientY;
-      activePull.current = true;
     };
     const onTouchMove = (event: TouchEvent) => {
-      if (!activePull.current || startY.current === null || event.touches.length !== 1) return;
+      if (startY.current === null || event.touches.length !== 1) return;
       const delta = event.touches[0].clientY - startY.current;
-      if (delta <= 0) { setDistance(0); return; }
-      setState("pulling");
-      setDistance(Math.min(delta, maxDistance));
+      if (delta <= tokenValue("--space-8")) { if (distanceRef.current !== 0) reset(); return; }
+      if (stateRef.current !== "pulling") { clearHide(); setState("pulling"); }
+      setDistance(Math.min(delta, tokenValue("--space-48") + tokenValue("--space-24")));
     };
     const onTouchEnd = () => {
-      if (activePull.current && distance >= threshold) void refresh();
-      else if (state === "pulling") setState("idle");
-      activePull.current = false;
-      startY.current = null;
-      setDistance(0);
-    };
-    const onTouchCancel = () => {
-      activePull.current = false;
-      startY.current = null;
-      setDistance(0);
-      if (state === "pulling") setState("idle");
+      const pulled = startY.current !== null && distanceRef.current >= tokenValue("--space-48");
+      reset();
+      if (pulled) void refresh();
     };
 
     root.addEventListener("touchstart", onTouchStart, { passive: true });
     root.addEventListener("touchmove", onTouchMove, { passive: true });
     root.addEventListener("touchend", onTouchEnd, { passive: true });
-    root.addEventListener("touchcancel", onTouchCancel, { passive: true });
+    root.addEventListener("touchcancel", reset, { passive: true });
     return () => {
       root.removeEventListener("touchstart", onTouchStart);
       root.removeEventListener("touchmove", onTouchMove);
       root.removeEventListener("touchend", onTouchEnd);
-      root.removeEventListener("touchcancel", onTouchCancel);
+      root.removeEventListener("touchcancel", reset);
     };
-  }, [distance, refresh, state]);
+  }, [node, refresh, clearHide, setDistance, setState]);
 
-  const message = state === "loading" ? "Đang tải…"
-    : state === "ok" ? "Đã tải lại"
-      : state === "offline" ? "Không có mạng, chưa tải lại được"
-        : state === "error" ? "Không tải lại được. Hãy thử lại."
-          : state === "pulling" ? "Kéo xuống để tải lại"
-            : "";
-  return { containerRef, state, distance, message, refresh };
+  const message = messageFor(state);
+  return { containerRef, state, distance, message, liveMessage: state === "pulling" ? "" : message, refresh };
 }

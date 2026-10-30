@@ -111,6 +111,14 @@ describe("sync triggers", () => {
     expect(await device.refreshNow()).toEqual({ status: "error" });
   });
 
+  it("refreshNow does not report ok when the server rejects the session", async () => {
+    const device = await bootDevice(server, "t", me);
+    expect(await device.refreshNow()).toEqual({ status: "ok" });
+    server.tokens.delete("t");
+    expect(await device.refreshNow()).toEqual({ status: "error" });
+    expect(await device.refreshNow()).toEqual({ status: "error" });
+  });
+
   it("keeps one sync round in flight and queues one explicit follow-up", async () => {
     const device = await bootDevice(server, "t", me);
     await device.syncNow();

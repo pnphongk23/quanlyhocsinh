@@ -211,8 +211,12 @@ export function syncNow(): Promise<void> { return runSync(true); }
 export type RefreshResult = { status: "ok" } | { status: "offline" | "error" };
 export async function refreshNow(): Promise<RefreshResult> {
   if (typeof navigator !== "undefined" && !navigator.onLine) return { status: "offline" };
+  if (!getCacheIdentity() || !getToken()) return { status: "error" };
+  const identityBefore = identityKey();
   const failuresBefore = syncFailureVersion;
   await syncNow();
+  // Phiên hết hạn hoặc mất quyền thì bộ nhớ đệm bị xoá giữa chừng: không tính là đã tải lại.
+  if (!getToken() || !getCacheIdentity() || identityKey() !== identityBefore) return { status: "error" };
   return syncFailureVersion === failuresBefore ? { status: "ok" } : { status: "error" };
 }
 async function syncRound(membershipId: string, identity: string, pullWhenIdle: boolean): Promise<void> {
