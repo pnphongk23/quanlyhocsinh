@@ -4,8 +4,6 @@ import XCTest
 @MainActor
 final class RestoreSessionOfflineTests: XCTestCase {
     private let scope = CacheScope(userId: "offline-user", workspaceId: "offline-workspace", membershipId: "offline-member")
-    private var clock = Date(timeIntervalSince1970: 1_800_000_000)
-
     func testNetworkFailureUsesCachedIdentityAndRetriesMeOnNextSync() async throws {
         let identity = fixtureIdentity()
         let cache = MemoryIdentityStore(identity)
@@ -165,8 +163,7 @@ final class RestoreSessionOfflineTests: XCTestCase {
     private func makeModel(api: AuthFixtureAPI, token: InMemoryTokenStore, cache: MemoryIdentityStore,
                            store: SQLiteStore, online: Bool, status: SyncStatusCenter = .shared) -> AuthModel {
         AuthModel(configuration: .fallback, apiClient: api, tokenStore: token,
-                  identityStore: cache, storeFactory: { _ in store }, isOnline: { online }, syncStatus: status,
-                  now: { self.clock })
+                    identityStore: cache, storeFactory: { _ in store }, isOnline: { online }, syncStatus: status)
     }
 
     private func fixtureIdentity() -> CurrentIdentity {

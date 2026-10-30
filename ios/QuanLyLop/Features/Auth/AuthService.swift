@@ -168,6 +168,7 @@ final class AuthModel {
     var activeSQLiteStore: SQLiteStore? { activeStore as? SQLiteStore }
     private(set) var activeSync: SyncCoordinator?
     private var lastAutomaticSyncScope: String?
+    private var identityValidatedForEntrySync = false
     private var returnToSettingsAfterRole = false
 
     private let identityStore: any CachedIdentityStore
@@ -176,15 +177,13 @@ final class AuthModel {
     private let storeFactory: (CacheScope) throws -> SQLiteStore
     private let isOnline: @MainActor () -> Bool
     private let syncStatus: SyncStatusCenter
-    private let now: @MainActor () -> Date
 
     init(configuration: AppConfiguration, apiClient: (any APIClient)? = nil,
          tokenStore injectedTokenStore: (any TokenStore)? = nil,
          identityStore injectedIdentityStore: (any CachedIdentityStore)? = nil,
          storeFactory: ((CacheScope) throws -> SQLiteStore)? = nil,
-           isOnline: @escaping @MainActor () -> Bool = { ConnectivityMonitor.shared.isOnline },
-           syncStatus: SyncStatusCenter = .shared,
-           now: @escaping @MainActor () -> Date = { .now }) {
+         isOnline: @escaping @MainActor () -> Bool = { ConnectivityMonitor.shared.isOnline },
+         syncStatus: SyncStatusCenter = .shared) {
         self.syncStatus = syncStatus
         let service = configuration.tokenStoreService
         deleteAccountFormURL = configuration.deleteAccountFormURL
@@ -193,7 +192,6 @@ final class AuthModel {
         identityStore = injectedIdentityStore ?? KeychainCachedIdentityStore(service: service)
         self.storeFactory = storeFactory ?? { scope in try SQLiteStore.open(scope: scope) }
         self.isOnline = isOnline
-        self.now = now
         api = apiClient ?? URLSessionAPIClient(configuration: configuration, tokenStore: store)
     }
 
@@ -216,7 +214,7 @@ final class AuthModel {
             } else if Self.statusCode(error) == 403 {
                 await hideRevokedIdentity(error)
             } else if Self.isRecoverable(error), let cached = try? await identityStore.load() {
-                await installIdentity(cached, persist: false)
+                await installIdentity(cached, persist: false, validated: false)
             } else {
                 message = Self.userMessage(error)
                 screen = .login
@@ -308,10 +306,11 @@ final class AuthModel {
         do {
             let request = AuthCredentials(phone: domesticPhone(phone), password: password, deviceLabel: "iPhone")
             let endpoint = try APIEndpoint.json(method: .post, path: "auth/login", body: request, requiresAuthentication: false)
-              let result = try await api.send(endpoint, as: AuthSession.self)
-              try await tokenStore.setToken(result.token)
-              session = result
-              try? await identityStore.save(Self.currentIdentity(from: result))
+            let result = try await api.send(endpoint, as: AuthSession.self)
+            try await tokenStore.setToken(result.token)
+            identityValidatedForEntrySync = true
+            session = result
+            try? await identityStore.save(Self.currentIdentity(from: result))
             if result.user.mustChangePassword { screen = .forcedPassword }
               else if result.activeMembershipId == nil && result.memberships.isEmpty { screen = .main }
               else if result.activeMembershipId == nil {
@@ -337,10 +336,11 @@ final class AuthModel {
                                               displayName: name.trimmingCharacters(in: .whitespacesAndNewlines),
                                               workspaceName: workspace.trimmingCharacters(in: .whitespacesAndNewlines))
             let endpoint = try APIEndpoint.json(method: .post, path: "auth/register", body: request, requiresAuthentication: false)
-              let result = try await api.send(endpoint, as: AuthSession.self)
-              try await tokenStore.setToken(result.token)
-              session = result
-              try? await identityStore.save(Self.currentIdentity(from: result))
+            let result = try await api.send(endpoint, as: AuthSession.self)
+            try await tokenStore.setToken(result.token)
+            identityValidatedForEntrySync = true
+            session = result
+            try? await identityStore.save(Self.currentIdentity(from: result))
             if let membership = result.activeMembershipId {
                 try await prepareStore(for: result.user, membershipId: membership)
                 screen = .main
@@ -428,14 +428,15 @@ final class AuthModel {
             let scopeStore = try makeStore(user: currentUser, membershipId: "")
             let controller = SessionController(api: api, tokenStore: tokenStore, store: scopeStore)
             let selection = try await controller.selectMembership(membership.id)
+            identityValidatedForEntrySync = true
             if let old = session {
                 session = AuthSession(token: old.token, expiresAt: old.expiresAt, user: old.user,
                                       memberships: old.memberships, activeMembershipId: selection.activeMembershipId)
             }
-              if let old = identity {
-                  identity = CurrentIdentity(user: old.user, activeMembershipId: selection.activeMembershipId,
-                                             memberships: old.memberships)
-                  try? await identityStore.save(identity!)
+            if let old = identity {
+                identity = CurrentIdentity(user: old.user, activeMembershipId: selection.activeMembershipId,
+                                           memberships: old.memberships)
+                try? await identityStore.save(identity!)
             }
             try await prepareStore(for: currentUser, membershipId: selection.activeMembershipId)
             screen = returnToSettingsAfterRole ? .settings : .main
@@ -482,18 +483,23 @@ final class AuthModel {
     func retrySync() async {
         guard let activeSync else { return }
         message = nil
+        let scope = activeStore?.scope.storageKey
         defer { syncRevision += 1 }
         do {
-            try await activeSync.synchronize()
-        } catch { message = Self.userMessage(error) }
+            let result = try await activeSync.synchronize()
+            recordSyncResult(succeeded: result.succeeded, scope: scope)
+        } catch {
+            recordSyncResult(succeeded: false, scope: scope)
+            message = Self.userMessage(error)
+        }
     }
 
-    func synchronizeWhileActive() async -> SyncResult {
+    func synchronizeWhileActive(revalidateIdentity: Bool = true) async -> SyncResult {
         guard isSyncEligible else {
             recordSyncResult(succeeded: false, scope: activeStore?.scope.storageKey)
             return SyncResult(succeeded: false)
         }
-        if isOnline(), !(await revalidateIdentityWhileOnline()) {
+        if revalidateIdentity, isOnline(), !(await revalidateIdentityWhileOnline()) {
             recordSyncResult(succeeded: false, scope: activeStore?.scope.storageKey)
             return SyncResult(succeeded: false)
         }
@@ -521,9 +527,14 @@ final class AuthModel {
     func synchronizePendingCommandsIfNeeded() async {
         guard isSyncEligible, isOnline(), let activeSync, let activeStore,
               ((try? await activeStore.pendingCommandCount()) ?? 0) > 0 else { return }
+        let scope = activeStore.scope.storageKey
         defer { syncRevision += 1 }
-        do { _ = try await activeSync.synchronize() }
+        do {
+            let result = try await activeSync.synchronize()
+            recordSyncResult(succeeded: result.succeeded, scope: scope)
+        }
         catch {
+            recordSyncResult(succeeded: false, scope: scope)
             if [401, 403].contains(Self.statusCode(error) ?? 0), isOnline() {
                 _ = await revalidateIdentityWhileOnline()
             }
@@ -534,7 +545,9 @@ final class AuthModel {
         guard isSyncEligible, let scope = activeStore?.scope.storageKey,
               lastAutomaticSyncScope != scope else { return }
         lastAutomaticSyncScope = scope
-        _ = await synchronizeWhileActive()
+        let shouldRevalidateIdentity = !identityValidatedForEntrySync
+        identityValidatedForEntrySync = false
+        _ = await synchronizeWhileActive(revalidateIdentity: shouldRevalidateIdentity)
     }
 
     /// Rechecks server identity when ConnectivityMonitor reports reachability.
@@ -559,10 +572,12 @@ final class AuthModel {
         }
     }
 
-    private func installIdentity(_ current: CurrentIdentity, persist: Bool = true, previousActiveId restored: String? = nil) async {
+    private func installIdentity(_ current: CurrentIdentity, persist: Bool = true,
+                                 validated: Bool = true, previousActiveId restored: String? = nil) async {
         let previousActiveId = session?.activeMembershipId ?? identity?.activeMembershipId ?? restored
         let wasRevoked = previousActiveId.map { id in !current.memberships.contains { $0.id == id } } ?? false
         identity = current
+        identityValidatedForEntrySync = validated
         // A fresh `/me` replaces the sign-in snapshot, so role, permission and class changes show without signing in again.
         if let old = session {
             session = AuthSession(token: old.token, expiresAt: old.expiresAt, user: current.user,
@@ -614,6 +629,7 @@ final class AuthModel {
     }
 
     private func hideRevokedIdentity(_ error: Error) async {
+        identityValidatedForEntrySync = false
         var previous = identity
         if previous == nil { previous = try? await identityStore.load() }
         if let previous, let revokedId = previous.activeMembershipId {
@@ -638,6 +654,7 @@ final class AuthModel {
     }
 
     private func clearIdentityAndToken() async {
+        identityValidatedForEntrySync = false
         try? await identityStore.clear()
         try? await tokenStore.clear()
         session = nil; identity = nil
@@ -708,13 +725,18 @@ final class AuthModel {
     }
       var activeStoreForLogout: (any LocalStore)? { activeStore }
 
-      private static func currentIdentity(from session: AuthSession) -> CurrentIdentity {
-          CurrentIdentity(user: session.user, activeMembershipId: session.activeMembershipId,
-                          memberships: session.memberships)
-      }
+    private static func currentIdentity(from session: AuthSession) -> CurrentIdentity {
+        CurrentIdentity(user: session.user, activeMembershipId: session.activeMembershipId,
+                        memberships: session.memberships)
+    }
+
+    func syncResult(for scope: CacheScope) -> Bool? {
+        guard lastSyncScope == scope.storageKey else { return nil }
+        return lastSyncSucceeded
+    }
 
     func hasSuccessfulSync(for scope: CacheScope) -> Bool {
-        lastSyncScope == scope.storageKey && lastSyncSucceeded
+        syncResult(for: scope) == true
     }
 
     private func recordSyncResult(succeeded: Bool, scope: String?) {

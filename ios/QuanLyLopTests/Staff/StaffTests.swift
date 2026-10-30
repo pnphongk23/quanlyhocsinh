@@ -236,8 +236,6 @@ final class MembershipClassIdsTests: XCTestCase {
 /// A role in use that the server stops listing sends the user to the role screen, or to sign-in when nothing is left.
 @MainActor
 final class RevokedRoleTests: XCTestCase {
-    private var clock = Date(timeIntervalSince1970: 1_800_000_000)
-
     private func membership(_ id: String, workspace: String) -> Membership {
         Membership(id: id, workspace: Workspace(id: workspace, name: "W \(workspace)"),
                    role: Role(id: "role-\(id)", name: "Trợ giảng", systemKey: "assistant", scopeKind: .assignedClasses),
@@ -253,7 +251,7 @@ final class RevokedRoleTests: XCTestCase {
         AuthModel(configuration: .fallback, apiClient: api, tokenStore: InMemoryTokenStore(token: "fixture-session"),
                   identityStore: StaffIdentityBox(),
                   storeFactory: { scope in try SQLiteStore(path: ":memory:", scope: scope) },
-                  isOnline: { true }, now: { self.clock })
+                    isOnline: { true })
     }
 
     func testDisabledActiveRoleWithAnotherRoleLeftOpensTheRoleScreen() async throws {
@@ -264,7 +262,6 @@ final class RevokedRoleTests: XCTestCase {
         XCTAssertEqual(model.screen, .main)
 
         await api.set(identity(active: nil, [second, membership("c", workspace: "w3")]))
-        clock = clock.addingTimeInterval(10 * 60 + 1)
         await model.synchronizeWhileActive()
 
         XCTAssertEqual(model.screen, .chooseRole)
@@ -279,7 +276,6 @@ final class RevokedRoleTests: XCTestCase {
         await model.restoreSession()
 
         await api.set(identity(active: nil, [second]))
-        clock = clock.addingTimeInterval(10 * 60 + 1)
         await model.synchronizeWhileActive()
 
         XCTAssertEqual(model.screen, .chooseRole)
@@ -319,7 +315,6 @@ final class RevokedRoleTests: XCTestCase {
         XCTAssertEqual(model.screen, .main)
 
         await api.set(identity(active: nil, []))
-        clock = clock.addingTimeInterval(10 * 60 + 1)
         await model.synchronizeWhileActive()
 
         XCTAssertEqual(model.screen, .login)

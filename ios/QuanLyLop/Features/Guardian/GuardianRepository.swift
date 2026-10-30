@@ -487,7 +487,7 @@ enum GuardianRepository {
         }
         let studentIDs = try await store.records(Student.self, entity: "student").map(\.id)
         let historyRefreshed = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: studentIDs)
-        let refreshed = didSyncSucceed && historyRefreshed
+          let refreshed = didSyncSucceed && historyRefreshed
         let base = try await dashboard(from: store)
         if refreshed {
             GuardianFreshness.record(scope, defaults: defaults)

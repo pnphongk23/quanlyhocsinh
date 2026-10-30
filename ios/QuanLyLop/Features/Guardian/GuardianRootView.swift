@@ -26,8 +26,16 @@ enum GuardianDetail: Hashable {
     case report
 }
 
+struct GuardianLoadOutcome {
+    let dashboard: GuardianDashboard?
+    let errorMessage: String?
+}
+
 struct GuardianRootView: View {
+    typealias DashboardLoader = @MainActor (CurrentIdentity, SQLiteStore, Bool) async throws -> GuardianDashboard
+
     var model: AuthModel? = nil
+    private let loadDashboard: DashboardLoader
     @State private var dashboard: GuardianDashboard?
     @State private var selectedChildID: String?
     @State private var tab: GuardianTab = .classes
@@ -37,6 +45,13 @@ struct GuardianRootView: View {
     @State private var errorMessage: String?
     @State private var isLoading = true
     @State private var showingChildPicker = false
+
+    init(model: AuthModel? = nil, loadDashboard: @escaping DashboardLoader = { identity, store, syncSucceeded in
+        try await GuardianRepository.load(identity: identity, store: store, syncSucceeded: syncSucceeded)
+    }) {
+        self.model = model
+        self.loadDashboard = loadDashboard
+    }
 
     private var children: [GuardianChildData] { dashboard?.children ?? [] }
     private var child: GuardianChildData? {
@@ -87,7 +102,7 @@ struct GuardianRootView: View {
             childPicker.presentationDetents([.height(childPickerHeight), .large])
         }
         .task {
-            await load()
+            _ = await load()
             #if DEBUG
             // `selectedChildID` settling clears the stacks, so seed the demo route after it.
             try? await Task.sleep(nanoseconds: 400_000_000)
@@ -99,7 +114,7 @@ struct GuardianRootView: View {
             #endif
         }
         .onChange(of: model?.syncRevision) { _, _ in
-            Task { await rebuildFromCache() }
+            Task { await syncRevisionDidChange() }
         }
     }
 
@@ -169,7 +184,7 @@ struct GuardianRootView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { childSwitcher } }
-          .refreshable { await load(manualSync: true) }
+        .refreshable { _ = await load(manualSync: true) }
     }
 
     private func shortcut(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
@@ -250,35 +265,53 @@ struct GuardianRootView: View {
         if let stored = months[child.student.id], child.months.contains(stored) { return stored }
         return child.defaultMonth
     }
-      @MainActor private func load(manualSync: Bool = false) async {
+    @MainActor func load(manualSync: Bool = false) async -> GuardianLoadOutcome? {
         isLoading = true
         defer { isLoading = false }
-        if let demo = GuardianDemo.dashboard { dashboard = demo; selectFirstChild(demo); errorMessage = nil; return }
+        if model == nil, let demo = GuardianDemo.dashboard {
+            dashboard = demo; selectFirstChild(demo); errorMessage = nil
+            return GuardianLoadOutcome(dashboard: demo, errorMessage: nil)
+        }
         if model?.activeMembership == nil && model?.memberships.isEmpty == true {
             dashboard = GuardianDashboard(children: [])
             selectedChildID = nil
             errorMessage = nil
-            return
-          }
-          do {
-              let next: GuardianDashboard
-                var syncSucceeded = false
-                if let model, model.isSyncEligible, model.activeSQLiteStore != nil {
-                    if manualSync { syncSucceeded = (await model.synchronizeWhileActive()).succeeded }
-                    guard let identity = model.identity, let store = model.activeSQLiteStore else { return }
-                    if !manualSync { syncSucceeded = model.hasSuccessfulSync(for: store.scope) }
-                    next = try await GuardianRepository.load(identity: identity, store: store,
-                                                             syncSucceeded: syncSucceeded)
-              } else {
-                  next = try await GuardianRepository.load()
-              }
-              dashboard = next; selectFirstChild(next)
-              errorMessage = syncSucceeded ? nil : String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai")
-        } catch { errorMessage = String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai") }
+            return GuardianLoadOutcome(dashboard: dashboard, errorMessage: nil)
+        }
+        do {
+            let next: GuardianDashboard
+            var syncSucceeded = false
+            if let model, model.isSyncEligible, let store = model.activeSQLiteStore {
+                if manualSync { syncSucceeded = (await model.synchronizeWhileActive()).succeeded }
+                guard let identity = model.identity else { return nil }
+                if !manualSync { syncSucceeded = model.syncResult(for: store.scope) == true }
+                next = try await loadDashboard(identity, store, syncSucceeded)
+            } else {
+                next = try await GuardianRepository.load()
+            }
+            dashboard = next; selectFirstChild(next)
+            let loadError = next.isOffline
+                ? String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai")
+                : nil
+            errorMessage = loadError
+            return GuardianLoadOutcome(dashboard: next, errorMessage: loadError)
+        } catch {
+            let loadError = String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai")
+            errorMessage = loadError
+            return GuardianLoadOutcome(dashboard: dashboard, errorMessage: loadError)
+        }
+    }
+    @MainActor func syncRevisionDidChange() async -> GuardianLoadOutcome? {
+        guard let model, let store = model.activeSQLiteStore,
+              model.syncResult(for: store.scope) != nil else {
+            await rebuildFromCache()
+            return dashboard.map { GuardianLoadOutcome(dashboard: $0, errorMessage: errorMessage) }
+        }
+        return await load()
     }
     /// A background sync changed the cache (a deleted report, for one): redraw from it, no request.
     @MainActor private func rebuildFromCache() async {
-        guard GuardianDemo.dashboard == nil, let store = model?.activeSQLiteStore, let current = dashboard else { return }
+        guard let store = model?.activeSQLiteStore, let current = dashboard else { return }
         guard let next = try? await GuardianRepository.reload(from: store, keeping: current) else { return }
         dashboard = next
         selectFirstChild(next)
