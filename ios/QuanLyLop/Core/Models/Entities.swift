@@ -435,6 +435,9 @@ struct User: Codable, Sendable, Equatable {
     let phone: String
     let displayName: String?
     let mustChangePassword: Bool
+
+    /// Only an Admin sets a staff member's name, so a new account can have none yet.
+    var hasDisplayName: Bool { !(displayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) }
 }
 
 struct AuthSession: Codable, Sendable, Equatable {

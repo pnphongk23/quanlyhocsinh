@@ -2288,6 +2288,18 @@
         }
       }
     },
+    "feature.auth.admin.at.ten.cho.ban" : {
+      "comment" : "Chuỗi hiển thị trong Features/Auth.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Admin đặt tên cho bạn"
+          }
+        }
+      }
+    },
     "feature.auth.ten.hien.thi" : {
       "comment" : "Chuỗi hiển thị trong Features/Auth.",
       "extractionState" : "manual",

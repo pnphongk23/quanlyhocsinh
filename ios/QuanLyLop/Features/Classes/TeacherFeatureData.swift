@@ -166,7 +166,11 @@ final class TeacherFeatureData {
                                   tokenStore: KeychainTokenStore(service: configuration.tokenStoreService))
         sync = auth.activeSync
         roleName = membership.role.name
-        displayName = auth.currentUser?.displayName ?? membership.role.name
+        if let user = auth.currentUser, user.hasDisplayName, let name = user.displayName {
+            displayName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            displayName = membership.role.name
+        }
         applyPermissions(membership)
 
         if observer == nil {

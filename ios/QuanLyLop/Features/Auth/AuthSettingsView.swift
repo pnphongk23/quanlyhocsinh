@@ -77,11 +77,20 @@ struct AuthSettingsView: View {
     private func profileCard(user: User, membership: Membership?) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 16) {
+                if showsUnnamed(user, membership) {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 28, weight: .regular))
+                        .foregroundStyle(AppColors.muted)
+                        .frame(width: 64, height: 64)
+                        .background(AppColors.primarySoft, in: Circle())
+                        .accessibilityHidden(true)
+                } else {
                   Text(AppInitials.of(displayName(user, membership)))
                     .font(AppFont.font(size: 20, weight: .bold))
                     .foregroundStyle(AppColors.primaryInk)
                     .frame(width: 64, height: 64)
                     .background(AppColors.primarySoft, in: Circle())
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayName(user, membership))
                         .appText(AuthText.profileName)
@@ -96,7 +105,17 @@ struct AuthSettingsView: View {
             profileRow(String(localized: "feature.auth.ten.hien.thi")) {
                 Text(displayName(user, membership))
                     .appText(AuthText.profileValue)
-                    .foregroundStyle(AppColors.text)
+                    .foregroundStyle(showsUnnamed(user, membership) ? AppColors.muted : AppColors.text)
+                    .accessibilityIdentifier("settings.displayName")
+            }
+            if membership?.role.scopeKind != .linkedStudents {
+                Text(String(localized: "feature.auth.admin.at.ten.cho.ban"))
+                    .appText(AuthText.profileMeta)
+                    .foregroundStyle(AppColors.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+                    .accessibilityIdentifier("settings.displayName.note")
             }
             profileRow(String(localized: "feature.auth.so.ien.thoai")) {
                 HStack(spacing: 6) {
@@ -227,10 +246,16 @@ struct AuthSettingsView: View {
         }
     }
 
+    /// A staff member the Admin has not named yet: no role label or letters standing in for a name.
+    private func showsUnnamed(_ user: User, _ membership: Membership?) -> Bool {
+        !user.hasDisplayName && membership != nil && membership?.role.scopeKind != .linkedStudents
+    }
+
     private func displayName(_ user: User, _ membership: Membership?) -> String {
-          if let name = user.displayName, !name.isEmpty { return name }
-          return membership.map { AuthRoleBadge.label($0.role) } ?? String(localized: "feature.auth.phu.huynh")
-      }
+        if user.hasDisplayName, let name = user.displayName { return name.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if showsUnnamed(user, membership) { return String(localized: "feature.staff.chua.at.ten") }
+        return membership.map { AuthRoleBadge.label($0.role) } ?? String(localized: "feature.auth.phu.huynh")
+    }
 
     private func roleLine(_ membership: Membership?) -> String {
           guard let membership else { return String(localized: "feature.auth.phu.huynh") }

@@ -626,8 +626,8 @@ final class AuthModel {
     /// Screenshot harness only (never reachable in a normal launch): seeds an account
     /// without touching the keychain or the network.
     func applyDemo(memberships: [Membership], activeID: String, screen: Screen,
-                   logoutBlock: LogoutBlock? = nil) {
-        let user = User(id: "demo-user", phone: "900000001", displayName: String(localized: "feature.auth.co.lan"),
+                   logoutBlock: LogoutBlock? = nil, displayName: String? = String(localized: "feature.auth.co.lan")) {
+        let user = User(id: "demo-user", phone: "900000001", displayName: displayName,
                         mustChangePassword: false)
         session = AuthSession(token: "demo-token", expiresAt: "2099-01-01T00:00:00.000Z",
                               user: user, memberships: memberships, activeMembershipId: activeID)

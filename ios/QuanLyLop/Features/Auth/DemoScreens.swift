@@ -86,6 +86,9 @@ enum DemoScreens {
                 let editor: StaffEditor? = name == "staff-add" ? .add : name == "staff-edit" ? .edit(store.members[2]) : nil
                 return AnyView(NavigationStack { StaffListView(store: store, initialEditor: editor) }.environment(model))
             }
+        case "settings-unnamed":
+            model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .settings, displayName: "")
+            return AnyView(DemoAuthFlow(model: model).environment(model))
         case "settings-teacher":
             model.applyDemo(memberships: [teacher, guardian], activeID: teacher.id, screen: .settings)
             return AnyView(DemoAuthFlow(model: model).environment(model))
