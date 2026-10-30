@@ -13,13 +13,11 @@ export interface PullToRefreshController {
   refresh: () => Promise<void>;
 }
 
-const DEFAULT_HOLD_MS = 1600;
-const ERROR_HOLD_FACTOR = 3;
-
 function tokenValue(name: string): number {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const value = Number.parseFloat(raw);
-  return Number.isFinite(value) ? value : 0;
+  if (!Number.isFinite(value)) return 0;
+  return /\d\s*s$/.test(raw) && !raw.endsWith("ms") ? value * 1000 : value;
 }
 
 function scrollIsAtTop(target: EventTarget | null, boundary: HTMLElement): boolean {
@@ -77,11 +75,10 @@ export function usePullToRefresh(onRefresh: () => Promise<RefreshResult>): PullT
       next = "error";
     }
     setState(next);
-    const hold = tokenValue("--dur-success-hold") || DEFAULT_HOLD_MS;
     hideTimer.current = setTimeout(() => {
       hideTimer.current = undefined;
       if (stateRef.current === next) setState("idle");
-    }, next === "ok" ? hold : hold * ERROR_HOLD_FACTOR);
+    }, tokenValue(next === "ok" ? "--dur-success-hold" : "--dur-error-hold"));
   }, [clearHide, setDistance, setState]);
 
   useEffect(() => clearHide, [clearHide]);

@@ -55,15 +55,29 @@
 }
 
 .action {
+  position: relative;
   display: none;
   align-items: center;
-  gap: var(--space-8);
 }
 
+/* Nổi dưới nút để chữ trạng thái không làm hàng action rộng ra và co tiêu đề. */
 .actionStatus {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: var(--z-raised);
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-12);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   font-size: var(--text-sm);
   color: var(--color-muted);
+  white-space: nowrap;
+  pointer-events: none;
 }
+
+.actionStatus:empty { display: none; }
 
 .actionStatus[data-state="offline"],
 .actionStatus[data-state="error"] {

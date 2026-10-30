@@ -45,7 +45,7 @@ async function pull(target: Element, to: number) {
 
 beforeEach(() => {
   Object.defineProperty(window, "matchMedia", { configurable: true, value: () => ({ matches: false }) });
-  for (const [name, value] of Object.entries({ "--space-48": "48px", "--space-24": "24px", "--space-8": "8px", "--dur-success-hold": "1600ms" })) {
+  for (const [name, value] of Object.entries({ "--space-48": "48px", "--space-24": "24px", "--space-8": "8px", "--dur-success-hold": "1600ms", "--dur-error-hold": "4800ms" })) {
     document.documentElement.style.setProperty(name, value);
   }
   Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
@@ -126,6 +126,17 @@ describe("PullToRefresh", () => {
     expect(live().some((node) => node.textContent === "Không tải lại được. Hãy thử lại.")).toBe(true);
     await act(async () => { await vi.advanceTimersByTimeAsync(4800); });
     expect(live().every((node) => node.textContent === "")).toBe(true);
+  });
+
+  it("reads hold tokens written in seconds", async () => {
+    vi.useFakeTimers();
+    document.documentElement.style.setProperty("--dur-error-hold", "4.8s");
+    render(<Harness onRefresh={async () => ({ status: "error" })} />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Tải lại" })); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(4700); });
+    expect(screen.getAllByRole("status").some((node) => node.textContent !== "")).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(screen.getAllByRole("status").every((node) => node.textContent === "")).toBe(true);
   });
 
   it("does not announce the pulling hint to assistive tech", async () => {
