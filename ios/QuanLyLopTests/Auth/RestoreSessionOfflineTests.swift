@@ -4,6 +4,7 @@ import XCTest
 @MainActor
 final class RestoreSessionOfflineTests: XCTestCase {
     private let scope = CacheScope(userId: "offline-user", workspaceId: "offline-workspace", membershipId: "offline-member")
+    private var clock = Date(timeIntervalSince1970: 1_800_000_000)
 
     func testNetworkFailureUsesCachedIdentityAndRetriesMeWhenOnline() async throws {
         let identity = fixtureIdentity()
@@ -22,7 +23,35 @@ final class RestoreSessionOfflineTests: XCTestCase {
 
         await model.synchronizeWhileActive()
         let meCalls = await api.meCallCount()
-        XCTAssertEqual(meCalls, 2)
+        XCTAssertEqual(meCalls, 1)
+    }
+
+    func testMeRevalidationIsThrottledToTenMinutesAndPull401ForcesIt() async throws {
+        let identity = fixtureIdentity()
+        let data = try WireJSON.encoder().encode(identity)
+        let api = AuthFixtureAPI(meResults: [.success(data), .success(data), .success(data)])
+        let model = makeModel(api: api, token: InMemoryTokenStore(token: "fixture-session"), cache: MemoryIdentityStore(identity),
+                              store: try SQLiteStore(path: ":memory:", scope: scope), online: true)
+        await model.restoreSession()
+        await model.synchronizeWhileActive()
+        var calls = await api.meCallCount()
+        XCTAssertEqual(calls, 1)
+        clock = clock.addingTimeInterval(10 * 60 + 1)
+        await model.synchronizeWhileActive()
+        calls = await api.meCallCount()
+        XCTAssertEqual(calls, 2)
+    }
+
+    func testPull401ImmediatelyRevalidatesIdentity() async throws {
+        let data = try WireJSON.encoder().encode(fixtureIdentity())
+        let api = AuthFixtureAPI(meResults: [.success(data), .success(data)],
+            syncError: .server(status: 401, error: APIError(code: "unauthorized", message: nil, details: nil, requestId: nil), retryAfter: nil))
+        let model = makeModel(api: api, token: InMemoryTokenStore(token: "fixture-session"), cache: MemoryIdentityStore(fixtureIdentity()),
+                              store: try SQLiteStore(path: ":memory:", scope: scope), online: true)
+        await model.restoreSession()
+        await model.synchronizeWhileActive()
+        let calls = await api.meCallCount()
+        XCTAssertEqual(calls, 2)
     }
 
     func testUnauthorizedRestoreClearsTokenAndCachedIdentity() async throws {
@@ -55,6 +84,7 @@ final class RestoreSessionOfflineTests: XCTestCase {
         let model = makeModel(api: api, token: token, cache: cache, store: store, online: true)
 
         await model.restoreSession()
+        clock = clock.addingTimeInterval(10 * 60 + 1)
         await model.synchronizeWhileActive()
 
         XCTAssertEqual(model.screen, .login)
@@ -77,6 +107,7 @@ final class RestoreSessionOfflineTests: XCTestCase {
         await model.restoreSession()
         XCTAssertEqual(center.state, .error)
 
+        clock = clock.addingTimeInterval(10 * 60 + 1)
         await model.synchronizeWhileActive()
 
         XCTAssertEqual(model.screen, .login)
@@ -137,7 +168,8 @@ final class RestoreSessionOfflineTests: XCTestCase {
     private func makeModel(api: AuthFixtureAPI, token: InMemoryTokenStore, cache: MemoryIdentityStore,
                            store: SQLiteStore, online: Bool, status: SyncStatusCenter = .shared) -> AuthModel {
         AuthModel(configuration: .fallback, apiClient: api, tokenStore: token,
-                  identityStore: cache, storeFactory: { _ in store }, isOnline: { online }, syncStatus: status)
+                  identityStore: cache, storeFactory: { _ in store }, isOnline: { online }, syncStatus: status,
+                  now: { self.clock })
     }
 
     private func fixtureIdentity() -> CurrentIdentity {
@@ -161,11 +193,16 @@ private actor AuthFixtureAPI: APIClient {
     let baseURL = URL(string: "https://fixture.invalid/v1")!
     private var meResults: [Result<Data, APIFailure>]
     private(set) var calls = 0
+    private let syncError: APIFailure?
 
-    init(meResults: [Result<Data, APIFailure>]) { self.meResults = meResults }
+    init(meResults: [Result<Data, APIFailure>], syncError: APIFailure? = nil) {
+        self.meResults = meResults
+        self.syncError = syncError
+    }
 
     func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
-        if endpoint.path == "auth/logout" { return try WireJSON.decoder().decode(type, from: Data("{}".utf8)) }
+          if endpoint.path == "auth/logout" { return try WireJSON.decoder().decode(type, from: Data("{}".utf8)) }
+          if endpoint.path.hasPrefix("sync/") { throw syncError ?? APIFailure.offline }
         guard endpoint.path == "me" else { throw APIFailure.offline }
         calls += 1
         guard !meResults.isEmpty else { throw APIFailure.offline }
