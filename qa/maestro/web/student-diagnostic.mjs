@@ -1,7 +1,8 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 
-const configPath = `${process.env.HOME}/.config/qlh/staging-smoke.txt`;
+const configPath = `${process.env.HOME}/.config/qlh/dev-qa.txt`;
 const values = Object.fromEntries((await readFile(configPath, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('=');
   return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
@@ -22,15 +23,15 @@ page.on('response', async (response) => {
 });
 
 try {
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap');
+  await page.goto(WEB_BASE + '/dang-nhap');
   await page.locator('input').first().fill(values.phone);
   await page.locator('input[type=password]').fill(values.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.waitForURL(/\/lop/);
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
   await page.getByRole('link', { name: /QA-Web-241025B-Class/ }).last().click();
   const studentsLink = page.getByRole('navigation', { name: 'Mục của lớp' }).getByRole('link', { name: 'Học sinh' });
-  await page.goto(new URL(await studentsLink.getAttribute('href'), 'https://qlh-staging-web.pages.dev').toString());
+  await page.goto(new URL(await studentsLink.getAttribute('href'), WEB_BASE).toString());
 
   const cases = [
     { label: 'optional-parent-phone-empty', name: 'QA', phone: '' },

@@ -1,16 +1,17 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 // Prints the generated slip sentence on web for each criteria mask (bit order = criterion order, last bit = homework).
 // Uses the first student's draft slip of class QA-iOS-D (today's session) created by fixture-ios-draft-slip-cancel.mjs.
 // The sentences are app-generated criteria text, not teacher comments. Output: one "mask<TAB>stars<TAB>sentence" line per mask.
-// Credentials come from ~/.config/qlh/staging-qa-ios.txt and are never printed.
+// Credentials come from ~/.config/qlh/dev-qa.txt and are never printed.
 // Usage: node qa/maestro/web/slip-sentence-matrix.mjs [mask ...]
 import { readFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const api = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
-const base = 'https://qlh-staging-web.pages.dev';
+const api = API_BASE;
+const base = WEB_BASE;
 const masks = process.argv.length > 2 ? process.argv.slice(2) : ['11111', '11101', '00000', '11000', '00001', '10101', '01110', '11110'];
-const creds = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-qa-ios.txt`, 'utf8')).split(/\r?\n/).map((l) => {
+const creds = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((l) => {
   const i = l.indexOf('='); return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : ['', ''];
 }).filter(([k]) => k));
 const get = async (path, token) => (await fetch(`${api}${path}`, { headers: { authorization: `Bearer ${token}` } })).json();
@@ -24,7 +25,7 @@ const browser = await chromium.launch({ headless: true });
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' })).newPage();
 try {
   await page.goto(`${base}/dang-nhap`, { waitUntil: 'domcontentloaded' });
-  console.log('STAGING_BUNDLE', await assertStagingBundle(page));
+  console.log('WEB_BUNDLE', await assertConfiguredBundle(page));
   await page.locator('#login-phone').fill(creds.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(creds.password);

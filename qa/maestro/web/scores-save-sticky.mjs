@@ -1,9 +1,10 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((line) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
@@ -69,9 +70,9 @@ async function geometry(label) {
 
 try {
   await mkdir(out, { recursive: true });
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
-  const bundle = await assertStagingBundle(page);
-  console.log('STAGING_BUNDLE', bundle);
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
+  const bundle = await assertConfiguredBundle(page);
+  console.log('WEB_BUNDLE', bundle);
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
@@ -79,13 +80,13 @@ try {
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
 
   phase = 'create QA class';
-  await page.goto('https://qlh-staging-web.pages.dev/lop/moi', { waitUntil: 'domcontentloaded' });
+  await page.goto(WEB_BASE + '/lop/moi', { waitUntil: 'domcontentloaded' });
   await page.getByPlaceholder('Ví dụ: IELTS Foundation').fill(className);
   await page.getByRole('button', { name: 'T2', exact: true }).click();
   await page.locator('input[type=time]').fill('18:00');
   await page.getByRole('button', { name: 'Tạo lớp', exact: true }).click();
   await page.waitForURL(/\/lop\/?$/, { timeout: 15000 });
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
   await page.getByRole('link', { name: new RegExp(className) }).last().click();
   const classId = new URL(page.url()).pathname.split('/')[2];
   const nav = page.getByRole('navigation', { name: 'Mục của lớp' });

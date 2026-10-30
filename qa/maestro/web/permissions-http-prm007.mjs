@@ -1,8 +1,9 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-const base = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
+const base = API_BASE;
 const outDir = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
 
 function parseSmoke(text) {
@@ -38,8 +39,8 @@ const configDir = path.join(os.homedir(), '.config', 'qlh');
 let records = [];
 try {
   const [rawA, rawB] = await Promise.all([
-    readFile(path.join(configDir, 'staging-smoke.txt'), 'utf8'),
-    readFile(path.join(configDir, 'staging-smoke-fb2.txt'), 'utf8'),
+    readFile(path.join(configDir, 'dev-qa.txt'), 'utf8'),
+    readFile(path.join(configDir, 'dev-qa.txt'), 'utf8'),
   ]);
   const a = parseSmoke(rawA);
   const b = parseSmoke(rawB);

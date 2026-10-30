@@ -1,13 +1,14 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 // Adds two classes on the clean iOS QA workspace through the API only:
 //  QA-iOS-D: past held session with homework (one cell graded), today's session held with a DRAFT slip for the first
 //            student, whose parent phone is the QA guardian's phone, so the guardian can be checked before sending.
 //  QA-iOS-E: past held session with homework, then two planned sessions (the next one is the cancel target).
-// Credentials come from ~/.config/qlh/staging-qa-ios.txt and ~/.config/qlh/staging-qa-ios-guardian.txt; nothing secret is printed.
+// Credentials come from ~/.config/qlh/dev-qa.txt and ~/.config/qlh/dev-qa.txt; nothing secret is printed.
 // Usage: node qa/maestro/web/fixture-ios-draft-slip-cancel.mjs   (re-run prints =exists and changes nothing)
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
-const api = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
+const api = API_BASE;
 const home = process.env.HOME;
 const parse = (text) => Object.fromEntries(text.split(/\r?\n/).map((l) => { const i = l.indexOf('='); return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : ['', '']; }).filter(([k]) => k));
 const call = async (method, path, body, token) => {
@@ -19,8 +20,8 @@ const call = async (method, path, body, token) => {
 const tz = (offset) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(Date.now() + offset * 86400000));
 const items = (x) => (Array.isArray(x) ? x : x.items ?? x.classes ?? x.sessions ?? []);
 
-const teacher = parse(await readFile(`${home}/.config/qlh/staging-qa-ios.txt`, 'utf8'));
-const guardian = parse(await readFile(`${home}/.config/qlh/staging-qa-ios-guardian.txt`, 'utf8'));
+const teacher = parse(await readFile(`${home}/.config/qlh/dev-qa.txt`, 'utf8'));
+const guardian = parse(await readFile(`${home}/.config/qlh/dev-qa.txt`, 'utf8'));
 const login = await call('POST', '/auth/login', { phone: teacher.phone, password: teacher.password, device_label: 'qa-fixture' });
 const token = login.token;
 const membership = login.active_membership_id ?? login.memberships?.[0]?.id;

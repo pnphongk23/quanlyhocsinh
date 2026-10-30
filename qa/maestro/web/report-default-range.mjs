@@ -1,7 +1,8 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 const { chromium } = await import('file:///Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs');
 
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((line) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
@@ -9,17 +10,17 @@ const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 try {
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
   await page.getByRole('link', { name: /QA-Web-241025B-Class/ }).last().click();
   const nav = page.getByRole('navigation', { name: 'Mục của lớp' });
   const reportsHref = await nav.getByRole('link', { name: 'Báo cáo', exact: true }).getAttribute('href');
-  await page.goto(new URL(reportsHref, 'https://qlh-staging-web.pages.dev').toString());
+  await page.goto(new URL(reportsHref, WEB_BASE).toString());
   const add = page.getByRole('button', { name: 'Thêm báo cáo', exact: true });
   let skipped = false;
   let detail = '';

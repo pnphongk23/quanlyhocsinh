@@ -19,11 +19,11 @@ onFlowComplete:
 - tapOn:
     id: login.phone
 - eraseText: 30
-- inputText: ${STAGING_PHONE}
+- inputText: ${DEV_PHONE}
 - tapOn:
     id: login.password
 - eraseText: 30
-- inputText: ${STAGING_PASSWORD}
+- inputText: ${DEV_PASSWORD}
 - runFlow:
     when:
       notVisible:

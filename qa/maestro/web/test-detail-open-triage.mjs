@@ -1,9 +1,10 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const credentialPath = `${process.env.HOME}/.config/qlh/staging-smoke.txt`;
+const credentialPath = `${process.env.HOME}/.config/qlh/dev-qa.txt`;
 const credentials = Object.fromEntries((await readFile(credentialPath, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
@@ -69,8 +70,8 @@ async function openTestLink(link) {
 
 try {
   phase = 'login';
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
-  console.log('STAGING_BUNDLE', await assertStagingBundle(page));
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
+  console.log('WEB_BUNDLE', await assertConfiguredBundle(page));
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
@@ -78,7 +79,7 @@ try {
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
 
   phase = 'new-test-setup';
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
   const scoreClass = page.getByRole('link', { name: /QA-Web-.*-Scores-Class/ }).last();
   await scoreClass.waitFor({ timeout: 12000 });
   await scoreClass.click();
@@ -97,7 +98,7 @@ try {
 
   phase = 'new-test-detail';
   await openTestLink(newTestLink);
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
 
   phase = 'old-test-setup';
   const qaClasses = await page.getByRole('link').evaluateAll((links) => links.map((link) => ({
@@ -105,7 +106,7 @@ try {
   })).filter(({ text }) => /^QA-Web-/.test(text) && /Class/.test(text)));
   let oldOpened = false;
   for (const { text: classText } of qaClasses) {
-    await page.goto('https://qlh-staging-web.pages.dev/lop');
+    await page.goto(WEB_BASE + '/lop');
     const classLink = page.getByRole('link', { name: classText, exact: true }).last();
     if (!(await classLink.count())) continue;
     await classLink.click();

@@ -1,13 +1,14 @@
-// Builds a clean iOS QA workspace on staging through the API only (fake phone numbers).
+import { API_BASE, WEB_BASE } from "./config.mjs";
+// Builds a clean iOS QA workspace on DEV through the API only (fake phone numbers).
 // Flow: phone-check -> teacher_register -> classes (recurring schedule) -> students (one with parent_phone) -> one one-off session.
-// Credentials go to ~/.config/qlh/staging-qa-ios.txt (mode 600) and are never printed.
+// Credentials go to ~/.config/qlh/dev-qa.txt (mode 600) and are never printed.
 // Usage: node qa/maestro/web/fixture-ios-clean-workspace.mjs
 // If the credential file already exists, the script logs in and only adds what is missing (no register call).
 import { readFile, writeFile, chmod, access } from 'node:fs/promises';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 
-const api = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
-const credPath = `${process.env.HOME}/.config/qlh/staging-qa-ios.txt`;
+const api = API_BASE;
+const credPath = `${process.env.HOME}/.config/qlh/dev-qa.txt`;
 
 const call = async (method, path, body, token) => {
   const r = await fetch(`${api}${path}`, { method, headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body ? JSON.stringify(body) : undefined });

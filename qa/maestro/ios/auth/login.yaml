@@ -1,5 +1,5 @@
 appId: com.study.teacherthu
-name: ios-login-staging
+name: ios-login-dev
 onFlowComplete:
   - runFlow:
       when:
@@ -25,11 +25,11 @@ onFlowComplete:
 - tapOn:
     id: login.phone
 - eraseText: 20
-- inputText: ${STAGING_PHONE}
+- inputText: ${DEV_PHONE}
 - tapOn:
     id: login.password
 - eraseText: 40
-- inputText: ${STAGING_PASSWORD}
+- inputText: ${DEV_PASSWORD}
 - runFlow:
     when:
       notVisible:

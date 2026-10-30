@@ -1,9 +1,9 @@
 #!/bin/bash
 # Run only after the QA lead assigns the dedicated iPhone 16 simulator.
-# Build/install the Staging simulator app with Manual ad-hoc signing first:
+# Build/install the Dev simulator app with Manual ad-hoc signing first:
 # CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual.
 # Unsigned simulator builds can silently fail to persist auth tokens in Keychain.
-# App id source: app target in ios/project.yml, following its Staging xcconfig
+# App id source: app target in ios/project.yml, following its Dev xcconfig
 # reference when PRODUCT_BUNDLE_IDENTIFIER is not inlined in the YAML.
 
 if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
@@ -46,7 +46,7 @@ if [ ! -f "$PROJECT_YML" ]; then
 fi
 
 # Resolve PRODUCT_BUNDLE_IDENTIFIER from the app target in project.yml. This
-# project points to Config/Staging.xcconfig, which includes Base.xcconfig where
+# project points to Config/Dev.xcconfig, which includes Base.xcconfig where
 # the identifier is defined.
 APP_BUNDLE_ID="$(python3 - "$PROJECT_YML" <<'PY'
 from pathlib import Path
@@ -70,19 +70,19 @@ config_block = re.search(
 )
 if not config_block:
     raise SystemExit("app target has no configFiles in project.yml")
-staging = re.search(r"(?m)^      Staging:\s*([^\s#]+)", config_block.group("body"))
-if not staging:
-    raise SystemExit("Staging xcconfig path is missing from app target in project.yml")
+dev = re.search(r"(?m)^      Dev:\s*([^\s#]+)", config_block.group("body"))
+if not dev:
+    raise SystemExit("Dev xcconfig path is missing from app target in project.yml")
 
 seen = set()
-pending = [project.parent / staging.group(1)]
+pending = [project.parent / dev.group(1)]
 while pending:
     current = pending.pop().resolve()
     if current in seen:
         continue
     seen.add(current)
     if not current.is_file():
-        raise SystemExit("referenced Staging xcconfig is missing")
+        raise SystemExit("referenced Dev xcconfig is missing")
     config = current.read_text()
     value = re.search(r"(?m)^\s*PRODUCT_BUNDLE_IDENTIFIER\s*=\s*([^\s#]+)", config)
     if value:
@@ -210,7 +210,7 @@ if [ "$SCREEN_STATE" = "signed-in" ]; then
   exit 0
 fi
 
-CREDS_FILE="$HOME/.config/qlh/staging-smoke.txt"
+CREDS_FILE="$HOME/.config/qlh/dev-qa.txt"
 if [ ! -r "$CREDS_FILE" ]; then
   printf 'Smoke credential file is unavailable.\n' >&2
   exit 1
@@ -227,7 +227,7 @@ if "phone" not in values:
 sys.stdout.write(values["phone"])
 PY
 )" || exit 1
-STAGING_PHONE="$(python3 - "$PHONE_RAW" <<'PY'
+DEV_PHONE="$(python3 - "$PHONE_RAW" <<'PY'
 import re
 import sys
 phone = re.sub(r"\D", "", sys.argv[1])
@@ -240,7 +240,7 @@ if len(phone) != 9 or not phone.isdigit():
 sys.stdout.write(phone)
 PY
 )" || exit 1
-STAGING_PASSWORD="$(python3 - "$CREDS_FILE" <<'PY'
+DEV_PASSWORD="$(python3 - "$CREDS_FILE" <<'PY'
 import sys
 values = {}
 for line in open(sys.argv[1], encoding="utf-8"):
@@ -253,8 +253,8 @@ sys.stdout.write(values["password"])
 PY
 )" || exit 1
 if "$MAESTRO_BIN" --udid "$SIMULATOR_UDID" test \
-  -e STAGING_PHONE="$STAGING_PHONE" \
-  -e STAGING_PASSWORD="$STAGING_PASSWORD" \
+  -e DEV_PHONE="$DEV_PHONE" \
+  -e DEV_PASSWORD="$DEV_PASSWORD" \
   --format junit \
   --output "$RUN_DIR/login.junit.xml" \
   --test-output-dir "$RUN_DIR/artifacts" \
@@ -267,7 +267,7 @@ else
   if ! "$MAESTRO_BIN" --udid "$SIMULATOR_UDID" hierarchy >"$RUN_DIR/hierarchy-after-fail.txt" 2>&1; then
     : >"$RUN_DIR/hierarchy-after-fail.txt"
   fi
-  REDACT_PASSWORD="$STAGING_PASSWORD" python3 - "$RUN_DIR/maestro.log" "$RUN_DIR/hierarchy-after-fail.txt" "$DIAG_FILE" <<'PY'
+  REDACT_PASSWORD="$DEV_PASSWORD" python3 - "$RUN_DIR/maestro.log" "$RUN_DIR/hierarchy-after-fail.txt" "$DIAG_FILE" <<'PY'
 from pathlib import Path
 import os
 import re

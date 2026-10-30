@@ -1,8 +1,9 @@
-export const EXPECTED_STAGING_BUNDLE = process.env.EXPECTED_STAGING_BUNDLE || 'index-BjTshgny.js';
+export const EXPECTED_WEB_BUNDLE = process.env.QLH_EXPECTED_WEB_BUNDLE;
 
-export async function assertStagingBundle(page) {
+export async function assertConfiguredBundle(page) {
+  if (!EXPECTED_WEB_BUNDLE) return 'not-pinned';
   await page.waitForFunction((expected) => performance.getEntriesByType('resource').some((entry) => {
     try { return new URL(entry.name).pathname.endsWith(`/assets/${expected}`); } catch { return false; }
-  }), EXPECTED_STAGING_BUNDLE, { timeout: 15000 });
-  return EXPECTED_STAGING_BUNDLE;
+  }), EXPECTED_WEB_BUNDLE, { timeout: 15000 });
+  return EXPECTED_WEB_BUNDLE;
 }

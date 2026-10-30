@@ -3,7 +3,7 @@
 Phạm vi: 149 ca P0/P1 chưa pass trên iOS (P0 82, P1 67), danh sách ở [ios-regression-backlog.md](ios-regression-backlog.md). P0 chạy trước, rồi P1 theo cùng thứ tự nhóm.
 
 ## Điều kiện
-- Workspace sạch: `node qa/maestro/web/fixture-ios-clean-workspace.mjs` (2 lớp `QA-iOS-A` 5 em, `QA-iOS-B` 4 em, lịch lặp, 1 buổi lẻ ngày mai, 1 em có SĐT phụ huynh). Tài khoản `~/.config/qlh/staging-qa-ios.txt`, không in ra.
+- Workspace sạch: `node qa/maestro/web/fixture-ios-clean-workspace.mjs` (2 lớp `QA-iOS-A` 5 em, `QA-iOS-B` 4 em, lịch lặp, 1 buổi lẻ ngày mai, 1 em có SĐT phụ huynh). Tài khoản DEV đọc từ `~/.config/qlh/dev-qa.txt`, không in ra.
 - Vào chi tiết lớp bằng text tên lớp (Lớp tab chỉ còn 2 lớp) hoặc id `class.card.<classID>`. Thêm buổi lẻ: nút nổi "Thêm buổi" → "Lưu buổi học". Sửa buổi lẻ: "Sửa buổi lẻ" trong thẻ "Buổi hiện tại" → "Lưu thay đổi".
 - Build: bản có sửa buổi lẻ và tốc độ (Lỗ Túc, `0bdc414`/`8c84576`/`77cc153`); chỉ chạy khi GL cấp lượt và có đường dẫn .app + sha.
 - Mỗi lượt simulator ≤45 phút; không chạy song song với Chromium. Mỗi ca ~3–4 phút (Maestro chậm), nên một lượt ≈ 10–12 ca. Sau mỗi nhóm: xoá thư mục debug Maestro, commit `qa/`, báo GL một dòng.

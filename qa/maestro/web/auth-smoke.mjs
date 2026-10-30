@@ -1,7 +1,8 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { readFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 
-const credentialPath = `${process.env.HOME}/.config/qlh/staging-smoke.txt`;
+const credentialPath = `${process.env.HOME}/.config/qlh/dev-qa.txt`;
 const lines = (await readFile(credentialPath, 'utf8')).split(/\r?\n/);
 const values = Object.fromEntries(lines.map((line) => {
   const i = line.indexOf('=');
@@ -13,7 +14,7 @@ if (!phone || !password) throw new Error('Required smoke credential keys are mis
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 try {
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
   await page.locator('input').first().fill(phone);
   await page.locator('input[type=password]').fill(password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();

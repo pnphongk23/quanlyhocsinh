@@ -1,7 +1,8 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes, randomInt } from 'node:crypto';
 const { chromium } = await import('file:///Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs');
-const credentialPath = `${process.env.HOME}/.config/qlh/staging-smoke.txt`;
+const credentialPath = `${process.env.HOME}/.config/qlh/dev-qa.txt`;
 const credentials = Object.fromEntries((await readFile(credentialPath, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
@@ -11,7 +12,7 @@ const student = `QA-HW-Parent-${suffix}`;
 const parentPhone = `0${randomInt(300000000, 999999999)}`;
 const parentPassword = `${randomBytes(12).toString('base64url')}A1`;
 const title = `QA-HW-Immediate-${suffix}`;
-const base = 'https://qlh-staging-web.pages.dev';
+const base = WEB_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
 const browser = await chromium.launch({ headless: true });
 const teacher = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();

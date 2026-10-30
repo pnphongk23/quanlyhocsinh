@@ -1,15 +1,16 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 // Brief 96 auth checks on web: two-step login branches, removed elements, phone formats.
 // Uses the smoke phone once (branch 1, no password submit) and fake numbers elsewhere.
 import { readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((line) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 const guardianPhone = (await readFile('/tmp/b96-guardian-phone.txt', 'utf8')).trim();
-const base = 'https://qlh-staging-web.pages.dev';
+const base = WEB_BASE;
 const rec = (id, status, note = '') => console.log(`${status} ${id}${note ? ': ' + note : ''}`);
 const nat = (p) => p.replace(/^\+84/, '');
 const fake = () => `+84${7 + Math.floor(Math.random() * 3)}${Math.floor(10000000 + Math.random() * 89999999)}`;
@@ -29,7 +30,7 @@ async function next(page, value) {
 }
 try {
   let { context, page } = await fresh();
-  console.log('STAGING_BUNDLE', await assertStagingBundle(page));
+  console.log('WEB_BUNDLE', await assertConfiguredBundle(page));
   await context.close();
 
   phase = 'AUTH-024 removed elements';

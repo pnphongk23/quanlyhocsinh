@@ -1,8 +1,9 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((line) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
@@ -48,9 +49,9 @@ async function saveFailureShot(name) {
 }
 
 try {
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
-  const bundle = await assertStagingBundle(page);
-  console.log('STAGING_BUNDLE', bundle);
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
+  const bundle = await assertConfiguredBundle(page);
+  console.log('WEB_BUNDLE', bundle);
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
@@ -58,7 +59,7 @@ try {
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
 
   phase = 'open smoke-visible fixture class';
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
   const classLink = page.locator(`a[href*="${classId}"]`).first();
   if (!(await classLink.count())) {
     for (const item of tests) checks.push({ caseId: item.caseId, outcome: 'not-visible-to-smoke' });
@@ -106,13 +107,13 @@ try {
 
   // Search only smoke-visible classes and report links for the two supplied legacy prefixes.
   phase = 'smoke-visible legacy reports';
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
   const reportClasses = [
     { classPrefix: '1041f806', reportPrefix: '6bff7dd2', caseId: 'legacy-report-1' },
     { classPrefix: '9938349b', reportPrefix: '9c235366', caseId: 'legacy-report-2' },
   ];
   for (const item of reportClasses) {
-    await page.goto('https://qlh-staging-web.pages.dev/lop');
+    await page.goto(WEB_BASE + '/lop');
     const visibleClass = page.locator(`a[href*="${item.classPrefix}"]`).first();
     if (!(await visibleClass.count())) {
       checks.push({ caseId: item.caseId, outcome: 'not-visible-to-smoke-workspace' });

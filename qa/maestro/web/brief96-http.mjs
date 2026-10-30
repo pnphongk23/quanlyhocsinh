@@ -1,6 +1,7 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 // Brief 96 HTTP checks: undeclared guardian phone is rejected; phone-check rate limit (fake numbers only; run last).
 import { randomInt } from 'node:crypto';
-const base = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
+const base = API_BASE;
 const rec = (id, status, note = '') => console.log(`${status} ${id}${note ? ': ' + note : ''}`);
 const fake = () => `+84${randomInt(700000000, 799999999)}`;
 const post = async (path, body) => {

@@ -1,9 +1,10 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 // Brief 97 fixture via API only (no browser): a class with 3 students and one one-off session today, no attendance, no slips.
 import { readFile } from 'node:fs/promises';
 import { randomBytes, randomUUID } from 'node:crypto';
 
-const api = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
-const creds = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((l) => {
+const api = API_BASE;
+const creds = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((l) => {
   const i = l.indexOf('='); return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : ['', ''];
 }).filter(([k]) => k));
 if (!creds.phone || !creds.password) throw new Error('Required smoke credential keys are missing');

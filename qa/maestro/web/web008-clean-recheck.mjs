@@ -1,11 +1,12 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { homedir } from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 
-const base = 'https://qlh-staging-web.pages.dev';
+const base = WEB_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
-const credentialPath = `${homedir()}/.config/qlh/staging-smoke.txt`;
+const credentialPath = `${homedir()}/.config/qlh/dev-qa.txt`;
 const runTag = randomBytes(3).toString('hex');
 const results = [];
 const errors = [];

@@ -1,9 +1,10 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { homedir } from 'node:os';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 import { parseFixture } from './permissions-http-prm004-005.mjs';
 
-const web = 'https://qlh-staging-web.pages.dev';
+const web = WEB_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
 const results = [];
 let phase = 'fixture load';
@@ -29,7 +30,7 @@ async function save() {
 }
 
 try {
-  const raw = await readFile(`${homedir()}/.config/qlh/staging-smoke-fb2.txt`, 'utf8');
+  const raw = await readFile(`${homedir()}/.config/qlh/dev-qa.txt`, 'utf8');
   const creds = parseFixture(raw);
   if (!creds.parentPhone || !creds.parentPassword) throw new Error('parent fixture incomplete');
   browser = await chromium.launch({ headless: true });

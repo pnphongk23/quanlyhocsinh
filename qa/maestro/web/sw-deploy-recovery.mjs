@@ -1,8 +1,9 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 
 const EXPECTED_BUNDLE = 'index-BhzpF4oY.js';
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((line) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
@@ -85,7 +86,7 @@ async function record(label, callback, { offlineShell = false } = {}) {
 
 try {
   await mkdir(out, { recursive: true });
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
   await bundleSeen();
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
@@ -94,9 +95,9 @@ try {
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
 
   phase = 'choose smoke class from UI';
-  await page.goto('https://qlh-staging-web.pages.dev/', { waitUntil: 'domcontentloaded' });
+  await page.goto(WEB_BASE + '/', { waitUntil: 'domcontentloaded' });
   await waitForShell();
-  await page.goto('https://qlh-staging-web.pages.dev/lop', { waitUntil: 'domcontentloaded' });
+  await page.goto(WEB_BASE + '/lop', { waitUntil: 'domcontentloaded' });
   await waitForShell();
   const classLink = page.getByRole('link', { name: /QA-Web-.*-Scores-Class/ }).first();
   let scoreUrl = null;
@@ -106,7 +107,7 @@ try {
     await page.waitForURL(/\/lop\/[^/]+/, { timeout: 12000 });
     const classId = new URL(page.url()).pathname.split('/')[2];
     if (!classId) throw new Error('fixture_missing: class link did not navigate to a class route');
-    scoreUrl = `https://qlh-staging-web.pages.dev/lop/${classId}/diem`;
+    scoreUrl = `${WEB_BASE}/lop/${classId}/diem`;
     await page.goto(scoreUrl, { waitUntil: 'domcontentloaded' });
     await waitForShell();
     await page.getByRole('link', { name: 'Bài kiểm tra', exact: true }).click();
@@ -142,7 +143,7 @@ try {
   });
 
   await record('service-worker-cache-warm-online', async () => {
-    for (const url of ['https://qlh-staging-web.pages.dev/', 'https://qlh-staging-web.pages.dev/lop', scoreUrl, detailUrl].filter(Boolean)) {
+    for (const url of [WEB_BASE + '/', WEB_BASE + '/lop', scoreUrl, detailUrl].filter(Boolean)) {
       await page.goto(url, { waitUntil: 'domcontentloaded' });
       await waitForShell();
       await bundleSeen();
@@ -165,7 +166,7 @@ try {
     results.push({ label: 'score-detail-open', ok: false, blocked: true, error: 'fixture_missing: no test detail link in smoke workspace UI' });
     console.log('BLOCKED score-detail-open: no visible test detail link');
   }
-  for (const [label, url] of [['root', 'https://qlh-staging-web.pages.dev/'], ['class-list', 'https://qlh-staging-web.pages.dev/lop'], ['score-grid', scoreUrl], ['test-detail', detailUrl]]) {
+  for (const [label, url] of [['root', WEB_BASE + '/'], ['class-list', WEB_BASE + '/lop'], ['score-grid', scoreUrl], ['test-detail', detailUrl]]) {
     if (!url) continue;
     await record(`offline-${label}`, async () => {
       await page.goto(url, { waitUntil: 'domcontentloaded' });

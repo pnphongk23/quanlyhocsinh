@@ -1,15 +1,16 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 // Builds the QA-iOS-C class on the clean iOS QA workspace through the API only (fake phone numbers):
 // a held past session (21/10) with two homework sections, one current session today, three students,
 // the first with a parent phone, and a guardian account for that phone.
-// The guardian credentials go to ~/.config/qlh/staging-qa-ios-guardian.txt (mode 600) and are never printed.
-// Teacher credentials come from ~/.config/qlh/staging-qa-ios.txt. Re-run prints QA-iOS-C=exists and changes nothing.
+// The guardian credentials go to ~/.config/qlh/dev-qa.txt (mode 600) and are never printed.
+// Teacher credentials come from ~/.config/qlh/dev-qa.txt. Re-run prints QA-iOS-C=exists and changes nothing.
 // Usage: node qa/maestro/web/fixture-ios-homework-guardian.mjs
 import { readFile, writeFile, chmod, access } from 'node:fs/promises';
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
 
-const api = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
+const api = API_BASE;
 const home = process.env.HOME;
-const guardianPath = `${home}/.config/qlh/staging-qa-ios-guardian.txt`;
+const guardianPath = `${home}/.config/qlh/dev-qa.txt`;
 const parse = (text) => Object.fromEntries(text.split(/\r?\n/).map((l) => { const i = l.indexOf('='); return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : ['', '']; }).filter(([k]) => k));
 const call = async (method, path, body, token) => {
   const r = await fetch(`${api}${path}`, { method, headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body ? JSON.stringify(body) : undefined });
@@ -20,7 +21,7 @@ const call = async (method, path, body, token) => {
 const fakePhone = () => `09${String(randomInt(0, 100000000)).padStart(8, '0')}`;
 const tz = (offset) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(Date.now() + offset * 86400000));
 
-const teacher = parse(await readFile(`${home}/.config/qlh/staging-qa-ios.txt`, 'utf8'));
+const teacher = parse(await readFile(`${home}/.config/qlh/dev-qa.txt`, 'utf8'));
 const login = await call('POST', '/auth/login', { phone: teacher.phone, password: teacher.password, device_label: 'qa-fixture' });
 const token = login.token;
 const membership = login.active_membership_id ?? login.memberships?.[0]?.id;

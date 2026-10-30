@@ -1,11 +1,12 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { homedir } from 'node:os';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 import { parseFixture, runHttpPermissionPhases } from './permissions-http-prm004-005.mjs';
 
-const web = 'https://qlh-staging-web.pages.dev';
-const api = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
+const web = WEB_BASE;
+const api = API_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
 const suffix = randomBytes(3).toString('hex');
 const className = `QA-Web-${suffix}-Class`;
@@ -79,7 +80,7 @@ async function addStudent(page, name, phone = '') {
 }
 
 try {
-    const credentialText = await phase('fixture load', () => readFile(`${homedir()}/.config/qlh/staging-smoke-fb2.txt`, 'utf8'));
+    const credentialText = await phase('fixture load', () => readFile(`${homedir()}/.config/qlh/dev-qa.txt`, 'utf8'));
       const credentials = parseFixture(credentialText);
       secretValues = [credentials.teacherPhone, credentials.parentPhone, credentials.teacherPassword, credentials.parentPassword];
     if (!credentials.teacherPhone || !credentials.teacherPassword || !credentials.parentPhone || !credentials.workspaceName) {

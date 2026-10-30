@@ -1,9 +1,10 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes, randomInt } from 'node:crypto';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const credentialPath = `${process.env.HOME}/.config/qlh/staging-smoke.txt`;
+const credentialPath = `${process.env.HOME}/.config/qlh/dev-qa.txt`;
 const teacher = Object.fromEntries((await readFile(credentialPath, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
@@ -20,8 +21,8 @@ const parentPage = await parentContext.newPage();
 let phase = 'parent registration without a match';
 
 try {
-    await parentPage.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
-    console.log('STAGING_BUNDLE', await assertStagingBundle(parentPage));
+    await parentPage.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
+    console.log('WEB_BUNDLE', await assertConfiguredBundle(parentPage));
   await parentPage.getByRole('link', { name: /Tạo tài khoản/ }).click();
   await parentPage.getByRole('tablist', { name: 'Bạn đăng ký với vai trò' }).getByRole('tab', { name: 'Phụ huynh', exact: true }).click();
   await parentPage.locator('#register-name').fill('QA-Web-Late-Guardian');
@@ -35,17 +36,17 @@ try {
   phase = 'teacher adds matching student';
     const teacherContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' });
     const teacherPage = await teacherContext.newPage();
-    await teacherPage.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
-    await assertStagingBundle(teacherPage);
+    await teacherPage.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
+    await assertConfiguredBundle(teacherPage);
   await teacherPage.locator('#login-phone').fill(teacher.phone);
   await teacherPage.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await teacherPage.locator('#login-password').fill(teacher.password);
   await teacherPage.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await teacherPage.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
-  await teacherPage.goto('https://qlh-staging-web.pages.dev/lop');
+  await teacherPage.goto(WEB_BASE + '/lop');
   await teacherPage.getByRole('link', { name: /QA-Web-241025B-Class/ }).last().click();
   const nav = teacherPage.getByRole('navigation', { name: 'Mục của lớp' });
-  await teacherPage.goto(new URL(await nav.getByRole('link', { name: 'Học sinh' }).getAttribute('href'), 'https://qlh-staging-web.pages.dev').toString());
+  await teacherPage.goto(new URL(await nav.getByRole('link', { name: 'Học sinh' }).getAttribute('href'), WEB_BASE).toString());
   await teacherPage.getByRole('button', { name: /Thêm học sinh/ }).first().click();
   await teacherPage.getByLabel('Họ và tên học sinh').fill(studentName);
   await teacherPage.getByRole('button', { name: 'Lưu học sinh', exact: true }).click();

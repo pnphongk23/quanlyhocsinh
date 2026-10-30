@@ -1,10 +1,11 @@
-// Adds two past sessions (held) to QA-iOS-B with the first student absent in both, for the two-consecutive-absences warning. API only; credentials come from ~/.config/qlh/staging-qa-ios.txt and are never printed.
+import { API_BASE, WEB_BASE } from "./config.mjs";
+// Adds two past sessions (held) to QA-iOS-B with the first student absent in both, for the two-consecutive-absences warning. API only; credentials come from ~/.config/qlh/dev-qa.txt and are never printed.
 // Usage: node qa/maestro/web/fixture-ios-past-absences.mjs (run once; a second run only re-sends the same absences)
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-const api='https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
+const api=API_BASE;
 const cls='fcf97253-9beb-4fab-9cc7-32e881afd174';
-const c=Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-qa-ios.txt`,'utf8')).split('\n').filter(Boolean).map(l=>{const i=l.indexOf('=');return [l.slice(0,i),l.slice(i+1)]}));
+const c=Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`,'utf8')).split('\n').filter(Boolean).map(l=>{const i=l.indexOf('=');return [l.slice(0,i),l.slice(i+1)]}));
 const call=async(m,p,b,t)=>{const r=await fetch(api+p,{method:m,headers:{'content-type':'application/json',...(t?{authorization:`Bearer ${t}`}:{})},body:b?JSON.stringify(b):undefined});return [r.status,await r.json().catch(()=>null)]};
 const [,l]=await call('POST','/auth/login',{phone:c.phone,password:c.password,device_label:'qa-fixture'});
 const t=l.token;

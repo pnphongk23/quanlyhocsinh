@@ -1,14 +1,15 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 // Brief 97 web checks on fixtures built by fixture-brief97-api.mjs.
 // Usage: node brief97-web.mjs <classId>:<sessionId> (whole class) <classId>:<sessionId> (one opened slip)
 import { mkdir, readFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((l) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((l) => {
   const i = l.indexOf('='); return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : ['', ''];
 }).filter(([k]) => k));
 const [whole, one] = process.argv.slice(2).map((a) => a.split(':'));
-const base = 'https://qlh-staging-web.pages.dev';
+const base = WEB_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-26/web';
 await mkdir(out, { recursive: true });
 const rec = (id, ok, note = '') => console.log(`${ok ? 'PASS' : 'FAIL'} ${id}${note ? ': ' + note : ''}`);
@@ -39,7 +40,7 @@ const confirmDialog = async (name, btn) => {
 let t = '';
 try {
   await page.goto(`${base}/dang-nhap`, { waitUntil: 'domcontentloaded' });
-  console.log('STAGING_BUNDLE', await assertStagingBundle(page));
+  console.log('WEB_BUNDLE', await assertConfiguredBundle(page));
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);

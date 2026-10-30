@@ -1,10 +1,11 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { homedir } from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 
-const web = 'https://qlh-staging-web.pages.dev';
-const api = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
+const web = WEB_BASE;
+const api = API_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
 const tag = randomBytes(3).toString('hex');
 const className = `QA-Web-FB2-Final-${tag}`;
@@ -330,7 +331,7 @@ async function writeLateLinkBug() {
 
 try {
   await mkdir(out, { recursive: true });
-  const raw = await readFile(`${homedir()}/.config/qlh/staging-smoke-fb2.txt`, 'utf8');
+  const raw = await readFile(`${homedir()}/.config/qlh/dev-qa.txt`, 'utf8');
   const credentials = Object.fromEntries(raw.split(/\r?\n/u).map((line) => {
     const index = line.indexOf('=');
     return index > 0 ? [line.slice(0, index).trim(), line.slice(index + 1).trim()] : ['', ''];

@@ -1,8 +1,9 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((line) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
@@ -12,14 +13,14 @@ const page = await context.newPage();
 const results = [];
 
 try {
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
-  const bundle = await assertStagingBundle(page);
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
+  const bundle = await assertConfiguredBundle(page);
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
-  await page.goto('https://qlh-staging-web.pages.dev/lop', { waitUntil: 'domcontentloaded' });
+  await page.goto(WEB_BASE + '/lop', { waitUntil: 'domcontentloaded' });
   await page.getByPlaceholder('Tìm lớp hoặc học sinh').waitFor({ timeout: 10000 });
   const cards = await page.locator('a[href^="/lop/"]').evaluateAll((anchors) => anchors.map((anchor) => ({
     href: anchor.getAttribute('href'),
@@ -31,11 +32,11 @@ try {
   for (const card of cards) {
     if (seen.has(card.href)) continue;
     seen.add(card.href);
-    await page.goto(`https://qlh-staging-web.pages.dev${card.href}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${WEB_BASE}${card.href}`, { waitUntil: 'domcontentloaded' });
     const nav = page.getByRole('navigation', { name: 'Mục của lớp' });
     const reportsHref = await nav.getByRole('link', { name: 'Báo cáo', exact: true }).getAttribute('href');
     if (!reportsHref) continue;
-    await page.goto(new URL(reportsHref, 'https://qlh-staging-web.pages.dev').toString(), { waitUntil: 'domcontentloaded' });
+    await page.goto(new URL(reportsHref, WEB_BASE).toString(), { waitUntil: 'domcontentloaded' });
     const add = page.getByRole('button', { name: 'Thêm báo cáo', exact: true });
     const addCount = await add.count();
     const enabled = addCount > 0 && await add.isEnabled();

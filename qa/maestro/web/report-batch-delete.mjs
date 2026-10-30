@@ -1,8 +1,9 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((line) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
@@ -114,21 +115,21 @@ async function record(id, run) {
 
 try {
   await mkdir(out, { recursive: true });
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
-  console.log('STAGING_BUNDLE', await assertStagingBundle(page));
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
+  console.log('WEB_BUNDLE', await assertConfiguredBundle(page));
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
   phase = 'open discovered QA report class';
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
   await page.getByPlaceholder('Tìm lớp hoặc học sinh').fill(className);
   await page.getByRole('link', { name: new RegExp(className) }).last().click();
   const nav = page.getByRole('navigation', { name: 'Mục của lớp' });
   const firstReportsLink = await nav.getByRole('link', { name: 'Báo cáo', exact: true }).getAttribute('href');
   if (!firstReportsLink) throw new Error('fixture_missing: report link not found in class navigation');
-  await page.goto(new URL(firstReportsLink, 'https://qlh-staging-web.pages.dev').toString(), { waitUntil: 'domcontentloaded' });
+  await page.goto(new URL(firstReportsLink, WEB_BASE).toString(), { waitUntil: 'domcontentloaded' });
   await page.getByRole('main').last().waitFor({ state: 'visible', timeout: 10000 });
   reportsUrl = page.url().split('?')[0];
 

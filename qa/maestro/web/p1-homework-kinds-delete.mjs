@@ -1,8 +1,9 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 
-const credentialPath = `${process.env.HOME}/.config/qlh/staging-smoke.txt`;
+const credentialPath = `${process.env.HOME}/.config/qlh/dev-qa.txt`;
 const credentials = Object.fromEntries((await readFile(credentialPath, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
@@ -17,7 +18,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let phase = 'teacher login';
 
 try {
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
@@ -25,16 +26,16 @@ try {
   await page.waitForURL(/\/lop(?:\/|$)/, { timeout: 15000 });
 
   phase = 'create today class';
-  await page.goto('https://qlh-staging-web.pages.dev/lop/moi');
+  await page.goto(WEB_BASE + '/lop/moi');
   await page.getByPlaceholder('Ví dụ: IELTS Foundation').fill(className);
   await page.getByRole('button', { name: 'T2', exact: true }).click();
   await page.locator('input[type=time]').fill('18:00');
   await page.getByRole('button', { name: 'Tạo lớp', exact: true }).click();
   await page.waitForURL(/\/lop$/, { timeout: 15000 });
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
   await page.getByRole('link', { name: new RegExp(className) }).last().click();
   const nav = page.getByRole('navigation', { name: 'Mục của lớp' });
-  await page.goto(new URL(await nav.getByRole('link', { name: 'Buổi học' }).getAttribute('href'), 'https://qlh-staging-web.pages.dev').toString());
+  await page.goto(new URL(await nav.getByRole('link', { name: 'Buổi học' }).getAttribute('href'), WEB_BASE).toString());
 
   phase = 'create one-off session for today';
   const now = new Date();

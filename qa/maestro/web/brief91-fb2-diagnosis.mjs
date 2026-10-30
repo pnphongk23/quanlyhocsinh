@@ -1,9 +1,10 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { homedir } from 'node:os';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 
-const web = 'https://qlh-staging-web.pages.dev';
-const api = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
+const web = WEB_BASE;
+const api = API_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
 const results = [];
 const errors = [];
@@ -153,7 +154,7 @@ async function inspectSavedParentPhone(student, guardianPhone) {
 
 async function main() {
   await mkdir(out, { recursive: true });
-  const raw = await readFile(`${homedir()}/.config/qlh/staging-smoke-fb2.txt`, 'utf8');
+  const raw = await readFile(`${homedir()}/.config/qlh/dev-qa.txt`, 'utf8');
   const fields = Object.fromEntries(raw.split(/\r?\n/u).map((line) => {
     const i = line.indexOf('=');
     return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];

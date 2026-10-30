@@ -1,3 +1,4 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, writeFile } from 'node:fs/promises';
 import { randomBytes, randomInt } from 'node:crypto';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
@@ -10,7 +11,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let phase = 'guardian registration';
 
 try {
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap', { waitUntil: 'domcontentloaded' });
+  await page.goto(WEB_BASE + '/dang-nhap', { waitUntil: 'domcontentloaded' });
   await page.getByRole('link', { name: /Tạo tài khoản/ }).click();
   await page.getByRole('tablist', { name: 'Bạn đăng ký với vai trò' }).getByRole('tab', { name: 'Phụ huynh', exact: true }).click();
   await page.locator('#register-name').fill('QA-Web-Guardian');

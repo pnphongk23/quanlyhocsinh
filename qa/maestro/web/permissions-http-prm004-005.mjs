@@ -1,8 +1,9 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { homedir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
-export const apiBase = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
+export const apiBase = API_BASE;
 const artifactDir = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
 const artifactFile = `${artifactDir}/permissions-http-prm004-005-junit.xml`;
 const uuid = () => crypto.randomUUID();
@@ -212,7 +213,7 @@ async function main() {
     process.stdout.write('DRY-RUN PASS permissions-http-prm004-005 (no network, no login)\n');
     return;
   }
-  const raw = await readFile(`${homedir()}/.config/qlh/staging-smoke-fb2.txt`, 'utf8');
+  const raw = await readFile(`${homedir()}/.config/qlh/dev-qa.txt`, 'utf8');
   const credentials = parseFixture(raw);
   if (!credentials.teacherPhone || !credentials.teacherPassword || !credentials.parentPhone || !credentials.workspaceName) {
     throw new Error('smoke fixture missing required fields');

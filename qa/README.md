@@ -16,14 +16,17 @@ Nguồn chuẩn: `docs/spec.md` (chỉ phạm vi "Bản đầu", mục 8) và `d
 ## Định dạng một testcase
 `ID · Tiêu đề`, Vai, Nền tảng (Web / iOS / Cả hai), Ưu tiên, Nguồn spec (`docs/spec.md:dòng`), Tiền điều kiện + dữ liệu, Các bước (đánh số), Kết quả mong đợi (theo câu chữ spec), Flow tự động (đường dẫn, hoặc "thủ công: lý do").
 
-## Dữ liệu và tên fixture
-- Chỉ chạy trên staging (`https://qlh-staging-web.pages.dev/`), trong workspace smoke giả; không ghi vào dữ liệu demo.
-- Tên dữ liệu bắt đầu `QA-` (ví dụ `QA-Lớp A`, `QA-HS 1`, `QA-KT1`). Tài khoản: giáo viên smoke (Admin đầu tiên); phụ huynh PH-A (1 con HS-1), PH-B (2 con HS-2, HS-6), PH-0 (chưa liên kết). SĐT là số giả, không ghi vào repo hay log.
+## Môi trường, dữ liệu và credentials
+- Mặc định mọi QA web chạy trên DEV: `https://qlh-dev-web.pages.dev`; API DEV: `https://qlh-dev-api.tolaphamnhuphong.workers.dev/v1`.
+- Có thể cấu hình bằng `QLH_WEB_BASE` và `QLH_API_BASE`. Module `maestro/web/config.mjs` chặn URL chứa `staging` trừ khi đặt `QLH_ALLOW_STAGING=1`. CẤM dùng staging: các URL `qlh-staging-*` hiện có người dùng thật và được coi là PROD.
+- Script đọc credentials lúc chạy từ `~/.config/qlh/dev-qa.txt`; không đưa credentials vào repo hoặc log. Không dùng dữ liệu demo.
+- Tên dữ liệu bắt đầu `QA-` (ví dụ `QA-Lớp A`, `QA-HS 1`, `QA-KT1`). Tài khoản DEV: giáo viên QA và các tài khoản phụ huynh QA. SĐT là dữ liệu riêng, không ghi vào repo hay log.
 - Subflow `maestro/common/` tạo dữ liệu qua giao diện; ca cần dữ liệu có sẵn dùng subflow chuẩn bị tương ứng.
 
-## Biến môi trường (không in, không ghi vào file trong repo)
-Đọc từ `~/.config/qlh/staging-smoke.txt` vào biến môi trường của tiến trình rồi truyền `maestro -e KEY=VALUE`. Không dùng `env`, `printenv`, `set`.
-- `STAGING_PHONE` (9 chữ số nội địa, bỏ 84/+84), `STAGING_PASSWORD`: giáo viên smoke.
+## Biến môi trường
+Các script web đọc trực tiếp `~/.config/qlh/dev-qa.txt`. Với Maestro iOS, preflight đọc cùng file và truyền `DEV_PHONE` / `DEV_PASSWORD` vào flow. Không in credentials hoặc ghi chúng vào file trong repo.
+- `QLH_WEB_BASE`, `QLH_API_BASE`: URL DEV mặc định ở trên.
+- `QLH_ALLOW_STAGING=1` bỏ qua guard; CẤM đặt biến này vì staging là PROD.
 - Quy ước gửi đăng nhập: UI web/iOS dùng 9 chữ số nội địa; HTTP API phải chuẩn hoá thành `+84` + 9 chữ số nội địa (ví dụ dữ liệu fixture có thể giữ dạng được API chấp nhận). Không in số thật.
 - Khoá 15 phút sau 5 lần sai: tối đa 2 lần submit đăng nhập mỗi thiết bị mỗi lượt.
 

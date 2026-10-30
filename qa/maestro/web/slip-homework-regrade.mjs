@@ -1,9 +1,10 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
-import { assertStagingBundle } from './staging-bundle-check.mjs';
+import { assertConfiguredBundle } from './staging-bundle-check.mjs';
 
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((line) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
@@ -87,7 +88,7 @@ async function openSessionFor(date, sessionListUrl, time = '18:00') {
 }
 
 const rec = (id, status, note = '') => console.log(`${status} ${id}${note ? ': ' + note : ''}`);
-const base = 'https://qlh-staging-web.pages.dev';
+const base = WEB_BASE;
 const pressed = async (id) => (await page.getByTestId(id).getAttribute('aria-pressed')) === 'true';
 async function openSlip(student) {
   await page.getByRole('tab', { name: 'Nhận xét', exact: true }).click();
@@ -107,7 +108,7 @@ async function homeworkState() {
 }
 try {
   await page.goto(`${base}/dang-nhap`, { waitUntil: 'domcontentloaded' });
-  console.log('STAGING_BUNDLE', await assertStagingBundle(page));
+  console.log('WEB_BUNDLE', await assertConfiguredBundle(page));
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);

@@ -1,7 +1,8 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 
-const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-smoke.txt`, 'utf8')).split(/\r?\n/).map((line) => {
+const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((line) => {
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
@@ -10,7 +11,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let phase = 'login';
 let passed = false;
 try {
-  await page.goto('https://qlh-staging-web.pages.dev/dang-nhap');
+  await page.goto(WEB_BASE + '/dang-nhap');
   await page.locator('#login-phone').fill(credentials.phone);
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
   await page.locator('#login-password').fill(credentials.password);
@@ -18,10 +19,10 @@ try {
   await page.waitForURL(/\/lop/);
 
   phase = 'QA class navigation';
-  await page.goto('https://qlh-staging-web.pages.dev/lop');
+  await page.goto(WEB_BASE + '/lop');
   await page.getByRole('link', { name: /QA-Web-241025B-Class/ }).last().click();
   const classNav = page.getByRole('navigation', { name: 'Mục của lớp' });
-  await page.goto(new URL(await classNav.getByRole('link', { name: 'Buổi học' }).getAttribute('href'), 'https://qlh-staging-web.pages.dev').toString());
+  await page.goto(new URL(await classNav.getByRole('link', { name: 'Buổi học' }).getAttribute('href'), WEB_BASE).toString());
 
   phase = 'future session detail';
   const viewLinks = page.getByRole('link', { name: 'Xem buổi' });

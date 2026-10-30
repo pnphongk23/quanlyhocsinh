@@ -2,7 +2,7 @@
 
 Nguồn: `qa/traceability.md` sau lượt iOS brief 96/97. Danh sách sinh từ cột "Trạng thái" (iOS không phải pass). Ca đã pass ở lượt 96/97 (CMT-018/020/021/022/023/024/025) đã cập nhật trong traceability và bị loại khỏi danh sách dưới đây.
 
-Workspace chạy: `qa/maestro/web/fixture-ios-clean-workspace.mjs` (tài khoản ở `~/.config/qlh/staging-qa-ios.txt`, lớp `QA-iOS-A`, `QA-iOS-B`).
+Workspace chạy trên DEV: `qa/maestro/web/fixture-ios-clean-workspace.mjs` (tài khoản ở `~/.config/qlh/dev-qa.txt`, lớp `QA-iOS-A`, `QA-iOS-B`).
 
 - **ATT** (14): TC-ATT-001(P0) TC-ATT-002(P0) TC-ATT-003(P0) TC-ATT-004(P1) TC-ATT-005(P0) TC-ATT-006(P1) TC-ATT-007(P1) TC-ATT-010(P0) TC-ATT-011(P0) TC-ATT-012(P1) TC-ATT-013(P1) TC-ATT-014(P0) TC-ATT-015(P0) TC-ATT-016(P1)
 - **AUTH** (20): TC-AUTH-001(P0) TC-AUTH-002(P0) TC-AUTH-003(P0) TC-AUTH-005(P1) TC-AUTH-006(P1) TC-AUTH-007(P0) TC-AUTH-008(P0) TC-AUTH-009(P0) TC-AUTH-010(P1) TC-AUTH-011(P1) TC-AUTH-012(P1) TC-AUTH-013(P1) TC-AUTH-014(P1) TC-AUTH-016(P1) TC-AUTH-017(P1) TC-AUTH-018(P1) TC-AUTH-019(P0) TC-AUTH-023(P0) TC-AUTH-024(P1) TC-AUTH-025(P1)

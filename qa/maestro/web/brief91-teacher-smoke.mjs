@@ -1,11 +1,12 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 import { homedir } from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 
-const base = 'https://qlh-staging-web.pages.dev';
+const base = WEB_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
-const secretsPath = `${homedir()}/.config/qlh/staging-smoke.txt`;
+const secretsPath = `${homedir()}/.config/qlh/dev-qa.txt`;
 const credentials = Object.fromEntries((await readFile(secretsPath, 'utf8')).split(/\r?\n/).map((line) => {
   const index = line.indexOf('=');
   return index > 0 ? [line.slice(0, index).trim(), line.slice(index + 1).trim()] : ['', ''];
@@ -268,8 +269,8 @@ try {
   await dialog.waitFor({ timeout: 8000 });
   const month = dialog.locator('input[type="month"]');
   if (!(await month.count())) {
-    record('RPT-MONTHLY', 'FAIL', 'Current staging UI did not expose monthly input');
-    throw new Error('Current staging report UI is not monthly');
+    record('RPT-MONTHLY', 'FAIL', 'Current target UI did not expose monthly input');
+    throw new Error('Current target report UI is not monthly');
   }
   await month.fill('2026-10');
     await dialog.getByRole('button', { name: 'Tạo báo cáo', exact: true }).click();

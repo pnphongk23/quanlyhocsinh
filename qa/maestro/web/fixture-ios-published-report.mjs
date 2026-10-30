@@ -1,11 +1,12 @@
+import { API_BASE, WEB_BASE } from "./config.mjs";
 // Publishes the 2026-10 report for QA-iOS-C-HS1 through the API so the guardian account has one published report.
-// Teacher credentials come from ~/.config/qlh/staging-qa-ios.txt and are never printed. Re-running reuses the month batch and publishes the report again.
+// Teacher credentials come from ~/.config/qlh/dev-qa.txt and are never printed. Re-running reuses the month batch and publishes the report again.
 // Usage: node qa/maestro/web/fixture-ios-published-report.mjs
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
-const api = 'https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1';
-const creds = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/staging-qa-ios.txt`, 'utf8')).split(/\r?\n/).map((l) => {
+const api = API_BASE;
+const creds = Object.fromEntries((await readFile(`${process.env.HOME}/.config/qlh/dev-qa.txt`, 'utf8')).split(/\r?\n/).map((l) => {
   const i = l.indexOf('='); return i > 0 ? [l.slice(0, i).trim(), l.slice(i + 1).trim()] : ['', ''];
 }).filter(([k]) => k));
 const call = async (method, path, body, token) => {
