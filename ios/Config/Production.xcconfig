@@ -1,4 +1,4 @@
-// Môi trường production. Production dùng chung máy chủ với staging (người dùng chốt 2026-10-28);
+// Môi trường production. URL bên dưới phục vụ người dùng thật;
 // khi có tên miền riêng, chỉ cần thay API_BASE_URL ở đây.
 #include "Base.xcconfig"
 

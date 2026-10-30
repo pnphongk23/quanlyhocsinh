@@ -39,8 +39,8 @@ Hai cấu hình build, đặt trong `Config/`:
 
 | Cấu hình | File | `APP_ENVIRONMENT` | `API_BASE_URL` |
 |---|---|---|---|
-| Staging (mặc định) | `Config/Staging.xcconfig` | `Staging` | máy chủ staging (`qlh-staging-api…/v1`) |
-| Production | `Config/Production.xcconfig` | `Production` | cùng máy chủ staging (chốt 2026-10-28) |
+| Staging (tên lịch sử; Debug/simulator) | `Config/Staging.xcconfig` | `Staging` | máy chủ dev (`qlh-dev-api…/v1`) |
+| Production | `Config/Production.xcconfig` | `Production` | máy chủ phục vụ người dùng thật |
 
 Hai giá trị này vào Info.plist qua `APP_ENVIRONMENT` / `API_BASE_URL` (`QuanLyLop/Resources/Info.plist`),
 app đọc bằng `AppConfiguration.load()` và hiện ở màn khởi động.
