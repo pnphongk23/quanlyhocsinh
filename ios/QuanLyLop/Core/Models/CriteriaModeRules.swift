@@ -51,6 +51,22 @@ enum CriteriaModeRules {
 
     static func unmetCount(_ chips: [Chip]) -> Int { chips.filter(\.unmet).count }
 
+    static func noSlipCount(_ chips: [Chip]) -> Int { chips.filter { !$0.hasSlip }.count }
+
+    /// What a group badge says: unmet students first, then students without a slip, else the whole class met.
+    enum Summary: Equatable {
+        case allMet
+        case unmet(Int)
+        case noSlip(Int)
+    }
+
+    static func summary(_ chips: [Chip]) -> Summary {
+        let unmet = unmetCount(chips)
+        if unmet > 0 { return .unmet(unmet) }
+        let noSlip = noSlipCount(chips)
+        return noSlip > 0 ? .noSlip(noSlip) : .allMet
+    }
+
     /// The save a chip tap makes: the criterion flipped, the sentence written again from the criteria, the note
     /// untouched (the caller passes the slip's own note). Homework is marked hand-set only when that group was tapped.
     static func tapGrading(slip: SessionSlip?, criterion: Int, sections: [HomeworkSection], grades: [HomeworkGrade],
@@ -88,6 +104,13 @@ enum CriteriaModeText {
     static let byCriterion = "Theo tiêu chí"
     static let hint = "Chạm để bỏ chọn em chưa đạt"
     static func unmetCount(_ count: Int) -> String { count == 0 ? "Cả lớp đạt" : "\(count) em chưa đạt" }
+    static func summary(_ summary: CriteriaModeRules.Summary) -> String {
+        switch summary {
+        case .allMet: return "Cả lớp đạt"
+        case .unmet(let count): return "\(count) em chưa đạt"
+        case .noSlip(let count): return "\(count) em chưa có phiếu"
+        }
+    }
     static let sentMark = "Đã gửi"
     static let legacyMark = "Phiếu thang cũ"
     static let absentMark = "Vắng"

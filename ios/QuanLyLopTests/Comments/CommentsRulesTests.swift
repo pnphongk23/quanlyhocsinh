@@ -316,6 +316,25 @@ final class CriteriaModeRulesTests: XCTestCase {
         }
     }
 
+    func testBadgeSaysWholeClassMetOnlyWhenEveryStudentHasAMetSlip() {
+        let met = slip("a", criteria: SlipRules.allCriteria)
+        func chips(_ rows: [I4TicketRow]) -> [CriteriaModeRules.Chip] {
+            CriteriaModeRules.chips(rows: rows, criterion: 1, sections: [], grades: [])
+        }
+        let allMet = chips([row("a", slip: met), row("c", slip: slip("c", criteria: SlipRules.allCriteria))])
+        XCTAssertEqual(CriteriaModeRules.summary(allMet), .allMet)
+        XCTAssertEqual(CriteriaModeText.summary(.allMet), "Cả lớp đạt")
+
+        let noSlip = chips([row("a", slip: met), row("b", slip: nil), row("c", slip: nil)])
+        XCTAssertEqual(CriteriaModeRules.noSlipCount(noSlip), 2)
+        XCTAssertEqual(CriteriaModeRules.summary(noSlip), .noSlip(2))
+        XCTAssertEqual(CriteriaModeText.summary(.noSlip(2)), "2 em chưa có phiếu")
+
+        let unmet = chips([row("a", slip: slip("a", criteria: SlipRules.allCriteria & ~2)), row("b", slip: nil)])
+        XCTAssertEqual(CriteriaModeRules.summary(unmet), .unmet(1))
+        XCTAssertEqual(CriteriaModeText.summary(.unmet(1)), "1 em chưa đạt")
+    }
+
     func testWarningsAskOncePerKind() {
         let edited = slip("a", comment: "Con rất tốt.", status: .sent)
         XCTAssertEqual(Set(CriteriaModeRules.warnings(slip: edited, acknowledged: [])), [.sent, .handEdited])

@@ -62,8 +62,7 @@ struct CriteriaModeView: View {
                     }
                 }
                 Spacer(minLength: 0)
-                AppPill(title: CriteriaModeText.unmetCount(CriteriaModeRules.unmetCount(chips)),
-                        tone: CriteriaModeRules.unmetCount(chips) == 0 ? .success : .warning)
+                summaryPill(CriteriaModeRules.summary(chips))
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: AppMetrics.chipGridMin), spacing: AppSpace.s8, alignment: .top)],
                       alignment: .leading, spacing: AppSpace.s8) {
@@ -94,6 +93,11 @@ struct CriteriaModeView: View {
 
     private func handEditedCount(_ draft: NotesImportDraft) -> Int {
         draft.handEditedCount { id in CriteriaModeRules.overwritesHandEditedSentence(rows.first { $0.student.id == id }?.slip) }
+    }
+
+    private func summaryPill(_ summary: CriteriaModeRules.Summary) -> some View {
+        AppPill(title: CriteriaModeText.summary(summary),
+                tone: { switch summary { case .allMet: .success; case .unmet: .warning; case .noSlip: .neutral } }())
     }
 
     private func chipButton(_ chip: CriteriaModeRules.Chip, criterion: Int) -> some View {
