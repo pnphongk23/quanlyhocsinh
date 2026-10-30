@@ -164,6 +164,8 @@ struct TeacherClassListView: View {
     private var todaySessions: [ClassSession] {
         TeacherFeatureData.todaySessions(data.sessions, classes: data.classes, today: today)
     }
+    @State private var tasksExpanded = false
+    private static let collapsedTaskRows = 2
     private var unfinishedSessions: [ClassSession] { data.unfinishedAttendanceSessions(today: today) }
     private var today: String { TeacherFormat.todayISO() }
 
@@ -294,10 +296,17 @@ struct TeacherClassListView: View {
                 AppEmptyState(title: String(localized: "classes.tasks.empty", table: "Teacher"), size: .compact)
             } else {
                 VStack(spacing: TeacherMetrics.listGap) {
-                    ForEach(unfinishedSessions) { session in
+                    ForEach(tasksExpanded ? unfinishedSessions : Array(unfinishedSessions.prefix(Self.collapsedTaskRows))) { session in
                         if let klass = data.classroom(id: session.classId) {
                             unfinishedCard(session: session, classroom: klass)
                         }
+                    }
+                    if unfinishedSessions.count > Self.collapsedTaskRows {
+                        AppButton(title: tasksExpanded ? String(localized: "classes.tasks.less", table: "Teacher")
+                                  : String(format: String(localized: "classes.tasks.more", table: "Teacher"),
+                                           unfinishedSessions.count - Self.collapsedTaskRows),
+                                  variant: .secondary) { tasksExpanded.toggle() }
+                            .accessibilityIdentifier("class.tasks.toggle")
                     }
                 }
             }

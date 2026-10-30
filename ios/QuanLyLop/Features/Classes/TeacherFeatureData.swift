@@ -286,7 +286,8 @@ final class TeacherFeatureData {
     func saveAttendance(session: ClassSession, drafts: [String: TeacherAttendanceDraft]) async throws {
         guard let store else { throw TeacherDataFailure.unavailable }
         for student in students(in: session.classId) where Self.student(student, isEnrolledOn: session.date) {
-            let draft = drafts[student.id] ?? TeacherAttendanceDraft(status: attendanceFor(sessionID: session.id, studentID: student.id)?.status ?? .present)
+            let draft = drafts[student.id]
+            guard let draft, TeacherAttendanceDraft.hasChanges(draft: draft, stored: attendanceFor(sessionID: session.id, studentID: student.id)) else { continue }
             try await enqueueAttendance(session: session, student: student, draft: draft, store: store)
         }
         await reload()
@@ -464,9 +465,10 @@ enum TeacherDataFailure: Error { case unavailable, missingVersion }
 struct TeacherAttendanceDraft: Sendable, Equatable {
     var status: AttendanceStatus
 
+    /// A student nobody marked has no draft and no record: nothing is written for them.
     static func hasChanges(draft: TeacherAttendanceDraft?, stored: Attendance?) -> Bool {
-        guard let stored else { return true }
         guard let draft else { return false }
+        guard let stored else { return true }
         return draft != TeacherAttendanceDraft(status: stored.status)
     }
 }

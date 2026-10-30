@@ -44,8 +44,8 @@ final class TeacherFeatureTests: XCTestCase {
     }
 
     func testAttendanceDraftTreatsMissingRecordAsUnsavedAndExistingPresentAsUnchanged() {
-        XCTAssertTrue(TeacherAttendanceDraft.hasChanges(draft: nil, stored: nil),
-                      "a session with no attendance record must be saved even though it displays Present")
+        XCTAssertFalse(TeacherAttendanceDraft.hasChanges(draft: nil, stored: nil),
+                       "a student nobody marked has nothing to save")
 
         let allPresent = TeacherAttendanceDraft(status: .present)
         XCTAssertTrue(TeacherAttendanceDraft.hasChanges(draft: allPresent, stored: nil),

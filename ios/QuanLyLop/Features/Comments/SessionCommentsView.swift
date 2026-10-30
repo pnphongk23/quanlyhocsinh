@@ -307,7 +307,7 @@ struct SessionCommentsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("comment.sendClass.disabledReason")
                 }
-                AppButton(title: SlipSheetText.defaultsButton, variant: .neutral, size: .large) { showingDefaults = true }
+                AppButton(title: SlipSheetText.defaultsButton, variant: .secondary, size: .large) { showingDefaults = true }
                     .disabled(defaultSlipCount == 0 || sendController.phase == .saving)
                     .accessibilityIdentifier("comment.assignDefaults")
                 if data.canSendComments {

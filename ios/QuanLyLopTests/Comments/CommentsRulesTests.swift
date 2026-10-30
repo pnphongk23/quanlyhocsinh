@@ -305,6 +305,15 @@ final class CriteriaModeRulesTests: XCTestCase {
         XCTAssertEqual(CriteriaModeRules.unmetCount(chips), 2)
         XCTAssertEqual(chips.first?.isSent, true)
         XCTAssertEqual(chips.first?.isAbsent, true)
+        XCTAssertEqual(chips.map(\.hasSlip), [true, false, true], "a student without a slip shows the paler default")
+    }
+
+    func testDefaultFiveStarSlipIsMetForEveryCriterionSoTheWholeClassIsFilled() {
+        let rows = [row("a", slip: slip("a", criteria: SlipRules.allCriteria)), row("b", slip: nil)]
+        for criterion in 0..<SlipRules.criteriaCount {
+            let chips = CriteriaModeRules.chips(rows: rows, criterion: criterion, sections: [], grades: [])
+            XCTAssertEqual(CriteriaModeRules.unmetCount(chips), 0, "criterion \(criterion)")
+        }
     }
 
     func testWarningsAskOncePerKind() {

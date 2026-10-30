@@ -161,6 +161,20 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có việc còn dở" } }
       }
     },
+    "classes.tasks.more" : {
+      "comment" : "Nút mở các việc còn dở bị ẩn trên trang Lớp. %lld là số việc còn lại.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xem thêm (%lld)" } }
+      }
+    },
+    "classes.tasks.less" : {
+      "comment" : "Nút thu gọn danh sách việc còn dở trên trang Lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thu gọn" } }
+      }
+    },
     "classes.tasks.attendance" : {
       "comment" : "Nhãn cho việc điểm danh còn thiếu trên trang Lớp.",
       "extractionState" : "manual",

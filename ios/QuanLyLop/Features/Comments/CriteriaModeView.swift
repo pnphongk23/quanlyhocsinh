@@ -84,10 +84,10 @@ struct CriteriaModeView: View {
         return chips.map { chip in
             guard let unmet = draft.unmet(for: chip.studentID) else {
                 return CriteriaModeRules.Chip(studentID: chip.studentID, name: chip.name, unmet: chip.unmet, isLegacy: chip.isLegacy,
-                                              isSent: chip.isSent, isAbsent: chip.isAbsent, isEditable: draft.isEditable(studentID: chip.studentID))
+                                              isSent: chip.isSent, isAbsent: chip.isAbsent, hasSlip: chip.hasSlip, isEditable: draft.isEditable(studentID: chip.studentID))
             }
             return CriteriaModeRules.Chip(studentID: chip.studentID, name: chip.name, unmet: unmet & (1 << criterion) != 0,
-                                          isLegacy: chip.isLegacy, isSent: chip.isSent, isAbsent: chip.isAbsent,
+                                          isLegacy: chip.isLegacy, isSent: chip.isSent, isAbsent: chip.isAbsent, hasSlip: chip.hasSlip,
                                           isEditable: draft.isEditable(studentID: chip.studentID))
         }
     }
@@ -104,7 +104,7 @@ struct CriteriaModeView: View {
             VStack(spacing: AppSpace.s2) {
                 Text(chip.name)
                     .appText(AppText.chip)
-                    .foregroundStyle(chip.unmet ? AppState.selectedFg : AppColors.text)
+                    .foregroundStyle(chip.unmet ? AppColors.text : chip.hasSlip ? AppState.selectedFg : AppColors.primaryInk)
                     .lineLimit(1)
                 if let mark {
                     Text(mark).appText(AppText.caption).foregroundStyle(AppColors.muted)
@@ -112,13 +112,13 @@ struct CriteriaModeView: View {
             }
             .padding(.horizontal, AppMetrics.chipPaddingHorizontal)
             .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
-            .background(chip.unmet ? AppState.selectedBg : AppColors.background,
+            .background(chip.unmet ? AppColors.background : chip.hasSlip ? AppState.selectedBg : AppColors.primarySoft,
                         in: RoundedRectangle(cornerRadius: AppRadius.chip))
             .opacity(chip.isLegacy || chip.isAbsent ? AppState.disabledOpacity : 1)
         }
         .buttonStyle(.plain)
         .disabled(!canWrite || !chip.isEditable || busy.contains(chip.studentID))
-        .accessibilityAddTraits(chip.unmet ? [.isSelected] : [])
+        .accessibilityAddTraits(chip.unmet ? [] : [.isSelected])
         .accessibilityIdentifier("criteria.chip.\(criterion).\(chip.studentID)")
     }
 

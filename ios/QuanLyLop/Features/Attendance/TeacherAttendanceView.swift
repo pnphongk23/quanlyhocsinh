@@ -26,10 +26,9 @@ struct TeacherAttendanceView: View {
         data.students(in: session.classId).filter { TeacherFeatureData.student($0, isEnrolledOn: session.date) }
     }
 
-    private func draft(for student: Student) -> TeacherAttendanceDraft {
-        if let draft = drafts[student.id] { return draft }
-        let stored = data.attendanceFor(sessionID: session.id, studentID: student.id)
-        return TeacherAttendanceDraft(status: stored?.status ?? .present)
+    /// What the row shows: the teacher's pick, else the saved status, else nil ("Chưa điểm danh").
+    private func status(for student: Student) -> AttendanceStatus? {
+        drafts[student.id]?.status ?? storedStatus(student)
     }
 
     private func storedStatus(_ student: Student) -> AttendanceStatus? {
@@ -37,13 +36,13 @@ struct TeacherAttendanceView: View {
     }
 
     private func update(_ student: Student, _ change: (inout TeacherAttendanceDraft) -> Void) {
-        var value = draft(for: student)
+        var value = drafts[student.id] ?? TeacherAttendanceDraft(status: storedStatus(student) ?? .present)
           change(&value)
           drafts[student.id] = value
     }
 
     private var absentCount: Int {
-        roster.filter { draft(for: $0).status == .absent }.count
+        roster.filter { status(for: $0) == .absent }.count
     }
 
     private var hasChanges: Bool {
@@ -182,8 +181,7 @@ struct TeacherAttendanceView: View {
     }
 
     private func row(_ student: Student) -> some View {
-        let value = draft(for: student)
-        let displayed: AttendanceStatus? = viewOnly ? storedStatus(student) : value.status
+        let displayed: AttendanceStatus? = viewOnly ? storedStatus(student) : status(for: student)
         let content = HStack(spacing: 8) {
             TeacherAvatar(name: student.name, size: 36)
             Text(student.name)
@@ -206,7 +204,7 @@ struct TeacherAttendanceView: View {
                     .offset(x: swipeOffset(for: student))
                     .background(alignment: .trailing) {
                         // Only while the row is open or dragged: at rest the buttons would bleed through the rounded corners.
-                        if swipeOffset(for: student) != 0 { swipeActions(student, current: value.status) }
+                        if swipeOffset(for: student) != 0 { swipeActions(student, current: displayed) }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: AppRadius.button))
                     .simultaneousGesture(swipeGesture(student))
@@ -224,7 +222,7 @@ struct TeacherAttendanceView: View {
         return min(0, max(-swipeActionWidth, base + (dragging?.dx ?? 0)))
     }
 
-    private func swipeActions(_ student: Student, current: AttendanceStatus) -> some View {
+    private func swipeActions(_ student: Student, current: AttendanceStatus?) -> some View {
         HStack(spacing: 0) {
             ForEach(swipeOrder, id: \.self) { status in
                 Button {
@@ -272,7 +270,7 @@ struct TeacherAttendanceView: View {
             Menu {
                 Picker("", selection: statusBinding(student)) {
                     ForEach(cycleOrder, id: \.self) {
-                        Text($0.label).tag($0).accessibilityIdentifier("attendance.status.\($0.rawValue)")
+                        Text($0.label).tag(Optional($0)).accessibilityIdentifier("attendance.status.\($0.rawValue)")
                     }
                 }
             } label: {
@@ -286,7 +284,7 @@ struct TeacherAttendanceView: View {
 
     private func statusPill(_ displayed: AttendanceStatus?, showsChevron: Bool) -> some View {
         HStack(spacing: 4) {
-            Text(displayed?.label ?? "–").appText(AppText.pill)
+            Text(displayed?.label ?? String(localized: "feature.attendance.chua.iem.danh")).appText(AppText.pill)
             if showsChevron {
                 Image(systemName: "chevron.down").font(.system(size: AppMetrics.pillChevronSize, weight: .semibold))
             }
@@ -299,9 +297,9 @@ struct TeacherAttendanceView: View {
         .contentShape(Rectangle())
     }
 
-    private func statusBinding(_ student: Student) -> Binding<AttendanceStatus> {
-        Binding(get: { draft(for: student).status },
-                set: { newValue in update(student) { $0.status = newValue } })
+    private func statusBinding(_ student: Student) -> Binding<AttendanceStatus?> {
+        Binding(get: { status(for: student) },
+                set: { newValue in if let newValue { update(student) { $0.status = newValue } } })
     }
 
     private func pillTone(_ status: AttendanceStatus?) -> Color {

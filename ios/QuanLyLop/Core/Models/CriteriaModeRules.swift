@@ -1,7 +1,7 @@
 import Foundation
 
-/// "Theo tiêu chí" mode of the comments tab: one group per criterion, one chip per student; a tapped chip means the
-/// criterion is not met. Every tap is one `slip.set` for that student.
+/// "Theo tiêu chí" mode of the comments tab: one group per criterion, one chip per student; a filled chip means the
+/// criterion is met and a tap clears it (not met). Every tap is one `slip.set` for that student.
 enum CriteriaModeRules {
     /// What a chip shows for one student and one criterion.
     struct Chip: Identifiable, Equatable {
@@ -12,13 +12,15 @@ enum CriteriaModeRules {
         let isLegacy: Bool
         let isSent: Bool
         let isAbsent: Bool
+        /// False while the student has no slip yet: the chip shows the default, paler than a saved one.
+        let hasSlip: Bool
         var id: String { studentID }
         /// An old three-star slip cannot be edited; a chip of the notes draft can also be closed for other reasons.
         let isEditable: Bool
 
-        init(studentID: String, name: String, unmet: Bool, isLegacy: Bool, isSent: Bool, isAbsent: Bool, isEditable: Bool? = nil) {
+        init(studentID: String, name: String, unmet: Bool, isLegacy: Bool, isSent: Bool, isAbsent: Bool, hasSlip: Bool = true, isEditable: Bool? = nil) {
             self.studentID = studentID; self.name = name; self.unmet = unmet; self.isLegacy = isLegacy
-            self.isSent = isSent; self.isAbsent = isAbsent; self.isEditable = isEditable ?? !isLegacy
+            self.isSent = isSent; self.isAbsent = isAbsent; self.hasSlip = hasSlip; self.isEditable = isEditable ?? !isLegacy
         }
     }
 
@@ -43,7 +45,7 @@ enum CriteriaModeRules {
             let criteria = effectiveCriteria(slip: row.slip, sections: sections, grades: grades, studentID: row.student.id)
             return Chip(studentID: row.student.id, name: row.student.name,
                         unmet: !locked && !SlipRules.isMet(criteria, index: criterion),
-                        isLegacy: locked, isSent: row.isSent, isAbsent: row.attendance == .absent)
+                        isLegacy: locked, isSent: row.isSent, isAbsent: row.attendance == .absent, hasSlip: row.slip != nil)
         }
     }
 
@@ -84,7 +86,7 @@ enum CriteriaModeRules {
 enum CriteriaModeText {
     static let byStudent = "Theo học sinh"
     static let byCriterion = "Theo tiêu chí"
-    static let hint = "Chạm tên em chưa đạt tiêu chí đó. Chạm lại để bỏ chọn."
+    static let hint = "Chạm để bỏ chọn em chưa đạt"
     static func unmetCount(_ count: Int) -> String { count == 0 ? "Cả lớp đạt" : "\(count) em chưa đạt" }
     static let sentMark = "Đã gửi"
     static let legacyMark = "Phiếu thang cũ"
