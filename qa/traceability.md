@@ -132,6 +132,26 @@ Sinh bằng `python3 -I qa/tools/gen-traceability.py`; cột flow và trạng th
 | TC-OFF-012 | Trạng thái chung: đang tải, rỗng, lỗi, mất mạng | P2 | 192 |  | - | iOS: blocked: không chạy trong lượt này; chưa xác lập được QA-iOS lớp/buổi/HS sau khi form tạo lớp đóng nhưng fixture không xuất hiện; dừng vì df 749 MiB (<1.2 GiB); web: tự động-chưa-chạy |
 | TC-OFF-013 | Gộp thông báo điểm sau 5 phút không nhập thêm | P2 | 187 |  | - | iOS: thủ công: chờ ≥ 5 phút theo đồng hồ máy chủ và cần cron; kiểm bằng inbox khi app có màn (Q-08).; web: tự động-chưa-chạy |
 | TC-OFF-014 | Đăng xuất/đổi tài khoản: máy chủ xác nhận gỡ push của phiên trước | P2 | 187, 191 |  |  | iOS: thủ công: cần iPhone thật và FCM. |
+| TC-OFF-015 | Mở app: pull đúng một lần khi đã có phiên | P0 | 206, arch:123 |  |  | chưa làm |
+| TC-OFF-016 | Đăng nhập: pull ngay sau khi vào | P0 | 206, arch:123 |  |  | chưa làm |
+| TC-OFF-017 | Đổi vai trò hoặc workspace: pull một lần cho danh tính mới | P1 | 107, 206, arch:123 |  |  | chưa làm |
+| TC-OFF-018 | Sau khi gửi xong lệnh ghi của mình: pull một lần | P0 | 206, arch:123 |  |  | chưa làm |
+| TC-OFF-019 | Đổi tab không pull | P0 | 206, arch:123 |  |  | chưa làm |
+| TC-OFF-020 | Quay lại app (focus, visibilitychange) không pull | P0 | 206, arch:123 |  |  | chưa làm |
+| TC-OFF-021 | Không pull theo chu kỳ (không poll) | P0 | 206, arch:123 |  |  | thủ công: cần quan sát lưu lượng mạng ≥10 phút, Maestro không đếm được request |
+| TC-OFF-022 | Web mobile: kéo để tải lại ở Lớp, Lịch, chi tiết buổi | P0 | 206, arch:123 | - |  | chưa làm |
+| TC-OFF-023 | Web mobile: kéo để tải lại ở trang chủ phụ huynh | P1 | 206, arch:123 | - |  | chưa làm |
+| TC-OFF-024 | iOS: kéo để tải lại ở tab Lịch và chi tiết buổi | P0 | 206, arch:123 |  | - | chưa làm |
+| TC-OFF-025 | iOS: kéo để tải lại ở tab Lớp | P0 | 206, arch:123 |  | - | chưa làm |
+| TC-OFF-026 | iOS: kéo để tải lại ở trang chủ phụ huynh | P1 | 206, arch:123 |  | - | chưa làm |
+| TC-OFF-027 | Web desktop: nút "Tải lại" ở Lớp, Lịch, chi tiết buổi | P0 | 206, arch:123 | - |  | chưa làm |
+| TC-OFF-028 | Web: mất mạng khi tải lại, báo lỗi rồi tự ẩn | P1 | 206, arch:123 | - |  | chưa làm |
+| TC-OFF-029 | iOS: mất mạng khi kéo để tải lại, báo lỗi rồi tự ẩn | P1 | 206, arch:123 |  | - | thủ công: Maestro không bật/tắt mạng |
+| TC-OFF-030 | Lệnh tạo lúc offline tự gửi khi có mạng lại, rồi pull | P0 | 206, arch:123 |  |  | thủ công: cần ngắt/bật mạng đúng lúc và một thiết bị thứ hai |
+| TC-OFF-031 | Trước khi kéo hoặc bấm "Tải lại", chưa thấy thay đổi từ máy khác | P0 | 206, arch:123 |  |  | thủ công: cần hai thiết bị/phiên và điều phối thời điểm |
+| TC-OFF-032 | Web mobile: kéo thì thấy thay đổi từ máy khác | P0 | 206, arch:123 | - |  | thủ công: cần hai phiên, một phiên thao tác dữ liệu |
+| TC-OFF-033 | Web desktop: bấm "Tải lại" thì thấy thay đổi từ máy khác | P0 | 206, arch:123 | - |  | thủ công: cần hai phiên, một phiên thao tác dữ liệu |
+| TC-OFF-034 | iOS: kéo thì thấy thay đổi từ máy khác | P0 | 206, arch:123 |  | - | thủ công: cần hai phiên, một phiên thao tác dữ liệu |
 | TC-PRM-001 | Người tạo workspace là Admin: thấy mọi lớp, tạo lớp được | P0 | 17, 114 | qa/maestro/ios/permissions/TC-PRM-001.yaml | qa/maestro/web/permissions-admin-workspace.mjs | iOS: blocked: stopped before P0 because the one allowed AUTH-002 preflight submit failed; no authenticated session or QA-iOS fixture for runtime execution; web: tự động-pass |
 | TC-PRM-002 | Không có màn quản lý nhân sự, role, phân công ở Bản đầu | P1 | 7, 114, 237 | qa/maestro/ios/permissions/TC-PRM-002.yaml | - | iOS: tự động-chưa-chạy; web: chặn: chưa duyệt được toàn bộ menu/Cài đặt trong lượt P1 do hai flow lớp dừng ở locator trước khi vào chi tiết; cần một lượt điều hướng admin riêng |
 | TC-PRM-003 | Phụ huynh không vào được màn của giáo viên | P0 | 20, 94 |  | qa/maestro/web/guardian-teacher-denied.mjs | web: tự động-pass |
