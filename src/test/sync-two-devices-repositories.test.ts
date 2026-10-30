@@ -44,6 +44,48 @@ describe("two devices, device A writing through the real repositories", () => {
     expect(B.getStore().sessions.find((s) => s.id === extra.id)).toMatchObject({ status: "cancelled", makeup: true });
   });
 
+  it("opens the server-created extra session after a cached device reloads its snapshot", async () => {
+    const serverSessionId = "ses-server-extra";
+    const serverForA = {
+      ...server,
+      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, "http://fake.local");
+        if (url.pathname === "/v1/classes/c1/sessions" && init?.method === "POST") {
+          const body = JSON.parse(String(init.body));
+          return server.fetch(input, { ...init, body: JSON.stringify({ ...body, id: serverSessionId }) });
+        }
+        return server.fetch(input, init);
+      },
+    };
+    const A = await bootDevice(serverForA, "tA", teacherMe);
+    const sessions = await import("../data/repositories/sessions");
+    const B = await bootDevice(server, "tB", teacherMe);
+    const sessionsOnB = await import("../data/repositories/sessions");
+    await Promise.all([A.syncNow(), B.syncNow()]);
+    await Promise.all([A.hydrateStore(), B.hydrateStore()]);
+
+    const extra = await sessions.createExtraSession({ classId: "c1", date: "2099-01-02", time: "10:30" });
+    expect(extra.id).toBe(serverSessionId);
+    expect(A.getStore().sessions.find((session) => session.id === extra.id)).toMatchObject({ id: serverSessionId, makeup: true });
+
+    let rejectNextPull = true;
+    server.hooks.respond = (request) => {
+      if (request.token === "tB" && request.path === "/sync/pull" && rejectNextPull) {
+        rejectNextPull = false;
+        return { status: 409, code: "snapshot_required" };
+      }
+      return undefined;
+    };
+    await B.syncNow();
+
+    // A link carrying the 201 id resolves through the same local repository used by the detail page.
+    const opened = sessionsOnB.getSession(extra.id);
+    expect(opened).toMatchObject({ id: serverSessionId, makeup: true });
+    expect(B.getStore().attendance).toEqual([]);
+    const { studentsForSession } = await import("../features/attendance/sessionRoster");
+    expect(studentsForSession(B.getStore().students, opened!)).toHaveLength(1);
+  });
+
   it("shows attendance saved through the repository (real outbox) on B after one focus", async () => {
     const A = await bootDevice(server, "tA", teacherMe);
     const attendance = await import("../data/repositories/attendance");

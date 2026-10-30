@@ -16,6 +16,7 @@ const SESSION = "6a-session-7";
 beforeEach(() => {
   const seed = createSeed();
   seed.attendance = seed.attendance.filter((record) => record.sessionId !== SESSION);
+  seed.sessions = seed.sessions.map((session) => session.id === SESSION ? { ...session, origin: "manual", makeup: true } : session);
   replaceStore(seed);
   save.mockReset().mockResolvedValue([]);
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {} }));
