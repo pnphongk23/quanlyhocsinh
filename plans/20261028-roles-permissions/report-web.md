@@ -138,3 +138,11 @@ Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 4
 - Deployment id: `83b4ea32-1d6f-4bd7-a918-ada680ac0590` (qlh-staging-web).
 - Rollback id: `e0423355-1c73-42c3-bf87-75db9bd5e2da` (960d696); rollback sâu hơn: `06509c13-fd54-48e1-9914-72b6b9080597`.
 - Nội dung: dòng đầu tab Điểm danh ghi "Chưa điểm danh N em" khi chưa em nào có trạng thái, chỉ đếm vắng khi đã có em được đặt. tsc sạch, vitest 861 qua / 4 skip.
+
+## Deploy staging — kéo để tải lại (hash d38836f)
+
+- Deployment id: `a61a2f26-cc32-45a5-b267-a6508010ec2e` (Cloudflare Pages `qlh-staging-web`, nhánh main, commit d38836f).
+- URL: https://a61a2f26.qlh-staging-web.pages.dev
+- Rollback id: `83b4ea32-1d6f-4bd7-a918-ada680ac0590` (commit c6e2768).
+- Gates: worktree `mvp-web` sạch; `tsc --noEmit` và vitest đã qua (GL kiểm trước); `npm run build` với `VITE_API_BASE_URL` staging thành công; chỉ Pages staging, không Worker, không prod.
+- Kiểm tra sau deploy: một lần `curl` trang chính, HTTP 200 và có `<div id="root">`. Không dùng trình duyệt tự động, không đăng nhập hay QA trên staging.
