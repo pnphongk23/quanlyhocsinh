@@ -24,6 +24,24 @@ describe("CriteriaMode", () => {
     expect(onSelectStudent).toHaveBeenCalledWith(rows[0].student.id);
   });
 
+  it("tô màu = em đạt: phiếu đủ tiêu chí tô hết, bỏ một tiêu chí thì chip đó bỏ tô, em chưa có phiếu tô nhạt", () => {
+    const rows = buildTicketRows(createSeed(), "6a-session-7");
+    const [full, partial, none] = rows;
+    full.comment = { ...full.comment!, scale: 5, criteria: 31 };
+    partial.comment = { ...partial.comment!, scale: 5, criteria: 30 };
+    none.comment = null;
+    render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite />);
+    expect(screen.getAllByText("Chạm để bỏ chọn em chưa đạt")).toHaveLength(5);
+    const chipsOf = (name: string) => screen.getAllByRole("button", { name: new RegExp(`^${name}`) });
+    expect(chipsOf(full.student.name).every((chip) => chip.getAttribute("aria-pressed") === "true")).toBe(true);
+    const partialChips = chipsOf(partial.student.name);
+    expect(partialChips[0]).toHaveAttribute("aria-pressed", "false");
+    expect(partialChips.slice(1).every((chip) => chip.getAttribute("aria-pressed") === "true")).toBe(true);
+    const noneChips = chipsOf(none.student.name);
+    expect(noneChips.every((chip) => chip.getAttribute("aria-pressed") === "true" && /provisional/.test(chip.className))).toBe(true);
+    expect(chipsOf(full.student.name).every((chip) => !/provisional/.test(chip.className))).toBe(true);
+  });
+
   it("hides editable chip buttons without write access", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7");
     render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite={false} />);

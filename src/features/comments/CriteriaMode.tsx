@@ -102,13 +102,15 @@ export default function CriteriaMode({
               <span className={s.count}>{criteriaUnmetCount(rows, index, initialCriteria, preview?.criteriaByStudent)} em chưa đạt</span>
           </div>
           {index === 4 && <Pill tone="neutral">Theo chấm BTVN</Pill>}
-          <p className={s.hint}>Chạm để đánh dấu chưa đạt</p>
+          <p className={s.hint}>Chạm để bỏ chọn em chưa đạt</p>
           <div className={s.chips}>
             {rows.map((row) => {
               const legacy = !canToggleCriterion(row);
                 const criteria = preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForRow(row) : initialCriteria(row));
               const unachieved = (criteria & (1 << index)) === 0;
-                const selected = unachieved;
+                // Tô màu = em đạt; em chưa có phiếu tô nhạt (sẽ đạt khi tạo phiếu).
+                const selected = !unachieved;
+                const provisional = selected && !row.comment && !preview?.criteriaByStudent?.[row.student.id];
                 const sent = row.status === "sent" || row.status === "queued";
                 const blockedSentPreview = !!preview && sent && !preview.includeSent;
                 const label = `${row.student.name}${sent ? " · Đã gửi" : ""}${legacy ? " · Phiếu thang cũ" : ""}`;
@@ -116,7 +118,7 @@ export default function CriteriaMode({
                 <button
                   key={row.student.id}
                   type="button"
-                  className={`${s.chip}${selected ? ` ${s.selected}` : ""}${!row.attended ? ` ${s.absent}` : ""}`}
+                  className={`${s.chip}${selected ? ` ${provisional ? s.provisional : s.selected}` : ""}${!row.attended ? ` ${s.absent}` : ""}`}
                   aria-pressed={selected}
                   aria-label={label}
                   aria-current={row.student.id === selectedStudentId ? "true" : undefined}
@@ -131,7 +133,7 @@ export default function CriteriaMode({
                   {row.student.name}{sent && <small>Đã gửi</small>}
                 </button>
               ) : (
-                <span key={row.student.id} aria-current={row.student.id === selectedStudentId ? "true" : undefined} className={`${s.chip}${selected ? ` ${s.selected}` : ""}${legacy ? ` ${s.legacy}` : ""}${!row.attended ? ` ${s.absent}` : ""}`}>
+                <span key={row.student.id} aria-current={row.student.id === selectedStudentId ? "true" : undefined} className={`${s.chip}${selected ? ` ${provisional ? s.provisional : s.selected}` : ""}${legacy ? ` ${s.legacy}` : ""}${!row.attended ? ` ${s.absent}` : ""}`}>
                   {row.student.name}{sent && <small>Đã gửi</small>}{legacy && <small>Phiếu thang cũ</small>}
                 </span>
               );

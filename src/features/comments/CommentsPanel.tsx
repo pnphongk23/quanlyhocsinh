@@ -370,8 +370,6 @@ export default function CommentsPanel({
             sessionId={sessionId}
             rows={rows}
             canWrite={canWrite}
-            selectedStudentId={openStudentId}
-            onSelectStudent={openStudent}
             previousGrades={(studentId) => previousHomeworkGrades(state, sessionId, studentId)}
           />
         ) : <>

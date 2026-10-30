@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createSeed } from "../../test/fixtures/seed";
 import { buildTicketRows, ungradedHomeworkNotice } from "../../data/homework";
 import type { StoreState } from "../../data/types";
-import { buildTodayAgenda } from "./todayModel";
+import { buildTodayAgenda, groupBacklog } from "./todayModel";
 import { dateISO } from "../../shared/date";
 
 let state: StoreState;
@@ -88,16 +88,18 @@ describe("việc còn dở", () => {
     // quá 14 ngày thì ẩn hẳn
     const far = buildTodayAgenda(state, dayBefore(today, 60));
     expect(far.backlog).toEqual([]);
-    expect(far.backlogMore).toBe(0);
   });
 
-  it("buổi đã qua còn planned báo điểm danh chưa lưu; cắt 5 dòng và đếm phần còn lại", () => {
+  it("buổi đã qua còn planned báo điểm danh chưa lưu; gộp theo loại, mỗi loại một nhóm", () => {
     const last = state.sessions.find((s) => s.id === "6a-session-7")!;
     last.status = "planned";
     const today = dayBefore(last.date, 1);
     const agenda = buildTodayAgenda(state, today);
     expect(agenda.backlog.some((i) => i.session.id === last.id && i.task.kind === "attendance")).toBe(true);
-    expect(agenda.backlog.length).toBeLessThanOrEqual(5);
-    if (agenda.backlogMore > 0) expect(agenda.backlog).toHaveLength(5);
+    const groups = groupBacklog(agenda.backlog);
+    expect(groups.map((g) => g.kind)).toEqual([...new Set(groups.map((g) => g.kind))]);
+    expect(groups.flatMap((g) => g.items)).toHaveLength(agenda.backlog.length);
+    expect(groups.every((g) => g.items.every((i) => i.task.kind === g.kind))).toBe(true);
+    expect(groups[0].kind).toBe("attendance");
   });
 });

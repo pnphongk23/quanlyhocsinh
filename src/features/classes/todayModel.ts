@@ -18,6 +18,8 @@ export interface TodayTask {
   kind: TodayTaskKind;
   label: string;
   tab: SessionTab;
+  /** Số em còn việc (phiếu chưa gửi, BTVN chưa chấm); điểm danh thì không có. */
+  students?: number;
 }
 
 export interface TodayEntry {
@@ -43,14 +45,32 @@ export interface BacklogItem {
 
 /** Số ngày gần nhất (tính cả hôm nay lùi lại) xét "việc còn dở". */
 export const BACKLOG_DAYS = 14;
-export const BACKLOG_MAX_LINES = 5;
+/** Số dòng mỗi nhóm "Việc còn dở" hiện khi thu gọn. */
+export const BACKLOG_GROUP_VISIBLE = 2;
+
+const BACKLOG_GROUP_LABELS: Record<TodayTaskKind, string> = {
+  attendance: "Điểm danh chưa xong",
+  tickets: "Phiếu chưa gửi",
+  homework: "BTVN chưa chấm",
+};
+
+export interface BacklogGroup {
+  kind: TodayTaskKind;
+  label: string;
+  items: BacklogItem[];
+}
+
+/** Gộp việc còn dở theo loại (điểm danh, phiếu, BTVN), giữ thứ tự mới nhất trước trong nhóm. */
+export function groupBacklog(items: BacklogItem[]): BacklogGroup[] {
+  return (Object.keys(BACKLOG_GROUP_LABELS) as TodayTaskKind[])
+    .map((kind) => ({ kind, label: BACKLOG_GROUP_LABELS[kind], items: items.filter((item) => item.task.kind === kind) }))
+    .filter((group) => group.items.length > 0);
+}
 
 export interface TodayAgenda {
   date: string;
-  /** Việc chưa xong của buổi đã diễn ra, mới nhất trước; đã cắt còn tối đa 5 dòng. */
+  /** Việc chưa xong của buổi đã diễn ra, mới nhất trước. */
   backlog: BacklogItem[];
-  /** Số việc còn dở bị cắt khỏi `backlog` ("và n việc khác"). */
-  backlogMore: number;
   /** Buổi hôm nay chưa huỷ, xếp theo giờ. */
   entries: TodayEntry[];
   /** Buổi kế tiếp, chỉ có khi hôm nay không có buổi nào. */
@@ -75,6 +95,7 @@ function tasksFor(state: StoreState, session: Session, today: string): TodayTask
       kind: "tickets",
       label: `Phiếu chưa gửi (${unsent} em)`,
       tab: "nhan-xet",
+      students: unsent,
     });
   // Đếm số em còn phần chưa chấm (ungradedParts là lượt em × phần, dễ hiểu nhầm).
   const ungraded = ungradedHomeworkNotice(state, session.id).students.length;
@@ -83,6 +104,7 @@ function tasksFor(state: StoreState, session: Session, today: string): TodayTask
       kind: "homework",
       label: `BTVN chưa chấm (${ungraded} em)`,
       tab: "btvn",
+      students: ungraded,
     });
   return tasks;
 }
@@ -178,17 +200,13 @@ export function buildTodayAgenda(
     .map((session) => entryFor(state, session, today))
     .sort(byTimeThenName);
   const backlog = buildBacklog(state, sessions, today);
-  const shown = {
-    backlog: backlog.slice(0, BACKLOG_MAX_LINES),
-    backlogMore: Math.max(0, backlog.length - BACKLOG_MAX_LINES),
-  };
-  if (entries.length) return { date: today, ...shown, entries, next: null };
+  if (entries.length) return { date: today, backlog, entries, next: null };
   const next = sessions
     .filter((session) => session.status === "planned" && session.date > today)
     .sort(compareSessions)[0];
   return {
     date: today,
-    ...shown,
+    backlog,
     entries,
     next: next ? entryFor(state, next, today) : null,
   };

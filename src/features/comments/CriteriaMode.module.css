@@ -68,6 +68,11 @@ button.chip {
   color: var(--state-selected-fg);
 }
 
+.provisional {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+
 .absent::after {
   content: "Vắng";
   display: inline-flex;

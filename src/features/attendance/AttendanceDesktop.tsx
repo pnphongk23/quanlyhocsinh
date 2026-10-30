@@ -21,7 +21,8 @@ import s from "./AttendanceDesktop.module.css";
 import d from "../class-space/desktop.module.css";
 
 type AttendanceState = AttendanceRecord["status"];
-type Draft = { status: AttendanceState };
+/** `null` = chưa điểm danh (chưa có bản ghi và chưa bấm). */
+type Draft = { status: AttendanceState | null };
 
 const STATES: AttendanceState[] = ["present", "late", "absent"];
 const LABELS: Record<AttendanceState, string> = {
@@ -63,7 +64,7 @@ export default function AttendanceDesktop({
   const stored = listAttendance(sessionId);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
 
-  const defaultDraft: Draft = { status: "present" };
+  const defaultDraft: Draft = { status: null };
   const storedDraft = (studentId: string): Draft | null => {
     const existing = stored.find((record) => record.studentId === studentId);
     return existing ? { status: existing.status } : null;
@@ -92,12 +93,11 @@ export default function AttendanceDesktop({
     value,
     save: async () => {
       try {
+        // Em chưa điểm danh thì không ghi bản ghi nào.
         await saveAttendanceBatchDurable(
-          rows.map((row) => ({
-            sessionId,
-            studentId: row.student.id,
-            status: row.status,
-          })),
+          rows.flatMap((row) =>
+            row.status ? [{ sessionId, studentId: row.student.id, status: row.status }] : [],
+          ),
         );
       } catch (cause) {
         setStatus("error");

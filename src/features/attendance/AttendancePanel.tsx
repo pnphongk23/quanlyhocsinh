@@ -20,12 +20,14 @@ import s from "./AttendancePanel.module.css";
 type AttendanceState = AttendanceRecord["status"];
 const states: AttendanceState[] = ["present", "absent", "late"];
 const summaryStates: AttendanceState[] = ["present", "late", "absent"];
+const UNMARKED_LABEL = "Chưa điểm danh";
 const labels: Record<AttendanceState, string> = {
   present: "Có mặt",
   late: "Muộn",
   absent: "Vắng",
 };
-type Draft = { status: AttendanceState };
+/** `null` = chưa điểm danh (chưa có bản ghi và chưa bấm). */
+type Draft = { status: AttendanceState | null };
 export default function AttendancePanel({
   classId,
   sessionId,
@@ -59,7 +61,7 @@ export default function AttendancePanel({
   const draftFor = (studentId: string): Draft => {
     const existing = stored.find((record) => record.studentId === studentId);
     return (
-      drafts[studentId] ?? { status: existing?.status ?? "present" }
+      drafts[studentId] ?? { status: existing?.status ?? null }
     );
   };
   const rows = students.map((student) => ({
@@ -85,7 +87,7 @@ export default function AttendancePanel({
       const record = stored.find((item) => item.studentId === student.id);
       return [
         student.id,
-        { status: record?.status ?? "present" },
+        { status: record?.status ?? null },
       ];
     }),
   );
@@ -119,7 +121,7 @@ export default function AttendancePanel({
   const cycle = (studentId: string) => {
     const current = draftFor(studentId).status;
     setRow(studentId, {
-      status: states[(states.indexOf(current) + 1) % states.length],
+      status: current ? states[(states.indexOf(current) + 1) % states.length] : "present",
     });
   };
   const allPresent = () => {
@@ -137,12 +139,11 @@ export default function AttendancePanel({
   const persist = async (): Promise<boolean> => {
     if (!session) return false;
     try {
+      // Em chưa điểm danh thì không ghi bản ghi nào.
       await saveAttendanceBatchDurable(
-        rows.map((row) => ({
-          sessionId: session.id,
-          studentId: row.student.id,
-          status: row.status,
-        })),
+        rows.flatMap((row) =>
+          row.status ? [{ sessionId: session.id, studentId: row.student.id, status: row.status }] : [],
+        ),
       );
       setDrafts({});
       setError("");
@@ -276,12 +277,16 @@ export default function AttendancePanel({
                 ? savedStatus
                   ? labels[savedStatus]
                   : "–"
-                : labels[row.status];
+                : row.status
+                  ? labels[row.status]
+                  : UNMARKED_LABEL;
               const statusClass = viewOnly
                 ? savedStatus
                   ? s[savedStatus]
                   : s.unmarked
-                : s[row.status];
+                : row.status
+                  ? s[row.status]
+                  : s.unmarked;
 
               return (
                 <div className={s.rowWrap} key={row.student.id}>
@@ -305,7 +310,7 @@ export default function AttendancePanel({
                       aria-label={
                         viewOnly
                           ? `${row.student.name}: ${displayState}`
-                          : `${row.student.name}: ${labels[row.status]}. Bấm để đổi`
+                          : `${row.student.name}: ${displayState}. Bấm để đổi`
                       }
                       className={s.statusButton + " " + statusClass}
                       disabled={viewOnly}

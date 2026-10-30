@@ -45,7 +45,7 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size }: 
 
   return (
     <>
-      <Button size={size} variant="surface" data-testid="slip-assign-defaults" onClick={() => { setError(""); setCount(countAssignDefaultSlips(sessionId)); setOpen(true); }}>
+      <Button size={size} variant="secondary" data-testid="slip-assign-defaults" onClick={() => { setError(""); setCount(countAssignDefaultSlips(sessionId)); setOpen(true); }}>
         Gán tất cả mặc định
       </Button>
       {open && (
