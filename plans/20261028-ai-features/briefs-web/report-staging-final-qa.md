@@ -40,4 +40,4 @@ Status: DONE_WITH_CONCERNS
 
 Summary: Đã tạo đúng một buổi lẻ và xác nhận buổi còn trong UI sau reload, đăng xuất/đăng nhập lại; snapshot có ID. Đã chụp và kiểm tra đủ ba ảnh, không có tràn ngang tại các kích thước yêu cầu; phần xác minh sau tạo phải tiếp tục trong context mới do lỗi selector của lần chạy đầu.
 
-Hash commit: sẽ được ghi sau commit nội dung.
+Hash commit nội dung: `5512b83`.
