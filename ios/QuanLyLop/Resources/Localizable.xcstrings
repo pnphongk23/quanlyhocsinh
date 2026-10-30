@@ -1640,6 +1640,18 @@
         }
       }
     },
+    "feature.staff.ten.toi.a.100.ky.tu" : {
+      "comment" : "Chuỗi hiển thị trong Features/Staff.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tên tối đa 100 ký tự."
+          }
+        }
+      }
+    },
     "feature.staff.vui.long.nhap.ten" : {
       "comment" : "Chuỗi hiển thị trong Features/Staff.",
       "extractionState" : "manual",

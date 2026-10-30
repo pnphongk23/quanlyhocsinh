@@ -416,6 +416,8 @@ struct Membership: Codable, Sendable, Equatable {
     let permissions: [String:PermissionLevel]?
     /// Classes assigned to a staff member (`assigned_classes` scope); absent for the admin and for guardians.
     var classIds: [String]? = nil
+    /// The name an Admin gave this person in this workspace; null or absent until one is set.
+    var displayName: String? = nil
 
     /// Whether this membership may read or write a permission group. The admin may do everything; a missing
     /// "send_comments" row (an older server) follows `comments_reports`.
@@ -438,6 +440,16 @@ struct User: Codable, Sendable, Equatable {
 
     /// Only an Admin sets a staff member's name, so a new account can have none yet.
     var hasDisplayName: Bool { !(displayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) }
+}
+
+/// The name shown for the signed-in person: the one the Admin set in the active workspace, else the account's.
+enum ProfileName {
+    static func resolve(user: User?, membership: Membership?) -> String? {
+        for candidate in [membership?.displayName, user?.displayName] {
+            if let name = candidate?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty { return name }
+        }
+        return nil
+    }
 }
 
 struct AuthSession: Codable, Sendable, Equatable {

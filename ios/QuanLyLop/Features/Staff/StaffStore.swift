@@ -121,6 +121,16 @@ final class StaffStore {
         return "+84 \(digits.prefix(3)) ••• \(digits.suffix(3))"
     }
 
+    /// The 422 text for the name field, or nil when the failure is about something else.
+    static func nameError(for error: Error) -> String? {
+        guard let failure = error as? APIFailure, case .server(422, let detail, _) = failure else { return nil }
+        switch detail.details?["fields"]?["display_name"]?.string {
+        case "required": return String(localized: "feature.staff.vui.long.nhap.ten")
+        case "must_be_at_most_100": return String(localized: "feature.staff.ten.toi.a.100.ky.tu")
+        default: return nil
+        }
+    }
+
     static func message(for error: Error) -> String {
         if let input = error as? StaffInputError {
             switch input {
@@ -158,6 +168,10 @@ final class StaffStore {
 }
 
 enum StaffInputError: Error, Equatable { case invalidPhone, missingName }
+
+enum StaffNameRules {
+    static let maxLength = 100
+}
 
 #if DEBUG
 extension StaffStore {

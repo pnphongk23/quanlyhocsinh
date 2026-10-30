@@ -460,6 +460,7 @@ struct TeacherField: View {
     var placeholder = ""
     var keyboard: UIKeyboardType = .default
     var identifier: String?
+    var error: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -470,8 +471,12 @@ struct TeacherField: View {
                 .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.control))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppRadius.control)
-                        .strokeBorder(AppColors.inputBorder, lineWidth: AppMetrics.borderWidth))
+                        .strokeBorder(error == nil ? AppColors.inputBorder : AppColors.error, lineWidth: AppMetrics.borderWidth))
                 .accessibilityIdentifier(identifier ?? label)
+            if let error {
+                Text(error).appText(AppText.muted).foregroundStyle(AppColors.error)
+                    .accessibilityIdentifier((identifier ?? label) + ".error")
+            }
         }
     }
 

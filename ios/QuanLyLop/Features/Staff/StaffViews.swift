@@ -184,8 +184,11 @@ struct StaffFormSheet: View {
     }
     private var isPending: Bool { member?.kind == .pending }
     private var isAdmin: Bool { member?.isAdmin ?? false }
-    /// An existing account keeps the name it has; only the admin's declaration (add or pending) is editable.
-    private var nameEditable: Bool { member == nil || isPending }
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var nameError: String? {
+        if trimmedName.count > StaffNameRules.maxLength { return String(localized: "feature.staff.ten.toi.a.100.ky.tu") }
+        return saveController.error.flatMap(StaffStore.nameError(for:))
+    }
 
     var body: some View {
         TeacherSheet(title: member == nil ? String(localized: "feature.staff.them.nhan.su")
@@ -203,15 +206,12 @@ struct StaffFormSheet: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
-            if let error = actionError ?? saveController.error.map(StaffStore.message(for:)) {
+            if let error = actionError ?? saveController.error.flatMap({ StaffStore.nameError(for: $0) == nil ? StaffStore.message(for: $0) : nil }) {
                 TeacherErrorBanner(message: error)
             }
-            if nameEditable {
-                TeacherField(label: String(localized: "feature.staff.ten"), text: $name, identifier: "staff.name")
-            } else if let member {
-                readOnly(String(localized: "feature.staff.ten"),
-                         member.isUnnamed ? String(localized: "feature.staff.chua.at.ten") : member.displayName)
-            }
+            TeacherField(label: String(localized: "feature.staff.ten"), text: $name,
+                         placeholder: member?.isUnnamed == true ? String(localized: "feature.staff.chua.at.ten") : "",
+                         identifier: "staff.name", error: nameError)
             if let member {
                 readOnly(String(localized: "feature.staff.so.dien.thoai"), AuthFormat.phone(member.phone))
             } else {
@@ -296,8 +296,7 @@ struct StaffFormSheet: View {
             if let member {
                 _ = try await store.update(member, role: roleChange(member),
                                            classIds: isAdmin ? nil : classChange(member),
-                                           displayName: isPending && name.trimmingCharacters(in: .whitespaces) != member.displayName
-                                               ? name.trimmingCharacters(in: .whitespaces) : nil)
+                                           displayName: trimmedName != member.displayName ? trimmedName : nil)
             } else {
                 try await store.add(phone: phone, name: name, role: role ?? .assistant, classIds: orderedClassIds)
             }
@@ -305,8 +304,10 @@ struct StaffFormSheet: View {
     }
 
     private var canSave: Bool {
-        if member == nil { return !name.trimmingCharacters(in: .whitespaces).isEmpty && !phone.isEmpty }
-        return !(nameEditable && name.trimmingCharacters(in: .whitespaces).isEmpty)
+        if trimmedName.count > StaffNameRules.maxLength { return false }
+        // An account the Admin has not named yet can still get a new role without a name being typed.
+        if trimmedName.isEmpty && member?.isUnnamed != true { return false }
+        return member != nil || !phone.isEmpty
     }
 
     private var orderedClassIds: [String] { store.classes.map(\.id).filter(classIds.contains) }

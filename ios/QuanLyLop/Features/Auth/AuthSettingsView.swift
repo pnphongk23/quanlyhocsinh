@@ -248,11 +248,12 @@ struct AuthSettingsView: View {
 
     /// A staff member the Admin has not named yet: no role label or letters standing in for a name.
     private func showsUnnamed(_ user: User, _ membership: Membership?) -> Bool {
-        !user.hasDisplayName && membership != nil && membership?.role.scopeKind != .linkedStudents
+        ProfileName.resolve(user: user, membership: membership) == nil && membership != nil
+            && membership?.role.scopeKind != .linkedStudents
     }
 
     private func displayName(_ user: User, _ membership: Membership?) -> String {
-        if user.hasDisplayName, let name = user.displayName { return name.trimmingCharacters(in: .whitespacesAndNewlines) }
+        if let name = ProfileName.resolve(user: user, membership: membership) { return name }
         if showsUnnamed(user, membership) { return String(localized: "feature.staff.chua.at.ten") }
         return membership.map { AuthRoleBadge.label($0.role) } ?? String(localized: "feature.auth.phu.huynh")
     }
