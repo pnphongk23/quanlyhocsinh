@@ -203,11 +203,11 @@ final class AuthSyncTriggerTests: XCTestCase {
                               enqueueing: nil)
         let defaults = try XCTUnwrap(UserDefaults(suiteName: "guardian-login-identity-tests"))
         defaults.removePersistentDomain(forName: "guardian-login-identity-tests")
-        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
+        let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
                                               defaults: defaults, knownIdentity: identity, knownStore: store,
                                               synchronize: false, syncSucceeded: syncSucceeded,
-                                              isSuperseded: isSuperseded)
+                                              recordFreshness: false)
         }
 
         let loaded = await root.load()
@@ -232,13 +232,13 @@ final class AuthSyncTriggerTests: XCTestCase {
         defaults.removePersistentDomain(forName: "guardian-manual-refresh-tests")
         var loadedIdentity: CurrentIdentity?
         var loadedScope: CacheScope?
-        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
+        let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             loadedIdentity = identity
             loadedScope = store.scope
             return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
                                                      defaults: defaults, knownIdentity: identity, knownStore: store,
                                                      synchronize: false, syncSucceeded: syncSucceeded,
-                                                     isSuperseded: isSuperseded)
+                                                     recordFreshness: false)
         }
 
         _ = await root.load(manualSync: true)
@@ -267,13 +267,13 @@ final class AuthSyncTriggerTests: XCTestCase {
                               enqueueing: nil)
         let gate = PauseGate()
         var loads = 0
-        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
+        let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             loads += 1
             if loads == 1 { await gate.pauseUntilReleased() }
             return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
                                                      defaults: defaults, knownIdentity: identity, knownStore: store,
                                                      synchronize: false, syncSucceeded: syncSucceeded,
-                                                     isSuperseded: isSuperseded)
+                                                     recordFreshness: false)
         }
 
         let older = Task { await root.load() }
@@ -289,9 +289,9 @@ final class AuthSyncTriggerTests: XCTestCase {
 
         XCTAssertNil(olderResult, "a superseded load applies nothing")
         XCTAssertEqual(newer?.dashboard?.children.map(\.student.id), ["child"])
-        XCTAssertEqual(root.accepted.dashboard?.children.map(\.student.id), ["child"],
+        XCTAssertEqual(root.loads.dashboard?.children.map(\.student.id), ["child"],
                        "the screen keeps the newer result")
-        XCTAssertEqual(root.accepted.dashboard?.updatedAt, newer?.dashboard?.updatedAt)
+        XCTAssertEqual(root.loads.dashboard?.updatedAt, newer?.dashboard?.updatedAt)
         defaults.removePersistentDomain(forName: "guardian-superseded-load-tests")
     }
 
@@ -311,13 +311,13 @@ final class AuthSyncTriggerTests: XCTestCase {
         GuardianFreshness.record(scope, at: oldDate, defaults: defaults)
         let gate = PauseGate()
         var loads = 0
-        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
+        let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             loads += 1
             if loads == 1 { await gate.pauseUntilReleased() }
             return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
                                                      defaults: defaults, knownIdentity: identity, knownStore: store,
                                                      synchronize: false, syncSucceeded: syncSucceeded,
-                                                     isSuperseded: isSuperseded)
+                                                     recordFreshness: false)
         }
 
         let older = Task { await root.load() }
@@ -331,10 +331,93 @@ final class AuthSyncTriggerTests: XCTestCase {
         XCTAssertNil(olderResult, "the late result is dropped")
         XCTAssertTrue(try XCTUnwrap(newer?.dashboard).isOffline)
         XCTAssertEqual(newer?.dashboard?.updatedAt, oldDate)
-        XCTAssertEqual(root.accepted.dashboard?.updatedAt, oldDate)
+        XCTAssertEqual(root.loads.dashboard?.updatedAt, oldDate)
         XCTAssertEqual(GuardianFreshness.last(scope, defaults: defaults), oldDate,
                        "a superseded load does not record a refresh")
         defaults.removePersistentDomain(forName: "guardian-late-freshness-tests")
+    }
+
+    /// The refresh time belongs to the load the screen accepts. The older read finishes, the newer sync
+    /// fails, and only then does the older load reach the point where it would record its time: it must
+    /// not move the time, which stays at the last successful refresh.
+    func testSupersededReadDoesNotMoveTheRefreshTimeAfterANewerFailedSync() async throws {
+        let guardian = membership("guardian", scopeKind: .linkedStudents)
+        let api = SyncTriggerAPI(identity: identity(active: "guardian", memberships: [guardian]))
+        let model = makeModel(api: api, online: true)
+        await model.restoreSession()
+        await model.synchronizeOnSessionEntry()
+        guard let store = model.activeSQLiteStore else { return XCTFail("expected the guardian store") }
+        let scope = store.scope
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "guardian-read-freshness-tests"))
+        defaults.removePersistentDomain(forName: "guardian-read-freshness-tests")
+        let oldDate = Date(timeIntervalSince1970: 1_700_000_000)
+        GuardianFreshness.record(scope, at: oldDate, defaults: defaults)
+        let gate = PauseGate()
+        var loads = 0
+        let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
+            loads += 1
+            let dashboard = try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
+                                                              defaults: defaults, knownIdentity: identity,
+                                                              knownStore: store, synchronize: false,
+                                                              syncSucceeded: syncSucceeded, recordFreshness: false)
+            // The read is done and this result counts as refreshed; the screen has not committed it yet.
+            if loads == 1 { await gate.pauseUntilReleased() }
+            return dashboard
+        }
+
+        let older = Task { await root.load() }
+        await gate.waitUntilEntered()
+        await api.failSync(true)
+        _ = await model.synchronizeWhileActive()
+        let newer = await root.load()
+        await gate.release()
+        let olderResult = await older.value
+
+        XCTAssertNil(olderResult, "the dropped load writes nothing")
+        XCTAssertTrue(try XCTUnwrap(newer?.dashboard).isOffline)
+        XCTAssertEqual(GuardianFreshness.last(scope, defaults: defaults), oldDate,
+                       "a load a newer one replaced must not make the cache look freshly updated")
+        XCTAssertEqual(root.loads.dashboard?.updatedAt, oldDate)
+        defaults.removePersistentDomain(forName: "guardian-read-freshness-tests")
+    }
+
+    /// The spinner belongs to the newest load: an older load finishing while the newer one still reads
+    /// must not hide it.
+    func testSupersededLoadDoesNotDropTheNewerLoadSpinner() async throws {
+        let guardian = membership("guardian", scopeKind: .linkedStudents)
+        let api = SyncTriggerAPI(identity: identity(active: "guardian", memberships: [guardian]))
+        let model = makeModel(api: api, online: true)
+        await model.restoreSession()
+        await model.synchronizeOnSessionEntry()
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "guardian-load-spinner-tests"))
+        defaults.removePersistentDomain(forName: "guardian-load-spinner-tests")
+        let gates = [PauseGate(), PauseGate()]
+        var loads = 0
+        let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
+            let gate = gates[min(loads, gates.count - 1)]
+            loads += 1
+            await gate.pauseUntilReleased()
+            return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
+                                                     defaults: defaults, knownIdentity: identity, knownStore: store,
+                                                     synchronize: false, syncSucceeded: syncSucceeded,
+                                                     recordFreshness: false)
+        }
+
+        let older = Task { await root.load() }
+        await gates[0].waitUntilEntered()
+        let newer = Task { await root.load() }
+        await gates[1].waitUntilEntered()
+        XCTAssertTrue(root.loads.isLoading, "both loads are waiting on the cache")
+
+        await gates[0].release()
+        _ = await older.value
+        XCTAssertNil(root.loads.dashboard, "the superseded load applied nothing")
+        XCTAssertTrue(root.loads.isLoading, "the older load must not end the newer load's spinner")
+
+        await gates[1].release()
+        _ = await newer.value
+        XCTAssertFalse(root.loads.isLoading)
+        defaults.removePersistentDomain(forName: "guardian-load-spinner-tests")
     }
 
     func testGuardianEntrySyncCompletionRefreshesOfflineDashboardAndFailureKeepsFreshness() async throws {
@@ -357,12 +440,12 @@ final class AuthSyncTriggerTests: XCTestCase {
         XCTAssertNotNil(model.activeSQLiteStore)
         GuardianFreshness.record(scope, at: oldDate, defaults: defaults)
         var loadFailure: String?
-        let root = GuardianRootView(model: model) { identity, store, syncSucceeded, isSuperseded in
+        let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             do {
                 return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
                                                          defaults: defaults, knownIdentity: identity, knownStore: store,
                                                          synchronize: false, syncSucceeded: syncSucceeded,
-                                                         isSuperseded: isSuperseded)
+                                                         recordFreshness: false)
             } catch {
                 loadFailure = String(describing: error)
                 throw error
@@ -392,11 +475,11 @@ final class AuthSyncTriggerTests: XCTestCase {
         let failedAPI = SyncTriggerAPI(identity: guardian, snapshotGate: failedGate, snapshotFails: true)
         let failedModel = makeModel(api: failedAPI, online: true)
         await failedModel.restoreSession()
-        let failedRoot = GuardianRootView(model: failedModel) { identity, store, syncSucceeded, isSuperseded in
+        let failedRoot = GuardianRootView(model: failedModel, freshness: defaults) { identity, store, syncSucceeded in
             try await GuardianRepository.load(api: failedAPI, identityStore: MemoryIdentityStore(identity),
                                               defaults: defaults, knownIdentity: identity, knownStore: store,
                                               synchronize: false, syncSucceeded: syncSucceeded,
-                                              isSuperseded: isSuperseded)
+                                              recordFreshness: false)
         }
         let failedEntry = Task { await failedModel.synchronizeOnSessionEntry() }
         await failedGate.waitUntilEntered()

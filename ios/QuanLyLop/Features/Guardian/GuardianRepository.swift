@@ -450,8 +450,8 @@ enum GuardianRepository {
 
     /// `/me` failing for a network or server reason falls back to the identity the app last confirmed,
     /// so a guardian who opens the app offline still reads the cached data with its "updated at" time.
-    /// `isSuperseded` lets the screen cancel the write of `updatedAt` when a newer load took over while
-    /// this one was reading (a late result must not make the cache look fresher than it is).
+    /// With `recordFreshness: false` the caller writes that time itself, so a screen can record it in the
+    /// same step that accepts the result: a load a newer one replaced must not move the time.
     static func load(api: any APIClient, identityStore: any CachedIdentityStore,
                      storeFactory: (CacheScope) throws -> SQLiteStore = { try SQLiteStore.open(scope: $0) },
                      defaults: UserDefaults = .standard,
@@ -459,7 +459,7 @@ enum GuardianRepository {
                      knownStore: SQLiteStore? = nil,
                      synchronize: Bool = true,
                      syncSucceeded: Bool = false,
-                     isSuperseded: @MainActor () -> Bool = { false }) async throws -> GuardianDashboard {
+                     recordFreshness: Bool = true) async throws -> GuardianDashboard {
         let identity: CurrentIdentity
         if let knownIdentity {
             identity = knownIdentity
@@ -490,26 +490,29 @@ enum GuardianRepository {
         }
         let studentIDs = try await store.records(Student.self, entity: "student").map(\.id)
         let historyRefreshed = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: studentIDs)
-          let refreshed = didSyncSucceed && historyRefreshed
-        let superseded = await isSuperseded()
         let base = try await dashboard(from: store)
-        if refreshed && !superseded {
+        let refreshed = didSyncSucceed && historyRefreshed
+        if refreshed {
+            guard recordFreshness else {
+                // Fresh, but the caller records the time only if it still accepts this result.
+                return GuardianDashboard(children: base.children)
+            }
             GuardianFreshness.record(scope, defaults: defaults)
             return GuardianDashboard(children: base.children)
         }
         return GuardianDashboard(children: base.children, updatedAt: GuardianFreshness.last(scope, defaults: defaults), isOffline: true)
     }
 
+    /// The screen reads through this: it commits the refresh time itself, next to accepting the result.
     static func load(identity: CurrentIdentity, store: SQLiteStore,
-                     syncSucceeded: Bool = false,
-                     isSuperseded: @MainActor () -> Bool = { false }) async throws -> GuardianDashboard {
+                     syncSucceeded: Bool = false) async throws -> GuardianDashboard {
         let configuration = try AppConfiguration.load().get()
         let tokenStore = KeychainTokenStore(service: configuration.tokenStoreService)
         guard try await tokenStore.token() != nil else { throw APIFailure.missingToken }
         return try await load(api: URLSessionAPIClient(configuration: configuration, tokenStore: tokenStore),
                               identityStore: KeychainCachedIdentityStore(service: configuration.tokenStoreService),
                               knownIdentity: identity, knownStore: store, synchronize: false,
-                              syncSucceeded: syncSucceeded, isSuperseded: isSuperseded)
+                              syncSucceeded: syncSucceeded, recordFreshness: false)
     }
 
     /// Rebuilds the dashboard from what the cache holds now, without a request: a sync that applied a
