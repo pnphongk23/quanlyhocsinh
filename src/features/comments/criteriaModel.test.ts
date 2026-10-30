@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { TicketRow } from "../../data/homework";
 import { createSeed } from "../../test/fixtures/seed";
 import { defaultSlipCriteria, generatedSlipSentence, starsFromCriteria } from "../../data/slip";
-import { canToggleCriterion, criteriaBadge, criteriaForRow, criteriaRowsForSession, criteriaUnmetCount, rowHasCustomComment } from "./criteriaModel";
+import { canToggleCriterion, criteriaBadge, criteriaForEditingRow, criteriaForRow, criteriaRowsForSession, criteriaUnmetCount, rowHasCustomComment } from "./criteriaModel";
 
 function row(criteria: number, options: Partial<NonNullable<TicketRow["comment"]>> = {}): TicketRow {
   const seed = createSeed();
@@ -26,9 +26,12 @@ describe("criteria mode model", () => {
     expect(rowHasCustomComment(row(15, { comment: "Câu sửa tay" }))).toBe(true);
   });
 
-  it("locks legacy scale slips while sent and queued slips remain editable", () => {
+  it("locks only legacy scale slips while sent and queued slips remain editable", () => {
     expect(canToggleCriterion(row(7, { scale: 3, criteria: null, stars: 2 }))).toBe(false);
-    expect(canToggleCriterion(row(31, { scale: 5, criteria: null, stars: 5 }))).toBe(false);
+    const missingCriteria = row(31, { scale: 5, criteria: null, stars: 5 });
+    expect(canToggleCriterion(missingCriteria)).toBe(true);
+    expect(criteriaForRow(missingCriteria)).toBe(0);
+    expect(criteriaForEditingRow(missingCriteria)).toBe(31);
     expect(canToggleCriterion(row(15, { status: "sent" }))).toBe(true);
     expect(canToggleCriterion(row(15, { sendQueued: true }))).toBe(true);
   });

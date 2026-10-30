@@ -4,7 +4,7 @@ import { toggleSlipCriterionDurable } from "../../data/repositories/comments";
 import { defaultSlipCriteria } from "../../data/slip";
 import type { HomeworkGrade } from "../../data/types";
 import { EmptyState, Pill, Segmented } from "../../shared/ui";
-import { canToggleCriterion, criteriaBadge, criteriaForRow, rowHasCustomComment, SLIP_CRITERIA } from "./criteriaModel";
+import { canToggleCriterion, criteriaBadge, criteriaForEditingRow, rowHasCustomComment, SLIP_CRITERIA } from "./criteriaModel";
 import s from "./CriteriaMode.module.css";
 
 export interface CriteriaPreview {
@@ -106,7 +106,7 @@ export default function CriteriaMode({
           <div className={s.chips}>
             {rows.map((row) => {
               const legacy = !canToggleCriterion(row);
-                const criteria = preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForRow(row) : initialCriteria(row));
+                const criteria = preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForEditingRow(row) : initialCriteria(row));
               const unachieved = (criteria & (1 << index)) === 0;
                 // Tô màu = em đạt; em chưa có phiếu tô nhạt (sẽ đạt khi tạo phiếu).
                 const selected = !unachieved;

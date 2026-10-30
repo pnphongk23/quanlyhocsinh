@@ -16,6 +16,12 @@ export function criteriaForRow(row: TicketRow): number {
   return row.comment.criteria;
 }
 
+/** Editing a five-star slip without stored criteria starts from its saved five-star baseline. */
+export function criteriaForEditingRow(row: TicketRow): number {
+  if (row.comment?.scale === 5 && row.comment.criteria == null) return 31;
+  return criteriaForRow(row);
+}
+
 export function criteriaUnmetCount(rows: TicketRow[], index: number, initialCriteria: (row: TicketRow) => number = () => 31, previewCriteria?: Record<string, number>): number {
   return rows.filter((row) => ((previewCriteria?.[row.student.id] ?? (row.comment ? criteriaForRow(row) : initialCriteria(row))) & (1 << index)) === 0).length;
 }
@@ -30,7 +36,7 @@ export function criteriaBadge(rows: TicketRow[], index: number, initialCriteria:
 }
 
 export function canToggleCriterion(row: TicketRow): boolean {
-  return !row.comment || (row.comment.scale !== 3 && row.comment.criteria != null);
+  return !row.comment || row.comment.scale !== 3;
 }
 
 export function rowHasCustomComment(row: TicketRow): boolean {

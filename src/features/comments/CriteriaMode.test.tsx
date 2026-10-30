@@ -75,20 +75,24 @@ describe("CriteriaMode", () => {
   it("renders legacy slips as non-interactive chips", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7");
     rows[0].comment = { ...rows[0].comment!, scale: 3, criteria: null, stars: 2 };
-    render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite />);
+    render(<CriteriaMode sessionId="6a-session-7" rows={[rows[0]]} canWrite />);
     expect(screen.getAllByText("Phiếu thang cũ").length).toBeGreaterThan(0);
     expect(screen.queryAllByRole("button", { name: /Nguyễn Minh Anh.*Phiếu thang cũ/ })).toHaveLength(0);
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(screen.getAllByText("Nguyễn Minh Anh").every((chip) => !/selected/.test(chip.className))).toBe(true);
   });
 
-  it("keeps no-criteria slips unmet in the chip display", () => {
+  it("keeps five-star no-criteria slips unmet in the badge and lets the teacher edit them", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7");
     rows[0].comment = { ...rows[0].comment!, scale: 5, criteria: null, stars: 5 };
     render(<CriteriaMode sessionId="6a-session-7" rows={[rows[0]]} canWrite />);
-    const chips = screen.getAllByText("Nguyễn Minh Anh");
-    expect(chips.length).toBeGreaterThan(0);
-    expect(chips.every((chip) => !/selected/.test(chip.className))).toBe(true);
+    const chips = screen.getAllByRole("button", { name: /^Nguyễn Minh Anh/ });
+    expect(chips).toHaveLength(5);
+    expect(chips.every((chip) => chip.getAttribute("aria-pressed") === "true")).toBe(true);
+    expect(screen.queryByText("Phiếu thang cũ")).not.toBeInTheDocument();
     expect(screen.getAllByText("1 em chưa đạt")).toHaveLength(5);
+    fireEvent.click(chips[0]);
+    expect(toggle).toHaveBeenCalledWith("6a-session-7", rows[0].student.id, 0);
   });
 
   it("asks once per screen before changing sent slips", () => {

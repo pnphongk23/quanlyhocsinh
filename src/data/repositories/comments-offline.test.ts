@@ -133,6 +133,37 @@ describe("phiếu nhận xét khi mất mạng", () => {
     expect(command.payload).toMatchObject({ session_id: "6a-session-7", student_id: "6a-student-1", criteria: 30, note: "" });
   });
 
+  it("chạm chip phiếu năm sao thiếu criteria dùng baseline năm sao, giữ note và lưu criteria khớp", async () => {
+    const { getStore } = await import("../store");
+    const state = getStore();
+    state.comments = [{
+      id: "6a-session-7:6a-student-1",
+      classId: "6a",
+      sessionId: "6a-session-7",
+      studentId: "6a-student-1",
+      criteria: null,
+      comment: "Câu nhận xét cũ",
+      scale: 5,
+      stars: 5,
+      note: "Ghi thêm",
+      hwManual: false,
+      status: "draft",
+      sendQueued: false,
+      sentAt: null,
+      updatedAt: "2026-10-14",
+      createdAt: "2026-10-14",
+    }];
+    replaceStore(state);
+
+    const { getSessionComment, toggleSlipCriterionDurable } = await import("./comments");
+    const saved = await toggleSlipCriterionDurable("6a-session-7", "6a-student-1", 0);
+
+    expect(saved).toMatchObject({ criteria: 30, stars: 4, scale: 5, note: "Ghi thêm" });
+    expect(getSessionComment("6a-session-7", "6a-student-1")).toMatchObject({ criteria: 30, stars: 4, note: "Ghi thêm" });
+    const [command] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(command.payload).toMatchObject({ student_id: "6a-student-1", criteria: 30, note: "Ghi thêm" });
+  });
+
   it("giữ phần gõ thêm và bật hw_manual khi đổi BTVN bằng chip", async () => {
     const { getStore } = await import("../store");
     const state = getStore();
