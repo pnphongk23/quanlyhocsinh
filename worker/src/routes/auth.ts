@@ -211,6 +211,7 @@ authRoutes.post('/auth/register', async (c) => {
           id: membershipId,
           status: 'active',
           scope_epoch: 1,
+          display_name: displayName,
           workspace: { id: workspaceId, name: workspaceName },
           role: {
             id: roleIds.admin,

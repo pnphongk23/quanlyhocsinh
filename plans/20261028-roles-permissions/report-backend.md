@@ -80,3 +80,8 @@ Concerns/Blockers: migration 0013 cần cửa sổ do GL duyệt.
 - Worker: cũ (rollback) `421ef6af-1ec2-417e-9d0b-157c140e95e0` → mới `40d3b177-cab7-4bb4-a02d-3a4d036cd77d`; health 200. Migration 0014: 10 lệnh, ~12 ms.
 - Smoke (tài khoản smoke BE, không đăng ký mới, không dùng appreview): login 200 (login không có `permissions`, đúng hợp đồng); `/me` 200 có `send_comments=write` cùng 6 khoá cũ; `GET /roles/permissions` 200 (`teacher:write`, `assistant:none`); `PUT` với `send_comments:"read"` ⇒ 422; `/sync/snapshot` 200. Rào chặn `slip.send` của trợ giảng chỉ kiểm bằng test tự động (không có tài khoản trợ giảng thật để thử trên staging).
 - Tương thích web bản đang chạy: không mở được UI trong phiên này. Đọc mã web (`mvp-web/src`): `SettingsPage` gửi lại nguyên `permissions` của role khi PUT — gồm cả `send_comments` hợp lệ (`none`/`write`), `PermissionMatrix` chỉ vẽ các nhóm đã biết; không thấy chỗ so khớp chặt tập khoá. Cần Chu Du/GL mở thử màn Phân quyền trên web staging để chắc.
+
+## Tên nhân sự theo workspace (30/10)
+- Nguyên nhân tên mất: `claimStaffDeclarations` và nhánh nhân sự của `registerGuardian` tạo membership nhưng không chép `staff_declarations.display_name`; `updateDisplayNameIfEmpty` không được gọi ở đâu.
+- Migration `0015_membership_display_name.sql`: thêm `memberships.display_name` (nullable, 1–100), trigger class phát lại khi tên đổi. Chỉ thêm cột, không backfill (dòng cũ rơi về `users.display_name`; tên bản khai đã xoá không khôi phục được).
+- `PATCH /staff/{id}` nhận `display_name` cho member (kể cả Admin tự sửa); hiển thị = tên membership ?? tên tài khoản ở `/staff`, `/me`, login, `teacher_name`.

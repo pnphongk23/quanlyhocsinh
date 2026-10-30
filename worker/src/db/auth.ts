@@ -98,6 +98,8 @@ export interface MembershipSummary {
   id: string;
   status: string;
   scope_epoch: number;
+  /** Name in this workspace: membership name set by the Admin, else the account name. */
+  display_name: string | null;
   workspace: { id: string; name: string };
   role: {
     id: string;
@@ -175,6 +177,7 @@ export async function getUserPhone(db: D1Database, userId: string): Promise<stri
 
 interface MembershipJoinRow {
   id: string;
+  display_name: string | null;
   status: string;
   scope_epoch: number;
   workspace_id: string;
@@ -190,6 +193,7 @@ function toMembershipSummary(row: MembershipJoinRow): MembershipSummary {
     id: row.id,
     status: row.status,
     scope_epoch: row.scope_epoch,
+    display_name: row.display_name,
     workspace: { id: row.workspace_id, name: row.workspace_name },
     role: {
       id: row.role_id,
@@ -235,8 +239,10 @@ export async function listActiveMemberships(
   const [membershipResult, studentResult] = await db.batch([
     db.prepare(
       `SELECT m.id, m.status, m.scope_epoch, m.workspace_id, w.name AS workspace_name,
+              COALESCE(NULLIF(trim(m.display_name), ''), u.display_name) AS display_name,
               r.id AS role_id, r.name AS role_name, r.system_key, r.scope_kind
          FROM memberships m
+         JOIN users u ON u.id = m.user_id
          JOIN workspaces w ON w.id = m.workspace_id
          JOIN roles r ON r.id = m.role_id
         WHERE m.user_id = ? AND m.status = 'active'
@@ -274,8 +280,10 @@ export async function getMe(
     db
       .prepare(
         `SELECT m.id, m.status, m.scope_epoch, m.workspace_id, w.name AS workspace_name,
+              COALESCE(NULLIF(trim(m.display_name), ''), u.display_name) AS display_name,
                 r.id AS role_id, r.name AS role_name, r.system_key, r.scope_kind
            FROM memberships m
+           JOIN users u ON u.id = m.user_id
            JOIN workspaces w ON w.id = m.workspace_id
            JOIN roles r ON r.id = m.role_id
           WHERE m.user_id = ? AND m.status = 'active'
@@ -328,8 +336,9 @@ export async function getMe(
     }
   }
 
+  const activeName = membershipSummaries.find((membership) => membership.id === activeMembershipId)?.display_name;
   return {
-    user: toUserView(userRow),
+    user: { ...toUserView(userRow), display_name: activeName ?? userRow.display_name },
     active_membership_id: activeMembershipId,
     memberships: membershipSummaries.map((membership, index) => ({
       ...membership,
@@ -556,8 +565,8 @@ export async function claimStaffDeclarations(db: D1Database, userId: string, pho
   for (const declaration of declarations.results) {
     const membershipId = crypto.randomUUID();
     statements.push(db.prepare(`INSERT INTO memberships
-      (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version)
-      SELECT ?, workspace_id, ?, role_id, 'active', 1, created_at, 1 FROM staff_declarations WHERE id = ?`)
+      (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version, display_name)
+      SELECT ?, workspace_id, ?, role_id, 'active', 1, created_at, 1, display_name FROM staff_declarations WHERE id = ?`)
       .bind(membershipId, userId, declaration.id));
     statements.push(db.prepare(`INSERT INTO member_classes (workspace_id, membership_id, class_id, created_at)
       SELECT workspace_id, ?, class_id, (SELECT created_at FROM staff_declarations WHERE id = ?)
@@ -611,8 +620,8 @@ export async function registerGuardian(
   for (const declaration of declarations.results) {
     const membershipId = staffMembershipIds.get(declaration.id)!;
     statements.push(db.prepare(`INSERT INTO memberships
-        (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version)
-      SELECT ?, workspace_id, ?, role_id, 'active', 1, ?, 1 FROM staff_declarations WHERE id = ?`)
+        (id, workspace_id, user_id, role_id, status, scope_epoch, created_at, version, display_name)
+      SELECT ?, workspace_id, ?, role_id, 'active', 1, ?, 1, display_name FROM staff_declarations WHERE id = ?`)
       .bind(membershipId, input.userId, input.now, declaration.id));
     statements.push(db.prepare(`INSERT INTO member_classes (workspace_id, membership_id, class_id, created_at)
       SELECT workspace_id, ?, class_id, ? FROM staff_declaration_classes WHERE declaration_id = ?`)

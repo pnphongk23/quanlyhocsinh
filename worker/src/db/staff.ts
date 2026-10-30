@@ -77,7 +77,7 @@ async function findStaff(db: D1Database, workspaceId: string, id: string): Promi
     WHERE d.workspace_id=? AND d.id=?`).bind(workspaceId, id).first<StaffRow>();
   if (pending) return pending;
   return (await db.prepare(`SELECT m.id,'member' AS kind,m.user_id,
-        u.display_name,u.phone,r.id AS role_id,r.name AS role_name,
+        COALESCE(NULLIF(trim(m.display_name),''),u.display_name) AS display_name,u.phone,r.id AS role_id,r.name AS role_name,
       r.system_key,m.status,m.created_at,m.version
     FROM memberships m JOIN users u ON u.id=m.user_id JOIN roles r ON r.id=m.role_id
     WHERE m.workspace_id=? AND m.id=? AND r.system_key IN ('admin','teacher','assistant')`)
@@ -87,7 +87,7 @@ async function findStaff(db: D1Database, workspaceId: string, id: string): Promi
 export async function listStaff(db: D1Database, identity: Identity) {
   requireAdmin(identity);
   const rows = await db.prepare(`SELECT m.id,'member' AS kind,m.user_id,
-        u.display_name,u.phone,r.id AS role_id,r.name AS role_name,
+        COALESCE(NULLIF(trim(m.display_name),''),u.display_name) AS display_name,u.phone,r.id AS role_id,r.name AS role_name,
       r.system_key,m.status,m.created_at,m.version
     FROM memberships m JOIN users u ON u.id=m.user_id JOIN roles r ON r.id=m.role_id
     WHERE m.workspace_id=? AND r.system_key IN ('admin','teacher','assistant')
@@ -177,7 +177,6 @@ export async function updateStaff(db: D1Database, identity: Identity, id: string
   const pending = row.kind === 'pending';
   const currentClassIds = await classesById(db, id, pending);
   if (pending && input.status !== undefined && input.status !== 'pending') throw validationError({ status: 'invalid_for_pending' });
-  if (!pending && input.display_name !== undefined) throw validationError({ display_name: 'owned_by_user' });
   const requestedClassIds = parseClassIds(input.class_ids, false);
   if (requestedClassIds && row.system_key === 'admin') throw validationError({ class_ids: 'not_applicable' });
   const nextRole = input.role === undefined ? row.system_key as StaffRole : parseRole(input.role);
@@ -186,15 +185,16 @@ export async function updateStaff(db: D1Database, identity: Identity, id: string
   if (!pending && nextStatus !== 'active' && nextStatus !== 'disabled') throw validationError({ status: 'invalid' });
   const nextName = input.display_name === undefined ? row.display_name ?? '' :
     (typeof input.display_name === 'string' ? input.display_name.trim() : '');
-  if (pending && input.display_name !== undefined && typeof input.display_name !== 'string') {
+  if (input.display_name !== undefined && typeof input.display_name !== 'string') {
     throw validationError({ display_name: 'must_be_string' });
   }
-  if (pending && input.display_name !== undefined && nextName.length < 1) throw validationError({ display_name: 'required' });
-  if (pending && nextName.length > 100) throw validationError({ display_name: 'must_be_at_most_100' });
+  if (input.display_name !== undefined && nextName.length < 1) throw validationError({ display_name: 'required' });
+  if (nextName.length > 100) throw validationError({ display_name: 'must_be_at_most_100' });
+  const nameChanged = input.display_name !== undefined && nextName !== (row.display_name ?? '');
   const classesChanged = requestedClassIds !== undefined &&
     (requestedClassIds.length !== currentClassIds.length || requestedClassIds.some((classId, i) => classId !== currentClassIds[i]));
   await validateClasses(db, identity.workspaceId, requestedClassIds ?? []);
-  const changed = nextRoleId !== row.role_id || nextStatus !== row.status || nextName !== row.display_name || classesChanged;
+  const changed = nextRoleId !== row.role_id || nextStatus !== row.status || nameChanged || classesChanged;
   if (!changed) return memberView(row, currentClassIds, identity.userId);
   const now = nowIso();
   const statements: D1PreparedStatement[] = [];
@@ -207,8 +207,11 @@ export async function updateStaff(db: D1Database, identity: Identity, id: string
         (workspace_id,declaration_id,class_id) VALUES(?,?,?)`).bind(identity.workspaceId, id, classId));
     }
   } else {
-    statements.push(db.prepare(`UPDATE memberships SET role_id=?,status=?,scope_epoch=scope_epoch+1,version=version+1
-      WHERE id=? AND workspace_id=? AND version=?`).bind(nextRoleId, nextStatus, id, identity.workspaceId, row.version));
+    const scopeChanged = nextRoleId !== row.role_id || nextStatus !== row.status || classesChanged;
+    statements.push(db.prepare(`UPDATE memberships SET role_id=?,status=?,display_name=COALESCE(?,display_name),scope_epoch=scope_epoch+?,version=version+1
+      WHERE id=? AND workspace_id=? AND version=?`)
+      .bind(nextRoleId, nextStatus, nameChanged ? nextName : null, scopeChanged ? 1 : 0,
+        id, identity.workspaceId, row.version));
     if (classesChanged) {
       const guard = 'EXISTS (SELECT 1 FROM memberships WHERE id=? AND version=?)';
       statements.push(db.prepare(`DELETE FROM member_classes WHERE membership_id=? AND ${guard}`)

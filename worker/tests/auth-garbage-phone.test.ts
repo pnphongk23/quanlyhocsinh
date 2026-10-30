@@ -3,9 +3,10 @@ import { call, db, post } from './helpers';
 
 describe('garbage phone input', () => {
   it('is a 422 on register, register-guardian and phone-check', async () => {
+    let n = 0;
     for (const phone of ['abc', '', '+84', '0', '84', '+84abc', 123, null, '😀😀😀']) {
       const body = { phone, password: 'fake-password-123', workspace_name: 'W', display_name: 'D' };
-      const headers = { 'cf-connecting-ip': `203.0.113.${Math.floor(Math.random() * 200) + 1}` };
+      const headers = { 'cf-connecting-ip': `203.0.113.${++n}` };
       for (const path of ['/v1/auth/register', '/v1/auth/register-guardian', '/v1/auth/phone-check']) {
         const result = await call(path, { ...post(body), headers });
         expect([path, phone, result.status]).toEqual([path, phone, 422]);
