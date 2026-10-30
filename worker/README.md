@@ -16,21 +16,27 @@ Run `npm run typecheck`, `npm test`, and `npm run bundle:size` before committing
 
 The web app runs on Cloudflare Pages, a different origin from the Worker, so `/v1/*` answers CORS. `ALLOWED_ORIGINS` is a comma-separated allow list of exact origins (`https://qlh-staging.pages.dev,http://localhost:5173`); an empty or unset value allows no cross-origin caller. The Worker never answers with `*` and reflects only an origin from that list, adds `Vary: Origin`, allows `Authorization, Content-Type, X-Request-Id, X-Client` (plus `GET, POST, PUT, PATCH, DELETE`), and answers `OPTIONS` preflight with `204` and `Access-Control-Max-Age: 600`. CORS headers are also set on error responses so the browser can read the error code. iOS does not use CORS. Set the staging value in the `env.staging` vars block of `wrangler.jsonc` and redeploy.
 
-## Staging deployment
+## Environments
 
-Resources (prefix `qlh-staging-` only; there is no production yet): Worker `qlh-staging-api`, D1 `qlh-staging-db` (region APAC). The D1 `database_id` is committed in `wrangler.jsonc` under `env.staging`; the top-level config stays on `REPLACE_AT_DEPLOY` because it is only used for local runs and tests.
+- **Development:** Worker `qlh-dev-api`, D1 `qlh-dev-db`, Pages `qlh-dev-web` (region APAC). QA and automated tests run only here. The dev cron runs every 30 minutes.
+- **Production:** Worker `qlh-staging-api`, D1 `qlh-staging-db`, Pages `qlh-staging-web`. These names and the Workers URL remain unchanged because the service is used by App Store 1.0. Wrangler still calls this `env.staging`; treat it as production and do not use it for QA.
+- Before a production deploy, get approval from the General Lead and back up D1 with `wrangler d1 export` or a Time Travel bookmark before applying migrations.
+
+D1 IDs for both environments are committed in `wrangler.jsonc`; the top-level config stays on `REPLACE_AT_DEPLOY` because it is only used for local runs and tests.
 
 ```sh
-npx wrangler d1 migrations apply DB --remote --env staging
-npx wrangler deploy --env staging
+npx wrangler d1 migrations apply qlh-dev-db --env dev --remote
+npx wrangler deploy --env dev
 ```
 
 - `PBKDF2_ITERATIONS=30000` is the default Worker Free setting; hashes carry their own iteration count, so existing hashes remain readable and are rehashed after a successful login when needed.
 - Parent accounts do not have a first-password or temporary-password issuance flow yet. Operators can reset a password manually using `plans/20261021-mvp/backend/runbook-reset-password.md`.
-- The cron trigger (`* * * * *`) runs session generation and push dispatch on staging.
+- The production cron trigger (`* * * * *`) runs session generation and push dispatch; dev runs every 30 minutes.
 - Staging runs on the Workers Free plan: CPU limits cannot be configured (`limits.cpu_ms` is rejected with error `100328`). Measure with `wrangler tail --format json` and read `cpuTime` / `outcome`.
 
-Live URL: https://qlh-staging-api.tolaphamnhuphong.workers.dev
+Development URL: https://qlh-dev-api.tolaphamnhuphong.workers.dev
+
+Production URL (keep unchanged): https://qlh-staging-api.tolaphamnhuphong.workers.dev
 
 ## Enable FCM push
 

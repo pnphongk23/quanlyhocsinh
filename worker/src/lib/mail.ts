@@ -31,13 +31,13 @@ export function maskEmail(email: string): string {
   return `${email.slice(0, 1)}***@${email.slice(at + 1)}`;
 }
 
-// Chế độ thử chỉ chạy ở staging, local và runtime test; production bị coi như disabled.
-const TEST_MAIL_ENVIRONMENTS = new Set(['staging', 'local', 'test']);
+// Chế độ thử chỉ chạy ở dev/staging, local và runtime test; production bị coi như disabled.
+const TEST_MAIL_ENVIRONMENTS = new Set(['dev', 'staging', 'local', 'test']);
 
 /**
  * Chọn người gửi theo `MAIL_MODE`:
  * - `cloudflare`: binding Email Service `EMAIL`, người gửi lấy từ `MAIL_FROM`.
- * - `test`: ghi vào bảng `test_mailbox` (chỉ khi ENVIRONMENT là staging/local/test).
+ * - `test`: ghi vào bảng `test_mailbox` (chỉ khi ENVIRONMENT là dev/staging/local/test).
  * - thiếu hoặc giá trị khác: null (disabled).
  */
 export function resolveMailSender(env: Env): MailSender | null {

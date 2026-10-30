@@ -176,6 +176,21 @@ describe('password reset request', () => {
     expect(await tokenCount(phone)).toBe(0);
   });
 
+  it('uses the test mailbox in dev', async () => {
+    const { phone, email } = await accountWithEmail('dev-mail@example.com');
+    const original = { MAIL_MODE: testEnv.MAIL_MODE, ENVIRONMENT: testEnv.ENVIRONMENT };
+    try {
+      testEnv.ENVIRONMENT = 'dev';
+      testEnv.MAIL_MODE = 'test';
+      const response = await withIp('/v1/auth/password-reset/request', { phone, email });
+      expect(response.status).toBe(202);
+      expect(await mailboxFor(email)).toHaveLength(1);
+    } finally {
+      testEnv.MAIL_MODE = original.MAIL_MODE;
+      testEnv.ENVIRONMENT = original.ENVIRONMENT;
+    }
+  });
+
   it('returns 503 and invalidates the token when the sender fails', async () => {
     const { phone, email } = await accountWithEmail('loi-gui@example.com');
     const original = testEnv.MAIL_MODE;

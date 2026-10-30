@@ -13,7 +13,7 @@
     "PBKDF2_ITERATIONS": "30000",
     // CORS cho /v1/*: danh sách origin (phân tách dấu phẩy), rỗng = không cho origin nào.
     "ALLOWED_ORIGINS": "",
-    // Gửi mail: disabled | test (ghi test_mailbox, chỉ staging/local) | cloudflare.
+    // Gửi mail: disabled | test (ghi test_mailbox, chỉ dev/staging/local) | cloudflare.
     // Khi có miền: chạy `npx wrangler email sending enable <miền>`, thêm
     // "send_email": [{ "name": "EMAIL" }] ở cấp gốc, đặt MAIL_MODE="cloudflare" và MAIL_FROM.
     "MAIL_MODE": "disabled"
@@ -29,8 +29,8 @@
       "migrations_dir": "migrations"
     }
   ],
-  "env": {
-    "staging": {
+    "env": {
+      "staging": {
       "name": "qlh-staging-api",
       "placement": { "region": "gcp:asia-east2" },
       "vars": {
@@ -51,7 +51,29 @@
           "database_id": "ab89f59d-5f7e-4db2-aff0-cbb2932d0a6d",
           "migrations_dir": "migrations"
         }
-      ],
+      ]
+      },
+      "dev": {
+        "name": "qlh-dev-api",
+        "placement": { "region": "gcp:asia-east2" },
+        "triggers": {
+          "crons": ["*/30 * * * *"]
+        },
+        "vars": {
+          "ENVIRONMENT": "dev",
+          "PBKDF2_ITERATIONS": "30000",
+          "MAIL_MODE": "test",
+          "RESET_LINK_BASE": "https://qlh-dev-web.pages.dev",
+          "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,http://localhost:3000,https://qlh-dev-web.pages.dev"
+        },
+        "d1_databases": [
+          {
+            "binding": "DB",
+            "database_name": "qlh-dev-db",
+            "database_id": "93331487-810d-4e7f-b4b8-e9e1bd9dcf69",
+            "migrations_dir": "migrations"
+          }
+        ]
+      }
     }
   }
-}

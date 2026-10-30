@@ -45,7 +45,7 @@ export interface Env {
    * `https://qlh.pages.dev,http://localhost:5173`. Rỗng/không đặt = không cho origin nào.
    */
   ALLOWED_ORIGINS?: string;
-  /** `cloudflare` | `test` | `disabled` (mặc định). `test` chỉ có hiệu lực ở staging/local/test. */
+    /** `cloudflare` | `test` | `disabled` (mặc định). `test` chỉ có hiệu lực ở dev/staging/local/test. */
   MAIL_MODE?: string;
   /** Địa chỉ gửi đi (miền đã onboard Email Service) khi MAIL_MODE=cloudflare. */
   MAIL_FROM?: string;
