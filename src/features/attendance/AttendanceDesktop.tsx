@@ -75,23 +75,24 @@ export default function AttendanceDesktop({
     student,
     ...draftFor(student.id),
   }));
-  // Chưa có bản ghi nào của em thì "dữ liệu gốc" là chưa điểm danh: lưu lần đầu
-  // luôn được phép. `touched` chỉ tính ô người dùng đã sửa (dùng cho cảnh báo rời màn).
-  const baseline: Record<string, Draft | null> = {};
+  // Chưa có bản ghi nào là trạng thái chưa điểm danh; chỉ bật lưu sau khi giáo viên chọn trạng thái.
+  // `touched` chỉ tính ô đã sửa (dùng cho cảnh báo rời màn).
+  const baseline: Record<string, Draft> = {};
   const value: Record<string, Draft> = {};
   for (const student of students) {
-    baseline[student.id] = storedDraft(student.id);
+    baseline[student.id] = storedDraft(student.id) ?? defaultDraft;
     value[student.id] = draftFor(student.id);
   }
   const touched = students.some(
     (student) =>
-      !deepEqual(value[student.id], baseline[student.id] ?? defaultDraft),
+      !deepEqual(value[student.id], baseline[student.id]),
   );
 
-  const action = useSaveAction<Record<string, Draft | null>>({
+  const action = useSaveAction<Record<string, Draft>>({
     baseline,
     value,
     save: async () => {
+      if (!rows.some((row) => row.status !== null)) return false;
       try {
         // Em chưa điểm danh thì không ghi bản ghi nào.
         await saveAttendanceBatchDurable(
@@ -197,30 +198,47 @@ export default function AttendanceDesktop({
                   <tr key={row.student.id}>
                     <td className={s.studentName}>{row.student.name}</td>
                     <td>
-                      <div
-                        className={s.statusGroup}
-                        role="group"
-                        aria-label={`Trạng thái của ${row.student.name}`}
-                      >
-                        {STATES.map((status) => (
-                          <button
-                            key={status}
-                            type="button"
-                            aria-pressed={row.status === status}
-                            disabled={viewOnly}
-                            className={
-                              s.statusButton +
-                              (row.status === status
-                                ? " " + s[`on_${status}`]
-                                : "")
-                            }
-                            onClick={() =>
-                              setRow(row.student.id, { status })
-                            }
+                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-8)" }}>
+                        {row.status === null && (
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              color: "var(--color-muted)",
+                              backgroundColor: "var(--color-neutral-soft)",
+                              borderRadius: "var(--radius-chip)",
+                              padding: "var(--space-2) var(--space-8)",
+                              fontSize: "var(--text-sm)",
+                              whiteSpace: "nowrap",
+                            }}
                           >
-                            {LABELS[status]}
-                          </button>
-                        ))}
+                            Chưa điểm danh
+                          </span>
+                        )}
+                        <div
+                          className={s.statusGroup}
+                          role="group"
+                          aria-label={`Trạng thái của ${row.student.name}${row.status === null ? ": Chưa điểm danh" : ""}`}
+                        >
+                          {STATES.map((status) => (
+                            <button
+                              key={status}
+                              type="button"
+                              aria-pressed={row.status === status}
+                              disabled={viewOnly}
+                              className={
+                                s.statusButton +
+                                (row.status === status
+                                  ? " " + s[`on_${status}`]
+                                  : "")
+                              }
+                              onClick={() =>
+                                setRow(row.student.id, { status })
+                              }
+                            >
+                              {LABELS[status]}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </td>
                   </tr>
