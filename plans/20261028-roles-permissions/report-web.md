@@ -132,3 +132,9 @@ Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 4
 - Deployment id: `e0423355-1c73-42c3-bf87-75db9bd5e2da` (qlh-staging-web, commit 960d696 on mvp-web).
 - Rollback id: `06509c13-fd54-48e1-9914-72b6b9080597`.
 - Gates: tsc sạch, vitest 857 qua / 4 skip, sol review vòng 2 xanh (0 major). Bản này chưa xác minh trên iPhone thật (ngày/giờ Thêm buổi lẻ).
+
+## Deploy staging — bản vá tóm tắt điểm danh (hash c6e2768)
+
+- Deployment id: `83b4ea32-1d6f-4bd7-a918-ada680ac0590` (qlh-staging-web).
+- Rollback id: `e0423355-1c73-42c3-bf87-75db9bd5e2da` (960d696); rollback sâu hơn: `06509c13-fd54-48e1-9914-72b6b9080597`.
+- Nội dung: dòng đầu tab Điểm danh ghi "Chưa điểm danh N em" khi chưa em nào có trạng thái, chỉ đếm vắng khi đã có em được đặt. tsc sạch, vitest 861 qua / 4 skip.
