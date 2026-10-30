@@ -106,3 +106,10 @@ Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 4
 - Kiểm trước deploy: tsc sạch, vitest 817 qua/4 bỏ qua, build OK.
 - Deployment mới (Production): `0af926de-3829-400d-8640-54dc66719086` (https://0af926de.qlh-staging-web.pages.dev). Rollback: `63de3ecc-1579-453e-8084-9a990d090877`, trước đó `862e3631-ff48-4f71-8f54-9999157a05dc`.
 - Ảnh trước/sau mobile 390 (tài khoản QA smoke): `plans/20261021-mvp/web/greeting/classes-before-390.png` (staging cũ: "Xin chào, cô Lan", "CL"), `classes-after-390.png` (preview local), `classes-live-after-390.png` (alias sau deploy: "Xin chào, {tên QA}").
+
+## Tạm ẩn "Nhập từ ghi chú" và sửa thanh nút tràn (tab Nhận xét)
+
+- Ẩn bằng cờ `FEATURE_NOTES_IMPORT = false` ở `src/shared/featureFlags.ts`; nút ở thanh dưới mobile (`CommentsPanel`) và thanh tab desktop (`CommentsDesktop`) chỉ hiện khi cờ bật. Mã `NotesImportDialog`, parser và test của B giữ nguyên (test B mock cờ = true; test mới xác nhận cờ tắt thì không có lối vào dù có quyền sửa).
+- Lỗi tràn: ở 375/390 nút "Gửi phiếu cả lớp" bị cắt mép phải (nút thứ 3 right=558 > viewport). Sau khi ẩn vẫn còn tràn (2 nút right=399). Sửa `.footer` (`flex-wrap: wrap`, nút `flex: 1 1 auto; min-width: 0`): 2 nút xếp hàng dọc vừa khung ở 375/390/430, không nút nào bị cắt; khi không có quyền gửi chỉ còn nút "Gán tất cả mặc định" đủ rộng. Desktop không đổi (khối `@media` riêng).
+- Commit mvp-web `41df522`. tsc sạch, vitest 819 qua/4 bỏ qua, build OK. Ảnh trước/sau: `plans/20261021-mvp/web/notes-import-hidden/comments-{before,after,live-after}-{375,390,430}.png`.
+- Deployment mới (Production): `9ae26a9d-0980-4e70-807b-c98bd73c5924`. Rollback: `0af926de-3829-400d-8640-54dc66719086`, trước đó `63de3ecc-1579-453e-8084-9a990d090877`.
