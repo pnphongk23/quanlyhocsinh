@@ -144,12 +144,83 @@ describe("Nhân sự (Admin)", () => {
     await waitFor(() => expect(calls("DELETE /staff/p-1")).toHaveLength(1));
   });
 
-  it("does not offer to disable or edit yourself", async () => {
+  it("does not offer to disable yourself, and Save stays off until the name changes", async () => {
     await startAs([adminMembership], "m-admin");
     renderPage();
     fireEvent.click((await screen.findByText("Cô Lan (bạn)")).closest("button")!);
     expect(screen.queryByRole("button", { name: "Tắt quyền" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Lưu" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Lưu" })).toBeDisabled();
+    expect(screen.queryByRole("tab", { name: "Trợ giảng" })).toBeNull();
+  });
+
+  it("Admin renames a member and a pending person with display_name and base_version", async () => {
+    await startAs([adminMembership], "m-admin");
+    request.mockImplementation(async (endpoint: string) => {
+      if (endpoint === "GET /staff") return { items: members };
+      if (endpoint === "GET /roles/permissions") return { items: perms() };
+      if (endpoint.startsWith("PATCH /staff/")) return staff({ id: "x" });
+      throw new Error(endpoint);
+    });
+    renderPage();
+    fireEvent.click((await screen.findByText("Cô Hoa")).closest("button")!);
+    const input = screen.getByLabelText("Tên hiển thị");
+    expect(input).not.toBeDisabled();
+    fireEvent.change(input, { target: { value: "  Cô Hoa Mai " } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    await waitFor(() => expect(calls("PATCH /staff/m-hoa")).toHaveLength(1));
+    expect((calls("PATCH /staff/m-hoa")[0][1] as { body: unknown }).body).toEqual({ base_version: 3, display_name: "Cô Hoa Mai" });
+
+    fireEvent.click((await screen.findByText("Thầy Nam")).closest("button")!);
+    fireEvent.change(screen.getByLabelText("Tên hiển thị"), { target: { value: "Thầy Nam B" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    await waitFor(() => expect(calls("PATCH /staff/p-1")).toHaveLength(1));
+    expect((calls("PATCH /staff/p-1")[0][1] as { body: unknown }).body).toEqual({ base_version: 3, display_name: "Thầy Nam B" });
+  });
+
+  it("Admin renames themselves and the session name refreshes from /me", async () => {
+    await startAs([adminMembership], "m-admin");
+    request.mockImplementation(async (endpoint: string) => {
+      if (endpoint === "GET /staff") return { items: members };
+      if (endpoint === "GET /roles/permissions") return { items: perms() };
+      if (endpoint === "PATCH /staff/m-admin") return members[0];
+      if (endpoint === "GET /me") return { ...me([adminMembership], "m-admin"), user: { ...user, display_name: "Cô Lan Anh" } };
+      throw new Error(endpoint);
+    });
+    renderPage();
+    fireEvent.click((await screen.findByText("Cô Lan (bạn)")).closest("button")!);
+    fireEvent.change(screen.getByLabelText("Tên hiển thị"), { target: { value: "Cô Lan Anh" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    await waitFor(() => expect(getSession()?.user.display_name).toBe("Cô Lan Anh"));
+    expect((calls("PATCH /staff/m-admin")[0][1] as { body: unknown }).body).toEqual({ base_version: 3, display_name: "Cô Lan Anh" });
+  });
+
+  it("opens a member whose name is not set yet and lets Admin type it", async () => {
+    await startAs([adminMembership], "m-admin");
+    members = [...members, staff({ id: "m-blank", display_name: null, phone: "+84900000009" })];
+    renderPage();
+    fireEvent.click((await screen.findByText("+84900000009")).closest("button")!);
+    const input = screen.getByLabelText("Tên hiển thị");
+    expect(input).toHaveValue("");
+    fireEvent.change(input, { target: { value: "Cô Mới" } });
+    expect(screen.getByRole("button", { name: "Lưu" })).toBeEnabled();
+  });
+
+  it("shows a 422 name error at the field and blocks saving an empty name", async () => {
+    await startAs([adminMembership], "m-admin");
+    request.mockImplementation(async (endpoint: string) => {
+      if (endpoint === "GET /staff") return { items: members };
+      if (endpoint === "GET /roles/permissions") return { items: perms() };
+      if (endpoint.startsWith("PATCH /staff/")) throw apiError(422, "validation_failed", { fields: { display_name: "must_be_at_most_100" } });
+      throw new Error(endpoint);
+    });
+    renderPage();
+    fireEvent.click((await screen.findByText("Cô Hoa")).closest("button")!);
+    const input = screen.getByLabelText("Tên hiển thị");
+    fireEvent.change(input, { target: { value: "   " } });
+    expect(screen.getByRole("button", { name: "Lưu" })).toBeDisabled();
+    fireEvent.change(input, { target: { value: "Cô Hoa B" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+    expect(await screen.findByText("Tên tối đa 100 ký tự.")).toBeInTheDocument();
   });
 
     it("saves only changed permissions, including the send-comments permission", async () => {

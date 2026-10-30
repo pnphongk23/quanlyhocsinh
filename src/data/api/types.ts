@@ -10,6 +10,8 @@ export interface ApiMembership {
   id: string;
   workspace: { id: string; name: string };
   role: { id: string; name: string; system_key: string | null; scope_kind: ScopeKind };
+  /** Tên theo workspace do Admin đặt; có thể null. */
+  display_name?: string | null;
   /** Lớp được giao, chỉ có khi `scope_kind = "assigned_classes"` (GET /me). */
   class_ids?: string[];
   /** Guardian-only scope supplied by login/register-guardian/GET /me. */
@@ -32,7 +34,8 @@ export interface StaffMember {
   id: string;
   kind: "member" | "pending";
   user_id: string | null;
-  display_name: string;
+  /** Tên Admin đặt theo workspace; null khi chưa có. */
+  display_name: string | null;
   phone: string;
   role: { id: string; name: string; system_key: string | null };
   class_ids: string[];

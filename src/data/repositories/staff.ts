@@ -16,7 +16,6 @@ const FIELD_MESSAGES: Record<string, string> = {
   invalid_role: "Vai trò không hợp lệ.",
   unknown_class: "Có lớp không còn tồn tại. Hãy tải lại rồi chọn lại.",
   not_applicable: "Vai trò này không gán theo lớp.",
-  owned_by_user: "Người này đã có tài khoản, tên do họ tự đặt.",
   invalid_for_pending: "Việc này chưa dùng được khi người đó chưa đặt mật khẩu.",
 };
 
@@ -46,4 +45,16 @@ export function staffErrorMessage(error: unknown): string {
     return "Thông tin chưa hợp lệ.";
   }
   return "Không thể hoàn thành yêu cầu.";
+}
+
+const NAME_MESSAGES: Record<string, string> = {
+  required: "Hãy nhập tên hiển thị.",
+  must_be_at_most_100: "Tên tối đa 100 ký tự.",
+};
+
+/** Lỗi 422 của riêng ô tên (hiện tại ô); các lỗi khác trả `null`. */
+export function staffNameError(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.status !== 422) return null;
+  const value = (error.error.details?.fields as Record<string, unknown> | undefined)?.display_name;
+  return typeof value === "string" ? NAME_MESSAGES[value] ?? "Tên chưa hợp lệ." : null;
 }

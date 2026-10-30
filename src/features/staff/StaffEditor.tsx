@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { StaffMember, StaffRoleKey } from "../../data/api/types";
-import { cancelPendingStaff, createStaff, isRevokedError, staffErrorMessage, updateStaff } from "../../data/repositories/staff";
+import { updateMe } from "../../data/auth/session";
+import { api } from "../../data/sync";
+import { cancelPendingStaff, createStaff, isRevokedError, staffErrorMessage, staffNameError, updateStaff } from "../../data/repositories/staff";
 import { normalizePhone } from "../../data/auth/phone";
 import { Button, Input, Modal, Segmented } from "../../shared/ui";
 import { ASSIGNABLE_ROLES, isAssignableRole, sameClassSet } from "./staffModel";
@@ -27,16 +29,18 @@ export function StaffEditor({ target, classes, onClose, onChanged, online, onFor
   const [classIds, setClassIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [nameError, setNameError] = useState("");
 
   useEffect(() => {
     if (!target) return;
     setError("");
+    setNameError("");
     setBusy(false);
     if (target === "new") {
       setPhone(""); setName(""); setRole("teacher"); setClassIds([]);
     } else {
       setPhone(target.phone);
-      setName(target.display_name);
+      setName(target.display_name ?? "");
       setRole(isAssignableRole(target.role.system_key) ? target.role.system_key : "teacher");
       setClassIds(target.class_ids);
     }
@@ -44,6 +48,7 @@ export function StaffEditor({ target, classes, onClose, onChanged, online, onFor
 
   const isAdminRow = member !== null && !isAssignableRole(member.role.system_key);
   const pending = member?.status === "pending";
+  const nameChanged = member !== null && name.trim() !== "" && name.trim() !== (member.display_name ?? "");
   const normalized = normalizePhone(phone);
   const toggleClass = (id: string) => setClassIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
 
@@ -51,6 +56,7 @@ export function StaffEditor({ target, classes, onClose, onChanged, online, onFor
     if (busy || !online) return;
     setBusy(true);
     setError("");
+    setNameError("");
     try {
       await action();
       onChanged();
@@ -60,7 +66,9 @@ export function StaffEditor({ target, classes, onClose, onChanged, online, onFor
         onForbidden();
         return;
       }
-      setError(staffErrorMessage(e));
+      const fieldError = staffNameError(e);
+      if (fieldError) setNameError(fieldError);
+      else setError(staffErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -73,16 +81,20 @@ export function StaffEditor({ target, classes, onClose, onChanged, online, onFor
         return;
       }
       const body: Parameters<typeof updateStaff>[1] = { base_version: member.version };
-      if (role !== member.role.system_key) body.role = role;
-      if (!sameClassSet(classIds, member.class_ids)) body.class_ids = classIds;
-      if (pending && name.trim() !== member.display_name) body.display_name = name.trim();
+      if (!isAdminRow && role !== member.role.system_key) body.role = role;
+      if (!isAdminRow && !sameClassSet(classIds, member.class_ids)) body.class_ids = classIds;
+      if (nameChanged) body.display_name = name.trim();
       await updateStaff(member.id, body);
+      // Admin tự đổi tên mình: làm mới phiên để Cài đặt và lời chào đổi theo.
+      if (nameChanged && member.is_self) {
+        try { await updateMe(await api.request("GET /me")); } catch { /* lần kiểm tra phiên sau sẽ cập nhật */ }
+      }
     });
 
   const canSave = online && (member
-    ? !isAdminRow && (role !== member.role.system_key || !sameClassSet(classIds, member.class_ids) || (pending && name.trim() !== member.display_name && name.trim() !== ""))
+    ? nameChanged || (!isAdminRow && (role !== member.role.system_key || !sameClassSet(classIds, member.class_ids)))
     : Boolean(normalized) && name.trim() !== "");
-  const title = member ? member.display_name : "Thêm nhân sự";
+  const title = member ? member.display_name || member.phone : "Thêm nhân sự";
 
   return (
     <Modal
@@ -107,7 +119,7 @@ export function StaffEditor({ target, classes, onClose, onChanged, online, onFor
             </Button>
           )}
           <span className={s.footerSpacer} />
-          {!isAdminRow && <Button onClick={() => void submit()} disabled={!canSave} loading={busy}>{member ? "Lưu" : "Thêm"}</Button>}
+          <Button onClick={() => void submit()} disabled={!canSave} loading={busy}>{member ? "Lưu" : "Thêm"}</Button>
         </div>
       }
     >
@@ -117,7 +129,7 @@ export function StaffEditor({ target, classes, onClose, onChanged, online, onFor
           <Input label="Số điện thoại" id="staff-phone" inputMode="tel" autoComplete="off" value={phone} onChange={(e) => setPhone(e.target.value)} error={phone && !normalized ? "Số điện thoại không hợp lệ." : undefined} />
         )}
         {member && <p className={s.editorPhone}>{member.phone}</p>}
-        <Input label="Tên hiển thị" id="staff-name" value={name} maxLength={100} disabled={Boolean(member) && !pending} onChange={(e) => setName(e.target.value)} />
+        <Input label="Tên hiển thị" id="staff-name" value={name} maxLength={100} error={nameError || undefined} onChange={(e) => { setName(e.target.value); setNameError(""); }} />
         {isAdminRow ? (
           <p className={s.hint}>Admin có toàn quyền và thấy mọi lớp. Vai trò này không chỉnh ở đây.</p>
         ) : (
