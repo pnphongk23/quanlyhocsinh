@@ -6,7 +6,7 @@ final class RestoreSessionOfflineTests: XCTestCase {
     private let scope = CacheScope(userId: "offline-user", workspaceId: "offline-workspace", membershipId: "offline-member")
     private var clock = Date(timeIntervalSince1970: 1_800_000_000)
 
-    func testNetworkFailureUsesCachedIdentityAndRetriesMeWhenOnline() async throws {
+    func testNetworkFailureUsesCachedIdentityAndRetriesMeOnNextSync() async throws {
         let identity = fixtureIdentity()
         let cache = MemoryIdentityStore(identity)
         let token = InMemoryTokenStore(token: "fixture-session")
@@ -23,10 +23,10 @@ final class RestoreSessionOfflineTests: XCTestCase {
 
         await model.synchronizeWhileActive()
         let meCalls = await api.meCallCount()
-        XCTAssertEqual(meCalls, 1)
+        XCTAssertEqual(meCalls, 2)
     }
 
-    func testMeRevalidationIsThrottledToTenMinutesAndPull401ForcesIt() async throws {
+    func testMeRevalidationRunsOnEachSyncAttempt() async throws {
         let identity = fixtureIdentity()
         let data = try WireJSON.encoder().encode(identity)
         let api = AuthFixtureAPI(meResults: [.success(data), .success(data), .success(data)])
@@ -35,11 +35,10 @@ final class RestoreSessionOfflineTests: XCTestCase {
         await model.restoreSession()
         await model.synchronizeWhileActive()
         var calls = await api.meCallCount()
-        XCTAssertEqual(calls, 1)
-        clock = clock.addingTimeInterval(10 * 60 + 1)
+        XCTAssertEqual(calls, 2)
         await model.synchronizeWhileActive()
         calls = await api.meCallCount()
-        XCTAssertEqual(calls, 2)
+        XCTAssertEqual(calls, 3)
     }
 
     func testPull401ImmediatelyRevalidatesIdentity() async throws {
@@ -51,7 +50,7 @@ final class RestoreSessionOfflineTests: XCTestCase {
         await model.restoreSession()
         await model.synchronizeWhileActive()
         let calls = await api.meCallCount()
-        XCTAssertEqual(calls, 2)
+        XCTAssertEqual(calls, 3)
     }
 
     func testUnauthorizedRestoreClearsTokenAndCachedIdentity() async throws {
@@ -84,7 +83,6 @@ final class RestoreSessionOfflineTests: XCTestCase {
         let model = makeModel(api: api, token: token, cache: cache, store: store, online: true)
 
         await model.restoreSession()
-        clock = clock.addingTimeInterval(10 * 60 + 1)
         await model.synchronizeWhileActive()
 
         XCTAssertEqual(model.screen, .login)
@@ -107,7 +105,6 @@ final class RestoreSessionOfflineTests: XCTestCase {
         await model.restoreSession()
         XCTAssertEqual(center.state, .error)
 
-        clock = clock.addingTimeInterval(10 * 60 + 1)
         await model.synchronizeWhileActive()
 
         XCTAssertEqual(model.screen, .login)

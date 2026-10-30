@@ -15,10 +15,12 @@ final class SyncRunGateTests: XCTestCase {
             })
         }
         await latch.waitUntilStarted()
+        let joined = GateLatch()
         let second = Task {
-            try await gate.run(scope: "coalesce", operation: { await counter.increment() })
+            try await gate.run(scope: "coalesce", onCoalesced: { await joined.signalStarted() },
+                               operation: { await counter.increment() })
         }
-        await Task.yield()
+        await joined.waitUntilStarted()
         await latch.release()
         try await first.value
         try await second.value

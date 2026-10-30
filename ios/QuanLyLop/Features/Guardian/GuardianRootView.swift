@@ -262,11 +262,13 @@ struct GuardianRootView: View {
           }
           do {
               let next: GuardianDashboard
-              var syncSucceeded = true
-              if let model, model.isSyncEligible, model.activeSQLiteStore != nil {
-                  if manualSync { syncSucceeded = (await model.synchronizeWhileActive()).succeeded }
-                  guard let identity = model.identity, let store = model.activeSQLiteStore else { return }
-                  next = try await GuardianRepository.load(identity: identity, store: store)
+                var syncSucceeded = false
+                if let model, model.isSyncEligible, model.activeSQLiteStore != nil {
+                    if manualSync { syncSucceeded = (await model.synchronizeWhileActive()).succeeded }
+                    guard let identity = model.identity, let store = model.activeSQLiteStore else { return }
+                    if !manualSync { syncSucceeded = model.hasSuccessfulSync(for: store.scope) }
+                    next = try await GuardianRepository.load(identity: identity, store: store,
+                                                             syncSucceeded: syncSucceeded)
               } else {
                   next = try await GuardianRepository.load()
               }

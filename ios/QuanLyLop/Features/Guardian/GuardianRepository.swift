@@ -455,7 +455,8 @@ enum GuardianRepository {
                      defaults: UserDefaults = .standard,
                      knownIdentity: CurrentIdentity? = nil,
                      knownStore: SQLiteStore? = nil,
-                     synchronize: Bool = true) async throws -> GuardianDashboard {
+                     synchronize: Bool = true,
+                     syncSucceeded: Bool = false) async throws -> GuardianDashboard {
         let identity: CurrentIdentity
         if let knownIdentity {
             identity = knownIdentity
@@ -473,18 +474,20 @@ enum GuardianRepository {
 
         let scope = CacheScope(userId: identity.user.id, workspaceId: membership.workspace.id, membershipId: membership.id)
         let store = try knownStore ?? storeFactory(scope)
-        var refreshed = true
+        var didSyncSucceed = syncSucceeded
         if synchronize {
             let sync = syncCoordinator(api: api, store: store, defaults: defaults)
-            do { _ = try await sync.synchronize() } catch {
+            do {
+                _ = try await sync.synchronize()
+                didSyncSucceed = true
+            } catch {
                 guard try await store.position() != nil else { throw error }
-                refreshed = false
+                didSyncSucceed = false
             }
         }
-        if refreshed {
-            let studentIDs = try await store.records(Student.self, entity: "student").map(\.id)
-            refreshed = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: studentIDs)
-        }
+        let studentIDs = try await store.records(Student.self, entity: "student").map(\.id)
+        let historyRefreshed = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: studentIDs)
+        let refreshed = didSyncSucceed && historyRefreshed
         let base = try await dashboard(from: store)
         if refreshed {
             GuardianFreshness.record(scope, defaults: defaults)
@@ -493,13 +496,15 @@ enum GuardianRepository {
         return GuardianDashboard(children: base.children, updatedAt: GuardianFreshness.last(scope, defaults: defaults), isOffline: true)
     }
 
-    static func load(identity: CurrentIdentity, store: SQLiteStore) async throws -> GuardianDashboard {
+    static func load(identity: CurrentIdentity, store: SQLiteStore,
+                     syncSucceeded: Bool = false) async throws -> GuardianDashboard {
         let configuration = try AppConfiguration.load().get()
         let tokenStore = KeychainTokenStore(service: configuration.tokenStoreService)
         guard try await tokenStore.token() != nil else { throw APIFailure.missingToken }
         return try await load(api: URLSessionAPIClient(configuration: configuration, tokenStore: tokenStore),
                               identityStore: KeychainCachedIdentityStore(service: configuration.tokenStoreService),
-                              knownIdentity: identity, knownStore: store, synchronize: false)
+                              knownIdentity: identity, knownStore: store, synchronize: false,
+                              syncSucceeded: syncSucceeded)
     }
 
     /// Rebuilds the dashboard from what the cache holds now, without a request: a sync that applied a

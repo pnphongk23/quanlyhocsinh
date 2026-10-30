@@ -45,6 +45,38 @@ final class GuardianOfflineLoadTests: XCTestCase {
         XCTAssertEqual(kept.count, 1)
     }
 
+    func testFailedPullAndSuccessfulReportHistoryKeepOldFreshness() async throws {
+        let store = try await syncedStore()
+        let refreshed = Date(timeIntervalSince1970: 1_700_000_000)
+        GuardianFreshness.record(scope, at: refreshed, defaults: defaults)
+        let api = RouteAPI { endpoint in
+            endpoint.path == "students/child/reports" ? #"{"items":[],"next_cursor":null}"# : nil
+        }
+
+        let dashboard = try await GuardianRepository.load(
+            api: api, identityStore: MemoryIdentityStore(identity()), storeFactory: { _ in store },
+            defaults: defaults, knownIdentity: identity(), knownStore: store, synchronize: true)
+
+        XCTAssertTrue(dashboard.isOffline)
+        XCTAssertEqual(dashboard.updatedAt, refreshed)
+        XCTAssertEqual(GuardianFreshness.last(scope, defaults: defaults), refreshed)
+    }
+
+    func testEmptyCacheWithFailedSyncDoesNotRecordFreshness() async throws {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+
+        do {
+            _ = try await GuardianRepository.load(
+            api: RouteAPI { _ in nil }, identityStore: MemoryIdentityStore(identity()),
+                storeFactory: { _ in store }, defaults: defaults, knownIdentity: identity(),
+                knownStore: store, synchronize: true)
+            XCTFail("a failed initial snapshot should be reported")
+        } catch {
+            XCTAssertEqual(error as? APIFailure, .offline)
+        }
+        XCTAssertNil(GuardianFreshness.last(scope, defaults: defaults))
+    }
+
     func testOfflineMeWithoutCachedIdentityStillFails() async throws {
         let store = try await syncedStore()
 

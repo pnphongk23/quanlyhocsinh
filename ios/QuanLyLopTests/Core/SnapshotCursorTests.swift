@@ -2,21 +2,24 @@ import XCTest
 @testable import QuanLyLop
 
 final class SnapshotCursorTests: XCTestCase {
-    func testRepeated404DoesNotRepeatSnapshotWithinAnHour() async throws {
+    func testSnapshot404CanSucceedOnImmediateRetry() async throws {
         let id = UUID().uuidString
         let scope = CacheScope(userId: id, workspaceId: id, membershipId: id)
         let store = try SQLiteStore(path: ":memory:", scope: scope)
-        let api = Snapshot404API()
+        let api = SnapshotRetryAPI()
         let coordinator = SyncCoordinator(api: api, store: store, deviceId: "snapshot-device")
-        let now = Date(timeIntervalSince1970: 1_700_000_000)
 
-        for _ in 0..<3 {
-            do { _ = try await coordinator.synchronize(now: now); XCTFail("404 should propagate") }
-            catch let error as APIFailure { XCTAssertEqual(error, .badStatus(code: 404)) }
-        }
+        do { _ = try await coordinator.synchronize(); XCTFail("first snapshot should fail") }
+        catch let error as APIFailure { XCTAssertEqual(error, .badStatus(code: 404)) }
+        let firstSnapshotCalls = await api.snapshotCalls()
+        XCTAssertEqual(firstSnapshotCalls, 1)
+
+        _ = try await coordinator.synchronize()
 
         let snapshotCalls = await api.snapshotCalls()
-        XCTAssertEqual(snapshotCalls, 1)
+        let pullCalls = await api.pullCalls()
+        XCTAssertEqual(snapshotCalls, 2)
+        XCTAssertEqual(pullCalls, 1)
     }
 
     func testPageFailureLeavesCursorUnsetAndSuccessfulSnapshotRetryInstallsEveryPage() async throws {
@@ -94,12 +97,27 @@ final class SnapshotCursorTests: XCTestCase {
     }
 }
 
-private actor Snapshot404API: APIClient {
+private actor SnapshotRetryAPI: APIClient {
     let baseURL = URL(string: "https://fixture.invalid/v1")!
     private var snapshots = 0
+    private var pulls = 0
     func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
-        if endpoint.path == "sync/snapshot" { snapshots += 1 }
-        throw APIFailure.badStatus(code: 404)
+        func encode<T: Encodable>(_ value: T) throws -> Response {
+            try WireJSON.decoder().decode(type, from: WireJSON.encoder().encode(value))
+        }
+        switch endpoint.path {
+        case "sync/snapshot":
+            snapshots += 1
+            if snapshots == 1 { throw APIFailure.badStatus(code: 404) }
+            return try encode(SnapshotManifest(cursor: 0, epoch: 1,
+                window: .init(from: "2026-07-01", to: "2026-12-01"), entities: []))
+        case "sync/pull":
+            pulls += 1
+            return try encode(PullPage(cursor: 0, epoch: 1, hasMore: false,
+                                       serverTime: "fixture", upserts: [:], deleted: []))
+        default: throw APIFailure.offline
+        }
     }
     func snapshotCalls() -> Int { snapshots }
+    func pullCalls() -> Int { pulls }
 }

@@ -163,9 +163,10 @@ final class AuthModel {
     private var activeStore: (any LocalStore)?
     /// Counts the sync attempts, failed ones too, that may have changed the cache, so a screen built from it can rebuild.
     private(set) var syncRevision = 0
+    private(set) var lastSyncScope: String?
+    private(set) var lastSyncSucceeded = false
     var activeSQLiteStore: SQLiteStore? { activeStore as? SQLiteStore }
     private(set) var activeSync: SyncCoordinator?
-    private var lastIdentityCheck: Date?
     private var lastAutomaticSyncScope: String?
     private var returnToSettingsAfterRole = false
 
@@ -203,7 +204,6 @@ final class AuthModel {
             return
         }
         do {
-            lastIdentityCheck = now()
             // Read before `/me` so a role disabled while the app was closed is still recognised as revoked.
             let cachedActiveId = try? await identityStore.load()?.activeMembershipId
             let current = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
@@ -235,7 +235,7 @@ final class AuthModel {
 
     /// Staff management calls go through the signed-in session; an admin changing their own role rereads `/me`.
     func makeStaffStore() -> StaffStore {
-        StaffStore(api: api, didChangeSelf: { [weak self] in _ = await self?.revalidateIdentityWhileOnline(force: true) })
+        StaffStore(api: api, didChangeSelf: { [weak self] in _ = await self?.revalidateIdentityWhileOnline() })
     }
 
     /// Label under a role card: "Bé Gia Bảo" for guardians (children are not part of the
@@ -489,15 +489,30 @@ final class AuthModel {
     }
 
     func synchronizeWhileActive() async -> SyncResult {
-        guard isSyncEligible, let activeSync else { return SyncResult(succeeded: false) }
-        if isOnline(), !(await revalidateIdentityWhileOnline()) { return SyncResult(succeeded: false) }
+        guard isSyncEligible else {
+            recordSyncResult(succeeded: false, scope: activeStore?.scope.storageKey)
+            return SyncResult(succeeded: false)
+        }
+        if isOnline(), !(await revalidateIdentityWhileOnline()) {
+            recordSyncResult(succeeded: false, scope: activeStore?.scope.storageKey)
+            return SyncResult(succeeded: false)
+        }
+        // `/me` may have revoked or changed the active role; only use the coordinator installed afterward.
+        guard isSyncEligible, let activeSync else {
+            recordSyncResult(succeeded: false, scope: activeStore?.scope.storageKey)
+            return SyncResult(succeeded: false)
+        }
+        let scope = activeStore?.scope.storageKey
         // Pages are committed one by one, so a sync that fails half way may already have changed the cache.
         defer { syncRevision += 1 }
         do {
-            return try await activeSync.synchronize()
+            let result = try await activeSync.synchronize()
+            recordSyncResult(succeeded: result.succeeded, scope: scope)
+            return result
         } catch {
+            recordSyncResult(succeeded: false, scope: scope)
             if [401, 403].contains(Self.statusCode(error) ?? 0), isOnline() {
-                _ = await revalidateIdentityWhileOnline(force: true)
+                _ = await revalidateIdentityWhileOnline()
             }
             return SyncResult(succeeded: false)
         }
@@ -510,7 +525,7 @@ final class AuthModel {
         do { _ = try await activeSync.synchronize() }
         catch {
             if [401, 403].contains(Self.statusCode(error) ?? 0), isOnline() {
-                _ = await revalidateIdentityWhileOnline(force: true)
+                _ = await revalidateIdentityWhileOnline()
             }
         }
     }
@@ -524,9 +539,7 @@ final class AuthModel {
 
     /// Rechecks server identity when ConnectivityMonitor reports reachability.
     /// A transient failure leaves the cached session usable without a persistent banner.
-    private func revalidateIdentityWhileOnline(force: Bool = false) async -> Bool {
-        if !force, let lastIdentityCheck, now().timeIntervalSince(lastIdentityCheck) < 10 * 60 { return true }
-        lastIdentityCheck = now()
+    private func revalidateIdentityWhileOnline() async -> Bool {
         do {
             let current = try await api.send(.init(method: .get, path: "me"), as: CurrentIdentity.self)
             await installIdentity(current)
@@ -699,6 +712,15 @@ final class AuthModel {
           CurrentIdentity(user: session.user, activeMembershipId: session.activeMembershipId,
                           memberships: session.memberships)
       }
+
+    func hasSuccessfulSync(for scope: CacheScope) -> Bool {
+        lastSyncScope == scope.storageKey && lastSyncSucceeded
+    }
+
+    private func recordSyncResult(succeeded: Bool, scope: String?) {
+        lastSyncScope = scope
+        lastSyncSucceeded = succeeded
+    }
 
     private func pendingCommandCount() async -> Int? {
         guard let activeStore else { return nil }

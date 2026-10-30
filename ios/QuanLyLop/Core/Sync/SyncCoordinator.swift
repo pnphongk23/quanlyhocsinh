@@ -14,16 +14,24 @@ enum SyncEntity {
 actor SyncRunGate {
     static let shared = SyncRunGate()
     private var activeScopes: [String: Task<Void, Error>] = [:]
-    private var recoveryFailures: [String: (Date, APIFailure)] = [:]
 
     func run(scope: String, rerunIfPending: (@Sendable () async -> Bool)? = nil,
              operation: @escaping @Sendable () async throws -> Void) async throws {
-        try await run(scope: scope, rerunIfPending: rerunIfPending, allowFollowUp: true, operation: operation)
+        try await run(scope: scope, rerunIfPending: rerunIfPending, allowFollowUp: true,
+                      onCoalesced: {}, operation: operation)
+    }
+
+    func run(scope: String, onCoalesced: @escaping @Sendable () async -> Void,
+             operation: @escaping @Sendable () async throws -> Void) async throws {
+        try await run(scope: scope, rerunIfPending: nil, allowFollowUp: false,
+                      onCoalesced: onCoalesced, operation: operation)
     }
 
     private func run(scope: String, rerunIfPending: (@Sendable () async -> Bool)?, allowFollowUp: Bool,
+                     onCoalesced: @escaping @Sendable () async -> Void,
                      operation: @escaping @Sendable () async throws -> Void) async throws {
         if let running = activeScopes[scope] {
+            await onCoalesced()
             try await running.value
             return
         }
@@ -40,16 +48,6 @@ actor SyncRunGate {
         } else {
             activeScopes[scope] = nil
         }
-    }
-
-    func recoveryFailure(scope: String, now: Date) -> APIFailure? {
-        guard let (until, failure) = recoveryFailures[scope] else { return nil }
-        if now >= until { recoveryFailures[scope] = nil; return nil }
-        return failure
-    }
-
-    func recordRecoveryFailure(_ failure: APIFailure, scope: String, now: Date) {
-        recoveryFailures[scope] = (now.addingTimeInterval(60 * 60), failure)
     }
 }
 struct CommandResult: Codable, Sendable, Equatable {
@@ -146,11 +144,10 @@ actor SyncCoordinator {
     }
     private func run(now: Date) async throws -> SyncResult {
         var result = SyncResult()
+        if try await store.position() == nil {
+            try await snapshot()
+        }
         do {
-            if try await store.position() == nil,
-               await SyncRunGate.shared.recoveryFailure(scope: store.scope.storageKey, now: now) == nil {
-                try await snapshot()
-            }
             while true {
                 try Task.checkCancellation()
                 let batch = try await store.claimBatch(now: now)
@@ -185,22 +182,11 @@ actor SyncCoordinator {
         } catch let failure as APIFailure {
             if failure.requiresSnapshot {
                 try await store.resetCache()
-                do { try await snapshot() }
-                catch let snapshotFailure as APIFailure {
-                    if Self.isRecoveryFailure(snapshotFailure),
-                       await SyncRunGate.shared.recoveryFailure(scope: store.scope.storageKey, now: now) != snapshotFailure {
-                        await SyncRunGate.shared.recordRecoveryFailure(snapshotFailure, scope: store.scope.storageKey, now: now)
-                    }
-                    throw snapshotFailure
-                }
+                try await snapshot()
                 result.didChangeData = try await pull(now: now) || result.didChangeData
                 return result
             }
-            if Self.isRecoveryFailure(failure),
-               await SyncRunGate.shared.recoveryFailure(scope: store.scope.storageKey, now: now) != failure {
-                await SyncRunGate.shared.recordRecoveryFailure(failure, scope: store.scope.storageKey, now: now)
-                try await store.resetCache()
-            }
+            if Self.isRecoveryFailure(failure) { try await store.resetCache() }
             throw failure
         }
     }
@@ -234,10 +220,7 @@ actor SyncCoordinator {
     }
     private func pull(now: Date) async throws -> Bool {
         var changed = false
-        guard var position = try await store.position() else {
-            if let failure = await SyncRunGate.shared.recoveryFailure(scope: store.scope.storageKey, now: now) { throw failure }
-            throw SyncFailure.invalidResponse
-        }
+        guard var position = try await store.position() else { throw SyncFailure.invalidResponse }
         while true {
             try Task.checkCancellation()
             let query = ["membership_id": store.scope.membershipId, "cursor": String(position.cursor), "epoch": String(position.epoch), "limit": "200"]
