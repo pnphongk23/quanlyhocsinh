@@ -9,7 +9,7 @@ Trạng thái cập nhật 2026-10-29: gộp vào bản đầu (1.0), không cò
 2. **Thêm nhân sự bằng SĐT**: nhập tên + SĐT, chọn role Giáo viên hoặc Trợ giảng, chọn lớp (tuỳ chọn). Không có luồng mời, không gửi SMS.
    - Số chưa có tài khoản: lần đầu nhập SĐT ở màn đăng nhập → vào màn tự đặt mật khẩu (như phụ huynh), không bị đưa sang đăng ký workspace.
    - Số đã có tài khoản (ở workspace khác hoặc là phụ huynh): dùng mật khẩu cũ, được thêm vai trò mới.
-3. **Sửa nhân sự**: đổi role (Giáo viên ↔ Trợ giảng), gán/gỡ lớp, vô hiệu hoá / bật lại. Có hiệu lực ngay ở máy chủ, không xoá dữ liệu người đó đã tạo. Không tự vô hiệu hoá hay hạ quyền Admin cuối cùng.
+3. **Sửa nhân sự**: đổi tên hiển thị (chỉ Admin; nhân sự không tự đổi tên, đã chốt 2026-10-30), đổi role (Giáo viên ↔ Trợ giảng), gán/gỡ lớp, vô hiệu hoá / bật lại. Có hiệu lực ngay ở máy chủ, không xoá dữ liệu người đó đã tạo. Không tự vô hiệu hoá hay hạ quyền Admin cuối cùng.
 4. **Ma trận quyền** của 2 role Giáo viên và Trợ giảng: 5 nhóm đang có tính năng (Lớp; Học sinh; Buổi học và điểm danh; Điểm; Nhận xét và báo cáo) × Không/Đọc/Sửa. Nhóm Bài giảng ẩn vì chưa có tính năng. Role Admin cố định, không sửa. Role Phụ huynh giữ nguyên, không có màn chỉnh.
    - Mặc định Giáo viên: Sửa cả 5 nhóm.
    - Mặc định Trợ giảng: Buổi học và điểm danh Sửa; Nhận xét và báo cáo Sửa (gồm gửi phiếu, phát hành báo cáo); Điểm, Học sinh, Lớp Đọc.
