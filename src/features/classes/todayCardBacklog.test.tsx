@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Session } from "../../data/types";
 import { TodayCard } from "./TodayCard";
-import type { BacklogItem, TodayAgenda } from "./todayModel";
+import type { BacklogItem, TodayAgenda, TodayEntry } from "./todayModel";
 
 const item = (n: number, kind: BacklogItem["task"]["kind"], backlogLabel?: string): BacklogItem => ({
   session: { id: `s${kind}${n}`, classId: `c${n}`, date: `2026-10-${String(10 + n).padStart(2, "0")}` } as Session,
@@ -14,6 +14,17 @@ const item = (n: number, kind: BacklogItem["task"]["kind"], backlogLabel?: strin
 });
 const agenda = (backlog: BacklogItem[]): TodayAgenda => ({ date: "2026-10-30", backlog, entries: [], next: null });
 const renderCard = (backlog: BacklogItem[]) => render(<MemoryRouter><TodayCard agenda={agenda(backlog)} /></MemoryRouter>);
+
+const nextEntry: TodayEntry = {
+  session: { id: "next-session", classId: "next-class", date: "2026-11-01" } as Session,
+  classId: "next-class",
+  className: "Lớp kế tiếp",
+  time: "09:00",
+  prefix: "CN · 01/11",
+  statusLabel: "Chưa tới",
+  statusTone: "neutral",
+  tasks: [],
+};
 
 describe("Việc còn dở theo nhóm", () => {
   it("thu gọn hiện đúng 2 việc ưu tiên điểm danh; mở hiện đủ nhóm và Thu gọn quay lại", () => {
@@ -57,5 +68,15 @@ describe("Việc còn dở theo nhóm", () => {
 
     fireEvent.click(within(backlog).getByRole("button", { name: "Xem thêm (1)" }));
     expect(within(backlog).getAllByRole("link")[0]).toHaveTextContent("Chưa điểm danh đủ");
+  });
+});
+
+describe("Buổi kế tiếp trong khối Hôm nay", () => {
+  it("hiện subtitle CN · 01/11 mà không lặp phần ngày", () => {
+    const cardAgenda: TodayAgenda = { ...agenda([]), next: nextEntry };
+    render(<MemoryRouter><TodayCard agenda={cardAgenda} /></MemoryRouter>);
+
+    expect(screen.getByText("CN · 01/11", { exact: true })).toBeInTheDocument();
+    expect(screen.queryByText(/1\/11 ·/)).toBeNull();
   });
 });

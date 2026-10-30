@@ -9,7 +9,7 @@ import s from "./today.module.css";
 const sessionHref = (entry: TodayEntry, tab?: string) =>
   `/lop/${entry.classId}/buoi-hoc/${entry.session.id}` + (tab ? `?tab=${tab}` : "");
 
-function Entry({ entry, showDate }: { entry: TodayEntry; showDate?: boolean }) {
+function Entry({ entry }: { entry: TodayEntry }) {
   return (
     <li className={s.entry}>
       <Link to={sessionHref(entry)} className={s.entryHead}>
@@ -17,7 +17,6 @@ function Entry({ entry, showDate }: { entry: TodayEntry; showDate?: boolean }) {
         <span className={s.entryText}>
           <span className={s.entryClass}>{entry.className}</span>
           <span className={s.entrySub}>
-            {showDate && `${formatDayMonth(entry.session.date)} · `}
             {entry.prefix}
           </span>
         </span>
@@ -110,7 +109,7 @@ export function TodayCard({ agenda }: { agenda: TodayAgenda }) {
                 Buổi kế tiếp · {formatWeekdayDate(agenda.next.session.date)}
               </p>
               <ul className={s.list}>
-                <Entry entry={agenda.next} showDate />
+                <Entry entry={agenda.next} />
               </ul>
             </>
           )}
