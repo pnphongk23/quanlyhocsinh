@@ -26,6 +26,7 @@ Trạng thái: ĐÃ DUYỆT 2026-10-29 (người dùng); cùng ngày gộp thẳ
 7. Mỗi lần chạm chip ghi cục bộ ngay như thao tác tay, qua hàng đợi, dùng được khi mất mạng. Không thêm API.
 
 ### B. Nhận xét chung → phiếu từng em (không AI)
+**Tạm ẩn (người dùng quyết 2026-10-30):** web và iOS giữ nguyên code, tắt bằng cờ nên nút "Nhập từ ghi chú" chưa hiện cho người dùng. Nội dung và tiêu chí xong của B bên dưới giữ nguyên để bật lại; bộ ca vàng giữ. Không mô tả B trong metadata App Store cho tới khi bật lại. A, C, D không đổi.
 1. Nút "Nhập từ ghi chú" ở tab Nhận xét mở ô dán nhiều dòng.
 2. Bộ phân tích trên máy: mỗi dòng dạng `cụm lý do: tên, tên` (tách tên theo `,` `;` `và` `/`).
 3. Khớp tên trên máy theo tầng: họ tên đầy đủ → tên riêng → chuỗi con theo thứ tự → sai một ký tự (chỉ tên từ 4 ký tự trở lên); chuẩn hoá bỏ dấu, `đ→d`, không phân biệt hoa/thường. Trùng tên không tự chọn. Không khớp, viết tắt: báo và gợi ý. Em đã nghỉ hoặc chưa vào lớp vào ngày buổi không là ứng viên; em Vắng có cảnh báo nhỏ.
