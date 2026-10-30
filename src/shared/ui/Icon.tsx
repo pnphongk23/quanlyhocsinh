@@ -17,6 +17,7 @@ const paths = {
     <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
   ),
   back: <path d="m15 18-6-6 6-6" />,
+  user: <path d="M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />,
   lock: (
     <>
       <rect x="4" y="10" width="16" height="11" rx="2" />

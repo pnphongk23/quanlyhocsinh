@@ -7,7 +7,7 @@ import {
   changePassword,
 } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
-import { initialsOf } from "../../shared/personName";
+import { initialsOf, profileTitle } from "../../shared/personName";
 import { listMyChildren } from "../../data/repositories/guardian";
 import { getStore, useStore } from "../../data/store";
 import { pendingCommandCount } from "../../data/outbox";
@@ -110,6 +110,10 @@ function useSettingsData() {
     current,
     multipleRoles: memberships.length > 1,
     isAdminRole: current?.role.system_key === "admin",
+    nameSetByAdmin:
+      current !== undefined &&
+      current.role.system_key !== "admin" &&
+      current.role.scope_kind !== "linked_students",
     name,
     phone,
     roleLine,
@@ -122,7 +126,7 @@ function useSettingsData() {
 
 function SettingsMobile() {
   const navigate = useNavigate();
-  const { state, memberships, current, multipleRoles, isAdminRole, name, phone, roleLine, guardian } =
+  const { state, memberships, current, multipleRoles, isAdminRole, nameSetByAdmin, name, phone, roleLine, guardian } =
     useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
@@ -171,17 +175,18 @@ function SettingsMobile() {
       <section className={s.card} aria-label="Hồ sơ">
         <div className={s.profileHead}>
           <span className={s.avatar} aria-hidden="true">
-            {initialsOf(name) || "GV"}
+            {initialsOf(name) || <Icon name="user" size={22} />}
           </span>
           <span className={s.profileText}>
-            <span className={s.profileName}>{name || "Chưa đăng nhập"}</span>
+            <span className={s.profileName}>{profileTitle(name)}</span>
             <span className={s.profileMeta}>{roleLine}</span>
           </span>
         </div>
         <div className={s.row}>
           <span className={s.rowLabel}>Tên hiển thị</span>
-          <span className={s.rowValue}>{name || "—"}</span>
+          <span className={s.rowValue}>{profileTitle(name)}</span>
         </div>
+        {nameSetByAdmin && <p className={`${s.nameHint} ${s.nameHintRow}`}>Admin đặt tên cho bạn</p>}
         <div className={s.row}>
           <span className={s.rowLabel}>Số điện thoại</span>
           <span className={s.rowValue}>
@@ -258,7 +263,7 @@ function SettingsMobile() {
 
 function SettingsDesktop() {
   const navigate = useNavigate();
-  const { state, memberships, current, multipleRoles, isAdminRole, name, phone, roleLine, subtitleFor, guardian } =
+  const { state, memberships, current, multipleRoles, isAdminRole, nameSetByAdmin, name, phone, roleLine, subtitleFor, guardian } =
     useSettingsData();
   const pending = state.pending.length;
   const online = useOnline();
@@ -343,22 +348,23 @@ function SettingsDesktop() {
             <h2 className={s.cardHead}>Hồ sơ</h2>
             <div className={s.profileHead}>
               <span className={s.avatar} aria-hidden="true">
-                {initialsOf(name) || "GV"}
+                {initialsOf(name) || <Icon name="user" size={22} />}
               </span>
               <span className={s.profileText}>
-                <span className={s.profileName}>{name || "Chưa đăng nhập"}</span>
+                <span className={s.profileName}>{profileTitle(name)}</span>
                 <span className={s.profileMeta}>{roleLine}</span>
               </span>
             </div>
             <div className={s.fieldBlock} style={{ marginTop: 16 }}>
               <span className={s.fieldLabel}>Tên hiển thị</span>
               <span className={s.readonlyBox}>
-                <span className={s.readonlyValue}>{name || "—"}</span>
+                <span className={s.readonlyValue}>{profileTitle(name)}</span>
                 <span className={s.readonlyTag}>
                   <Icon name="lock" size={15} />
                   Chỉ đọc
                 </span>
               </span>
+              {nameSetByAdmin && <span className={s.nameHint}>Admin đặt tên cho bạn</span>}
             </div>
             <div className={s.fieldBlock} style={{ marginBottom: 24 }}>
               <span className={s.fieldLabel}>Số điện thoại</span>

@@ -15,3 +15,8 @@ export function greetingFor(name: string | null | undefined): string {
   const trimmed = name?.trim();
   return trimmed ? `Xin chào, ${trimmed}` : "Xin chào";
 }
+
+/** Tên hiển thị ở hồ sơ; tên rỗng (nhân sự chưa được Admin đặt tên) thì "Chưa đặt tên". */
+export function profileTitle(name: string | null | undefined): string {
+  return name?.trim() || "Chưa đặt tên";
+}
