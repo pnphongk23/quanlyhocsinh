@@ -81,11 +81,26 @@ function numberOf(_state: StoreState, session: Session): string {
   return sessionDateLabel(session.date);
 }
 
+function hasUnmarkedStudents(state: StoreState, session: Session): boolean {
+  const markedStudentIds = new Set(
+    state.attendance
+      .filter((record) => record.sessionId === session.id)
+      .map((record) => record.studentId),
+  );
+  return state.students.some(
+    (student) =>
+      student.classId === session.classId &&
+      student.enrolledAt <= session.date &&
+      (student.leftAt === null || student.leftAt >= session.date) &&
+      !markedStudentIds.has(student.id),
+  );
+}
+
 function tasksFor(state: StoreState, session: Session, today: string): TodayTask[] {
   // Buổi chưa tới chưa có gì để làm.
   if (session.date > today) return [];
   const tasks: TodayTask[] = [];
-  if (session.status === "planned")
+  if (session.status === "planned" || hasUnmarkedStudents(state, session))
     tasks.push({ kind: "attendance", label: "Điểm danh chưa xong", tab: "diem-danh" });
   const unsent = buildTicketRows(state, session.id).filter(
     (row) => row.status !== "sent",
@@ -116,6 +131,7 @@ function entryFor(
 ): TodayEntry {
   const klass = state.classes.find((item) => item.id === session.classId);
   const held = session.status === "held";
+  const attendanceIncomplete = held && hasUnmarkedStudents(state, session);
   const upcoming = session.date > today;
   return {
     session,
@@ -123,8 +139,14 @@ function entryFor(
     className: klass?.name ?? "",
     time: session.time ?? klass?.time ?? "",
     prefix: numberOf(state, session),
-    statusLabel: held ? "Đã điểm danh" : upcoming ? "Chưa tới" : "Chưa điểm danh",
-    statusTone: held ? "success" : upcoming ? "neutral" : "warning",
+    statusLabel: attendanceIncomplete
+      ? "Chưa điểm danh đủ"
+      : held
+        ? "Đã điểm danh"
+        : upcoming
+          ? "Chưa tới"
+          : "Chưa điểm danh",
+    statusTone: attendanceIncomplete ? "warning" : held ? "success" : upcoming ? "neutral" : "warning",
     tasks: tasksFor(state, session, today),
   };
 }

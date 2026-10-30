@@ -35,10 +35,74 @@ describe("khối Hôm nay", () => {
   it("buổi đã điểm danh không báo điểm danh thiếu", () => {
     const today = plannedDate("6a-session-8");
     state.sessions.find((s) => s.id === "6a-session-8")!.status = "held";
+    const roster = state.students.filter(
+      (student) =>
+        student.classId === "6a" &&
+        student.enrolledAt <= today &&
+        (student.leftAt === null || student.leftAt >= today),
+    );
+    state.attendance.push(
+      ...roster.map((student, index) => ({
+        id: `test-attendance-${index}`,
+        sessionId: "6a-session-8",
+        studentId: student.id,
+        status: "present" as const,
+        note: "",
+        lateAt: null,
+      })),
+    );
     const entry = buildTodayAgenda(state, today).entries.find(
       (e) => e.session.id === "6a-session-8",
     )!;
     expect(entry.tasks.map((t) => t.kind)).not.toContain("attendance");
+    expect(entry.statusLabel).toBe("Đã điểm danh");
+    expect(entry.statusTone).toBe("success");
+  });
+
+  it("buổi held mới có 1/N bản ghi vẫn nhắc điểm danh và báo trạng thái thiếu", () => {
+    const today = plannedDate("6a-session-8");
+    state.sessions.find((s) => s.id === "6a-session-8")!.status = "held";
+    const roster = state.students.filter(
+      (student) =>
+        student.classId === "6a" &&
+        student.enrolledAt <= today &&
+        (student.leftAt === null || student.leftAt >= today),
+    );
+    expect(roster.length).toBeGreaterThan(1);
+    state.attendance.push({
+      id: "test-attendance-partial",
+      sessionId: "6a-session-8",
+      studentId: roster[0].id,
+      status: "present",
+      note: "",
+      lateAt: null,
+    });
+
+    const entry = buildTodayAgenda(state, today).entries.find(
+      (e) => e.session.id === "6a-session-8",
+    )!;
+    expect(entry.tasks.map((task) => task.kind)).toContain("attendance");
+    expect(entry.statusLabel).toBe("Chưa điểm danh đủ");
+    expect(entry.statusTone).toBe("warning");
+  });
+
+  it("không tính em đã rời lớp trước ngày buổi vào danh sách thiếu điểm danh", () => {
+    const session = state.sessions.find((item) => item.id === "6a-session-7")!;
+    const today = session.date;
+    const roster = state.students.filter(
+      (student) =>
+        student.classId === session.classId &&
+        student.enrolledAt <= session.date &&
+        (student.leftAt === null || student.leftAt >= session.date),
+    );
+    const leftStudent = state.students.find(
+      (student) => student.classId === session.classId && student.leftAt !== null && student.leftAt < session.date,
+    )!;
+    expect(state.attendance.some((record) => record.sessionId === session.id && record.studentId === leftStudent.id)).toBe(false);
+    expect(state.attendance.filter((record) => record.sessionId === session.id && roster.some((student) => student.id === record.studentId))).toHaveLength(roster.length);
+
+    const entry = buildTodayAgenda(state, today).entries.find((item) => item.session.id === session.id)!;
+    expect(entry.tasks.map((task) => task.kind)).not.toContain("attendance");
     expect(entry.statusLabel).toBe("Đã điểm danh");
   });
 

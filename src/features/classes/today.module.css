@@ -152,7 +152,7 @@
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .groupToggle {
@@ -163,13 +163,13 @@
   background: transparent;
   color: var(--color-primary-ink);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 
 .groupToggle:focus-visible {
-  outline: 3px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--state-focus-ring);
 }
 
 .backlogTask {
@@ -189,5 +189,5 @@
 
 .backlogCount {
   flex: none;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
