@@ -525,7 +525,7 @@ Nguồn: `docs/spec.md` mục 8 "Bản 1.1" và `plans/20261028-roles-permission
 - `class_ids`: lớp được gán (`member_classes`). Với role `admin` luôn `[]` (Admin thấy mọi lớp).
 - `phone` đầy đủ `+84…`: chỉ Admin gọi được các route này; client che một phần ở danh sách nếu muốn.
 - **`display_name` có thể là `null`** (kiểu chuỗi hoặc `null`): `member` mà tài khoản chưa đặt tên (ví dụ tài khoản tạo bằng đặt lại mật khẩu của Admin) trả `null`; client phải decode nullable và hiển thị SĐT thay thế. `kind = pending` luôn có tên.
-- `display_name` của `member` là tên trong tài khoản; thêm SĐT đã có tài khoản thì giữ tên của họ, bỏ qua tên Admin nhập.
+- `display_name` của `member` là **tên trong workspace này**: `memberships.display_name` do Admin đặt, nếu chưa đặt thì rơi về tên tài khoản (`users.display_name`). Đổi tên ở workspace A không đổi tên người đó ở workspace B. Khi bản khai chờ trở thành membership, tên Admin đã nhập chuyển sang `memberships.display_name`. Thêm SĐT đã có tài khoản: tên Admin nhập vẫn bị bỏ qua, hiển thị tên tài khoản cho tới khi Admin sửa bằng `PATCH`.
 
 ### GET /staff
 `Admin`. `{ "items": [StaffMember…] }` — gồm Admin, Giáo viên, Trợ giảng (cả đã vô hiệu) và bản khai chờ, sắp theo `status` (active, pending, disabled) rồi tên. Không phân trang (workspace nhỏ).
@@ -551,7 +551,8 @@ Nguồn: `docs/spec.md` mục 8 "Bản 1.1" và `plans/20261028-roles-permission
 - `class_ids`: thay toàn bộ tập lớp được gán. Với role `admin`: `422` `details.fields.class_ids = "not_applicable"`.
 - `role`: `teacher` | `assistant`. Admin đổi role của chính mình hoặc Admin khác thành Giáo viên/Trợ giảng được, trừ khi đó là Admin hoạt động cuối cùng (`409`, bên dưới). Không thể nâng ai lên Admin.
 - `status`: `active` | `disabled`. Vô hiệu hoá: các lệnh/ request kế tiếp của membership đó bị từ chối (bảng dưới); phiên đăng nhập và tài khoản không bị xoá; dữ liệu cũ nguyên vẹn; bật lại bằng `status = "active"`.
-- `display_name`: chỉ với `kind = pending` (tài khoản đã có thì tên thuộc người dùng, `422 display_name: "owned_by_user"`).
+- `display_name`: cả `member` lẫn `pending`, kể cả chính Admin đang gọi (`is_self`). Chuỗi đã `trim`, 1–100 ký tự; rỗng/chỉ khoảng trắng ⇒ `422` `details.fields.display_name = "required"`, quá 100 ⇒ `"must_be_at_most_100"`, không phải chuỗi (số, `null`) ⇒ `"must_be_string"`. Với `member` ghi vào `memberships.display_name` của workspace đang dùng; chỉ đổi tên thì `scope_epoch` không tăng (không buộc `resync_required`), `version` tăng, các dòng `class` có `teacher_name` được phát lại qua đồng bộ. Tên trùng tên hiện tại thì không đổi gì (`version` giữ nguyên). Không có route tự đổi tên cho người không phải Admin.
+- Tên hiển thị ở `GET /me`, `POST /auth/login`, `POST /auth/register-guardian`: mỗi phần tử `memberships[]` có thêm `display_name` (tên trong workspace đó, `null` nếu chưa có tên nào); `/me` đặt `user.display_name` bằng tên của `active_membership_id` (nếu không có membership đang dùng thì giữ tên tài khoản).
 - `kind = pending` chỉ cho sửa `role`, `class_ids`, `display_name`; `status` khác `pending` ⇒ `422` `details.fields.status = "invalid_for_pending"`.
 - `409 conflict` `details.reason = "last_admin"` khi sẽ làm mất Admin hoạt động cuối cùng (hạ role hoặc vô hiệu hoá).
 - `404 not_found` nếu `id` không thuộc workspace.
