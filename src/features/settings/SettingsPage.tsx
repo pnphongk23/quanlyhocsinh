@@ -7,6 +7,7 @@ import {
   changePassword,
 } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
+import { initialsOf } from "../../shared/personName";
 import { listMyChildren } from "../../data/repositories/guardian";
 import { getStore, useStore } from "../../data/store";
 import { pendingCommandCount } from "../../data/outbox";
@@ -23,16 +24,6 @@ import { roleBadge } from "../auth/roleBadge";
 import s from "./settings.module.css";
 
 const PASSWORD_MIN_LENGTH = 8;
-
-function initialsOf(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(-2)
-    .map((part) => part[0])
-    .join("")
-    .toLocaleUpperCase("vi-VN");
-}
 
 function normalizePhone(value: string): string {
   return value.replace(/\D/g, "").replace(/^84/, "").replace(/^0/, "");

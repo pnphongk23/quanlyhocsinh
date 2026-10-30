@@ -9,7 +9,9 @@ import {
   listStudents,
 } from "../../data/repositories/students";
 import { useAccess, visibleClassIds } from "../../data/repositories/access";
+import { getSession } from "../../data/auth/session";
 import { getStore, useStore } from "../../data/store";
+import { greetingFor, initialsOf } from "../../shared/personName";
 import type { Class } from "../../data/types";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { formatDayMonth, todayISO, weekdayNames } from "../../shared/format";
@@ -17,6 +19,7 @@ import {
   Chip,
   EmptyState,
   Fab,
+  Icon,
   LinkButton,
   NoAccess,
   PageHeader,
@@ -87,6 +90,8 @@ export default function ClassListPage() {
   const desktop = useIsDesktop();
   const access = useAccess();
   const [query, setQuery] = useState("");
+  const userName = getSession()?.user.display_name ?? "";
+  const initials = initialsOf(userName);
   if (!access.can("classes", "read")) return <NoAccess what="lớp học" />;
   const canWrite = access.can("classes", "write");
   const classes = listClasses();
@@ -109,13 +114,13 @@ export default function ClassListPage() {
     <section className={s.page}>
       <PageHeader
         eyebrow={
-          desktop ? `Học kỳ này · ${activeCount} lớp đang mở` : "Xin chào, cô Lan"
+          desktop ? `Học kỳ này · ${activeCount} lớp đang mở` : greetingFor(userName)
         }
         title={desktop ? "Tất cả lớp" : "Lớp của tôi"}
         actions={
           desktop ? undefined : (
             <Link to="/cai-dat" className={s.avatar} aria-label="Cài đặt">
-              CL
+              {initials || <Icon name="settings" size={22} />}
             </Link>
           )
         }
