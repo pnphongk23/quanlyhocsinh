@@ -36,18 +36,18 @@ describe("two devices on one workspace", () => {
     await Promise.all([A.syncNow(), B.syncNow(), C.syncNow()]);
     expect(B.getStore().students).toHaveLength(2);
 
-    // 1) REST writes on A, picked up when B returns to the foreground.
+      // 1) REST writes on A, picked up when B manually refreshes.
     server.put("student", student("s3", "Chi"));
     server.put("class_session", { id: "x2", class_id: "c1", date: "2026-10-24", start_time: "10:00", origin: "manual", is_makeup: false, status: "planned" });
     server.put("class_session", { id: "x1", class_id: "c1", date: "2026-10-23", start_time: "09:00", origin: "recurring", is_makeup: false, status: "cancelled" });
     let before = pullsOf("tB");
-    document.dispatchEvent(new Event("visibilitychange"));
+      await B.syncNow();
     await vi.waitFor(() => expect(B.getStore().students).toHaveLength(3));
     await settle();
     expect(pullsOf("tB")).toBe(before + 1);
     expect(B.getStore().sessions.map((s) => `${s.id}:${s.status}`).sort()).toEqual(["x1:cancelled", "x2:planned"]);
 
-    // 2) Outbox commands pushed by A (attendance, test, score), picked up on focus.
+      // 2) Outbox commands pushed by A (attendance, test, score), picked up on refresh.
     await outbox(A, "o1", "attendance.set", { session_id: "x2", student_id: "s1", status: "late", note: "", late_at: null });
     await outbox(A, "o2", "attendance.set", { session_id: "x2", student_id: "s2", status: "absent", note: "" });
     await outbox(A, "o3", "test.create", { id: "t1", class_id: "c1", name: "Quiz 1", date: "2026-10-24", max: 10 });
@@ -56,14 +56,14 @@ describe("two devices on one workspace", () => {
     await A.syncNow();
     expect(await A.db.outbox.count()).toBe(0);
     before = pullsOf("tB");
-    window.dispatchEvent(new Event("focus"));
+      await B.syncNow();
     await vi.waitFor(() => expect(B.getStore().scores).toHaveLength(2));
     await settle();
     expect(pullsOf("tB")).toBe(before + 1);
     expect(B.getStore().attendance.map((r) => r.status).sort()).toEqual(["absent", "late"]);
     expect(B.getStore().tests.map((t) => t.name)).toEqual(["Quiz 1"]);
 
-    // 3) Slip and homework from A, picked up by the 60 s tick.
+      // 3) Slip and homework from A, picked up by manual refresh.
     await outbox(A, "o6", "slip.set", { session_id: "x2", student_id: "s1", criteria: 31, comment: "Con học tốt.", note: "Tốt" });
     await outbox(A, "o7", "slip.set", { session_id: "x2", student_id: "s2", criteria: 1, comment: "Con cần cố gắng thêm.", note: "Cần cố gắng" });
     await outbox(A, "o8", "homework.assign", { session_id: "x2", sections: [{ id: "h1", kind: "reading", title: "Bài đọc", description: "" }] });
@@ -71,14 +71,15 @@ describe("two devices on one workspace", () => {
     await outbox(A, "o10", "homework.grade.set", { section_id: "h1", student_id: "s2", level: "not_done" });
     await A.syncNow();
     before = pullsOf("tB");
-    vi.advanceTimersByTime(60_000);
+      await B.syncNow();
     await vi.waitFor(() => expect(B.getStore().homeworkGrades).toHaveLength(2));
     await settle();
     expect(pullsOf("tB")).toBe(before + 1);
     expect(B.getStore().comments).toHaveLength(2);
     expect(B.getStore().homeworkSections).toHaveLength(1);
 
-    // Parent: only the child's rows, never mixed with another identity.
+      // Parent pulls explicitly and still sees only the child's rows.
+      await C.syncNow();
     await vi.waitFor(() => expect(C.getStore().homeworkGrades).toHaveLength(1));
     expect(C.getStore().students.map((s) => s.id)).toEqual(["s1"]);
     expect(C.getStore().attendance.map((r) => r.studentId)).toEqual(["s1"]);

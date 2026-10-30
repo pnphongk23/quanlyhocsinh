@@ -12,6 +12,8 @@ const defaultBase = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
 export const api = createApiClient({ baseUrl: import.meta.env.VITE_API_BASE_URL || defaultBase, getToken: () => getToken() });
 let running: Promise<void> | null = null;
 let timer: ReturnType<typeof setTimeout> | undefined;
+let pullWhenIdleRequested = false;
+let syncFailureVersion = 0;
 const entities: Array<EntityName> = ["class", "student", "class_session", "attendance", "test", "score", "slip", "homework_section", "homework_grade", "report_batch", "report", "report_publication"];
 function keyParts(entity: EntityName, item: Record<string, unknown>): Array<string | number | null> {
   switch (entity) {
@@ -31,11 +33,11 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
   switch (entity) {
     case "class": return classFromApi(item as unknown as ApiClass);
     case "student": return { id: item.id, classId: item.class_id, name: item.name, parentPhone: item.parent_phone ?? "", enrolledAt: item.enrolled_at, leftAt: item.left_at, status: item.status };
-      case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status === "excused" ? "absent" : item.status, note: item.note, version: item.version };
+    case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status === "excused" ? "absent" : item.status, note: item.note, version: item.version };
     case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };
-      case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, archived: item.archived, version: item.version };
+    case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, archived: item.archived, version: item.version };
     case "score": return { id: `${item.test_id}:${item.student_id}`, testId: item.test_id, studentId: item.student_id, value: item.value, version: item.version };
-      case "slip": { const scale = item.scale ?? (item.criteria == null ? 3 : 5); const criteria = item.criteria ?? null; return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, criteria, comment: item.comment ?? null, scale, stars: scale === 5 && criteria !== null ? starsFromCriteria(criteria) : item.stars ?? null, note: item.note ?? "", hwManual: item.hw_manual === true || item.hw_manual === 1, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at }; }
+    case "slip": { const scale = item.scale ?? (item.criteria == null ? 3 : 5); const criteria = item.criteria ?? null; return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, criteria, comment: item.comment ?? null, scale, stars: scale === 5 && criteria !== null ? starsFromCriteria(criteria) : item.stars ?? null, note: item.note ?? "", hwManual: item.hw_manual === true || item.hw_manual === 1, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at }; }
     case "homework_section": return { id: item.id, sessionId: item.session_id, kind: item.kind, title: item.title, description: item.description, version: item.version };
     case "homework_grade": return { sectionId: item.section_id, studentId: item.student_id, level: item.level ?? null, version: item.version };
     case "report_batch": return reportBatchFromApi(item as unknown as ApiReportBatch);
@@ -46,16 +48,16 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
 function updateStoreView(entity: EntityName, item: Record<string, any>): void {
   const view = toView(entity, item); const state = window.__QLH_STATE__;
   if (!state) return;
-    if (entity === "report_publication") {
-      const publications = state.reportPublications;
-      const existing = publications.findIndex((entry) => entry.id === item.id);
-      if (existing >= 0) publications[existing] = item as typeof publications[number]; else publications.push(item as typeof publications[number]);
-      const known = state.reports.findIndex((entry) => entry.id === item.report_id);
-      if (known >= 0) state.reports[known] = { ...state.reports[known], status: "published", publishedAt: item.published_at };
-      else state.reports.push({ id: item.report_id, classId: item.class_id, studentId: item.student_id, batchId: item.batch_id ?? "", month: item.month, status: "published", generalComment: "", needsRepublish: false, publishedAt: item.published_at });
-      return;
-    }
-    const target = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "comments", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report_batch: "reportBatches", report: "reports" } as const)[entity];
+  if (entity === "report_publication") {
+    const publications = state.reportPublications;
+    const existing = publications.findIndex((entry) => entry.id === item.id);
+    if (existing >= 0) publications[existing] = item as typeof publications[number]; else publications.push(item as typeof publications[number]);
+    const known = state.reports.findIndex((entry) => entry.id === item.report_id);
+    if (known >= 0) state.reports[known] = { ...state.reports[known], status: "published", publishedAt: item.published_at };
+    else state.reports.push({ id: item.report_id, classId: item.class_id, studentId: item.student_id, batchId: item.batch_id ?? "", month: item.month, status: "published", generalComment: "", needsRepublish: false, publishedAt: item.published_at });
+    return;
+  }
+  const target = ({ class: "classes", student: "students", class_session: "sessions", attendance: "attendance", test: "tests", score: "scores", slip: "comments", homework_section: "homeworkSections", homework_grade: "homeworkGrades", report_batch: "reportBatches", report: "reports" } as const)[entity];
   const list = state[target] as Array<Record<string, any>>; const k = entity === "attendance" ? `${item.session_id}:${item.student_id}` : entity === "score" ? `${item.test_id}:${item.student_id}` : entity === "slip" ? `${item.session_id}:${item.student_id}` : entity === "homework_grade" ? `${item.section_id}:${item.student_id}` : item.id;
   const index = list.findIndex((entry) => entry.id === k || entry.id === item.id || (entry.sectionId === item.section_id && entry.studentId === item.student_id));
   // Phiếu đang chờ gửi chưa có kết quả từ máy chủ: một lần kéo về không được xoá cờ chờ gửi, nếu không phiếu hiện lại như nháp.
@@ -65,8 +67,8 @@ function updateStoreView(entity: EntityName, item: Record<string, any>): void {
 declare global { interface Window { __QLH_STATE__?: import("./types").StoreState } }
 async function applyPull(page: PullResponse, identity: string): Promise<boolean> {
   await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
-      for (const entity of entities) for (const item of page.upserts?.[entity] ?? []) {
-        if (isDeletedReportUpsert(entity, item as unknown as Record<string, unknown>, identity)) continue;
+    for (const entity of entities) for (const item of page.upserts?.[entity] ?? []) {
+      if (isDeletedReportUpsert(entity, item as unknown as Record<string, unknown>, identity)) continue;
       const parts = keyParts(entity, item as unknown as Record<string, unknown>), key = `${identity}|${entity}|${parts.join("|")}`;
       const table = tableFor(entity); const existing = await table.get(key) as any;
       if (!existing || Number((item as any).version ?? 0) >= Number(existing.version ?? 0)) await table.put(stored(entity, key, item as object, identity) as any);
@@ -96,7 +98,9 @@ async function hasLocalData(identity: string): Promise<boolean> {
   for (const entity of entities) if (await tableFor(entity).where("identity").equals(identity).count()) return true;
   return false;
 }
-async function snapshot(identity: string, membershipId: string): Promise<void> {
+const SNAPSHOT_COOLDOWN_MS = 5 * 60_000;
+const lastResyncSnapshotAt = new Map<string, number>();
+async function snapshot(identity: string, membershipId: string, causedBy409 = false): Promise<void> {
   const header = await api.request("GET /sync/snapshot", { query: { membership_id: membershipId } });
   // With data already on screen, download everything first and swap it in one transaction so the store never shows a half-loaded cache.
   const swap = await hasLocalData(identity);
@@ -110,9 +114,9 @@ async function snapshot(identity: string, membershipId: string): Promise<void> {
       const current = entity;
       try {
         await fetchEntity(identity, membershipId, current, () => failure !== null, async (rows) => {
-            const acceptedRows = rows.filter((row) => !isDeletedReportUpsert(current, row as unknown as Record<string, unknown>, identity));
-            if (swap) buffered.set(current, [...(buffered.get(current) ?? []), ...acceptedRows]);
-            else await tableFor(current).bulkPut(acceptedRows as any);
+          const acceptedRows = rows.filter((row) => !isDeletedReportUpsert(current, row as unknown as Record<string, unknown>, identity));
+          if (swap) buffered.set(current, [...(buffered.get(current) ?? []), ...acceptedRows]);
+          else await tableFor(current).bulkPut(acceptedRows as any);
         });
         if (!swap && firstPaintEntities.includes(current) && identityKey() === identity) await hydrateStore();
       } catch (error) { failure ??= { error }; }
@@ -121,15 +125,16 @@ async function snapshot(identity: string, membershipId: string): Promise<void> {
   await Promise.all(Array.from({ length: Math.min(snapshotConcurrency, queue.length) }, worker));
   if (failure) throw (failure as { error: unknown }).error;
   await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
-      if (swap) {
-        for (const entity of entities) {
-          await tableFor(entity).where("identity").equals(identity).delete();
-          const acceptedRows = (buffered.get(entity) ?? []).filter((row) => !isDeletedReportUpsert(entity, row as unknown as Record<string, unknown>, identity));
-          await tableFor(entity).bulkPut(acceptedRows as any);
-        }
+    if (swap) {
+      for (const entity of entities) {
+        await tableFor(entity).where("identity").equals(identity).delete();
+        const acceptedRows = (buffered.get(entity) ?? []).filter((row) => !isDeletedReportUpsert(entity, row as unknown as Record<string, unknown>, identity));
+        await tableFor(entity).bulkPut(acceptedRows as any);
       }
+    }
     await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
   });
+  if (causedBy409) lastResyncSnapshotAt.set(identity, Date.now());
   await pull(identity, membershipId);
 }
 /** Returns whether the local cache changed. */
@@ -143,7 +148,8 @@ async function pull(identity: string, membershipId: string): Promise<boolean> {
       if (!page.has_more) break;
     } catch (error) {
       if (error instanceof ApiError && error.status === 409 && ["resync_required", "snapshot_required"].includes(error.error.code)) {
-        await snapshot(identity, membershipId); return true;
+        if (Date.now() - (lastResyncSnapshotAt.get(identity) ?? Number.NEGATIVE_INFINITY) < SNAPSHOT_COOLDOWN_MS) throw error;
+        await snapshot(identity, membershipId, true); return true;
       }
       if (error instanceof ApiError && error.status === 401) { await clearIdentityCache(identity); await clearSession(); return true; }
       if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
@@ -158,12 +164,13 @@ async function clearIdentityCache(identity: string): Promise<void> {
   await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
     for (const entity of entities) await tableFor(entity).where("identity").equals(identity).delete();
     await db.meta.delete(identity);
-    });
-    clearReportBatchTombstones(identity);
+  });
+  lastResyncSnapshotAt.delete(identity);
+  clearReportBatchTombstones(identity);
 }
 export async function clearUserCache(userId: string): Promise<boolean> {
   const identityPrefix = `${userId}:`;
-  return db.transaction("rw", [db.meta, db.outbox, ...entities.map((entity) => tableFor(entity))], async () => {
+  const cleared = await db.transaction("rw", [db.meta, db.outbox, ...entities.map((entity) => tableFor(entity))], async () => {
     const racedRows = await db.outbox.where("identity").startsWith(identityPrefix).count();
     if (racedRows) {
       await db.meta.put({ key: logoutLockKey(userId), identity: `logout:${userId}`, cursor: 0, epoch: 0, logoutState: "needs_login", updatedAt: Date.now() });
@@ -176,13 +183,15 @@ export async function clearUserCache(userId: string): Promise<boolean> {
     await db.meta.delete(logoutLockKey(userId));
     return true;
   });
+  if (cleared) for (const identity of lastResyncSnapshotAt.keys()) if (identity.startsWith(identityPrefix)) lastResyncSnapshotAt.delete(identity);
+  return cleared;
 }
 export const clearMembershipCache = clearIdentityCache;
 let again = false;
-export function syncNow(): Promise<void> {
+function runSync(pullWhenIdle: boolean): Promise<void> {
   if (timer) { clearTimeout(timer); timer = undefined; }
   firstScheduledAt = null;
-  if (running) { again = true; return running; }
+  if (running) { again = true; pullWhenIdleRequested ||= pullWhenIdle; return running; }
   if (!getCacheIdentity() || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) return Promise.resolve();
   running = (async () => {
     await Promise.resolve();
@@ -190,13 +199,23 @@ export function syncNow(): Promise<void> {
       do {
         again = false;
         const cache = getCacheIdentity(); if (!cache || !getToken()) break;
-        await syncRound(cache.membershipId, identityKey());
+        const roundPullWhenIdle = pullWhenIdle || pullWhenIdleRequested;
+        pullWhenIdleRequested = false;
+        await syncRound(cache.membershipId, identityKey(), roundPullWhenIdle);
       } while (again);
     } finally { running = null; }
   })();
   return running;
 }
-async function syncRound(membershipId: string, identity: string): Promise<void> {
+export function syncNow(): Promise<void> { return runSync(true); }
+export type RefreshResult = { status: "ok" } | { status: "offline" | "error" };
+export async function refreshNow(): Promise<RefreshResult> {
+  if (typeof navigator !== "undefined" && !navigator.onLine) return { status: "offline" };
+  const failuresBefore = syncFailureVersion;
+  await syncNow();
+  return syncFailureVersion === failuresBefore ? { status: "ok" } : { status: "error" };
+}
+async function syncRound(membershipId: string, identity: string, pullWhenIdle: boolean): Promise<void> {
   let outboxChanged = false;
   try {
     await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
@@ -246,12 +265,14 @@ async function syncRound(membershipId: string, identity: string): Promise<void> 
       for (const row of batch) if (!returned.has(row.id)) await db.outbox.update(row.id, { status: "pending" });
       if (batch.some((row) => !returned.has(row.id))) break;
     }
+    if (!outboxChanged && !pullWhenIdle) return;
     const changed = await pull(identity, membershipId);
     if (changed || outboxChanged) await hydrateStore();
     const remaining = await db.outbox.where("identity").equals(identity).toArray();
     publishRejected(remaining);
     setSaveStatus(remaining.some((x) => x.status === "rejected") ? "error" : remaining.length ? "local" : "synced");
   } catch {
+    syncFailureVersion++;
     if (outboxChanged) await hydrateStore();
     publishRejected(await db.outbox.where("identity").equals(identity).toArray());
     if (await db.outbox.where("identity").equals(identity).count()) setSaveStatus("error");
@@ -277,7 +298,7 @@ export const canDiscardRejected = (type: string): boolean => type in cellEntity;
 async function withTestUpdateId(row: OutboxRow, identity: string): Promise<OutboxRow> {
   if (row.type !== "test.update" || (row.payload as { id?: string }).id) return row;
   const prefix = `${identity}|test|`;
-    const patch = row.payload as { name?: string; date?: string };
+  const patch = row.payload as { name?: string; date?: string };
   let id = row.entity_key?.startsWith(prefix) ? row.entity_key.slice(prefix.length) : undefined;
   if (!id) {
     // Nhiều lệnh cũ có thể cùng sửa một bài; khi đó khớp theo nội dung không phân biệt được, nên không đoán.
@@ -345,10 +366,10 @@ export async function discardRejectedCommands(ids: string[]): Promise<void> {
 }
 async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {
   const row = await db.outbox.get(result.id); if (!row) return;
-    if (result.status === "rejected") { await db.outbox.put({ ...row, status: "rejected", error: result.error.code }); return; }
-    if (result.status === "duplicate" && (result as { original_status?: string }).original_status === "rejected") {
-      await db.outbox.put({ ...row, status: "rejected", error: (result as { error?: { code?: string } }).error?.code ?? row.error ?? "rejected" }); return;
-    }
+  if (result.status === "rejected") { await db.outbox.put({ ...row, status: "rejected", error: result.error.code }); return; }
+  if (result.status === "duplicate" && (result as { original_status?: string }).original_status === "rejected") {
+    await db.outbox.put({ ...row, status: "rejected", error: (result as { error?: { code?: string } }).error?.code ?? row.error ?? "rejected" }); return;
+  }
   if (row.type === "slip.send" && result.status === "applied") {
     // Gửi xong: ghi ngay trạng thái đã gửi vào máy để tải lại trước lần kéo về kế tiếp không hiện lại phiếu như nháp.
     const payload = row.payload as { session_id: string; student_ids: string[] };
@@ -382,19 +403,6 @@ export function scheduleSync(delay?: number): void {
   const wait = delay ?? Math.min(SYNC_TRAILING_MS, Math.max(0, firstScheduledAt! + SYNC_MAX_WAIT_MS - now));
   timer = setTimeout(() => { timer = undefined; void syncNow(); }, wait);
 }
-const pollInterval = 60_000;
 if (typeof window !== "undefined") {
-  let poll: ReturnType<typeof setInterval> | undefined;
-  const visible = () => typeof document === "undefined" || document.visibilityState === "visible";
-  const startPoll = () => { if (!poll && visible()) poll = setInterval(() => void syncNow(), pollInterval); };
-  const stopPoll = () => { if (poll) { clearInterval(poll); poll = undefined; } };
-  // A running round may have read its cursor already, so syncNow queues one more round instead of dropping the event.
-  const onForeground = () => void syncNow();
-  window.addEventListener("online", onForeground);
-  window.addEventListener("focus", onForeground);
-  window.addEventListener("pageshow", onForeground);
-  if (typeof document !== "undefined") document.addEventListener("visibilitychange", () => {
-    if (visible()) { startPoll(); onForeground(); } else stopPoll();
-  });
-  startPoll();
+  window.addEventListener("online", () => { void runSync(false); });
 }

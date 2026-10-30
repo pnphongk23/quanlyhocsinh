@@ -13,6 +13,7 @@ const rememberUserEmail = (user: WebSession["user"]) => rememberEmail(user.phone
 const ME_CHECK_INTERVAL = 60_000;
 /** Bumped on login, logout, role change and refresh so a late /me response can never overwrite a newer choice. */
 let generation = 0;
+let activatedCacheIdentity: string | null = null;
 
 function read(): WebSession | null {
   if (typeof localStorage === "undefined") return null;
@@ -57,14 +58,20 @@ export async function updateMe(me: MeResponse): Promise<void> {
 }
 export async function activateMembershipCache(membershipId: string | null): Promise<void> {
   const membership = session?.me.memberships.find((m) => m.id === membershipId && m.status === "active");
-  if (!session || !membership) { setCacheIdentity(null); await hydrateStore(); return; }
+  if (!session || !membership) { activatedCacheIdentity = null; setCacheIdentity(null); await hydrateStore(); return; }
   const next = { userId: session.user.id, workspaceId: membership.workspace.id, membershipId: membership.id };
-  if (identityKey(next) === identityKey(getCacheIdentity())) return;
+  const key = identityKey(next);
+  if (key === identityKey(getCacheIdentity())) {
+    if (activatedCacheIdentity !== key) { activatedCacheIdentity = key; void syncNow(); }
+    return;
+  }
   setCacheIdentity(next);
+  activatedCacheIdentity = key;
   await hydrateStore(); void syncNow();
 }
 export async function clearSession(): Promise<void> {
   generation++;
+  activatedCacheIdentity = null;
   session = null; persist(); setCacheIdentity(null); await hydrateStore();
 }
 /** Cập nhật email trong phiên sau khi máy chủ xác nhận PUT /me/email (không cần gọi lại /me). */
