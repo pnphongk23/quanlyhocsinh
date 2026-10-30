@@ -2,6 +2,23 @@ import XCTest
 @testable import QuanLyLop
 
 final class SnapshotCursorTests: XCTestCase {
+    func testRepeated404DoesNotRepeatSnapshotWithinAnHour() async throws {
+        let id = UUID().uuidString
+        let scope = CacheScope(userId: id, workspaceId: id, membershipId: id)
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        let api = Snapshot404API()
+        let coordinator = SyncCoordinator(api: api, store: store, deviceId: "snapshot-device")
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+        for _ in 0..<3 {
+            do { _ = try await coordinator.synchronize(now: now); XCTFail("404 should propagate") }
+            catch let error as APIFailure { XCTAssertEqual(error, .badStatus(code: 404)) }
+        }
+
+        let snapshotCalls = await api.snapshotCalls()
+        XCTAssertEqual(snapshotCalls, 1)
+    }
+
     func testPageFailureLeavesCursorUnsetAndSuccessfulSnapshotRetryInstallsEveryPage() async throws {
         let scope = CacheScope(userId: "snapshot-retry-user", workspaceId: "snapshot-retry-workspace", membershipId: "snapshot-retry-member")
         let store = try SQLiteStore(path: ":memory:", scope: scope)
@@ -11,10 +28,11 @@ final class SnapshotCursorTests: XCTestCase {
         let snapshotEndpoint = APIEndpoint(method: .get, path: "sync/snapshot", query: ["membership_id": scope.membershipId])
         let classEndpoint = APIEndpoint(method: .get, path: "sync/snapshot/class", query: ["membership_id": scope.membershipId, "limit": "300"])
         let studentEndpoint = APIEndpoint(method: .get, path: "sync/snapshot/student", query: ["membership_id": scope.membershipId, "limit": "300"])
-        let incompleteAPI = StubAPIClient(baseURL: URL(string: "https://fixture.invalid/v1")!, fixtures: [
-            snapshotEndpoint: manifest,
-            classEndpoint: try WireJSON.encoder().encode(classPage)
-        ])
+          let incompleteAPI = StubAPIClient(baseURL: URL(string: "https://fixture.invalid/v1")!, fixtures: [
+              snapshotEndpoint: manifest,
+              classEndpoint: try WireJSON.encoder().encode(classPage),
+              studentEndpoint: Data("invalid".utf8)
+          ])
 
         do {
             try await SyncCoordinator(api: incompleteAPI, store: store, deviceId: "snapshot-device").synchronize()
@@ -74,4 +92,14 @@ final class SnapshotCursorTests: XCTestCase {
         XCTAssertEqual(classes.count, 1)
         XCTAssertEqual(students.count, 1)
     }
+}
+
+private actor Snapshot404API: APIClient {
+    let baseURL = URL(string: "https://fixture.invalid/v1")!
+    private var snapshots = 0
+    func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+        if endpoint.path == "sync/snapshot" { snapshots += 1 }
+        throw APIFailure.badStatus(code: 404)
+    }
+    func snapshotCalls() -> Int { snapshots }
 }
