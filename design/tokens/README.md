@@ -24,7 +24,7 @@ Màu thương hiệu, bo góc và chuyển động giữ nguyên. Token trạng 
 | `--dur-press` | Thay 100ms ghi cứng |
 | `--state-selected-*`, `--state-hover-bg`, `--state-pressed-bg`, `--state-focus-ring`, `--state-disabled-opacity`, `--state-success-*`, `--state-error-*`, `--state-pending-*` | Trạng thái thành phần dùng chung; bảng ở `design/ux-v2/rules.md` mục 6 |
 | `--card-success-*`, `--card-error-*`, `--card-pending-*` | Nền mềm, viền và chữ đậm cho card/banner trạng thái lớn |
-| `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms | Loading tối thiểu và thời gian giữ "Đã lưu" |
+| `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms, `--dur-error-hold` 4800ms | Loading tối thiểu, thời gian giữ "Đã lưu" và thông báo lỗi của "Tải lại" |
 | `--empty-mascot` 96px, `--empty-mascot-compact` 56px | Cỡ Mít trong `EmptyState` |
 | `--criteria-check-size` 20px, `--criteria-check-icon-size` 12px, `--comment-star-size` 24px | Kích thước tick tiêu chí và sao trong phiếu nhận xét |
 | `--textarea-min` 200px, `--chip-grid-min` 132px, `--date-col` 64px, `--row-chevron-size` 12px | Hộp dán nhiều dòng, chip tên ở "Theo tiêu chí", cột ngày thẻ buổi học phụ huynh, mũi tên cuối thẻ dòng (thêm cho iOS, web chưa bắt buộc dùng) |

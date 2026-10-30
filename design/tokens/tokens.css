@@ -164,6 +164,7 @@
   --card-pending-fg: var(--color-warning);
   --dur-loading-min: 400ms;   /* loading hiện tối thiểu (lưu cục bộ); trùng SAVE_MIN_VISIBLE_MS */
   --dur-success-hold: 1600ms; /* giữ "Đã lưu"; trùng SAVE_SUCCESS_HOLD_MS */
+  --dur-error-hold: 4800ms;   /* giữ thông báo lỗi/offline của "Tải lại" trước khi tự ẩn */
   --empty-mascot: 96px;
   --empty-mascot-compact: 56px;
   --textarea-min: 200px;      /* hộp dán nhiều dòng (nhập danh sách, nhập từ ghi chú) */

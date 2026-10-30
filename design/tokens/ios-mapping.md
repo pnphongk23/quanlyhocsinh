@@ -33,7 +33,7 @@ Chỉ tài liệu. `Tokens.swift` (mvp-ios `ios/QuanLyLop/Core/DesignSystem/Toke
 | `--card-success-bg/border/fg` | Chưa có | Đề xuất `AppColors.cardSuccessBackground/cardSuccessBorder/cardSuccessForeground` = `#e7f6ec` / `#14663f` / `#14663f` |
 | `--card-error-bg/border/fg` | Chưa có | Đề xuất `AppColors.cardErrorBackground/cardErrorBorder/cardErrorForeground` = `#fdecec` / `#b42318` / `#b42318` |
 | `--card-pending-bg/border/fg` | Chưa có | Đề xuất `AppColors.cardPendingBackground/cardPendingBorder/cardPendingForeground` = `#fff3d6` / `#8a5300` / `#8a5300` |
-| `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms | Chưa có | Đề xuất `AppMotion.loadingMinimum`, `AppMotion.successHold` |
+| `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms, `--dur-error-hold` 4800ms | Chưa có | Đề xuất `AppMotion.loadingMinimum`, `AppMotion.successHold`, `AppMotion.errorHold` |
 | `--textarea-min` 200, `--chip-grid-min` 132, `--date-col` 64, `--row-chevron-size` 12 | `AppMetrics.textAreaMin`, `chipGridMin`, `dateColumn`, `rowChevronSize` | Đã áp dụng trong `Tokens.swift` |
 | `--empty-mascot` 96, `--empty-mascot-compact` 56 | Chưa có | Đề xuất `AppMetrics.emptyMascot`, `emptyMascotCompact` |
 | `--criteria-check-size` 20, `--criteria-check-icon-size` 12, `--comment-star-size` 24 | `TeacherMetrics.slipChipTickSize`, `slipChipTickGlyphSize`, `slipScoreStarSize` | Khớp (sheet phiếu, `Features/Classes/TeacherUI.swift`) |
