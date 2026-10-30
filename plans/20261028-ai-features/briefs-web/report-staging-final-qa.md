@@ -41,3 +41,7 @@ Status: DONE_WITH_CONCERNS
 Summary: Đã tạo đúng một buổi lẻ và xác nhận buổi còn trong UI sau reload, đăng xuất/đăng nhập lại; snapshot có ID. Đã chụp và kiểm tra đủ ba ảnh, không có tràn ngang tại các kích thước yêu cầu; phần xác minh sau tạo phải tiếp tục trong context mới do lỗi selector của lần chạy đầu.
 
 Hash commit nội dung: `5512b83`.
+
+Status: DONE — staging deployment `83b4ea32`, hash `c6e2768`.
+Dòng đầu phần điểm danh hiển thị `Chưa điểm danh 3 em`; không có `0 vắng mặt`.
+Nút `Lưu điểm danh` disabled; không thay đổi trạng thái hay lưu điểm danh. Ảnh: `plans/20261021-mvp/web/ui-feedback-30/staging-final-attendance-unmarked-v2-390.png`.
