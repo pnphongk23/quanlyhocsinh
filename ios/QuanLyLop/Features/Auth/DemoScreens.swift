@@ -98,11 +98,12 @@ enum DemoScreens {
               model.applyDemo(memberships: [teacher, guardian], activeID: guardian.id, screen: screen)
               if name == "settings-blocked" { model.demoPendingCommands = 1 }
               return AnyView(GuardianRootView(model: model).environment(model))
-        case "teacher-session", "teacher-session-clean", "teacher-class-detail", "teacher-classes":
+        case "teacher-session", "teacher-session-clean", "teacher-class-detail", "teacher-classes", "teacher-classes-tasks":
             model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
-            let data = TeacherDemoData.data(withAbsenceWarning: name != "teacher-session-clean")
+            let data = TeacherDemoData.data(withAbsenceWarning: name != "teacher-session-clean",
+                                            unfinishedSessions: name == "teacher-classes-tasks" ? 5 : 1)
             let routes: [TeacherRoute] = switch name {
-            case "teacher-classes": []
+            case "teacher-classes", "teacher-classes-tasks": []
             case "teacher-class-detail": [.classDetail(TeacherDemoData.classID)]
             default: [.classDetail(TeacherDemoData.classID),
                       .session(classID: TeacherDemoData.classID, sessionID: "demo-session-8")]
@@ -196,9 +197,17 @@ private struct DemoI4Screen: View {
                 attendance: TeacherDemoData.attendance(for: sessions), sections: sections, grades: grades))
         } else if kind == "reports-error" || kind == "comments" {
             let sessions = TeacherDemoData.makeSessions()
+            // Three chip states: met (saved slip), not met (saved slip missing a criterion), no slip yet (last students).
+            let open = sessions.first { $0.status != .cancelled }?.id ?? ""
+            let students = TeacherDemoData.students.filter { $0.status == .active }
+            let slips = students.dropLast(3).enumerated().map { index, student in
+                let bits = index < 2 ? SlipRules.allCriteria & ~(1 << 0) & ~(1 << 2) : SlipRules.allCriteria
+                return SessionSlip(sessionId: open, studentId: student.id, stars: SlipRules.stars(criteria: bits), criteria: bits,
+                                   note: "", status: .draft, sentAt: nil, version: 1, updatedAt: "2026-10-27T11:00:00.000Z")
+            }
             _data = StateObject(wrappedValue: I4FeatureStore(
                 demoClasses: [TeacherDemoData.classroom], students: TeacherDemoData.students,
-                sessions: sessions, attendance: TeacherDemoData.attendance(for: sessions)))
+                sessions: sessions, attendance: TeacherDemoData.attendance(for: sessions), slips: slips))
         } else {
             _data = StateObject(wrappedValue: I4FeatureStore())
         }

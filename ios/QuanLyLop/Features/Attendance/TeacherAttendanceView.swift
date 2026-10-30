@@ -122,11 +122,17 @@ struct TeacherAttendanceView: View {
 
     private var summaryRow: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 0) {
-                Text("\(absentCount)")
-                    .appText(AppTextStyle(size: 14, weight: .bold, lineHeight: 21))
-                    .foregroundStyle(AppColors.error)
-                Text(String(localized: "feature.attendance.vang.mat")).appText(AppText.muted).foregroundStyle(AppColors.muted)
+            if roster.allSatisfy({ status(for: $0) == nil }) {
+                Text(String.localizedStringWithFormat(String(localized: "feature.attendance.chua.iem.danh.n.em"), roster.count))
+                    .appText(AppText.muted).foregroundStyle(AppColors.muted)
+                    .accessibilityIdentifier("attendance.unmarkedSummary")
+            } else {
+                HStack(spacing: 0) {
+                    Text("\(absentCount)")
+                        .appText(AppTextStyle(size: 14, weight: .bold, lineHeight: 21))
+                        .foregroundStyle(AppColors.error)
+                    Text(String(localized: "feature.attendance.vang.mat")).appText(AppText.muted).foregroundStyle(AppColors.muted)
+                }
             }
             Spacer(minLength: 0)
             AppButton(title: String(localized: "feature.attendance.tat.ca.co.mat"), variant: .secondary) {
@@ -187,6 +193,7 @@ struct TeacherAttendanceView: View {
             Text(student.name)
                 .appText(AppTextStyle(size: 16, weight: .medium, lineHeight: 24))
                 .foregroundStyle(AppColors.text)
+                .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             statusButton(student, displayed)
         }
@@ -285,6 +292,7 @@ struct TeacherAttendanceView: View {
     private func statusPill(_ displayed: AttendanceStatus?, showsChevron: Bool) -> some View {
         HStack(spacing: 4) {
             Text(displayed?.label ?? String(localized: "feature.attendance.chua.iem.danh")).appText(AppText.pill)
+                .lineLimit(1).fixedSize(horizontal: true, vertical: false)
             if showsChevron {
                 Image(systemName: "chevron.down").font(.system(size: AppMetrics.pillChevronSize, weight: .semibold))
             }

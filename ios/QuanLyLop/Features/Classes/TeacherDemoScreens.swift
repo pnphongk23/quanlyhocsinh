@@ -11,12 +11,15 @@ enum TeacherDemoData {
     static let classID = "demo-class-6a"
     static let today = TeacherFormat.todayISO()
 
-    static func data(withAbsenceWarning: Bool = true) -> TeacherFeatureData {
+    /// `unfinishedSessions` above 1 drops the attendance of that many past sessions (the open one counts as one).
+    static func data(withAbsenceWarning: Bool = true, unfinishedSessions: Int = 1) -> TeacherFeatureData {
         let sessions = makeSessions()
+        let dropped = Set((0..<8).suffix(max(unfinishedSessions - 1, 0)).map { "demo-session-\($0)" })
         return TeacherFeatureData(previewClasses: [classroom],
                                   previewStudents: students,
                                   previewSessions: sessions,
-                                  previewAttendance: attendance(for: sessions, withAbsenceWarning: withAbsenceWarning),
+                                  previewAttendance: attendance(for: sessions, withAbsenceWarning: withAbsenceWarning)
+                                      .filter { !dropped.contains($0.sessionId) },
                                   displayName: String(localized: "feature.classes.co.lan"))
     }
 

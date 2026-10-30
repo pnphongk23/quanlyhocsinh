@@ -53,7 +53,8 @@ final class I4FeatureStore: ObservableObject {
 #if DEBUG
     /// Screenshot harness only: synthetic roster with report permissions, no store or network.
     init(demoClasses: [Classroom], students: [Student], sessions: [ClassSession], attendance: [Attendance],
-         sections: [HomeworkSection] = [], grades: [HomeworkGrade] = []) {
+         sections: [HomeworkSection] = [], grades: [HomeworkGrade] = [], slips: [SessionSlip] = []) {
+        self.slips = slips
         self.sections = sections
         self.grades = grades
         self.classes = demoClasses

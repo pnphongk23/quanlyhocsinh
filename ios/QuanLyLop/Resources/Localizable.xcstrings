@@ -572,6 +572,13 @@
         }
       }
     },
+    "feature.attendance.chua.iem.danh.n.em" : {
+      "comment" : "Dòng tóm tắt khi chưa đặt trạng thái cho em nào. %lld là số em.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa điểm danh %lld em" } }
+      }
+    },
     "feature.attendance.chua.iem.danh" : {
       "comment" : "Chuỗi hiển thị trong Features/Attendance.",
       "extractionState" : "manual",
