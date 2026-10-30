@@ -19,7 +19,7 @@
     "MAIL_MODE": "disabled"
   },
   "triggers": {
-    "crons": ["*/30 * * * *"]
+    "crons": ["* * * * *", "*/30 * * * *"]
   },
   "d1_databases": [
     {

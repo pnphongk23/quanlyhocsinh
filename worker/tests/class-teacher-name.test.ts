@@ -78,4 +78,73 @@ describe('class teacher name SQL', () => {
 
     expect(after.read).toBeLessThan(before.read / 2);
   });
+
+  it('matches the reference formulation for disabled users, blank names, ties and multi-workspace users', async () => {
+    const owner = await registerWorkspace(fakePhone(), 'Teacher names edge');
+    const adminUserId = owner.userId;
+    const create = async (name: string) => insertClass(owner.workspaceId, name, owner.userId);
+    const disabledTeacherUser = await create('Disabled teacher user');
+    const blankMembershipName = await create('Blank membership name');
+    const blankEverywhere = await create('Blank everywhere');
+    const tie = await create('Same assignment time');
+    const sharedUser = await create('Shared user');
+    const at = '2026-03-01T00:00:00.000Z';
+
+    const userA = await insertUser(fakePhone(), 'Teacher with disabled account');
+    const memA = await insertMembership(owner.workspaceId, userA, owner.roles.teacher!);
+    await assign(owner.workspaceId, memA, disabledTeacherUser, at);
+    await db.prepare("UPDATE users SET status='disabled' WHERE id=?").bind(userA).run();
+
+    const memB = await insertMembership(owner.workspaceId, await insertUser(fakePhone(), 'Falls back to account name'), owner.roles.teacher!);
+    await db.prepare('UPDATE memberships SET display_name=? WHERE id=?').bind('   ', memB).run();
+    await assign(owner.workspaceId, memB, blankMembershipName, at);
+
+    const memC = await insertMembership(owner.workspaceId, await insertUser(fakePhone(), '   '), owner.roles.teacher!);
+    await db.prepare('UPDATE memberships SET display_name=? WHERE id=?').bind('  ', memC).run();
+    await assign(owner.workspaceId, memC, blankEverywhere, at);
+
+    for (const label of ['Tie one', 'Tie two', 'Tie three']) {
+      const membership = await insertMembership(owner.workspaceId, await insertUser(fakePhone(), label), owner.roles.teacher!);
+      await assign(owner.workspaceId, membership, tie, at);
+    }
+
+    const other = await registerWorkspace(fakePhone(), 'Teacher names edge other');
+    const sharedUserId = await insertUser(fakePhone(), 'Shared account name');
+    const sharedHere = await insertMembership(owner.workspaceId, sharedUserId, owner.roles.teacher!);
+    await db.prepare('UPDATE memberships SET display_name=? WHERE id=?').bind('Name in first workspace', sharedHere).run();
+    await assign(owner.workspaceId, sharedHere, sharedUser, at);
+    const sharedThere = await insertMembership(other.workspaceId, sharedUserId, other.roles.teacher!);
+    const otherClass = await insertClass(other.workspaceId, 'Other workspace class', other.userId);
+    await assign(other.workspaceId, sharedThere, otherClass, at);
+
+    const compare = async (workspaceId: string) => {
+      const before = await names(referenceTeacherNameSql, workspaceId);
+      const after = await names(classTeacherNameSql, workspaceId);
+      expect(after.rows).toEqual(before.rows);
+      return new Map(after.rows.map((row) => [row.id, row.teacher_name]));
+    };
+    let result = await compare(owner.workspaceId);
+    expect(result.get(disabledTeacherUser)).toBe('Giáo viên Mẫu');
+    expect(result.get(blankMembershipName)).toBe('Falls back to account name');
+    expect(result.get(blankEverywhere)).toBe('Giáo viên Mẫu');
+    expect(['Tie one', 'Tie two', 'Tie three']).toContain(result.get(tie));
+    expect(result.get(sharedUser)).toBe('Name in first workspace');
+    const otherResult = await compare(other.workspaceId);
+    expect(otherResult.get(otherClass)).toBe('Shared account name');
+
+    // Admin fallback when the Admin's user or membership is disabled, or the Admin has no usable name.
+    await db.prepare("UPDATE users SET status='disabled' WHERE id=?").bind(adminUserId).run();
+    result = await compare(owner.workspaceId);
+    expect(result.get(disabledTeacherUser)).toBeNull();
+    await db.prepare("UPDATE users SET status='active' WHERE id=?").bind(adminUserId).run();
+    const secondAdmin = await insertMembership(owner.workspaceId, await insertUser(fakePhone(), 'Second admin'), owner.roles.admin!);
+    await db.prepare("UPDATE memberships SET status='disabled' WHERE id=?").bind(owner.membershipId).run();
+    expect((await compare(owner.workspaceId)).get(disabledTeacherUser)).toBe('Second admin');
+    await db.prepare("UPDATE memberships SET status='active', display_name=? WHERE id=?").bind('   ', owner.membershipId).run();
+    await db.prepare('UPDATE users SET display_name=? WHERE id=?').bind('   ', adminUserId).run();
+    await db.prepare("UPDATE memberships SET display_name='   ' WHERE id=?").bind(secondAdmin).run();
+    await db.prepare("UPDATE users SET display_name='   ' WHERE id=(SELECT user_id FROM memberships WHERE id=?)").bind(secondAdmin).run();
+    expect((await compare(owner.workspaceId)).get(disabledTeacherUser)).toBeNull();
+    // A role deleted from under a membership cannot be fixtured: memberships(workspace_id, role_id) is a foreign key.
+  });
 });

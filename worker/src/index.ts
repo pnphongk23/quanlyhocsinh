@@ -41,8 +41,15 @@ function logPath(path: string): string {
   return path.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi, ':id');
 }
 
+// Two cron triggers (wrangler.jsonc): push must run every minute (retry backoff is minutes), while
+// session generation and table cleanup scan whole tables and only need a slow cadence.
+export const MINUTE_CRON = '* * * * *';
+export const SLOW_CRON = '*/30 * * * *';
+
 interface ScheduledJob {
   name: string;
+  /** Trigger that runs this job; any other cron expression (manual or test invocation) runs every job. */
+  cron: typeof MINUTE_CRON | typeof SLOW_CRON;
   run: (controller: ScheduledController, env: Env, context: ExecutionContext) => Promise<void>;
 }
 
@@ -50,14 +57,17 @@ interface ScheduledJob {
 const scheduledJobs: ScheduledJob[] = [
   {
     name: 'session_generation',
+    cron: SLOW_CRON,
     run: async (_controller, env) => { await generateUpcomingSessions(env.DB); },
   },
   {
     name: 'notification_dispatch',
+    cron: MINUTE_CRON,
     run: async (_controller, env) => { await runScheduledPush(env); },
   },
   {
     name: 'password_reset_cleanup',
+    cron: SLOW_CRON,
     run: async (_controller, env) => { await purgeResetData(env.DB); },
   },
 ];
@@ -67,7 +77,9 @@ export async function scheduled(
   env: Env,
   context: ExecutionContext,
 ): Promise<void> {
+  const known = controller.cron === MINUTE_CRON || controller.cron === SLOW_CRON;
   for (const job of scheduledJobs) {
+    if (known && job.cron !== controller.cron) continue;
     const startedAt = performance.now();
     try {
       await job.run(controller, env, context);
