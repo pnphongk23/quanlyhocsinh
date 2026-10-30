@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createSeed } from "../../test/fixtures/seed";
 import { buildTicketRows, ungradedHomeworkNotice } from "../../data/homework";
 import type { StoreState } from "../../data/types";
-import { buildTodayAgenda, groupBacklog } from "./todayModel";
+import { buildTodayAgenda, collapsedBacklogItems, groupBacklog } from "./todayModel";
 import { dateISO } from "../../shared/date";
 
 let state: StoreState;
@@ -165,5 +165,17 @@ describe("việc còn dở", () => {
     expect(groups.flatMap((g) => g.items)).toHaveLength(agenda.backlog.length);
     expect(groups.every((g) => g.items.every((i) => i.task.kind === g.kind))).toBe(true);
     expect(groups[0].kind).toBe("attendance");
+  });
+
+  it("thu gọn backlog lấy tối đa 2 việc theo ưu tiên điểm danh, phiếu, BTVN", () => {
+    const agenda = buildTodayAgenda(state, "2026-10-30");
+    const backlog = [
+      agenda.backlog.find((item) => item.task.kind === "homework")!,
+      agenda.backlog.find((item) => item.task.kind === "tickets")!,
+      agenda.backlog.find((item) => item.task.kind === "attendance")!,
+    ];
+    const collapsed = collapsedBacklogItems(backlog);
+    expect(collapsed).toHaveLength(2);
+    expect(collapsed.map((item) => item.task.kind)).toEqual(["attendance", "tickets"]);
   });
 });

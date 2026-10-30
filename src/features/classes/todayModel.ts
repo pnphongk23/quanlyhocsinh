@@ -45,8 +45,8 @@ export interface BacklogItem {
 
 /** Số ngày gần nhất (tính cả hôm nay lùi lại) xét "việc còn dở". */
 export const BACKLOG_DAYS = 14;
-/** Số dòng mỗi nhóm "Việc còn dở" hiện khi thu gọn. */
-export const BACKLOG_GROUP_VISIBLE = 2;
+/** Tổng số dòng "Việc còn dở" hiện khi thu gọn cả khối. */
+export const BACKLOG_COLLAPSED_VISIBLE = 2;
 
 const BACKLOG_GROUP_LABELS: Record<TodayTaskKind, string> = {
   attendance: "Điểm danh chưa xong",
@@ -65,6 +65,13 @@ export function groupBacklog(items: BacklogItem[]): BacklogGroup[] {
   return (Object.keys(BACKLOG_GROUP_LABELS) as TodayTaskKind[])
     .map((kind) => ({ kind, label: BACKLOG_GROUP_LABELS[kind], items: items.filter((item) => item.task.kind === kind) }))
     .filter((group) => group.items.length > 0);
+}
+
+/** Lấy các việc đầu theo thứ tự ưu tiên của nhóm để hiển thị ở khối thu gọn. */
+export function collapsedBacklogItems(items: BacklogItem[]): BacklogItem[] {
+  return groupBacklog(items)
+    .flatMap((group) => group.items)
+    .slice(0, BACKLOG_COLLAPSED_VISIBLE);
 }
 
 export interface TodayAgenda {

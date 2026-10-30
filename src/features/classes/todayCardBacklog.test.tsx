@@ -16,29 +16,37 @@ const agenda = (backlog: BacklogItem[]): TodayAgenda => ({ date: "2026-10-30", b
 const renderCard = (backlog: BacklogItem[]) => render(<MemoryRouter><TodayCard agenda={agenda(backlog)} /></MemoryRouter>);
 
 describe("Việc còn dở theo nhóm", () => {
-  it("gộp theo loại, mỗi nhóm mặc định tối đa 2 dòng và có Xem thêm (N)", () => {
-    renderCard([1, 2, 3, 4, 5].map((n) => item(n, "tickets")).concat([item(1, "attendance")]));
-    const tickets = screen.getByRole("region", { name: "Phiếu chưa gửi" });
-    expect(within(tickets).getAllByRole("link")).toHaveLength(2);
-    expect(screen.getByRole("region", { name: "Điểm danh chưa xong" })).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Điểm danh chưa xong" })).queryByRole("button")).toBeNull();
-    const more = within(tickets).getByRole("button", { name: "Xem thêm (3)" });
+  it("thu gọn hiện đúng 2 việc ưu tiên điểm danh; mở hiện đủ nhóm và Thu gọn quay lại", () => {
+    renderCard(
+      [1, 2, 3, 4, 5].map((n) => item(n, "tickets"))
+        .concat([item(1, "attendance")])
+        .concat([item(1, "homework"), item(2, "homework"), item(3, "homework")]),
+    );
+    const backlog = screen.getByRole("region", { name: "Việc còn dở" });
+    let links = within(backlog).getAllByRole("link");
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveTextContent("Điểm danh chưa xong");
+    expect(links[1]).toHaveTextContent("Phiếu chưa gửi");
+    expect(within(backlog).queryByRole("heading", { level: 4 })).toBeNull();
+
+    const more = within(backlog).getByRole("button", { name: "Xem thêm (7)" });
     expect(more).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(more);
+    links = within(backlog).getAllByRole("link");
+    expect(links).toHaveLength(9);
+    expect(within(backlog).getAllByRole("heading", { level: 4 })).toHaveLength(3);
+    const collapse = within(backlog).getByRole("button", { name: "Thu gọn" });
+    expect(collapse).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(collapse);
+    expect(within(backlog).getAllByRole("link")).toHaveLength(2);
+    expect(within(backlog).queryByRole("heading", { level: 4 })).toBeNull();
+    expect(within(backlog).getByRole("button", { name: "Xem thêm (7)" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("Xem thêm mở cả nhóm và Thu gọn đóng lại; nhóm khác không đổi", () => {
-    renderCard([1, 2, 3, 4].map((n) => item(n, "tickets")).concat([1, 2, 3].map((n) => item(n, "homework"))));
-    const tickets = screen.getByRole("region", { name: "Phiếu chưa gửi" });
-    const homework = screen.getByRole("region", { name: "BTVN chưa chấm" });
-    fireEvent.click(within(tickets).getByRole("button", { name: "Xem thêm (2)" }));
-    expect(within(tickets).getAllByRole("link")).toHaveLength(4);
-    expect(within(homework).getAllByRole("link")).toHaveLength(2);
-    fireEvent.click(within(tickets).getByRole("button", { name: "Thu gọn" }));
-    expect(within(tickets).getAllByRole("link")).toHaveLength(2);
-  });
-
-  it("nhóm chỉ có 2 việc không hiện Xem thêm", () => {
+  it("2 việc tổng cộng không hiện nút Xem thêm", () => {
     renderCard([item(1, "homework"), item(2, "homework")]);
-    expect(screen.queryByRole("button", { name: /Xem thêm/ })).toBeNull();
+    const backlog = screen.getByRole("region", { name: "Việc còn dở" });
+    expect(within(backlog).getAllByRole("link")).toHaveLength(2);
+    expect(within(backlog).queryByRole("button", { name: /Xem thêm/ })).toBeNull();
   });
 });

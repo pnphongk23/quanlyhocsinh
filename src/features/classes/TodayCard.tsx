@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatDayMonth, formatWeekdayDate, weekdayNames } from "../../shared/format";
 import { EmptyState, Pill } from "../../shared/ui";
-import { BACKLOG_GROUP_VISIBLE, groupBacklog } from "./todayModel";
-import type { BacklogGroup, TodayAgenda, TodayEntry } from "./todayModel";
+import { collapsedBacklogItems, groupBacklog } from "./todayModel";
+import type { BacklogItem, BacklogGroup, TodayAgenda, TodayEntry, TodayTaskKind } from "./todayModel";
 import s from "./today.module.css";
 
 const sessionHref = (entry: TodayEntry, tab?: string) =>
@@ -39,45 +39,48 @@ function Entry({ entry, showDate }: { entry: TodayEntry; showDate?: boolean }) {
   );
 }
 
-function BacklogGroupView({ group }: { group: BacklogGroup }) {
-  const [open, setOpen] = useState(false);
-  const hidden = group.items.length - BACKLOG_GROUP_VISIBLE;
-  const shown = open ? group.items : group.items.slice(0, BACKLOG_GROUP_VISIBLE);
+const BACKLOG_TASK_LABELS: Record<TodayTaskKind, string> = {
+  attendance: "Điểm danh chưa xong",
+  tickets: "Phiếu chưa gửi",
+  homework: "BTVN chưa chấm",
+};
+
+function BacklogRow({ item }: { item: BacklogItem }) {
   return (
-    <section className={s.group} aria-label={group.label}>
-      <div className={s.groupHead}>
-        <h4 className={s.groupTitle}>
-          {group.label} ({group.items.length})
-        </h4>
-        {hidden > 0 && (
-          <button type="button" className={s.groupToggle} aria-expanded={open} onClick={() => setOpen(!open)}>
-            {open ? "Thu gọn" : `Xem thêm (${hidden})`}
-          </button>
-        )}
-      </div>
-      <ul className={s.tasks}>
-        {shown.map((item) => (
-          <li key={item.session.id + item.task.kind}>
-            <Link
-              to={`/lop/${item.classId}/buoi-hoc/${item.session.id}?tab=${item.task.tab}`}
-              className={s.task + " " + s.backlogTask}
-            >
-              <span className={s.backlogText}>
-                {item.className} · {formatDayMonth(item.session.date)}
-              </span>
-              {item.task.students !== undefined && <span className={s.backlogCount}>{item.task.students} em</span>}
-              <span aria-hidden>›</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <li key={item.session.id + item.task.kind}>
+      <Link
+        to={`/lop/${item.classId}/buoi-hoc/${item.session.id}?tab=${item.task.tab}`}
+        className={s.task + " " + s.backlogTask}
+      >
+        <span className={s.backlogText}>
+          <span className={s.backlogTaskTitle}>{BACKLOG_TASK_LABELS[item.task.kind]}</span>
+          <span className={s.backlogSub}>{item.className} · {formatDayMonth(item.session.date)}</span>
+        </span>
+        {item.task.students !== undefined && <span className={s.backlogCount}>{item.task.students} em</span>}
+        <span aria-hidden>›</span>
+      </Link>
+    </li>
   );
 }
 
+function BacklogGroups({ groups }: { groups: BacklogGroup[] }) {
+  return groups.map((group) => (
+    <section className={s.group} aria-label={group.label} key={group.kind}>
+      <h4 className={s.groupTitle}>{group.label} ({group.items.length})</h4>
+      <ul className={s.tasks}>
+        {group.items.map((item) => <BacklogRow item={item} key={item.session.id + item.task.kind} />)}
+      </ul>
+    </section>
+  ));
+}
+
 export function TodayCard({ agenda }: { agenda: TodayAgenda }) {
+  const [backlogExpanded, setBacklogExpanded] = useState(false);
   const weekday = weekdayNames[new Date(agenda.date + "T12:00:00").getDay()];
   const hasTasks = agenda.entries.some((entry) => entry.tasks.length > 0);
+  const backlogGroups = groupBacklog(agenda.backlog);
+  const collapsedItems = collapsedBacklogItems(agenda.backlog);
+  const backlogRemaining = agenda.backlog.length - collapsedItems.length;
   return (
     <aside className={s.card} aria-label="Hôm nay">
       <h2 className={s.title}>
@@ -116,9 +119,23 @@ export function TodayCard({ agenda }: { agenda: TodayAgenda }) {
       {agenda.backlog.length > 0 && (
         <section className={s.backlog} aria-label="Việc còn dở">
           <h3 className={s.backlogTitle}>Việc còn dở</h3>
-          {groupBacklog(agenda.backlog).map((group) => (
-            <BacklogGroupView key={group.kind} group={group} />
-          ))}
+          {backlogExpanded ? (
+            <BacklogGroups groups={backlogGroups} />
+          ) : (
+            <ul className={s.tasks}>
+              {collapsedItems.map((item) => <BacklogRow item={item} key={item.session.id + item.task.kind} />)}
+            </ul>
+          )}
+          {(backlogExpanded || backlogRemaining > 0) && (
+            <button
+              type="button"
+              className={s.backlogToggle}
+              aria-expanded={backlogExpanded}
+              onClick={() => setBacklogExpanded(!backlogExpanded)}
+            >
+              {backlogExpanded ? "Thu gọn" : `Xem thêm (${backlogRemaining})`}
+            </button>
+          )}
         </section>
       )}
     </aside>
