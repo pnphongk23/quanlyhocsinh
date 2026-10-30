@@ -113,3 +113,10 @@ Concerns/Blockers: 3 chỗ BE lệch hợp đồng (403 account_disabled, push 4
 - Lỗi tràn: ở 375/390 nút "Gửi phiếu cả lớp" bị cắt mép phải (nút thứ 3 right=558 > viewport). Sau khi ẩn vẫn còn tràn (2 nút right=399). Sửa `.footer` (`flex-wrap: wrap`, nút `flex: 1 1 auto; min-width: 0`): 2 nút xếp hàng dọc vừa khung ở 375/390/430, không nút nào bị cắt; khi không có quyền gửi chỉ còn nút "Gán tất cả mặc định" đủ rộng. Desktop không đổi (khối `@media` riêng).
 - Commit mvp-web `41df522`. tsc sạch, vitest 819 qua/4 bỏ qua, build OK. Ảnh trước/sau: `plans/20261021-mvp/web/notes-import-hidden/comments-{before,after,live-after}-{375,390,430}.png`.
 - Deployment mới (Production): `9ae26a9d-0980-4e70-807b-c98bd73c5924`. Rollback: `0af926de-3829-400d-8640-54dc66719086`, trước đó `63de3ecc-1579-453e-8084-9a990d090877`.
+
+## Hồ sơ Cài đặt khi nhân sự chưa có tên (deploy staging)
+
+- Commit mvp-web `f2c354e`: tiêu đề hồ sơ không còn "Chưa đăng nhập" khi đã có phiên (dùng "Chưa đặt tên"); avatar dùng `initialsOf`, không có tên thì hiện icon người (không "GV"); nhân sự không phải Admin thấy hàng tên chỉ xem kèm ghi chú "Admin đặt tên cho bạn".
+- Kiểm chứng: tsc OK, vitest 822 passed / 4 skipped, build OK. Ảnh 390 trước/sau (giả lập display_name rỗng): `plans/20261021-mvp/web/settings-empty-name/`.
+- Deployment: `22da9b3a-ce2b-4716-905c-8d31fe337334` (qlh-staging-web, main). Rollback: `9ae26a9d-0980-4e70-807b-c98bd73c5924`.
+- Cài đặt hiện chưa có đường tự sửa tên cho bất kỳ vai trò nào (chỉ xem).
