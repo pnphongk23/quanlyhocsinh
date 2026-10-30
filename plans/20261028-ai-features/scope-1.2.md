@@ -14,7 +14,7 @@ Trạng thái: ĐÃ DUYỆT 2026-10-29 (người dùng); cùng ngày gộp thẳ
 
 ### A. Nhận xét theo tiêu chí
 1. Tab Nhận xét có segmented "Theo học sinh / Theo tiêu chí" (web và iOS). Không thêm tab. Áp cho buổi đang mở.
-2. Chế độ "Theo tiêu chí": 5 nhóm tiêu chí, mỗi nhóm là lưới chip tên các học sinh **đang học vào ngày buổi** (ngày vào lớp ≤ ngày buổi ≤ ngày rời lớp). Chạm chip = em đó chưa đạt, chạm lại = đạt. Tiêu đề nhóm ghi số em chưa đạt. Lớp chưa có học sinh: `EmptyState`.
+2. Chế độ "Theo tiêu chí": 5 nhóm tiêu chí, mỗi nhóm là lưới chip tên các học sinh **đang học vào ngày buổi** (ngày vào lớp ≤ ngày buổi ≤ ngày rời lớp). Chip được chọn = em đó **đạt** (đảo hiển thị 2026-10-30, dữ liệu không đổi); mặc định cả lớp chọn sẵn, chạm bỏ chọn = chưa đạt, chạm lại = đạt; chạm chip không mở popup đánh giá sao trên mobile. Tiêu đề nhóm ghi số em chưa đạt. Lớp chưa có học sinh: `EmptyState`.
 3. Chạm chip tích/bỏ tích tiêu chí trên phiếu của em, sinh lại câu tự sinh theo quy tắc spec mục 4, giữ phần gõ thêm. Em chưa có phiếu: tạo phiếu mặc định (theo quy tắc mục B.7) rồi bỏ tích.
 4. Nhóm "Hoàn thành BTVN" hiện theo kết quả chấm, nhãn "Theo chấm BTVN"; chạm = đổi tay (gửi cờ đổi tay) và giữ lựa chọn tay.
 5. Ca biên của phiếu:
@@ -87,7 +87,7 @@ Trạng thái: ĐÃ DUYỆT 2026-10-29 (người dùng); cùng ngày gộp thẳ
 - Bộ ca kiểm thử vàng chỉ dùng dữ liệu giả.
 
 ## Mặc định (đề xuất, chờ người dùng duyệt)
-- Chip "chưa đạt" dùng selected chuẩn (`--state-selected-bg`, không viền); nhãn nhóm nói rõ "chạm để đánh dấu chưa đạt". Cần trạng thái riêng thì thêm token vào `design/tokens/` trước khi dùng; không ghi cứng màu, cỡ, khoảng cách.
+- Chip "đạt" (đang chọn) dùng selected chuẩn (`--state-selected-bg`, không viền); nhãn nhóm nói rõ "chạm để bỏ chọn nếu chưa đạt". Cần trạng thái riêng thì thêm token vào `design/tokens/` trước khi dùng; không ghi cứng màu, cỡ, khoảng cách.
 - Câu khen vào phần gõ thêm chỉ khi giáo viên tick.
 - Vượt 20 em chỉ cảnh báo.
 - Làm ngay trong bản đầu (không chờ 1.0 được duyệt). Thứ tự: D (quyền riêng gửi, vì đụng backend) và A trước, B sau, C song song.

@@ -64,3 +64,7 @@ Quy tắc:
 - **Lỗi**: giữ dữ liệu người dùng đã nhập, giữ editor mở, nút về default để thử lại; không tự đóng.
 - **Chờ đồng bộ**: dữ liệu đã lưu trên máy nhưng chưa đẩy lên: `SaveStatus` hiện pill "Chờ đồng bộ" (`--state-pending-*`) khi kéo dài hơn 1 s; khi offline hiện "Đã lưu trên máy · sẽ đồng bộ khi có mạng".
 - **Empty duy nhất có Mít**: chỉ `EmptyState` (Mít + tiêu đề + mô tả + hành động tuỳ chọn). Khung nhỏ/lọc rỗng dùng `size="compact"` (`--empty-mascot-compact`); mặc định `--empty-mascot`. Không tự viết empty khác, không dùng Mít ở chỗ khác ngoài empty/trạng thái chờ và khung sao của phiếu nhận xét (dáng `sao-0`…`sao-5` theo số sao, cỡ `--empty-mascot-compact`).
+
+## 7. Danh sách gộp theo nhóm
+- Mục gộp theo loại (vd. "Việc còn dở" ở trang Lớp): mỗi nhóm hiện tối đa 2 dòng; còn nữa thì có nút chữ "Xem thêm (N)" để mở rộng và "Thu gọn" để gập lại; mặc định thu gọn. Mở/gập dùng quy tắc expand ở mục 4; vùng bấm theo mục 2.
+- "Gán tất cả mặc định" dùng kiểu **Nút phụ** (mục 6): nền `--color-primary-soft`, chữ `--color-primary-ink`.
