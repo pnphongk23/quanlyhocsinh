@@ -12,3 +12,6 @@ Workspace: QA iOS (lớp QA-iOS-C, QA-iOS-D, QA-iOS-E). Không ghi SĐT hay mậ
 - Báo cáo tháng 10/2026 của QA-iOS-C-HS1 đã phát hành (nhận xét chung "QA bao cao thang").
 - Một đợt báo cáo tháng ở dạng nháp cho QA-iOS-D (chưa phát hành).
 - Các bài kiểm tra QA-KT1 và QA-KT8 ở QA-iOS-C (tạo ở lượt đầu); QA-KT-Xoa đã xoá.
+
+## Quyết định
+- 2026-10-30: người dùng chốt giữ tài khoản "PH QA khong con", dùng làm tài khoản QA cho ca phụ huynh chưa có con. Không tạo thêm tài khoản mới.
