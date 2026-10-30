@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   groupEntriesByDate,
@@ -19,6 +19,9 @@ import {
 import { EmptyState, Icon, NoAccess, PageHeader, Segmented } from "../../shared/ui";
 import type { PillTone } from "../../shared/ui";
 import { useOnline } from "../../shared/hooks/useOnline";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { refreshNow } from "../../data/sync";
+import { PullToRefresh, RefreshButton } from "../../shared/ui/PullToRefresh";
 import {
   scheduleState,
   trimMonthWeeks,
@@ -151,6 +154,12 @@ export default function SchedulePage() {
   const today = todayISO();
   const online = useOnline();
   const access = useAccess();
+  const refreshList = useCallback(async () => {
+    const result = await refreshNow();
+    if (result.status === "ok") setEntries(getEntries());
+    return result;
+  }, []);
+  const refresh = usePullToRefresh(refreshList);
   const [view, setView] = useState<View>("day");
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedClass, setSelectedClass] = useState("all");
@@ -270,8 +279,9 @@ export default function SchedulePage() {
   );
 
   return (
-    <div className={s.page}>
-      <PageHeader title="Lịch" />
+    <div ref={refresh.containerRef} className={s.page}>
+      <PullToRefresh controller={refresh} />
+      <PageHeader title="Lịch" actions={<RefreshButton controller={refresh} />} />
 
       <div className={s.viewSwitch}>
         <Segmented

@@ -18,6 +18,8 @@ import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
 import { todayISO } from "../../shared/date";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { refreshNow } from "../../data/sync";
 import {
   Button,
   EmptyState,
@@ -30,6 +32,7 @@ import {
   Sheet,
   UnsavedChangesDialog,
 } from "../../shared/ui";
+import { PullToRefresh } from "../../shared/ui/PullToRefresh";
 import AttendancePanel from "../attendance/AttendancePanel";
 import CommentsPanel from "../comments/CommentsPanel";
 import HomeworkPanel from "../homework/HomeworkPanel";
@@ -63,6 +66,7 @@ export function sessionTabOf(value: string | null | undefined): SessionTab {
 
 export default function SessionDetailPage() {
   useStore();
+  const refresh = usePullToRefresh(refreshNow);
   const desktop = useIsDesktop();
   const { classId = "", sessionId = "" } = useParams();
   const navigate = useNavigate();
@@ -206,6 +210,7 @@ export default function SessionDetailPage() {
             setConfirmCancel(true);
           }}
           onEdit={manualPlanned ? () => setEditOpen(true) : undefined}
+          refreshController={refresh}
         />
         {cancelDialog}
         {editModal}
@@ -214,7 +219,8 @@ export default function SessionDetailPage() {
     );
 
   return (
-    <section className={s.detail}>
+    <section ref={refresh.containerRef} className={s.detail}>
+      <PullToRefresh controller={refresh} />
       <header className={s.header}>
         <div className={s.headerRow}>
           <Link

@@ -11,9 +11,11 @@ import {
 import { useAccess, visibleClassIds } from "../../data/repositories/access";
 import { getSession } from "../../data/auth/session";
 import { getStore, useStore } from "../../data/store";
+import { refreshNow } from "../../data/sync";
 import { greetingFor, initialsOf } from "../../shared/personName";
 import type { Class } from "../../data/types";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 import { formatDayMonth, todayISO, weekdayNames } from "../../shared/format";
 import {
   Chip,
@@ -24,6 +26,7 @@ import {
   NoAccess,
   PageHeader,
 } from "../../shared/ui";
+import { PullToRefresh, RefreshButton } from "../../shared/ui/PullToRefresh";
 import { TodayCard } from "./TodayCard";
 import { buildTodayAgenda, nextSessionOf } from "./todayModel";
 import { normalizeWeekdays } from "../../shared/weekdays";
@@ -86,6 +89,7 @@ function ClassCard({
 
 export default function ClassListPage() {
   useStore();
+  const refresh = usePullToRefresh(refreshNow);
   const navigate = useNavigate();
   const desktop = useIsDesktop();
   const access = useAccess();
@@ -111,14 +115,15 @@ export default function ClassListPage() {
     : classes;
 
   return (
-    <section className={s.page}>
+    <section ref={refresh.containerRef} className={s.page}>
+      <PullToRefresh controller={refresh} />
       <PageHeader
         eyebrow={
           desktop ? `Học kỳ này · ${activeCount} lớp đang mở` : greetingFor(userName)
         }
         title={desktop ? "Tất cả lớp" : "Lớp của tôi"}
         actions={
-          desktop ? undefined : (
+          desktop ? <RefreshButton controller={refresh} /> : (
             <Link to="/cai-dat" className={s.avatar} aria-label="Cài đặt">
               {initials || <Icon name="settings" size={22} />}
             </Link>

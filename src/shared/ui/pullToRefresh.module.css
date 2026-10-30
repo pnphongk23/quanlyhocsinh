@@ -1,0 +1,93 @@
+.indicator {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  justify-content: center;
+  height: 0;
+  pointer-events: none;
+}
+
+.indicator > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  max-width: calc(100% - var(--page-x) * 2);
+  min-height: var(--tap);
+  padding: 0 var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--text-sm);
+  transform: translateY(calc(var(--pull-distance) - var(--tap)));
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.indicator[data-state="idle"] > span {
+  visibility: hidden;
+}
+
+.indicator[aria-hidden="true"] { display: none; }
+
+.indicator[data-state="loading"] > span,
+.indicator[data-state="ok"] > span,
+.indicator[data-state="offline"] > span,
+.indicator[data-state="error"] > span {
+  transform: translateY(0);
+}
+
+.indicator[data-state="offline"] > span,
+.indicator[data-state="error"] > span {
+  color: var(--state-error-fg);
+  background: var(--state-error-bg);
+}
+
+.button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  min-width: var(--button-min-w-desktop);
+  min-height: var(--tap-desktop);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-primary-ink);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--state-focus-ring);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+  transition: transform var(--dur-press) var(--ease-standard);
+}
+
+.button:disabled {
+  opacity: var(--state-disabled-opacity);
+  cursor: default;
+}
+
+@media (min-width: 1024px) {
+  .button { display: inline-flex; }
+  .indicator {
+    position: static;
+    height: auto;
+    justify-content: flex-end;
+  }
+  .indicator > span {
+    min-height: var(--tap-desktop);
+    box-shadow: none;
+    transform: none;
+  }
+}

@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import { getChildOverview } from "../../data/repositories/guardian";
 import { useAccess } from "../../data/repositories/access";
+import { refreshNow } from "../../data/sync";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 import { Card, PageHeader } from "../../shared/ui";
+import { PullToRefresh, RefreshButton } from "../../shared/ui/PullToRefresh";
 import { motionClass } from "../../shared/motion";
 import { todayISO } from "../../shared/date";
 import { useGuardianContext } from "./guardianContext";
@@ -31,6 +34,7 @@ const UPCOMING_LIMIT = 3;
  */
 export default function GuardianClassPage() {
   const access = useAccess();
+  const refresh = usePullToRefresh(refreshNow);
   const { child, error } = useGuardianContext();
   if (error) {
     return (
@@ -57,8 +61,9 @@ export default function GuardianClassPage() {
     .slice(0, UPCOMING_LIMIT);
 
   return (
-    <div className={g.page}>
-      <PageHeader eyebrow={child.student.name} title={info.name} />
+    <div ref={refresh.containerRef} className={g.page}>
+      <PullToRefresh controller={refresh} />
+      <PageHeader eyebrow={child.student.name} title={info.name} actions={<RefreshButton controller={refresh} />} />
       <div className={g.classLayout}>
         <aside className={g.classAside}>
           <p className={g.classMeta}>

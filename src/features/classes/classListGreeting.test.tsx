@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { MeResponse } from "../../data/api/types";
 
-vi.mock("../../data/sync", () => ({ api: { request: vi.fn() }, syncNow: vi.fn(), scheduleSync: vi.fn(), clearUserCache: vi.fn(async () => undefined) }));
+vi.mock("../../data/sync", () => ({ api: { request: vi.fn() }, syncNow: vi.fn(), refreshNow: vi.fn(async () => ({ status: "ok" })), scheduleSync: vi.fn(), clearUserCache: vi.fn(async () => undefined) }));
 
 import ClassListPage from "./ClassListPage";
 import { activateSession, clearSession } from "../../data/auth/session";

@@ -5,6 +5,8 @@ import ClassDesktopHeader from "./ClassDesktopHeader";
 import AttendanceDesktop from "../attendance/AttendanceDesktop";
 import CommentsDesktop from "../comments/CommentsDesktop";
 import HomeworkDesktop from "../homework/HomeworkDesktop";
+import { RefreshButton } from "../../shared/ui/PullToRefresh";
+import type { PullToRefreshController } from "../../shared/hooks/usePullToRefresh";
 import { SESSION_TABS, type SessionTab } from "./SessionDetailPage";
 import s from "./desktop.module.css";
 
@@ -14,8 +16,8 @@ import s from "./desktop.module.css";
  */
 export default function SessionDetailDesktop({
   classId,
-    klass,
-    session,
+  klass,
+  session,
   tab,
   onTab,
   canWrite,
@@ -26,10 +28,11 @@ export default function SessionDetailDesktop({
   homeworkSaveRef,
   onCancel,
   onEdit,
+  refreshController,
 }: {
   classId: string;
-    klass: Class;
-    session: Session;
+  klass: Class;
+  session: Session;
   tab: SessionTab;
   onTab: (tab: SessionTab) => void;
   canWrite: boolean;
@@ -39,6 +42,7 @@ export default function SessionDetailDesktop({
   onHomeworkDirtyChange?: (dirty: boolean) => void;
   homeworkSaveRef?: MutableRefObject<(() => unknown) | null>;
   onCancel: () => void;
+  refreshController?: PullToRefreshController;
   /** Chỉ có với buổi lẻ đang chờ học. */
   onEdit?: () => void;
 }) {
@@ -72,6 +76,7 @@ export default function SessionDetailDesktop({
         classId={classId}
         klass={klass}
         session={session}
+        actions={refreshController ? <RefreshButton controller={refreshController} /> : undefined}
         extraMenuItems={
           canWrite && !cancelled && session.status === "planned"
             ? [
