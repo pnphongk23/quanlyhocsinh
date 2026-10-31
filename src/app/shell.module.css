@@ -7,6 +7,13 @@
 /* Staff shell follows the desktop sidebar and mobile tab bar in the prototype. */
 .staffDesktop { min-height: 100dvh; overflow-x: clip; padding-bottom: var(--tabbar-total); background: var(--color-bg); }
 .staffDetail { padding-bottom: 0; --tabbar-total: var(--safe-bottom); --sticky-bottom: var(--safe-bottom); --fab-bottom: calc(var(--safe-bottom) + var(--fab-inset)); }
+@media (max-width: 1023px) {
+  :global(:root[data-staff-detail]) {
+    --tabbar-total: var(--safe-bottom);
+    --sticky-bottom: var(--safe-bottom);
+    --fab-bottom: calc(var(--safe-bottom) + var(--fab-inset));
+  }
+}
 .staffSkip { position: fixed; top: -100px; left: var(--space-8); z-index: var(--z-toast); padding: var(--space-12); border-radius: var(--radius-button); background: var(--color-surface); color: var(--color-text); }
 .staffSkip:focus { top: var(--space-8); }
 .staffContent { display: flex; min-width: 0; flex-direction: column; gap: var(--page-gap); padding: var(--page-top) var(--page-x) calc(var(--page-bottom) + var(--fab-pad)); }

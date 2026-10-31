@@ -33,10 +33,15 @@ export function Component() {
   const store = useStore();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [classMenuOpen, setClassMenuOpen] = useState(false);
-  const classPickerRef = useRef<HTMLDivElement>(null);
-  useDismiss(classMenuOpen, () => setClassMenuOpen(false), classPickerRef);
-  const session = getSession();
+    const [classMenuOpen, setClassMenuOpen] = useState(false);
+    const classPickerRef = useRef<HTMLDivElement>(null);
+    useDismiss(classMenuOpen, () => setClassMenuOpen(false), classPickerRef);
+    useEffect(() => {
+      const root = document.documentElement;
+      root.toggleAttribute("data-staff-detail", isClassChildPath(pathname));
+      return () => root.removeAttribute("data-staff-detail");
+    }, [pathname]);
+    const session = getSession();
   const membership = session?.me.memberships.find(
     (item) => item.id === session.activeMembershipId && item.status === "active",
   );
