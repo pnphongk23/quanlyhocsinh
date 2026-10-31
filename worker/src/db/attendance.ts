@@ -13,17 +13,22 @@ export async function assertSessionAttendanceComplete(
   db: D1Database,
   workspaceId: string,
   sessionId: string,
+  memo?: Map<string, number>,
 ): Promise<void> {
-  const row = await db.prepare(`SELECT COUNT(*) AS missing_count
-    FROM class_sessions cs
-    JOIN students s ON s.workspace_id=cs.workspace_id AND s.class_id=cs.class_id
-      AND s.enrolled_at<=cs.date AND (s.left_at IS NULL OR s.left_at>=cs.date)
-    LEFT JOIN attendance a ON a.workspace_id=s.workspace_id AND a.session_id=cs.id AND a.student_id=s.id
-      AND a.status IN ('present','late','absent')
-    WHERE cs.workspace_id=? AND cs.id=? AND a.student_id IS NULL`)
-    .bind(workspaceId, sessionId)
-    .first<{ missing_count: number }>();
-  const missingCount = row?.missing_count ?? 0;
+  let missingCount = memo?.get(sessionId);
+  if (missingCount === undefined) {
+    const row = await db.prepare(`SELECT COUNT(*) AS missing_count
+      FROM class_sessions cs
+      JOIN students s ON s.workspace_id=cs.workspace_id AND s.class_id=cs.class_id
+        AND s.status='active' AND s.enrolled_at<=cs.date AND (s.left_at IS NULL OR s.left_at>=cs.date)
+      LEFT JOIN attendance a ON a.workspace_id=s.workspace_id AND a.session_id=cs.id AND a.student_id=s.id
+        AND a.status IN ('present','late','absent')
+      WHERE cs.workspace_id=? AND cs.id=? AND a.student_id IS NULL`)
+      .bind(workspaceId, sessionId)
+      .first<{ missing_count: number }>();
+    missingCount = row?.missing_count ?? 0;
+    memo?.set(sessionId, missingCount);
+  }
   if (missingCount > 0) {
     throw new ApiError(409, 'attendance_incomplete', 'Attendance is incomplete.', {
       missing_count: missingCount,

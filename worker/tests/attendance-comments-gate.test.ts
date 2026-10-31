@@ -30,6 +30,15 @@ async function setup() {
 describe('attendance gate for session comments', () => {
   it('rejects slip.set and slip.send while any enrolled student has no saved attendance', async () => {
     const f = await setup();
+    const now = new Date().toISOString();
+    await db.prepare(`INSERT INTO session_comments
+      (workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,hw_manual,status,sent_at,version,created_at,updated_at,updated_by)
+      VALUES(?,?,?,?,1,5,1,'Existing draft','unchanged',0,'draft',NULL,1,?,?,?)`)
+      .bind(f.owner.workspaceId,f.classId,f.sessionId,f.students[0],now,now,f.owner.userId).run();
+    const beforeSlip = await db.prepare('SELECT * FROM session_comments WHERE session_id=? AND student_id=?')
+      .bind(f.sessionId,f.students[0]).first();
+    const beforeNotifications = await db.prepare('SELECT COUNT(*) AS n FROM notifications').first<{n:number}>();
+    const beforeDeliveries = await db.prepare('SELECT COUNT(*) AS n FROM push_deliveries').first<{n:number}>();
     const set = f.slip(f.students[0]!);
     const send = command('slip.send', { session_id: f.sessionId, student_ids: [f.students[0]] });
     const result = await f.push([set, send]);
@@ -39,6 +48,10 @@ describe('attendance gate for session comments', () => {
       { code: 'attendance_incomplete', message: 'Attendance is incomplete.', request_id: 'attendance-gate-test', details: { missing_count: 2 } },
     ]);
     expect(result.body.results.map((item: any) => item.status)).toEqual(['rejected', 'rejected']);
+    expect(await db.prepare('SELECT * FROM session_comments WHERE session_id=? AND student_id=?')
+      .bind(f.sessionId,f.students[0]).first()).toEqual(beforeSlip);
+    expect(await db.prepare('SELECT COUNT(*) AS n FROM notifications').first()).toEqual(beforeNotifications);
+    expect(await db.prepare('SELECT COUNT(*) AS n FROM push_deliveries').first()).toEqual(beforeDeliveries);
   });
 
   it('accepts a slip after attendance commands earlier in the same push', async () => {
@@ -146,5 +159,80 @@ describe('attendance gate for session comments', () => {
     });
     expect(await db.prepare('SELECT status FROM session_comments WHERE session_id=? AND student_id=?')
       .bind(f.sessionId, f.students[0]).first()).toEqual({ status: 'draft' });
+  });
+
+  it('applies an all-absent class send with no sent slips, including an already-sent absent slip', async () => {
+    const f = await setup();
+    await f.markAll('absent');
+    await f.push([f.slip(f.students[0]!)]);
+    await f.push([command('slip.send', { session_id: f.sessionId, student_ids: [f.students[0]] })]);
+    const before = await db.prepare('SELECT status,version FROM session_comments WHERE session_id=? AND student_id=?')
+      .bind(f.sessionId,f.students[0]).first();
+
+    const result = await f.push([command('slip.send', { session_id: f.sessionId, student_ids: f.students })]);
+
+    expect(result.body.results[0]).toMatchObject({ status: 'applied', sent: [] });
+    expect((result.body.results[0].skipped as any[]).every((item) => item.reason === 'absent')).toBe(true);
+    expect(await db.prepare('SELECT status,version FROM session_comments WHERE session_id=? AND student_id=?')
+      .bind(f.sessionId,f.students[0]).first()).toEqual(before);
+  });
+
+  it('does not count students outside their enrollment period or deleted students', async () => {
+    const f = await setup();
+    const beforeEnrollment = await insertStudent(f.owner.workspaceId,f.classId,'Not enrolled yet',null,f.owner.userId);
+    const leftStudent = f.students[1]!;
+    const deleted = await insertStudent(f.owner.workspaceId,f.classId,'Deleted',null,f.owner.userId);
+    const dayBefore = new Date(`${today()}T00:00:00Z`);
+    dayBefore.setUTCDate(dayBefore.getUTCDate()-1);
+    const tomorrow = new Date(`${today()}T00:00:00Z`);
+    tomorrow.setUTCDate(tomorrow.getUTCDate()+1);
+    const format = (d:Date) => d.toISOString().slice(0,10);
+    await db.prepare("UPDATE students SET enrolled_at=? WHERE id=?").bind(format(tomorrow),beforeEnrollment).run();
+    await db.prepare("UPDATE students SET left_at=?,status='left' WHERE id=?").bind(format(dayBefore),leftStudent).run();
+    await db.prepare('DELETE FROM students WHERE id=?').bind(deleted).run();
+    await f.push([f.attendance(f.students[0]!, 'present')]);
+
+    const result = await f.push([f.slip(f.students[0]!)]);
+
+    expect(result.body.results[0].status).toBe('applied');
+  });
+
+  it('memoizes repeated slip checks and invalidates the session after attendance is applied', async () => {
+    const f = await setup();
+    await f.markAll();
+    const multiple = await f.push([f.slip(f.students[0]!),f.slip(f.students[1]!)]);
+    expect(multiple.body.results.map((item:any) => item.status)).toEqual(['applied','applied']);
+
+    await db.prepare('DELETE FROM attendance WHERE session_id=? AND student_id=?').bind(f.sessionId,f.students[1]).run();
+    const sequence = await f.push([
+      f.slip(f.students[0]!,1),
+      f.attendance(f.students[1]!, 'late'),
+      f.slip(f.students[1]!),
+    ]);
+    expect(sequence.body.results.map((item:any) => item.status)).toEqual(['rejected','applied','applied']);
+    expect(sequence.body.results[0].error).toMatchObject({code:'attendance_incomplete',details:{missing_count:1}});
+  });
+
+  it('keeps cancelled-session behavior and still gates a makeup session', async () => {
+    const f = await setup();
+    const cancelledDate = new Date(`${today()}T00:00:00Z`);
+    cancelledDate.setUTCDate(cancelledDate.getUTCDate()+1);
+    const cancelledId = await insertSession(f.owner.workspaceId,f.classId,cancelledDate.toISOString().slice(0,10),f.owner.userId,'cancelled');
+    const cancelledSend = await f.push([command('slip.send',{session_id:cancelledId,student_ids:[f.students[0]]})]);
+    expect(cancelledSend.body.results[0]).toMatchObject({status:'applied',sent:[],skipped:[{student_id:f.students[0],reason:'not_attended'}]});
+
+    const cancelledSlip = await f.push([command('slip.set',{
+      session_id:cancelledId,student_id:f.students[0],criteria:31,comment:'Existing behavior.',note:'',
+    })]);
+    expect(cancelledSlip.body.results[0].status).toBe('applied');
+
+    const makeupDate = new Date(`${today()}T00:00:00Z`);
+    makeupDate.setUTCDate(makeupDate.getUTCDate()+2);
+    const makeupId = await insertSession(f.owner.workspaceId,f.classId,makeupDate.toISOString().slice(0,10),f.owner.userId);
+    await db.prepare('UPDATE class_sessions SET is_makeup=1 WHERE id=?').bind(makeupId).run();
+    const makeupSlip = await f.push([command('slip.set',{
+      session_id:makeupId,student_id:f.students[0],criteria:31,comment:'Makeup session.',note:'',
+    })]);
+    expect(makeupSlip.body.results[0].error).toMatchObject({code:'attendance_incomplete',details:{missing_count:2}});
   });
 });

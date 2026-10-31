@@ -4,7 +4,7 @@ import { assertStaffWrite, requireAccess, mapTriggerError } from './authz';
 import { assertSessionAttendanceComplete } from './attendance';
 
 type Row = Record<string, any>;
-type SyncIdentity = Identity & { syncState?: Map<string,Row|null>; timezone?: string };
+type SyncIdentity = Identity & { syncState?: Map<string,Row|null>; attendanceCompleteness?: Map<string,number>; timezone?: string };
 type SQL = { sql: string; args: any[] };
 export interface Command { id: string; type: string; base_version: number; created_at: string; payload: Row }
 type Result = { id: string; status: string; [key: string]: any };
@@ -126,6 +126,8 @@ async function stateRow(db:D1Database,i:SyncIdentity,table:string,key:string,sec
 }
 function evict(i:SyncIdentity,c:Command):void {
   const prefix=c.type.split('.')[0];
+  if (prefix==='attendance' && typeof c.payload.session_id==='string') i.attendanceCompleteness?.delete(c.payload.session_id);
+  if (prefix==='student' || prefix==='class') i.attendanceCompleteness?.clear();
   const tables=prefix==='attendance' ? ['attendance','class_sessions']
     : prefix==='score' ? ['scores'] : prefix==='test' ? ['tests','scores']
     : prefix==='slip' ? ['session_comments'] : prefix==='homework' ? ['homework_sections','homework_grades']
@@ -226,7 +228,7 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
   const def=cells[entity]!,p=c.payload,now=new Date().toISOString();
   const parent=await resource(db,i,def.parent,p[def.key],groups[entity]!);
   const enrolled=await student(db,i,p.student_id,parent,entity==='attendance'||entity==='slip' ? parent.date : undefined);
-  if (entity==='slip') await assertSessionAttendanceComplete(db,i.workspaceId,parent.id);
+  if (entity==='slip' && parent.status!=='cancelled') await assertSessionAttendanceComplete(db,i.workspaceId,parent.id,i.attendanceCompleteness);
   if (entity==='attendance') {
     if (parent.status==='cancelled') throw conflict('session_cancelled');
     const timezone=i.timezone ?? (await one(db,'SELECT timezone FROM workspaces WHERE id=?',i.workspaceId))!.timezone;
@@ -276,7 +278,7 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
     return {result,first,rest};
 }
 export async function push(db:D1Database,i:SyncIdentity,commands:Command[],requestId:string) {
-  i={...i};
+  i={...i,attendanceCompleteness:new Map()};
   await initialState(db,i,commands);
   const results:Result[]=[];
   for (const c of commands) {
@@ -355,7 +357,7 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
   }
       if (c.type==='slip.send') {
         const session=await resource(db,i,'class_sessions',p.session_id,'comments_reports');
-        await assertSessionAttendanceComplete(db,i.workspaceId,session.id);
+        if (session.status!=='cancelled') await assertSessionAttendanceComplete(db,i.workspaceId,session.id,i.attendanceCompleteness);
         if (!Array.isArray(p.student_ids) || p.student_ids.length>50) throw validationError(undefined,'invalid_student_ids');
         const selected=new Set<unknown>(p.student_ids);
         const classBatch=selected.size>1;
