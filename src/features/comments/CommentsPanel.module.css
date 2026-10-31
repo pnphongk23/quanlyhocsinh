@@ -46,6 +46,8 @@
 
 .attendanceGate p { margin: var(--space-2) 0 0; }
 .attendanceGate strong { font-weight: var(--weight-semibold); }
+/* Nhãn nút thẳng lề chữ tiêu đề: bù đệm ngang mặc định của nút (--space-16), không thụt vào. */
+.attendanceGate > button { margin-inline-start: calc(-1 * var(--space-16)); }
 .absentHeading { padding: var(--space-8) 0; color: var(--color-muted); font-size: var(--text-md); font-weight: var(--weight-semibold); }
 .ticket:disabled { opacity: var(--state-disabled-opacity); cursor: default; }
 .absentActions { padding: 0 var(--space-8) var(--space-8); }
