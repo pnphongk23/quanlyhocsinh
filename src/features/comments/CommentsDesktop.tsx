@@ -20,7 +20,7 @@ import type { StoreState, Student } from "../../data/types";
 import { useOnline } from "../../shared/hooks/useOnline";
 import { formatDayMonth } from "../../shared/format";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { Button, EmptyState, Pill } from "../../shared/ui";
+import { Button, EmptyState, InfoNotice, Pill } from "../../shared/ui";
 import AssignDefaultsAction from "./AssignDefaultsAction";
 import SendTicketsDialog from "./SendTicketsDialog";
 import TicketEditor, { StarRow, desktopTicketLabel } from "./TicketEditor";
@@ -224,7 +224,13 @@ export default function CommentsDesktop({
 
         <CriteriaModeToggle mode={mode} onChange={setMode} />
 
-        {!attendance.complete && <div className={s.attendanceGate} role="status"><div><strong>Điểm danh xong để nhận xét</strong><p>Còn {attendance.missing} em chưa điểm danh.</p></div><Button size="sm" variant="secondary" onClick={() => setSearchParams(new URLSearchParams({ tab: "diem-danh" }))}>Đến Điểm danh</Button></div>}
+        {!attendance.complete && (
+          <InfoNotice
+            title="Điểm danh xong để nhận xét"
+            description={`Còn ${attendance.missing} em chưa điểm danh.`}
+            action={<Button size="sm" variant="secondary" onClick={() => setSearchParams(new URLSearchParams({ tab: "diem-danh" }))}>Đến Điểm danh</Button>}
+          />
+        )}
 
         <div className={mode === "criteria" ? `${d.split} ${s.criteriaSplit}` : d.split}>
           {mode === "criteria" ? <section className={s.listColumn}>

@@ -19,7 +19,7 @@ Màu thương hiệu, bo góc và chuyển động giữ nguyên. Trạng thái 
 | `--shadow-sm/menu/frame/fab`, `--focus-ring` | Bóng ghi cứng |
 | `--z-raised/sticky/tabbar/fab/menu/overlay/toast` | Thay z-index tự do 1…1000 |
 | `--tap-desktop`, `--control-h`, `--button-h-*`, `--button-min-w-desktop` | Kích thước nút/ô nhập |
-| `--safe-*`, `--tabbar-total` | Safe-area PWA; `--tabbar-total` = 0 trên desktop |
+| `--safe-*`, `--tabbar-total`, `--sticky-bottom`, `--sticky-clearance` | Safe-area PWA; `--tabbar-total` = 0 trên desktop. `--sticky-clearance` là đệm đáy vùng cuộn khi có thanh hành động dính (`--sticky-bottom` + `--page-bottom`), thanh nằm trong luồng nên chiều cao thanh đã tính sẵn; nhờ vậy mép thanh không đè dòng cuối khi cuộn hết trên iPhone có safe-area |
 | `--fab-*`, `--fab-pad`, `:root[data-has-fab]` | FAB neo màn hình và chừa đáy nội dung |
 | `--dur-press` | Thay 100ms ghi cứng |
 | `--state-selected-*`, `--state-hover-bg`, `--state-pressed-bg`, `--state-focus-ring`, `--state-disabled-opacity`, `--state-success-*`, `--state-error-*`, `--state-pending-*` | Trạng thái thành phần dùng chung; bảng ở `design/ux-v2/rules.md` mục 6 |

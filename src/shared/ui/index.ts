@@ -3,6 +3,7 @@ export { LinkButton } from "./LinkButton";
 export { Card } from "./Card";
 export { Chip } from "./Chip";
 export { Pill } from "./Pill";
+export { InfoNotice } from "./InfoNotice";
 export { Segmented } from "./Segmented";
 export { PageHeader } from "./PageHeader";
 export { Icon } from "./Icon";

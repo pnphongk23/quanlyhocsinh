@@ -132,7 +132,7 @@
 
 .currentCard {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-12);
   color: var(--color-text);
   text-decoration: none;
@@ -143,14 +143,7 @@
   box-shadow: var(--state-focus-ring);
 }
 
-.currentRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-12);
-  min-width: 0;
-}
-
+/* Nút "Xem buổi" căn giữa theo chiều dọc của cả thẻ (như bản mobile), không lệch xuống dưới caption. */
 .currentInfo {
   flex: 1;
   display: grid;

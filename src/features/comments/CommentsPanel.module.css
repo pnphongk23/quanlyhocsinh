@@ -31,20 +31,6 @@
   margin-top: var(--space-2);
 }
 
-.attendanceGate {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-12);
-  padding: var(--space-12) var(--space-16);
-  border-radius: var(--radius-button);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
-  font-size: var(--text-md);
-}
-
-.attendanceGate p { margin: var(--space-2) 0 0; }
-.attendanceGate strong { font-weight: var(--weight-semibold); }
 .absentHeading { padding: var(--space-8) 0; color: var(--color-muted); font-size: var(--text-md); font-weight: var(--weight-semibold); }
 .ticket:disabled { opacity: var(--state-disabled-opacity); cursor: default; }
 .absentActions { padding: 0 var(--space-8) var(--space-8); }
@@ -101,13 +87,16 @@
 .ticket:focus-visible { outline: none; box-shadow: var(--state-focus-ring); }
 
 .ticketHead {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-8);
   min-width: 0;
 }
 
 .avatar {
+  grid-column: 1;
+  grid-row: 1;
   width: 36px;
   height: 36px;
   flex: none;
@@ -120,8 +109,10 @@
   font-weight: 700;
 }
 
+/* Tên chỉ chiếm một dòng của hàng đầu nên không bị nhãn trạng thái ép thành "…". */
 .ticketName {
-  flex: 1;
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   font-size: var(--text-base);
   font-weight: 600;
@@ -130,7 +121,21 @@
   white-space: nowrap;
 }
 
+/* Ngoại lệ có chủ đích của rules.md mục 5 (đã ghi trong rules): nhãn trạng thái xuống dòng phụ dưới tên
+   để tên học sinh không bị cắt thành "…" khi hàng có cả nhãn Vắng và nhãn trạng thái phiếu. */
+.ticketBadges {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
 .chevron {
+  grid-column: 3;
+  grid-row: 1;
   display: flex;
   flex: none;
   margin-right: -4px;

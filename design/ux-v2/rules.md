@@ -40,6 +40,7 @@ Token (thêm vào `tokens.css`):
 ## 5. Phân cấp thông tin
 - Mỗi màn một tiêu đề chính; dòng phụ (lớp · tháng) phía trên tiêu đề cỡ 13px màu muted.
 - Trạng thái (Mới, Đã phát hành, Thiếu dữ liệu) dùng Pill ở cạnh phải hàng, không đè chữ.
+  - Ngoại lệ có chủ đích (web, danh sách phiếu ở tab Nhận xét của buổi): hàng có hai nhãn ("Vắng" + trạng thái phiếu) thì nhãn xuống dòng phụ ngay dưới tên, để tên học sinh không bị cắt thành "…"; cả danh sách dùng cùng một cách nên không lệch hàng.
 
 ## 6. Trạng thái thành phần
 Chỉ dùng token `--state-*` (định nghĩa ở `design/tokens/`), không ghi cứng màu. Một loại thành phần = một cách thể hiện mỗi trạng thái ở mọi màn.
