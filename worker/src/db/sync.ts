@@ -401,7 +401,11 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
             const value=needsDefault ? defaults.get(sid as string) : undefined;
             if (needsDefault && !value) {skipped.push({student_id:sid,reason:'no_default'});continue;}
           sent.push(sid as string);
-            guards.push(q('EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=?) AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)',i.workspaceId,session.id,sid,row.version,i.workspaceId,session.id,sid,att?.status,att?.version));
+            const commentGuard='EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=?)';
+            const attendanceGuard=session.status==='cancelled' ? '' : ' AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)';
+            guards.push(q(`${commentGuard}${attendanceGuard}`,
+              i.workspaceId,session.id,sid,row.version,
+              ...(session.status==='cancelled' ? [] : [i.workspaceId,session.id,sid,att!.status,att!.version])));
             if (value) rest.push(q(`UPDATE session_comments SET stars=?,scale=5,criteria=?,comment=?,hw_manual=0,status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
               WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,bits(value.criteria),value.criteria,value.comment,now,now,i.userId,i.workspaceId,session.id,sid));
             else rest.push(q(`UPDATE session_comments SET status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1

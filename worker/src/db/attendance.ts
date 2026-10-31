@@ -20,7 +20,7 @@ export async function assertSessionAttendanceComplete(
     const row = await db.prepare(`SELECT COUNT(*) AS missing_count
       FROM class_sessions cs
       JOIN students s ON s.workspace_id=cs.workspace_id AND s.class_id=cs.class_id
-        AND s.status='active' AND s.enrolled_at<=cs.date AND (s.left_at IS NULL OR s.left_at>=cs.date)
+        AND s.enrolled_at<=cs.date AND (s.left_at IS NULL OR s.left_at>=cs.date)
       LEFT JOIN attendance a ON a.workspace_id=s.workspace_id AND a.session_id=cs.id AND a.student_id=s.id
         AND a.status IN ('present','late','absent')
       WHERE cs.workspace_id=? AND cs.id=? AND a.student_id IS NULL`)

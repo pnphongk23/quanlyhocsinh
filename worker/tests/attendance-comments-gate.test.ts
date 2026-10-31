@@ -177,10 +177,11 @@ describe('attendance gate for session comments', () => {
       .bind(f.sessionId,f.students[0]).first()).toEqual(before);
   });
 
-  it('does not count students outside their enrollment period or deleted students', async () => {
+  it('counts students leaving after the session and excludes those who left before or enrolled after it', async () => {
     const f = await setup();
     const beforeEnrollment = await insertStudent(f.owner.workspaceId,f.classId,'Not enrolled yet',null,f.owner.userId);
-    const leftStudent = f.students[1]!;
+    const leftBefore = await insertStudent(f.owner.workspaceId,f.classId,'Left before session',null,f.owner.userId);
+    const leftAfter = f.students[1]!;
     const deleted = await insertStudent(f.owner.workspaceId,f.classId,'Deleted',null,f.owner.userId);
     const dayBefore = new Date(`${today()}T00:00:00Z`);
     dayBefore.setUTCDate(dayBefore.getUTCDate()-1);
@@ -188,13 +189,17 @@ describe('attendance gate for session comments', () => {
     tomorrow.setUTCDate(tomorrow.getUTCDate()+1);
     const format = (d:Date) => d.toISOString().slice(0,10);
     await db.prepare("UPDATE students SET enrolled_at=? WHERE id=?").bind(format(tomorrow),beforeEnrollment).run();
-    await db.prepare("UPDATE students SET left_at=?,status='left' WHERE id=?").bind(format(dayBefore),leftStudent).run();
+    await db.prepare("UPDATE students SET left_at=?,status='left' WHERE id=?").bind(format(dayBefore),leftBefore).run();
+    await db.prepare("UPDATE students SET left_at=?,status='left' WHERE id=?").bind(format(tomorrow),leftAfter).run();
     await db.prepare('DELETE FROM students WHERE id=?').bind(deleted).run();
     await f.push([f.attendance(f.students[0]!, 'present')]);
 
-    const result = await f.push([f.slip(f.students[0]!)]);
+    const blocked = await f.push([f.slip(f.students[0]!)]);
+    expect(blocked.body.results[0].error).toMatchObject({code:'attendance_incomplete',details:{missing_count:1}});
 
-    expect(result.body.results[0].status).toBe('applied');
+    const result = await f.push([f.attendance(leftAfter,'present'),f.slip(f.students[0]!)]);
+
+    expect(result.body.results.map((item:any) => item.status)).toEqual(['applied','applied']);
   });
 
   it('memoizes repeated slip checks and invalidates the session after attendance is applied', async () => {
@@ -215,20 +220,28 @@ describe('attendance gate for session comments', () => {
 
   it('keeps cancelled-session behavior and still gates a makeup session', async () => {
     const f = await setup();
-    const cancelledDate = new Date(`${today()}T00:00:00Z`);
-    cancelledDate.setUTCDate(cancelledDate.getUTCDate()+1);
-    const cancelledId = await insertSession(f.owner.workspaceId,f.classId,cancelledDate.toISOString().slice(0,10),f.owner.userId,'cancelled');
-    const cancelledSend = await f.push([command('slip.send',{session_id:cancelledId,student_ids:[f.students[0]]})]);
-    expect(cancelledSend.body.results[0]).toMatchObject({status:'applied',sent:[],skipped:[{student_id:f.students[0],reason:'not_attended'}]});
+    const dateAtOffset = (days:number) => {
+      const date = new Date(`${today()}T00:00:00Z`);
+      date.setUTCDate(date.getUTCDate()+days);
+      return date.toISOString().slice(0,10);
+    };
+    const cancelledSameTurn = await insertSession(f.owner.workspaceId,f.classId,dateAtOffset(1),f.owner.userId,'cancelled');
+    const sameTurn = await f.push([
+      command('slip.set',{session_id:cancelledSameTurn,student_id:f.students[0],criteria:31,comment:'Same turn.',note:''}),
+      command('slip.send',{session_id:cancelledSameTurn,student_ids:[f.students[0]]}),
+    ]);
+    expect(sameTurn.body.results.map((item:any) => item.status)).toEqual(['applied','applied']);
+    expect(sameTurn.body.results[1]).toMatchObject({sent:[f.students[0]],skipped:[]});
 
-    const cancelledSlip = await f.push([command('slip.set',{
-      session_id:cancelledId,student_id:f.students[0],criteria:31,comment:'Existing behavior.',note:'',
+    const cancelledSeparateTurns = await insertSession(f.owner.workspaceId,f.classId,dateAtOffset(2),f.owner.userId,'cancelled');
+    const saved = await f.push([command('slip.set',{
+      session_id:cancelledSeparateTurns,student_id:f.students[0],criteria:31,comment:'Separate turns.',note:'',
     })]);
-    expect(cancelledSlip.body.results[0].status).toBe('applied');
+    const sent = await f.push([command('slip.send',{session_id:cancelledSeparateTurns,student_ids:[f.students[0]]})]);
+    expect(saved.body.results[0].status).toBe('applied');
+    expect(sent.body.results[0]).toMatchObject({status:'applied',sent:[f.students[0]],skipped:[]});
 
-    const makeupDate = new Date(`${today()}T00:00:00Z`);
-    makeupDate.setUTCDate(makeupDate.getUTCDate()+2);
-    const makeupId = await insertSession(f.owner.workspaceId,f.classId,makeupDate.toISOString().slice(0,10),f.owner.userId);
+    const makeupId = await insertSession(f.owner.workspaceId,f.classId,dateAtOffset(3),f.owner.userId);
     await db.prepare('UPDATE class_sessions SET is_makeup=1 WHERE id=?').bind(makeupId).run();
     const makeupSlip = await f.push([command('slip.set',{
       session_id:makeupId,student_id:f.students[0],criteria:31,comment:'Makeup session.',note:'',
