@@ -25,6 +25,10 @@ function isDetailPath(pathname: string): boolean {
   return pathname.split("/").filter(Boolean).length > 2;
 }
 
+function isClassChildPath(pathname: string): boolean {
+  return /^\/lop\/[^/]+\/(?:[^/]+)(?:\/|$)/.test(pathname);
+}
+
 export function Component() {
   const store = useStore();
   const { pathname } = useLocation();
@@ -68,7 +72,7 @@ export function Component() {
         .join(" ");
 
   return (
-    <div className={styles.staffDesktop} data-role="staff">
+      <div className={`${styles.staffDesktop}${isClassChildPath(pathname) ? ` ${styles.staffDetail}` : ""}`} data-role="staff">
       <a className={styles.staffSkip} href="#staff-content">
         Đến nội dung
       </a>
@@ -159,7 +163,7 @@ export function Component() {
           <RejectedBanner />
           <PageTransition detail={isDetailPath(pathname)} />
       </main>
-      <nav className={styles.staffTabbar} aria-label="Điều hướng chính">
+        <nav className={styles.staffTabbar} aria-label="Điều hướng chính">
         <NavLink to="/lop">
           <Icon name="classes" />
           Lớp
