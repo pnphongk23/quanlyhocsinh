@@ -16,7 +16,7 @@ export type MascotPose =
   | "sao-5";
 
 /** Tên file WebP của từng tư thế. */
-const FILES: Record<MascotPose, string> = {
+export const MASCOT_FILES: Record<MascotPose, string> = {
   main: "main",
   vui: "khen",
   "dong-vien": "dong-vien",
@@ -70,7 +70,7 @@ export function Mascot({
   cssSize?: string;
   className?: string;
 }) {
-  const base = `${import.meta.env.BASE_URL}mascot/mit-${FILES[pose]}`;
+  const base = `${import.meta.env.BASE_URL}mascot/mit-${MASCOT_FILES[pose]}`;
   return (
     <img
       className={className ? `${s.mascot} ${className}` : s.mascot}

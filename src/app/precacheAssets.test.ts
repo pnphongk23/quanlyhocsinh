@@ -2,6 +2,7 @@ import type { OutputBundle } from "rollup";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { MASCOT_FILES } from "../shared/ui/Mascot";
 import { createAppShellPrecacheList, listMascotAssets } from "./precacheAssets";
 
 const MASCOT_DIR = join(process.cwd(), "public", "mascot");
@@ -33,19 +34,25 @@ describe("app shell precache assets", () => {
     ]);
   });
 
-  it("precaches every mascot image in public/mascot, including new poses", () => {
+  it("precaches an image for every pose Mascot.tsx can render", () => {
+    const list = createAppShellPrecacheList({} as OutputBundle, listMascotAssets(MASCOT_DIR));
+    // Tên tư thế lấy từ Mascot.tsx, không chép lại: thêm tư thế mà quên ảnh là test đỏ.
+    for (const file of Object.values(MASCOT_FILES)) {
+      expect(list).toContain(`/mascot/mit-${file}.webp`);
+      expect(list).toContain(`/mascot/mit-${file}@2x.webp`);
+    }
+  });
+
+  it("precaches every webp in public/mascot and nothing else", () => {
     const onDisk = readdirSync(MASCOT_DIR, { withFileTypes: true })
       .filter((entry) => entry.isFile() && entry.name.endsWith(".webp"))
       .map((entry) => `/mascot/${entry.name}`)
       .sort();
 
     expect(listMascotAssets(MASCOT_DIR)).toEqual(onDisk);
-    // Mọi tư thế trong Mascot.tsx phải có mặt (1x và @2x) để đổi tư thế không phải tải qua mạng.
-    const list = createAppShellPrecacheList({} as OutputBundle, listMascotAssets(MASCOT_DIR));
-    const poses = ["main", "khen", "dong-vien", "cho", "chao", "dang-tai", "avatar", "sao-0", "sao-1", "sao-2", "sao-3", "sao-4", "sao-5"];
-    for (const pose of poses) {
-      expect(list).toContain(`/mascot/mit-${pose}.webp`);
-      expect(list).toContain(`/mascot/mit-${pose}@2x.webp`);
-    }
+    const precached = createAppShellPrecacheList({} as OutputBundle, listMascotAssets(MASCOT_DIR)).filter((url) =>
+      url.startsWith("/mascot/"),
+    );
+    expect(precached.sort()).toEqual(onDisk);
   });
 });
