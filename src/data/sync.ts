@@ -326,14 +326,21 @@ async function withTestUpdateId(row: OutboxRow, identity: string): Promise<Outbo
 export async function retryRejectedCommands(ids: string[]): Promise<void> {
   const identity = identityKey(), wanted = new Set(ids);
   // Máy chủ trả lại kết quả đã lưu cho cùng id, nên lệnh thử lại phải mang id mới mới được xét lại.
-  await db.transaction("rw", [db.outbox, db.tests], async () => {
-    const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
-    const renamed = new Map(rows.map((row) => [row.id, crypto.randomUUID()]));
-    for (const row of rows) {
-      const fixed = await withTestUpdateId(row, identity);
-      await db.outbox.delete(row.id);
-      await db.outbox.put({ ...fixed, id: renamed.get(row.id)!, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
-    }
+    await db.transaction("rw", [db.outbox, db.tests], async () => {
+      const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
+      const pendingAttendance = await db.outbox.where("identity").equals(identity).and((row) => row.status === "pending" && row.type === "attendance.set").toArray();
+      const renamed = new Map(rows.map((row) => [row.id, crypto.randomUUID()]));
+      for (const row of rows) {
+        const fixed = await withTestUpdateId(row, identity);
+        const sessionId = (row.payload as { session_id?: string }).session_id;
+        const sessionAttendance = row.type === "slip.set" || row.type === "slip.send"
+          ? pendingAttendance.filter((attendance) => (attendance.payload as { session_id?: string }).session_id === sessionId)
+          : [];
+        const latestAttendance = sessionAttendance.reduce((latest, attendance) => Math.max(latest, Date.parse(attendance.created_at)), 0);
+        const createdAt = new Date(Math.max(Date.now(), latestAttendance + 1)).toISOString();
+        await db.outbox.delete(row.id);
+        await db.outbox.put({ ...fixed, id: renamed.get(row.id)!, created_at: createdAt, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
+      }
     await db.outbox.where("identity").equals(identity).and((other) => !!other.depends_on && renamed.has(other.depends_on)).modify((other) => { other.depends_on = renamed.get(other.depends_on!); });
   });
   publishRejected(await db.outbox.where("identity").equals(identity).toArray());

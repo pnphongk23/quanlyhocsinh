@@ -102,6 +102,30 @@ describe("sync rejection persistence", () => {
     expect(pushedTypes).toEqual(["attendance.set", "slip.set"]);
   });
 
+  it("retries a rejected slip after pending attendance for the same session", async () => {
+    const { api, retryRejectedCommands } = await import("../data/sync");
+    await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
+    await db.outbox.bulkPut([
+      { id: "attendance-pending", identity: identityKey(), type: "attendance.set", payload: { session_id: "session-a", student_id: "student-a", status: "present" }, base_version: 0, membership_id: identity.membershipId, created_at: "2026-10-31T00:00:02.000Z", status: "pending" },
+      { id: "slip-rejected", identity: identityKey(), type: "slip.set", payload: { session_id: "session-a", student_id: "student-a", criteria: 31, comment: "Draft", note: "" }, base_version: 0, membership_id: identity.membershipId, created_at: "2026-10-31T00:00:00.000Z", status: "rejected", error: "attendance_incomplete" },
+    ] as never);
+    let pushed: Array<{ id: string; type: string; created_at: string }> = [];
+    vi.spyOn(api, "request").mockImplementation((async (endpoint: string, init?: { body?: { commands?: typeof pushed } }) => {
+      if (endpoint === "POST /sync/push") {
+        pushed = init?.body?.commands ?? [];
+        return { epoch: 1, cursor: 1, results: pushed.map(({ id }) => ({ id, status: "applied", version: 1 })) };
+      }
+      if (endpoint === "GET /sync/pull") return { cursor: 1, epoch: 1, has_more: false, server_time: "2026-10-31T00:00:00Z", upserts: {}, deleted: [] };
+      throw new Error(`Unexpected fake endpoint: ${endpoint}`);
+    }) as never);
+
+    await retryRejectedCommands(["slip-rejected"]);
+
+    expect(pushed.map(({ type }) => type)).toEqual(["attendance.set", "slip.set"]);
+    expect(pushed[1].id).not.toBe("slip-rejected");
+    expect(Date.parse(pushed[1].created_at)).toBeGreaterThan(Date.parse(pushed[0].created_at));
+  });
+
   it("hides membership cache and preserves its rejected outbox on a permission revoke", async () => {
     const { api, syncNow } = await import("../data/sync");
     const id = identityKey();
