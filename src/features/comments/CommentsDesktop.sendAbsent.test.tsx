@@ -6,6 +6,11 @@ import { replaceStore } from "../../data/store";
 import CommentsDesktop from "./CommentsDesktop";
 
 const repository = vi.hoisted(() => ({ send: vi.fn(), flush: vi.fn() }));
+const permissions = vi.hoisted(() => ({ canWrite: true, canSend: true }));
+
+vi.mock("../../data/repositories/access", () => ({
+  useAccess: () => ({ can: (group: string, level: string) => (group === "comments_reports" && (level !== "write" || permissions.canWrite)) || (group === "send_comments" && permissions.canSend) }),
+}));
 
 vi.mock("../../data/repositories/comments", async (original) => ({
   ...(await original<typeof import("../../data/repositories/comments")>()),
@@ -24,6 +29,8 @@ function renderComments() {
 describe("CommentsDesktop individual absent send", () => {
   beforeEach(() => {
     const seed = createSeed();
+    permissions.canWrite = true;
+    permissions.canSend = true;
     const draft = seed.comments.find((comment) => comment.sessionId === "6a-session-7" && comment.studentId === "6a-student-1")!;
     draft.status = "draft";
     draft.scale = 5;
@@ -43,5 +50,14 @@ describe("CommentsDesktop individual absent send", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Gửi 1 phiếu" }));
     expect(repository.send).toHaveBeenCalledWith("6a-session-7", ["6a-student-1"]);
+  });
+
+  it("hides individual send when send access is granted without comment write access", () => {
+    permissions.canWrite = false;
+
+    renderComments();
+
+    expect(screen.queryByRole("button", { name: "Gửi lẻ" })).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

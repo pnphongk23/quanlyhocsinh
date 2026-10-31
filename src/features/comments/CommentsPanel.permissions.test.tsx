@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import CommentsPanel from "./CommentsPanel";
 
-const state = vi.hoisted(() => ({ canSend: false, attendanceComplete: true, includeAbsent: false }));
+const state = vi.hoisted(() => ({ canWrite: true, canSend: false, attendanceComplete: true, includeAbsent: false }));
 const repository = vi.hoisted(() => ({ send: vi.fn(), flush: vi.fn() }));
 
 vi.mock("../../data/repositories/access", () => ({
-  useAccess: () => ({ can: (group: string) => group === "comments_reports" || (group === "send_comments" && state.canSend) }),
+  useAccess: () => ({ can: (group: string, level: string) => (group === "comments_reports" && (level !== "write" || state.canWrite)) || (group === "send_comments" && state.canSend) }),
 }));
 vi.mock("../../data/repositories/comments", () => ({ flushQueuedTickets: repository.flush, sendSessionTicketsDurable: repository.send }));
 vi.mock("../../data/repositories/sessions", () => ({
@@ -46,7 +46,7 @@ vi.mock("./commentsModel", () => ({
 }));
 
 describe("CommentsPanel send permission", () => {
-  beforeEach(() => { state.canSend = false; state.attendanceComplete = true; state.includeAbsent = false; repository.send.mockReset().mockResolvedValue(undefined); });
+  beforeEach(() => { state.canWrite = true; state.canSend = false; state.attendanceComplete = true; state.includeAbsent = false; repository.send.mockReset().mockResolvedValue(undefined); });
 
     it("hides sending while keeping draft actions available", () => {
       state.includeAbsent = true;
@@ -67,6 +67,15 @@ describe("CommentsPanel send permission", () => {
       state.includeAbsent = true;
       render(<MemoryRouter><CommentsPanel classId="class-1" sessionId="session-1" /></MemoryRouter>);
       expect(screen.getByRole("button", { name: "Gửi lẻ" })).toBeInTheDocument();
+    });
+
+    it("hides individual send when send access is granted without comment write access", () => {
+      state.canSend = true;
+      state.canWrite = false;
+      state.includeAbsent = true;
+      render(<MemoryRouter><CommentsPanel classId="class-1" sessionId="session-1" /></MemoryRouter>);
+      expect(screen.queryByRole("button", { name: "Gửi lẻ" })).toBeNull();
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
 
     it("asks before sending an absent student's slip and warns about ungraded homework", async () => {

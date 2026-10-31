@@ -149,7 +149,7 @@ export default function CommentsDesktop({
   }
 
   function requestAbsentSend(studentId: string) {
-    if (!canSend || !attendance.complete || !online) return;
+      if (!canWrite || !canSend || !attendance.complete || !online) return;
     const row = rows.find((candidate) => candidate.student.id === studentId);
     if (!row?.comment || row.attended || row.status === "sent" || row.status === "queued") return;
     setDialogError("");
@@ -158,7 +158,7 @@ export default function CommentsDesktop({
 
   async function confirmAbsentSend() {
     const student = absentStudentToSend;
-    if (!student || !canSend || !attendance.complete || !online || absentSendBusy) return;
+      if (!student || !canWrite || !canSend || !attendance.complete || !online || absentSendBusy) return;
     setAbsentSendBusy(true);
     try {
       await sendSessionTicketsDurable(sessionId, [student.id]);
@@ -317,7 +317,7 @@ export default function CommentsDesktop({
                 compact={mode === "criteria"}
                   readOnly={!canEdit}
               />
-                  {canSend && attendance.complete && !selected.attended && selected.comment && selected.status !== "sent" && selected.status !== "queued" && <Button size="md" variant="secondary" disabled={!online || absentSendBusy} onClick={() => requestAbsentSend(selected.student.id)}>Gửi lẻ</Button>}
+                    {canWrite && canSend && attendance.complete && !selected.attended && selected.comment && selected.status !== "sent" && selected.status !== "queued" && <Button size="md" variant="secondary" disabled={!canWrite || !canSend || !online || absentSendBusy} onClick={() => requestAbsentSend(selected.student.id)}>Gửi lẻ</Button>}
               </>
             ) : (
             <p className={d.muted14}>Chọn một em để soạn phiếu.</p>
@@ -340,7 +340,7 @@ export default function CommentsDesktop({
         }}
           />
           <SendTicketsDialog
-            open={!!absentStudentToSend && canSend}
+              open={!!absentStudentToSend && canWrite && canSend}
             sessionLabel={`${absentStudentToSend?.name ?? ""} · ${sessionPrefix(session)}`}
             sendCount={1}
             skipped={[]}

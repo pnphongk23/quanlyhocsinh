@@ -244,7 +244,7 @@ export default function CommentsPanel({
   }
 
   function requestAbsentSend(studentId: string) {
-    if (!canSend || !attendance.complete || !online || sendingStudentIds.has(studentId)) return;
+      if (!canWrite || !canSend || !attendance.complete || !online || sendingStudentIds.has(studentId)) return;
     const row = rows.find((candidate) => candidate.student.id === studentId);
     if (!row?.comment || row.attended || row.status === "sent" || row.status === "queued") return;
     setDialogError("");
@@ -253,7 +253,7 @@ export default function CommentsPanel({
 
   async function confirmAbsentSend() {
     const student = absentStudentToSend;
-    if (!student || !canSend || !attendance.complete || !online || sendingStudentIds.has(student.id)) return;
+      if (!student || !canWrite || !canSend || !attendance.complete || !online || sendingStudentIds.has(student.id)) return;
     setSendingStudentIds((current) => new Set(current).add(student.id));
     try {
       await sendSessionTicketsDurable(sessionId, [student.id]);
@@ -358,8 +358,8 @@ export default function CommentsPanel({
             {line.text}
           </span>
         </button>
-            {canSend && attendance.complete && !row.attended && row.comment && row.status !== "sent" && row.status !== "queued" && (
-              <div className={s.absentActions}><Button size="sm" variant="secondary" disabled={!canSend || !online || sendingStudentIds.has(row.student.id)} loading={sendingStudentIds.has(row.student.id)} onClick={() => requestAbsentSend(row.student.id)}>Gửi lẻ</Button></div>
+              {canWrite && canSend && attendance.complete && !row.attended && row.comment && row.status !== "sent" && row.status !== "queued" && (
+                <div className={s.absentActions}><Button size="sm" variant="secondary" disabled={!canWrite || !canSend || !online || sendingStudentIds.has(row.student.id)} loading={sendingStudentIds.has(row.student.id)} onClick={() => requestAbsentSend(row.student.id)}>Gửi lẻ</Button></div>
           )}
         </li>
     );
@@ -513,7 +513,7 @@ export default function CommentsPanel({
           }}
           />
         <SendTicketsDialog
-          open={!!absentStudentToSend && canSend}
+            open={!!absentStudentToSend && canWrite && canSend}
           sessionLabel={`${absentStudentToSend?.name ?? ""} · ${sessionPrefix(session)}`}
           sendCount={1}
           skipped={[]}
