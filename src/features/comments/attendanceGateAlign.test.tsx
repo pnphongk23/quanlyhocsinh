@@ -7,11 +7,12 @@ import CommentsPanel from "./CommentsPanel";
 
 /**
  * jsdom không dàn trang: kiểm hợp đồng CSS/DOM cho khối "Điểm danh xong để nhận xét" ở tab Nhận xét.
- * Trước đây mobile xếp khối này một hàng nên tiêu đề bị ngắt giữa cụm và nút bị đệm 16px của nút
- * đẩy lệch lề chữ; nay khối xếp dọc và nhãn nút bù đúng phần đệm ngang đó.
+ * Trước đây mobile xếp khối này một hàng nên tiêu đề bị ngắt giữa cụm và nút bị đệm ngang của chính nút
+ * đẩy lệch lề chữ; nay khối dùng `InfoNotice` (shared/ui), mobile xếp dọc và hành động dạng chữ đệm ngang 0.
  */
+const uiCss = readFileSync(resolve(process.cwd(), "src/shared/ui/ui.module.css"), "utf8");
 const panelCss = readFileSync(resolve(process.cwd(), "src/features/comments/CommentsPanel.module.css"), "utf8");
-const buttonCss = readFileSync(resolve(process.cwd(), "src/shared/ui/ui.module.css"), "utf8");
+const desktopCss = readFileSync(resolve(process.cwd(), "src/features/comments/CommentsDesktop.module.css"), "utf8");
 
 const state = vi.hoisted(() => ({ canWrite: true, canSend: true, attendanceComplete: false }));
 
@@ -51,7 +52,6 @@ vi.mock("./commentsModel", () => ({
   ticketFilterLabel: () => "Tất cả (1)",
   TICKET_FILTERS: ["all"],
 }));
-vi.mock("./criteriaModel", () => ({ canToggleCriterion: () => true, rowHasCustomComment: () => false, criteriaForEditingRow: () => 31, SLIP_CRITERIA: ["a", "b", "c", "d", "e"] }));
 vi.mock("./CriteriaMode", () => ({ default: () => null, CriteriaModeToggle: () => null }));
 vi.mock("./SendTicketsDialog", () => ({ default: () => null }));
 vi.mock("./NotesImportDialog", () => ({ default: () => null }));
@@ -61,27 +61,32 @@ beforeEach(() => {
   state.attendanceComplete = false;
 });
 
-function renderGate() {
-  render(
-    <MemoryRouter>
-      <CommentsPanel classId="class-1" sessionId="session-1" />
-    </MemoryRouter>,
-  );
-  return screen.getByRole("status");
-}
-
 describe("khối Điểm danh xong để nhận xét", () => {
-  it("xếp dọc và nút là con trực tiếp của khối để quy tắc căn lề áp đúng", () => {
-    const gate = renderGate();
+  it("dùng khối thông báo dùng chung: tiêu đề, dòng phụ và một hành động", () => {
+    render(
+      <MemoryRouter>
+        <CommentsPanel classId="class-1" sessionId="session-1" />
+      </MemoryRouter>,
+    );
+    const gate = screen.getByRole("status");
     expect(gate.textContent).toContain("Điểm danh xong để nhận xét");
-    expect(gate.lastElementChild?.tagName).toBe("BUTTON");
-    expect(gate.lastElementChild?.textContent).toBe("Đến Điểm danh");
-    expect(panelCss).toMatch(/\.attendanceGate\s*\{[^}]*flex-direction:\s*column[^}]*align-items:\s*flex-start/s);
+    expect(gate.textContent).toContain("Còn 1 em chưa điểm danh.");
+    const buttons = gate.querySelectorAll("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].textContent).toBe("Đến Điểm danh");
   });
 
-  it("nhãn nút thẳng lề chữ tiêu đề: bù đúng đệm ngang của nút theo token", () => {
-    // Nút `size="sm"` đệm ngang --space-16; khối bù lại đúng khoảng đó ở lề trái.
-    expect(buttonCss).toMatch(/^\.button\s*\{[^}]*padding:\s*0 var\(--space-16\)/ms);
-    expect(panelCss).toMatch(/\.attendanceGate > button\s*\{[^}]*margin-inline-start:\s*calc\(-1 \* var\(--space-16\)\)/s);
+  it("không dùng margin âm hay CSS riêng cho khối ở hai file màn hình", () => {
+    expect(panelCss).not.toMatch(/\.attendanceGate/);
+    expect(desktopCss).not.toMatch(/\.attendanceGate/);
+    expect(uiCss).not.toMatch(/margin-inline-start:\s*calc\(-1 \*/);
+  });
+
+  it("mobile: hành động xuống dưới, đệm ngang 0 để nhãn thẳng lề chữ tiêu đề và vùng chạm đủ --tap", () => {
+    expect(uiCss).toMatch(/\.infoNotice\s*\{[^}]*flex-direction:\s*column[^}]*align-items:\s*flex-start/s);
+    expect(uiCss).toMatch(/\.infoNotice > \.button\s*\{[^}]*min-height:\s*var\(--tap\)[^}]*padding-inline:\s*0/s);
+    // Desktop (≥1024) hành động nằm cùng hàng bên phải nên trả lại đệm ngang theo nội dung.
+    expect(uiCss).toMatch(/@media \(min-width: 1024px\)\s*\{\s*\.infoNotice\s*\{[^}]*flex-direction:\s*row/s);
+    expect(uiCss).toMatch(/@media \(min-width: 1024px\)\s*\{[\s\S]*?\.infoNotice > \.button\s*\{[^}]*padding-inline:\s*var\(--space-16\)/);
   });
 });

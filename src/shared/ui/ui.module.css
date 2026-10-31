@@ -113,6 +113,42 @@
   color: var(--state-selected-fg);
 }
 
+/* Khối thông báo tông thông tin (ux-design.md mục 3): tiêu đề + dòng phụ + hành động phụ. */
+.infoNotice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-button);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: var(--text-md);
+  text-wrap: balance;
+}
+.infoNoticeText > p {
+  margin: var(--space-2) 0 0;
+}
+.infoNotice strong {
+  font-weight: var(--weight-semibold);
+}
+/* Hành động phụ dạng chữ: đệm ngang 0 để nhãn thẳng lề chữ tiêu đề, vùng chạm vẫn đủ --tap. */
+.infoNotice > .button {
+  min-height: var(--tap);
+  padding-inline: 0;
+}
+@media (min-width: 1024px) {
+  .infoNotice {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  /* Desktop: nút rời khỏi lề chữ nên trả lại đệm ngang theo nội dung. */
+  .infoNotice > .button {
+    padding-inline: var(--space-16);
+  }
+}
+
 /* Pill trạng thái */
 .pill {
   display: inline-flex;

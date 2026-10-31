@@ -20,7 +20,7 @@ import { useStore } from "../../data/store";
 import type { StoreState, Student } from "../../data/types";
 import { formatDayMonth } from "../../shared/format";
 import { useOnline } from "../../shared/hooks/useOnline";
-import { Button, EmptyState, NoAccess, Pill } from "../../shared/ui";
+import { Button, EmptyState, InfoNotice, NoAccess, Pill } from "../../shared/ui";
 import CommentTicketSheet, { type SheetHomework } from "./CommentTicketSheet";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import AssignDefaultsAction from "./AssignDefaultsAction";
@@ -335,7 +335,7 @@ export default function CommentsPanel({
             <span className={s.avatar} aria-hidden="true">
               {initialsOf(row.student.name)}
             </span>
-            {/* Tên giữ trọn một dòng riêng: nhãn trạng thái xuống dòng phụ, không ép tên thành "…". */}
+            {/* Ngoại lệ có chủ đích của rules.md mục 5: nhãn trạng thái xuống dòng phụ dưới tên để tên học sinh không bị cắt thành "…". */}
             <span className={s.ticketName}>{row.student.name}</span>
               {attendance.complete && (
                 <span className={s.chevron}>
@@ -401,12 +401,13 @@ export default function CommentsPanel({
 
     return (
       <section className={s.panel}>
-          {!attendance.complete && (
-            <div className={s.attendanceGate} role="status">
-              <div><strong>Điểm danh xong để nhận xét</strong><p>Còn {attendance.missing} em chưa điểm danh.</p></div>
-              <Button size="sm" variant="secondary" onClick={() => setSearchParams(new URLSearchParams({ tab: "diem-danh" }))}>Đến Điểm danh</Button>
-            </div>
-          )}
+        {!attendance.complete && (
+          <InfoNotice
+            title="Điểm danh xong để nhận xét"
+            description={`Còn ${attendance.missing} em chưa điểm danh.`}
+            action={<Button size="sm" variant="secondary" onClick={() => setSearchParams(new URLSearchParams({ tab: "diem-danh" }))}>Đến Điểm danh</Button>}
+          />
+        )}
         {leftStudents.length > 0 && (
         <p className={s.infoBanner}>
           <InfoIcon />

@@ -1,25 +1,4 @@
 /* Tab Nhận xét trên web desktop (ảnh 04). */
-/* Cùng khối thông báo với mobile (tông thông tin, không phải lỗi); desktop đủ chỗ nên nút nằm cùng hàng. */
-.attendanceGate {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-12);
-  padding: var(--space-12) var(--space-16);
-  border-radius: var(--radius-button);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-ink);
-  font-size: var(--text-md);
-}
-
-.attendanceGate p {
-  margin: var(--space-2) 0 0;
-}
-
-.attendanceGate strong {
-  font-weight: var(--weight-semibold);
-}
-
 .listColumn {
   width: 400px;
   flex: none;
