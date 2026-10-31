@@ -130,11 +130,10 @@ button.chip {
   color: var(--color-primary-ink);
 }
 
-/* Khoá vì chưa điểm danh xong: nền trung tính + mờ theo token, không giữ màu "đang bật". */
+/* Chỉ xem (chưa điểm danh xong, không có quyền ghi, phiếu đã gửi): chỉ mờ bằng opacity để vẫn phân biệt
+   chip đạt (nền chọn) với chip chưa đạt, không đè nền/chữ như nút disabled. */
 .disabled {
   opacity: var(--state-disabled-opacity);
-  background: var(--color-neutral-soft);
-  color: var(--color-muted);
 }
 
 .warning,

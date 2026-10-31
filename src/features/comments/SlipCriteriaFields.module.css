@@ -113,17 +113,17 @@
   color: var(--state-selected-fg);
 }
 
-/* Khoá vì chưa điểm danh xong: nền trung tính + mờ theo token, không giữ màu "đang bật". */
+/* Khoá phiếu (chưa điểm danh xong / không có quyền ghi / phiếu đã gửi): nút theo quy ước disabled của
+   repo (ui.module.css `.button:disabled`) — nền neutral-soft + chữ muted, không thêm opacity để khỏi mờ hai lần. */
 .criterion:disabled,
 .criterionOn:disabled {
-  opacity: var(--state-disabled-opacity);
+  background: var(--color-neutral-soft);
+  color: var(--color-muted);
   cursor: default;
 }
 
 .criterionOn:disabled {
   border-color: transparent;
-  background: var(--color-neutral-soft);
-  color: var(--color-muted);
 }
 
 .criterionOn:disabled .checkbox {
@@ -235,12 +235,12 @@
   background: var(--color-neutral-soft);
 }
 
-/* Ô chữ của phiếu bị khoá (chưa điểm danh xong): nền trung tính + mờ theo token như rules.md mục 6. */
+/* Ô chữ chỉ xem (không có quyền ghi / phiếu đã gửi / phiếu thang cũ): nền trung tính nhưng giữ chữ
+   --color-text ở độ tương phản đầy đủ để đọc được, không dùng opacity. */
 .sentenceInput:read-only,
 .noteInput:read-only {
   background: var(--color-neutral-soft);
-  color: var(--color-muted);
-  opacity: var(--state-disabled-opacity);
+  color: var(--color-text);
   cursor: default;
 }
 
