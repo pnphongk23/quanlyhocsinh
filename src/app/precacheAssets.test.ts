@@ -1,6 +1,10 @@
 import type { OutputBundle } from "rollup";
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createAppShellPrecacheList } from "./precacheAssets";
+import { createAppShellPrecacheList, listMascotAssets } from "./precacheAssets";
+
+const MASCOT_DIR = join(process.cwd(), "public", "mascot");
 
 describe("app shell precache assets", () => {
   it("includes lazy route chunks, their CSS, and bundled images and fonts", () => {
@@ -14,7 +18,7 @@ describe("app shell precache assets", () => {
       "debug.map": { type: "asset", fileName: "assets/main.js.map" },
     } as unknown as OutputBundle;
 
-    expect(createAppShellPrecacheList(bundle)).toEqual([
+    expect(createAppShellPrecacheList(bundle, ["/mascot/mit-main.webp", "/mascot/mit-main@2x.webp"])).toEqual([
       "/",
       "/assets/ScoreGridTab-hash.css",
       "/assets/ScoreGridTab-hash.js",
@@ -24,12 +28,24 @@ describe("app shell precache assets", () => {
       "/fonts/plus-jakarta-sans-latin-ext.woff2",
       "/fonts/plus-jakarta-sans-latin.woff2",
       "/fonts/plus-jakarta-sans-vietnamese.woff2",
-      "/mascot/mit-sao-0.webp",
-      "/mascot/mit-sao-0@2x.webp",
-      "/mascot/mit-sao-4.webp",
-      "/mascot/mit-sao-4@2x.webp",
-      "/mascot/mit-sao-5.webp",
-      "/mascot/mit-sao-5@2x.webp",
+      "/mascot/mit-main.webp",
+      "/mascot/mit-main@2x.webp",
     ]);
+  });
+
+  it("precaches every mascot image in public/mascot, including new poses", () => {
+    const onDisk = readdirSync(MASCOT_DIR, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".webp"))
+      .map((entry) => `/mascot/${entry.name}`)
+      .sort();
+
+    expect(listMascotAssets(MASCOT_DIR)).toEqual(onDisk);
+    // Mọi tư thế trong Mascot.tsx phải có mặt (1x và @2x) để đổi tư thế không phải tải qua mạng.
+    const list = createAppShellPrecacheList({} as OutputBundle, listMascotAssets(MASCOT_DIR));
+    const poses = ["main", "khen", "dong-vien", "cho", "chao", "dang-tai", "avatar", "sao-0", "sao-1", "sao-2", "sao-3", "sao-4", "sao-5"];
+    for (const pose of poses) {
+      expect(list).toContain(`/mascot/mit-${pose}.webp`);
+      expect(list).toContain(`/mascot/mit-${pose}@2x.webp`);
+    }
   });
 });

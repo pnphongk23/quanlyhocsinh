@@ -3,7 +3,12 @@ import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
 import type { OutputChunk } from "rollup";
 import { createHash } from "node:crypto";
-import { createAppShellPrecacheList } from "./src/app/precacheAssets";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { createAppShellPrecacheList, listMascotAssets } from "./src/app/precacheAssets";
+
+const PUBLIC_DIR = "public";
+const MASCOT_DIR = join(PUBLIC_DIR, "mascot");
 
 function appShellServiceWorker(): Plugin {
   return {
@@ -12,15 +17,17 @@ function appShellServiceWorker(): Plugin {
     generateBundle(_options, bundle) {
         const entry = Object.values(bundle).find((item): item is OutputChunk => item.type === "chunk" && !!item.isEntry);
         if (!entry) throw new Error("Could not find the app entry for service worker precache.");
-        const assets = createAppShellPrecacheList(bundle);
+        const assets = createAppShellPrecacheList(bundle, listMascotAssets(MASCOT_DIR));
         const version = JSON.stringify(assets);
         const html = bundle["index.html"];
         const revisionHash = createHash("sha256");
         for (const path of assets) {
           const item = bundle[path.slice(1)];
           revisionHash.update(path);
-          if (!item) continue;
-          revisionHash.update(item.type === "chunk" ? item.code : item.source);
+          // Ảnh trong public/ không nằm trong bundle: băm nội dung file để đổi ảnh là đổi cache SW.
+          if (!item) {
+            if (path !== "/") revisionHash.update(readFileSync(join(PUBLIC_DIR, path)));
+          } else revisionHash.update(item.type === "chunk" ? item.code : item.source);
         }
         if (html?.type === "asset") revisionHash.update(html.source);
         const revision = revisionHash.digest("hex").slice(0, 12);
