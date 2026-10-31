@@ -1,0 +1,79 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "qlh-staging-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-21",
+  // Chạy Worker gần D1 (APAC; đo theo colo: Worker ở HKG gọi D1 nhanh nhất).
+  "placement": { "region": "gcp:asia-east2" },
+  "observability": {
+    "enabled": false
+  },
+  "vars": {
+    "ENVIRONMENT": "local",
+    "PBKDF2_ITERATIONS": "30000",
+    // CORS cho /v1/*: danh sách origin (phân tách dấu phẩy), rỗng = không cho origin nào.
+    "ALLOWED_ORIGINS": "",
+    // Gửi mail: disabled | test (ghi test_mailbox, chỉ dev/staging/local) | cloudflare.
+    // Khi có miền: chạy `npx wrangler email sending enable <miền>`, thêm
+    // "send_email": [{ "name": "EMAIL" }] ở cấp gốc, đặt MAIL_MODE="cloudflare" và MAIL_FROM.
+    "MAIL_MODE": "disabled"
+  },
+  "triggers": {
+    "crons": ["* * * * *", "*/30 * * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "qlh-staging-db",
+      "database_id": "REPLACE_AT_DEPLOY",
+      "migrations_dir": "migrations"
+    }
+  ],
+    "env": {
+      "staging": {
+      "name": "qlh-staging-api",
+      "placement": { "region": "gcp:asia-east2" },
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "PBKDF2_ITERATIONS": "30000",
+        "MAIL_MODE": "test",
+        "RESET_LINK_BASE": "https://qlh-staging-web.pages.dev",
+        // Origin được phép gọi /v1/* (phân tách dấu phẩy, khớp chính xác). Hiện chưa có
+        // project Pages riêng cho mảng Web nên dùng origin của Pages prototype
+        // (quanlyhocsinh-proto) cộng các cổng dev/Preview của máy cục bộ.
+        // Rỗng = chặn mọi origin khác miền (iOS không bị ảnh hưởng).
+        "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,http://localhost:3000,https://quanlyhocsinh-proto.pages.dev,https://qlh-staging-web.pages.dev"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "qlh-staging-db",
+          "database_id": "ab89f59d-5f7e-4db2-aff0-cbb2932d0a6d",
+          "migrations_dir": "migrations"
+        }
+      ]
+      },
+      "dev": {
+        "name": "qlh-dev-api",
+        "placement": { "region": "gcp:asia-east2" },
+        "triggers": {
+          "crons": ["*/30 * * * *"]
+        },
+        "vars": {
+          "ENVIRONMENT": "dev",
+          "PBKDF2_ITERATIONS": "30000",
+          "MAIL_MODE": "test",
+          "RESET_LINK_BASE": "https://qlh-dev-web.pages.dev",
+          "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,http://localhost:3000,https://qlh-dev-web.pages.dev"
+        },
+        "d1_databases": [
+          {
+            "binding": "DB",
+            "database_name": "qlh-dev-db",
+            "database_id": "93331487-810d-4e7f-b4b8-e9e1bd9dcf69",
+            "migrations_dir": "migrations"
+          }
+        ]
+      }
+    }
+  }

@@ -1,0 +1,26 @@
+{
+  "name": "qlh-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend Worker + D1 cho app quản lý lớp tiếng Anh (MVP).",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate:local": "wrangler d1 migrations apply DB --local",
+    "bundle": "wrangler deploy --dry-run --outdir dist --minify",
+    "bundle:size": "npm run bundle && node scripts/bundle-size.mjs"
+  },
+  "dependencies": {
+    "hono": "4.13.13"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.6",
+    "@cloudflare/workers-types": "^5.20261019.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.87.0"
+  }
+}
