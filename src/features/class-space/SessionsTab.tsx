@@ -138,7 +138,11 @@ export default function SessionsTab() {
               <h2 id="current-session-heading" className={s.groupLabel}>
                 Buổi hiện tại
               </h2>
-              <article className={s.currentCard}>
+                <Link
+                  className={s.currentCard}
+                  to={`/lop/${classId}/buoi-hoc/${spotlight.id}`}
+                  aria-label={`Mở buổi ${sessionPrefix(spotlight)}`}
+                >
                 <div className={s.currentInfo}>
                   <p className={s.currentTitle}>
                     {sessionPrefix(spotlight)}
@@ -147,16 +151,13 @@ export default function SessionsTab() {
                     {spotlight.time ?? klass.time}
                   </p>
                 </div>
-                <Link
-                  className={s.primaryAction}
-                  to={`/lop/${classId}/buoi-hoc/${spotlight.id}`}
-                >
-                  Xem buổi
-                </Link>
+                  <span className={s.primaryAction}>
+                    Xem buổi
+                  </span>
                 {spotlight.date > today && spotlight.status === "planned" && (
                   <p className={s.lockedHint}>Điểm danh mở vào ngày học.</p>
                 )}
-              </article>
+                </Link>
             </section>
           )}
 
