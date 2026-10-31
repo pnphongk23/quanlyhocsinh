@@ -10,6 +10,36 @@ vi.mock("../data/auth/session", () => ({ getToken: () => "fake-token", ...auth }
 const identity = { userId: "test-user", workspaceId: "test-workspace", membershipId: "test-membership" };
 const identityId = `${identity.userId}:${identity.workspaceId}:${identity.membershipId}`;
 
+type PushedCommand = { id: string; type: string; payload: { session_id?: string; student_id?: string; student_ids?: string[] }; created_at: string };
+
+/** Dựng một dòng hàng đợi đúng hình dạng lệnh thật: `slip.send` gửi theo `student_ids`. */
+const queueRow = (id: string, type: string, payload: object, createdAt: string, status: "pending" | "rejected" = "rejected") => ({
+  id, identity: identityKey(), type, payload, base_version: 0, membership_id: identity.membershipId, created_at: createdAt, status,
+});
+
+/** Ghi lại đúng thứ tự máy chủ nhận lệnh trong một lượt đẩy. */
+const capturePushes = async () => {
+  const { api } = await import("../data/sync");
+  const pushed: PushedCommand[] = [];
+  vi.spyOn(api, "request").mockImplementation((async (endpoint: string, init?: { body?: { commands?: PushedCommand[] } }) => {
+    if (endpoint === "POST /sync/push") {
+      const commands = init?.body?.commands ?? [];
+      pushed.push(...commands);
+      return { epoch: 1, cursor: 1, results: commands.map(({ id: commandId }) => ({ id: commandId, status: "applied", version: 1 })) };
+    }
+    if (endpoint === "GET /sync/pull") return { cursor: 1, epoch: 1, has_more: false, server_time: "2026-10-31T00:00:00Z", upserts: {}, deleted: [] };
+    throw new Error(`Unexpected fake endpoint: ${endpoint}`);
+  }) as never);
+  return pushed;
+};
+
+const positionOf = (pushed: PushedCommand[], type: string, sessionId: string, studentId?: string) => {
+  const index = pushed.findIndex(({ type: pushedType, payload }) => pushedType === type && payload.session_id === sessionId &&
+    (studentId === undefined || payload.student_id === studentId || payload.student_ids?.includes(studentId)));
+  if (index < 0) throw new Error(`Không thấy lệnh ${type} của ${sessionId}${studentId ? `/${studentId}` : ""} trong lượt đẩy`);
+  return index;
+};
+
 beforeEach(async () => {
   setCacheIdentity(identity);
   await db.delete();
@@ -126,32 +156,23 @@ describe("sync rejection persistence", () => {
     expect(Date.parse(pushed[1].created_at)).toBeGreaterThan(Date.parse(pushed[0].created_at));
   });
 
-  it("retries commands from multiple sessions in source order with attendance and set dependencies first", async () => {
+  it("retries commands from multiple sessions with attendance and set dependencies first", async () => {
     const { api, retryRejectedCommands } = await import("../data/sync");
     await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
     const common = { identity: identityKey(), base_version: 0, membership_id: identity.membershipId, status: "rejected" as const };
     await db.outbox.bulkPut([
-      { ...common, id: "send-b", type: "slip.send", payload: { session_id: "session-b", student_id: "student-b" }, created_at: "2026-10-31T00:00:04.000Z" },
+      { ...common, id: "send-b", type: "slip.send", payload: { session_id: "session-b", student_ids: ["student-b"] }, created_at: "2026-10-31T00:00:04.000Z" },
       { ...common, id: "set-a", type: "slip.set", payload: { session_id: "session-a", student_id: "student-a", criteria: 31, comment: "A", note: "" }, created_at: "2026-10-31T00:00:01.000Z" },
       { ...common, id: "attendance-b", type: "attendance.set", payload: { session_id: "session-b", student_id: "student-b", status: "present" }, created_at: "2026-10-31T00:00:00.000Z" },
       { ...common, id: "set-b", type: "slip.set", payload: { session_id: "session-b", student_id: "student-b", criteria: 31, comment: "B", note: "" }, created_at: "2026-10-31T00:00:02.000Z" },
-      { ...common, id: "send-a", type: "slip.send", payload: { session_id: "session-a", student_id: "student-a" }, created_at: "2026-10-31T00:00:03.000Z" },
+      { ...common, id: "send-a", type: "slip.send", payload: { session_id: "session-a", student_ids: ["student-a"] }, created_at: "2026-10-31T00:00:03.000Z" },
       { ...common, id: "attendance-a", type: "attendance.set", payload: { session_id: "session-a", student_id: "student-a", status: "present" }, created_at: "2026-10-31T00:00:00.500Z" },
     ] as never);
 
-    let pushed: Array<{ id: string; type: string; payload: { session_id: string; student_id: string }; created_at: string }> = [];
-    vi.spyOn(api, "request").mockImplementation((async (endpoint: string, init?: { body?: { commands?: typeof pushed } }) => {
-      if (endpoint === "POST /sync/push") {
-        pushed = init?.body?.commands ?? [];
-        return { epoch: 1, cursor: 1, results: pushed.map(({ id }) => ({ id, status: "applied", version: 1 })) };
-      }
-      if (endpoint === "GET /sync/pull") return { cursor: 1, epoch: 1, has_more: false, server_time: "2026-10-31T00:00:00Z", upserts: {}, deleted: [] };
-      throw new Error(`Unexpected fake endpoint: ${endpoint}`);
-    }) as never);
-
+    const pushed = await capturePushes();
     await retryRejectedCommands(["send-b", "set-a", "attendance-b", "set-b", "send-a", "attendance-a"]);
 
-    expect(pushed.map(({ type, payload }) => `${type}:${payload.session_id}:${payload.student_id}`)).toEqual([
+    expect(pushed.map(({ type, payload }) => `${type}:${payload.session_id}:${payload.student_id ?? payload.student_ids?.join("+")}`)).toEqual([
       "attendance.set:session-b:student-b",
       "attendance.set:session-a:student-a",
       "slip.set:session-a:student-a",
@@ -161,6 +182,97 @@ describe("sync rejection persistence", () => {
     ]);
     expect(pushed.every((row, index) => index === 0 || Date.parse(row.created_at) > Date.parse(pushed[index - 1].created_at))).toBe(true);
     expect(pushed.every(({ id }) => !["send-b", "set-a", "attendance-b", "set-b", "send-a", "attendance-a"].includes(id))).toBe(true);
+  });
+
+  it("retries attendance, sets and sends in dependency order across sessions and students", async () => {
+    const { retryRejectedCommands } = await import("../data/sync");
+    await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
+    const same = "2026-10-31T00:00:00.000Z";
+    const rejected = [
+      queueRow("cmd-01", "slip.send", { session_id: "session-a", student_ids: ["student-x"] }, same),
+      queueRow("cmd-02", "slip.set", { session_id: "session-a", student_id: "student-y", criteria: 31, comment: "Y", note: "" }, same),
+      queueRow("cmd-03", "attendance.set", { session_id: "session-a", student_id: "student-x", status: "present" }, same),
+      queueRow("cmd-04", "slip.send", { session_id: "session-b", student_ids: ["student-z", "student-w"] }, same),
+      queueRow("cmd-05", "slip.set", { session_id: "session-a", student_id: "student-x", criteria: 31, comment: "X", note: "" }, same),
+      queueRow("cmd-06", "attendance.set", { session_id: "session-b", student_id: "student-z", status: "present" }, same),
+      queueRow("cmd-07", "slip.set", { session_id: "session-b", student_id: "student-z", criteria: 31, comment: "Z", note: "" }, same),
+      queueRow("cmd-08", "slip.set", { session_id: "session-b", student_id: "student-w", criteria: 31, comment: "W", note: "" }, same),
+      queueRow("cmd-09", "attendance.set", { session_id: "session-a", student_id: "student-y", status: "present" }, same),
+    ];
+    await db.outbox.bulkPut(rejected as never);
+
+    const pushed = await capturePushes();
+    await retryRejectedCommands(rejected.map(({ id }) => id));
+
+    expect(pushed).toHaveLength(rejected.length);
+    // Buổi A: điểm danh của từng em trước phiếu của em đó, phiếu trước lệnh gửi.
+    expect(positionOf(pushed, "attendance.set", "session-a", "student-x")).toBeLessThan(positionOf(pushed, "slip.set", "session-a", "student-x"));
+    expect(positionOf(pushed, "attendance.set", "session-a", "student-y")).toBeLessThan(positionOf(pushed, "slip.set", "session-a", "student-y"));
+    expect(positionOf(pushed, "slip.set", "session-a", "student-x")).toBeLessThan(positionOf(pushed, "slip.send", "session-a", "student-x"));
+    // Buổi B: lệnh gửi cả lớp chỉ sau phiếu của mọi em có trong lệnh gửi.
+    expect(positionOf(pushed, "attendance.set", "session-b", "student-z")).toBeLessThan(positionOf(pushed, "slip.set", "session-b", "student-z"));
+    for (const studentId of ["student-z", "student-w"]) {
+      expect(positionOf(pushed, "slip.set", "session-b", studentId)).toBeLessThan(positionOf(pushed, "slip.send", "session-b", studentId));
+    }
+    expect(pushed.every((row, index) => index === 0 || Date.parse(row.created_at) > Date.parse(pushed[index - 1].created_at))).toBe(true);
+    expect(pushed.every(({ id }) => !rejected.some((row) => row.id === id))).toBe(true);
+  });
+
+  it("keeps a retried set before a pending attendance and send of the same students", async () => {
+    const { retryRejectedCommands } = await import("../data/sync");
+    await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
+    await db.outbox.bulkPut([
+      queueRow("attendance-pending", "attendance.set", { session_id: "session-a", student_id: "student-a", status: "present" }, "2026-10-30T00:00:00.000Z", "pending"),
+      queueRow("send-pending", "slip.send", { session_id: "session-a", student_ids: ["student-a", "student-b"] }, "2026-10-30T00:00:01.000Z", "pending"),
+      queueRow("set-rejected", "slip.set", { session_id: "session-a", student_id: "student-a", criteria: 31, comment: "A", note: "" }, "2026-10-30T00:00:02.000Z"),
+    ] as never);
+
+    const pushed = await capturePushes();
+    await retryRejectedCommands(["set-rejected"]);
+
+    const setIndex = positionOf(pushed, "slip.set", "session-a", "student-a"), sendIndex = positionOf(pushed, "slip.send", "session-a", "student-a");
+    expect(pushed[setIndex].id).not.toBe("set-rejected");
+    expect(positionOf(pushed, "attendance.set", "session-a", "student-a")).toBeLessThan(setIndex);
+    expect(setIndex).toBeLessThan(sendIndex);
+    expect(Date.parse(pushed[setIndex].created_at)).toBeLessThan(Date.parse(pushed[sendIndex].created_at));
+  });
+
+  it("waits for every set of a class-wide send, including sets already pending", async () => {
+    const { retryRejectedCommands } = await import("../data/sync");
+    await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
+    const same = "2026-10-31T00:00:00.000Z";
+    await db.outbox.bulkPut([
+      queueRow("send-class", "slip.send", { session_id: "session-a", student_ids: ["student-a", "student-b", "student-c"] }, same),
+      queueRow("set-c-pending", "slip.set", { session_id: "session-a", student_id: "student-c", criteria: 31, comment: "C", note: "" }, same, "pending"),
+      queueRow("set-a", "slip.set", { session_id: "session-a", student_id: "student-a", criteria: 31, comment: "A", note: "" }, same),
+      queueRow("set-b", "slip.set", { session_id: "session-a", student_id: "student-b", criteria: 31, comment: "B", note: "" }, same),
+    ] as never);
+
+    const pushed = await capturePushes();
+    await retryRejectedCommands(["send-class", "set-a", "set-b"]);
+
+    const sendIndex = positionOf(pushed, "slip.send", "session-a");
+    expect(sendIndex).toBe(pushed.length - 1);
+    for (const studentId of ["student-a", "student-b", "student-c"]) expect(positionOf(pushed, "slip.set", "session-a", studentId)).toBeLessThan(sendIndex);
+  });
+
+  it("leaves commands of sessions that are not retried untouched", async () => {
+    const { retryRejectedCommands } = await import("../data/sync");
+    await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
+    await db.outbox.bulkPut([
+      queueRow("other-attendance", "attendance.set", { session_id: "session-z", student_id: "student-z", status: "present" }, "2026-10-30T00:00:00.000Z", "pending"),
+      queueRow("other-slip", "slip.set", { session_id: "session-z", student_id: "student-z", criteria: 31, comment: "Z", note: "" }, "2026-10-30T00:00:01.000Z", "pending"),
+      queueRow("retried-send", "slip.send", { session_id: "session-a", student_ids: ["student-a"] }, "2026-10-30T00:00:02.000Z"),
+    ] as never);
+
+    const pushed = await capturePushes();
+    await retryRejectedCommands(["retried-send"]);
+
+    expect(pushed.filter(({ payload }) => payload.session_id === "session-z").map(({ type, created_at }) => [type, created_at])).toEqual([
+      ["attendance.set", "2026-10-30T00:00:00.000Z"],
+      ["slip.set", "2026-10-30T00:00:01.000Z"],
+    ]);
+    expect(positionOf(pushed, "slip.send", "session-a")).toBe(2);
   });
 
   it("hides membership cache and preserves its rejected outbox on a permission revoke", async () => {

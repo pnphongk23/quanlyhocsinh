@@ -224,13 +224,8 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
   try {
     await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
     while (true) {
-        const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").toArray();
-        rows.sort((a, b) => {
-          const byCreatedAt = a.created_at.localeCompare(b.created_at);
-          if (byCreatedAt) return byCreatedAt;
-          const attendancePriority = (row: typeof a) => row.type === "attendance.set" ? 0 : row.type === "slip.set" || row.type === "slip.send" ? 2 : 1;
-          return attendancePriority(a) - attendancePriority(b);
-        });
+        const rows = (await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").toArray())
+          .sort((a, b) => a.created_at.localeCompare(b.created_at) || pushPhase(a.type) - pushPhase(b.type) || a.id.localeCompare(b.id));
       if (!rows.length) break;
       let batch = [] as typeof rows;
       for (const row of rows) {
@@ -326,24 +321,25 @@ async function withTestUpdateId(row: OutboxRow, identity: string): Promise<Outbo
 export async function retryRejectedCommands(ids: string[]): Promise<void> {
   const identity = identityKey(), wanted = new Set(ids);
   // Máy chủ trả lại kết quả đã lưu cho cùng id, nên lệnh thử lại phải mang id mới mới được xét lại.
-    await db.transaction("rw", [db.outbox, db.tests], async () => {
-        const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
-        rows.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
-        const pendingAttendance = await db.outbox.where("identity").equals(identity).and((row) => row.status === "pending" && row.type === "attendance.set").toArray();
-        const renamed = new Map(rows.map((row) => [row.id, crypto.randomUUID()]));
-        const retryRows = orderRetriedSlips(rows);
-        const retrySessions = new Set(retryRows.filter((row) => row.type === "slip.set" || row.type === "slip.send").map((row) => (row.payload as { session_id?: string }).session_id));
-        const latestAttendance = pendingAttendance.reduce((latest, attendance) => {
-          const sessionId = (attendance.payload as { session_id?: string }).session_id;
-          return retrySessions.has(sessionId) ? Math.max(latest, Date.parse(attendance.created_at)) : latest;
-        }, 0);
-        const firstCreatedAt = Math.max(Date.now(), latestAttendance + 1);
-        for (const [index, row] of retryRows.entries()) {
-          const fixed = await withTestUpdateId(row, identity);
-          const createdAt = new Date(firstCreatedAt + index).toISOString();
-        await db.outbox.delete(row.id);
-        await db.outbox.put({ ...fixed, id: renamed.get(row.id)!, created_at: createdAt, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
-      }
+  await db.transaction("rw", [db.outbox, db.tests], async () => {
+    const rejected = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
+    if (!rejected.length) return;
+    const pending = await db.outbox.where("identity").equals(identity).and((row) => row.status === "pending").toArray();
+    const retrySessions = new Set(rejected.map(queueSession).filter((sessionId): sessionId is string => Boolean(sessionId)));
+    // Lệnh đang chờ của cùng buổi cũng vào lượt xếp lại: phiếu đã chờ gửi phải nhường lệnh sửa phiếu thử lại.
+    const affected = pending.filter((row) => isSlipQueue(row.type) && retrySessions.has(queueSession(row) ?? ""));
+    const affectedIds = new Set(affected.map((row) => row.id));
+    const latestOther = pending.reduce((latest, row) => affectedIds.has(row.id) ? latest : Math.max(latest, Date.parse(row.created_at) || 0), 0);
+    const ordered = orderPushBatch([...rejected, ...affected]);
+    const renamed = new Map(rejected.map((row) => [row.id, crypto.randomUUID()]));
+    const firstCreatedAt = Math.max(Date.now(), latestOther + 1);
+    for (const [index, row] of ordered.entries()) {
+      const createdAt = new Date(firstCreatedAt + index).toISOString();
+      if (!renamed.has(row.id)) { await db.outbox.update(row.id, { created_at: createdAt }); continue; }
+      const fixed = await withTestUpdateId(row, identity);
+      await db.outbox.delete(row.id);
+      await db.outbox.put({ ...fixed, id: renamed.get(row.id)!, created_at: createdAt, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
+    }
     await db.outbox.where("identity").equals(identity).and((other) => !!other.depends_on && renamed.has(other.depends_on)).modify((other) => { other.depends_on = renamed.get(other.depends_on!); });
   });
   publishRejected(await db.outbox.where("identity").equals(identity).toArray());
@@ -351,32 +347,14 @@ export async function retryRejectedCommands(ids: string[]): Promise<void> {
   await syncNow();
 }
 
-function orderRetriedSlips<T extends { id: string; type: string; payload: unknown }>(rows: T[]): T[] {
-  const prerequisites = rows.map(() => new Set<number>());
-  rows.forEach((row, index) => {
-    const payload = row.payload as { session_id?: string; student_id?: string };
-    rows.forEach((candidate, candidateIndex) => {
-      const candidatePayload = candidate.payload as { session_id?: string; student_id?: string };
-      if (row.type === "slip.send" && candidate.type === "slip.set" && candidatePayload.session_id === payload.session_id && candidatePayload.student_id === payload.student_id) {
-        prerequisites[index].add(candidateIndex);
-      }
-      if (row.type === "slip.set" || row.type === "slip.send") {
-        if (candidate.type === "attendance.set" && candidatePayload.session_id === payload.session_id) {
-          prerequisites[index].add(candidateIndex);
-        }
-      }
-    });
-  });
-
-  const ordered: T[] = [];
-  const completed = new Set<number>();
-  while (ordered.length < rows.length) {
-    const next = rows.findIndex((_, index) => !completed.has(index) && [...prerequisites[index]].every((dependency) => completed.has(dependency)));
-    if (next < 0) break;
-    completed.add(next);
-    ordered.push(rows[next]);
-  }
-  return ordered;
+/** Thứ tự đẩy lệnh: điểm danh của buổi trước, rồi phiếu của từng em, cuối cùng lệnh gửi phiếu (một em hay cả lớp). */
+const pushPhase = (type: string): number => type === "attendance.set" ? 0 : type === "slip.send" ? 2 : 1;
+const isSlipQueue = (type: string): boolean => type === "attendance.set" || type === "slip.set" || type === "slip.send";
+const queueSession = (row: { payload: unknown }): string | undefined => (row.payload as { session_id?: string }).session_id;
+export type QueueOrderRow = { id: string; type: string; payload: unknown; created_at: string };
+/** Xếp một lượt đẩy theo phụ thuộc nghiệp vụ: cùng pha thì theo giờ tạo rồi tới id, nên kết quả luôn xác định. */
+export function orderPushBatch<T extends QueueOrderRow>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => pushPhase(a.type) - pushPhase(b.type) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
 }
 /** Bỏ các lệnh ghi ô bị từ chối (theo id) rồi lấy lại giá trị hiện tại của từng ô từ máy chủ, không động tới lệnh khác. */
 export async function discardRejectedCommands(ids: string[]): Promise<void> {
