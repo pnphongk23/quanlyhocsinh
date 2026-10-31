@@ -93,7 +93,7 @@ describe("CriteriaMode", () => {
     expect(screen.getAllByText("Nguyễn Minh Anh").every((chip) => !/selected/.test(chip.className))).toBe(true);
   });
 
-  it("keeps five-star no-criteria slips unmet in the badge and lets the teacher edit them", () => {
+  it("counts a five-star slip without stored criteria in both the badge and the chips", () => {
       const rows = buildTicketRows(createSeed(), "6a-session-7");
       const row = rows.find((candidate) => candidate.attended)!;
       row.comment = { ...row.comment!, scale: 5, criteria: null, stars: 5 };
@@ -104,7 +104,8 @@ describe("CriteriaMode", () => {
     expect(chips).toHaveLength(5);
     expect(chips.every((chip) => chip.getAttribute("aria-pressed") === "true")).toBe(true);
     expect(screen.queryByText("Phiếu thang cũ")).not.toBeInTheDocument();
-      expect(screen.getAllByText("đạt 0/1")).toHaveLength(5);
+      // Badge đếm cùng nguồn với chip: phiếu thang 5 thiếu criteria tính là đủ 5 tiêu chí.
+      expect(screen.getAllByText("đạt 1/1")).toHaveLength(5);
     fireEvent.click(chips[0]);
       expect(toggle).toHaveBeenCalledWith("6a-session-7", row.student.id, 0);
   });

@@ -4,7 +4,7 @@ import { toggleSlipCriterionDurable } from "../../data/repositories/comments";
 import { defaultSlipCriteria } from "../../data/slip";
 import type { HomeworkGrade } from "../../data/types";
 import { EmptyState, Pill, Segmented } from "../../shared/ui";
-import { canToggleCriterion, criteriaForEditingRow, criteriaForRow, rowHasCustomComment, SLIP_CRITERIA } from "./criteriaModel";
+import { canToggleCriterion, criteriaForEditingRow, rowHasCustomComment, SLIP_CRITERIA } from "./criteriaModel";
 import s from "./CriteriaMode.module.css";
 
 const expandedCriteriaBySession = new Map<string, number[]>();
@@ -54,6 +54,8 @@ export default function CriteriaMode({
   const customWarningShown = useRef(false);
   const sentConfirmShown = useRef(false);
   const initialCriteria = (row: TicketRow) => defaultSlipCriteria(previousGrades(row.student.id));
+  // Cùng một nguồn tiêu chí cho số đếm trên tiêu đề lẫn chip, nếu không phiếu thang 5 thiếu `criteria` sẽ lệch nhau.
+  const criteriaOf = (row: TicketRow) => preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForEditingRow(row) : row.attended ? initialCriteria(row) : 0);
 
   useEffect(() => {
     customWarningShown.current = false;
@@ -103,7 +105,7 @@ export default function CriteriaMode({
             const expanded = (expandedBySession[sessionId] ?? expandedCriteriaBySession.get(sessionId) ?? [0]).includes(index);
           const achieved = rows.filter((row) => {
             if (!row.attended) return false;
-              const criteria = preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForRow(row) : initialCriteria(row));
+              const criteria = criteriaOf(row);
             return (criteria & (1 << index)) !== 0;
           }).length;
           return (
@@ -130,7 +132,7 @@ export default function CriteriaMode({
             <div className={s.chips}>
               {orderedRows.map((row) => {
               const legacy = !canToggleCriterion(row);
-                  const criteria = preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForEditingRow(row) : row.attended ? initialCriteria(row) : 0);
+                  const criteria = criteriaOf(row);
               const unachieved = (criteria & (1 << index)) === 0;
                 // Tô màu = em đạt; em chưa có phiếu tô nhạt (sẽ đạt khi tạo phiếu).
                 const selected = !unachieved;
