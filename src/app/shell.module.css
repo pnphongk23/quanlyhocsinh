@@ -6,7 +6,8 @@
 
 /* Staff shell follows the desktop sidebar and mobile tab bar in the prototype. */
 .staffDesktop { min-height: 100dvh; overflow-x: clip; padding-bottom: var(--tabbar-total); background: var(--color-bg); }
-.staffDetail { padding-bottom: 0; --tabbar-total: var(--safe-bottom); --sticky-bottom: var(--safe-bottom); --fab-bottom: calc(var(--safe-bottom) + var(--fab-inset)); }
+/* Khung chi tiết trên mobile bỏ chỗ của thanh tab; biến đệm đổi trong media query bên dưới, desktop giữ token mặc định. */
+.staffDetail { padding-bottom: 0; }
 @media (max-width: 1023px) {
   :global(:root[data-staff-detail]) {
     --tabbar-total: var(--safe-bottom);
