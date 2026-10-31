@@ -19,7 +19,7 @@ jobs:
       web: ${{ steps.filter.outputs.web }}
       ios: ${{ steps.filter.outputs.ios }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       - id: filter
@@ -36,7 +36,8 @@ jobs:
           while IFS= read -r path; do
             case "$path" in
               worker/*) worker=true ;;
-              src/*|public/*|package.json|package-lock.json|package*.json|vite.config.*|scripts/*) web=true ;;
+              .github/workflows/*) worker=true; web=true ;;
+              src/*|public/*|package.json|package-lock.json|package*.json|vite.config.*|scripts/*|index.html|tsconfig*.json|.env.dev) web=true ;;
               ios/*) ios=true ;;
             esac
           done <<< "$changed_files"
@@ -54,8 +55,8 @@ jobs:
       run:
         working-directory: worker
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -69,8 +70,8 @@ jobs:
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -87,7 +88,7 @@ jobs:
       run:
         working-directory: ios
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install XcodeGen
         run: brew install xcodegen
       - run: xcodegen generate

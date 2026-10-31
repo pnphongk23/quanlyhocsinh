@@ -175,14 +175,14 @@ Tạo feature branch từ `develop`, mở pull request vào `develop` để ch�
 | Workflow | Kích hoạt | Công việc |
 |---|---|---|
 | `ci.yml` | Pull request vào `develop` hoặc `master` | Chỉ chạy kiểm tra cho Worker (`typecheck`, test), web (`typecheck`, test, build) và/hoặc iOS (XcodeGen, test Simulator) theo file thay đổi. Không deploy. |
-| `deploy-dev.yml` | Push `develop` hoặc chạy tay | Chỉ deploy Worker (D1 migrations rồi Worker) và/hoặc web thay đổi lên `qlh-dev-*`; chạy tay sẽ deploy cả hai. |
-| `deploy-prod.yml` | Push `master` | Chỉ deploy Worker và/hoặc web thay đổi lên `qlh-staging-*`; Worker ghi Time Travel bookmark, chỉ apply migration khi còn migration chờ. Bật required reviewers cho Environment `production`. |
+| `deploy-dev.yml` | Push `develop` hoặc chạy tay | Luôn deploy cả Worker (D1 migrations rồi Worker) và web lên `qlh-dev-*`, để run mới nhất hội tụ trạng thái dù có push liên tiếp. |
+| `deploy-prod.yml` | Push `master` | Luôn deploy cả Worker và web lên `qlh-staging-*`; Worker ghi Time Travel bookmark, chỉ apply migration khi còn migration chờ. Bật required reviewers cho Environment `production`. |
 
 ### GitHub Environments và quyền Cloudflare
 
 Tạo Environments `development` và `production`, đặt riêng hai secret `CLOUDFLARE_API_TOKEN` và `CLOUDFLARE_ACCOUNT_ID` trong từng Environment. Bật required reviewers cho `production`. Người vận hành tự thêm secret bằng `gh secret set` với tùy chọn Environment tương ứng; không lưu token trong repository hoặc tài liệu. Token chỉ cần quyền tài khoản: Workers Scripts Edit, D1 Edit, Cloudflare Pages Edit và Account Settings Read.
 
-Mỗi Environment cần GitHub Actions variable `PAGES_PRODUCTION_BRANCH` khớp production branch đã cấu hình cho Pages project tương ứng. `wrangler pages project list` xác nhận cả `qlh-dev-web` và `qlh-staging-web` tồn tại nhưng không trả về branch; cần kiểm tra branch trong Cloudflare Dashboard rồi đặt variable trước deploy.
+Production branch của cả Pages project `qlh-dev-web` và `qlh-staging-web` được xác nhận là `main`. Workflow deploy Pages chỉ định `--branch main`; branch này thuộc cấu hình Pages và độc lập với nhánh GitHub `develop`/`master`.
 
 ## 9. Chưa kiểm chứng
 
