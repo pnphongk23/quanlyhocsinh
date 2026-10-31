@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createAppShellPrecacheList, listMascotAssets } from "./src/app/precacheAssets";
+import { buildServiceWorkerSource } from "./src/app/serviceWorkerSource";
 
 const PUBLIC_DIR = "public";
 const MASCOT_DIR = join(PUBLIC_DIR, "mascot");
@@ -18,7 +19,6 @@ function appShellServiceWorker(): Plugin {
         const entry = Object.values(bundle).find((item): item is OutputChunk => item.type === "chunk" && !!item.isEntry);
         if (!entry) throw new Error("Could not find the app entry for service worker precache.");
         const assets = createAppShellPrecacheList(bundle, listMascotAssets(MASCOT_DIR));
-        const version = JSON.stringify(assets);
         const html = bundle["index.html"];
         const revisionHash = createHash("sha256");
         for (const path of assets) {
@@ -31,7 +31,11 @@ function appShellServiceWorker(): Plugin {
         }
         if (html?.type === "asset") revisionHash.update(html.source);
         const revision = revisionHash.digest("hex").slice(0, 12);
-        this.emitFile({ type: "asset", fileName: "sw.js", source: `const CACHE="qlh-shell-${revision}";\nconst ASSETS=${version};\nself.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));\nself.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith("qlh-shell-")&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));\nself.addEventListener("fetch",event=>{const request=event.request;const url=new URL(request.url);if(request.method!=="GET"||url.origin!==self.location.origin||url.pathname.startsWith("/v1/"))return;if(request.mode==="navigate"){event.respondWith(fetch(request).catch(()=>caches.match("/").then(cached=>cached||Response.error())));return;}if(url.pathname.startsWith("/assets/")){event.respondWith(caches.open(CACHE).then(async cache=>{const cached=await cache.match(request);if(cached)return cached;const response=await fetch(request);if(response.ok&&!response.headers.get("content-type")?.includes("text/html"))await cache.put(request,response.clone());return response;}));return;}event.respondWith(caches.match(request).then(cached=>cached||fetch(request)));});\n` });
+        this.emitFile({
+          type: "asset",
+          fileName: "sw.js",
+          source: buildServiceWorkerSource({ cacheName: `qlh-shell-${revision}`, assets }),
+        });
     },
   };
 }
