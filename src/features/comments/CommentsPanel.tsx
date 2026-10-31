@@ -336,6 +336,7 @@ export default function CommentsPanel({
               {initialsOf(row.student.name)}
             </span>
             <span className={s.ticketName}>{row.student.name}</span>
+            {attendance.complete && !row.attended && <Pill tone="warning">Vắng</Pill>}
             <Pill tone={badge.tone}>{badge.label}</Pill>
               {attendance.complete && (
                 <span className={s.chevron}>
