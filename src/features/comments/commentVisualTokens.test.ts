@@ -46,4 +46,8 @@ describe("comments visual contrast", () => {
     expect(fieldsCss).toMatch(/\.criterionOn:disabled\s*\{[^}]*opacity:\s*1/s);
     expect(panelCss).toMatch(/\.starOptionOn:disabled\s*\{[^}]*opacity:\s*1/s);
   });
+
+  it("fades non-interactive criteria chips with the disabled state token", () => {
+    expect(criteriaCss).toMatch(/\.disabled\s*\{[^}]*opacity:\s*var\(--state-disabled-opacity\)/s);
+  });
 });

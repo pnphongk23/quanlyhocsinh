@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildTicketRows } from "../../data/homework";
 import { createSeed } from "../../test/fixtures/seed";
 import CriteriaMode from "./CriteriaMode";
+import s from "./CriteriaMode.module.css";
 
 function expandAllCriteria() {
   for (const heading of screen.getAllByRole("button", { name: /đạt \d+\/\d+/ })) {
@@ -69,10 +70,12 @@ describe("CriteriaMode", () => {
 
   it("hides editable chip buttons without write access", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7");
-    render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite={false} />);
-    expect(screen.queryByRole("button", { name: "Nguyễn Minh Anh" })).not.toBeInTheDocument();
-    expect(screen.getAllByText("Nguyễn Minh Anh").length).toBeGreaterThan(0);
-    expect(toggle).not.toHaveBeenCalled();
+      render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite={false} />);
+      expect(screen.queryByRole("button", { name: "Nguyễn Minh Anh" })).not.toBeInTheDocument();
+      const disabledChips = screen.getAllByText("Nguyễn Minh Anh", { exact: true }).map((label) => label.closest("span"));
+      expect(disabledChips.length).toBeGreaterThan(0);
+      expect(disabledChips.every((chip) => chip?.getAttribute("aria-disabled") === "true" && chip.classList.contains(s.disabled))).toBe(true);
+      expect(toggle).not.toHaveBeenCalled();
   });
 
   it("shows the shared empty state when no students are on the session", () => {

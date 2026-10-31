@@ -101,6 +101,10 @@
   font-size: var(--text-md);
 }
 
+.disabled {
+  opacity: var(--state-disabled-opacity);
+}
+
 button.chip {
   cursor: pointer;
 }

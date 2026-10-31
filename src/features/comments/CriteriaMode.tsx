@@ -158,7 +158,7 @@ export default function CriteriaMode({
                     {row.student.name}{!row.attended && <small className={s.absenceLabel}>Vắng</small>}{sent && <small>Đã gửi</small>}
                 </button>
               ) : (
-                  <span key={row.student.id} aria-current={row.student.id === selectedStudentId ? "true" : undefined} className={`${s.chip}${chipTone ? ` ${chipTone}` : ""}${legacy ? ` ${s.legacy}` : ""}`}>
+                    <span key={row.student.id} aria-disabled="true" aria-current={row.student.id === selectedStudentId ? "true" : undefined} className={`${s.chip}${chipTone ? ` ${chipTone}` : ""}${legacy ? ` ${s.legacy}` : ""} ${s.disabled}`}>
                     {row.student.name}{!row.attended && <small className={s.absenceLabel}>Vắng</small>}{sent && <small>Đã gửi</small>}{legacy && <small>Phiếu thang cũ</small>}
                 </span>
               );
