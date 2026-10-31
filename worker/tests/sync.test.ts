@@ -1,6 +1,6 @@
 import { beforeEach,describe,it,expect } from 'vitest';
 import { call,post,db,registerWorkspace,fakePhone,insertUser,insertMembership,insertClass,insertStudent,
-  insertSession,insertTest,insertGuardianMembership,clubToken } from './helpers';
+  insertAttendance,insertSession,insertTest,insertGuardianMembership,clubToken } from './helpers';
 
 beforeEach(async()=>{await db.prepare('DELETE FROM auth_throttle').run();});
 const uid=()=>crypto.randomUUID();
@@ -56,6 +56,7 @@ describe('sync commands and recovery',()=>{
   });
   it('lets the later arrival win for every cell type and never records conflicts',async()=>{
     const f=await setup(),section=uid();
+    await Promise.all([f.s1,f.s2].map((studentId) => insertAttendance(f.a.workspaceId,f.cls,f.ses,studentId,'present',f.a.userId)));
     await f.send([command('homework.assign',{session_id:f.ses,sections:[{id:section,kind:'reading'}]})]);
     for (const [type,base,other] of [
       ['attendance.set',{session_id:f.ses,student_id:f.s1,status:'present'},{status:'absent'}],
@@ -131,6 +132,7 @@ describe('sync commands and recovery',()=>{
     expect(r.body.results.map((x:any)=>x.error.details?.reason ?? x.error.code)).toEqual(['command_expired','session_not_started','invalid_value','not_found']);
     await f.send([command('attendance.set',payload)]);
     expect((await f.send([command('attendance.set',payload,2)])).body.results[0].error.details.reason).toBe('base_version_ahead');
+    await f.send([command('attendance.set',{session_id:f.ses,student_id:f.s2,status:'present'})]);
     await db.prepare("UPDATE students SET enrolled_at='2099-01-01' WHERE id=?").bind(f.s1).run();
     expect((await f.send([command('slip.set',{session_id:f.ses,student_id:f.s1,stars:3,note:''})])).body.results[0].error.details.reason).toBe('student_not_enrolled_on_date');
   });
@@ -277,6 +279,8 @@ describe('sync scope and read protocol',()=>{
   it('hides draft slips/grades, replays homework grades on send and removes archived tests/scores',async()=>{
     const f=await setup(),section=uid();
     const next=await insertSession(f.a.workspaceId,f.cls,'2099-01-01',f.a.userId);
+    await Promise.all([insertAttendance(f.a.workspaceId,f.cls,next,f.s1,'present',f.a.userId),
+      insertAttendance(f.a.workspaceId,f.cls,next,f.s2,'absent',f.a.userId)]);
     await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading'}),
       command('homework.grade.set',{section_id:section,student_id:f.s1,level:'excellent'}),
       command('slip.set',{session_id:next,student_id:f.s1,stars:3,note:''}),command('score.set',{test_id:f.test,student_id:f.s1,value:0})]);
@@ -286,7 +290,7 @@ describe('sync scope and read protocol',()=>{
     expect(sends.map(r=>r.body.results[0].status).sort()).toEqual(['applied','duplicate']);
     const sent=sends.find(r=>r.body.results[0].status==='applied')!;
     expect((await db.prepare('SELECT version FROM session_comments WHERE session_id=? AND student_id=?').bind(next,f.s1).first<any>())!.version).toBe(2);
-    expect(sent.body.results[0]).toMatchObject({status:'applied',sent:[f.s1],skipped:[{student_id:f.s2,reason:'not_attended'}]});
+    expect(sent.body.results[0]).toMatchObject({status:'applied',sent:[f.s1],skipped:[{student_id:f.s2,reason:'absent'}]});
     const after=await f.pull(before.body.cursor,'p1');expect(after.body.upserts.slip).toHaveLength(1);expect(after.body.upserts.homework_grade).toHaveLength(1);
     expect((await f.send([command('slip.set',{session_id:next,student_id:f.s1,stars:2,note:'Updated fixture'},2)])).body.results[0].status).toBe('applied');
     expect((await f.send([command('slip.set',{session_id:next,student_id:f.s1,stars:null,note:''},0)])).body.results[0].error.details.reason).toBe('stars_required');

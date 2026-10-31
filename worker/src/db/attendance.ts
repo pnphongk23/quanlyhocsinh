@@ -1,12 +1,35 @@
 import { requireAccess } from './authz';
 import type { Identity } from '../types';
-import { notFound, validationError } from '../lib/errors';
+import { ApiError, notFound, validationError } from '../lib/errors';
 import { isDate } from './classes';
 
 type AttendanceRow = {
   session_id: string; student_id: string; status: 'present' | 'late' | 'absent';
   version: number; updated_at: string; date?: string; start_time?: string;
 };
+
+/** Reject slip writes until every student enrolled on the session date has a saved attendance state. */
+export async function assertSessionAttendanceComplete(
+  db: D1Database,
+  workspaceId: string,
+  sessionId: string,
+): Promise<void> {
+  const row = await db.prepare(`SELECT COUNT(*) AS missing_count
+    FROM class_sessions cs
+    JOIN students s ON s.workspace_id=cs.workspace_id AND s.class_id=cs.class_id
+      AND s.enrolled_at<=cs.date AND (s.left_at IS NULL OR s.left_at>=cs.date)
+    LEFT JOIN attendance a ON a.workspace_id=s.workspace_id AND a.session_id=cs.id AND a.student_id=s.id
+      AND a.status IN ('present','late','absent')
+    WHERE cs.workspace_id=? AND cs.id=? AND a.student_id IS NULL`)
+    .bind(workspaceId, sessionId)
+    .first<{ missing_count: number }>();
+  const missingCount = row?.missing_count ?? 0;
+  if (missingCount > 0) {
+    throw new ApiError(409, 'attendance_incomplete', 'Attendance is incomplete.', {
+      missing_count: missingCount,
+    });
+  }
+}
 
 export async function getSessionAttendance(db: D1Database, identity: Identity, sessionId: string) {
   const session = await db.prepare('SELECT id, class_id FROM class_sessions WHERE workspace_id = ? AND id = ?')

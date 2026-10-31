@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
-import { call, clubToken, db, fakePhone, insertClass, insertGuardianMembership, insertMembership, insertSession, insertStudent, insertUser, post, put, registerWorkspace } from './helpers';
+import { call, clubToken, db, fakePhone, insertAttendance, insertClass, insertGuardianMembership, insertMembership, insertSession, insertStudent, insertUser, post, put, registerWorkspace } from './helpers';
 
 const uid = () => crypto.randomUUID();
 const command = (type: string, payload: unknown) => ({ id: uid(), type, payload, base_version: 0, created_at: new Date().toISOString() });
@@ -14,6 +14,7 @@ async function setup(name: string) {
   const sessionId = await insertSession(owner.workspaceId, classId,
     new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date()), owner.userId);
   await db.prepare("UPDATE students SET enrolled_at='2000-01-01' WHERE id=?").bind(studentId).run();
+  await insertAttendance(owner.workspaceId, classId, sessionId, studentId, 'present', owner.userId);
   const assistantUserId = await insertUser(fakePhone());
   const assistantMembership = await insertMembership(owner.workspaceId, assistantUserId, owner.roles.assistant!, [classId]);
   const assistantToken = await clubToken(owner.workspaceId, assistantUserId, assistantMembership);
@@ -56,12 +57,14 @@ describe('send_comments permission', () => {
     const teacherToken = await clubToken(f.owner.workspaceId, teacherUser, teacherMembership);
     const teacherStudent = await insertStudent(f.owner.workspaceId, f.classId, 'Teacher learner', null, f.owner.userId);
     await db.prepare("UPDATE students SET enrolled_at='2000-01-01' WHERE id=?").bind(teacherStudent).run();
+    await insertAttendance(f.owner.workspaceId, f.classId, f.sessionId, teacherStudent, 'present', f.owner.userId);
     await f.push(teacherToken, teacherMembership, [command('slip.set', { session_id: f.sessionId, student_id: teacherStudent, criteria: 15, comment: 'Tốt', note: '' })]);
     expect((await f.push(teacherToken, teacherMembership, [command('slip.send', {
       session_id: f.sessionId, student_ids: [teacherStudent],
     })])).body.results[0].status).toBe('applied');
     const adminStudent = await insertStudent(f.owner.workspaceId, f.classId, 'Admin learner', null, f.owner.userId);
     await db.prepare("UPDATE students SET enrolled_at='2000-01-01' WHERE id=?").bind(adminStudent).run();
+    await insertAttendance(f.owner.workspaceId, f.classId, f.sessionId, adminStudent, 'present', f.owner.userId);
     await f.push(f.owner.token, f.owner.membershipId, [command('slip.set', { session_id: f.sessionId, student_id: adminStudent, criteria: 31, comment: 'Rất tốt', note: '' })]);
     expect((await f.push(f.owner.token, f.owner.membershipId, [command('slip.send', {
       session_id: f.sessionId, student_ids: [adminStudent],
@@ -72,6 +75,7 @@ describe('send_comments permission', () => {
     expect((await call('/v1/roles/assistant/permissions', put({ permissions: { send_comments: 'none' } }), f.owner.token)).status).toBe(200);
     const blockedStudent = await insertStudent(f.owner.workspaceId, f.classId, 'Blocked learner', null, f.owner.userId);
     await db.prepare("UPDATE students SET enrolled_at='2000-01-01' WHERE id=?").bind(blockedStudent).run();
+    await insertAttendance(f.owner.workspaceId, f.classId, f.sessionId, blockedStudent, 'present', f.owner.userId);
     await f.push(f.assistantToken, f.assistantMembership, [command('slip.set', {
       session_id: f.sessionId, student_id: blockedStudent, criteria: 31, comment: 'Rất tốt', note: '',
     })]);
@@ -88,6 +92,8 @@ describe('send_comments permission', () => {
     const f = await setup('Send comments migration');
     const students = await Promise.all([0, 1, 2].map((i) => insertStudent(f.owner.workspaceId, f.classId, `Student ${i}`, null, f.owner.userId)));
     await db.prepare("UPDATE students SET enrolled_at='2000-01-01' WHERE class_id=?").bind(f.classId).run();
+    await Promise.all(students.map((studentId) =>
+      insertAttendance(f.owner.workspaceId, f.classId, f.sessionId, studentId, 'present', f.owner.userId)));
     const batch = await f.push(f.owner.token, f.owner.membershipId, students.map((studentId, index) => command('slip.set', {
       session_id: f.sessionId, student_id: index === 1 ? uid() : studentId, criteria: 31, comment: 'Rất tốt', note: '',
     })));

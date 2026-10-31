@@ -192,6 +192,21 @@ export async function insertStudent(
   return studentId;
 }
 
+export async function insertAttendance(
+  workspaceId: string,
+  classId: string,
+  sessionId: string,
+  studentId: string,
+  status: 'present' | 'late' | 'absent',
+  updatedBy: string,
+): Promise<void> {
+  const now = nowIso();
+  await db.prepare(`INSERT INTO attendance
+    (workspace_id,class_id,session_id,student_id,status,version,created_at,updated_at,updated_by)
+    VALUES(?,?,?,?,?,1,?,?,?)`)
+    .bind(workspaceId,classId,sessionId,studentId,status,now,now,updatedBy).run();
+}
+
 export async function insertSession(
   workspaceId: string,
   classId: string,
