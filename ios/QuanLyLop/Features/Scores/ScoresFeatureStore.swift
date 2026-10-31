@@ -338,8 +338,16 @@ final class I4FeatureStore: ObservableObject {
             try await store.write(write.row, forKey: write.command.recordKey, enqueueing: write.command)
             await syncIfNeeded()
             await refresh()
-            return nil
+            return await attendanceRefusal(forKeys: [write.command.recordKey])
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+    }
+
+    /// The message to show when the server refused one of these slip writes because attendance has not reached it
+    /// yet. The refused command stays in the outbox, so the slip is kept and a later save replaces it.
+    private func attendanceRefusal(forKeys keys: Set<String>) async -> String? {
+        let queued = (try? await store?.queuedCommands()) ?? []
+        return queued.first { $0.state == "rejected" && keys.contains($0.command.recordKey) }
+            .flatMap { SlipServerError.message(for: $0.error) }
     }
 
     /// The slip row and the `slip.set` that save `grading` on top of the slip as currently loaded; nil when the
@@ -407,7 +415,7 @@ final class I4FeatureStore: ObservableObject {
             try await store.writeAll(entries)
             await syncIfNeeded()
             await refresh()
-            return nil
+            return await attendanceRefusal(forKeys: Set(entries.map(\.key)))
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
     }
 
@@ -523,6 +531,7 @@ final class I4FeatureStore: ObservableObject {
         }
         guard let result, result.status == .applied else {
             await refresh()
+            if let message = SlipServerError.message(for: result?.error) { return .failed(message) }
             return failure
         }
 

@@ -232,6 +232,9 @@ enum AppState {
     static let cardPendingBg = AppColors.warningSoft
     static let cardPendingBorder = AppColors.warning
     static let cardPendingFg = AppColors.warning
+    static let cardInfoBg = AppColors.primarySoft
+    static let cardInfoBorder = AppColors.primary
+    static let cardInfoFg = AppColors.primaryInk
     static let cardBorderWidth: CGFloat = 1
     /// `scale(0.98)` while a button or card is pressed.
     static let pressedScale: CGFloat = 0.98

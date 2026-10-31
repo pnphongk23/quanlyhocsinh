@@ -208,9 +208,17 @@ actor SQLiteStore: LocalStore {
                 if cells.contains(command.kind), let row = try db.execute("SELECT json FROM commands WHERE scope=? AND record_key=? AND kind=? AND state='pending' AND attempts=0 ORDER BY created_at DESC,seq DESC LIMIT 1", [scope.storageKey,key,command.kind]).first,
                    let old = row["json"] {
                     let previous = try decode(PendingCommand.self, old)
+                    // The queue replays attendance before slips. A slip edit merged into a command older than a queued
+                    // attendance command would jump ahead of it, so it takes the newer place in the queue instead.
+                    var laterAttendance = false
+                    if command.kind == "slip.set" {
+                        laterAttendance = try !db.execute(
+                            "SELECT 1 AS found FROM commands WHERE scope=? AND kind='attendance.set' AND state<>'rejected' AND CAST(created_at AS REAL)>? LIMIT 1",
+                            [scope.storageKey, String(previous.createdAt.timeIntervalSince1970)]).isEmpty
+                    }
                     replacement = PendingCommand(id: command.id, recordKey: key, baseVersion: previous.baseVersion,
                                                  kind: command.kind, payload: command.merged(over: previous).payload,
-                                                 createdAt: previous.createdAt)
+                                                 createdAt: laterAttendance ? command.createdAt : previous.createdAt)
                     try db.execute("DELETE FROM commands WHERE scope=? AND id=?", [scope.storageKey,previous.id.uuidString])
                 }
                 try db.execute("INSERT INTO commands(scope,id,record_key,kind,json,local_json,created_at) VALUES(?,?,?,?,?,?,?)",

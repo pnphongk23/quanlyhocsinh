@@ -4,6 +4,8 @@ import SwiftUI
 struct SessionCommentsView: View {
     let sessionID: String
     @ObservedObject var data: I4FeatureStore
+    /// Switches the session to its attendance tab; the locked notice offers it.
+    let onGoAttendance: (() -> Void)?
     @Environment(AuthModel.self) private var auth
     @State private var filter: TicketFilter = .all
     @State private var mode: CommentsMode = .byStudent
@@ -26,9 +28,12 @@ struct SessionCommentsView: View {
     @State private var notesRetrying = false
     @State private var notesIncludeSent = false
 
-    init(sessionID: String, data: I4FeatureStore = I4FeatureStore()) {
+    init(sessionID: String, data: I4FeatureStore = I4FeatureStore(), initialMode: CommentsMode = .byStudent,
+         onGoAttendance: (() -> Void)? = nil) {
         self.sessionID = sessionID
         self.data = data
+        self.onGoAttendance = onGoAttendance
+        _mode = State(initialValue: initialMode)
     }
 
     private var session: ClassSession? { data.session(id: sessionID) }
@@ -61,6 +66,9 @@ struct SessionCommentsView: View {
     private var counts: (all: Int, unsent: Int) { CommentsRules.counts(rows) }
     private var visibleRows: [I4TicketRow] { CommentsRules.filtered(rows, filter) }
     private var sendableRows: [I4TicketRow] { CommentsRules.sendable(rows) }
+    /// Until every student has an attendance status the tab only shows the slips.
+    private var isLocked: Bool { !CommentsRules.isAttendanceComplete(rows) }
+    private var defaultTargetCount: Int { CommentsRules.defaultTargets(rows).count }
 
     private var showsFooter: Bool {
         guard let session else { return false }
@@ -116,8 +124,11 @@ struct SessionCommentsView: View {
                 AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.e.nhan.xet"))
             } else {
                 if let saveStatusSource { AppSaveStatus(kind: saveStatusSource.kind.errorOnly) }
+                if isLocked {
+                    AttendanceLockNotice(unmarked: CommentsRules.unmarkedCount(rows), goToAttendance: onGoAttendance)
+                }
                 if notesDraft == nil {
-                    if NotesImportAvailability.showsEntry(canWrite: data.canWriteCommentsReports) { notesImportButton }
+                    if !isLocked, NotesImportAvailability.showsEntry(canWrite: data.canWriteCommentsReports) { notesImportButton }
                     modeSwitch
                 }
                 if let notesResult {
@@ -148,7 +159,8 @@ struct SessionCommentsView: View {
 
     private var criteriaMode: some View {
         let sections = previousSession.map { data.sections(sessionID: $0.id) } ?? []
-        return CriteriaModeView(rows: rows, sections: sections, grades: data.grades, canWrite: data.canWriteCommentsReports,
+        return CriteriaModeView(rows: isLocked ? rows : CommentsRules.absentLast(rows), sections: sections, grades: data.grades,
+                                canWrite: data.canWriteCommentsReports, isLocked: isLocked,
                                 save: { id, grading, note in
             guard let student = rows.first(where: { $0.student.id == id })?.student else { return CriteriaModeText.saveFailed }
             let error = await data.saveSlip(sessionID: sessionID, student: student, grading: grading, note: note)
@@ -227,16 +239,36 @@ struct SessionCommentsView: View {
             if visibleRows.isEmpty {
                 AppEmptyState(title: String(localized: "feature.comments.khong.co.hoc.sinh.trong.muc.nay"), size: .compact)
             }
-            ForEach(visibleRows) { row in
-                ticketCard(row)
+            if isLocked {
+                ForEach(visibleRows) { row in ticketCard(row) }
+            } else {
+                let ordered = CommentsRules.absentLast(visibleRows)
+                ForEach(ordered.filter { !$0.isAbsent }) { row in ticketCard(row) }
+                let absent = ordered.filter(\.isAbsent)
+                if !absent.isEmpty {
+                    Text(String(localized: "comments.absent.group", table: "Teacher"))
+                        .appText(AppText.label)
+                        .foregroundStyle(AppColors.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, AppSpace.s8)
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityIdentifier("comment.absentGroup")
+                    ForEach(absent) { row in ticketCard(row) }
+                }
             }
         }
     }
 
     private func ticketCard(_ row: I4TicketRow) -> some View {
+        Button { open(row.student) } label: { ticketCardBody(row) }
+            .buttonStyle(.plain)
+            .disabled(isLocked)
+    }
+
+    private func ticketCardBody(_ row: I4TicketRow) -> some View {
         let badge = CommentsRules.badge(row)
         let line = CommentsRules.homeworkLine(row)
-        return Button { open(row.student) } label: {
+        return Group {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     I4Avatar(name: row.student.name)
@@ -246,9 +278,11 @@ struct SessionCommentsView: View {
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     AppPill(title: badge.label, tone: badge.tone)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(AppColors.placeholder)
+                    if !isLocked {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(AppColors.placeholder)
+                    }
                 }
                 starsLine(row)
                 Text(line.text)
@@ -259,14 +293,15 @@ struct SessionCommentsView: View {
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.card))
+            .opacity(isLocked ? AppState.disabledOpacity : 1)
         }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
     private func starsLine(_ row: I4TicketRow) -> some View {
         if let slip = row.slip, let stars = slip.stars {
             HStack(spacing: 8) {
+                if row.isAbsent && !isLocked { absentPill }
                 Text(String(repeating: "★", count: stars))
                     .font(.system(size: 16))
                     .foregroundStyle(I4Style.star)
@@ -277,11 +312,18 @@ struct SessionCommentsView: View {
             }
             .frame(minHeight: 20)
         } else {
-            Text(CommentsRules.starsCaption(row) ?? "")
-                .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
-                .foregroundStyle(AppColors.muted)
-                .frame(minHeight: 20)
+            HStack(spacing: 8) {
+                if row.isAbsent && !isLocked { absentPill }
+                Text(CommentsRules.starsCaption(row) ?? "")
+                    .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
+                    .foregroundStyle(AppColors.muted)
+            }
+            .frame(minHeight: 20)
         }
+    }
+
+    private var absentPill: some View {
+        AppPill(title: String(localized: "comments.absent.label", table: "Teacher"), tone: .error)
     }
 
     /// Gửi phiếu cả lớp luôn ghim đáy màn, không cuộn theo danh sách.
@@ -308,7 +350,7 @@ struct SessionCommentsView: View {
                         .accessibilityIdentifier("comment.sendClass.disabledReason")
                 }
                 AppButton(title: SlipSheetText.defaultsButton, variant: .secondary, size: .large) { showingDefaults = true }
-                    .disabled(defaultSlipCount == 0 || sendController.phase == .saving)
+                    .disabled(isLocked || defaultTargetCount == 0 || sendController.phase == .saving)
                     .accessibilityIdentifier("comment.assignDefaults")
                 if data.canSendComments {
                     AppButton(
@@ -316,17 +358,15 @@ struct SessionCommentsView: View {
                         systemImage: "paperplane",
                         size: .large
                     ) { showingSend = true }
-                        .disabled(sendAvailability != .ready)
+                        .disabled(isLocked || sendAvailability != .ready)
                         .accessibilityIdentifier("comment.sendClass")
                 }
             }
         }
     }
 
-    private var defaultSlipCount: Int { rows.filter { !$0.isSent }.count }
-
     private var defaultsDialog: some View {
-        I4Dialog(title: SlipSheetText.defaultsTitle(count: defaultSlipCount), content: {
+        I4Dialog(title: SlipSheetText.defaultsTitle(count: defaultTargetCount), content: {
             VStack(alignment: .leading, spacing: TeacherMetrics.contentGap) {
                 Text(SlipSheetText.defaultsBody)
                     .appText(AppText.body)

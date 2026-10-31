@@ -33,9 +33,27 @@ struct I4TicketRow: Identifiable {
     var id: String { student.id }
     var stars: Int? { slip?.stars }
     var isSent: Bool { slip?.status == .sent }
+    var isAbsent: Bool { attendance == .absent }
+    /// Marked Có mặt or Muộn: the students "Gán mặc định" and "Gửi phiếu cả lớp" act on.
+    var isAttending: Bool { attendance == .present || attendance == .late }
 }
 
 enum CommentsRules {
+    /// "Điểm danh xong": every student of the session has a saved attendance status (pending sync included).
+    /// A student added after attendance was taken has none, so the session is unfinished again until they are marked.
+    static func isAttendanceComplete(_ rows: [I4TicketRow]) -> Bool {
+        rows.allSatisfy { $0.attendance != nil }
+    }
+
+    static func unmarkedCount(_ rows: [I4TicketRow]) -> Int {
+        rows.filter { $0.attendance == nil }.count
+    }
+
+    /// The list order once attendance is complete: absent students last, everyone else keeps their order.
+    static func absentLast(_ rows: [I4TicketRow]) -> [I4TicketRow] {
+        rows.filter { !$0.isAbsent } + rows.filter(\.isAbsent)
+    }
+
     static func matches(_ row: I4TicketRow, _ filter: TicketFilter) -> Bool {
         switch filter {
         case .all: true
@@ -64,10 +82,12 @@ enum CommentsRules {
         }
     }
 
-    /// What "Gửi phiếu cả lớp" sends: the slips that exist and are not sent yet. A student with no slip has
-    /// nothing to send, whatever their attendance.
+    /// What "Gửi phiếu cả lớp" sends: the unsent slips of students marked Có mặt or Muộn. An absent student is left
+    /// out even with a slip (it can still be sent on its own); a student with no slip has nothing to send. Nothing
+    /// is sent while attendance is unfinished.
     static func sendable(_ rows: [I4TicketRow]) -> [I4TicketRow] {
-        rows.filter { !$0.isSent && $0.slip != nil }
+        guard isAttendanceComplete(rows) else { return [] }
+        return rows.filter { !$0.isSent && $0.slip != nil && $0.isAttending }
     }
 
     struct DefaultSlip: Equatable {
@@ -90,11 +110,17 @@ enum CommentsRules {
         }
     }
 
-    /// "Gán tất cả mặc định": every slip that is not sent gets all five criteria, and every student without a
-    /// slip (absent or not marked too) gets a new one. Homework follows last session's grades, the sentence is
-    /// regenerated and a slip's own note is kept.
+    /// Who "Gán tất cả mặc định" acts on: students marked Có mặt or Muộn whose slip is not sent. Absent students
+    /// get no slip and keep theirs; nothing is assigned while attendance is unfinished.
+    static func defaultTargets(_ rows: [I4TicketRow]) -> [I4TicketRow] {
+        guard isAttendanceComplete(rows) else { return [] }
+        return rows.filter { !$0.isSent && $0.isAttending }
+    }
+
+    /// "Gán tất cả mặc định": each target gets all five criteria (a new slip when it has none). Homework follows
+    /// last session's grades, the sentence is regenerated and a slip's own note is kept.
     static func defaultSlips(_ rows: [I4TicketRow], sections: [HomeworkSection], grades: [HomeworkGrade]) -> [DefaultSlip] {
-        rows.filter { !$0.isSent }.map {
+        defaultTargets(rows).map {
             DefaultSlip(studentID: $0.student.id,
                         criteria: HomeworkRules.openingCriteria(slip: nil, sections: sections, grades: grades,
                                                                 studentID: $0.student.id),
@@ -102,9 +128,9 @@ enum CommentsRules {
         }
     }
 
-    /// Unsent students the class send leaves out because they have no slip.
+    /// Present or late students the class send leaves out because they have no slip.
     static func withoutSlip(_ rows: [I4TicketRow]) -> [I4TicketRow] {
-        rows.filter { $0.slip == nil }
+        rows.filter { $0.slip == nil && $0.isAttending }
     }
 
     enum SendAvailability: Equatable {
@@ -169,5 +195,17 @@ enum CommentsRules {
         let sending = sendable(rows)
         let ungradedRows = sending.filter { $0.previousHomework.ungraded > 0 }
         return (ungradedRows.count, ungradedRows.reduce(0) { $0 + $1.previousHomework.ungraded })
+    }
+}
+
+/// How a server refusal of a slip write or send reads to the teacher. The server's code for "attendance is not
+/// complete" lives here only.
+enum SlipServerError {
+    static let attendanceIncompleteCode = "attendance_incomplete"
+
+    /// The message for a refusal the screen explains itself; nil leaves the usual failure text.
+    static func message(for error: APIError?) -> String? {
+        error?.code == attendanceIncompleteCode
+            ? String(localized: "comments.error.attendanceIncomplete", table: "Teacher") : nil
     }
 }

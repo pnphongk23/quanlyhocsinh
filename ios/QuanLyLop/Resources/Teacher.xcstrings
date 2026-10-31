@@ -91,6 +91,48 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thử lại" } }
       }
     },
+    "comments.locked.title" : {
+      "comment" : "Tiêu đề khối thông báo đầu tab Nhận xét khi buổi chưa điểm danh xong (tab chỉ xem).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm danh xong để nhận xét" } }
+      }
+    },
+    "comments.locked.detail" : {
+      "comment" : "Dòng phụ của khối thông báo. %lld là số em chưa có trạng thái điểm danh.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Còn %lld em chưa điểm danh." } }
+      }
+    },
+    "comments.locked.action" : {
+      "comment" : "Nút phụ trong khối thông báo, chuyển sang tab Điểm danh cùng buổi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đến Điểm danh" } }
+      }
+    },
+    "comments.absent.group" : {
+      "comment" : "Tiêu đề nhóm em vắng ở cuối danh sách nhận xét.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Vắng buổi này" } }
+      }
+    },
+    "comments.absent.label" : {
+      "comment" : "Nhãn trên dòng của em vắng (danh sách nhận xét và chip Theo tiêu chí).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Vắng" } }
+      }
+    },
+    "comments.error.attendanceIncomplete" : {
+      "comment" : "Máy chủ từ chối lưu hoặc gửi phiếu vì điểm danh của buổi chưa tới máy chủ; phiếu được giữ.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm danh chưa đồng bộ xong, thử lại sau." } }
+      }
+    },
     "comments.send.needs_network" : {
       "comment" : "Giải thích dưới nút Gửi phiếu cả lớp khi mất mạng; gửi phiếu không xếp hàng.",
       "extractionState" : "manual",

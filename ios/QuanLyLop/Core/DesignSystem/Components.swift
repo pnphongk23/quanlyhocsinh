@@ -290,13 +290,14 @@ struct AppPill: View {
 
 /// `--card-*`: the soft fill of a large status card, with a 1 px border in the strong colour.
 enum AppStatusTone: Sendable {
-    case success, error, pending
+    case success, error, pending, info
 
     var background: Color {
         switch self {
         case .success: AppState.cardSuccessBg
         case .error: AppState.cardErrorBg
         case .pending: AppState.cardPendingBg
+        case .info: AppState.cardInfoBg
         }
     }
     var border: Color {
@@ -304,6 +305,7 @@ enum AppStatusTone: Sendable {
         case .success: AppState.cardSuccessBorder
         case .error: AppState.cardErrorBorder
         case .pending: AppState.cardPendingBorder
+        case .info: AppState.cardInfoBorder
         }
     }
     var foreground: Color {
@@ -311,6 +313,7 @@ enum AppStatusTone: Sendable {
         case .success: AppState.cardSuccessFg
         case .error: AppState.cardErrorFg
         case .pending: AppState.cardPendingFg
+        case .info: AppState.cardInfoFg
         }
     }
 }

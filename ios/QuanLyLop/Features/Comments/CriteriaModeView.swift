@@ -7,6 +7,8 @@ struct CriteriaModeView: View {
     let sections: [HomeworkSection]
     let grades: [HomeworkGrade]
     let canWrite: Bool
+    /// Attendance is unfinished: the chips only show, whatever the teacher may write.
+    var isLocked = false
     /// Saves one tap; returns an error text, nil when it was written.
     let save: (String, I4FeatureStore.SlipGrading, String) async -> String?
     /// Suggestions from "Nhập từ ghi chú": while set, chips show it and a tap changes it, nothing is written.
@@ -26,9 +28,11 @@ struct CriteriaModeView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpace.s16) {
-            Text(CriteriaModeText.hint)
-                .appText(AppText.muted)
-                .foregroundStyle(AppColors.muted)
+            if !isLocked {
+                Text(CriteriaModeText.hint)
+                    .appText(AppText.muted)
+                    .foregroundStyle(AppColors.muted)
+            }
             if let draft { NotesImportReview(draft: draft, handEdited: handEditedCount(draft)) }
             if let failure {
                 Text(failure).appText(AppText.label).foregroundStyle(AppColors.error)
@@ -118,10 +122,10 @@ struct CriteriaModeView: View {
             .frame(maxWidth: .infinity, minHeight: AppMetrics.tap)
             .background({ switch chip.look { case .unmet: AppColors.background; case .met: AppState.selectedBg; case .noSlip: AppColors.primarySoft } }(),
                         in: RoundedRectangle(cornerRadius: AppRadius.chip))
-            .opacity(chip.isLegacy || chip.isAbsent ? AppState.disabledOpacity : 1)
+            .opacity(chip.isLegacy || chip.isAbsent || isLocked ? AppState.disabledOpacity : 1)
         }
         .buttonStyle(.plain)
-        .disabled(!canWrite || !chip.isEditable || busy.contains(chip.studentID))
+        .disabled(isLocked || !canWrite || !chip.isEditable || busy.contains(chip.studentID))
         .accessibilityAddTraits(chip.unmet ? [] : [.isSelected])
         .accessibilityIdentifier("criteria.chip.\(criterion).\(chip.studentID)")
     }

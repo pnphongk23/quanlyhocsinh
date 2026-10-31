@@ -101,7 +101,7 @@ struct TeacherSessionDetailView: View {
                         TeacherErrorBanner(message: error)
                             .padding(.horizontal, TeacherMetrics.screenPaddingHorizontal)
                     }
-                    SessionCommentsView(sessionID: session.id, data: i4Data)
+                    SessionCommentsView(sessionID: session.id, data: i4Data, onGoAttendance: { tab = "diem-danh" })
                 }
             case "btvn":
                 scrolled { SessionHomeworkView(sessionID: session.id, data: i4Data) }

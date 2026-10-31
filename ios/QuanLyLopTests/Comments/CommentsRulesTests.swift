@@ -7,9 +7,9 @@ final class CommentsRulesTests: XCTestCase {
                 leftAt: nil, status: .active, version: 1)
     }
 
-    /// `stars` nil means no slip yet.
+    /// `stars` nil means no slip yet; attendance defaults to present, pass `nil` for a student not marked yet.
     private func row(_ id: String, _ name: String, stars: Int?, sent: Bool,
-                     attendance: AttendanceStatus? = nil, graded: Int = 0, total: Int = 0) -> I4TicketRow {
+                     attendance: AttendanceStatus? = .present, graded: Int = 0, total: Int = 0) -> I4TicketRow {
         let slip = stars.map {
             SessionSlip(sessionId: "s", studentId: id, stars: $0, criteria: (1 << $0) - 1, note: "",
                         status: sent ? .sent : .draft,
@@ -21,7 +21,7 @@ final class CommentsRulesTests: XCTestCase {
                            previousDate: "2026-10-14", previousHadSections: true)
     }
 
-    func testDefaultSlipsCoverEveryUnsentSlipAndEveryStudentWithoutOneAndFollowHomeworkGrades() {
+    func testDefaultSlipsCoverUnsentPresentAndLateStudentsOnlyAndFollowHomeworkGrades() {
         let part = HomeworkSection(id: "p", classId: "c", sessionId: "before", kind: .vocabulary, title: "Từ vựng",
                                    description: "", version: 1)
         let notDone = HomeworkGrade(sectionId: "p", studentId: "b", level: .notDone, version: 1,
@@ -31,13 +31,12 @@ final class CommentsRulesTests: XCTestCase {
             row("b", "Bình", stars: 2, sent: false),
             row("c", "Chi", stars: nil, sent: false, attendance: .present),
             row("d", "Dũng", stars: nil, sent: false, attendance: .absent),
-            row("e", "Em", stars: nil, sent: false),
+            row("e", "Em", stars: nil, sent: false, attendance: .late),
         ]
         let plans = CommentsRules.defaultSlips(rows, sections: [part], grades: [notDone])
         XCTAssertEqual(plans, [
             .init(studentID: "b", criteria: SlipRules.allCriteria & ~(1 << 4), note: ""),
             .init(studentID: "c", criteria: SlipRules.allCriteria, note: ""),
-            .init(studentID: "d", criteria: SlipRules.allCriteria, note: ""),
             .init(studentID: "e", criteria: SlipRules.allCriteria, note: ""),
         ])
     }
@@ -96,14 +95,66 @@ final class CommentsRulesTests: XCTestCase {
 
     func testAssignAllNeverPlansASentSlip() {
         let rows = [row("sent", "An", stars: 5, sent: true, attendance: .present),
-                    row("none", "Bình", stars: nil, sent: false, attendance: .absent)]
+                    row("none", "Bình", stars: nil, sent: false, attendance: .present)]
         XCTAssertEqual(CommentsRules.defaultSlips(rows, sections: [], grades: []).map(\.studentID), ["none"])
+    }
+
+    func testAssignAllLeavesAbsentStudentsAloneWhetherOrNotTheyHaveASlip() {
+        let rows = [row("here", "An", stars: nil, sent: false, attendance: .present),
+                    row("gone", "Bình", stars: nil, sent: false, attendance: .absent),
+                    row("gone-slip", "Chi", stars: 2, sent: false, attendance: .absent)]
+        XCTAssertEqual(CommentsRules.defaultSlips(rows, sections: [], grades: []).map(\.studentID), ["here"])
+        XCTAssertEqual(CommentsRules.defaultTargets(rows).map(\.student.id), ["here"])
+    }
+
+    func testNothingIsAssignedOrSentWhileAttendanceIsUnfinished() {
+        let rows = [row("a", "An", stars: 3, sent: false, attendance: .present),
+                    row("b", "Bình", stars: 3, sent: false, attendance: nil)]
+        XCTAssertTrue(CommentsRules.defaultSlips(rows, sections: [], grades: []).isEmpty)
+        XCTAssertTrue(CommentsRules.defaultTargets(rows).isEmpty)
+        XCTAssertTrue(CommentsRules.sendable(rows).isEmpty)
+    }
+
+    func testAttendanceIsCompleteOnlyWhenEveryStudentHasAStatus() {
+        let marked = [row("a", "An", stars: nil, sent: false, attendance: .present),
+                      row("b", "Bình", stars: nil, sent: false, attendance: .late),
+                      row("c", "Chi", stars: nil, sent: false, attendance: .absent)]
+        XCTAssertTrue(CommentsRules.isAttendanceComplete(marked))
+        XCTAssertEqual(CommentsRules.unmarkedCount(marked), 0)
+        // A student added after attendance was taken has no status: the session is unfinished again.
+        let withNewcomer = marked + [row("d", "Dũng", stars: nil, sent: false, attendance: nil)]
+        XCTAssertFalse(CommentsRules.isAttendanceComplete(withNewcomer))
+        XCTAssertEqual(CommentsRules.unmarkedCount(withNewcomer), 1)
+        let twoMissing = withNewcomer + [row("e", "Em", stars: nil, sent: false, attendance: nil)]
+        XCTAssertEqual(CommentsRules.unmarkedCount(twoMissing), 2)
+    }
+
+    func testAbsentStudentsGoLastAndTheRestKeepTheirOrder() {
+        let rows = [row("a", "An", stars: nil, sent: false, attendance: .absent),
+                    row("b", "Bình", stars: nil, sent: false, attendance: .present),
+                    row("c", "Chi", stars: nil, sent: false, attendance: .absent),
+                    row("d", "Dũng", stars: nil, sent: false, attendance: .late)]
+        XCTAssertEqual(CommentsRules.absentLast(rows).map(\.student.id), ["b", "d", "a", "c"])
+    }
+
+    func testUnsentFilterKeepsAbsentStudentsWithAnUnsentSlip() {
+        let rows = [row("here", "An", stars: 4, sent: true, attendance: .present),
+                    row("gone", "Bình", stars: 3, sent: false, attendance: .absent)]
+        XCTAssertEqual(CommentsRules.filtered(rows, .unsent).map(\.student.id), ["gone"])
+        XCTAssertEqual(CommentsRules.counts(rows).unsent, 1)
+    }
+
+    func testAttendanceIncompleteCodeMapsToOneMessageAndOthersStayUntouched() {
+        let refused = APIError(code: SlipServerError.attendanceIncompleteCode, message: nil, details: nil, requestId: nil)
+        XCTAssertEqual(SlipServerError.message(for: refused), "Điểm danh chưa đồng bộ xong, thử lại sau.")
+        XCTAssertNil(SlipServerError.message(for: APIError(code: "forbidden", message: nil, details: nil, requestId: nil)))
+        XCTAssertNil(SlipServerError.message(for: nil))
     }
 
     func testDefaultSlipKeepsTheNote() {
         let slip = SessionSlip(sessionId: "s", studentId: "b", stars: 2, criteria: 3, note: "Nhắc con ghi bài",
                                status: .draft, sentAt: nil, version: 1, updatedAt: "2026-10-19T11:00:00.000Z")
-        let row = I4TicketRow(student: student("b", "Bình"), slip: slip,
+        let row = I4TicketRow(student: student("b", "Bình"), slip: slip, attendance: .present,
                               previousHomework: I4HomeworkSummary(total: 0, graded: 0),
                               previousDate: nil, previousHadSections: false)
         XCTAssertEqual(CommentsRules.defaultSlips([row], sections: [], grades: []).first?.note, "Nhắc con ghi bài")
@@ -125,17 +176,18 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertEqual(CommentsRules.filtered(rows, .all).count, 3)
     }
 
-    func testSendableIsEveryUnsentSlipAndNothingForStudentsWithoutOne() {
+    func testSendableIsTheUnsentSlipsOfPresentAndLateStudentsOnly() {
         let rows = [
             row("sent", "An", stars: 5, sent: true, attendance: .present),
-            row("draft", "Bình", stars: 3, sent: false, attendance: .absent),
+            row("draft", "Bình", stars: 3, sent: false, attendance: .late),
+            row("absent-draft", "Bảo", stars: 3, sent: false, attendance: .absent),
             row("present", "Chi", stars: nil, sent: false, attendance: .present),
             row("late", "Dũng", stars: nil, sent: false, attendance: .late),
-            row("absent", "Em", stars: nil, sent: false, attendance: .absent),
-            row("unmarked", "Giang", stars: nil, sent: false)
+            row("absent", "Em", stars: nil, sent: false, attendance: .absent)
         ]
         XCTAssertEqual(CommentsRules.sendable(rows).map(\.student.id), ["draft"])
-        XCTAssertEqual(CommentsRules.withoutSlip(rows).map(\.student.id), ["present", "late", "absent", "unmarked"])
+        XCTAssertEqual(CommentsRules.sendable(rows).count, 1, "the number on the button")
+        XCTAssertEqual(CommentsRules.withoutSlip(rows).map(\.student.id), ["present", "late"])
     }
 
     func testCardHasNoStarsAndSaysNotCommentedWhenThereIsNoSlip() {
@@ -145,10 +197,9 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertNil(CommentsRules.starsCaption(row("b", "Bình", stars: 3, sent: false)))
     }
 
-    func testSendMatrixSendsOnlyExistingSlipsWhateverTheAttendance() {
+    func testSendMatrixSendsOnlyExistingSlipsOfStudentsWhoAttended() {
         let statuses: [(name: String, value: AttendanceStatus?, attended: Bool)] = [
-            ("present", .present, true), ("late", .late, true), ("absent", .absent, false),
-            ("unmarked", nil, false)
+            ("present", .present, true), ("late", .late, true), ("absent", .absent, false)
         ]
         var rows: [I4TicketRow] = []
         var expectedSendable: [String] = []
@@ -158,8 +209,10 @@ final class CommentsRulesTests: XCTestCase {
             let draft = "\(status.name)-draft"
             rows.append(row(bare, bare, stars: nil, sent: false, attendance: status.value))
             rows.append(row(draft, draft, stars: 2, sent: false, attendance: status.value))
-            expectedSendable.append(draft)
-            expectedWithoutSlip.append(bare)
+            if status.attended {
+                expectedSendable.append(draft)
+                expectedWithoutSlip.append(bare)
+            }
         }
         rows.append(row("already-sent", "Đã gửi", stars: 3, sent: true, attendance: .present))
 
@@ -171,9 +224,10 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertFalse(CommentsRules.withoutSlip(rows).map(\.student.id).contains("already-sent"))
     }
 
-    func testAnOpenedSlipOfAnAbsentStudentIsStillSent() {
+    func testAnAbsentStudentWithASlipIsLeftOutOfTheClassSend() {
         let rows = [row("a", "An", stars: 0, sent: false, attendance: .absent)]
-        XCTAssertEqual(CommentsRules.sendable(rows).map(\.student.id), ["a"])
+        XCTAssertTrue(CommentsRules.sendable(rows).isEmpty)
+        XCTAssertTrue(CommentsRules.withoutSlip(rows).isEmpty)
     }
 
     func testUngradedNoticeCountsOnlySlipsThatWillBeSent() {

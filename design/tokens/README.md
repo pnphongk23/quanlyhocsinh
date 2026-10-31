@@ -25,7 +25,7 @@ Màu thương hiệu, bo góc và chuyển động giữ nguyên. Trạng thái 
 | `--state-selected-*`, `--state-hover-bg`, `--state-pressed-bg`, `--state-focus-ring`, `--state-disabled-opacity`, `--state-success-*`, `--state-error-*`, `--state-pending-*` | Trạng thái thành phần dùng chung; bảng ở `design/ux-v2/rules.md` mục 6 |
 | `--color-star` | Một màu sao dùng chung cho danh sách, phiếu nhận xét (cũ và 3 mức) và màn phụ huynh |
 | `--color-on-accent`, `--state-selected-accent-*` | Chữ trắng và chip tối trong thẻ lớp được chọn trên nền accent; không đổi màu chọn chung của nav, lịch và chip |
-| `--card-success-*`, `--card-error-*`, `--card-pending-*` | Nền mềm, viền và chữ đậm cho card/banner trạng thái lớn |
+| `--card-success-*`, `--card-error-*`, `--card-pending-*`, `--card-info-*` | Nền mềm, viền và chữ đậm cho card/banner trạng thái lớn |
 | `--dur-loading-min` 400ms, `--dur-success-hold` 1600ms, `--dur-error-hold` 4800ms | Loading tối thiểu, thời gian giữ "Đã lưu" và thông báo lỗi của "Tải lại" |
 | `--dialog-action-gap`, `--textarea-min`, `--chip-grid-min`, `--date-col`, `--row-chevron-size` | Khoảng nút hộp xác nhận, kích thước nhập nhiều dòng, chip, cột ngày và mũi tên cuối dòng |
 | `--empty-mascot` 96px, `--empty-mascot-compact` 56px | Cỡ Mít trong `EmptyState` |
