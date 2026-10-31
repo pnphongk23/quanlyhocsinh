@@ -170,6 +170,7 @@ export default function CommentsPanel({
   const [dialogError, setDialogError] = useState("");
   const [error, setError] = useState("");
   const [sendingStudentIds, setSendingStudentIds] = useState<Set<string>>(new Set());
+  const [absentStudentToSend, setAbsentStudentToSend] = useState<Student | null>(null);
 
     const session = getSession(sessionId);
     const canWrite = access.can("comments_reports", "write") && !readOnly;
@@ -203,6 +204,7 @@ export default function CommentsPanel({
     setError("");
     setDialogError("");
       setConfirmOpen(false);
+      setAbsentStudentToSend(null);
       setNotesImportOpen(false);
     setMode("student");
   }, [sessionId]);
@@ -241,16 +243,27 @@ export default function CommentsPanel({
     }
   }
 
-  async function sendAbsentStudent(studentId: string) {
-    if (!attendance.complete || !online || sendingStudentIds.has(studentId)) return;
-    setSendingStudentIds((current) => new Set(current).add(studentId));
+  function requestAbsentSend(studentId: string) {
+    if (!canSend || !attendance.complete || !online || sendingStudentIds.has(studentId)) return;
+    const row = rows.find((candidate) => candidate.student.id === studentId);
+    if (!row?.comment || row.attended || row.status === "sent" || row.status === "queued") return;
+    setDialogError("");
+    setAbsentStudentToSend(row.student);
+  }
+
+  async function confirmAbsentSend() {
+    const student = absentStudentToSend;
+    if (!student || !canSend || !attendance.complete || !online || sendingStudentIds.has(student.id)) return;
+    setSendingStudentIds((current) => new Set(current).add(student.id));
     try {
-      await sendSessionTicketsDurable(sessionId, [studentId]);
+      await sendSessionTicketsDurable(sessionId, [student.id]);
       setError("");
+      setDialogError("");
+      setAbsentStudentToSend(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Không gửi được phiếu.");
+      setDialogError(cause instanceof Error ? cause.message : "Không gửi được phiếu.");
     } finally {
-      setSendingStudentIds((current) => { const next = new Set(current); next.delete(studentId); return next; });
+      setSendingStudentIds((current) => { const next = new Set(current); next.delete(student.id); return next; });
     }
   }
 
@@ -346,7 +359,7 @@ export default function CommentsPanel({
           </span>
         </button>
             {canSend && attendance.complete && !row.attended && row.comment && row.status !== "sent" && row.status !== "queued" && (
-            <div className={s.absentActions}><Button size="sm" variant="secondary" disabled={!online || sendingStudentIds.has(row.student.id)} loading={sendingStudentIds.has(row.student.id)} onClick={() => void sendAbsentStudent(row.student.id)}>Gửi lẻ</Button></div>
+              <div className={s.absentActions}><Button size="sm" variant="secondary" disabled={!canSend || !online || sendingStudentIds.has(row.student.id)} loading={sendingStudentIds.has(row.student.id)} onClick={() => requestAbsentSend(row.student.id)}>Gửi lẻ</Button></div>
           )}
         </li>
     );
@@ -498,6 +511,17 @@ export default function CommentsPanel({
             setConfirmOpen(false);
             setDialogError("");
           }}
+          />
+        <SendTicketsDialog
+          open={!!absentStudentToSend && canSend}
+          sessionLabel={`${absentStudentToSend?.name ?? ""} · ${sessionPrefix(session)}`}
+          sendCount={1}
+          skipped={[]}
+          ungraded={absentStudentToSend ? ungradedHomeworkNotice(state, sessionId, [absentStudentToSend.id]) : { students: [], ungradedParts: 0 }}
+          error={dialogError}
+          busy={absentStudentToSend ? sendingStudentIds.has(absentStudentToSend.id) : false}
+          onConfirm={() => void confirmAbsentSend()}
+          onClose={() => { setAbsentStudentToSend(null); setDialogError(""); }}
         />
         {notesImportOpen && <NotesImportDialog
           sessionId={sessionId}

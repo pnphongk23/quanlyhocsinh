@@ -59,9 +59,11 @@ export default function CommentsDesktop({
   const [searchParams, setSearchParams] = useSearchParams();
   const [filter, setFilter] = useState<TicketFilter>("all");
   const [mode, setMode] = useState<"student" | "criteria">("student");
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [notesImportOpen, setNotesImportOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [notesImportOpen, setNotesImportOpen] = useState(false);
   const [dialogError, setDialogError] = useState("");
+  const [absentStudentToSend, setAbsentStudentToSend] = useState<Student | null>(null);
+  const [absentSendBusy, setAbsentSendBusy] = useState(false);
 
     const session = getSession(sessionId);
     const canWrite = access.can("comments_reports", "write") && !readOnly;
@@ -89,6 +91,7 @@ export default function CommentsDesktop({
 
   useEffect(() => {
       setConfirmOpen(false);
+      setAbsentStudentToSend(null);
       setNotesImportOpen(false);
     setMode("student");
   }, [sessionId]);
@@ -145,13 +148,26 @@ export default function CommentsDesktop({
     }
   }
 
-  async function sendAbsentStudent(studentId: string) {
-    if (!attendance.complete || !online) return;
+  function requestAbsentSend(studentId: string) {
+    if (!canSend || !attendance.complete || !online) return;
+    const row = rows.find((candidate) => candidate.student.id === studentId);
+    if (!row?.comment || row.attended || row.status === "sent" || row.status === "queued") return;
+    setDialogError("");
+    setAbsentStudentToSend(row.student);
+  }
+
+  async function confirmAbsentSend() {
+    const student = absentStudentToSend;
+    if (!student || !canSend || !attendance.complete || !online || absentSendBusy) return;
+    setAbsentSendBusy(true);
     try {
-      await sendSessionTicketsDurable(sessionId, [studentId]);
+      await sendSessionTicketsDurable(sessionId, [student.id]);
       setDialogError("");
+      setAbsentStudentToSend(null);
     } catch (cause) {
       setDialogError(cause instanceof Error ? cause.message : "Không gửi được phiếu.");
+    } finally {
+      setAbsentSendBusy(false);
     }
   }
 
@@ -301,7 +317,7 @@ export default function CommentsDesktop({
                 compact={mode === "criteria"}
                   readOnly={!canEdit}
               />
-                  {canSend && attendance.complete && !selected.attended && selected.comment && selected.status !== "sent" && selected.status !== "queued" && <Button size="md" variant="secondary" disabled={!online} onClick={() => void sendAbsentStudent(selected.student.id)}>Gửi lẻ</Button>}
+                  {canSend && attendance.complete && !selected.attended && selected.comment && selected.status !== "sent" && selected.status !== "queued" && <Button size="md" variant="secondary" disabled={!online || absentSendBusy} onClick={() => requestAbsentSend(selected.student.id)}>Gửi lẻ</Button>}
               </>
             ) : (
             <p className={d.muted14}>Chọn một em để soạn phiếu.</p>
@@ -322,7 +338,18 @@ export default function CommentsDesktop({
           setConfirmOpen(false);
           setDialogError("");
         }}
-        />
+          />
+          <SendTicketsDialog
+            open={!!absentStudentToSend && canSend}
+            sessionLabel={`${absentStudentToSend?.name ?? ""} · ${sessionPrefix(session)}`}
+            sendCount={1}
+            skipped={[]}
+            ungraded={absentStudentToSend ? ungradedHomeworkNotice(state, sessionId, [absentStudentToSend.id]) : { students: [], ungradedParts: 0 }}
+            error={dialogError}
+            busy={absentSendBusy}
+            onConfirm={() => void confirmAbsentSend()}
+            onClose={() => { setAbsentStudentToSend(null); setDialogError(""); }}
+          />
         {notesImportOpen && <NotesImportDialog
           sessionId={sessionId}
           rows={rows}
