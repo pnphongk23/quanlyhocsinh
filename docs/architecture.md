@@ -87,6 +87,7 @@ Quy ước:
 - Bảng điểm và báo cáo bản desktop là chunk riêng, tải lười.
 - Sentry, thư viện tạo PDF và các thư viện nặng đều tải lười.
 - Worker không truy vấn D1 ngoài `worker/src/db`; mọi hàm ở đó nhận danh tính đã xác thực và tự áp điều kiện `workspace_id`, quyền của role và phạm vi (lớp được gán hoặc quan hệ phụ huynh–học sinh).
+- Bộ ca vàng cho bộ phân tích ghi chú và nhập danh sách là dữ liệu riêng tư: không chép nội dung golden hay ca thật sang test/commit/tài liệu khác. Test đọc qua `src/test/goldenFixture.ts`, tìm theo thứ tự `QLH_GOLDEN_DIR` (nếu đặt), `plans/20261028-ai-features` trong checkout, rồi đường dẫn riêng của máy dev; thiếu fixture thì test tự skip với lý do `golden fixture is private and not in the repo` thay vì lỗi lúc import. CI không cần đặt biến này; muốn trỏ chỗ khác thì đặt `QLH_GOLDEN_DIR=/duong/dan/thu-muc-chua-json`.
 
 ## 4. Dữ liệu và phân quyền
 
