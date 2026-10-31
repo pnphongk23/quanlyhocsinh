@@ -314,17 +314,15 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
                 to={`/lop/${classId}/buoi-hoc/${spotlight.id}`}
                 aria-label={`Mở buổi ${sessionPrefix(spotlight)}`}
               >
-                <h2 className={s.sectionTitle}>Buổi hiện tại</h2>
-                <div className={s.currentRow}>
-                  <div className={s.currentInfo}>
-                    <p className={s.currentTitle}>{sessionPrefix(spotlight)}</p>
-                    <p className={s.currentMeta}>{spotlight.time ?? klass.time}</p>
-                  </div>
-                  <span className={s.primaryAction}>Xem buổi</span>
+                <div className={s.currentInfo}>
+                  <h2 className={s.sectionTitle}>Buổi hiện tại</h2>
+                  <p className={s.currentTitle}>{sessionPrefix(spotlight)}</p>
+                  <p className={s.currentMeta}>{spotlight.time ?? klass.time}</p>
+                  {spotlight.date > today && spotlight.status === "planned" && (
+                    <p className={s.currentHint}>Điểm danh mở vào ngày học.</p>
+                  )}
                 </div>
-                {spotlight.date > today && spotlight.status === "planned" && (
-                  <p className={s.currentHint}>Điểm danh mở vào ngày học.</p>
-                )}
+                <span className={s.primaryAction}>Xem buổi</span>
               </Link>
             )}
 
