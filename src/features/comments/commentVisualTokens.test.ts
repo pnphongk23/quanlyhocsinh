@@ -6,6 +6,9 @@ const tokens = readFileSync(resolve(process.cwd(), "src/shared/styles/tokens.css
 const criteriaCss = readFileSync(resolve(process.cwd(), "src/features/comments/CriteriaMode.module.css"), "utf8");
 const fieldsCss = readFileSync(resolve(process.cwd(), "src/features/comments/SlipCriteriaFields.module.css"), "utf8");
 const panelCss = readFileSync(resolve(process.cwd(), "src/features/comments/CommentsPanel.module.css"), "utf8");
+const desktopCss = readFileSync(resolve(process.cwd(), "src/features/comments/CommentsDesktop.module.css"), "utf8");
+const panelTsx = readFileSync(resolve(process.cwd(), "src/features/comments/CommentsPanel.tsx"), "utf8");
+const desktopTsx = readFileSync(resolve(process.cwd(), "src/features/comments/CommentsDesktop.tsx"), "utf8");
 const criteriaModeTsx = readFileSync(resolve(process.cwd(), "src/features/comments/CriteriaMode.tsx"), "utf8");
 const uiCss = readFileSync(resolve(process.cwd(), "src/shared/ui/ui.module.css"), "utf8");
 
@@ -63,5 +66,22 @@ describe("comments visual contrast", () => {
 
   it("fades non-interactive criteria chips with the disabled state token", () => {
     expect(criteriaCss).toMatch(/\.disabled\s*\{[^}]*opacity:\s*var\(--state-disabled-opacity\)/s);
+  });
+
+  it("keeps the list rules the mobile panel still uses", () => {
+    expect(panelCss).toMatch(/\.absentHeading\s*\{\s*padding:\s*var\(--space-8\) 0;\s*color:\s*var\(--color-muted\);\s*font-size:\s*var\(--text-md\);\s*font-weight:\s*var\(--weight-semibold\);\s*\}/);
+    expect(panelCss).toMatch(/\.ticket:disabled\s*\{\s*opacity:\s*var\(--state-disabled-opacity\);\s*cursor:\s*default;\s*\}/);
+    expect(panelCss).toMatch(/\.absentActions\s*\{\s*padding:\s*0 var\(--space-8\) var\(--space-8\);\s*\}/);
+  });
+
+  it("has a rule for every class the panels reference (no silently dropped styles)", () => {
+    const classesOf = (source: string) => [...new Set([...source.matchAll(/\bs\.([A-Za-z0-9_]+)/g)].map((match) => match[1]))];
+    const styledIn = (css: string) => new Set([...css.matchAll(/\.([A-Za-z0-9_]+)/g)].map((match) => match[1]));
+    const missing = (tsx: string, css: string) => {
+      const styled = styledIn(css);
+      return classesOf(tsx).filter((name) => !styled.has(name)).sort();
+    };
+    expect(missing(panelTsx, panelCss)).toEqual([]);
+    expect(missing(desktopTsx, desktopCss)).toEqual([]);
   });
 });
