@@ -1,0 +1,582 @@
+{
+  "version": 1,
+  "purpose": "Ca kiểm thử vàng cho bộ phân tích 'Nhập danh sách học sinh' (dán chữ/CSV). Web và iOS chép nguyên file vào test và so khớp expect. Dữ liệu giả; mọi SĐT là số bịa, không phải số thật.",
+  "rules": {
+    "lines": "Bỏ dòng chỉ có khoảng trắng. Bỏ số thứ tự đầu dòng ('12.', '12)', '12 -', '12:' hoặc số rồi khoảng trắng rồi chữ).",
+    "cells": "Nếu dòng có tab, ';' hoặc ',' (không phải ',' trước chữ số) thì tách ô theo đó; ngược lại cả dòng là một ô và một SĐT ở cuối dòng được tách ra.",
+    "phone": "Ô được coi là SĐT khi sau khi bỏ khoảng trắng . - ( ) còn ≥8 chữ số (cho phép '+' đầu). Hợp lệ khi dạng (+84|84|0) rồi đúng 9 chữ số; chuẩn hoá '+84'+9 số. SĐT-like nhưng sai dạng: guardianPhone null kèm cờ invalid_phone. Chỉ ô SĐT đầu tiên là SĐT phụ huynh; các ô còn lại ghép làm tên.",
+    "name": "Gộp khoảng trắng, viết hoa chữ đầu mỗi từ, còn lại chữ thường. Rỗng → missing_name. Chứa chữ số hoặc ký tự trong @#$%^&*_=+<>{}[]|\\/~ → suspicious_name (dấu gạch nối và nháy đơn là hợp lệ).",
+    "duplicateInPaste": "Cùng (tên chuẩn hoá, SĐT) với dòng trước đó: dòng sau có cờ duplicate_in_paste và status skip_duplicate_in_paste. SĐT khác thì không phải trùng.",
+    "existing": "Trùng tên chuẩn hoá (bỏ dấu, đ→d, hoa/thường) với em đã có trong lớp: cùng SĐT → status skip_existing (người dùng có thể buộc thêm); SĐT khác hoặc thiếu → cờ same_name_different_phone, vẫn status add (cảnh báo, không tự bỏ). Cùng SĐT khác tên → không cờ, status add.",
+    "status": "add | skip_existing | skip_duplicate_in_paste | needs_fix (có missing_name, invalid_phone hoặc suspicious_name: không tạo cho tới khi sửa hoặc bỏ dòng).",
+    "warnings": "under_20 nếu existingStudentCount + addCount < 20; chỉ cảnh báo, không chặn.",
+    "create": "Mỗi dòng status add tạo bằng POST /classes/:id/students lần lượt với id UUID do client sinh, enrolled_at = hôm nay; không đưa vào log tên hay SĐT."
+  },
+  "existingRoster": [
+    {
+      "id": "e1",
+      "fullName": "Nguyễn Văn An",
+      "guardianPhone": "+84912345678"
+    },
+    {
+      "id": "e2",
+      "fullName": "Trần Thị Bích",
+      "guardianPhone": "+84987654321"
+    },
+    {
+      "id": "e3",
+      "fullName": "Lê Minh Khôi",
+      "guardianPhone": null
+    }
+  ],
+  "cases": [
+    {
+      "id": "numbered-lines",
+      "title": "Số thứ tự đầu dòng ('1.', '2)', '03 -') và dòng trống bị bỏ; chữ đầu mỗi từ viết hoa",
+      "input": "1. nguyễn thị mai\n2) TRẦN văn   nam\n\n03 - lê hoàng yến\n",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Nguyễn Thị Mai",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Văn Nam",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Lê Hoàng Yến",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 3,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "excel-tab",
+      "title": "Dán từ Excel: cột tách bằng tab, SĐT nằm cột bất kỳ",
+      "input": "1\tPhạm Gia Hân\t0901 234 567\n2\t0902.345.678\tĐỗ Quốc Bảo\n3\tVũ Thảo Vy\t",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Phạm Gia Hân",
+            "guardianPhone": "+84901234567",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Đỗ Quốc Bảo",
+            "guardianPhone": "+84902345678",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Vũ Thảo Vy",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 3,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "phone-formats",
+      "title": "SĐT nhiều dạng đều chuẩn hoá +84 + 9 số: 0xxx, +84, 84, dấu cách, chấm, gạch, ngoặc",
+      "input": "A Một\t0912345678\nB Hai\t+84 913 456 789\nC Ba\t84.914.567.890\nD Bốn\t(091) 5678-901\nE Năm\t+84916789012",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "A Một",
+            "guardianPhone": "+84912345678",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "B Hai",
+            "guardianPhone": "+84913456789",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "C Ba",
+            "guardianPhone": "+84914567890",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "D Bốn",
+            "guardianPhone": "+84915678901",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "E Năm",
+            "guardianPhone": "+84916789012",
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 5,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "phone-invalid",
+      "title": "SĐT sai định dạng bị đánh dấu, không tạo âm thầm; SĐT hợp lệ ở dòng khác giữ nguyên",
+      "input": "Lê Văn Sáu\t091234567\nPhạm Thị Bảy\t0123456789012\nHoàng Văn Tám\t0917890123",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Lê Văn Sáu",
+            "guardianPhone": null,
+            "flags": [
+              "invalid_phone"
+            ],
+            "status": "needs_fix"
+          },
+          {
+            "name": "Phạm Thị Bảy",
+            "guardianPhone": null,
+            "flags": [
+              "invalid_phone"
+            ],
+            "status": "needs_fix"
+          },
+          {
+            "name": "Hoàng Văn Tám",
+            "guardianPhone": "+84917890123",
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 1,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "name-suspicious",
+      "title": "Tên có số hoặc ký tự lạ bị nghi ngờ; tên có dấu gạch nối hoặc nháy đơn thì hợp lệ",
+      "input": "Nguyễn 2 Chín\nTrần @Mười\nMary-Jane Smith\nO'Connor Lee",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Nguyễn 2 Chín",
+            "guardianPhone": null,
+            "flags": [
+              "suspicious_name"
+            ],
+            "status": "needs_fix"
+          },
+          {
+            "name": "Trần @Mười",
+            "guardianPhone": null,
+            "flags": [
+              "suspicious_name"
+            ],
+            "status": "needs_fix"
+          },
+          {
+            "name": "Mary-Jane Smith",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "O'Connor Lee",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 2,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "single-line-phone-end",
+      "title": "Không có dấu tách: SĐT ở cuối dòng được nhận dạng, phần còn lại là tên",
+      "input": "1. Nguyễn Minh Châu 0911 222 333\n2. Lý Bảo Ngọc +84 944 555 666",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Nguyễn Minh Châu",
+            "guardianPhone": "+84911222333",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Lý Bảo Ngọc",
+            "guardianPhone": "+84944555666",
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 2,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "csv-comma-semicolon",
+      "title": "Dán CSV phẩy hoặc chấm phẩy, tên có dấu cách",
+      "input": "Đặng Thu Hà,0933111222\nBùi Anh Tuấn;0933333444\nVõ Kim Ngân,",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Đặng Thu Hà",
+            "guardianPhone": "+84933111222",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Bùi Anh Tuấn",
+            "guardianPhone": "+84933333444",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Võ Kim Ngân",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 3,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "missing-name-phone-only",
+      "title": "Dòng chỉ có SĐT thiếu tên: cần sửa, không thêm",
+      "input": "0933 999 000\nNgô Hải Đăng",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": null,
+            "guardianPhone": "+84933999000",
+            "flags": [
+              "missing_name"
+            ],
+            "status": "needs_fix"
+          },
+          {
+            "name": "Ngô Hải Đăng",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 1,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "duplicate-in-paste",
+      "title": "Trùng trong danh sách dán (cùng tên chuẩn hoá và cùng SĐT, kể cả bỏ dấu/hoa thường): dòng sau bị đánh dấu và bỏ qua; khác SĐT thì không phải trùng",
+      "input": "Trương Mỹ Linh\t0944000111\ntruong my linh\t0944 000 111\nTrương Mỹ Linh\t0944000222",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Trương Mỹ Linh",
+            "guardianPhone": "+84944000111",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Truong My Linh",
+            "guardianPhone": "+84944000111",
+            "flags": [
+              "duplicate_in_paste"
+            ],
+            "status": "skip_duplicate_in_paste"
+          },
+          {
+            "name": "Trương Mỹ Linh",
+            "guardianPhone": "+84944000222",
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 2,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "existing-same-name-same-phone",
+      "title": "Cùng tên chuẩn hoá và cùng SĐT với em đã có: mặc định bỏ qua 'Đã có trong lớp'",
+      "input": "nguyen van an\t0912 345 678\nTrần Thị Bích\t+84987654321",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Nguyen Van An",
+            "guardianPhone": "+84912345678",
+            "flags": [],
+            "status": "skip_existing"
+          },
+          {
+            "name": "Trần Thị Bích",
+            "guardianPhone": "+84987654321",
+            "flags": [],
+            "status": "skip_existing"
+          }
+        ],
+        "addCount": 0,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "existing-same-name-other-phone",
+      "title": "Cùng tên nhưng SĐT khác hoặc thiếu: cảnh báo, không tự bỏ, vẫn thêm",
+      "input": "Nguyễn Văn An\t0900000001\nLê Minh Khôi\nTrần Thị Bích",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Nguyễn Văn An",
+            "guardianPhone": "+84900000001",
+            "flags": [
+              "same_name_different_phone"
+            ],
+            "status": "add"
+          },
+          {
+            "name": "Lê Minh Khôi",
+            "guardianPhone": null,
+            "flags": [
+              "same_name_different_phone"
+            ],
+            "status": "add"
+          },
+          {
+            "name": "Trần Thị Bích",
+            "guardianPhone": null,
+            "flags": [
+              "same_name_different_phone"
+            ],
+            "status": "add"
+          }
+        ],
+        "addCount": 3,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "existing-same-phone-other-name",
+      "title": "Cùng SĐT khác tên (anh em): hợp lệ, không cảnh báo",
+      "input": "Nguyễn Văn Bình\t0912345678",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Nguyễn Văn Bình",
+            "guardianPhone": "+84912345678",
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 1,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    },
+    {
+      "id": "twenty-lines-no-warning",
+      "title": "20 dòng sạch có số thứ tự: thêm đủ 20; lớp rỗng thì không cảnh báo vượt/ít hơn 20",
+      "input": "1. Trần An\t0912003456\n2. Trần Bình\t0912013456\n3. Trần Chi\t0912023456\n4. Trần Dũng\t0912033456\n5. Trần Giang\t0912043456\n6. Trần Hà\t0912053456\n7. Trần Khánh\t0912063456\n8. Trần Lan\t0912073456\n9. Trần Minh\t0912083456\n10. Trần Nga\t0912093456\n11. Trần Oanh\t0912103456\n12. Trần Phúc\t0912113456\n13. Trần Quân\t0912123456\n14. Trần Sơn\t0912133456\n15. Trần Thảo\t0912143456\n16. Trần Uyên\t0912153456\n17. Trần Việt\t0912163456\n18. Trần Xuân\t0912173456\n19. Trần Yến\t0912183456\n20. Trần Zung\t0912193456",
+      "existingStudentCount": 0,
+      "expect": {
+        "rows": [
+          {
+            "name": "Trần An",
+            "guardianPhone": "+84912003456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Bình",
+            "guardianPhone": "+84912013456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Chi",
+            "guardianPhone": "+84912023456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Dũng",
+            "guardianPhone": "+84912033456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Giang",
+            "guardianPhone": "+84912043456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Hà",
+            "guardianPhone": "+84912053456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Khánh",
+            "guardianPhone": "+84912063456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Lan",
+            "guardianPhone": "+84912073456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Minh",
+            "guardianPhone": "+84912083456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Nga",
+            "guardianPhone": "+84912093456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Oanh",
+            "guardianPhone": "+84912103456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Phúc",
+            "guardianPhone": "+84912113456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Quân",
+            "guardianPhone": "+84912123456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Sơn",
+            "guardianPhone": "+84912133456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Thảo",
+            "guardianPhone": "+84912143456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Uyên",
+            "guardianPhone": "+84912153456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Việt",
+            "guardianPhone": "+84912163456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Xuân",
+            "guardianPhone": "+84912173456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Yến",
+            "guardianPhone": "+84912183456",
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Trần Zung",
+            "guardianPhone": "+84912193456",
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 20,
+        "warnings": []
+      }
+    },
+    {
+      "id": "under-20-warning",
+      "title": "Tổng sau khi thêm dưới 20 chỉ cảnh báo trước khi tạo, không chặn",
+      "input": "Phan Văn Một\nPhan Văn Hai",
+      "existingStudentCount": 5,
+      "expect": {
+        "rows": [
+          {
+            "name": "Phan Văn Một",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          },
+          {
+            "name": "Phan Văn Hai",
+            "guardianPhone": null,
+            "flags": [],
+            "status": "add"
+          }
+        ],
+        "addCount": 2,
+        "warnings": [
+          "under_20"
+        ]
+      }
+    }
+  ]
+}

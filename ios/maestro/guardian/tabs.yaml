@@ -1,0 +1,31 @@
+appId: com.study.teacherthu
+---
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: guardian
+- assertVisible: "Lớp học của con"
+- assertVisible: "Nhận xét của cô"
+- assertVisible: "Cài đặt"
+- assertVisible: "Nhận xét mới nhất"
+- takeScreenshot: guardian-overview
+- scrollUntilVisible:
+    element:
+      text: "Điểm"
+- tapOn: "Điểm"
+- assertVisible: "Điểm từng bài"
+- takeScreenshot: guardian-scores
+- swipe:
+    start: 2%, 50%
+    end: 80%, 50%
+- scrollUntilVisible:
+    element:
+      text: "Báo cáo"
+- tapOn: "Báo cáo"
+- assertVisible: "Chuyên cần"
+- takeScreenshot: guardian-reports
+- swipe:
+    start: 2%, 50%
+    end: 80%, 50%
+- tapOn: "Nhận xét của cô"
+- assertVisible: "Phiếu buổi học theo từng buổi: sao, câu mẫu, ghi chú và kết quả BTVN."
+- takeScreenshot: guardian-comments

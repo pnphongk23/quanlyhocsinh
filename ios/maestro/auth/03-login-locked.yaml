@@ -1,0 +1,10 @@
+# demo: login-locked
+# Tài khoản · Đăng nhập bị khoá tạm (ảnh 03 của P2): băng cảnh báo, ô nhập và nút bị vô hiệu.
+# Chạy: ios/maestro/run.sh ios/maestro/auth/03-login-locked.yaml
+appId: com.study.teacherthu
+name: auth-login-locked
+---
+- extendedWaitUntil:
+    visible: "Thử sai quá nhiều lần, thử lại sau 15 phút"
+    timeout: 20000
+- takeScreenshot: docs/screens/auth/dang-nhap-khoa-ios

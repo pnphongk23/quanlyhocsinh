@@ -1,0 +1,170 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "auth.guardian.createAccount" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo tài khoản phụ huynh"
+          }
+        }
+      }
+    },
+    "auth.guardian.registerDescription" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dùng số điện thoại đã đăng ký với giáo viên để liên kết tài khoản với con."
+          }
+        }
+      }
+    },
+    "auth.guardian.registerLink" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tạo tài khoản phụ huynh"
+          }
+        }
+      }
+    },
+    "auth.guardian.registerTitle" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đăng ký phụ huynh"
+          }
+        }
+      }
+    },
+    "guardian.schedule.title" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lịch học của con"
+          }
+        }
+      }
+    },
+    "guardian.upcoming.title" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buổi sắp tới"
+          }
+        }
+      }
+    },
+    "guardian.upcoming.empty" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa có buổi học sắp tới"
+          }
+        }
+      }
+    },
+    "guardian.childPicker.title" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn con"
+          }
+        }
+      }
+    },
+    "guardian.scores" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Điểm"
+          }
+        }
+      }
+    },
+    "guardian.session.cancelled" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã huỷ"
+          }
+        }
+      }
+    },
+    "guardian.session.notTaken" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa điểm danh"
+          }
+        }
+      }
+    },
+    "guardian.session.planned" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sắp học"
+          }
+        }
+      }
+    },
+    "guardian.sessionList" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danh sách buổi học"
+          }
+        }
+      }
+    },
+    "guardian.tab.classes" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lớp học của con"
+          }
+        }
+      }
+    },
+    "guardian.tab.comments" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhận xét của cô"
+          }
+        }
+      }
+    },
+    "guardian.updatedAt" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cập nhật dữ liệu: %@"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.1"
+}

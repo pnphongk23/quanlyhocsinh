@@ -1,0 +1,8 @@
+#include "Base.xcconfig"
+
+// Cấu hình Debug/simulator trỏ đến máy chủ dev; “Staging” chỉ là tên lịch sử,
+// không phải môi trường staging thật. API có base path `/v1`.
+// Trong xcconfig, `//` mở đầu chú thích, nên viết URL bằng `https:/$()/...`.
+// Không đặt secret ở đây: chỉ URL công khai.
+APP_ENVIRONMENT = Staging
+API_BASE_URL = https:/$()/qlh-dev-api.tolaphamnhuphong.workers.dev/v1

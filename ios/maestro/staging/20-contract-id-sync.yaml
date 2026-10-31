@@ -1,0 +1,54 @@
+appId: com.study.teacherthu
+name: staging-create-class-and-student
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Đăng nhập"
+    timeout: 30000
+- tapOn:
+    id: login.phone
+- inputText: ${STAGING_PHONE}
+- tapOn:
+    id: login.password
+- inputText: ${STAGING_PASSWORD}
+- scrollUntilVisible:
+    element:
+      id: login.submit
+    direction: DOWN
+- swipe:
+    start: 50%, 60%
+    end: 50%, 30%
+    duration: 600
+- tapOn:
+    id: login.submit
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 45000
+- tapOn:
+    text: "Tạo lớp mới"
+- tapOn:
+    id: class.name
+- inputText: "ZZ-iOS20"
+- tapOn:
+    text: "T2"
+- tapOn:
+    text: "Tạo lớp"
+- extendedWaitUntil:
+    visible: "ZZ-iOS20"
+    timeout: 45000
+- tapOn:
+    text: "ZZ-iOS20"
+- tapOn:
+    text: "Học sinh"
+- tapOn:
+    text: "Thêm học sinh"
+- tapOn:
+    id: student.name
+- inputText: "Test Student 20"
+- tapOn:
+    text: "Lưu học sinh"
+- extendedWaitUntil:
+    visible: "Test Student 20"
+    timeout: 45000
+- assertNotVisible:
+    id: saveStatus.error

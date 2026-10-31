@@ -1,0 +1,6 @@
+# demo: comments
+appId: com.study.teacherthu
+name: session-comments
+---
+- assertVisible: "Nhận xét"
+- takeScreenshot: docs/screens/comments/list-ios

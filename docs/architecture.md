@@ -10,7 +10,7 @@ Hợp đồng backend đã qua review tổng thể (APPROVED) nằm ở `plans/2
 
 - Hai client dùng chung một backend và một API (đã chốt 2026-10-21): app iOS native (SwiftUI, ưu tiên iPhone) và PWA/web (React, Android sau). Bản web desktop cho giáo viên thuộc Bản đầu (đã chốt 2026-10-21): phần Chi tiết lớp gồm các tab Buổi học (điểm danh, nhận xét, bài tập về nhà), Bài kiểm tra, Điểm, Học sinh, Báo cáo, kèm đăng nhập và đăng ký workspace; deploy web lên Cloudflare Pages.
 - Mạng ở lớp học chập chờn: gọn nhẹ, thao tác tại lớp dùng được khi mất mạng. API thiết kế sẵn cho đồng bộ offline (mục 5) cho cả hai client.
-- Deploy: Cloudflare, có môi trường production và development riêng.
+- Deploy: Cloudflare có `env.dev` và `env.staging`. Phạm vi MVP ban đầu chỉ triển khai staging; các tài nguyên `qlh-staging-*` hiện đã phục vụ app App Store 1.0 nên được xem là production trong vận hành. QA và kiểm thử chỉ dùng `qlh-dev-*`.
 - Đội nhỏ: ít thành phần phải vận hành, chạy trên gói miễn phí; chỉ cân nhắc gói trả phí nếu sau này vượt giới hạn.
 - Phân quyền kiểm tra ở máy chủ, không tin máy khách.
 - Nhiều nhân sự dùng chung một workspace; quyền theo role tuỳ chỉnh và phạm vi lớp được gán (spec mục 4).
@@ -19,7 +19,7 @@ Hợp đồng backend đã qua review tổng thể (APPROVED) nằm ở `plans/2
 
 - **Production:** các tài nguyên hiện mang tên `qlh-staging-*` vì URL Workers đã được phát hành cho bản App Store 1.0: Worker `qlh-staging-api`, D1 `qlh-staging-db`, Pages `qlh-staging-web`. Giữ nguyên tên và URL; trong Wrangler đây vẫn là `env.staging`.
 - **Development:** Worker `qlh-dev-api`, D1 `qlh-dev-db`, Pages `qlh-dev-web` (Wrangler `env.dev`). QA và kiểm thử tự động chỉ chạy trên dev.
-- Trước mọi deploy production cần xin General Lead và tạo bản sao lưu D1 trước migration bằng `wrangler d1 export` hoặc Time Travel bookmark.
+- Phạm vi MVP ban đầu chỉ gồm deploy staging, không deploy production. Trước mọi deploy production cần xin General Lead và tạo bản sao lưu D1 trước migration bằng `wrangler d1 export` hoặc Time Travel bookmark.
 
 ## 2. Stack
 
@@ -126,7 +126,7 @@ Quy ước:
 - **Ghi:** thay đổi và dòng hàng đợi cùng một transaction của kho cục bộ (IndexedDB trên web). Trạng thái nội bộ (chưa lưu, đã lưu trên máy, đã đồng bộ, lỗi) vẫn theo dõi nhưng giao diện chỉ hiện lỗi (đã chốt 2026-10-18).
 - **Lệnh trong hàng đợi:** UUID, khoá bản ghi, `base_version`, `membership_id`, nội dung. Gửi tuần tự, tối đa 50 lệnh/request, retry có backoff. Máy chủ kiểm quyền, bỏ qua UUID trùng (`applied_commands`), áp **mỗi lệnh trong một `batch` D1 riêng** (dữ liệu + `applied_commands` + `change_log` + lịch sử). Lô HTTP nhiều lệnh **không** atomic: lệnh đã áp dụng không bị hoàn lại, lệnh bị từ chối không chặn lệnh khác. Vì vậy client xoá **từng** lệnh theo xác nhận của riêng nó, gửi lại cả lô sau khi mất mạng và nhận `duplicate` cho lệnh đã áp dụng ([api-spec.md](../plans/20261021-mvp/backend/api-spec.md) mục 6.1, [offline-plan.md](../plans/20261021-mvp/backend/offline-plan.md)).
 - **Dọn `change_log` và tải đầu lại:** `change_log` do trigger ghi, `created_at` là giây Unix, có chỉ mục theo tuổi; cron xoá dòng cũ hơn 120 ngày theo lô nhỏ (≤ 500 dòng/lô, ≤ 4 lô/lần chạy) rồi cập nhật `workspaces.change_floor`. Client có `cursor` nhỏ hơn `change_floor` nhận `409 snapshot_required` và tải lại bằng `GET /sync/snapshot`; `epoch` lệch vẫn là `409 resync_required`.
-- **Khi nào đồng bộ** (đã chốt 2026-10-30, bỏ đồng bộ định kỳ trên web và iOS vì hệ thống nhỏ, hiếm khi nhiều người cùng thao tác một lớp): app tự pull một lần khi mở app, đăng nhập hoặc đổi vai trò, và sau khi gửi xong lệnh ghi của chính mình. Không pull theo chu kỳ, không pull khi lấy lại focus. Lệnh ghi lúc offline vẫn xếp hàng và tự gửi khi có mạng lại. Muốn thấy thay đổi từ thiết bị khác thì kéo để tải lại (mobile web và iOS) hoặc bấm nút "Tải lại" (desktop web). iOS không đồng bộ được khi app đã đóng.
+- **Khi nào đồng bộ** (đã chốt 2026-10-30, bỏ đồng bộ định kỳ trên web và iOS vì hệ thống nhỏ, hiếm khi nhiều người cùng thao tác một lớp): pull lúc mở app, đăng nhập hoặc đổi vai, sau khi gửi thành công lệnh ghi của chính mình, hoặc khi người dùng kéo để tải lại. Không pull theo chu kỳ hay khi lấy lại focus. Lệnh ghi lúc offline vẫn xếp hàng; khi mạng trở lại, xử lý outbox nếu còn lệnh đang chờ. iOS không đồng bộ được khi app đã đóng.
 - **Chi tiết web:** khi mạng trở lại chỉ đẩy outbox; pull chạy sau khi đẩy có lệnh. Snapshot lặp sau `409 resync_required`/`snapshot_required` bị khoá một lần cho mỗi identity trong 5 phút (lưu trong bộ nhớ, lần đầu không chặn). Kéo để tải lại ở Lớp, Lịch, chi tiết buổi và trang chủ phụ huynh; desktop dùng nút "Tải lại" kèm dòng trạng thái ngay cạnh nút.
 - **Xung đột:** hai thiết bị sửa cùng một ô điểm danh hoặc điểm. Thay đổi tới máy chủ SAU CÙNG được áp dụng và thắng (đã chốt 2026-10-21); không giữ cả hai giá trị, không có bước giáo viên chọn. Thứ tự tính theo lúc máy chủ nhận lệnh, không theo giờ của thiết bị. Lệnh vẫn idempotent theo UUID; lịch sử sửa điểm danh và điểm vẫn ghi trước/sau bằng trigger nên không mất dấu vết.
 - **Offline được:** điểm danh, nhập điểm, tạo bài kiểm tra, soạn nhận xét, giao và chấm BTVN.

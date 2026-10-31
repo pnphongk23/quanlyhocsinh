@@ -1,0 +1,7 @@
+# demo: comments
+appId: com.study.teacherthu
+name: session-comment-ticket
+---
+- tapOn: "Học sinh mẫu"
+- assertVisible: "Câu mẫu cố định theo mức sao"
+- takeScreenshot: docs/screens/comments/ticket-sheet

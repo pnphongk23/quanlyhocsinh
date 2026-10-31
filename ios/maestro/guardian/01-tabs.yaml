@@ -1,0 +1,54 @@
+# demo: guardian
+# Phụ huynh · thanh tab hệ thống 3 tab (Lớp học của con, Nhận xét của cô, Cài đặt) và các màn con
+# Điểm, Báo cáo (đẩy từ tab Lớp học của con). Tab bar hệ thống không có accessibilityIdentifier,
+# nên chọn tab theo nhãn. Quay lại bằng vuốt cạnh trái (nút back hệ thống mang tên tab trước).
+# Chạy: ios/maestro/run.sh ios/maestro/guardian/01-tabs.yaml
+appId: com.study.teacherthu
+name: guardian-tabs
+---
+- extendedWaitUntil:
+    visible: "Nhận xét mới nhất"
+    timeout: 20000
+- assertVisible: "Lớp học của con"
+- assertVisible: "Nhận xét của cô"
+- assertVisible: "Cài đặt"
+- assertVisible: "Nhận xét mới nhất"
+- assertVisible: "Đi học"
+- takeScreenshot: docs/screens/guardian/tong-quan-ios
+- scrollUntilVisible:
+    element:
+      text: "Điểm"
+- tapOn: "Điểm"
+- extendedWaitUntil:
+    visible: "Điểm từng bài"
+    timeout: 10000
+- takeScreenshot: docs/screens/guardian/diem-so-ios
+- swipe:
+    start: 2%, 50%
+    end: 80%, 50%
+- extendedWaitUntil:
+    visible: "Lớp học của con"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      text: "Báo cáo"
+- tapOn: "Báo cáo"
+- extendedWaitUntil:
+    visible: "Chuyên cần"
+    timeout: 10000
+- takeScreenshot: docs/screens/guardian/bao-cao-ios
+- swipe:
+    start: 2%, 50%
+    end: 80%, 50%
+- extendedWaitUntil:
+    visible: "Lớp học của con"
+    timeout: 10000
+- tapOn: "Nhận xét của cô"
+- extendedWaitUntil:
+    visible: "Phiếu buổi học theo từng buổi: sao, câu mẫu, ghi chú và kết quả BTVN."
+    timeout: 10000
+- takeScreenshot: docs/screens/guardian/nhan-xet-ios
+- tapOn: "Cài đặt"
+- extendedWaitUntil:
+    visible: "Đăng xuất"
+    timeout: 10000

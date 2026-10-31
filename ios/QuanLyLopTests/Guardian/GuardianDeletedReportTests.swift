@@ -1,0 +1,253 @@
+import XCTest
+@testable import QuanLyLop
+
+/// A report the teacher deleted must disappear from the guardian's cache, also when the guardian was
+/// offline at the time and learns about it on the next refresh.
+@MainActor
+final class GuardianDeletedReportTests: XCTestCase {
+    private let scope = CacheScope(userId: "guardian-user", workspaceId: "workspace", membershipId: "guardian")
+
+    private func publication(report: String) throws -> ReportPublication {
+        let snapshot = try WireJSON.decoder().decode(ReportSnapshot.self, from: Data("""
+        {"student_id":"st1","ready":true,"general_comment":"","attendance":{"present":1,"late":0,"excused":0,"absent":0,"held_sessions":1},
+         "stars":{"three":1,"two":0,"one":0},"homework":[],"tests":[]}
+        """.utf8))
+        return ReportPublication(id: "p-\(report)", reportId: report, classId: "c1", studentId: "st1", batchId: "b-\(report)",
+                                 month: "2026-10", publicationNo: 1, publishedAt: "2026-10-20T00:00:00.000Z", snapshot: snapshot)
+    }
+
+    private func store(reports: [String]) async throws -> SQLiteStore {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        for id in reports {
+            let item = try publication(report: id)
+            try await store.write(item, forKey: RecordKey(entity: "report_publication", k1: item.id).storageKey, enqueueing: nil)
+        }
+        return store
+    }
+
+    private func cachedReportIDs(_ store: SQLiteStore) async throws -> Set<String> {
+        Set(try await store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication").values.map(\.reportId))
+    }
+
+    func testCachedPublicationMissingFromTheServerListIsRemoved() async throws {
+        let store = try await store(reports: ["r-kept", "r-deleted"])
+        let api = RouteAPI { endpoint in
+            guard endpoint.path == "students/st1/reports" else { return nil }
+            return """
+            {"items":[{"report_id":"r-kept","batch_id":"b-r-kept","student_id":"st1","month":"2026-10","status":"published",
+                       "needs_republish":0,"publication_count":1,"published_at":"2026-10-20T00:00:00.000Z","version":2,
+                       "from_key":"2026-10-01 18:00","to_key":"2026-10-20 18:00","from_number":1,"to_number":6}],"next_cursor":null}
+            """
+        }
+
+        let complete = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: ["st1"])
+
+        XCTAssertTrue(complete)
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertEqual(remaining, ["r-kept"])
+    }
+
+    func testPublicationAnswered404IsDroppedAndDoesNotMakeTheRefreshIncomplete() async throws {
+        let store = try await store(reports: [])
+        let api = RouteAPI(route: { endpoint in
+            guard endpoint.path == "students/st1/reports" else { return nil }
+            return """
+            {"items":[{"report_id":"r-gone","batch_id":"b-r-gone","student_id":"st1","month":"2026-10","status":"published",
+                       "needs_republish":0,"publication_count":1,"published_at":"2026-10-20T00:00:00.000Z","version":2,
+                       "from_key":"2026-10-01 18:00","to_key":"2026-10-20 18:00","from_number":1,"to_number":6}],"next_cursor":null}
+            """
+        }, failures: ["reports/r-gone/publications/1": 404])
+
+        let complete = await GuardianReportHistory.refresh(api: api, store: store, studentIDs: ["st1"])
+
+        XCTAssertTrue(complete)
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertTrue(remaining.isEmpty)
+    }
+
+    func testOfflineRefreshKeepsCachedPublications() async throws {
+        let store = try await store(reports: ["r-kept"])
+
+        let complete = await GuardianReportHistory.refresh(api: RouteAPI { _ in nil }, store: store, studentIDs: ["st1"])
+
+        XCTAssertFalse(complete)
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertEqual(remaining, ["r-kept"])
+    }
+
+    func testSyncDeletedPublicationRemovesItFromTheDashboardHistory() async throws {
+        let store = try await store(reports: ["r-kept", "r-deleted"])
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                       deleted: [RecordKey(entity: "report_publication", k1: "p-r-deleted")]))
+
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertEqual(remaining, ["r-kept"])
+    }
+
+    func testReloadAfterSyncDeletionTakesTheReportOffAnOpenDashboard() async throws {
+        let store = try await store(reports: ["r-kept", "r-deleted"])
+        let student = Student(id: "st1", classId: "c1", name: "Trần Gia Bảo", parentPhone: nil,
+                              enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
+        try await store.write(student, forKey: RecordKey(entity: "student", k1: student.id).storageKey, enqueueing: nil)
+        let refreshed = Date(timeIntervalSince1970: 1_700_000_000)
+        let open = GuardianDashboard(children: try await GuardianRepository.dashboard(from: store).children,
+                                     updatedAt: refreshed, isOffline: true)
+        XCTAssertEqual(Set(open.children.first?.publishedReports.map(\.reportId) ?? []), ["r-kept", "r-deleted"])
+
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                       deleted: [RecordKey(entity: "report_publication", k1: "p-r-deleted")]))
+        let next = try await GuardianRepository.reload(from: store, keeping: open)
+
+        XCTAssertEqual(next.children.first?.publishedReports.map(\.reportId), ["r-kept"])
+        XCTAssertEqual(next.updatedAt, refreshed)
+        XCTAssertTrue(next.isOffline)
+    }
+
+    func testPublicationFetchedBeforeASyncDeletionDoesNotComeBack() async throws {
+        let store = try await store(reports: [])
+        let latch = FetchLatch()
+        let pub = try publication(report: "r-late")
+        let body = String(decoding: try WireJSON.encoder().encode(pub), as: UTF8.self)
+        let api = LatchedAPI(latch: latch, listJSON: "{\"items\":[{\"report_id\":\"r-late\",\"status\":\"published\",\"publication_count\":1}],\"next_cursor\":null}",
+                             publicationJSON: body)
+
+        let refresh = Task { await GuardianReportHistory.refresh(api: api, store: store, studentIDs: ["st1"]) }
+        while await latch.arrivals == 0 { await Task.yield() }
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                       deleted: [RecordKey(entity: "report_publication", k1: pub.id)]))
+        await latch.release()
+        _ = await refresh.value
+
+        let cached = try await cachedReportIDs(store)
+        XCTAssertTrue(cached.isEmpty)
+    }
+
+    /// The refresh and the background sync open their own stores on the same file.
+    func testRemovalCommittedThroughAnotherStoreOnTheSameFileBlocksALateFetchedWrite() async throws {
+        let path = NSTemporaryDirectory() + "core-\(UUID().uuidString).sqlite"
+        defer { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: path + suffix) } }
+        let refreshStore = try SQLiteStore(path: path, scope: scope)
+        let syncStore = try SQLiteStore(path: path, scope: scope)
+        try await syncStore.installSnapshot([:], position: SyncPosition(cursor: 0, epoch: 1))
+        let student = Student(id: "st1", classId: "c1", name: "Trần Gia Bảo", parentPhone: nil,
+                              enrolledAt: "2026-10-01", leftAt: nil, status: .active, version: 1)
+        try await syncStore.write(student, forKey: RecordKey(entity: "student", k1: student.id).storageKey, enqueueing: nil)
+        let pub = try publication(report: "r-late")
+        let key = RecordKey(entity: "report_publication", k1: pub.id).storageKey
+
+        // The response has arrived, then the sync commits the removal, then the refresh writes.
+        try await syncStore.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                           deleted: [RecordKey(entity: "report_publication", k1: pub.id)]))
+        let written = try await refreshStore.writeFetched(pub, forKey: key)
+
+        XCTAssertFalse(written)
+        for store in [refreshStore, syncStore] {
+            let cached = try await cachedReportIDs(store)
+            XCTAssertTrue(cached.isEmpty)
+            let dashboard = try await GuardianRepository.dashboard(from: store)
+            XCTAssertTrue(dashboard.children.flatMap(\.publishedReports).isEmpty)
+        }
+    }
+
+    func testRemovalThroughAnotherStoreAlsoRemovesWhatWasFetchedJustBefore() async throws {
+        let path = NSTemporaryDirectory() + "core-\(UUID().uuidString).sqlite"
+        defer { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: path + suffix) } }
+        let refreshStore = try SQLiteStore(path: path, scope: scope)
+        let syncStore = try SQLiteStore(path: path, scope: scope)
+        try await syncStore.installSnapshot([:], position: SyncPosition(cursor: 0, epoch: 1))
+        let pub = try publication(report: "r-early")
+        let key = RecordKey(entity: "report_publication", k1: pub.id).storageKey
+
+        let written = try await refreshStore.writeFetched(pub, forKey: key)
+        try await syncStore.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                           deleted: [RecordKey(entity: "report_publication", k1: pub.id)]))
+
+        XCTAssertTrue(written)
+        let cached = try await cachedReportIDs(refreshStore)
+        XCTAssertTrue(cached.isEmpty)
+    }
+
+    func testAnUpsertAfterADeletionLiftsTheMarkSoTheRecordCanBeCachedAgain() async throws {
+        let store = try await store(reports: [])
+        let pub = try publication(report: "r-back")
+        let key = RecordKey(entity: "report_publication", k1: pub.id).storageKey
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                       deleted: [RecordKey(entity: "report_publication", k1: pub.id)]))
+        let skipped = try await store.writeFetched(pub, forKey: key)
+        XCTAssertFalse(skipped)
+
+        let value = try WireJSON.decoder().decode(JSONValue.self, from: try WireJSON.encoder().encode(pub))
+        try await store.apply(PullPage(cursor: 2, epoch: 1, hasMore: false, serverTime: "2026-10-25T00:00:00.000Z",
+                                       upserts: ["report_publication": [value]], deleted: []))
+        let written = try await store.writeFetched(pub, forKey: key)
+        XCTAssertTrue(written)
+    }
+
+    func testSyncThatFailsAfterAppliedDeletionStillSignalsTheScreensToRebuild() async throws {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        try await store.installSnapshot([:], position: SyncPosition(cursor: 0, epoch: 1))
+        let item = try publication(report: "r-deleted")
+        try await store.write(item, forKey: RecordKey(entity: "report_publication", k1: item.id).storageKey, enqueueing: nil)
+        let user = User(id: "guardian-user", phone: "0900000000", displayName: "Phụ huynh", mustChangePassword: false)
+        let role = Role(id: "guardian-role", name: "Guardian", systemKey: nil, scopeKind: .assignedClasses)
+        let membership = Membership(id: "guardian", workspace: Workspace(id: "workspace", name: "Lớp"), role: role,
+                                    status: "active", scopeEpoch: 1, permissions: [:])
+        let identity = CurrentIdentity(user: user, activeMembershipId: "guardian", memberships: [membership])
+        let firstPage = PullPage(cursor: 1, epoch: 1, hasMore: true, serverTime: "2026-10-25T00:00:00.000Z", upserts: [:],
+                                 deleted: [RecordKey(entity: "report_publication", k1: item.id)])
+        let api = RouteAPI(route: { endpoint in
+            switch (endpoint.path, endpoint.query["cursor"]) {
+            case ("me", _): return String(decoding: try! WireJSON.encoder().encode(identity), as: UTF8.self)
+            case ("sync/pull", "0"?): return String(decoding: try! WireJSON.encoder().encode(firstPage), as: UTF8.self)
+            default: return nil
+            }
+        })
+        let model = AuthModel(configuration: .fallback, apiClient: api,
+                              tokenStore: InMemoryTokenStore(token: "fixture-session"),
+                              identityStore: MemoryIdentityCache(identity), storeFactory: { _ in store }, isOnline: { true })
+        await model.restoreSession()
+        let before = model.syncRevision
+
+        await model.synchronizeWhileActive()
+
+        let remaining = try await cachedReportIDs(store)
+        XCTAssertTrue(remaining.isEmpty)
+        XCTAssertGreaterThan(model.syncRevision, before)
+    }
+}
+
+private actor MemoryIdentityCache: CachedIdentityStore {
+    private var value: CurrentIdentity?
+    init(_ identity: CurrentIdentity?) { value = identity }
+    func load() -> CurrentIdentity? { value }
+    func save(_ identity: CurrentIdentity) { value = identity }
+    func clear() { value = nil }
+}
+
+private actor FetchLatch {
+    private var waiting: [CheckedContinuation<Void, Never>] = []
+    private var released = false
+    private(set) var arrivals = 0
+    func wait() async {
+        arrivals += 1
+        if released { return }
+        await withCheckedContinuation { waiting.append($0) }
+    }
+    func release() { released = true; waiting.forEach { $0.resume() }; waiting = [] }
+}
+
+/// Answers the report list at once and holds the publication request until the latch is released.
+private struct LatchedAPI: APIClient {
+    let baseURL = URL(string: "https://fixture.invalid/v1")!
+    let latch: FetchLatch
+    let listJSON: String
+    let publicationJSON: String
+
+    func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+        let json: String
+        if endpoint.path.hasPrefix("students/") { json = listJSON }
+        else if endpoint.path.contains("/publications/") { await latch.wait(); json = publicationJSON }
+        else { throw APIFailure.offline }
+        do { return try WireJSON.decoder().decode(type, from: Data(json.utf8)) } catch { throw APIFailure.decoding }
+    }
+}

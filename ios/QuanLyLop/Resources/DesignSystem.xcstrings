@@ -1,0 +1,102 @@
+{
+  "sourceLanguage": "vi",
+  "strings": {
+    "ds.save.saved": {
+      "comment": "Nút lưu sau khi lưu xong.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã lưu"
+          }
+        }
+      }
+    },
+    "ds.save.saving": {
+      "comment": "Nhãn trợ năng khi nút lưu quay.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang lưu"
+          }
+        }
+      }
+    },
+    "ds.preview.empty.students.title": {
+      "comment": "DesignSystem gallery: empty state title for a class without students.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có học sinh"
+          }
+        }
+      }
+    },
+    "ds.preview.empty.students.description": {
+      "comment": "DesignSystem gallery: empty state description for a class without students.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm học sinh đầu tiên vào lớp."
+          }
+        }
+      }
+    },
+    "ds.preview.empty.students.action": {
+      "comment": "DesignSystem gallery: action label for the empty state.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm học sinh"
+          }
+        }
+      }
+    },
+    "ds.preview.empty.results.title": {
+      "comment": "DesignSystem gallery: compact empty state title.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không có kết quả"
+          }
+        }
+      }
+    },
+    "ds.status.pending": {
+      "comment": "SaveStatus: chưa đẩy lên máy chủ quá 1 giây.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chờ đồng bộ"
+          }
+        }
+      }
+    },
+    "ds.status.offline": {
+      "comment": "SaveStatus: ngoại tuyến.",
+      "extractionState": "manual",
+      "localizations": {
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã lưu trên máy · sẽ đồng bộ khi có mạng"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

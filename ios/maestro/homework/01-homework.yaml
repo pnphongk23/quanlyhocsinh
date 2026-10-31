@@ -1,0 +1,6 @@
+# demo: homework
+appId: com.study.teacherthu
+name: session-homework
+---
+- assertVisible: "Bài tập buổi trước"
+- takeScreenshot: docs/screens/homework/previous-ios

@@ -1,0 +1,16 @@
+appId: com.study.teacherthu
+name: login-and-open-class
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "900 000 001"
+- inputText: ${TEACHER_PHONE}
+- tapOn:
+    point: "50%,62%"
+- inputText: ${TEACHER_PASSWORD}
+- tapOn: "Đăng nhập"
+- extendedWaitUntil:
+    visible: "Lớp của tôi"
+    timeout: 30000
+- takeScreenshot: /tmp/i8c-ios-classlist

@@ -1,0 +1,459 @@
+{
+  "sourceLanguage" : "vi",
+  "strings" : {
+    "scores.fab.newTest" : {
+      "comment" : "Nhãn nút nổi tạo bài kiểm tra ở tab Điểm và tab Bài kiểm tra.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bài mới" } }
+      }
+    },
+    "scores.assignDefault.button" : {
+      "comment" : "Nút ở màn nhập điểm một bài: đặt điểm mặc định cho cả lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gán điểm mặc định" } }
+      }
+    },
+    "scores.assignDefault.title" : {
+      "comment" : "Tiêu đề hộp xác nhận gán điểm mặc định.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gán điểm 15 cho cả lớp?" } }
+      }
+    },
+    "scores.assignDefault.message" : {
+      "comment" : "Nội dung hộp xác nhận gán điểm mặc định; nói rõ ghi đè điểm đã nhập.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Mọi học sinh đang hiện trong bài này sẽ được đặt 15 điểm. Điểm đã nhập sẽ bị ghi đè." } }
+      }
+    },
+    "scores.assignDefault.confirm" : {
+      "comment" : "Nút xác nhận gán điểm mặc định.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gán 15 điểm" } }
+      }
+    },
+    "scores.invalid.range" : {
+      "comment" : "Lỗi khi điểm nhập ngoài khoảng cho phép.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm từ 0 đến 1000, theo bước 0,5" } }
+      }
+    },
+    "homework.grading.header" : {
+      "comment" : "Tiêu đề mục danh sách chấm bài của tab Bài tập về nhà.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chấm bài" } }
+      }
+    },
+    "homework.grading.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "BTVN ngày %1$@ · %2$@/%3$@ em đã chấm" } }
+      }
+    },
+    "homework.part.picker.a11y" : {
+      "comment" : "Nhãn VoiceOver của menu chọn phần bài tập đang chấm.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chọn phần bài tập" } }
+      }
+    },
+    "homework.part.more.a11y" : {
+      "comment" : "Nhãn VoiceOver của menu tuỳ chọn chấm cả lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tuỳ chọn chấm cả lớp" } }
+      }
+    },
+    "comments.send.failed" : {
+      "comment" : "Lỗi khi gửi phiếu cả lớp không được máy chủ xác nhận.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa gửi được phiếu. Kiểm tra kết nối rồi thử lại. Phiếu đã soạn vẫn được giữ." } }
+      }
+    },
+    "comments.send.partial" : {
+      "comment" : "Một số phiếu chưa được gửi vì máy chủ bỏ qua (bỏ sao hoặc đã gửi ở máy khác). %lld là số em chưa gửi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Còn %lld em chưa nhận được phiếu (đã bỏ sao hoặc đã gửi ở nơi khác). Kiểm tra lại danh sách rồi gửi tiếp." } }
+      }
+    },
+    "comments.send.retry" : {
+      "comment" : "Nút gửi lại phiếu sau khi gửi lỗi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thử lại" } }
+      }
+    },
+    "comments.send.needs_network" : {
+      "comment" : "Giải thích dưới nút Gửi phiếu cả lớp khi mất mạng; gửi phiếu không xếp hàng.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cần có mạng để gửi phiếu. Phiếu đã soạn vẫn lưu trên máy." } }
+      }
+    },
+    "reports.demo.error.long" : {
+      "comment" : "Thông điệp lỗi dài chỉ dùng cho màn chụp ảnh Debug của tab Báo cáo.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không thể lưu nhận xét chung lên máy chủ vì mất kết nối. Nhận xét vẫn được giữ trên máy này và sẽ tự đồng bộ khi có mạng trở lại; hãy kiểm tra kết nối rồi thử lại." } }
+      }
+    },
+    "attendance.save.no_changes" : {
+      "comment" : "Trạng thái điểm danh khi không có thay đổi cần lưu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có thay đổi để lưu" } }
+      }
+    },
+    "session.date.line" : {
+      "comment" : "Dòng ngày và giờ dạy dưới tiêu đề buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%1$@, %2$@ · %3$@" } }
+      }
+    },
+    "classes.today.title" : {
+      "comment" : "Tiêu đề nhóm buổi học hôm nay trên trang Lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hôm nay" } }
+      }
+    },
+    "classes.today.empty" : {
+      "comment" : "Empty state khi hôm nay không có buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hôm nay không có buổi học" } }
+      }
+    },
+    "classes.next.title" : {
+      "comment" : "Tiêu đề buổi học kế tiếp có thứ và ngày.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Buổi kế tiếp · %@" } }
+      }
+    },
+    "classes.next.not_yet" : {
+      "comment" : "Pill báo buổi học kế tiếp chưa tới ngày học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa tới" } }
+      }
+    },
+    "classes.tasks.title" : {
+      "comment" : "Tiêu đề nhóm việc còn dở trên trang Lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Việc còn dở" } }
+      }
+    },
+    "classes.tasks.empty" : {
+      "comment" : "Trạng thái khi không có việc giáo viên còn cần xử lý.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có việc còn dở" } }
+      }
+    },
+    "classes.tasks.more" : {
+      "comment" : "Nút mở các việc còn dở bị ẩn trên trang Lớp. %lld là số việc còn lại.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xem thêm (%lld)" } }
+      }
+    },
+    "classes.tasks.less" : {
+      "comment" : "Nút thu gọn danh sách việc còn dở trên trang Lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thu gọn" } }
+      }
+    },
+    "classes.tasks.attendance" : {
+      "comment" : "Nhãn cho việc điểm danh còn thiếu trên trang Lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm danh chưa xong" } }
+      }
+    },
+    "classes.card.next" : {
+      "comment" : "Ngày buổi tiếp theo của lớp trong thẻ lớp.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Buổi tới: %@ %@ · %@" } }
+      }
+    },
+    "session.info.title" : {
+      "comment" : "Tên nút info và tiêu đề sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thông tin buổi học" } }
+      }
+    },
+    "session.info.class" : {
+      "comment" : "Nhãn dòng lớp trong sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lớp" } }
+      }
+    },
+    "session.info.date" : {
+      "comment" : "Nhãn dòng ngày trong sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Ngày" } }
+      }
+    },
+    "session.info.time" : {
+      "comment" : "Nhãn dòng giờ trong sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Giờ" } }
+      }
+    },
+    "session.info.close" : {
+      "comment" : "Nút đóng sheet thông tin buổi học.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đóng" } }
+      }
+    },
+    "attendance.status.a11y" : {
+      "comment" : "Nhãn trợ năng của nút trạng thái điểm danh; %@ là tên học sinh.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Trạng thái điểm danh của %@" } }
+      }
+    },
+    "classes.list.title" : {
+      "comment" : "Tiêu đề mục danh sách lớp ở trang chủ.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Lớp" } }
+      }
+    },
+    "sessions.upcoming.count" : {
+      "comment" : "Số buổi sắp tới trong thẻ mục Sắp tới.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%@ buổi" } }
+      }
+    },
+    "homework.editor.discard.title" : {
+      "comment" : "Hỏi huỷ thay đổi khi đóng sheet phần BTVN.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bỏ thay đổi?" } }
+      }
+    },
+    "homework.editor.discard.message" : {
+      "comment" : "Nội dung phần BTVN chưa lưu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Phần bài tập chưa được lưu sẽ bị mất." } }
+      }
+    },
+    "homework.editor.discard.confirm" : {
+      "comment" : "Nút bỏ thay đổi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bỏ thay đổi" } }
+      }
+    },
+    "homework.editor.discard.keep" : {
+      "comment" : "Nút tiếp tục chỉnh sửa.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tiếp tục chỉnh sửa" } }
+      }
+    },
+    "students.leave.cancel" : {
+      "comment" : "Nút huỷ trong hộp xác nhận đánh dấu học sinh nghỉ.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Huỷ" } }
+      }
+    },
+    "homework.grading.cancelledBanner" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%1$@ đã bị hủy. BTVN ngày %2$@ chấm ở %3$@. Phụ huynh thấy thay đổi này." } }
+      }
+    },
+    "comments.homework.prefixOnDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "BTVN ngày %@" } }
+      }
+    },
+    "comments.previous.onDate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "ngày %@" } }
+      }
+    },
+    "comments.sheet.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Nhận xét %@" } }
+      }
+    },
+    "auth.demo.session" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "T2 · 19/10" } }
+      }
+    },
+    "auth.demo.longName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Nguyễn Hoàng Thiên Phương Anh Thư" } }
+      }
+    },
+    "slip.criterion.listen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chú ý nghe giảng" } }
+      }
+    },
+    "slip.criterion.notes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Ghi chép đầy đủ" } }
+      }
+    },
+    "slip.criterion.participate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tham gia hoạt động sôi nổi" } }
+      }
+    },
+    "slip.criterion.quiet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không mất trật tự" } }
+      }
+    },
+    "slip.criterion.homework" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Hoàn thành bài tập về nhà" } }
+      }
+    },
+    "slip.default.five" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Con học rất tốt, chăm chỉ, tích cực tham gia phát biểu" } }
+      }
+    },
+    "slip.default.four" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Con học tốt, làm bài đầy đủ nhưng hơi trầm" } }
+      }
+    },
+    "slip.default.three" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Con học tốt, nhưng còn hơi mất tập trung, nói tự do" } }
+      }
+    },
+    "slip.default.low" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Con chưa tích cực tham gia hoạt động, cần tập trung hơn" } }
+      }
+    },
+    "comments.card.stars" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%1$d/%2$d sao" } }
+      }
+    },
+    "classes.session.exists" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã có buổi vào ngày và giờ này" } }
+      }
+    },
+    "classes.session.datePast" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không sửa được buổi đã qua ngày" } }
+      }
+    },
+    "classes.session.versionConflict" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Buổi học đã được thay đổi ở nơi khác. Đóng rồi mở lại để xem bản mới nhất." } }
+      }
+    },
+    "comments.card.defaultSlip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa mở phiếu · gửi kèm phiếu 5 sao mặc định" } }
+      }
+    },
+    "comments.card.noSlip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có phiếu" } }
+      }
+    },
+    "comments.send.skippedStat" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có phiếu" } }
+      }
+    },
+    "comments.send.skipped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không gửi phiếu cho em vắng, có phép hoặc chưa điểm danh: %@. Mở phiếu của em để gửi riêng." } }
+      }
+    },
+    "comments.send.nothing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không có phiếu nào để gửi." } }
+      }
+    },
+    "slip.sheet.criteria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tiêu chí" } }
+      }
+    },
+    "slip.sheet.stars" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%d/5 sao" } }
+      }
+    },
+    "slip.sheet.comment" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Câu nhận xét" } }
+      }
+    },
+    "slip.sheet.useDefault" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Dùng câu mặc định" } }
+      }
+    },
+    "slip.sheet.legacy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Phiếu cũ chấm theo thang 3 sao, giữ nguyên." } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

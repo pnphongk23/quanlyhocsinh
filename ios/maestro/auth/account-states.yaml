@@ -1,0 +1,42 @@
+appId: com.study.teacherthu
+---
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: login
+- assertVisible: "Đăng nhập"
+- takeScreenshot: auth-login
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: login-error
+- assertVisible: "Đăng nhập"
+- takeScreenshot: auth-login-error
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: login-locked
+- assertVisible: "Đăng nhập"
+- takeScreenshot: auth-login-locked
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: register
+- assertVisible: "Tạo không gian làm việc"
+- takeScreenshot: auth-register
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: forced-password
+- assertVisible: "Đổi mật khẩu"
+- takeScreenshot: auth-forced-password
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: forgot-guardian
+- assertVisible: "Quên mật khẩu?"
+- takeScreenshot: auth-forgot-guardian
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: forgot-teacher
+- assertVisible: "Quên mật khẩu?"
+- takeScreenshot: auth-forgot-teacher
+- launchApp:
+    arguments:
+      QLH_DEMO_SCREEN: role-picker
+- assertVisible: "Chọn vai trò"
+- takeScreenshot: auth-role-picker

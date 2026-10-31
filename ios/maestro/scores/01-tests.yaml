@@ -1,0 +1,10 @@
+# demo: scores
+appId: com.study.teacherthu
+name: scores-tests
+---
+- extendedWaitUntil:
+    visible: "Bài mẫu"
+    timeout: 20000
+- assertVisible: "Bài kiểm tra"
+- waitForAnimationToEnd
+- takeScreenshot: docs/screens/scores/tests-ios

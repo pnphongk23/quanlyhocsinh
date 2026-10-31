@@ -1,0 +1,11 @@
+# demo: forgot-teacher
+# Tài khoản · Quên mật khẩu của giáo viên (ảnh 08 của P2).
+# Chạy: ios/maestro/run.sh ios/maestro/auth/06-forgot-teacher.yaml
+appId: com.study.teacherthu
+name: auth-forgot-teacher
+---
+- extendedWaitUntil:
+    visible: "Giáo viên chưa tự đặt lại mật khẩu được."
+    timeout: 20000
+- assertVisible: "Liên hệ quản trị viên không gian làm việc"
+- takeScreenshot: docs/screens/auth/quen-mat-khau-giao-vien-ios

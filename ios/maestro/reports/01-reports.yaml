@@ -1,0 +1,6 @@
+# demo: reports
+appId: com.study.teacherthu
+name: monthly-reports
+---
+- assertVisible: "Báo cáo"
+- takeScreenshot: docs/screens/reports/list-ios

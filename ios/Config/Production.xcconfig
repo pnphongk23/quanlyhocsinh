@@ -1,0 +1,6 @@
+// Môi trường production. URL bên dưới phục vụ người dùng thật;
+// khi có tên miền riêng, chỉ cần thay API_BASE_URL ở đây.
+#include "Base.xcconfig"
+
+APP_ENVIRONMENT = Production
+API_BASE_URL = https:/$()/qlh-staging-api.tolaphamnhuphong.workers.dev/v1
