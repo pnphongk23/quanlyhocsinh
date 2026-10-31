@@ -60,6 +60,10 @@
   cursor: pointer;
 }
 
+.ticketRow:disabled {
+  cursor: default;
+}
+
 .ticketRow:first-child {
   border-top-color: transparent;
 }

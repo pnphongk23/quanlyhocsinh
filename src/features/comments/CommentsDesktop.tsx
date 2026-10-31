@@ -246,10 +246,11 @@ export default function CommentsDesktop({
                   {(attendance.complete ? visibleRows.filter((row) => row.attended) : visibleRows).map((row) => {
                   const active = row.student.id === selected?.student.id;
                   return (
-                    <button
-                      key={row.student.id}
-                      type="button"
-                      aria-pressed={active}
+                      <button
+                        key={row.student.id}
+                        type="button"
+                        disabled={!attendance.complete}
+                        aria-pressed={active}
                       className={
                         s.ticketRow + (active ? " " + s.ticketRowSelected : "")
                       }

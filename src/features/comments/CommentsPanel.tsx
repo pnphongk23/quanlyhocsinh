@@ -324,9 +324,11 @@ export default function CommentsPanel({
             </span>
             <span className={s.ticketName}>{row.student.name}</span>
             <Pill tone={badge.tone}>{badge.label}</Pill>
-            <span className={s.chevron}>
-              <ChevronRight />
-            </span>
+              {attendance.complete && (
+                <span className={s.chevron}>
+                  <ChevronRight />
+                </span>
+              )}
           </span>
           {row.stars !== null && (
             <span className={s.starsLine}>

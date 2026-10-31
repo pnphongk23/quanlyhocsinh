@@ -64,8 +64,9 @@ describe("CommentsPanel send permission", () => {
     expect(screen.getByText("Còn 1 em chưa điểm danh.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Đến Điểm danh" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Gán tất cả mặc định" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Gửi phiếu cả lớp" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Học sinh mẫu/ })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Gửi phiếu cả lớp" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /Học sinh mẫu/ })).toBeDisabled();
+      expect(document.querySelector(".chevron")).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Theo tiêu chí" }));
     expect(screen.queryByRole("button", { name: /Học sinh mẫu/ })).toBeNull();
   });

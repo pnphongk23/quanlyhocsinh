@@ -106,7 +106,7 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     expect(html).not.toContain("Đổi người dạy");
   });
 
-  it("Nhận xét: danh sách + khung soạn phiếu cạnh nhau, không có bottom sheet", () => {
+    it("Nhận xét: danh sách + khung soạn phiếu cạnh nhau, không có bottom sheet", () => {
     const html = render(
       <CommentsDesktop sessionId="6a-session-7" tabBar={(actions) => <div>{actions}</div>} />,
     );
@@ -118,8 +118,20 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
       expect(html).toContain("Hoàn thành BTVN");
       expect(html).toContain("Theo chấm BTVN");
     expect(html).toContain("5/5 sao");
-    expect(html).toContain("Đã gửi");
-  });
+      expect(html).toContain("Đã gửi");
+    });
+
+    it("Nhận xét: khóa hàng học sinh và ẩn mũi tên khi điểm danh chưa xong", () => {
+      const seed = createSeed();
+      seed.attendance = [];
+      replaceStore(seed);
+      const html = render(
+        <CommentsDesktop sessionId="6a-session-7" tabBar={(actions) => <div>{actions}</div>} />,
+      );
+      expect(html).toContain("Điểm danh xong để nhận xét");
+      expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-pressed=/);
+      expect(html).not.toContain("chevron");
+    });
 
   it("BTVN: chọn phần bên trái, chấm cả lớp bên phải, nút Lưu kết quả chấm", () => {
     const html = render(
