@@ -37,7 +37,7 @@ describe("comments visual contrast", () => {
   });
 
   it("labels absent chips without fading selected or legacy chip text", () => {
-    expect(criteriaCss).toMatch(/\.absent::after\s*\{[^}]*content:\s*"Vắng"/s);
+    expect(criteriaCss).toMatch(/\.absenceLabel\s*\{[^}]*border:\s*1px dashed currentColor/s);
     expect(criteriaCss).not.toMatch(/\.absent\s*\{[^}]*opacity\s*:/s);
     expect(criteriaCss).not.toMatch(/\.legacy\s*\{[^}]*opacity\s*:/s);
   });
