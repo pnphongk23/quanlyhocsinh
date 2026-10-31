@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   worker:
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     environment: development
     defaults:
@@ -37,6 +38,7 @@ jobs:
           npx wrangler deploy --env dev
 
   web:
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     environment: development
     steps:
