@@ -6,6 +6,7 @@ const tokens = readFileSync(resolve(process.cwd(), "src/shared/styles/tokens.css
 const criteriaCss = readFileSync(resolve(process.cwd(), "src/features/comments/CriteriaMode.module.css"), "utf8");
 const fieldsCss = readFileSync(resolve(process.cwd(), "src/features/comments/SlipCriteriaFields.module.css"), "utf8");
 const panelCss = readFileSync(resolve(process.cwd(), "src/features/comments/CommentsPanel.module.css"), "utf8");
+const criteriaModeTsx = readFileSync(resolve(process.cwd(), "src/features/comments/CriteriaMode.tsx"), "utf8");
 
 function token(name: string): string {
   const value = tokens.match(new RegExp(`--${name}:\\s*(#[\\da-f]{6})`, "i"))?.[1];
@@ -36,14 +37,18 @@ describe("comments visual contrast", () => {
     expect(contrast(token("color-primary-ink"), token("color-primary-soft"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("labels absent chips without fading selected or legacy chip text", () => {
-    expect(criteriaCss).toMatch(/\.absenceLabel\s*\{[^}]*border:\s*1px dashed currentColor/s);
+  it("labels absent chips with the warning Pill instead of a dashed border", () => {
+    expect(criteriaCss).not.toMatch(/\.absenceLabel\s*\{/);
+    expect(criteriaModeTsx).toMatch(/!row\.attended && <Pill tone="warning">Vắng<\/Pill>/);
     expect(criteriaCss).not.toMatch(/\.absent\s*\{[^}]*opacity\s*:/s);
     expect(criteriaCss).not.toMatch(/\.legacy\s*\{[^}]*opacity\s*:/s);
   });
 
-  it("keeps selected disabled controls at full contrast", () => {
-    expect(fieldsCss).toMatch(/\.criterionOn:disabled\s*\{[^}]*opacity:\s*1/s);
+  it("greys out locked criteria chips and read-only slip fields with the disabled tokens", () => {
+    expect(criteriaCss).toMatch(/\.disabled\s*\{[^}]*opacity:\s*var\(--state-disabled-opacity\)[^}]*background:\s*var\(--color-neutral-soft\)/s);
+    expect(fieldsCss).toMatch(/\.criterionOn:disabled\s*\{[^}]*background:\s*var\(--color-neutral-soft\)/s);
+    expect(fieldsCss).toMatch(/\.sentenceInput:read-only[\s\S]*?opacity:\s*var\(--state-disabled-opacity\)/);
+    // Nút gửi/ô sao giữ nguyên cách thể hiện cũ; chỉ chip + ô chữ đổi theo trạng thái khoá.
     expect(panelCss).toMatch(/\.starOptionOn:disabled\s*\{[^}]*opacity:\s*1/s);
   });
 

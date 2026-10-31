@@ -153,6 +153,26 @@ describe("CriteriaMode", () => {
       expect(screen.getAllByText("đạt 1/1")).toHaveLength(5);
     });
 
+  it("keeps absent chips unticked with the warning Vắng label at the end of the group", () => {
+    const rows = buildTicketRows(createSeed(), "6a-session-7");
+    rows.forEach((row) => { row.comment = null; });
+    render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite />);
+    expandAllCriteria();
+    const absent = rows.filter((row) => !row.attended);
+    expect(absent.length).toBeGreaterThan(0);
+    for (const row of absent) {
+      const chips = screen.getAllByRole("button", { name: new RegExp(`^${row.student.name} · Vắng`) });
+      expect(chips).toHaveLength(5);
+      expect(chips.every((chip) => chip.getAttribute("aria-pressed") === "false")).toBe(true);
+      // Không tự tích và không mang màu "đang chọn": chip nền trung tính, nhãn Vắng là Pill cảnh báo.
+      expect(chips.every((chip) => !/selected|provisional/.test(chip.className))).toBe(true);
+      expect(chips.every((chip) => chip.textContent?.includes("Vắng"))).toBe(true);
+    }
+    const presentChip = screen.getAllByRole("button", { name: /^Phạm Đức Dũng/ })[0];
+    const absentChip = screen.getAllByRole("button", { name: /^Nguyễn Minh Anh · Vắng/ })[0];
+    expect(presentChip.compareDocumentPosition(absentChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
     it("opens the first criterion by default and supports multiple expanded groups", () => {
       render(<CriteriaMode sessionId="s1" rows={buildTicketRows(createSeed(), "6a-session-7")} canWrite />);
       const headings = screen.getAllByRole("button", { name: /đạt \d+\/\d+/ });
