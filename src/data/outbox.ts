@@ -39,7 +39,9 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
         const matching = cellKey ? await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "pending").first() : undefined;
         // Phiếu chỉ gửi trường vừa đổi: gộp vào lệnh chờ cũ để không làm mất tiêu chí đã soạn trước đó.
         const mergedPayload = matching && command.type === "slip.set" ? (mergeSlipPayload(matching.payload, row.payload) as OutboxRow["payload"]) : row.payload;
-        const finalRow = matching ? { ...row, payload: mergedPayload, base_version: matching.base_version } : row;
+        // Điểm danh đã chờ trước phiếu cùng buổi: gộp mà lấy giờ mới sẽ đẩy nó ra sau phiếu và máy chủ từ chối phiếu vì thiếu điểm danh.
+        const mergedCreatedAt = matching && command.type === "attendance.set" ? matching.created_at : row.created_at;
+        const finalRow = matching ? { ...row, payload: mergedPayload, base_version: matching.base_version, created_at: mergedCreatedAt } : row;
         if (matching) await db.outbox.delete(matching.id);
         // Lệnh mới cho cùng ô thay thế lệnh cũ đã bị từ chối, để lỗi cũ không kẹt mãi.
         if (cellKey) await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "rejected").delete();
