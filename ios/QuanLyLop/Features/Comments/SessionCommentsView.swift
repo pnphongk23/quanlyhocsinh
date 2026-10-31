@@ -262,8 +262,7 @@ struct SessionCommentsView: View {
     private func ticketCard(_ row: I4TicketRow) -> some View {
         Button { open(row.student) } label: { ticketCardBody(row) }
             .buttonStyle(.plain)
-            .disabled(isLocked)
-            .accessibilityHint(isLocked ? String(localized: "comments.locked.hint", table: "Teacher") : "")
+            .attendanceLock(isLocked)
             .accessibilityIdentifier("comment.row.\(row.student.id)")
     }
 
@@ -325,7 +324,7 @@ struct SessionCommentsView: View {
     }
 
     private var absentPill: some View {
-        AppPill(title: String(localized: "comments.absent.label", table: "Teacher"), tone: .error)
+        AppPill(title: String(localized: "comments.absent.label", table: "Teacher"), tone: .warning)
     }
 
     /// Gửi phiếu cả lớp luôn ghim đáy màn, không cuộn theo danh sách.

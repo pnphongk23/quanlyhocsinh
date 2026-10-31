@@ -125,8 +125,8 @@ struct CriteriaModeView: View {
             .opacity(chip.isLegacy || chip.isAbsent || isLocked ? AppState.disabledOpacity : 1)
         }
         .buttonStyle(.plain)
-        .disabled(isLocked || !canWrite || !chip.isEditable || busy.contains(chip.studentID))
-        .accessibilityHint(isLocked ? String(localized: "comments.locked.hint", table: "Teacher") : "")
+        .disabled(!canWrite || !chip.isEditable || busy.contains(chip.studentID))
+        .attendanceLock(isLocked)
         .accessibilityAddTraits(chip.unmet ? [] : [.isSelected])
         .accessibilityIdentifier("criteria.chip.\(criterion).\(chip.studentID)")
     }
