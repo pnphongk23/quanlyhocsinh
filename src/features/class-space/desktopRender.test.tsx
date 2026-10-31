@@ -38,8 +38,11 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     const html = render(<SessionsDesktop classId="6a" />);
     expect(html).toContain("Các buổi đã qua");
     expect(html).toContain("Buổi đã hủy");
-    expect(html).toContain("Buổi hiện tại");
-    expect(html).toContain("Lịch lặp");
+      expect(html).toContain("Buổi hiện tại");
+      expect(html).toMatch(/class="[^"]*currentCard[^"]*"/);
+      expect(html).toContain('aria-label="Mở buổi');
+      expect(html).toContain(">Xem buổi</span>");
+      expect(html).toContain("Lịch lặp");
     expect(html).toContain("Thêm buổi lẻ");
     expect(html).toContain("Chưa điểm danh");
     expect(html).not.toMatch(/trung bình/i);
@@ -52,7 +55,7 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     expect(html).not.toContain("Đường dẫn");
     expect(html).not.toMatch(/học sinh · .*hôm nay/);
     expect(html).toContain("Mục của lớp");
-    const card = html.split("Buổi hiện tại")[1].split("</div>")[0];
+    const card = html.split("Buổi hiện tại")[1].split("</a>")[0];
     expect(card).toContain("Xem buổi");
     expect(card).not.toContain("Hủy buổi");
     expect(card).not.toContain("Sửa buổi lẻ");
