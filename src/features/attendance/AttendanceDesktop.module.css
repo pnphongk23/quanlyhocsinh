@@ -1,0 +1,129 @@
+/* Tab Điểm danh trên web desktop (ảnh 03). */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th:first-child, .table td:first-child { width: auto; }
+.table th:not(:first-child), .table td:not(:first-child) { width: 1%; white-space: nowrap; }
+
+.table th {
+  padding: 0 0 var(--space-8);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: left;
+}
+
+.table td {
+  height: 48px;
+  padding-block: var(--space-4);
+  border-top: 1px solid var(--color-divider);
+  vertical-align: middle;
+}
+
+.studentName {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.statusGroup {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: 10px;
+  background: var(--color-neutral-soft);
+}
+
+.statusButton {
+  width: 74px;
+  height: var(--tap-desktop);
+  min-height: var(--tap-desktop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.statusButton:disabled {
+  cursor: default;
+}
+
+.on_present {
+  background: var(--state-success-bg);
+  color: var(--state-success-fg);
+  box-shadow: none;
+}
+
+.on_late {
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
+  box-shadow: none;
+}
+
+.on_absent {
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
+  box-shadow: none;
+}
+
+.countRow {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 0;
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-md);
+  color: var(--color-muted);
+}
+
+.countRow b {
+  font-weight: 700;
+  margin-right: var(--space-2);
+}
+
+.countPresent {
+  color: var(--color-success);
+}
+.countLate {
+  color: var(--color-warning);
+}
+.countAbsent {
+  color: var(--color-error);
+}
+
+.teacherRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.teacherAvatar {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-weight: 700;
+}
+
+.teacherName {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.teacherRole {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}

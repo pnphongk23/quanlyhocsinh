@@ -1,0 +1,253 @@
+/*
+ * Chi tiết buổi: 16-gv-diem-danh · 17-gv-buoi-chua-toi-ngay-hoc ·
+ * 24-gv-nhan-xet · 76-trang-thai-rong-buoi-bi-huy.
+ * Đầu màn trắng: tên lớp 13px xám, "T3 · dd/mm" 20/700, ba tab cao 48
+ * chữ 14/600 gạch chân 3px (ảnh 60/61: Điểm danh · Nhận xét · Bài tập về nhà).
+ */
+.detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: calc(-1 * var(--page-top)) calc(-1 * var(--page-x)) calc(-1 * var(--page-bottom));
+}
+
+.header {
+  flex: 0 0 auto;
+  background: var(--color-surface);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  /* Mũi tên lùi và nút ⋯ (vùng bấm 44) thẳng lề trang: glyph cách mép nút ~17px */
+  padding: var(--space-12) calc(var(--page-x) - var(--space-16)) 0;
+}
+
+.iconButton {
+  width: var(--tap);
+  height: var(--tap);
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-button);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.titleBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Nút "⋯" mở tuỳ chọn buổi học, cùng kiểu với màn chi tiết bài giảng. */
+.moreButton {
+  display: grid;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.moreButton:hover,
+.moreButton:focus-visible {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Thao tác trong sheet tuỳ chọn: nút rộng hết khung, đủ 44px để bấm. */
+.sheetActions {
+  display: grid;
+  gap: 10px;
+}
+
+.sheetActions > * {
+  width: 100%;
+}
+
+.eyebrow {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titleLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabs {
+  display: flex;
+  margin: 0;
+  padding: 0 var(--page-x);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--text-md);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tabActive {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-4) var(--page-x) var(--page-bottom);
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-button);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Thẻ ngày trong buổi đã huỷ: 76 — trắng, bo 16, đệm 8 */
+.dateCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.dateTitle {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.dateMeta {
+  font-size: var(--text-md);
+  color: var(--color-muted);
+}
+
+/* Trạng thái rỗng: 76 — vòng tròn 72px, tiêu đề 20/700, hai nút 52 */
+.emptyBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-16);
+  flex: 1;
+  padding: var(--space-32) var(--space-20);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+
+.emptyText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.emptyTextLine {
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.emptyActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  width: 100%;
+}
+
+.emptyActions > * {
+  border-radius: var(--radius-button);
+}
+
+@media (min-width: 1024px) {
+  .detail {
+    margin: 0;
+    gap: var(--space-16);
+  }
+
+  .header {
+    border-radius: var(--radius-card);
+  }
+
+  .headerRow {
+    padding: var(--space-16) var(--space-20) 0;
+  }
+
+  .tabs {
+    margin: 0;
+    padding: 0 var(--space-20);
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    min-width: 160px;
+  }
+
+  .body {
+    padding: 0 0 var(--space-16);
+    gap: var(--space-16);
+  }
+}

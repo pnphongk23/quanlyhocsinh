@@ -1,0 +1,360 @@
+/*
+ * Điểm danh: 16-gv-diem-danh (mobile) · 17-gv-buoi-chua-toi-ngay-hoc (khoá) ·
+ * 78-trang-thai-loi-luu (băng lỗi + nút Thử lại) · 89-web-diem-danh-lop (web).
+ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  padding-top: var(--space-8);
+}
+
+.summary {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary b {
+  color: var(--color-error);
+}
+
+.summaryUnmarked b {
+  color: inherit;
+}
+
+.cardSummaryUnmarked b {
+  color: inherit;
+}
+
+.summaryActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: nowrap;
+}
+
+/* Băng nhắc khoá điểm danh: 17 — nền nhạt, chữ xanh đậm, biểu tượng 18px */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-button);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: var(--text-md);
+  line-height: 1.45;
+}
+
+.noticeIcon {
+  flex: none;
+  display: flex;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.rosterWrap {
+  min-width: 0;
+}
+
+.rosterList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/* Hàng học sinh: 16 — trắng, bo 12, cao 56, đệm 6/8/6/12 */
+.rowWrap {
+  position: relative;
+  min-width: 0;
+  border-radius: var(--radius-button);
+  overflow: hidden;
+}
+
+.studentRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 56px;
+  padding: 6px var(--space-8) 6px var(--space-12);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+}
+
+.studentRowLocked {
+  opacity: 0.6;
+}
+
+.avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.person {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.personName {
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+/* Nút trạng thái: 16 — nút 96x44 chứa pill 13/600; web 89 — nút đặc 92x44 */
+.statusButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  /* Mép phải pill thẳng cột dù nhãn dài ngắn khác nhau (Có mặt / Vắng); desktop căn giữa trong nút đặc */
+  justify-content: flex-end;
+  min-width: 96px;
+  height: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: transparent;
+  color: var(--status-fg, var(--color-text));
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-12);
+  border-radius: var(--radius-pill);
+  background: var(--status-bg, var(--color-neutral-soft));
+  color: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.present {
+  --status-bg: var(--state-success-bg);
+  --status-fg: var(--state-success-fg);
+}
+
+.late {
+  --status-bg: var(--state-pending-bg);
+  --status-fg: var(--state-pending-fg);
+}
+
+.absent {
+  --status-bg: var(--state-error-bg);
+  --status-fg: var(--state-error-fg);
+}
+
+.unmarked {
+  --status-bg: var(--color-neutral-soft);
+  --status-fg: var(--color-muted);
+}
+
+.statusButton:disabled {
+  cursor: not-allowed;
+}
+
+/* Cần chú ý + ghi chú */
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.attention {
+  display: grid;
+  gap: 6px;
+  padding: 14px var(--space-16);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.attentionTitle {
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.warning {
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.footnote {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+/* Băng lỗi lưu */
+.saveError {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 52px;
+  padding: 0 var(--space-8) 0 var(--space-16);
+  border-radius: var(--radius-button);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.saveErrorIcon {
+  flex: none;
+  display: flex;
+}
+
+.saveErrorText {
+  flex: 1;
+  min-width: 0;
+}
+
+.retry {
+  flex: none;
+  height: var(--tap);
+  padding: 0 var(--space-16);
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.error {
+  margin: 0;
+  padding: 10px var(--space-12);
+  border-radius: var(--radius-button);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
+  font-size: var(--text-md);
+}
+
+/* Nút lưu: 16 — thanh dưới cùng (ActionFooter), nút 52 cao */
+.stickyBar > :last-child {
+  border-radius: var(--radius-button);
+}
+
+/* 17/81: nút bị vô hiệu hoá chuyển sang xám, chữ xám đậm */
+.stickyBar > button:disabled {
+  background: var(--color-input-border);
+  color: var(--color-muted);
+  opacity: 1;
+}
+
+@media (min-width: 1024px) {
+  .panel {
+    gap: var(--space-16);
+  }
+
+  .summaryRow {
+    padding-top: 0;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    align-items: start;
+    gap: var(--space-16);
+  }
+
+  /* web 89: thẻ bảng điểm danh trắng đệm 18/20, hàng có đường kẻ trên */
+  .rosterCard {
+    padding: 18px var(--space-20);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  .cardHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-8);
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+  }
+
+  .cardTitle {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .cardSummary {
+    margin: 0;
+    font-size: var(--text-md);
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cardSummary b {
+    color: var(--color-text);
+  }
+
+  .rosterCard .rowWrap {
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .rosterCard .studentRow {
+    padding: var(--space-8) 0;
+    border-top: 1px solid var(--color-divider);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .rosterCard .avatar {
+    display: none;
+  }
+
+  .statusButton {
+    min-width: 92px;
+    justify-content: center;
+    background: var(--status-bg, var(--color-neutral-soft));
+    color: var(--status-fg, var(--color-text));
+  }
+
+  .statusPill {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: var(--text-md);
+  }
+
+  .stickyBar {
+    position: static;
+    padding: 0;
+    background: transparent;
+  }
+}

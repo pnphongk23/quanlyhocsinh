@@ -1,0 +1,396 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { ApiError } from "../../data/api/client";
+import { formatScore } from "../../data/scoreFormat";
+import {
+  getChildReport,
+  listChildReports,
+  type ChildReport,
+  type ChildReportItem,
+} from "../../data/repositories/guardian";
+import { Button, Card, EmptyState, PageHeader, Spinner } from "../../shared/ui";
+import { motionClass } from "../../shared/motion";
+import { useGuardianContext } from "./guardianContext";
+import { useStore } from "../../data/store";
+import { longDayMonth } from "./guardianFormat";
+import GuardianIcon from "./GuardianIcon";
+import { ChildEmpty, GuardianPill, StarRow, useBackTarget } from "./guardianUi";
+import GuardianNoChild from "./guardianEmpty";
+import g from "./guardian.module.css";
+
+const REPUBLISH_NOTICE = "Điểm có cập nhật, cần phát hành lại";
+
+/** "12/10" từ thời điểm phát hành ISO. */
+const publishedDay = (iso: string | null) =>
+  iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "";
+
+/**
+ * PH · Báo cáo (ảnh 10): `/ph/bao-cao` liệt kê các báo cáo ĐÃ phát hành của con
+ * theo khoảng buổi; `/ph/bao-cao/:reportId/:publicationNo` mở bản đã phát hành với
+ * chuyên cần, điểm từng bài, nhận xét theo sao và bảng BTVN theo phần. Cả hai đọc
+ * từ máy chủ nên cần mạng.
+ */
+export default function GuardianReportPage() {
+  const { reportId, publicationNo } = useParams();
+  const { child, error } = useGuardianContext();
+  if (error) {
+    return (
+      <p className={g.error} role="alert">
+        {error}
+      </p>
+    );
+  }
+  if (!child) {
+    return <GuardianNoChild />;
+  }
+  const no = Number(publicationNo);
+  return reportId && Number.isInteger(no) && no >= 1 ? (
+    <ReportDetail studentId={child.student.id} childName={child.student.name} reportId={reportId} publicationNo={no} />
+  ) : (
+    <ReportList studentId={child.student.id} childName={child.student.name} />
+  );
+}
+
+interface ListState {
+  items: ChildReportItem[];
+  next: string | null;
+  loading: boolean;
+  error: string;
+}
+
+function ReportList({ studentId, childName }: { studentId: string; childName: string }) {
+  const back = useBackTarget();
+  const [state, setState] = useState<ListState>({ items: [], next: null, loading: true, error: "" });
+
+  const load = useCallback(
+    async (cursor?: string) => {
+      setState((prev) => ({ ...prev, loading: true, error: "" }));
+      try {
+        const page = await listChildReports(studentId, cursor);
+        setState((prev) => ({
+          items: cursor ? [...prev.items, ...page.items] : page.items,
+          next: page.nextCursor,
+          loading: false,
+          error: "",
+        }));
+      } catch (cause) {
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          error: cause instanceof Error ? cause.message : "Không đọc được báo cáo của con.",
+        }));
+      }
+    },
+    [studentId],
+  );
+
+  useEffect(() => {
+    setState({ items: [], next: null, loading: true, error: "" });
+    void load();
+  }, [load]);
+
+  const { items, next, loading, error } = state;
+  const retry = () => void load(items.length ? (next ?? undefined) : undefined);
+  return (
+    <main className={g.page}>
+      <PageHeader backTo={back} eyebrow={childName} title="Báo cáo" />
+      {items.length > 0 && (
+        <ul className={g.rowList}>
+          {items.map((item) => (
+            <li key={`${item.id}:${item.publicationNo}`}>
+              <Link
+                to={`/ph/bao-cao/${item.id}/${item.publicationNo}`}
+                className={`${g.sessionRow} ${motionClass.pressable}`}
+              >
+                <span className={g.rowMain}>
+                  <span className={g.rowTitle}>{item.range.label}</span>
+                  <span className={g.sessionMeta}>
+                    <span className={g.hint}>Phát hành {publishedDay(item.publishedAt)}</span>
+                    {item.needsRepublish && <GuardianPill tone="primary">Cập nhật</GuardianPill>}
+                  </span>
+                </span>
+                <GuardianIcon name="chevron-right" size={18} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      {loading && <Spinner />}
+      {error && (
+        <>
+          <p className={g.error} role="alert">
+            {error}
+          </p>
+          <Button variant="secondary" onClick={retry}>
+            Thử lại
+          </Button>
+        </>
+      )}
+      {!loading && !error && items.length === 0 && (
+        <ChildEmpty title="Cô chưa phát hành báo cáo nào">
+          <p>Báo cáo hiện ở đây sau khi cô phát hành cho phụ huynh.</p>
+        </ChildEmpty>
+      )}
+      {!loading && !error && next && (
+        <Button variant="secondary" size="lg" onClick={() => void load(next)}>
+          Xem thêm
+        </Button>
+      )}
+    </main>
+  );
+}
+
+function ReportDetail({
+  studentId,
+  childName,
+  reportId,
+  publicationNo,
+}: {
+  studentId: string;
+  childName: string;
+  reportId: string;
+  publicationNo: number;
+}) {
+  const [report, setReport] = useState<ChildReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [removed, setRemoved] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const reportRef = useRef<ChildReport | null>(null);
+  const checking = useRef(false);
+  const store = useStore();
+  const storeRows = useRef({ reports: store.reports, reportBatches: store.reportBatches, reportPublications: store.reportPublications });
+  reportRef.current = report;
+
+  const load = useCallback(async (initial = false) => {
+    if (checking.current) return;
+    checking.current = true;
+    if (initial) { setLoading(true); setLoadError(""); }
+    try {
+      const value = await getChildReport(studentId, reportId, publicationNo);
+      if (value === null) {
+        reportRef.current = null;
+        setReport(null);
+        setRemoved(true);
+      } else {
+        reportRef.current = value;
+        setReport(value);
+        setRemoved(false);
+      }
+      setLoadError("");
+    } catch (cause) {
+      if (cause instanceof ApiError && [404, 410].includes(cause.status)) {
+        reportRef.current = null;
+        setReport(null);
+        setRemoved(true);
+        setLoadError("");
+      } else if (!reportRef.current) {
+        setLoadError(cause instanceof Error ? cause.message : "Không đọc được báo cáo của con.");
+      }
+    } finally {
+      checking.current = false;
+      setLoading(false);
+    }
+  }, [studentId, reportId, publicationNo]);
+
+  useEffect(() => { void load(true); }, [load, attempt]);
+
+  useEffect(() => {
+    const checkWhenVisible = () => { if (document.visibilityState === "visible") void load(); };
+    window.addEventListener("focus", checkWhenVisible);
+    document.addEventListener("visibilitychange", checkWhenVisible);
+    return () => {
+      window.removeEventListener("focus", checkWhenVisible);
+      document.removeEventListener("visibilitychange", checkWhenVisible);
+    };
+  }, [load]);
+
+  useEffect(() => {
+    const previous = storeRows.current;
+    const changed = previous.reports !== store.reports || previous.reportBatches !== store.reportBatches || previous.reportPublications !== store.reportPublications;
+    storeRows.current = { reports: store.reports, reportBatches: store.reportBatches, reportPublications: store.reportPublications };
+    if (changed && reportRef.current) void load();
+  }, [store.reports, store.reportBatches, store.reportPublications, load]);
+
+  if (removed) {
+    return (
+      <main className={g.page}>
+        <PageHeader backTo="/ph/bao-cao" eyebrow={childName} title="Báo cáo" />
+        <ChildEmpty title="Báo cáo này không còn">
+          <Link to="/ph/bao-cao">Quay lại danh sách báo cáo</Link>
+        </ChildEmpty>
+      </main>
+    );
+  }
+
+  if (loading || loadError || !report) {
+    return (
+      <main className={g.page}>
+        <PageHeader backTo="/ph/bao-cao" eyebrow={childName} title="Báo cáo" />
+        {loading ? (
+          <Spinner />
+        ) : loadError ? (
+          <>
+            <p className={g.error} role="alert">
+              {loadError}
+            </p>
+              <Button variant="secondary" onClick={() => setAttempt((value) => value + 1)}>
+              Thử lại
+            </Button>
+          </>
+        ) : (
+            <ChildEmpty title="Báo cáo này không còn">
+            <p>Báo cáo hiện ở đây sau khi cô phát hành cho phụ huynh.</p>
+          </ChildEmpty>
+        )}
+      </main>
+    );
+  }
+
+  const body = report.body;
+  const { range } = report;
+  const modernTotal = Object.values(body.stars.byFiveStars).reduce((sum, count) => sum + count, 0);
+  const legacyTotal = body.stars.legacy.three + body.stars.legacy.two + body.stars.legacy.one;
+  const starMax = Math.max(1, ...Object.values(body.stars.byFiveStars));
+
+  return (
+    <main className={g.page}>
+      <PageHeader
+        backTo="/ph/bao-cao"
+        eyebrow={childName}
+        title={range.sessionsLabel ? `Báo cáo ${range.sessionsLabel}` : "Báo cáo"}
+          overlay={<p className={g.muted}>{range.label}</p>}
+      />
+
+      {report.needsRepublish && (
+        <p className={g.warning} role="status">
+          {REPUBLISH_NOTICE}
+        </p>
+      )}
+
+      <div className={g.statRow}>
+        <Card className={g.statCard}>
+          <span className={g.statLabel}>Chuyên cần</span>
+          <strong className={g.statValue}>
+            {body.attendanceCount}/{body.sessions.length} buổi
+          </strong>
+          <span className={g.statSub}>{body.lateCount} muộn</span>
+        </Card>
+        <Card className={g.statCard}>
+          <span className={g.statLabel}>Bài kiểm tra</span>
+          <strong className={g.statValue}>
+            {body.gradedTestCount}/{body.tests.length} bài
+          </strong>
+          <span className={g.statSub}>đã có điểm</span>
+        </Card>
+      </div>
+
+      <Card className={g.card}>
+        <div className={g.cardHead}>
+          <h2>Nhận xét theo sao</h2>
+          <span className={g.statSub}>{body.stars.ticketCount} buổi có phiếu</span>
+        </div>
+        <p className={g.reportNote}>Tính trên các phiếu đã gửi.</p>
+          {modernTotal > 0 && <>
+            <p className={g.reportNote}>Thang 5 sao</p>
+            <div className={g.starBars}>
+              {([5, 4, 3, 2, 1, 0] as const).map((level) => {
+                const count = body.stars.byFiveStars[`s${level}` as keyof typeof body.stars.byFiveStars];
+                return <div key={`five-${level}`} className={g.barRow}>
+                  <StarRow level={level} size={16} />
+                  <span className={g.barTrack}><span className={g.barFill} style={{ width: `${Math.round((count / starMax) * 100)}%` }} /></span>
+                  <span className={g.barCount}>{count} buổi</span>
+                </div>;
+              })}
+            </div>
+          </>}
+          {legacyTotal > 0 && <>
+            <p className={g.reportNote}>Phiếu cũ · thang 3 sao</p>
+            <div className={g.starBars}>
+              {([3, 2, 1] as const).map((level) => {
+                const count = body.stars.legacy[({ 1: "one", 2: "two", 3: "three" } as const)[level]];
+                return <div key={`three-${level}`} className={g.barRow}>
+                  <StarRow level={level} size={16} />
+                  <span className={g.barTrack}><span className={g.barFill} style={{ width: `${Math.round((count / Math.max(1, legacyTotal)) * 100)}%` }} /></span>
+                  <span className={g.barCount}>{count} buổi</span>
+                </div>;
+              })}
+            </div>
+          </>}
+      </Card>
+
+      <Card className={g.card}>
+        <div className={g.cardHead}>
+          <h2>Bài tập về nhà</h2>
+        </div>
+        <p className={g.reportNote}>
+          Tốt = Hoàn thành tốt · Chưa = Chưa hoàn thành
+        </p>
+        {body.homework.length === 0 ? (
+          <EmptyState size="compact" title="Chưa có kết quả bài tập đã gửi trong đợt này" />
+        ) : (
+          <table className={g.table}>
+            <thead>
+              <tr>
+                <th scope="col">Phần</th>
+                <th scope="col">Tốt</th>
+                <th scope="col">Hoàn thành</th>
+                <th scope="col">Chưa</th>
+              </tr>
+            </thead>
+            <tbody>
+              {body.homework.map((row) => (
+                <tr key={row.kind}>
+                  <th scope="row">{row.label}</th>
+                  <td className={g.numExcellent}>{row.excellent}</td>
+                  <td className={g.numDone}>{row.done}</td>
+                  <td className={g.numNotDone}>{row.not_done}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <p className={g.reportNote}>
+          Chỉ tính kết quả đã gửi, không tính phần Chưa chấm. Không quy ra điểm.
+        </p>
+      </Card>
+
+      <Card className={g.card}>
+        <div className={g.cardHead}>
+          <h2>Điểm từng bài</h2>
+        </div>
+        {body.tests.length === 0 ? (
+          <EmptyState size="compact" title="Không có bài kiểm tra trong đợt này" />
+        ) : (
+          <ul className={g.scoreList}>
+            {body.tests.map(({ test, score }) => (
+              <li key={test.id} className={g.scoreRow}>
+                <span className={g.scoreName}>
+                  {test.name}
+                  <span className={g.scoreDate}>
+                    {longDayMonth(test.date)}
+                  </span>
+                </span>
+                <b className={g.scoreValue}>
+                  {score && score.value !== null
+                      ? formatScore(score.value)
+                    : "Chưa có điểm"}
+                </b>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Button
+        size="lg"
+        className={g.pdfButton}
+        onClick={() => {
+          if (typeof window !== "undefined") window.print();
+        }}
+      >
+        Tải PDF về máy
+      </Button>
+    </main>
+  );
+}

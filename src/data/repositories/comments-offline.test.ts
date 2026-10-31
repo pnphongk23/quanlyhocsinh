@@ -1,0 +1,248 @@
+import "fake-indexeddb/auto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { db, setCacheIdentity } from "../db";
+import { createSeed } from "../seed";
+import { replaceStore } from "../store";
+
+vi.mock("../sync", async (original) => ({
+  ...(await original<typeof import("../sync")>()),
+  scheduleSync: vi.fn(),
+}));
+
+beforeEach(async () => {
+  setCacheIdentity({ userId: "teacher", workspaceId: "workspace", membershipId: "member" });
+  await db.delete();
+  await db.open();
+  await db.meta.put({ key: "teacher:workspace:member", identity: "teacher:workspace:member", cursor: 0, epoch: 1 } as never);
+  const seed = createSeed();
+  const session = seed.sessions.find((item) => item.id === "6a-session-7")!;
+  seed.comments = [{
+    id: `${session.id}:6a-student-0`, classId: "6a", sessionId: session.id,
+      studentId: "6a-student-0", stars: 3, note: "", hwManual: false, status: "draft",
+    sendQueued: false, sentAt: null, updatedAt: "2026-10-14", createdAt: "2026-10-14",
+  }];
+  replaceStore(seed);
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+});
+
+afterEach(async () => {
+  setCacheIdentity(null);
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+  await db.delete();
+});
+
+describe("phiếu nhận xét khi mất mạng", () => {
+  it("gộp lệnh chờ: đổi tiêu chí rồi gõ ghi chú vẫn gửi tiêu chí", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const { saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", criteria: 23 });
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Ghi thêm" });
+    const sets = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(sets).toHaveLength(1);
+    expect(sets[0].payload).toMatchObject({ criteria: 23, note: "Ghi thêm" });
+  });
+
+  it("phiếu mới chỉ gõ ghi chú vẫn gửi criteria để máy chủ nhận", async () => {
+    const { saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Chỉ ghi chú" });
+    const [set] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(set.payload).toMatchObject({ criteria: 31, note: "Chỉ ghi chú" });
+  });
+
+  it("lệnh stars mới thay tiêu chí cũ khi gộp", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const { saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-0", criteria: 23 });
+    const { db: database, identityKey } = await import("../db");
+    const [pending] = (await database.outbox.where("identity").equals(identityKey()).toArray()).filter((row) => row.type === "slip.set");
+    const { persistCommand } = await import("../outbox");
+    await persistCommand("slip", ["6a-session-7", "6a-student-0"], null, { id: "x", type: "slip.set", payload: { session_id: "6a-session-7", student_id: "6a-student-0", stars: 1, note: "" }, base_version: 0, created_at: new Date().toISOString() } as never);
+    const sets = (await database.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(sets).toHaveLength(1);
+    expect(sets[0].payload).toMatchObject({ stars: 1 });
+    expect(sets[0].payload).not.toHaveProperty("criteria");
+    expect(pending.type).toBe("slip.set");
+  });
+
+  it("chưa tải xong snapshot thì không ghi phiếu mới chỉ có ghi chú", async () => {
+    const { db: database } = await import("../db");
+    await database.meta.clear();
+    const { saveSessionCommentDurable } = await import("./comments");
+    await expect(saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Chờ" })).rejects.toThrow("Đang tải dữ liệu phiếu");
+    expect((await database.outbox.toArray()).filter((row) => row.type === "slip.set")).toHaveLength(0);
+  });
+
+  it("phiếu đã có trong Dexie nhưng store chưa hydrate thì không ghi đè bằng criteria mặc định", async () => {
+    const { db: database, identityKey, stored } = await import("../db");
+    const wire = { session_id: "6a-session-7", student_id: "6a-student-1", criteria: 15, comment: "x", scale: 5, stars: 4, note: "", status: "draft", sent_at: null, version: 2, updated_at: "2026-10-14" };
+    await database.slips.put(stored("slip", `${identityKey()}|slip|6a-session-7|6a-student-1`, wire) as never);
+    const { saveSessionCommentDurable } = await import("./comments");
+    await expect(saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Ghi" })).rejects.toThrow("Đang tải dữ liệu phiếu");
+    expect((await database.outbox.toArray()).filter((row) => row.type === "slip.set")).toHaveLength(0);
+  });
+
+  it("phiếu đã có chỉ sửa ghi chú thì không gửi criteria cũ đè lên máy chủ", async () => {
+    const { saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-0", note: "Sửa ghi chú" });
+    const [set] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(set.payload).not.toHaveProperty("criteria");
+  });
+
+  it("chặn gửi, không thêm slip.send, và giữ nguyên slip.send cũ trong outbox", async () => {
+    const { identityKey } = await import("../db");
+    const identity = identityKey();
+    const oldCommand = {
+      id: "already-queued", identity, type: "slip.send" as const,
+      payload: { session_id: "6a-session-6", student_ids: ["6a-student-0"] },
+      base_version: 0, membership_id: "member", created_at: "2026-10-13T00:00:00.000Z", status: "pending" as const,
+    };
+    await db.outbox.put(oldCommand);
+    const { getStore } = await import("../store");
+    const stateBefore = structuredClone(getStore());
+    const slipsBefore = await db.slips.toArray();
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+
+    const { sendSessionTicketsDurable } = await import("./comments");
+    await expect(sendSessionTicketsDurable("6a-session-7", ["6a-student-0"]))
+      .rejects.toThrow("Cần có mạng để gửi phiếu.");
+    expect(getStore()).toEqual(stateBefore);
+    expect(await db.outbox.toArray()).toEqual([oldCommand]);
+    expect(await db.slips.toArray()).toEqual(slipsBefore);
+  });
+
+  it("cho phép slip.set offline và xếp hàng slip.send khi online", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const { saveSessionCommentDurable, sendSessionTicketsDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-0", stars: 2, note: "Đã soạn" });
+    expect((await db.outbox.toArray()).map((row) => row.type)).toContain("slip.set");
+    expect((await db.outbox.toArray()).map((row) => row.type)).not.toContain("slip.send");
+
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    await sendSessionTicketsDurable("6a-session-7", ["6a-student-0"]);
+    expect((await db.outbox.toArray()).map((row) => row.type)).toContain("slip.send");
+  });
+
+  it("tạo phiếu mặc định rồi bỏ tiêu chí vào outbox khi chạm chip lúc offline", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    const { toggleSlipCriterionDurable } = await import("./comments");
+    const result = await toggleSlipCriterionDurable("6a-session-7", "6a-student-1", 0);
+    expect(result.criteria).toBe(30);
+    expect(result.stars).toBe(4);
+    expect(result.comment).toBe("Con ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp, ngồi học ngoan ngoãn, không mất trật tự và hoàn thành tốt bài tập về nhà, nhưng chưa chú ý nghe giảng.");
+    const [command] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(command.payload).toMatchObject({ session_id: "6a-session-7", student_id: "6a-student-1", criteria: 30, note: "" });
+  });
+
+  it("chạm chip phiếu năm sao thiếu criteria dùng baseline năm sao, giữ note và lưu criteria khớp", async () => {
+    const { getStore } = await import("../store");
+    const state = getStore();
+    state.comments = [{
+      id: "6a-session-7:6a-student-1",
+      classId: "6a",
+      sessionId: "6a-session-7",
+      studentId: "6a-student-1",
+      criteria: null,
+      comment: "Câu nhận xét cũ",
+      scale: 5,
+      stars: 5,
+      note: "Ghi thêm",
+      hwManual: false,
+      status: "draft",
+      sendQueued: false,
+      sentAt: null,
+      updatedAt: "2026-10-14",
+      createdAt: "2026-10-14",
+    }];
+    replaceStore(state);
+
+    const { getSessionComment, toggleSlipCriterionDurable } = await import("./comments");
+    const saved = await toggleSlipCriterionDurable("6a-session-7", "6a-student-1", 0);
+
+    expect(saved).toMatchObject({ criteria: 30, stars: 4, scale: 5, note: "Ghi thêm" });
+    expect(getSessionComment("6a-session-7", "6a-student-1")).toMatchObject({ criteria: 30, stars: 4, note: "Ghi thêm" });
+    const [command] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+    expect(command.payload).toMatchObject({ student_id: "6a-student-1", criteria: 30, note: "Ghi thêm" });
+  });
+
+  it("giữ phần gõ thêm và bật hw_manual khi đổi BTVN bằng chip", async () => {
+    const { getStore } = await import("../store");
+    const state = getStore();
+    state.comments.push({ id: "existing", classId: "6a", sessionId: "6a-session-7", studentId: "6a-student-1", criteria: 15, comment: "Câu đã sửa tay", scale: 5, stars: 4, note: "Ghi thêm", hwManual: false, status: "sent", sendQueued: false, sentAt: "2026-10-14T00:00:00.000Z", updatedAt: "", createdAt: "" });
+    replaceStore(state);
+    const { toggleSlipCriterionDurable } = await import("./comments");
+    const result = await toggleSlipCriterionDurable("6a-session-7", "6a-student-1", 4);
+    expect(result).toMatchObject({ criteria: 31, stars: 5, note: "Ghi thêm", hwManual: true, status: "sent", comment: "Con chú ý nghe giảng, ghi bài đầy đủ, tích cực tham gia các hoạt động trong lớp, ngồi học ngoan ngoãn, không mất trật tự và hoàn thành tốt bài tập về nhà." });
+    expect((await db.outbox.toArray()).find((row) => row.type === "slip.set")?.payload).toMatchObject({ criteria: 31, note: "Ghi thêm", hw_manual: true });
+  });
+
+  it("không sửa phiếu thang 3 cũ", async () => {
+    const { toggleSlipCriterionDurable } = await import("./comments");
+    expect(() => toggleSlipCriterionDurable("6a-session-7", "6a-student-0", 1)).toThrow("Phiếu thang cũ");
+    expect((await db.outbox.toArray()).filter((row) => row.type === "slip.set")).toHaveLength(0);
+  });
+
+  it("cập nhật riêng note giữ nguyên phiếu năm sao và bỏ criteria khỏi payload", async () => {
+    const { getStore } = await import("../store");
+    const state = getStore();
+    state.comments = [{
+      id: "6a-session-7:6a-student-0",
+      classId: "6a",
+      sessionId: "6a-session-7",
+      studentId: "6a-student-0",
+      criteria: 15,
+      comment: "Câu nhận xét đã lưu.",
+      scale: 5,
+      stars: 4,
+      note: "Ghi chú đã lưu.",
+      hwManual: true,
+      status: "draft",
+      sendQueued: false,
+      sentAt: null,
+      updatedAt: "2026-10-14",
+      createdAt: "2026-10-14",
+    }];
+    replaceStore(state);
+
+    const { getSessionComment, saveSessionCommentDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-0", note: "Ghi chú mới." });
+
+    expect(getSessionComment("6a-session-7", "6a-student-0")).toMatchObject({
+      criteria: 15,
+      stars: 4,
+      scale: 5,
+      hwManual: true,
+      comment: "Câu nhận xét đã lưu.",
+      note: "Ghi chú mới.",
+    });
+    const command = (await db.outbox.toArray()).find((row) => row.type === "slip.set");
+    expect(command?.payload).not.toHaveProperty("criteria");
+    expect(command?.payload).toMatchObject({ note: "Ghi chú mới." });
+  });
+
+  it("gửi cả lớp chỉ gửi phiếu đã có; em chưa có phiếu (kể cả có mặt) bị bỏ qua và không tạo phiếu", async () => {
+    const { getStore } = await import("../store");
+    const seed = getStore();
+    seed.attendance = seed.attendance.map((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-0" ? { ...item, status: "absent" } : item);
+    replaceStore(seed);
+    const { sendSessionTicketsDurable } = await import("./comments");
+    const result = await sendSessionTicketsDurable("6a-session-6");
+    expect(result.sent).not.toContain("6a-student-0");
+    expect(result.skipped).toContain("6a-student-0");
+    expect(result.skippedReasons).toContainEqual({ studentId: "6a-student-0", reason: "no_slip" });
+    expect(result.skippedReasons).toContainEqual({ studentId: "6a-student-1", reason: "no_slip" });
+    const created = getStore().comments.find((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-1");
+    expect(created).toBeUndefined();
+    expect(((await db.outbox.toArray()).find((row) => row.type === "slip.send")?.payload as { defaults?: unknown } | undefined)?.defaults).toBeUndefined();
+  });
+
+  it("gửi cả lớp lần hai không xếp thêm lệnh cho phiếu đang chờ gửi", async () => {
+    const { saveSessionCommentDurable, sendSessionTicketsDurable } = await import("./comments");
+    await saveSessionCommentDurable({ sessionId: "6a-session-6", studentId: "6a-student-0", criteria: 15, note: "" });
+    const first = await sendSessionTicketsDurable("6a-session-6", ["6a-student-0"]);
+    const second = await sendSessionTicketsDurable("6a-session-6", ["6a-student-0"]);
+    expect(first.sent).toEqual(["6a-student-0"]);
+    expect(second.sent).toEqual([]);
+    expect(second.skippedReasons).toContainEqual({ studentId: "6a-student-0", reason: "already_sent" });
+    expect((await db.outbox.toArray()).filter((row) => row.type === "slip.send")).toHaveLength(1);
+  });
+});

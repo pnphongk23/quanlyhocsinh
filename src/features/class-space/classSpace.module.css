@@ -1,0 +1,150 @@
+/*
+ * Khung chi tiết lớp: 11-gv-chi-tiet-lop-buoi-hoc (đầu màn trắng, nút back
+ * trong suốt 44px, tên lớp 22/700, hàng tab cao 48 chữ 13/600 gạch chân 3px)
+ * và 12-gv-chi-tiet-lop-menu cho menu "...".
+ */
+.space {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: calc(-1 * var(--page-top)) calc(-1 * var(--page-x)) calc(-1 * var(--page-bottom));
+}
+
+.header {
+  flex: 0 0 auto;
+  background: var(--color-surface);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  /* Mũi tên lùi và nút ⋯ (vùng bấm 44) thẳng lề trang: glyph cách mép nút ~17px */
+  padding: var(--space-12) calc(var(--page-x) - var(--space-16)) var(--space-4);
+}
+
+.iconButton {
+  width: var(--tap);
+  height: var(--tap);
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: transparent;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuWrap {
+  position: relative;
+  flex: none;
+  display: flex;
+}
+
+.subTabs {
+  position: relative;
+  display: flex;
+  /* gap 0: 5 tab vừa khít ở 375 (chữ đầu/cuối thẳng lề 20); space-between chia đều khe ở khổ rộng hơn */
+  gap: 0;
+  justify-content: space-between;
+  padding: 0 var(--space-12);
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.slideBar {
+  position: absolute;
+  left: 0;
+  top: calc(var(--ind-top, 0px) + var(--ind-h, 0px) - 3px);
+  width: var(--ind-w, 0px);
+  height: 3px;
+  background: var(--color-primary);
+  transform: translateX(var(--ind-x, 0px));
+  pointer-events: none;
+}
+.slideBarReady { transition: transform 200ms var(--ease-standard); }
+
+.subTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.subTab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 var(--space-8);
+  margin-bottom: -1px;
+  border-bottom: 3px solid transparent;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.subTabActive {
+  color: var(--color-primary);
+  border-bottom-color: transparent;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-4) var(--page-x) var(--page-bottom);
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-button);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+@media (min-width: 1024px) {
+  .space {
+    margin: 0;
+    gap: var(--space-16);
+  }
+
+  .header {
+    border-radius: var(--radius-card);
+  }
+
+  .headerRow {
+    padding: var(--space-16) var(--space-20) var(--space-4);
+  }
+
+  .subTabs {
+    padding: 0 var(--space-20);
+    justify-content: flex-start;
+    overflow: visible;
+  }
+
+  .body {
+    padding: 0;
+    gap: var(--space-16);
+  }
+}

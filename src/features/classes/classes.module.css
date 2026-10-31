@@ -1,0 +1,183 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+/* Đầu màn: 09-gv-lop-cua-toi (avatar 44px, chữ 14/700) */
+.avatar {
+  width: var(--tap);
+  height: var(--tap);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: var(--text-md);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  margin-bottom: var(--space-8);
+}
+
+/* Web 88: ô tìm cao 48 */
+.search {
+  height: 48px;
+  width: 320px;
+  max-width: 100%;
+  padding: 0 var(--space-16);
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.search::placeholder {
+  color: var(--color-placeholder);
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+/* Mobile: khối Hôm nay nằm trên danh sách lớp; desktop: cột phải dính */
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.side {
+  min-width: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+.classLink {
+  display: block;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-card);
+}
+
+.classLink:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+/* Thẻ lớp: 09 (mobile bo 16 đệm 16) · web 88 (đệm 18/20) */
+.classCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+  padding: var(--space-16);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.classCardSelected {
+  background: var(--state-selected-accent-bg);
+  color: var(--state-selected-accent-fg);
+}
+
+.cardTitle {
+  min-width: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardSchedule {
+  margin-top: -6px;
+  color: var(--color-muted);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.classCardSelected .cardSchedule {
+  color: var(--color-on-accent);
+}
+
+.cardNext {
+  margin-top: -6px;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.classCardSelected .selectedChip {
+  border: 1px solid var(--state-selected-accent-chip-border);
+  background: var(--state-selected-accent-chip-bg);
+  color: var(--color-on-accent);
+}
+
+@media (min-width: 1024px) {
+  .page {
+    gap: var(--space-16);
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: start;
+    gap: var(--space-24);
+  }
+
+  .main {
+    grid-column: 1;
+    grid-row: 1;
+    gap: var(--space-16);
+  }
+
+  .side {
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: 24px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-16);
+  }
+
+  .classCard {
+    padding: 18px var(--space-20);
+  }
+
+  .cardTitle {
+    font-size: 20px;
+  }
+}

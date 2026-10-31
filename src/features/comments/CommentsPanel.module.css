@@ -1,0 +1,672 @@
+/*
+ * Tab Nhận xét của buổi học (ảnh 40–47):
+ * - bộ lọc pill cho Tất cả / Chưa gửi
+ * - thẻ phiếu trắng bo 16 đệm 12/16: avatar 36, tên 16/600, nhãn trạng thái,
+ *   hàng sao vàng 16, dòng tóm tắt BTVN buổi trước
+ * - nút "Gửi phiếu cả lớp (n)" dính đáy màn
+ * - sheet nhận xét, hộp xác nhận gửi cả lớp, thẻ em đã rời lớp viền nét đứt
+ */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+/* 47: băng thông tin xanh nhạt khi buổi có em đã rời lớp */
+.infoBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-12) 14px;
+  border-radius: var(--radius-button);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+.infoBanner > svg {
+  flex: none;
+  margin-top: var(--space-2);
+}
+
+/* 40: ba bộ lọc pill cao 44, chữ 13/600; bộ lọc đang chọn nền xanh */
+.filters {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filter,
+.filterActive {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--tap);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.filterActive {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
+}
+
+/* Danh sách phiếu */
+.list {
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.ticket {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  padding: var(--space-12) var(--space-16);
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.ticketHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.ticketName {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  display: flex;
+  flex: none;
+  margin-right: -4px;
+  color: var(--color-placeholder);
+}
+
+.starsLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 20px;
+}
+
+.star {
+  flex: none;
+  display: block;
+}
+
+.noStars {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.homeworkLine {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.homeworkLineWarning {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+/* 47: em đã rời lớp — thẻ viền nét đứt, không có phiếu của buổi này */
+.leftCard {
+  display: grid;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  border: 1px dashed var(--color-input-border-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.leftText {
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.leftLink {
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--color-primary-ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.emptyFilter {
+  list-style: none;
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-button);
+  border: 1px solid var(--card-error-border);
+  background: var(--card-error-bg);
+  color: var(--card-error-fg);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* 40: nút gửi cả lớp dính đáy màn, cao 52 */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  padding: var(--space-8) 0;
+  background: var(--color-bg);
+}
+
+.footerGroup {
+  position: sticky;
+  bottom: var(--sticky-bottom);
+  z-index: var(--z-sticky);
+  display: grid;
+  gap: var(--space-4);
+  background: var(--color-bg);
+}
+
+.networkHint {
+  margin: 0;
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.footer > button {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-radius: var(--radius-button);
+}
+
+/* 45: chưa chọn sao cho em nào → nút gửi xám, không phải nút chính mờ */
+.footer > button:disabled {
+  opacity: 1;
+  background: var(--color-neutral-soft);
+  color: var(--color-muted);
+}
+
+/* 41/42: hàng đầu sheet — tay nắm, avatar 44, tên 20/700, nhãn trạng thái */
+.sheetHead {
+  width: 100%;
+  display: grid;
+  gap: var(--space-12);
+}
+
+.grabber {
+  width: 44px;
+  height: 4px;
+  margin: 0 auto;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+}
+
+.sheetTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.sheetTitleRow .avatar {
+  width: var(--tap);
+  height: var(--tap);
+  font-size: var(--text-md);
+}
+
+.sheetTitleText {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Tiêu đề chỉ nhận focus bằng mã để đọc màn hình; không phải điều khiển nên không vẽ vòng focus. */
+.sheetName:focus {
+  outline: none;
+}
+
+.sheetName {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.sheetSub {
+  font-size: var(--text-md);
+  color: var(--color-muted);
+}
+
+.sheetBody {
+  display: grid;
+  gap: var(--space-16);
+  min-width: 0;
+}
+
+.saveFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  width: 100%;
+}
+
+.saveStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex: none;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.saveStatusPending {
+  color: var(--color-warning);
+}
+
+.saveStatusSaved {
+  color: var(--color-success);
+}
+
+.saveStatusError {
+  color: var(--color-error);
+}
+
+.saveStatus::before {
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--radius-pill);
+  background: currentColor;
+  content: "";
+}
+
+.saveFooter > button {
+  flex: 1;
+}
+
+@media (min-width: 1024px) {
+  .saveFooter > button {
+    flex: none;
+    min-width: var(--button-min-w-desktop);
+  }
+}
+
+.draftRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+}
+
+.draftPill {
+  flex: none;
+  padding: 6px var(--space-12);
+  border-radius: var(--radius-pill);
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.draftHint {
+  flex: 1;
+  min-width: 140px;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--color-muted);
+}
+
+/* 41: ba nút chọn 1/2/3 sao; mức đang chọn viền vàng, nền vàng nhạt */
+.starPicker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-8);
+}
+
+.starOption {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-12);
+  border: 2px solid transparent;
+  border-radius: var(--radius-button);
+  background: var(--color-bg);
+}
+
+.starOptionOn {
+  border-color: transparent;
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
+}
+
+/* Viền focus nằm trong ô để khung sheet không cắt ô sao đầu tiên. */
+.starOption:focus-visible {
+  outline-offset: -4px;
+}
+
+.starOption:disabled {
+  opacity: 0.6;
+}
+
+.starOptionOn:disabled {
+  opacity: 1;
+}
+
+/* 41: hộp câu mẫu cố định */
+.templateBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-button);
+  background: var(--color-bg);
+}
+
+.templateMascot {
+  flex: none;
+}
+
+.templateText {
+  font-size: var(--text-base);
+  line-height: 1.55;
+}
+
+.templateCaption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.noteField {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.noteLabel {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.noteOptional {
+  font-size: var(--text-md);
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.noteInput {
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-12);
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 15px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.noteInput::placeholder {
+  color: var(--color-placeholder);
+}
+
+.noteInput:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* 41/42: khối BTVN buổi trước chỉ đọc */
+.homeworkBlock {
+  display: grid;
+  gap: var(--space-8);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-divider);
+}
+
+.homeworkTitle {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.homeworkReadOnly {
+  font-size: var(--text-md);
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.homeworkList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.homeworkRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  font-size: 15px;
+}
+
+.homeworkName {
+  min-width: 0;
+}
+
+.levelExcellent {
+  color: var(--color-success);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.levelDone {
+  color: var(--color-primary-ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.levelNotDone {
+  color: var(--color-error);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.levelNotGraded {
+  color: var(--color-warning);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.homeworkLink {
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sentNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+/* 43: hộp xác nhận gửi cả lớp */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-20);
+  background: var(--color-scrim);
+}
+
+.confirm {
+  width: 100%;
+  max-width: 350px;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  display: grid;
+  gap: var(--space-12);
+  padding: var(--space-20);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.confirmTitle {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.confirmStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+}
+
+.statSend,
+.statSkip {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  padding: 10px var(--space-12);
+  border-radius: var(--radius-button);
+}
+
+.statSend {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+
+.statSkip {
+  border: 1px solid var(--card-pending-border);
+  background: var(--card-pending-bg);
+  color: var(--card-pending-fg);
+}
+
+.statSend strong,
+.statSkip strong {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.statSend span,
+.statSkip span {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.confirmWarning {
+  padding: 10px var(--space-12);
+  border-radius: var(--radius-button);
+  border: 1px solid var(--card-pending-border);
+  background: var(--card-pending-bg);
+  color: var(--card-pending-fg);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+.confirmNote {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.confirmNote strong {
+  color: var(--color-text);
+}
+
+.confirmActions {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.confirmActions > * {
+  border-radius: var(--radius-button);
+}
+
+@media (min-width: 1024px) {
+  .panel {
+    max-width: 720px;
+  }
+
+  .footer {
+    position: static;
+    justify-content: flex-end;
+    padding: 0;
+    background: transparent;
+  }
+
+  .footer > button {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0 var(--space-24);
+  }
+
+  .footer > button:disabled {
+    opacity: 1;
+    background: var(--color-neutral-soft);
+    color: var(--color-placeholder);
+  }
+}

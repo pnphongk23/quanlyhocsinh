@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guardian UI fixture</title>
+    <script>
+      localStorage.setItem("qlh.session.v1", JSON.stringify({
+        token: "fixture-token",
+        user: { id: "fixture-parent", phone: "fixture-user", display_name: "Nguyễn An", must_change_password: false },
+        activeMembershipId: "fixture-guardian-membership",
+        guardianAccount: true,
+        me: {
+          active_membership_id: "fixture-guardian-membership",
+          user: { id: "fixture-parent", phone: "fixture-user", display_name: "Nguyễn An", must_change_password: false },
+          memberships: [{
+            id: "fixture-guardian-membership",
+            workspace: { id: "fixture-workspace", name: "Lớp của Nguyễn An" },
+            role: { id: "fixture-parent-role", name: "Phụ huynh", system_key: "guardian", scope_kind: "linked_students" },
+            status: "active",
+            scope_epoch: 1,
+            permissions: { classes: "none", students: "none", sessions_attendance: "read", scores: "read", lectures: "none", comments_reports: "read" },
+            students: [
+              { id: "6a-student-1", name: "Trần Gia Bảo", class_id: "6a", class_name: "Tiếng Anh giao tiếp 6A", teacher_name: "Cô Lan" },
+              { id: "6a-student-8", name: "Bùi Tuấn Kiệt", class_id: "6a", class_name: "Tiếng Anh giao tiếp 6A", teacher_name: "Cô Lan" }
+            ]
+          }]
+        }
+      }));
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./guardian-harness.tsx"></script>
+  </body>
+</html>

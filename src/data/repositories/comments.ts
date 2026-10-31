@@ -1,0 +1,140 @@
+import type { Comment, HomeworkLevel, StarLevel } from "../types";
+import { criteriaWithHomework, defaultSlipCriteria, generatedSlipSentence, starsFromCriteria } from "../slip";
+import { getStore } from "../store";
+import { commitState, persistCommand, persistSlipCommands } from "../outbox";
+import { type UngradedHomeworkNotice, gradingSessionFor, previousHomeworkGrades, previousHomeworkSession, studentsOnSession, ungradedHomeworkNotice } from "../homework";
+import { requirePermission, requireSessionAccess } from "./access";
+import type { SyncCommand } from "../api/types";
+import { composePlans, runDurably, type WritePlan } from "./durable";
+import { scheduleSync, syncNow } from "../sync";
+import { db, getCacheIdentity, identityKey, stored } from "../db";
+import { todayISO } from "../../shared/date";
+const key=(sessionId:string,studentId:string)=>`${sessionId}:${studentId}`;
+const normalizeNoteForDuplicateCheck=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/gi,"d").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").replace(/\s+/g," ").trim();
+export const listComments=(classId:string):Comment[]=>getStore().comments.filter(c=>c.classId===classId);
+export function listSessionComments(sessionId:string):Comment[]{return getStore().comments.filter(c=>c.sessionId===sessionId);}
+export function getSessionComment(sessionId:string,studentId:string):Comment|null{return getStore().comments.find(c=>c.sessionId===sessionId&&c.studentId===studentId)??null;}
+type CommentWritePlan = WritePlan<Comment> & { batchEntry: { parts: string[]; wireRecord: Record<string, unknown>; command: SyncCommand } };
+function planComment(input:{sessionId:string;studentId:string;stars?:StarLevel|null;criteria?:number;comment?:string|null;note?:string;hwManual?:boolean}):CommentWritePlan {
+  requirePermission("comments_reports","write");
+  const session=requireSessionAccess(input.sessionId);
+  const student=getStore().students.find(s=>s.id===input.studentId);
+  if(!student||student.classId!==session.classId||student.enrolledAt>session.date||(student.leftAt&&student.leftAt<session.date))throw new Error("Học sinh không thuộc buổi học này.");
+  const old=getSessionComment(input.sessionId,input.studentId);
+  const scale=old?.scale===3?3:5;
+  const criteria=input.criteria??(input.stars==null?(old?.criteria??(old?.stars==null?31:(1<<old.stars)-1)):(1<<input.stars)-1);
+  const stars=scale===5?starsFromCriteria(criteria):input.stars??old?.stars??3;
+  // Phiếu thang 5: câu do client sinh (hoặc giáo viên sửa tay) và luôn đi cùng tiêu chí; máy chủ chỉ lưu.
+  const manualComment=scale===5&&typeof input.comment==="string"&&input.comment.trim()!==""?input.comment.trim():null;
+  const sendsCriteria=scale===5&&(input.criteria!==undefined||!old);
+  const comment=scale===5?(manualComment??(sendsCriteria?generatedSlipSentence(criteria):old?.comment??null)):(input.comment===undefined?old?.comment??null:input.comment);
+  const now=new Date().toISOString();
+  const item:Comment={id:key(input.sessionId,input.studentId),classId:session.classId,sessionId:input.sessionId,studentId:input.studentId,criteria:scale===5?criteria:null,comment,scale,stars,note:input.note??old?.note??"",hwManual:input.hwManual??old?.hwManual??false,status:old?.status??"draft",sendQueued:old?.sendQueued??false,sentAt:old?.sentAt??null,updatedAt:now,createdAt:old?.createdAt??now};
+  const payload={session_id:item.sessionId,student_id:item.studentId,...(scale===3?{stars:item.stars!}:{...(sendsCriteria?{criteria:item.criteria}:{}),...(sendsCriteria||manualComment!==null?{comment:item.comment}:{})}),note:item.note,...(input.hwManual===undefined?{}:{hw_manual:input.hwManual})};
+  const cmd={id:crypto.randomUUID(),type:"slip.set",payload,base_version:(old as any)?.version??0,created_at:now} as SyncCommand;
+    const wireRecord={session_id:item.sessionId,student_id:item.studentId,criteria:item.criteria,comment:item.comment,scale:item.scale,stars:item.stars,note:item.note,status:item.status,sent_at:item.sentAt,version:(old as any)?.version??0,updated_at:now,hw_manual:item.hwManual?1:0};
+    return{result:item,batchEntry:{parts:[item.sessionId,item.studentId],wireRecord,command:cmd},apply:()=>commitState("comment",item.id,d=>{d.comments=d.comments.filter(c=>c.id!==item.id).concat(item);}),undo:()=>commitState("comment",item.id,d=>{d.comments=d.comments.filter(c=>c.id!==item.id).concat(old?[old]:[]);}),persist:async()=>{if(!old&&input.criteria===undefined&&input.stars==null&&!(await db.meta.get(identityKey())))throw new Error("Đang tải dữ liệu phiếu, thử lại sau giây lát.");if(!old&&input.criteria===undefined&&input.stars==null&&await db.slips.get(`${identityKey()}|slip|${item.sessionId}|${item.studentId}`))throw new Error("Đang tải dữ liệu phiếu, thử lại sau giây lát.");await persistCommand("slip",[item.sessionId,item.studentId],wireRecord,cmd);}};
+}
+/**
+ * Chấm lại BTVN: phiếu NHÁP thang 5 của em ở buổi kế (tiêu chí BTVN chưa chọn tay, chưa gửi, chưa chờ gửi)
+ * được tính lại tiêu chí và câu; câu sửa tay bị thay bằng câu tự sinh. Không đổi thì không có lệnh.
+ */
+export function planRegradedSlip(sectionId:string,studentId:string,level:HomeworkLevel|null):WritePlan<Comment>|null {
+  const state=getStore();
+  const section=state.homeworkSections.find(x=>x.id===sectionId);
+  const next=section?gradingSessionFor(state.sessions,section.sessionId):null;
+  const old=next?getSessionComment(next.id,studentId):null;
+  if(!next||!old||old.scale!==5||old.status==="sent"||old.sendQueued||old.hwManual||old.criteria==null)return null;
+  const criteria=criteriaWithHomework(old.criteria,previousHomeworkGrades(state,next.id,studentId,{sectionId,level}),false);
+  if(criteria===old.criteria&&old.comment===generatedSlipSentence(criteria))return null;
+  try{return planComment({sessionId:next.id,studentId,criteria});}catch{return null;}
+}
+/** Chờ ghi bền; ghi lỗi ⇒ ném lỗi gốc và phiếu trở lại như trước. */
+export const saveSessionCommentDurable=(input:{sessionId:string;studentId:string;stars?:StarLevel|null;criteria?:number;comment?:string|null;note?:string;hwManual?:boolean}):Promise<Comment>=>runDurably(planComment(input));
+
+export interface NotesImportWrite { studentId: string; uncheckMask?: number; appendNote?: string[]; hwManual?: boolean; isDefault?: boolean }
+/** Save a complete notes import locally in one transaction, then let sync batch commands in groups of 50. */
+export async function saveNotesImportDurable(sessionId: string, changes: NotesImportWrite[]): Promise<{ locallySaved: number; waiting: number; applied: number; rejected: number }> {
+  requirePermission("comments_reports","write");
+  requireSessionAccess(sessionId);
+  const regularPlans=changes.filter(change=>!change.isDefault).flatMap(change=>{
+    const old=getSessionComment(sessionId,change.studentId);
+    const baseline=old?.criteria??(old?.stars==null?defaultSlipCriteria(previousHomeworkGrades(getStore(),sessionId,change.studentId)):(1<<old.stars)-1);
+    const uncheckMask=change.uncheckMask??0;
+    const criteria=baseline&~uncheckMask;
+    const oldNote=old?.note??"";
+    const additions=(change.appendNote??[]).filter(line=>!normalizeNoteForDuplicateCheck(oldNote).includes(normalizeNoteForDuplicateCheck(line)));
+    const note=[oldNote.trim(),...additions].filter(Boolean).join("\n");
+    return [planComment({sessionId,studentId:change.studentId,...(uncheckMask||!old?{criteria}:{}),note,...(change.hwManual===true?{hwManual:true}:{})})];
+  });
+  const defaultPlan=planAssignDefaultSlips(sessionId,changes.filter(change=>change.isDefault).map(({studentId})=>({studentId})));
+  const regularGroup=composePlans(regularPlans,regularPlans.length);
+  const combined=composePlans([regularGroup,defaultPlan],regularPlans.length+defaultPlan.result);
+  const batchEntries=[...regularPlans.map(plan=>plan.batchEntry),...defaultPlan.batchEntries];
+  await runDurably({...combined,persist:()=>persistSlipCommands(batchEntries)});
+  await syncNow();
+  const commandIds=new Set(batchEntries.map(entry=>entry.command.id));
+    const remaining=await db.outbox.where("identity").equals(identityKey()).and(row=>commandIds.has(row.id)).toArray();
+    const rejected=remaining.filter(row=>row.status==="rejected").length;
+    const waiting=remaining.filter(row=>row.status==="pending"||row.status==="sending").length;
+    return { locallySaved: batchEntries.length, waiting, applied: batchEntries.length-rejected-waiting, rejected };
+}
+/** Toggles one criterion while preserving the separately typed note. */
+export function toggleSlipCriterionDurable(sessionId:string,studentId:string,index:number):Promise<Comment>{
+  if(!Number.isInteger(index)||index<0||index>4)throw new RangeError("invalid_criterion");
+  const old=getSessionComment(sessionId,studentId);
+  if(old&&old.scale!==5)throw new Error("Phiếu thang cũ không thể sửa.");
+  const criteria=(old?.criteria??(old?31:defaultSlipCriteria(previousHomeworkGrades(getStore(),sessionId,studentId))))^(1<<index);
+  return runDurably(planComment({sessionId,studentId,criteria,comment:generatedSlipSentence(criteria),note:old?.note??"",...(index===4?{hwManual:true}:{})}));
+}
+/** Lúc ghi bền đọc lại phiếu: nếu đã gửi hoặc đang chờ gửi (vừa gửi, hoặc vừa kéo từ máy khác) thì bỏ qua, không ghi đè và không hoàn lại. */
+function guardUnsent(plan:WritePlan<Comment>,sessionId:string,studentId:string):WritePlan<Comment>{
+  let skipped=false;
+  return{...plan,
+    undo:()=>{if(!skipped)plan.undo();},
+    persist:async()=>{const now=getSessionComment(sessionId,studentId);if(now&&(now.status==="sent"||now.sendQueued)){skipped=true;return;}await plan.persist();}};
+}
+/**
+ * "Gán tất cả mặc định": mọi phiếu thang 5 chưa gửi (và chưa chờ gửi) về đủ năm tiêu chí, BTVN theo chấm
+ * (bỏ lựa chọn tay), câu tự sinh lại; giữ phần gõ thêm. Em chưa có phiếu (kể cả chưa điểm danh hoặc Vắng) được tạo phiếu
+ * mặc định. Phiếu thang 3 cũ không đổi. Trả số phiếu đã đổi hoặc tạo.
+ */
+type DefaultSlipPlan = WritePlan<number> & { batchEntries: CommentWritePlan["batchEntry"][] };
+function planAssignDefaultSlips(sessionId:string, requested?:Array<{studentId:string;criteria?:number;note?:string;hwManual?:boolean}>):DefaultSlipPlan{
+  requirePermission("comments_reports","write");
+  const session=requireSessionAccess(sessionId);
+  const state=getStore();
+    const planned:CommentWritePlan[]=[];
+    const targetStudents=requested
+      ? requested.flatMap(target=>{const student=state.students.find(item=>item.id===target.studentId);return student&&student.classId===session.classId&&student.enrolledAt<=session.date&&(!student.leftAt||student.leftAt>=session.date)?[{student,target}]:[];})
+      : studentsOnSession(state,session).map(student=>({student,target:undefined}));
+    for(const {student,target} of targetStudents){
+      const old=getSessionComment(sessionId,student.id);
+      if(requested&&old)continue;
+      if(old&&(old.status==="sent"||old.sendQueued||old.scale!==5))continue;
+      const criteria=defaultSlipCriteria(previousHomeworkGrades(state,sessionId,student.id));
+      if(old&&old.criteria===criteria&&old.comment===generatedSlipSentence(criteria)&&!old.hwManual)continue;
+      planned.push(planComment({sessionId,studentId:student.id,criteria:target?.criteria??criteria,note:target?.note??old?.note??"",hwManual:target?.hwManual??false}));
+    }
+    const plans=planned.map(plan=>guardUnsent(plan,sessionId,plan.result.studentId));
+    return {...composePlans(plans,plans.length),batchEntries:planned.map(plan=>plan.batchEntry)};
+}
+/** Số phiếu "Gán tất cả mặc định" sẽ đổi hoặc tạo (hộp xác nhận ghi đúng số này). */
+export const countAssignDefaultSlips=(sessionId:string):number=>planAssignDefaultSlips(sessionId).result;
+/** Chờ ghi bền cả lô; một lệnh lỗi ⇒ các phiếu của cả lô trở lại như trước. */
+export const assignDefaultSlipsDurable=(sessionId:string):Promise<number>=>runDurably(planAssignDefaultSlips(sessionId));
+export interface SendTicketsResult { sent:string[];skipped:string[];skippedReasons:Array<{studentId:string;reason:"no_slip"|"already_sent"}>;queued:boolean;ungraded:UngradedHomeworkNotice; }
+  function planSendTickets(sessionId:string,studentIds?:string[]):WritePlan<SendTicketsResult> {requirePermission("comments_reports","write");requirePermission("send_comments","write");const session=requireSessionAccess(sessionId);if(session.date>todayISO())throw new Error("Chỉ gửi phiếu từ ngày học.");const requested=studentIds??studentsOnSession(getStore(),session).map(s=>s.id);const sent:string[]=[],skipped:string[]=[],skippedReasons:SendTicketsResult["skippedReasons"]=[];const previous:Array<Comment|null>=[];const targets:Comment[]=[];const defaults:Array<{student_id:string;criteria:number;comment:string}>=[];for(const studentId of requested){const old=getSessionComment(sessionId,studentId);if(old?.status==="sent"||old?.sendQueued){skipped.push(studentId);skippedReasons.push({studentId,reason:"already_sent"});continue;}if(!old){skipped.push(studentId);skippedReasons.push({studentId,reason:"no_slip"});continue;}const now=new Date().toISOString();const needsDefault=old.scale===3&&old.stars===null;const fallbackCriteria=defaultSlipCriteria(previousHomeworkGrades(getStore(),sessionId,studentId));const fallbackComment=generatedSlipSentence(fallbackCriteria);if(needsDefault)defaults.push({student_id:studentId,criteria:fallbackCriteria,comment:fallbackComment});const target:Comment=old.scale===3&&old.stars===null?{...old,criteria:fallbackCriteria,comment:fallbackComment,scale:5,stars:starsFromCriteria(fallbackCriteria),updatedAt:now}:old;sent.push(studentId);previous.push(old);targets.push(target);}
+  if(sent.length&&(typeof navigator==="undefined"||!navigator.onLine))throw new Error("Cần có mạng để gửi phiếu.");
+    const membership=getCacheIdentity();if(sent.length&&!membership)throw new Error("Đăng nhập để gửi phiếu.");
+  const identity=identityKey();const cmd={id:crypto.randomUUID(),type:"slip.send",payload:{session_id:sessionId,student_ids:sent,...(defaults.length?{defaults}:{})},created_at:new Date().toISOString()} as SyncCommand;
+  const giving=previousHomeworkSession(getStore().sessions,sessionId);
+    const result:SendTicketsResult={sent,skipped,skippedReasons,queued:sent.length>0&&(typeof navigator==="undefined"||!navigator.onLine),ungraded:giving?ungradedHomeworkNotice(getStore(),giving.id,sent):{students:[],ungradedParts:0}};
+    const ids=new Set(targets.map(c=>c.id));
+  return{result,
+      apply:()=>{for(const comment of targets)commitState("comment-send",comment.id,d=>{const next={...comment,sendQueued:true,updatedAt:new Date().toISOString()};d.comments=d.comments.filter(c=>c.id!==comment.id).concat(next);});},
+      undo:()=>commitState("comment-send",sessionId,d=>{d.comments=d.comments.filter(c=>!ids.has(c.id)).concat(previous.filter((p):p is Comment=>p!==null));}),
+      persist:async()=>{if(!sent.length)return;const row:any={id:cmd.id,identity,type:cmd.type,payload:cmd.payload,base_version:0,membership_id:membership!.membershipId,created_at:cmd.created_at,status:"pending"};await db.transaction("rw",[db.slips,db.outbox],async()=>{for(const comment of targets){const wire={session_id:sessionId,student_id:comment.studentId,criteria:comment.criteria??null,comment:comment.comment??null,scale:comment.scale??3,stars:comment.stars,note:comment.note,status:comment.status,sent_at:comment.sentAt,version:(comment as any).version??0,updated_at:comment.updatedAt};await db.slips.put(stored("slip",`${identity}|slip|${sessionId}|${comment.studentId}`,wire) as any);}await db.outbox.put(row);});scheduleSync();}};}
+/** Chờ ghi bền hàng đợi gửi; ghi lỗi ⇒ ném lỗi gốc và các phiếu bỏ trạng thái đang chờ gửi. */
+export const sendSessionTicketsDurable=async(sessionId:string,studentIds?:string[]):Promise<SendTicketsResult>=>runDurably(planSendTickets(sessionId,studentIds));
+export function flushQueuedTickets():number {const count=getStore().comments.filter(c=>c.sendQueued).length;scheduleSync(0);return count;}

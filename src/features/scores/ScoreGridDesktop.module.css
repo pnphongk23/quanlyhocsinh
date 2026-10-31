@@ -1,0 +1,158 @@
+/* Tab Điểm trên web desktop (ảnh 13). */
+.card {
+  padding: var(--space-12) var(--space-12) var(--space-8);
+  overflow: hidden;
+}
+
+.scroll {
+  overflow: auto;
+  max-width: 100%;
+}
+
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-raised);
+  padding: 10px var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-md);
+  font-weight: 700;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  white-space: nowrap;
+}
+
+/* Cột tự co theo nội dung trong khoảng min/max; kéo tay nắm thì width inline thắng. */
+.studentBody,
+.testBody {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studentBody {
+  min-width: var(--grid-col-name-min);
+  max-width: var(--grid-col-name-max);
+}
+
+.testBody {
+  min-width: var(--grid-cell-input-min);
+  max-width: var(--grid-col-test-max);
+}
+
+.studentBody[style*="width"],
+.testBody[style*="width"] {
+  min-width: 0;
+  max-width: none;
+}
+
+.testName {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tay nắm đổi độ rộng ở mép phải tiêu đề cột. */
+.resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--space-8);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resizer:hover,
+.resizer:active {
+  background: var(--state-hover-bg);
+}
+
+.resizer:focus-visible {
+  outline: none;
+  box-shadow: inset var(--state-focus-ring);
+  background: var(--state-hover-bg);
+}
+
+.testMeta {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.studentHead {
+  left: 0;
+  z-index: calc(var(--z-raised) + 2) !important;
+  box-shadow: 6px 0 8px -6px rgb(20 24 31 / 0.15);
+}
+
+.table .studentCell {
+  position: sticky;
+  left: 0;
+  z-index: calc(var(--z-raised) + 1);
+  padding: 0 var(--space-8);
+  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-surface);
+  box-shadow: 6px 0 8px -6px rgb(20 24 31 / 0.15);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.leftLabel {
+  margin-left: 6px;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.table td {
+  height: 52px;
+  padding: 0 var(--space-8);
+  border-bottom: 1px solid var(--color-divider);
+  vertical-align: middle;
+}
+
+.cell {
+  box-sizing: border-box;
+  width: var(--grid-cell-input-min);
+  height: 38px;
+  padding: 0 var(--space-12);
+  border: 1.5px solid var(--color-input-border);
+  border-radius: var(--radius-button);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell::placeholder {
+  color: var(--color-muted);
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.note {
+  margin: 0;
+  padding: 10px var(--space-8) 0;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}

@@ -1,7 +1,10 @@
 .DS_Store
 node_modules/
 dist/
+dist-dev/
 .wrangler/
+artifacts/w8-browser-state/
+artifacts/w8-results.json
 .claude/scheduled_tasks.lock
 
 # Bản export HTML trung gian của từng vòng review thiết kế (lấy lại được từ Claude Design);

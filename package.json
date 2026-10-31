@@ -1,0 +1,36 @@
+{
+  "name": "quan-ly-hoc-sinh-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && node src/test/check-bundle.mjs dist staging",
+    "build:dev": "tsc --noEmit && vite build --mode dev --outDir dist-dev && node scripts/prepare-dev-headers.mjs && node src/test/check-bundle.mjs dist-dev dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:click": "node scripts/ui-click-check.mjs",
+      "test:save": "node scripts/ui-save-check.mjs",
+      "test:state": "node scripts/ui-state-check.mjs"
+  },
+  "dependencies": {
+    "dexie": "^4.4.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "fake-indexeddb": "^6.2.6",
+    "jsdom": "^27.0.0",
+    "playwright": "1.64.1",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0",
+    "vitest": "^4.1.12"
+  }
+}

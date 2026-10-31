@@ -1,0 +1,25 @@
+.fab {
+  position: fixed;
+  right: var(--fab-right);
+  bottom: var(--fab-bottom);
+  z-index: var(--z-fab);
+  display: grid;
+  place-items: center;
+  width: var(--fab-size);
+  height: var(--fab-size);
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-fab);
+  cursor: pointer;
+}
+.fab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.plus {
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 400;
+}

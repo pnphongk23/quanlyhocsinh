@@ -1,0 +1,31 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.unsaved {
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
+}
+.local {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+}
+.synced {
+  background: var(--state-success-bg);
+  color: var(--state-success-fg);
+}
+.error {
+  background: var(--state-error-bg);
+  color: var(--state-error-fg);
+}
+.pending {
+  background: var(--state-pending-bg);
+  color: var(--state-pending-fg);
+}

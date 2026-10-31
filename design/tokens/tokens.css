@@ -3,7 +3,7 @@
  * Sửa ở đây và tokens.json cùng lúc, rồi chép khối :root sang
  * src/shared/styles/tokens.css (web) và design/prototype/src/shared/styles/tokens.css.
  * Mốc khổ: mobile < 1024px, desktop >= 1024px (CSS var không dùng được trong @media).
- * Màu cơ sở, bo góc và chuyển động giữ nguyên; state tách cặp màu cho chip và card.
+ * Cập nhật 2026-10-23: màu, bo góc, chuyển động giữ nguyên giá trị đã duyệt.
  * Giá trị nằm ở tokens.json (cùng nội dung); bảng thay đổi ở README.md.
  */
 :root {
@@ -24,6 +24,7 @@
   --color-primary-ink: #1e43b8;
   --color-primary-soft: #e8eefe;
   --color-on-primary: #ffffff;
+  --color-on-accent: #ffffff;
   --color-success: #14663f;
   --color-success-soft: #e7f6ec;
   --color-warning: #8a5300;
@@ -105,7 +106,7 @@
   --criteria-check-size: 20px;
   --criteria-check-icon-size: 12px;
   --comment-star-size: 24px;
-  --dialog-action-gap: 8px; /* giữa các nút trong hộp xác nhận */
+  --dialog-action-gap: 8px; /* khoảng giữa các nút xác nhận */
   --control-h: 52px;        /* ô nhập */
   --button-h-sm: 44px;
   --button-h-md: 48px;
@@ -141,18 +142,22 @@
   --ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
 
   /* Trạng thái thành phần (bảng state contract: design/ux-v2/rules.md mục 6) */
-  --state-selected-bg: var(--color-primary); /* đang chọn: nền, không viền */
-  --state-selected-fg: var(--color-on-primary);
+  --state-selected-bg: var(--color-primary-soft); /* đang chọn: nền, không viền */
+  --state-selected-fg: var(--color-primary-ink);
+  --state-selected-accent-bg: var(--color-primary);
+  --state-selected-accent-fg: var(--color-on-accent);
+  --state-selected-accent-chip-bg: var(--color-primary-ink);
+  --state-selected-accent-chip-border: var(--color-primary-ink);
   --state-hover-bg: var(--color-neutral-soft);
   --state-pressed-bg: var(--color-border);
   --state-focus-ring: var(--focus-ring);
   --state-disabled-opacity: 0.5;                  /* thành phần không có nền riêng (hàng, thẻ, ô) */
-  --state-success-bg: var(--color-success);
-  --state-success-fg: var(--color-on-primary);
-  --state-error-bg: var(--color-error);
-  --state-error-fg: var(--color-on-primary);
-  --state-pending-bg: var(--color-warning);  /* đã lưu trên máy, chờ đồng bộ */
-  --state-pending-fg: var(--color-on-primary);
+  --state-success-bg: var(--color-success-soft);
+  --state-success-fg: var(--color-success);
+  --state-error-bg: var(--color-error-soft);
+  --state-error-fg: var(--color-error);
+  --state-pending-bg: var(--color-warning-soft);  /* đã lưu trên máy, chờ đồng bộ */
+  --state-pending-fg: var(--color-warning);
   --card-success-bg: var(--color-success-soft);
   --card-success-border: var(--color-success);
   --card-success-fg: var(--color-success);
@@ -164,13 +169,13 @@
   --card-pending-fg: var(--color-warning);
   --dur-loading-min: 400ms;   /* loading hiện tối thiểu (lưu cục bộ); trùng SAVE_MIN_VISIBLE_MS */
   --dur-success-hold: 1600ms; /* giữ "Đã lưu"; trùng SAVE_SUCCESS_HOLD_MS */
-  --dur-error-hold: 4800ms;   /* giữ thông báo lỗi/offline của "Tải lại" trước khi tự ẩn */
+  --dur-error-hold: 4800ms;   /* giữ lỗi tải lại trước khi tự ẩn */
   --empty-mascot: 96px;
   --empty-mascot-compact: 56px;
-  --textarea-min: 200px;      /* hộp dán nhiều dòng (nhập danh sách, nhập từ ghi chú) */
-  --chip-grid-min: 132px;     /* bề rộng tối thiểu chip tên trong lưới "Theo tiêu chí" */
-  --date-col: 64px;           /* cột ngày ở thẻ buổi học của phụ huynh */
-  --row-chevron-size: 12px;   /* mũi tên cuối thẻ dòng */
+  --textarea-min: 200px;
+  --chip-grid-min: 132px;
+  --date-col: 64px;
+  --row-chevron-size: 12px;
 
   /* Bảng điểm: độ rộng cột và bước kéo */
   --grid-col-name-min: 140px;

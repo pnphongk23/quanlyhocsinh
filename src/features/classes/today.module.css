@@ -1,0 +1,207 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-width: 0;
+  padding: var(--space-16);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.title {
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.entry:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.entryHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.time {
+  flex: none;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.entryText {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+}
+
+.entryClass {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entrySub {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-height: var(--tap);
+  padding: 0 var(--space-12);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--card-pending-border);
+  background: var(--card-pending-bg);
+  color: var(--card-pending-fg);
+  font-size: var(--text-md);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.task:focus-visible,
+.entryHead:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.note {
+  color: var(--color-muted);
+  font-size: var(--text-md);
+}
+
+.nextLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .card {
+    padding: var(--space-20);
+  }
+
+  .task {
+    min-height: 36px;
+  }
+}
+
+.backlog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.backlogTitle {
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.groupTitle {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.backlogToggle {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--space-8);
+  border: 0;
+  background: transparent;
+  color: var(--color-primary-ink);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.backlogToggle:hover {
+  background: var(--state-hover-bg);
+}
+
+.backlogToggle:active {
+  background: var(--state-pressed-bg);
+}
+
+.backlogToggle:focus-visible {
+  outline: none;
+  box-shadow: var(--state-focus-ring);
+}
+
+.backlogTask {
+  min-height: var(--space-32);
+  line-height: var(--space-20);
+  padding-block: 0;
+  font-size: var(--text-sm);
+}
+
+.backlogText {
+  flex: 1;
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.backlogTaskTitle,
+.backlogSub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.backlogSub {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.backlogCount {
+  flex: none;
+  font-weight: var(--weight-regular);
+}
