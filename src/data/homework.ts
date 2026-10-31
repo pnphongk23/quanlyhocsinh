@@ -150,6 +150,14 @@ export function studentsOnSession(
   );
 }
 
+/** Attendance completion uses the device's persisted rows, including pending outbox writes. */
+export function attendanceCompletion(state: StoreState, session: Session): { complete: boolean; missing: number } {
+  const roster = studentsOnSession(state, session);
+  const recorded = new Set(state.attendance.filter((entry) => entry.sessionId === session.id).map((entry) => entry.studentId));
+  const missing = roster.filter((student) => !recorded.has(student.id)).length;
+  return { complete: missing === 0, missing };
+}
+
 /**
  * Học sinh đã rời lớp trước ngày buổi. Phiếu cũ của các em vẫn giữ; UI hiện
  * thẻ riêng ngoài danh sách phiếu ("Đã rời lớp · 18/10").

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  attendanceCompletion,
   buildTicketRows,
   homeworkGradeLevel,
   homeworkSectionsFor,
@@ -65,7 +66,9 @@ export default function CommentsDesktop({
     const session = getSession(sessionId);
     const canWrite = access.can("comments_reports", "write") && !readOnly;
     const canSend = access.can("send_comments", "write") && !readOnly;
-  const rows = buildTicketRows(state, sessionId);
+    const rows = buildTicketRows(state, sessionId);
+    const attendance = session ? attendanceCompletion(state, session) : { complete: false, missing: rows.length };
+    const canEdit = canWrite && attendance.complete;
   const visibleRows = filterTicketRows(rows, filter);
   const requestedId = searchParams.get("student");
   const selected =
@@ -122,7 +125,8 @@ export default function CommentsDesktop({
       </div>
     );
 
-  function selectStudent(studentId: string) {
+    function selectStudent(studentId: string) {
+      if (!attendance.complete) return;
     setSearchParams(new URLSearchParams({ tab: "nhan-xet", student: studentId }));
   }
 
@@ -138,6 +142,16 @@ export default function CommentsDesktop({
         cause instanceof Error ? cause.message : "Không gửi được phiếu.",
       );
       throw cause;
+    }
+  }
+
+  async function sendAbsentStudent(studentId: string) {
+    if (!attendance.complete || !online) return;
+    try {
+      await sendSessionTicketsDurable(sessionId, [studentId]);
+      setDialogError("");
+    } catch (cause) {
+      setDialogError(cause instanceof Error ? cause.message : "Không gửi được phiếu.");
     }
   }
 
@@ -166,14 +180,16 @@ export default function CommentsDesktop({
         {tabBar(
           canWrite ? (
               <>
-                <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="md" />
-                {FEATURE_NOTES_IMPORT && <Button size="md" variant="surface" onClick={() => setNotesImportOpen(true)}>Nhập từ ghi chú</Button>}
+                  <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="md" disabled={!attendance.complete} eligibleStudentIds={rows.filter((row) => row.attended).map((row) => row.student.id)} />
+                  {FEATURE_NOTES_IMPORT && <Button size="md" variant="surface" disabled={!attendance.complete} aria-disabled={!attendance.complete} onClick={() => attendance.complete && setNotesImportOpen(true)}>Nhập từ ghi chú</Button>}
               {canSend && <>
               <Button
               size="md"
-              disabled={sendButtonDisabled(count, !online)}
+                disabled={!attendance.complete || sendButtonDisabled(count, !online)}
+                aria-disabled={!attendance.complete || sendButtonDisabled(count, !online)}
               aria-describedby={!online ? "comments-desktop-send-offline-hint" : undefined}
-              onClick={() => {
+                onClick={() => {
+                  if (!attendance.complete) return;
                 setDialogError("");
                 setConfirmOpen(true);
               }}
@@ -192,12 +208,14 @@ export default function CommentsDesktop({
 
         <CriteriaModeToggle mode={mode} onChange={setMode} />
 
+        {!attendance.complete && <div className={s.attendanceGate} role="status"><div><strong>Điểm danh xong để nhận xét</strong><p>Còn {attendance.missing} em chưa điểm danh.</p></div><Button size="sm" variant="secondary" onClick={() => setSearchParams(new URLSearchParams({ tab: "diem-danh" }))}>Đến Điểm danh</Button></div>}
+
         <div className={mode === "criteria" ? `${d.split} ${s.criteriaSplit}` : d.split}>
           {mode === "criteria" ? <section className={s.listColumn}>
             <CriteriaMode
               sessionId={sessionId}
               rows={rows}
-              canWrite={canWrite}
+                canWrite={canEdit}
               selectedStudentId={selected?.student.id}
               onSelectStudent={selectStudent}
               previousGrades={(studentId) => previousHomeworkGrades(state, sessionId, studentId)}
@@ -223,8 +241,9 @@ export default function CommentsDesktop({
               ))}
             </div>
             <div className={s.ticketList}>
-              {visibleRows.length ? (
-                visibleRows.map((row) => {
+                {visibleRows.length ? (
+                  <>
+                  {(attendance.complete ? visibleRows.filter((row) => row.attended) : visibleRows).map((row) => {
                   const active = row.student.id === selected?.student.id;
                   return (
                     <button
@@ -251,7 +270,13 @@ export default function CommentsDesktop({
                       </Pill>
                     </button>
                   );
-                })
+                  })}
+                  {attendance.complete && visibleRows.some((row) => !row.attended) && <div className={s.absentHeading}>Vắng buổi này</div>}
+                  {attendance.complete && visibleRows.filter((row) => !row.attended).map((row) => {
+                    const active = row.student.id === selected?.student.id;
+                    return <button key={row.student.id} type="button" aria-pressed={active} className={s.ticketRow + (active ? " " + s.ticketRowSelected : "")} onClick={() => selectStudent(row.student.id)}><span className={s.ticketText}><span className={s.ticketName}>{row.student.name}</span><span className={s.ticketMeta}>Vắng · {homeworkCountsLine(state, row)}</span></span>{row.stars === null ? <span className={s.stars} /> : <StarRow level={row.stars} />}<Pill tone={row.status === "sent" ? "success" : "neutral"} className={s.ticketBadge}>{desktopTicketLabel(row)}</Pill></button>;
+                  })}
+                  </>
               ) : (
                 <EmptyState size="compact" title="Không có học sinh trong mục này" />
               )}
@@ -265,15 +290,18 @@ export default function CommentsDesktop({
           </section>}
 
           <section className={s.editorColumn}>
-          {selected && selectedHomework ? (
-            <TicketEditor
+            {selected && selectedHomework ? (
+              <>
+              <TicketEditor
                 key={`${sessionId}:${selected.student.id}`}
                 session={session}
                 row={selected}
                 homework={selectedHomework}
                 compact={mode === "criteria"}
-                readOnly={!canWrite}
-            />
+                  readOnly={!canEdit}
+              />
+                {attendance.complete && !selected.attended && selected.comment && selected.status !== "sent" && selected.status !== "queued" && <Button size="md" variant="secondary" disabled={!online} onClick={() => void sendAbsentStudent(selected.student.id)}>Gửi lẻ</Button>}
+              </>
             ) : (
             <p className={d.muted14}>Chọn một em để soạn phiếu.</p>
           )}

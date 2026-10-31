@@ -82,12 +82,12 @@ export function ticketFilterLabel(
 
 /** Phiếu "Gửi phiếu cả lớp" sẽ gửi: chỉ phiếu đã có, chưa gửi và chưa chờ gửi. Em chưa có phiếu không được gửi. */
 export function sendableRows(rows: TicketRow[]): TicketRow[] {
-  return rows.filter((row) => row.comment !== null && row.status !== "sent" && row.status !== "queued");
+  return rows.filter((row) => row.attended && row.comment !== null && row.status !== "sent" && row.status !== "queued");
 }
 
 /** Em chưa có phiếu: bị bỏ qua khi gửi cả lớp (muốn gửi thì mở phiếu em đó hoặc bấm "Gán tất cả mặc định"). */
 export function unopenedRows(rows: TicketRow[]): TicketRow[] {
-  return rows.filter((row) => row.comment === null);
+  return rows.filter((row) => row.attended && row.comment === null);
 }
 
 /** Số phiếu nút "Gửi phiếu cả lớp (n)" sẽ gửi. */

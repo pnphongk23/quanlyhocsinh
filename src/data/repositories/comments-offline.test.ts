@@ -31,7 +31,27 @@ afterEach(async () => {
   await db.delete();
 });
 
-describe("phiếu nhận xét khi mất mạng", () => {
+  describe("phiếu nhận xét khi mất mạng", () => {
+    it("khóa soạn khi còn học sinh chưa được điểm danh trên máy", async () => {
+      const { getStore } = await import("../store");
+      const state = getStore();
+      state.attendance = state.attendance.filter((entry) => !(entry.sessionId === "6a-session-7" && entry.studentId === "6a-student-6"));
+      replaceStore(state);
+      const { saveSessionCommentDurable } = await import("./comments");
+      expect(() => saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Chưa điểm danh" })).toThrow("Điểm danh xong để nhận xét.");
+      expect((await db.outbox.toArray()).filter((row) => row.type === "slip.set")).toHaveLength(0);
+    });
+
+    it("thêm học sinh sau khi điểm danh làm buổi chưa hoàn tất", async () => {
+      const { getStore } = await import("../store");
+      const { attendanceCompletion } = await import("../homework");
+      const state = getStore();
+      state.students.push({ id: "new-student", classId: "6a", name: "Học sinh mới", parentPhone: "", enrolledAt: "2026-09-01", leftAt: null, status: "active" });
+      replaceStore(state);
+      const session = state.sessions.find((item) => item.id === "6a-session-7")!;
+      expect(attendanceCompletion(state, session)).toEqual({ complete: false, missing: 1 });
+    });
+
   it("gộp lệnh chờ: đổi tiêu chí rồi gõ ghi chú vẫn gửi tiêu chí", async () => {
     Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
     const { saveSessionCommentDurable } = await import("./comments");
@@ -219,7 +239,7 @@ describe("phiếu nhận xét khi mất mạng", () => {
     expect(command?.payload).toMatchObject({ note: "Ghi chú mới." });
   });
 
-  it("gửi cả lớp chỉ gửi phiếu đã có; em chưa có phiếu (kể cả có mặt) bị bỏ qua và không tạo phiếu", async () => {
+    it("gửi cả lớp chỉ gửi phiếu đã có; em chưa có phiếu (kể cả có mặt) bị bỏ qua và không tạo phiếu", async () => {
     const { getStore } = await import("../store");
     const seed = getStore();
     seed.attendance = seed.attendance.map((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-0" ? { ...item, status: "absent" } : item);
@@ -227,13 +247,20 @@ describe("phiếu nhận xét khi mất mạng", () => {
     const { sendSessionTicketsDurable } = await import("./comments");
     const result = await sendSessionTicketsDurable("6a-session-6");
     expect(result.sent).not.toContain("6a-student-0");
-    expect(result.skipped).toContain("6a-student-0");
-    expect(result.skippedReasons).toContainEqual({ studentId: "6a-student-0", reason: "no_slip" });
+    expect(result.sent).not.toContain("6a-student-0");
     expect(result.skippedReasons).toContainEqual({ studentId: "6a-student-1", reason: "no_slip" });
     const created = getStore().comments.find((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-1");
     expect(created).toBeUndefined();
     expect(((await db.outbox.toArray()).find((row) => row.type === "slip.send")?.payload as { defaults?: unknown } | undefined)?.defaults).toBeUndefined();
-  });
+    });
+
+    it("cho phép gửi lẻ phiếu của học sinh Vắng sau khi điểm danh xong", async () => {
+      const { saveSessionCommentDurable, sendSessionTicketsDurable } = await import("./comments");
+      await saveSessionCommentDurable({ sessionId: "6a-session-6", studentId: "6a-student-0", criteria: 15, note: "" });
+      const result = await sendSessionTicketsDurable("6a-session-6", ["6a-student-0"]);
+      expect(result.sent).toEqual(["6a-student-0"]);
+      expect((await db.outbox.toArray()).find((row) => row.type === "slip.send")?.payload).toMatchObject({ student_ids: ["6a-student-0"] });
+    });
 
   it("gửi cả lớp lần hai không xếp thêm lệnh cho phiếu đang chờ gửi", async () => {
     const { saveSessionCommentDurable, sendSessionTicketsDurable } = await import("./comments");

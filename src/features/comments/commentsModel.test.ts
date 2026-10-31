@@ -59,9 +59,9 @@ function row(
   describe("bộ lọc danh sách phiếu", () => {
   const rows = [
     row("A", { stars: 3, status: "sent", sentAt: "2026-10-14T13:14:00.000Z" }),
-    row("B", { stars: 2, status: "draft" }),
+      row("B", { stars: 2, status: "draft", attended: true }),
     row("C", { stars: 2, status: "queued" }),
-      row("D", { attended: true }),
+        row("D", { attended: true }),
       row("E"),
   ];
 
@@ -82,8 +82,15 @@ function row(
   it("chỉ phiếu đã có và chưa gửi mới nằm trong nút gửi cả lớp", () => {
       expect(sendableCount(rows)).toBe(1);
     expect(sendableRows(rows).map((item) => item.student.id)).toEqual(["B"]);
-    expect(unopenedRows(rows).map((item) => item.student.id)).toEqual(["D", "E"]);
+      expect(unopenedRows(rows).map((item) => item.student.id)).toEqual(["D"]);
     expect(sendableCount([row("A"), row("B")])).toBe(0);
+  });
+
+  it("chỉ đếm phiếu Có mặt/Muộn khi gửi cả lớp, nhưng giữ phiếu Vắng trong bộ lọc Chưa gửi", () => {
+    const absent = row("Vắng", { stars: 4, status: "draft", attended: false });
+    const present = row("Có mặt", { stars: 3, status: "draft", attended: true });
+    expect(sendableCount([absent, present])).toBe(1);
+    expect(filterTicketRows([absent, present], "unsent")).toEqual([absent, present]);
   });
 
   it("giữ nhãn nút và khoá gửi khi mất mạng", () => {

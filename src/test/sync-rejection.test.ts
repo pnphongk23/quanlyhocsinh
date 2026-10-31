@@ -39,6 +39,69 @@ describe("sync rejection persistence", () => {
     expect(getSaveStatus()).toBe("error");
   });
 
+  it("retains a slip draft on attendance_incomplete rejection and retries with a fresh command id", async () => {
+    const { api, retryRejectedCommands, syncNow } = await import("../data/sync");
+    const { rejectionMessage } = await import("../data/rejectionMessages");
+    await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
+    await db.slips.put(stored("slip", `${identityId}|slip|session-a|student-a`, {
+      session_id: "session-a", student_id: "student-a", criteria: 31, comment: "Phiếu nháp", scale: 5,
+      stars: 5, note: "", status: "draft", sent_at: null, version: 0, updated_at: "2026-10-31T00:00:00Z",
+    }) as never);
+    await db.outbox.put({
+      id: "slip-rejected", identity: identityKey(), type: "slip.set",
+      payload: { session_id: "session-a", student_id: "student-a", criteria: 31, comment: "Phiếu nháp", note: "" },
+      base_version: 0, membership_id: identity.membershipId, created_at: "2026-10-31T00:00:00Z", status: "pending",
+    });
+    const pushedIds: string[] = [];
+    let firstPush = true;
+    vi.spyOn(api, "request").mockImplementation((async (endpoint: string, init?: { body?: { commands?: Array<{ id: string }> } }) => {
+      if (endpoint === "POST /sync/push") {
+        const commands = init?.body?.commands ?? [];
+        pushedIds.push(...commands.map(({ id }) => id));
+        if (firstPush) {
+          firstPush = false;
+          return { epoch: 1, cursor: 1, results: commands.map(({ id }) => ({ id, status: "rejected", error: { code: "attendance_incomplete", message: "Attendance is incomplete.", request_id: "fixture", details: { missing_count: 1 } } })) };
+        }
+        return { epoch: 1, cursor: 2, results: commands.map(({ id }) => ({ id, status: "applied", version: 1 })) };
+      }
+      if (endpoint === "GET /sync/pull") return { cursor: 2, epoch: 1, has_more: false, server_time: "2026-10-31T00:00:00Z", upserts: {}, deleted: [] };
+      throw new Error(`Unexpected fake endpoint: ${endpoint}`);
+    }) as never);
+
+    await syncNow();
+    expect(await db.outbox.get("slip-rejected")).toMatchObject({ status: "rejected", error: "attendance_incomplete" });
+    expect(await db.slips.get(`${identityId}|slip|session-a|student-a`)).toMatchObject({ status: "draft", comment: "Phiếu nháp" });
+    expect(rejectionMessage("attendance_incomplete")).toBe("Điểm danh chưa đồng bộ xong, thử lại sau.");
+
+    await retryRejectedCommands(["slip-rejected"]);
+    expect(pushedIds).toHaveLength(2);
+    expect(pushedIds[1]).not.toBe(pushedIds[0]);
+    expect(await db.outbox.get("slip-rejected")).toBeUndefined();
+    expect(await db.slips.get(`${identityId}|slip|session-a|student-a`)).toMatchObject({ status: "draft", comment: "Phiếu nháp" });
+  });
+
+  it("orders attendance before slip commands sharing a queue timestamp", async () => {
+    const { api, syncNow } = await import("../data/sync");
+    await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
+    const createdAt = "2026-10-31T00:00:00Z";
+    await db.outbox.bulkPut([
+      { id: "slip-first", identity: identityKey(), type: "slip.set", payload: { session_id: "session-a", student_id: "student-a", criteria: 31, comment: "x", note: "" }, base_version: 0, membership_id: identity.membershipId, created_at: createdAt, status: "pending" },
+      { id: "attendance-second", identity: identityKey(), type: "attendance.set", payload: { session_id: "session-a", student_id: "student-a", status: "present" }, base_version: 0, membership_id: identity.membershipId, created_at: createdAt, status: "pending" },
+    ] as never);
+    let pushedTypes: string[] = [];
+    vi.spyOn(api, "request").mockImplementation((async (endpoint: string, init?: { body?: { commands?: Array<{ id: string; type: string }> } }) => {
+      if (endpoint === "POST /sync/push") {
+        pushedTypes = (init?.body?.commands ?? []).map(({ type }) => type);
+        return { epoch: 1, cursor: 1, results: (init?.body?.commands ?? []).map(({ id }) => ({ id, status: "applied", version: 1 })) };
+      }
+      if (endpoint === "GET /sync/pull") return { cursor: 1, epoch: 1, has_more: false, server_time: "2026-10-31T00:00:00Z", upserts: {}, deleted: [] };
+      throw new Error(`Unexpected fake endpoint: ${endpoint}`);
+    }) as never);
+
+    await syncNow();
+    expect(pushedTypes).toEqual(["attendance.set", "slip.set"]);
+  });
+
   it("hides membership cache and preserves its rejected outbox on a permission revoke", async () => {
     const { api, syncNow } = await import("../data/sync");
     const id = identityKey();

@@ -219,7 +219,7 @@ describe("phiếu nhận xét: ghi bền lỗi", () => {
   it("gửi phiếu: báo lỗi trong hộp xác nhận và hộp còn mở", async () => {
     const sessionId = "6a-session-6";
     const actual = await vi.importActual<typeof import("../data/repositories/comments")>("../data/repositories/comments");
-    await actual.saveSessionCommentDurable({ sessionId, studentId: "6a-student-0", stars: 3 });
+      await actual.saveSessionCommentDurable({ sessionId, studentId: "6a-student-2", stars: 3 });
     inRouter(
       <CommentsPanel classId="6a" sessionId={sessionId} />,
       "/lop/:classId/buoi-hoc/:sessionId",
@@ -234,7 +234,7 @@ describe("phiếu nhận xét: ghi bền lỗi", () => {
   it("dialog gửi: đang mở thì khoá khi mất mạng và bật lại khi có mạng", async () => {
     const sessionId = "6a-session-6";
     const actual = await vi.importActual<typeof import("../data/repositories/comments")>("../data/repositories/comments");
-    await actual.saveSessionCommentDurable({ sessionId, studentId: "6a-student-0", stars: 3 });
+      await actual.saveSessionCommentDurable({ sessionId, studentId: "6a-student-2", stars: 3 });
     inRouter(
       <CommentsPanel classId="6a" sessionId={sessionId} />,
       "/lop/:classId/buoi-hoc/:sessionId",

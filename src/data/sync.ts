@@ -224,7 +224,13 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
   try {
     await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
     while (true) {
-      const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").sortBy("created_at");
+        const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").toArray();
+        rows.sort((a, b) => {
+          const byCreatedAt = a.created_at.localeCompare(b.created_at);
+          if (byCreatedAt) return byCreatedAt;
+          const attendancePriority = (row: typeof a) => row.type === "attendance.set" ? 0 : row.type === "slip.set" || row.type === "slip.send" ? 2 : 1;
+          return attendancePriority(a) - attendancePriority(b);
+        });
       if (!rows.length) break;
       let batch = [] as typeof rows;
       for (const row of rows) {
@@ -370,7 +376,12 @@ export async function discardRejectedCommands(ids: string[]): Promise<void> {
 }
 async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {
   const row = await db.outbox.get(result.id); if (!row) return;
-  if (result.status === "rejected") { await db.outbox.put({ ...row, status: "rejected", error: result.error.code }); return; }
+    if (result.status === "rejected") {
+      const reason = (result.error.details as { reason?: string } | undefined)?.reason;
+      const error = result.error.code === "attendance_incomplete" || (result.error.code === "conflict" && reason === "attendance_incomplete") ? "attendance_incomplete" : result.error.code;
+      await db.outbox.put({ ...row, status: "rejected", error });
+      return;
+    }
   if (result.status === "duplicate" && (result as { original_status?: string }).original_status === "rejected") {
     await db.outbox.put({ ...row, status: "rejected", error: (result as { error?: { code?: string } }).error?.code ?? row.error ?? "rejected" }); return;
   }

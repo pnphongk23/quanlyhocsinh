@@ -31,6 +31,24 @@
   margin-top: var(--space-2);
 }
 
+.attendanceGate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-button);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-ink);
+  font-size: var(--text-md);
+}
+
+.attendanceGate p { margin: var(--space-2) 0 0; }
+.attendanceGate strong { font-weight: var(--weight-semibold); }
+.absentHeading { padding: var(--space-8) 0; color: var(--color-muted); font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.ticket:disabled { opacity: var(--state-disabled-opacity); cursor: default; }
+.absentActions { padding: 0 var(--space-8) var(--space-8); }
+
 /* 40: ba bộ lọc pill cao 44, chữ 13/600; bộ lọc đang chọn nền xanh */
 .filters {
   display: flex;
@@ -79,6 +97,8 @@
   color: var(--color-text);
   text-align: left;
 }
+
+.ticket:focus-visible { outline: none; box-shadow: var(--state-focus-ring); }
 
 .ticketHead {
   display: flex;

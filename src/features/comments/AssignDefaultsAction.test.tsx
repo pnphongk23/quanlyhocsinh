@@ -57,7 +57,7 @@ describe("Gán tất cả mặc định", () => {
     count.mockReturnValueOnce(5);
     view();
     fireEvent.click(screen.getByTestId("slip-assign-defaults"));
-    expect(screen.getByTestId("slip-assign-count")).toHaveTextContent("5 phiếu");
+      expect(screen.getByTestId("slip-assign-count")).toHaveTextContent("5 em có mặt");
     fireEvent.click(screen.getByRole("button", { name: "Quay lại" }));
     count.mockReturnValueOnce(0);
     fireEvent.click(screen.getByTestId("slip-assign-defaults"));

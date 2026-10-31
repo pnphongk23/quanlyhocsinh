@@ -20,8 +20,8 @@ const base = (): StoreState => ({
   classes: [{ id: "c1", name: "A", status: "active", weekdays: [1], time: "18:00" } as never],
   students: [{ id: "st1", classId: "c1", name: "An", parentPhone: "", enrolledAt: "2026-09-01", leftAt: null, status: "active" } as never],
   sessions: [{ id: "s1", classId: "c1", date: "2026-10-01", time: "18:00", origin: "recurring", status: "held" } as never],
-  tests: [{ id: "t1", classId: "c1", name: "Kiểm tra", date: "2026-10-01", max: 10, archived: false } as never],
-  scores: [], attendance: [], comments: [], homeworkSections: [], homeworkGrades: [],
+    tests: [{ id: "t1", classId: "c1", name: "Kiểm tra", date: "2026-10-01", max: 10, archived: false } as never],
+    scores: [], attendance: [{ id: "s1:st1", sessionId: "s1", studentId: "st1", status: "present", note: "", lateAt: null } as never], comments: [], homeworkSections: [], homeworkGrades: [],
 });
 const store = async () => (await import("../data/store"));
 const snapshot = (s: StoreState) => JSON.stringify({ a: s.attendance, sc: s.scores, c: s.comments, hs: s.homeworkSections, hg: s.homeworkGrades, t: s.tests });
