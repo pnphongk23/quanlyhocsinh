@@ -483,6 +483,85 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(CommentsRules.sendable(after).count, 3, "the absent student is never in the class send")
     }
 
+
+    func testARefusedNewSlipStaysOnTheDeviceWithItsContent() async throws {
+        let (store, data) = try await seededRoster(api: SlipPushAPI(mode: .attendanceIncomplete))
+        let student = try XCTUnwrap(data.students.first { $0.id == "c" } ?? data.students.first)
+        let key = data.key("slip", "fresh", student.id)
+
+        let failure = await data.saveSlip(sessionID: "fresh", student: student,
+                                          grading: .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)), note: "Giữ")
+
+        XCTAssertEqual(failure, Self.attendanceMessage)
+        let kept = try await store.records(SessionSlip.self, entity: "slip").filter { $0.sessionId == "fresh" }
+        XCTAssertEqual(kept.count, 1, "the refused slip is still a record")
+        XCTAssertEqual(data.slip(sessionID: "fresh", studentID: student.id)?.note, "Giữ")
+        XCTAssertEqual(data.slip(sessionID: "fresh", studentID: student.id)?.criteria, 15)
+        let queued = try await store.queuedCommands().filter { $0.command.recordKey == key }
+        XCTAssertEqual(queued.map(\.state), ["rejected"])
+    }
+
+    func testARefusedEditOfAnExistingSlipKeepsTheEditUntilAPullBringsTheServersRow() async throws {
+        let (store, data) = try await seededRoster(api: SlipPushAPI(mode: .attendanceIncomplete))
+        let student = try XCTUnwrap(data.students.first { $0.id == "b" })
+        let before = try XCTUnwrap(data.slip(sessionID: "session", studentID: "b"))
+
+        let failure = await data.saveSlip(sessionID: "session", student: student,
+                                          grading: .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)), note: "Mới")
+
+        XCTAssertEqual(failure, Self.attendanceMessage)
+        XCTAssertEqual(data.slip(sessionID: "session", studentID: "b")?.criteria, 15)
+        XCTAssertEqual(data.slip(sessionID: "session", studentID: "b")?.note, "Mới")
+
+        // The server's own newer row wins over the refused draft.
+        guard case .object(var fields) = slip("b", stars: 5, note: "Máy chủ") else { return XCTFail("slip is not an object") }
+        fields["version"] = .number(Double(before.version + 1)); fields["criteria"] = .number(31)
+        try await store.apply(PullPage(cursor: 5, epoch: 1, hasMore: false, serverTime: "fixture",
+                                       upserts: ["slip": [.object(fields)]], deleted: []))
+        await data.refresh()
+        XCTAssertEqual(data.slip(sessionID: "session", studentID: "b")?.note, "Máy chủ")
+        XCTAssertEqual(data.slip(sessionID: "session", studentID: "b")?.criteria, 31)
+    }
+
+    func testRefusedDefaultsAllStayOnTheDevice() async throws {
+        let (_, data) = try await seededRoster(api: SlipPushAPI(mode: .attendanceIncomplete))
+        let failure = await data.saveDefaultSlips(sessionID: "fresh", slips: [
+            CommentsRules.DefaultSlip(studentID: "a", criteria: 31, note: "A"),
+            CommentsRules.DefaultSlip(studentID: "b", criteria: 31, note: "B")])
+        XCTAssertEqual(failure, Self.attendanceMessage)
+        XCTAssertEqual(data.slips(sessionID: "fresh").count, 2)
+        XCTAssertEqual(data.slip(sessionID: "fresh", studentID: "b")?.note, "B")
+    }
+
+    private func regradeFixture() async throws -> (data: I4FeatureStore, section: HomeworkSection, student: Student) {
+        let store = try SQLiteStore(path: ":memory:", scope: scope)
+        guard case .object(var fields) = slip("a", stars: 5, note: "Ghi chú a") else { fatalError("slip is not an object") }
+        fields["criteria"] = .number(31); fields["session_id"] = .string("next")
+        try await store.apply(PullPage(cursor: 1, epoch: 1, hasMore: false, serverTime: "fixture", upserts: [
+            "class_session": [session("before", date: "2026-10-19"), session("next", date: "2026-10-26")],
+            "homework_section": [part("p", session: "before")],
+            "student": [studentRecord("a")],
+            "slip": [.object(fields)]
+        ], deleted: []))
+        let data = I4FeatureStore(store: store, api: SlipPushAPI(mode: .attendanceIncomplete))
+        await data.refresh()
+        return (data, try XCTUnwrap(data.sections(sessionID: "before").first), try XCTUnwrap(data.students.first))
+    }
+
+    func testRegradingOneStudentIntoASessionWithIncompleteAttendanceSaysSoAndKeepsTheSlip() async throws {
+        let (data, section, student) = try await regradeFixture()
+        await data.grade(section, student: student, level: .notDone)
+        XCTAssertEqual(data.errorMessage, Self.attendanceMessage)
+        XCTAssertEqual(data.slip(sessionID: "next", studentID: "a")?.criteria, 15, "the regraded draft is kept")
+    }
+
+    func testRegradingTheWholeClassIntoASessionWithIncompleteAttendanceSaysSoAndKeepsTheSlip() async throws {
+        let (data, section, student) = try await regradeFixture()
+        await data.gradeAll(section, students: [student], level: .notDone)
+        XCTAssertEqual(data.errorMessage, Self.attendanceMessage)
+        XCTAssertEqual(data.slip(sessionID: "next", studentID: "a")?.criteria, 15, "the regraded draft is kept")
+    }
+
     private static let attendanceMessage = "Điểm danh chưa đồng bộ xong, thử lại sau."
 
     func testClassSendRefusedForIncompleteAttendanceSaysSoAndKeepsTheSlips() async throws {

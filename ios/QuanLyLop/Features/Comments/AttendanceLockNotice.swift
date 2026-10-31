@@ -7,12 +7,16 @@ struct AttendanceLockNotice: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpace.s8) {
-            Text(String(localized: "comments.locked.title", table: "Teacher"))
-                .appText(AppText.subheading)
-                .foregroundStyle(AppState.cardInfoFg)
-            Text(String.localizedStringWithFormat(String(localized: "comments.locked.detail", table: "Teacher"), unmarked))
-                .appText(AppText.muted)
-                .foregroundStyle(AppColors.muted)
+            // One spoken element for the message; the button below stays its own control.
+            VStack(alignment: .leading, spacing: AppSpace.s8) {
+                Text(String(localized: "comments.locked.title", table: "Teacher"))
+                    .appText(AppText.subheading)
+                    .foregroundStyle(AppState.cardInfoFg)
+                Text(String.localizedStringWithFormat(String(localized: "comments.locked.detail", table: "Teacher"), unmarked))
+                    .appText(AppText.muted)
+                    .foregroundStyle(AppColors.muted)
+            }
+            .accessibilityElement(children: .combine)
             if let goToAttendance {
                 // The card is already `primarySoft`, so the secondary action sits on the surface fill.
                 AppButton(title: String(localized: "comments.locked.action", table: "Teacher"), variant: .surface,

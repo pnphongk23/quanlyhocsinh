@@ -201,7 +201,7 @@ enum CommentsRules {
 /// How a server refusal of a slip write or send reads to the teacher. The server's code for "attendance is not
 /// complete" lives here only.
 enum SlipServerError {
-    static let attendanceIncompleteCode = "attendance_incomplete"
+    static let attendanceIncompleteCode = APIError.attendanceIncompleteCode
 
     /// The message for a refusal the screen explains itself; nil leaves the usual failure text.
     static func message(for error: APIError?) -> String? {

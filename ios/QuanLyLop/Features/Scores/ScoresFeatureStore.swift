@@ -343,7 +343,7 @@ final class I4FeatureStore: ObservableObject {
     }
 
     /// The message to show when the server refused one of these slip writes because attendance has not reached it
-    /// yet. The refused command stays in the outbox, so the slip is kept and a later save replaces it.
+    /// yet. The slip stays on the device and on screen, and a later save replaces the refused command with a new one.
     private func attendanceRefusal(forKeys keys: Set<String>) async -> String? {
         let queued = (try? await store?.queuedCommands()) ?? []
         return queued.first { $0.state == "rejected" && keys.contains($0.command.recordKey) }
@@ -639,23 +639,25 @@ final class I4FeatureStore: ObservableObject {
         do {
             try await store.write(row, forKey: command.recordKey, enqueueing: command)
             await refresh()
-            await regradeNextSessionSlip(of: section, student: student)
+            let refusal = await regradeNextSessionSlip(of: section, student: student)
             await syncIfNeeded()
             await refresh()
+            if let refusal { errorMessage = refusal }
         } catch { errorMessage = String(localized: "feature.scores.khong.luu.uoc.ket.qua.cham") }
     }
 
     /// The server no longer recomputes a slip when homework is graded again, so the app does: the student's draft
     /// slip in the next session that was not hand-set follows the new result, with its sentence written again.
-    private func regradeNextSessionSlip(of section: HomeworkSection, student: Student) async {
+    /// Returns the message to show when that save failed, such as a server refusal for incomplete attendance.
+    private func regradeNextSessionSlip(of section: HomeworkSection, student: Student) async -> String? {
         guard let graded = session(id: section.sessionId),
               let next = HomeworkRules.gradingPlan(sessions(in: graded.classId), after: graded).session,
               let change = HomeworkRules.regradedSlip(slip: slip(sessionID: next.id, studentID: student.id),
                                                       sections: sections(sessionID: graded.id), grades: grades,
-                                                      studentID: student.id) else { return }
-        _ = await saveSlip(sessionID: next.id, student: student,
-                           grading: .criteria(change.criteria, comment: change.comment),
-                           note: slip(sessionID: next.id, studentID: student.id)?.note ?? "")
+                                                      studentID: student.id) else { return nil }
+        return await saveSlip(sessionID: next.id, student: student,
+                              grading: .criteria(change.criteria, comment: change.comment),
+                              note: slip(sessionID: next.id, studentID: student.id)?.note ?? "")
     }
 
     /// Marks one level for every student in one local write and one sync, like the web: the grades (and the next
@@ -684,6 +686,7 @@ final class I4FeatureStore: ObservableObject {
             if !slipEntries.isEmpty { try await store.writeAll(slipEntries) }
             await syncIfNeeded()
             await refresh()
+            if let message = await attendanceRefusal(forKeys: Set(slipEntries.map(\.key))) { errorMessage = message }
         } catch { errorMessage = String(localized: "feature.scores.khong.luu.uoc.ket.qua.cham") }
     }
 

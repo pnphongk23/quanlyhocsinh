@@ -112,6 +112,13 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đến Điểm danh" } }
       }
     },
+    "comments.locked.hint" : {
+      "comment" : "Gợi ý đọc cho hàng và chip nhận xét đang bị khoá vì chưa điểm danh xong.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm danh xong để nhận xét" } }
+      }
+    },
     "comments.absent.group" : {
       "comment" : "Tiêu đề nhóm em vắng ở cuối danh sách nhận xét.",
       "extractionState" : "manual",

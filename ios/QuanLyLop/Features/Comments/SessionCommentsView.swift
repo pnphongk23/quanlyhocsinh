@@ -263,6 +263,8 @@ struct SessionCommentsView: View {
         Button { open(row.student) } label: { ticketCardBody(row) }
             .buttonStyle(.plain)
             .disabled(isLocked)
+            .accessibilityHint(isLocked ? String(localized: "comments.locked.hint", table: "Teacher") : "")
+            .accessibilityIdentifier("comment.row.\(row.student.id)")
     }
 
     private func ticketCardBody(_ row: I4TicketRow) -> some View {
@@ -312,7 +314,7 @@ struct SessionCommentsView: View {
             }
             .frame(minHeight: 20)
         } else {
-            HStack(spacing: 8) {
+            HStack(spacing: AppSpace.s8) {
                 if row.isAbsent && !isLocked { absentPill }
                 Text(CommentsRules.starsCaption(row) ?? "")
                     .appText(AppTextStyle(size: 14, weight: .regular, lineHeight: 21))
