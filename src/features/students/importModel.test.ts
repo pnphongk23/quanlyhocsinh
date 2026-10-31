@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Student } from "../../data/types";
 import { normalizePhone } from "../../data/auth/phone";
-import { GOLDEN_SKIP_REASON, readGoldenFixture } from "../../test/goldenFixture";
+import { readGoldenFixture } from "../../test/goldenFixture";
 import { assessImportRows, comparableStudentName, importSizeWarnings, normalizeStudentName, parseStudentsImport, shouldCreateImportRow } from "./importModel";
 
 interface GoldenImportSuite {
@@ -9,7 +9,7 @@ interface GoldenImportSuite {
   cases: Array<{ id: string; input: string; existingStudentCount: number; expect: { rows: Array<{ name: string | null; guardianPhone: string | null; flags: string[]; status: string }>; addCount: number; warnings: string[] } }>;
 }
 
-/** Fixture riêng tư (không có trong repo/CI): thiếu thì bỏ qua, không đọc file lúc import. */
+/** Bộ ca vàng nằm trong repo (dữ liệu riêng tư); thiếu file thì lỗi rõ ràng, không bỏ qua. */
 const goldenImport = readGoldenFixture<GoldenImportSuite>("golden-import-cases.json");
 
 const student = (id: string, name: string, parentPhone: string): Student => ({ id, classId: "class-1", name, parentPhone, enrolledAt: "2026-01-01", leftAt: null, status: "active" });
@@ -54,8 +54,8 @@ describe("student list import", () => {
     expect(assessed[3].suspiciousName).toBe(true);
   });
 
-  it.skipIf(goldenImport === null)("matches every checked in golden import case without copying its data", () => {
-    const suite = goldenImport!;
+  it("matches every checked in golden import case without copying its data", () => {
+    const suite = goldenImport;
     const roster = suite.existingRoster.map((item) => student(item.id, item.fullName, item.guardianPhone ?? ""));
     for (const testCase of suite.cases) {
       const rows = assessImportRows(parseStudentsImport(testCase.input), roster);
@@ -69,6 +69,4 @@ describe("student list import", () => {
       expect(importSizeWarnings(testCase.existingStudentCount, testCase.expect.addCount), testCase.id).toEqual(testCase.expect.warnings);
     }
   });
-
-  if (goldenImport === null) it.skip(`golden import fixture: ${GOLDEN_SKIP_REASON}`, () => {});
 });

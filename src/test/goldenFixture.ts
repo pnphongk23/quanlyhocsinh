@@ -1,39 +1,43 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
- * Bộ ca vàng (golden) cho bộ phân tích ghi chú và nhập danh sách là dữ liệu riêng tư:
- * không chép nội dung sang test/commit khác. Test đọc qua helper này để máy có fixture
- * vẫn chạy đủ ca, còn nơi không có fixture thì skip thay vì crash lúc import (CI).
+ * Bộ ca vàng (golden) cho bộ phân tích ghi chú và nhập danh sách nằm trong repo tại
+ * `plans/20261028-ai-features/` và là dữ liệu riêng tư: không chép nội dung golden hay
+ * ca thật sang test, commit hoặc tài liệu khác. Thiếu file là lỗi thật (CI phải đỏ),
+ * không phải trường hợp bỏ qua.
  */
-export const GOLDEN_SKIP_REASON = "golden fixture is private and not in the repo";
-/** Thư mục fixture khi nó có trong checkout. */
-export const GOLDEN_FILES_DIR = path.join("plans", "20261028-ai-features");
-/** Chỗ để fixture trên máy dev, giữ cách chạy cục bộ trước đây. */
-export const GOLDEN_LOCAL_FALLBACK_DIR = path.join("/Users", "phamnhuphong", "Git", "quanlyhocsinh", "plans", "20261028-ai-features");
+/** Gốc repo suy ra từ vị trí file này (`src/test` → lên hai cấp), không phụ thuộc cwd. */
+export const GOLDEN_FILES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../plans/20261028-ai-features");
 
-/** Các chỗ có thể có fixture, theo thứ tự: `QLH_GOLDEN_DIR`, thư mục trong repo, rồi máy dev. */
+/** Các chỗ có fixture: `QLH_GOLDEN_DIR` (bản khác khi cần), rồi thư mục trong repo. */
 export function goldenCandidates(fileName: string): string[] {
   const configured = process.env.QLH_GOLDEN_DIR?.trim();
   return [
     ...(configured ? [path.join(configured, fileName)] : []),
-    path.resolve(process.cwd(), GOLDEN_FILES_DIR, fileName),
-    path.join(GOLDEN_LOCAL_FALLBACK_DIR, fileName),
+    path.join(GOLDEN_FILES_DIR, fileName),
   ];
 }
 
-/** Chọn đường dẫn đầu tiên có file; `null` khi không có chỗ nào (điều kiện skip). */
-export function pickGoldenPath(candidates: readonly string[], exists: (candidate: string) => boolean = existsSync): string | null {
-  return candidates.find((candidate) => exists(candidate)) ?? null;
+/** Đường dẫn fixture đã có trên đĩa; ném lỗi kèm mọi đường dẫn đã thử khi không tìm thấy. */
+export function goldenFixturePath(fileName: string): string {
+  const candidates = goldenCandidates(fileName);
+  for (const candidate of candidates) {
+    try {
+      readFileSync(candidate);
+      return candidate;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+  const error = new Error(`ENOENT: không thấy golden fixture "${fileName}". Đã thử: ${candidates.join(", ")}`) as NodeJS.ErrnoException;
+  error.code = "ENOENT";
+  throw error;
 }
 
-/** Đường dẫn fixture theo thứ tự trên, hoặc `null` khi máy này không có fixture. */
-export function goldenFixturePath(fileName: string): string | null {
-  return pickGoldenPath(goldenCandidates(fileName));
-}
-
-/** Đọc fixture đã tìm thấy; `null` khi không có (dùng cho `describe.skipIf`/`it.skipIf`). */
-export function readGoldenFixture<T>(fileName: string): T | null {
+/** Đọc fixture; thiếu file thì lỗi ENOENT nêu đường dẫn đã thử, không bỏ qua. */
+export function readGoldenFixture<T>(fileName: string): T {
   const file = goldenFixturePath(fileName);
-  return file ? (JSON.parse(readFileSync(file, "utf8")) as T) : null;
+  return JSON.parse(readFileSync(file, "utf8")) as T;
 }
