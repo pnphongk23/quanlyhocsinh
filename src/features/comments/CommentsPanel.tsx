@@ -335,14 +335,17 @@ export default function CommentsPanel({
             <span className={s.avatar} aria-hidden="true">
               {initialsOf(row.student.name)}
             </span>
+            {/* Tên giữ trọn một dòng riêng: nhãn trạng thái xuống dòng phụ, không ép tên thành "…". */}
             <span className={s.ticketName}>{row.student.name}</span>
-            {attendance.complete && !row.attended && <Pill tone="warning">Vắng</Pill>}
-            <Pill tone={badge.tone}>{badge.label}</Pill>
               {attendance.complete && (
                 <span className={s.chevron}>
                   <ChevronRight />
                 </span>
               )}
+            <span className={s.ticketBadges}>
+              {attendance.complete && !row.attended && <Pill tone="warning">Vắng</Pill>}
+              <Pill tone={badge.tone}>{badge.label}</Pill>
+            </span>
           </span>
           {row.stars !== null && (
             <span className={s.starsLine}>
@@ -375,9 +378,11 @@ export default function CommentsPanel({
             {initialsOf(student.name)}
           </span>
           <span className={s.ticketName}>{student.name}</span>
-          <Pill tone="neutral">
-            Đã rời lớp · {formatDayMonth(student.leftAt ?? sessionDate)}
-          </Pill>
+          <span className={s.ticketBadges}>
+            <Pill tone="neutral">
+              Đã rời lớp · {formatDayMonth(student.leftAt ?? sessionDate)}
+            </Pill>
+          </span>
         </span>
         <span className={s.leftText}>
           Em đã rời lớp; các phiếu đã gửi trước ngày nghỉ vẫn được giữ.

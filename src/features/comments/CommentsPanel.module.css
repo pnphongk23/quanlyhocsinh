@@ -33,14 +33,15 @@
 
 .attendanceGate {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-12);
   padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
   font-size: var(--text-md);
+  text-wrap: balance;
 }
 
 .attendanceGate p { margin: var(--space-2) 0 0; }
@@ -101,13 +102,16 @@
 .ticket:focus-visible { outline: none; box-shadow: var(--state-focus-ring); }
 
 .ticketHead {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-8);
   min-width: 0;
 }
 
 .avatar {
+  grid-column: 1;
+  grid-row: 1;
   width: 36px;
   height: 36px;
   flex: none;
@@ -120,8 +124,10 @@
   font-weight: 700;
 }
 
+/* Tên chỉ chiếm một dòng của hàng đầu nên không bị nhãn trạng thái ép thành "…". */
 .ticketName {
-  flex: 1;
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   font-size: var(--text-base);
   font-weight: 600;
@@ -130,7 +136,20 @@
   white-space: nowrap;
 }
 
+/* Nhãn trạng thái (Vắng, Chưa nhận xét…) xuống dòng phụ dưới tên, theo rules.md mục 5. */
+.ticketBadges {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
 .chevron {
+  grid-column: 3;
+  grid-row: 1;
   display: flex;
   flex: none;
   margin-right: -4px;
