@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { call, clubToken, db, insertClass, insertGuardianMembership, insertMembership, insertSession, insertStudent, insertUser, post, registerWorkspace, PASSWORD, type RegisteredWorkspace } from './helpers';
+import { call, clubToken, db, insertAttendance, insertClass, insertGuardianMembership, insertMembership, insertSession, insertStudent, insertUser, post, registerWorkspace, PASSWORD, type RegisteredWorkspace } from './helpers';
 import { generateUpcomingSessions } from '../src/db/session-generation';
 
 async function registerWorkspaceAtIp(phone: string, name: string, ip: string): Promise<RegisteredWorkspace> {
@@ -227,8 +227,9 @@ describe('sessions API', () => {
       return date.toISOString().slice(0, 10);
     };
     const assignmentSession = await insertSession(owner.workspaceId, classId, relativeDate(-2), owner.userId);
-    const cancelledSession = await insertSession(owner.workspaceId, classId, relativeDate(-1), owner.userId);
-    const newGradingSession = await insertSession(owner.workspaceId, classId, relativeDate(0), owner.userId);
+      const cancelledSession = await insertSession(owner.workspaceId, classId, relativeDate(-1), owner.userId);
+      const newGradingSession = await insertSession(owner.workspaceId, classId, relativeDate(0), owner.userId);
+      await insertAttendance(owner.workspaceId, classId, newGradingSession, studentId, 'present', owner.userId);
     const parentUser = await insertUser('+84900000342');
     const parentMembership = await insertGuardianMembership(owner.workspaceId, parentUser, owner.roles.guardian!, [studentId]);
     const parentToken = await clubToken(owner.workspaceId, parentUser, parentMembership);
@@ -273,8 +274,9 @@ describe('sessions API', () => {
       return date.toISOString().slice(0, 10);
     };
     const assignmentSession = await insertSession(owner.workspaceId, classId, relativeDate(-3), owner.userId);
-    const gradingSession = await insertSession(owner.workspaceId, classId, relativeDate(-2), owner.userId);
-    const nextSession = await insertSession(owner.workspaceId, classId, relativeDate(-1), owner.userId);
+      const gradingSession = await insertSession(owner.workspaceId, classId, relativeDate(-2), owner.userId);
+      const nextSession = await insertSession(owner.workspaceId, classId, relativeDate(-1), owner.userId);
+      await insertAttendance(owner.workspaceId, classId, gradingSession, studentId, 'present', owner.userId);
     const parentUser = await insertUser('+84900000344');
     const parentMembership = await insertGuardianMembership(owner.workspaceId, parentUser, owner.roles.guardian!, [studentId]);
     const parentToken = await clubToken(owner.workspaceId, parentUser, parentMembership);

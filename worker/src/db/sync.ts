@@ -1,9 +1,10 @@
 import type { Identity, Permissions, PermGroup } from '../types';
 import { ApiError, notFound, validationError, conflict, forbidden, errorBody, passwordChangeRequired } from '../lib/errors';
 import { assertStaffWrite, requireAccess, mapTriggerError } from './authz';
+import { assertSessionAttendanceComplete } from './attendance';
 
 type Row = Record<string, any>;
-type SyncIdentity = Identity & { syncState?: Map<string,Row|null>; timezone?: string };
+type SyncIdentity = Identity & { syncState?: Map<string,Row|null>; attendanceCompleteness?: Map<string,number>; timezone?: string };
 type SQL = { sql: string; args: any[] };
 export interface Command { id: string; type: string; base_version: number; created_at: string; payload: Row }
 type Result = { id: string; status: string; [key: string]: any };
@@ -125,6 +126,8 @@ async function stateRow(db:D1Database,i:SyncIdentity,table:string,key:string,sec
 }
 function evict(i:SyncIdentity,c:Command):void {
   const prefix=c.type.split('.')[0];
+  if (prefix==='attendance' && typeof c.payload.session_id==='string') i.attendanceCompleteness?.delete(c.payload.session_id);
+  if (prefix==='student' || prefix==='class') i.attendanceCompleteness?.clear();
   const tables=prefix==='attendance' ? ['attendance','class_sessions']
     : prefix==='score' ? ['scores'] : prefix==='test' ? ['tests','scores']
     : prefix==='slip' ? ['session_comments'] : prefix==='homework' ? ['homework_sections','homework_grades']
@@ -225,6 +228,7 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
   const def=cells[entity]!,p=c.payload,now=new Date().toISOString();
   const parent=await resource(db,i,def.parent,p[def.key],groups[entity]!);
   const enrolled=await student(db,i,p.student_id,parent,entity==='attendance'||entity==='slip' ? parent.date : undefined);
+  if (entity==='slip' && parent.status!=='cancelled') await assertSessionAttendanceComplete(db,i.workspaceId,parent.id,i.attendanceCompleteness);
   if (entity==='attendance') {
     if (parent.status==='cancelled') throw conflict('session_cancelled');
     const timezone=i.timezone ?? (await one(db,'SELECT timezone FROM workspaces WHERE id=?',i.workspaceId))!.timezone;
@@ -274,7 +278,7 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
     return {result,first,rest};
 }
 export async function push(db:D1Database,i:SyncIdentity,commands:Command[],requestId:string) {
-  i={...i};
+  i={...i,attendanceCompleteness:new Map()};
   await initialState(db,i,commands);
   const results:Result[]=[];
   for (const c of commands) {
@@ -351,10 +355,12 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
       ? q(`UPDATE tests SET archived=1,version=version+1,updated_at=?,updated_by=? WHERE workspace_id=? AND id=? AND version=?`,now,i.userId,i.workspaceId,row.id,row.version)
       : q(`DELETE FROM tests WHERE workspace_id=? AND id=? AND version=?`,i.workspaceId,row.id,row.version)};
   }
-    if (c.type==='slip.send') {
-      const session=await resource(db,i,'class_sessions',p.session_id,'comments_reports');
-      if (!Array.isArray(p.student_ids) || p.student_ids.length>50) throw validationError(undefined,'invalid_student_ids');
-      const selected=new Set<unknown>(p.student_ids);
+      if (c.type==='slip.send') {
+        const session=await resource(db,i,'class_sessions',p.session_id,'comments_reports');
+        if (session.status!=='cancelled') await assertSessionAttendanceComplete(db,i.workspaceId,session.id,i.attendanceCompleteness);
+        if (!Array.isArray(p.student_ids) || p.student_ids.length>50) throw validationError(undefined,'invalid_student_ids');
+        const selected=new Set<unknown>(p.student_ids);
+        const classBatch=selected.size>1;
       const defaults=new Map<string,{criteria:number;comment:string}>();
       if (p.defaults!==undefined) {
         if (!Array.isArray(p.defaults)) throw validationError(undefined,'invalid_defaults');
@@ -370,28 +376,36 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
         }
       }
       const sent:string[]=[],skipped:Row[]=[],guards:SQL[]=[];
-    for (const sid of new Set(p.student_ids)) {
-      await student(db,i,sid,session,session.date);
-      const row=await one(db,'SELECT * FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?',i.workspaceId,session.id,sid);
-      if (row?.status==='sent') {skipped.push({student_id:sid,reason:'already_sent'});continue;}
-        if (!row) {
-            const att=await one(db,'SELECT status,version FROM attendance WHERE session_id=? AND student_id=?',session.id,sid);
-            if (!att || !DEFAULT_SLIP_ATTENDANCE.includes(att.status)) {skipped.push({student_id:sid,reason:'not_attended'});continue;}
+      for (const sid of new Set(p.student_ids)) {
+        await student(db,i,sid,session,session.date);
+        const att=await one(db,'SELECT status,version FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=?',i.workspaceId,session.id,sid);
+        if (classBatch && att && !DEFAULT_SLIP_ATTENDANCE.includes(att.status)) {
+          skipped.push({student_id:sid,reason:'absent'});
+          continue;
+        }
+        const row=await one(db,'SELECT * FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?',i.workspaceId,session.id,sid);
+        if (row?.status==='sent') {skipped.push({student_id:sid,reason:'already_sent'});continue;}
+          if (!row) {
+              if (!att || !DEFAULT_SLIP_ATTENDANCE.includes(att.status)) {skipped.push({student_id:sid,reason:'not_attended'});continue;}
             const value=defaults.get(sid as string);
             if (!value) {skipped.push({student_id:sid,reason:'no_default'});continue;}
             sent.push(sid as string);
-          guards.push(q('NOT EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?) AND EXISTS(SELECT 1 FROM attendance WHERE session_id=? AND student_id=? AND version=?)',i.workspaceId,session.id,sid,session.id,sid,att.version));
+            guards.push(q('NOT EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?) AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)',i.workspaceId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
           rest.push(q(`INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,hw_manual,status,sent_at,version,created_at,updated_at,updated_by)
             SELECT ?,?,?,?,?,5,?,?, '',0,'sent',?,1,?,?,? WHERE ${ack(c)}
             AND NOT EXISTS(SELECT 1 FROM session_comments WHERE session_id=? AND student_id=?)
-            AND EXISTS(SELECT 1 FROM attendance WHERE session_id=? AND student_id=? AND version=?)`,
-          i.workspaceId,session.class_id,session.id,sid,bits(value.criteria),value.criteria,value.comment,now,now,now,i.userId,session.id,sid,session.id,sid,att.version));
+              AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)`,
+            i.workspaceId,session.class_id,session.id,sid,bits(value.criteria),value.criteria,value.comment,now,now,now,i.userId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
           } else {
             const needsDefault=row.stars===null && row.scale===3;
             const value=needsDefault ? defaults.get(sid as string) : undefined;
             if (needsDefault && !value) {skipped.push({student_id:sid,reason:'no_default'});continue;}
           sent.push(sid as string);
-          guards.push(q('EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=?)',i.workspaceId,session.id,sid,row.version));
+            const commentGuard='EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=?)';
+            const attendanceGuard=session.status==='cancelled' ? '' : ' AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)';
+            guards.push(q(`${commentGuard}${attendanceGuard}`,
+              i.workspaceId,session.id,sid,row.version,
+              ...(session.status==='cancelled' ? [] : [i.workspaceId,session.id,sid,att!.status,att!.version])));
             if (value) rest.push(q(`UPDATE session_comments SET stars=?,scale=5,criteria=?,comment=?,hw_manual=0,status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
               WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,bits(value.criteria),value.criteria,value.comment,now,now,i.userId,i.workspaceId,session.id,sid));
             else rest.push(q(`UPDATE session_comments SET status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1

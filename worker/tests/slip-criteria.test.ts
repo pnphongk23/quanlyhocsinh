@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect } from 'vitest';
-import { call, post, db, registerWorkspace, fakePhone, insertUser, insertClass, insertStudent, insertSession,
+import { call, post, db, registerWorkspace, fakePhone, insertUser, insertClass, insertStudent, insertAttendance, insertSession,
   insertGuardianMembership, clubToken } from './helpers';
 
 beforeEach(async () => { await db.prepare('DELETE FROM auth_throttle').run(); });
@@ -16,6 +16,7 @@ async function setup() {
     ids.push(await insertStudent(a.workspaceId, cls, name, null, a.userId));
   await db.prepare("UPDATE students SET enrolled_at='2000-01-01' WHERE workspace_id=?").bind(a.workspaceId).run();
   const ses = await insertSession(a.workspaceId, cls, today(), a.userId);
+  await Promise.all(ids.map((studentId) => insertAttendance(a.workspaceId, cls, ses, studentId, 'present', a.userId)));
   const parentUser = await insertUser(fakePhone());
   const parent = await insertGuardianMembership(a.workspaceId, parentUser, a.roles.guardian!, [ids[0]!]);
   const parentToken = await clubToken(a.workspaceId, parentUser, parent);
@@ -95,7 +96,7 @@ describe('slip criteria', () => {
   it('sends client defaults for new slips and preserves existing slips', async () => {
     const f = await setup();
     const [present, late, absent, opened] = f.s as [string, string, string, string];
-      await f.send([attend(f, present, 'present'), attend(f, late, 'late'), attend(f, absent, 'absent'), attend(f, opened, 'absent'),
+      await f.send([attend(f, present, 'present'), attend(f, late, 'late'), attend(f, absent, 'absent'), attend(f, opened, 'present'),
         command('slip.set', { session_id: f.ses, student_id: opened, criteria: 3, comment: 'Keep existing.', note: '' })]);
     const sent = await f.send([command('slip.send', { session_id: f.ses, student_ids: [present, late, absent, opened], defaults: [
       { student_id: present, criteria: 31, comment: 'Present default.' },
@@ -105,7 +106,7 @@ describe('slip criteria', () => {
     const result = sent.body.results[0];
     expect(result.status).toBe('applied');
     expect([...result.sent].sort()).toEqual([present, late, opened].sort());
-    expect(result.skipped).toEqual([{ student_id: absent, reason: 'not_attended' }]);
+    expect(result.skipped).toEqual([{ student_id: absent, reason: 'absent' }]);
     expect(await f.row(present)).toMatchObject({ stars: 5, scale: 5, criteria: 31, comment: 'Present default.', status: 'sent' });
     expect(await f.row(late)).toMatchObject({ stars: 4, scale: 5, criteria: 23, comment: 'Late default.', status: 'sent' });
     expect(await f.row(opened)).toMatchObject({ stars: 2, criteria: 3, comment: 'Keep existing.', status: 'sent' });
@@ -122,6 +123,7 @@ describe('slip criteria', () => {
   it('skips attended students without defaults and does not rewrite draft slips when homework is graded', async () => {
     const f = await setup(), student=f.s[0]!;
     const next=await insertSession(f.a.workspaceId,f.cls,'2099-01-01',f.a.userId);
+    await Promise.all(f.s.map((studentId) => insertAttendance(f.a.workspaceId,f.cls,next,studentId,'present',f.a.userId)));
     const section=uid();
     await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading'}),
       command('slip.set',{session_id:next,student_id:student,criteria:31,comment:'Draft stays.',note:''})]);
@@ -176,6 +178,7 @@ describe('slip criteria', () => {
   it('does not rewrite a legacy three-star next-session slip when homework is graded', async () => {
     const f=await setup(),student=f.s[0]!;
     const next=await insertSession(f.a.workspaceId,f.cls,'2099-01-01',f.a.userId),section=uid();
+    await Promise.all(f.s.map((studentId) => insertAttendance(f.a.workspaceId,f.cls,next,studentId,'present',f.a.userId)));
     await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading'}),
       command('slip.set',{session_id:next,student_id:student,stars:3,note:''})]);
     const grade=await f.send([command('homework.grade.set',{section_id:section,student_id:student,level:'not_done'})]);
@@ -187,6 +190,7 @@ describe('slip criteria', () => {
   it('keeps sent five-criteria slips unchanged when prior homework is regraded', async () => {
     const f=await setup(),student=f.s[0]!;
     const next=await insertSession(f.a.workspaceId,f.cls,'2099-01-01',f.a.userId),section=uid();
+    await Promise.all(f.s.map((studentId) => insertAttendance(f.a.workspaceId,f.cls,next,studentId,'present',f.a.userId)));
     await f.send([command('homework.section.upsert',{id:section,session_id:f.ses,kind:'reading'}),
       command('slip.set',{session_id:next,student_id:student,criteria:31,comment:'Sent comment.',note:''})]);
     const sent=await f.send([command('slip.send',{session_id:next,student_ids:[student]})]);
