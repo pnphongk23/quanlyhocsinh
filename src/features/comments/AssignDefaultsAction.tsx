@@ -9,7 +9,7 @@ import s from "./CommentsPanel.module.css";
  * Nút "Gán tất cả mặc định" cạnh "Gửi phiếu cả lớp": hỏi xác nhận rồi đặt mọi phiếu chưa gửi
  * về đủ năm tiêu chí (BTVN theo chấm) với câu tự sinh lại. Ghi được khi mất mạng.
  */
-export default function AssignDefaultsAction({ sessionId, sessionLabel, size }: { sessionId: string; sessionLabel: string; size: ButtonSize }) {
+export default function AssignDefaultsAction({ sessionId, sessionLabel, size, eligibleStudentIds, disabled = false }: { sessionId: string; sessionLabel: string; size: ButtonSize; eligibleStudentIds?: string[]; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -32,7 +32,8 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size }: 
   async function confirm() {
     setBusy(true);
     try {
-      await assignDefaultSlipsDurable(sessionId);
+        if (eligibleStudentIds) await assignDefaultSlipsDurable(sessionId, eligibleStudentIds);
+        else await assignDefaultSlipsDurable(sessionId);
       resetSessionDrafts(sessionId);
       setError("");
       setOpen(false);
@@ -45,7 +46,7 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size }: 
 
   return (
     <>
-      <Button size={size} variant="secondary" data-testid="slip-assign-defaults" onClick={() => { setError(""); setCount(countAssignDefaultSlips(sessionId)); setOpen(true); }}>
+      <Button size={size} variant="secondary" data-testid="slip-assign-defaults" disabled={disabled} aria-disabled={disabled} onClick={() => { if (disabled) return; setError(""); setCount(eligibleStudentIds ? countAssignDefaultSlips(sessionId, eligibleStudentIds) : countAssignDefaultSlips(sessionId)); setOpen(true); }}>
         Gán tất cả mặc định
       </Button>
       {open && (
@@ -53,8 +54,8 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size }: 
           <div className={s.confirm} role="dialog" aria-modal="true" aria-label={`Gán mặc định ${sessionLabel}?`}>
             <p className={s.confirmTitle}>Gán mặc định {sessionLabel}?</p>
             <p className={s.confirmNote}>
-              <strong data-testid="slip-assign-count">{count} phiếu</strong> sẽ được tích đủ 5 tiêu chí (BTVN theo chấm) và câu nhận xét được sinh lại,
-              kể cả phần bạn đã sửa tay. Em chưa có phiếu (kể cả chưa điểm danh hoặc vắng) được tạo phiếu mặc định. Ghi chú riêng được giữ.
+                <strong data-testid="slip-assign-count">{count} em có mặt</strong> sẽ được tích đủ 5 tiêu chí (BTVN theo chấm) và câu nhận xét được sinh lại,
+                kể cả phần bạn đã sửa tay. Em vắng không được gán. Ghi chú riêng được giữ.
               Phiếu đã gửi hoặc đang chờ gửi không đổi.
             </p>
             {error && <p role="alert" className={s.error}>{error}</p>}

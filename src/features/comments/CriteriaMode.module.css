@@ -15,15 +15,63 @@
 
 .groupHead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-8);
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
 }
 
-.groupHead h2 {
-  margin: 0;
+.groupTitle {
+  flex: 1;
+  min-width: 0;
   font-size: var(--text-base);
   font-weight: var(--weight-bold);
+}
+
+.groupHead:focus-visible {
+  outline: none;
+  box-shadow: var(--state-focus-ring);
+  border-radius: var(--radius-row);
+}
+
+.chevron {
+  flex: none;
+  transition: transform var(--dur-base) var(--ease-standard);
+}
+
+.chevronOpen { transform: rotate(180deg); }
+
+.content {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--dur-base) var(--ease-standard), opacity var(--dur-base) var(--ease-standard);
+}
+
+.contentOpen {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.contentInner {
+  display: grid;
+  gap: var(--space-8);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.count {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
 }
 
 .count,
@@ -53,6 +101,10 @@
   font-size: var(--text-md);
 }
 
+.disabled {
+  opacity: var(--state-disabled-opacity);
+}
+
 button.chip {
   cursor: pointer;
 }
@@ -73,8 +125,7 @@ button.chip {
   color: var(--color-primary-ink);
 }
 
-.absent::after {
-  content: "Vắng";
+.absenceLabel {
   display: inline-flex;
   align-items: center;
   padding: 0 var(--space-4);
@@ -122,4 +173,9 @@ button.chip {
   .chip {
     min-height: var(--tap-desktop);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron,
+  .content { transition: none; }
 }

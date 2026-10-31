@@ -37,7 +37,7 @@ describe("comments visual contrast", () => {
   });
 
   it("labels absent chips without fading selected or legacy chip text", () => {
-    expect(criteriaCss).toMatch(/\.absent::after\s*\{[^}]*content:\s*"Vắng"/s);
+    expect(criteriaCss).toMatch(/\.absenceLabel\s*\{[^}]*border:\s*1px dashed currentColor/s);
     expect(criteriaCss).not.toMatch(/\.absent\s*\{[^}]*opacity\s*:/s);
     expect(criteriaCss).not.toMatch(/\.legacy\s*\{[^}]*opacity\s*:/s);
   });
@@ -45,5 +45,9 @@ describe("comments visual contrast", () => {
   it("keeps selected disabled controls at full contrast", () => {
     expect(fieldsCss).toMatch(/\.criterionOn:disabled\s*\{[^}]*opacity:\s*1/s);
     expect(panelCss).toMatch(/\.starOptionOn:disabled\s*\{[^}]*opacity:\s*1/s);
+  });
+
+  it("fades non-interactive criteria chips with the disabled state token", () => {
+    expect(criteriaCss).toMatch(/\.disabled\s*\{[^}]*opacity:\s*var\(--state-disabled-opacity\)/s);
   });
 });

@@ -34,12 +34,14 @@
 
 .currentCard {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-12);
   min-width: 0;
   padding: var(--space-16);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
 }
 
 .currentInfo {
@@ -64,11 +66,13 @@
 }
 
 .primaryAction {
-  display: flex;
+  flex: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-8);
-  height: 52px;
+  min-height: var(--tap);
+  padding-inline: var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-primary);
   color: var(--color-on-primary);
@@ -76,6 +80,14 @@
   font-weight: 600;
   text-decoration: none;
 }
+
+.currentCard:focus-visible {
+  outline: none;
+  box-shadow: var(--state-focus-ring);
+}
+
+.currentCard .currentInfo { flex: 1; }
+.currentCard .lockedHint { flex-basis: 100%; }
 
 .primaryAction:hover {
   background: var(--color-primary-ink);

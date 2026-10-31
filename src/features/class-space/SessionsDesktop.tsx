@@ -308,34 +308,25 @@ export default function SessionsDesktop({ classId }: { classId: string }) {
         </section>
 
         <aside className={s.sideColumn + " " + s.sessionsSide}>
-          {spotlight && (
-            <div className={s.card}>
-              <h2 className={s.sectionTitle}>Buổi hiện tại</h2>
-              <p
-                style={{
-                  margin: "6px 0 0",
-                  fontSize: 20,
-                  fontWeight: 700,
-                  lineHeight: 1.3,
-                  textWrap: "balance",
-                }}
-              >
-                {cardTitle(spotlight)}
-              </p>
-              <p className={s.muted14} style={{ margin: "6px 0 14px" }}>
-                {spotlight.date > today
-                  ? "Điểm danh mở vào ngày học."
-                  : "Buổi học đã tới ngày."}
-              </p>
-              <LinkButton
+            {spotlight && (
+              <Link
+                className={`${s.card} ${s.currentCard}`}
                 to={`/lop/${classId}/buoi-hoc/${spotlight.id}`}
-                size="md"
-                className={s.fullWidth}
+                aria-label={`Mở buổi ${sessionPrefix(spotlight)}`}
               >
-                Xem buổi
-              </LinkButton>
-            </div>
-          )}
+                <h2 className={s.sectionTitle}>Buổi hiện tại</h2>
+                <div className={s.currentRow}>
+                  <div className={s.currentInfo}>
+                    <p className={s.currentTitle}>{sessionPrefix(spotlight)}</p>
+                    <p className={s.currentMeta}>{spotlight.time ?? klass.time}</p>
+                  </div>
+                  <span className={s.primaryAction}>Xem buổi</span>
+                </div>
+                {spotlight.date > today && spotlight.status === "planned" && (
+                  <p className={s.currentHint}>Điểm danh mở vào ngày học.</p>
+                )}
+              </Link>
+            )}
 
           {manual && (
             <div className={s.card}>

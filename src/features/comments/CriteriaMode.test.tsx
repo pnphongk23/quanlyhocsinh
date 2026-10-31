@@ -3,6 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildTicketRows } from "../../data/homework";
 import { createSeed } from "../../test/fixtures/seed";
 import CriteriaMode from "./CriteriaMode";
+import s from "./CriteriaMode.module.css";
+
+function expandAllCriteria() {
+  for (const heading of screen.getAllByRole("button", { name: /đạt \d+\/\d+/ })) {
+    if (heading.getAttribute("aria-expanded") !== "true") fireEvent.click(heading);
+  }
+}
 
 const toggle = vi.hoisted(() => vi.fn());
 vi.mock("../../data/repositories/comments", async (original) => ({
@@ -19,7 +26,7 @@ describe("CriteriaMode", () => {
     const rows = buildTicketRows(state, "6a-session-7");
     const onSelectStudent = vi.fn();
     render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite onSelectStudent={onSelectStudent} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Nguyễn Minh Anh" })[0]);
+      fireEvent.click(screen.getAllByRole("button", { name: /^Nguyễn Minh Anh/ })[0]);
     expect(toggle).toHaveBeenCalledWith("6a-session-7", rows[0].student.id, 0);
     expect(onSelectStudent).toHaveBeenCalledWith(rows[0].student.id);
   });
@@ -29,8 +36,9 @@ describe("CriteriaMode", () => {
     const [full, partial, none] = rows;
     full.comment = { ...full.comment!, scale: 5, criteria: 31 };
     partial.comment = { ...partial.comment!, scale: 5, criteria: 30 };
-    none.comment = null;
-    render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite />);
+      none.comment = null;
+      render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite />);
+      expandAllCriteria();
     expect(screen.getAllByText("Chạm để bỏ chọn em chưa đạt")).toHaveLength(5);
     const chipsOf = (name: string) => screen.getAllByRole("button", { name: new RegExp(`^${name}`) });
     expect(chipsOf(full.student.name).every((chip) => chip.getAttribute("aria-pressed") === "true")).toBe(true);
@@ -44,11 +52,12 @@ describe("CriteriaMode", () => {
 
   it("keeps every no-slip chip pale even when prior homework was not done", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7");
-    const row = rows[0];
-    const noHomeworkRow = rows[1];
-    row.comment = null;
-    noHomeworkRow.comment = null;
-    render(<CriteriaMode sessionId="6a-session-7" rows={[row, noHomeworkRow]} canWrite previousGrades={(studentId) => studentId === row.student.id ? [{ sectionId: "reading", studentId, level: "not_done" }] : []} />);
+      const row = rows[2];
+      const noHomeworkRow = rows[3];
+      row.comment = null;
+      noHomeworkRow.comment = null;
+        render(<CriteriaMode sessionId="6a-session-7" rows={[row, noHomeworkRow]} canWrite previousGrades={(studentId) => studentId === row.student.id ? [{ sectionId: "reading", studentId, level: "not_done" }] : []} />);
+        expandAllCriteria();
     const chipsOf = (student: typeof row) => screen.getAllByRole("button", { name: new RegExp(`^${student.student.name}`) });
     const unfinishedHomeworkChips = chipsOf(row);
     const noHomeworkChips = chipsOf(noHomeworkRow);
@@ -61,10 +70,12 @@ describe("CriteriaMode", () => {
 
   it("hides editable chip buttons without write access", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7");
-    render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite={false} />);
-    expect(screen.queryByRole("button", { name: "Nguyễn Minh Anh" })).not.toBeInTheDocument();
-    expect(screen.getAllByText("Nguyễn Minh Anh").length).toBeGreaterThan(0);
-    expect(toggle).not.toHaveBeenCalled();
+      render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite={false} />);
+      expect(screen.queryByRole("button", { name: "Nguyễn Minh Anh" })).not.toBeInTheDocument();
+      const disabledChips = screen.getAllByText("Nguyễn Minh Anh", { exact: true }).map((label) => label.closest("span"));
+      expect(disabledChips.length).toBeGreaterThan(0);
+      expect(disabledChips.every((chip) => chip?.getAttribute("aria-disabled") === "true" && chip.classList.contains(s.disabled))).toBe(true);
+      expect(toggle).not.toHaveBeenCalled();
   });
 
   it("shows the shared empty state when no students are on the session", () => {
@@ -77,22 +88,26 @@ describe("CriteriaMode", () => {
     rows[0].comment = { ...rows[0].comment!, scale: 3, criteria: null, stars: 2 };
     render(<CriteriaMode sessionId="6a-session-7" rows={[rows[0]]} canWrite />);
     expect(screen.getAllByText("Phiếu thang cũ").length).toBeGreaterThan(0);
-    expect(screen.queryAllByRole("button", { name: /Nguyễn Minh Anh.*Phiếu thang cũ/ })).toHaveLength(0);
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+      expect(screen.queryByRole("button", { name: /Nguyễn Minh Anh.*Phiếu thang cũ/ })).not.toBeInTheDocument();
+      expect(screen.getAllByRole("button", { name: /đạt \d+\/\d+/ })).toHaveLength(5);
     expect(screen.getAllByText("Nguyễn Minh Anh").every((chip) => !/selected/.test(chip.className))).toBe(true);
   });
 
-  it("keeps five-star no-criteria slips unmet in the badge and lets the teacher edit them", () => {
-    const rows = buildTicketRows(createSeed(), "6a-session-7");
-    rows[0].comment = { ...rows[0].comment!, scale: 5, criteria: null, stars: 5 };
-    render(<CriteriaMode sessionId="6a-session-7" rows={[rows[0]]} canWrite />);
-    const chips = screen.getAllByRole("button", { name: /^Nguyễn Minh Anh/ });
+  it("counts a five-star slip without stored criteria in both the badge and the chips", () => {
+      const rows = buildTicketRows(createSeed(), "6a-session-7");
+      const row = rows.find((candidate) => candidate.attended)!;
+      row.comment = { ...row.comment!, scale: 5, criteria: null, stars: 5 };
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      render(<CriteriaMode sessionId="6a-session-7" rows={[row]} canWrite />);
+      expandAllCriteria();
+      const chips = screen.getAllByRole("button", { name: new RegExp(`^${row.student.name}`) });
     expect(chips).toHaveLength(5);
     expect(chips.every((chip) => chip.getAttribute("aria-pressed") === "true")).toBe(true);
     expect(screen.queryByText("Phiếu thang cũ")).not.toBeInTheDocument();
-    expect(screen.getAllByText("1 em chưa đạt")).toHaveLength(5);
+      // Badge đếm cùng nguồn với chip: phiếu thang 5 thiếu criteria tính là đủ 5 tiêu chí.
+      expect(screen.getAllByText("đạt 1/1")).toHaveLength(5);
     fireEvent.click(chips[0]);
-    expect(toggle).toHaveBeenCalledWith("6a-session-7", rows[0].student.id, 0);
+      expect(toggle).toHaveBeenCalledWith("6a-session-7", row.student.id, 0);
   });
 
   it("asks once per screen before changing sent slips", () => {
@@ -128,13 +143,27 @@ describe("CriteriaMode", () => {
   it("counts unmet students from preview criteria", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7");
     render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite preview={{ criteriaByStudent: { [rows[0].student.id]: 30 } }} />);
-    expect(screen.getAllByText("6 em chưa có phiếu")).toHaveLength(5);
+      expect(screen.getAllByText("đạt 6/7")).toHaveLength(5);
   });
 
   it("renders the no-slip badge text", () => {
     const rows = buildTicketRows(createSeed(), "6a-session-7").slice(0, 3);
     rows.forEach((row) => { row.comment = null; });
     render(<CriteriaMode sessionId="6a-session-7" rows={rows} canWrite />);
-    expect(screen.getAllByText("3 em chưa có phiếu")).toHaveLength(5);
-  });
+      expect(screen.getAllByText("đạt 1/1")).toHaveLength(5);
+    });
+
+    it("opens the first criterion by default and supports multiple expanded groups", () => {
+      render(<CriteriaMode sessionId="s1" rows={buildTicketRows(createSeed(), "6a-session-7")} canWrite />);
+      const headings = screen.getAllByRole("button", { name: /đạt \d+\/\d+/ });
+      expect(headings[0]).toHaveAttribute("aria-expanded", "true");
+      expect(headings[1]).toHaveAttribute("aria-expanded", "false");
+      fireEvent.keyDown(headings[1], { key: "Enter" });
+      fireEvent.click(headings[1]);
+      expect(headings[0]).toHaveAttribute("aria-expanded", "true");
+      expect(headings[1]).toHaveAttribute("aria-expanded", "true");
+      const presentChip = screen.getAllByRole("button", { name: /^Phạm Đức Dũng/ })[0];
+      const absentChip = screen.getAllByRole("button", { name: /Vắng/ })[0];
+      expect(presentChip.compareDocumentPosition(absentChip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
 });

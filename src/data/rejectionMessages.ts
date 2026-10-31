@@ -9,6 +9,7 @@ const messages: Record<string, string> = {
   student_class_mismatch: "Học sinh không thuộc lớp này.",
   command_expired: "Thay đổi đã quá cũ nên máy chủ không nhận.",
   base_version_ahead: "Dữ liệu trên máy lệch với máy chủ.",
+  attendance_incomplete: "Điểm danh chưa đồng bộ xong, thử lại sau.",
 };
 
 /** Câu lỗi tiếng Việt cho mã máy chủ từ chối lệnh; mã lạ thì nói rõ là máy chủ từ chối. */

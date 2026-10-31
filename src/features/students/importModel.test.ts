@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import type { Student } from "../../data/types";
 import { normalizePhone } from "../../data/auth/phone";
+import { readGoldenFixture } from "../../test/goldenFixture";
 import { assessImportRows, comparableStudentName, importSizeWarnings, normalizeStudentName, parseStudentsImport, shouldCreateImportRow } from "./importModel";
 
-const GOLDEN_IMPORT_CASES_PATH = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261028-ai-features/golden-import-cases.json";
+interface GoldenImportSuite {
+  existingRoster: Array<{ id: string; fullName: string; guardianPhone: string | null }>;
+  cases: Array<{ id: string; input: string; existingStudentCount: number; expect: { rows: Array<{ name: string | null; guardianPhone: string | null; flags: string[]; status: string }>; addCount: number; warnings: string[] } }>;
+}
+
+/** Bộ ca vàng nằm trong repo (dữ liệu riêng tư); thiếu file thì lỗi rõ ràng, không bỏ qua. */
+const goldenImport = readGoldenFixture<GoldenImportSuite>("golden-import-cases.json");
 
 const student = (id: string, name: string, parentPhone: string): Student => ({ id, classId: "class-1", name, parentPhone, enrolledAt: "2026-01-01", leftAt: null, status: "active" });
 
@@ -49,10 +55,7 @@ describe("student list import", () => {
   });
 
   it("matches every checked in golden import case without copying its data", () => {
-    const suite = JSON.parse(readFileSync(GOLDEN_IMPORT_CASES_PATH, "utf8")) as {
-      existingRoster: Array<{ id: string; fullName: string; guardianPhone: string | null }>;
-      cases: Array<{ id: string; input: string; existingStudentCount: number; expect: { rows: Array<{ name: string | null; guardianPhone: string | null; flags: string[]; status: string }>; addCount: number; warnings: string[] } }>;
-    };
+    const suite = goldenImport;
     const roster = suite.existingRoster.map((item) => student(item.id, item.fullName, item.guardianPhone ?? ""));
     for (const testCase of suite.cases) {
       const rows = assessImportRows(parseStudentsImport(testCase.input), roster);

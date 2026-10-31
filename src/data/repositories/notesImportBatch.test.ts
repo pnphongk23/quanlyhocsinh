@@ -28,7 +28,11 @@ async function setup(count: number) {
   await db.open();
   await db.meta.put({ key: "teacher:workspace:member", identity: "teacher:workspace:member", cursor: 0, epoch: 1 });
   const state = createSeed();
-  for (let index = 0; index < count; index++) state.students.push({ id: `extra-${index}`, classId: "6a", name: `Học sinh ${index}`, parentPhone: "", enrolledAt: "2026-01-01", leftAt: null, status: "active" });
+    for (let index = 0; index < count; index++) {
+      const studentId = `extra-${index}`;
+      state.students.push({ id: studentId, classId: "6a", name: `Học sinh ${index}`, parentPhone: "", enrolledAt: "2026-01-01", leftAt: null, status: "active" });
+      state.attendance.push({ id: `6a-session-7:${studentId}`, sessionId: "6a-session-7", studentId, status: "present", note: "", lateAt: null });
+    }
   replaceStore(state);
   const auth = await import("../auth/session");
   await auth.activateSession("fixture-token", me.user, me as never, identity.membershipId);
@@ -94,8 +98,9 @@ describe("nhập ghi chú theo lô", () => {
 
   it("rebases removals and appended notes on the latest slip at save time", async () => {
     await setup(1);
-    const state = createSeed();
-    state.students.push({ id: "extra-0", classId: "6a", name: "Học sinh thêm", parentPhone: "", enrolledAt: "2026-01-01", leftAt: null, status: "active" });
+      const state = createSeed();
+      state.students.push({ id: "extra-0", classId: "6a", name: "Học sinh thêm", parentPhone: "", enrolledAt: "2026-01-01", leftAt: null, status: "active" });
+      state.attendance.push({ id: "6a-session-7:extra-0", sessionId: "6a-session-7", studentId: "extra-0", status: "present", note: "", lateAt: null });
     state.comments.push({ id: "6a-session-7:extra-0", classId: "6a", sessionId: "6a-session-7", studentId: "extra-0", criteria: 31, comment: null, scale: 5, stars: 5, note: "Ghi chú mới từ máy khác\nCâu đã có", hwManual: false, status: "draft", sendQueued: false, sentAt: null, updatedAt: "", createdAt: "", version: 8 } as never);
     replaceStore(state);
     const sync = await import("../sync");

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
+  attendanceCompletion,
   buildTicketRows,
   homeworkGradeLevel,
   homeworkSectionsFor,
@@ -168,13 +169,20 @@ export default function CommentsPanel({
     const [notesImportOpen, setNotesImportOpen] = useState(false);
   const [dialogError, setDialogError] = useState("");
   const [error, setError] = useState("");
+  const [sendingStudentIds, setSendingStudentIds] = useState<Set<string>>(new Set());
+  const [absentStudentToSend, setAbsentStudentToSend] = useState<Student | null>(null);
 
     const session = getSession(sessionId);
     const canWrite = access.can("comments_reports", "write") && !readOnly;
     const canSend = access.can("send_comments", "write") && !readOnly;
   const rows = buildTicketRows(state, sessionId);
+  const attendance = session ? attendanceCompletion(state, session) : { complete: false, missing: rows.length };
+  const canEdit = canWrite && attendance.complete;
   const counts = ticketCounts(rows);
-  const visibleRows = filterTicketRows(rows, filter);
+  const filteredRows = filterTicketRows(rows, filter);
+  const visibleRows = attendance.complete
+    ? [...filteredRows.filter((row) => row.attended), ...filteredRows.filter((row) => !row.attended)]
+    : filteredRows;
     const sendable = sendableRows(rows);
     const skipped = unopenedRows(rows);
   const count = sendableCount(rows);
@@ -196,6 +204,7 @@ export default function CommentsPanel({
     setError("");
     setDialogError("");
       setConfirmOpen(false);
+      setAbsentStudentToSend(null);
       setNotesImportOpen(false);
     setMode("student");
   }, [sessionId]);
@@ -206,6 +215,7 @@ export default function CommentsPanel({
   }, [online, sessionId]);
 
   function openStudent(studentId: string) {
+    if (!attendance.complete) return;
     setSearchParams(
       new URLSearchParams({ tab: "nhan-xet", student: studentId }),
     );
@@ -230,6 +240,30 @@ export default function CommentsPanel({
         cause instanceof Error ? cause.message : "Không gửi được phiếu.",
       );
       throw cause;
+    }
+  }
+
+  function requestAbsentSend(studentId: string) {
+      if (!canWrite || !canSend || !attendance.complete || !online || sendingStudentIds.has(studentId)) return;
+    const row = rows.find((candidate) => candidate.student.id === studentId);
+    if (!row?.comment || row.attended || row.status === "sent" || row.status === "queued") return;
+    setDialogError("");
+    setAbsentStudentToSend(row.student);
+  }
+
+  async function confirmAbsentSend() {
+    const student = absentStudentToSend;
+      if (!student || !canWrite || !canSend || !attendance.complete || !online || sendingStudentIds.has(student.id)) return;
+    setSendingStudentIds((current) => new Set(current).add(student.id));
+    try {
+      await sendSessionTicketsDurable(sessionId, [student.id]);
+      setError("");
+      setDialogError("");
+      setAbsentStudentToSend(null);
+    } catch (cause) {
+      setDialogError(cause instanceof Error ? cause.message : "Không gửi được phiếu.");
+    } finally {
+      setSendingStudentIds((current) => { const next = new Set(current); next.delete(student.id); return next; });
     }
   }
 
@@ -290,20 +324,25 @@ export default function CommentsPanel({
     const line = homeworkLine(row.previousHomework);
     return (
       <li key={row.student.id}>
-        <button
-          type="button"
-          className={s.ticket}
-          onClick={() => openStudent(row.student.id)}
+          <button
+            type="button"
+            className={s.ticket}
+            disabled={!attendance.complete}
+            aria-disabled={!attendance.complete}
+            onClick={() => openStudent(row.student.id)}
         >
           <span className={s.ticketHead}>
             <span className={s.avatar} aria-hidden="true">
               {initialsOf(row.student.name)}
             </span>
             <span className={s.ticketName}>{row.student.name}</span>
+            {attendance.complete && !row.attended && <Pill tone="warning">Vắng</Pill>}
             <Pill tone={badge.tone}>{badge.label}</Pill>
-            <span className={s.chevron}>
-              <ChevronRight />
-            </span>
+              {attendance.complete && (
+                <span className={s.chevron}>
+                  <ChevronRight />
+                </span>
+              )}
           </span>
           {row.stars !== null && (
             <span className={s.starsLine}>
@@ -320,7 +359,10 @@ export default function CommentsPanel({
             {line.text}
           </span>
         </button>
-      </li>
+              {canWrite && canSend && attendance.complete && !row.attended && row.comment && row.status !== "sent" && row.status !== "queued" && (
+                <div className={s.absentActions}><Button size="sm" variant="secondary" disabled={!canWrite || !canSend || !online || sendingStudentIds.has(row.student.id)} loading={sendingStudentIds.has(row.student.id)} onClick={() => requestAbsentSend(row.student.id)}>Gửi lẻ</Button></div>
+          )}
+        </li>
     );
   }
 
@@ -352,8 +394,14 @@ export default function CommentsPanel({
     );
   }
 
-  return (
-    <section className={s.panel}>
+    return (
+      <section className={s.panel}>
+          {!attendance.complete && (
+            <div className={s.attendanceGate} role="status">
+              <div><strong>Điểm danh xong để nhận xét</strong><p>Còn {attendance.missing} em chưa điểm danh.</p></div>
+              <Button size="sm" variant="secondary" onClick={() => setSearchParams(new URLSearchParams({ tab: "diem-danh" }))}>Đến Điểm danh</Button>
+            </div>
+          )}
         {leftStudents.length > 0 && (
         <p className={s.infoBanner}>
           <InfoIcon />
@@ -369,7 +417,7 @@ export default function CommentsPanel({
           <CriteriaMode
             sessionId={sessionId}
             rows={rows}
-            canWrite={canWrite}
+              canWrite={canEdit}
             previousGrades={(studentId) => previousHomeworkGrades(state, sessionId, studentId)}
           />
         ) : <>
@@ -395,8 +443,12 @@ export default function CommentsPanel({
       )}
 
         <ul className={s.list}>
-        {visibleRows.length ? (
-          visibleRows.map(ticketRow)
+          {visibleRows.length ? (
+            <>
+              {attendance.complete ? visibleRows.filter((row) => row.attended).map(ticketRow) : visibleRows.map(ticketRow)}
+              {attendance.complete && visibleRows.some((row) => !row.attended) && <li className={s.absentHeading}>Vắng buổi này</li>}
+              {attendance.complete && visibleRows.filter((row) => !row.attended).map(ticketRow)}
+            </>
         ) : (
           <li className={s.emptyFilter}>
             <EmptyState size="compact" title="Không có học sinh trong mục này" />
@@ -414,14 +466,16 @@ export default function CommentsPanel({
               </p>
             )}
               <div className={s.footer}>
-                <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="lg" />
-                {FEATURE_NOTES_IMPORT && <Button size="lg" variant="surface" onClick={() => setNotesImportOpen(true)}>Nhập từ ghi chú</Button>}
+                  <AssignDefaultsAction sessionId={sessionId} sessionLabel={sessionPrefix(session)} size="lg" disabled={!attendance.complete} eligibleStudentIds={rows.filter((row) => row.attended).map((row) => row.student.id)} />
+                  {FEATURE_NOTES_IMPORT && <Button size="lg" variant="surface" disabled={!attendance.complete} aria-disabled={!attendance.complete} onClick={() => attendance.complete && setNotesImportOpen(true)}>Nhập từ ghi chú</Button>}
               {canSend && (
               <Button
               size="lg"
-              disabled={sendButtonDisabled(count, !online)}
+                disabled={!attendance.complete || sendButtonDisabled(count, !online)}
+                aria-disabled={!attendance.complete || sendButtonDisabled(count, !online)}
               aria-describedby={!online ? "comments-send-offline-hint" : undefined}
-              onClick={() => {
+                onClick={() => {
+                  if (!attendance.complete) return;
                 setDialogError("");
                 setConfirmOpen(true);
               }}
@@ -440,7 +494,7 @@ export default function CommentsPanel({
           session={session}
           row={openRow}
           homework={sheetHomework}
-          readOnly={!canWrite}
+            readOnly={!canEdit}
           onClose={closeStudent}
         />
       )}
@@ -458,6 +512,17 @@ export default function CommentsPanel({
             setConfirmOpen(false);
             setDialogError("");
           }}
+          />
+        <SendTicketsDialog
+            open={!!absentStudentToSend && canWrite && canSend}
+          sessionLabel={`${absentStudentToSend?.name ?? ""} · ${sessionPrefix(session)}`}
+          sendCount={1}
+          skipped={[]}
+          ungraded={absentStudentToSend ? ungradedHomeworkNotice(state, sessionId, [absentStudentToSend.id]) : { students: [], ungradedParts: 0 }}
+          error={dialogError}
+          busy={absentStudentToSend ? sendingStudentIds.has(absentStudentToSend.id) : false}
+          onConfirm={() => void confirmAbsentSend()}
+          onClose={() => { setAbsentStudentToSend(null); setDialogError(""); }}
         />
         {notesImportOpen && <NotesImportDialog
           sessionId={sessionId}

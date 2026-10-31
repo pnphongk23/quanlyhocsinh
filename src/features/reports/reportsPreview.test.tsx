@@ -60,8 +60,10 @@ function desktop(on: boolean) {
 
 const nativeShowModal = HTMLDialogElement.prototype.showModal;
 const nativeClose = HTMLDialogElement.prototype.close;
-beforeEach(async () => {
-  setCacheIdentity({ userId: "u", workspaceId: "w", membershipId: "m" });
+  beforeEach(async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-25T12:00:00"));
+    setCacheIdentity({ userId: "u", workspaceId: "w", membershipId: "m" });
   await db.delete(); await db.open();
   desktop(false);
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
@@ -69,8 +71,9 @@ beforeEach(async () => {
   Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value() { this.removeAttribute("open"); } });
   replaceStore(createSeed());
 });
-afterEach(async () => {
-  sync.scheduleSync.mockClear(); sync.syncNow.mockClear(); setCacheIdentity(null); await db.delete(); vi.restoreAllMocks();
+  afterEach(async () => {
+    sync.scheduleSync.mockClear(); sync.syncNow.mockClear(); setCacheIdentity(null); await db.delete(); vi.restoreAllMocks();
+    vi.useRealTimers();
   if (nativeShowModal) Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: nativeShowModal });
   else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
   if (nativeClose) Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value: nativeClose });

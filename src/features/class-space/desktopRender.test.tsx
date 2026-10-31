@@ -38,8 +38,11 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     const html = render(<SessionsDesktop classId="6a" />);
     expect(html).toContain("Các buổi đã qua");
     expect(html).toContain("Buổi đã hủy");
-    expect(html).toContain("Buổi hiện tại");
-    expect(html).toContain("Lịch lặp");
+      expect(html).toContain("Buổi hiện tại");
+      expect(html).toMatch(/class="[^"]*currentCard[^"]*"/);
+      expect(html).toContain('aria-label="Mở buổi');
+      expect(html).toContain(">Xem buổi</span>");
+      expect(html).toContain("Lịch lặp");
     expect(html).toContain("Thêm buổi lẻ");
     expect(html).toContain("Chưa điểm danh");
     expect(html).not.toMatch(/trung bình/i);
@@ -52,7 +55,7 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     expect(html).not.toContain("Đường dẫn");
     expect(html).not.toMatch(/học sinh · .*hôm nay/);
     expect(html).toContain("Mục của lớp");
-    const card = html.split("Buổi hiện tại")[1].split("</div>")[0];
+    const card = html.split("Buổi hiện tại")[1].split("</a>")[0];
     expect(card).toContain("Xem buổi");
     expect(card).not.toContain("Hủy buổi");
     expect(card).not.toContain("Sửa buổi lẻ");
@@ -103,7 +106,7 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
     expect(html).not.toContain("Đổi người dạy");
   });
 
-  it("Nhận xét: danh sách + khung soạn phiếu cạnh nhau, không có bottom sheet", () => {
+    it("Nhận xét: danh sách + khung soạn phiếu cạnh nhau, không có bottom sheet", () => {
     const html = render(
       <CommentsDesktop sessionId="6a-session-7" tabBar={(actions) => <div>{actions}</div>} />,
     );
@@ -115,8 +118,34 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
       expect(html).toContain("Hoàn thành BTVN");
       expect(html).toContain("Theo chấm BTVN");
     expect(html).toContain("5/5 sao");
-    expect(html).toContain("Đã gửi");
-  });
+      expect(html).toContain("Đã gửi");
+    });
+
+    it("Nhận xét: không hiện nút Gửi lẻ khi quyền gửi bị tắt", () => {
+      const seed = createSeed();
+      const absentDraft = seed.comments.find((comment) => comment.sessionId === "6a-session-7" && comment.studentId === "6a-student-1")!;
+      absentDraft.status = "draft";
+      absentDraft.scale = 5;
+      absentDraft.criteria = 31;
+      replaceStore(seed);
+      const html = render(
+        <CommentsDesktop sessionId="6a-session-7" readOnly tabBar={(actions) => <div>{actions}</div>} />,
+        "/lop/6a/buoi-hoc?tab=nhan-xet&student=6a-student-1",
+      );
+      expect(html).not.toContain("Gửi lẻ");
+    });
+
+    it("Nhận xét: khóa hàng học sinh và ẩn mũi tên khi điểm danh chưa xong", () => {
+      const seed = createSeed();
+      seed.attendance = [];
+      replaceStore(seed);
+      const html = render(
+        <CommentsDesktop sessionId="6a-session-7" tabBar={(actions) => <div>{actions}</div>} />,
+      );
+      expect(html).toContain("Điểm danh xong để nhận xét");
+      expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-pressed=/);
+      expect(html).not.toContain("chevron");
+    });
 
   it("BTVN: chọn phần bên trái, chấm cả lớp bên phải, nút Lưu kết quả chấm", () => {
     const html = render(

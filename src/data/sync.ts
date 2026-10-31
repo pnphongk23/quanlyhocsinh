@@ -224,7 +224,8 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
   try {
     await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
     while (true) {
-      const rows = await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").sortBy("created_at");
+        const rows = (await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").toArray())
+          .sort((a, b) => a.created_at.localeCompare(b.created_at) || pushPhase(a.type) - pushPhase(b.type) || a.id.localeCompare(b.id));
       if (!rows.length) break;
       let batch = [] as typeof rows;
       for (const row of rows) {
@@ -321,18 +322,39 @@ export async function retryRejectedCommands(ids: string[]): Promise<void> {
   const identity = identityKey(), wanted = new Set(ids);
   // Máy chủ trả lại kết quả đã lưu cho cùng id, nên lệnh thử lại phải mang id mới mới được xét lại.
   await db.transaction("rw", [db.outbox, db.tests], async () => {
-    const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
-    const renamed = new Map(rows.map((row) => [row.id, crypto.randomUUID()]));
-    for (const row of rows) {
+    const rejected = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
+    if (!rejected.length) return;
+    const pending = await db.outbox.where("identity").equals(identity).and((row) => row.status === "pending").toArray();
+    const retrySessions = new Set(rejected.map(queueSession).filter((sessionId): sessionId is string => Boolean(sessionId)));
+    // Lệnh đang chờ của cùng buổi cũng vào lượt xếp lại: phiếu đã chờ gửi phải nhường lệnh sửa phiếu thử lại.
+    const affected = pending.filter((row) => isSlipQueue(row.type) && retrySessions.has(queueSession(row) ?? ""));
+    const affectedIds = new Set(affected.map((row) => row.id));
+    const latestOther = pending.reduce((latest, row) => affectedIds.has(row.id) ? latest : Math.max(latest, Date.parse(row.created_at) || 0), 0);
+    const ordered = orderPushBatch([...rejected, ...affected]);
+    const renamed = new Map(rejected.map((row) => [row.id, crypto.randomUUID()]));
+    const firstCreatedAt = Math.max(Date.now(), latestOther + 1);
+    for (const [index, row] of ordered.entries()) {
+      const createdAt = new Date(firstCreatedAt + index).toISOString();
+      if (!renamed.has(row.id)) { await db.outbox.update(row.id, { created_at: createdAt }); continue; }
       const fixed = await withTestUpdateId(row, identity);
       await db.outbox.delete(row.id);
-      await db.outbox.put({ ...fixed, id: renamed.get(row.id)!, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
+      await db.outbox.put({ ...fixed, id: renamed.get(row.id)!, created_at: createdAt, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
     }
     await db.outbox.where("identity").equals(identity).and((other) => !!other.depends_on && renamed.has(other.depends_on)).modify((other) => { other.depends_on = renamed.get(other.depends_on!); });
   });
   publishRejected(await db.outbox.where("identity").equals(identity).toArray());
   setSaveStatus("local");
   await syncNow();
+}
+
+/** Thứ tự đẩy lệnh: điểm danh của buổi trước, rồi phiếu của từng em, cuối cùng lệnh gửi phiếu (một em hay cả lớp). */
+const pushPhase = (type: string): number => type === "attendance.set" ? 0 : type === "slip.send" ? 2 : 1;
+const isSlipQueue = (type: string): boolean => type === "attendance.set" || type === "slip.set" || type === "slip.send";
+const queueSession = (row: { payload: unknown }): string | undefined => (row.payload as { session_id?: string }).session_id;
+export type QueueOrderRow = { id: string; type: string; payload: unknown; created_at: string };
+/** Xếp một lượt đẩy theo phụ thuộc nghiệp vụ: cùng pha thì theo giờ tạo rồi tới id, nên kết quả luôn xác định. */
+export function orderPushBatch<T extends QueueOrderRow>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => pushPhase(a.type) - pushPhase(b.type) || a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
 }
 /** Bỏ các lệnh ghi ô bị từ chối (theo id) rồi lấy lại giá trị hiện tại của từng ô từ máy chủ, không động tới lệnh khác. */
 export async function discardRejectedCommands(ids: string[]): Promise<void> {
@@ -370,7 +392,12 @@ export async function discardRejectedCommands(ids: string[]): Promise<void> {
 }
 async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {
   const row = await db.outbox.get(result.id); if (!row) return;
-  if (result.status === "rejected") { await db.outbox.put({ ...row, status: "rejected", error: result.error.code }); return; }
+    if (result.status === "rejected") {
+      const reason = (result.error.details as { reason?: string } | undefined)?.reason;
+      const error = result.error.code === "attendance_incomplete" || (result.error.code === "conflict" && reason === "attendance_incomplete") ? "attendance_incomplete" : result.error.code;
+      await db.outbox.put({ ...row, status: "rejected", error });
+      return;
+    }
   if (result.status === "duplicate" && (result as { original_status?: string }).original_status === "rejected") {
     await db.outbox.put({ ...row, status: "rejected", error: (result as { error?: { code?: string } }).error?.code ?? row.error ?? "rejected" }); return;
   }

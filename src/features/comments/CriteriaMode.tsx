@@ -4,8 +4,10 @@ import { toggleSlipCriterionDurable } from "../../data/repositories/comments";
 import { defaultSlipCriteria } from "../../data/slip";
 import type { HomeworkGrade } from "../../data/types";
 import { EmptyState, Pill, Segmented } from "../../shared/ui";
-import { canToggleCriterion, criteriaBadge, criteriaForEditingRow, rowHasCustomComment, SLIP_CRITERIA } from "./criteriaModel";
+import { canToggleCriterion, criteriaForEditingRow, rowHasCustomComment, SLIP_CRITERIA } from "./criteriaModel";
 import s from "./CriteriaMode.module.css";
+
+const expandedCriteriaBySession = new Map<string, number[]>();
 
 export interface CriteriaPreview {
   banner?: string;
@@ -48,9 +50,12 @@ export default function CriteriaMode({
 }) {
   const [error, setError] = useState("");
   const [showCustomWarning, setShowCustomWarning] = useState(false);
+  const [expandedBySession, setExpandedBySession] = useState<Record<string, number[]>>({});
   const customWarningShown = useRef(false);
   const sentConfirmShown = useRef(false);
   const initialCriteria = (row: TicketRow) => defaultSlipCriteria(previousGrades(row.student.id));
+  // Cùng một nguồn tiêu chí cho số đếm trên tiêu đề lẫn chip, nếu không phiếu thang 5 thiếu `criteria` sẽ lệch nhau.
+  const criteriaOf = (row: TicketRow) => preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForEditingRow(row) : row.attended ? initialCriteria(row) : 0);
 
   useEffect(() => {
     customWarningShown.current = false;
@@ -88,6 +93,7 @@ export default function CriteriaMode({
   }
 
   if (!rows.length) return <EmptyState title="Chưa có học sinh trong buổi học này" />;
+  const orderedRows = [...rows.filter((row) => row.attended), ...rows.filter((row) => !row.attended)];
 
   return (
       <div className={s.root}>
@@ -95,18 +101,38 @@ export default function CriteriaMode({
           {preview?.summary && <p className={s.previewSummary}>{preview.summary}</p>}
           {showCustomWarning && <p className={s.warning}>Câu nhận xét đã được sửa tay; lần chạm này sẽ thay bằng câu tự sinh theo tiêu chí.</p>}
       {error && <p className={s.error} role="alert">{error}</p>}
-      {SLIP_CRITERIA.map((criterion, index) => (
-        <section className={s.group} key={criterion}>
-          <div className={s.groupHead}>
-            <h2>{index === 4 ? "Hoàn thành BTVN" : criterion}</h2>
-                <span className={s.count}>{criteriaBadge(rows, index, initialCriteria, preview?.criteriaByStudent).label}</span>
-          </div>
-          {index === 4 && <Pill tone="neutral">Theo chấm BTVN</Pill>}
-          <p className={s.hint}>Chạm để bỏ chọn em chưa đạt</p>
-          <div className={s.chips}>
-            {rows.map((row) => {
+        {SLIP_CRITERIA.map((criterion, index) => {
+            const expanded = (expandedBySession[sessionId] ?? expandedCriteriaBySession.get(sessionId) ?? [0]).includes(index);
+          const achieved = rows.filter((row) => {
+            if (!row.attended) return false;
+              const criteria = criteriaOf(row);
+            return (criteria & (1 << index)) !== 0;
+          }).length;
+          return (
+          <section className={s.group} key={criterion}>
+            <button
+              type="button"
+              className={s.groupHead}
+              aria-expanded={expanded}
+                onClick={() => setExpandedBySession((current) => {
+                  const opened = current[sessionId] ?? expandedCriteriaBySession.get(sessionId) ?? [0];
+                  const next = opened.includes(index) ? opened.filter((item) => item !== index) : [...opened, index];
+                  expandedCriteriaBySession.set(sessionId, next);
+                  return { ...current, [sessionId]: next };
+                })}
+            >
+              <span className={s.groupTitle}>{index === 4 ? "Hoàn thành BTVN" : criterion}</span>
+            <span className={s.count}>đạt {achieved}/{rows.filter((row) => row.attended).length}</span>
+              <span className={`${s.chevron}${expanded ? ` ${s.chevronOpen}` : ""}`} aria-hidden="true">⌄</span>
+            </button>
+            <div className={`${s.content}${expanded ? ` ${s.contentOpen}` : ""}`} aria-hidden={!expanded} inert={!expanded}>
+              <div className={s.contentInner}>
+            {index === 4 && <Pill tone="neutral">Theo chấm BTVN</Pill>}
+            <p className={s.hint}>Chạm để bỏ chọn em chưa đạt</p>
+            <div className={s.chips}>
+              {orderedRows.map((row) => {
               const legacy = !canToggleCriterion(row);
-                const criteria = preview?.criteriaByStudent?.[row.student.id] ?? (row.comment ? criteriaForEditingRow(row) : initialCriteria(row));
+                  const criteria = criteriaOf(row);
               const unachieved = (criteria & (1 << index)) === 0;
                 // Tô màu = em đạt; em chưa có phiếu tô nhạt (sẽ đạt khi tạo phiếu).
                 const selected = !unachieved;
@@ -114,12 +140,12 @@ export default function CriteriaMode({
                 const chipTone = provisional ? s.provisional : selected ? s.selected : "";
                 const sent = row.status === "sent" || row.status === "queued";
                 const blockedSentPreview = !!preview && sent && !preview.includeSent;
-                const label = `${row.student.name}${sent ? " · Đã gửi" : ""}${legacy ? " · Phiếu thang cũ" : ""}`;
+                  const label = `${row.student.name}${!row.attended ? " · Vắng" : ""}${sent ? " · Đã gửi" : ""}${legacy ? " · Phiếu thang cũ" : ""}`;
                 return canWrite && !legacy && !blockedSentPreview ? (
                 <button
                   key={row.student.id}
                   type="button"
-                  className={`${s.chip}${chipTone ? ` ${chipTone}` : ""}${!row.attended ? ` ${s.absent}` : ""}`}
+                    className={`${s.chip}${chipTone ? ` ${chipTone}` : ""}`}
                   aria-pressed={selected}
                   aria-label={label}
                   aria-current={row.student.id === selectedStudentId ? "true" : undefined}
@@ -131,17 +157,20 @@ export default function CriteriaMode({
                         } else void toggle(row, index);
                       }}
                 >
-                  {row.student.name}{sent && <small>Đã gửi</small>}
+                    {row.student.name}{!row.attended && <small className={s.absenceLabel}>Vắng</small>}{sent && <small>Đã gửi</small>}
                 </button>
               ) : (
-                <span key={row.student.id} aria-current={row.student.id === selectedStudentId ? "true" : undefined} className={`${s.chip}${chipTone ? ` ${chipTone}` : ""}${legacy ? ` ${s.legacy}` : ""}${!row.attended ? ` ${s.absent}` : ""}`}>
-                  {row.student.name}{sent && <small>Đã gửi</small>}{legacy && <small>Phiếu thang cũ</small>}
+                    <span key={row.student.id} aria-disabled="true" aria-current={row.student.id === selectedStudentId ? "true" : undefined} className={`${s.chip}${chipTone ? ` ${chipTone}` : ""}${legacy ? ` ${s.legacy}` : ""} ${s.disabled}`}>
+                    {row.student.name}{!row.attended && <small className={s.absenceLabel}>Vắng</small>}{sent && <small>Đã gửi</small>}{legacy && <small>Phiếu thang cũ</small>}
                 </span>
               );
             })}
-          </div>
-        </section>
-      ))}
+            </div>
+              </div>
+            </div>
+          </section>
+          );
+        })}
     </div>
   );
 }

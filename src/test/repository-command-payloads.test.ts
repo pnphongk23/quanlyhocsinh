@@ -41,7 +41,8 @@ beforeEach(() => {
   server.tokens.set("t", { membershipId: "m-staff", me });
   server.put("class", { id: "c1", name: "6A", status: "active", weekdays: [1], start_time: "09:00" });
   server.put("student", { id: "s1", class_id: "c1", name: "Student", enrolled_at: "2026-09-01", left_at: null, status: "active" });
-  server.put("class_session", { id: "session-1", class_id: "c1", date: "2026-10-20", start_time: "09:00", origin: "manual", status: "held" });
+    server.put("class_session", { id: "session-1", class_id: "c1", date: "2026-10-20", start_time: "09:00", origin: "manual", status: "held" });
+    server.put("attendance", { session_id: "session-1", student_id: "s1", status: "present" });
   server.put("test", { id: "test-1", class_id: "c1", name: "Quiz", date: "2026-10-20", archived: false });
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
@@ -212,21 +213,25 @@ describe("repository command payload contracts", () => {
     expect(server.rows.get("slip")?.get("session-1|s2")).toBeUndefined();
   });
 
-  it("assign-all-defaults creates a default slip for students without one, even absent or unmarked, and send-all then counts them", async () => {
+    it("assign-all-defaults skips absent students and creates slips only for present students", async () => {
     server.put("student", { id: "s2", class_id: "c1", name: "Student 2", enrolled_at: "2026-09-01", left_at: null, status: "active" });
     server.put("student", { id: "s3", class_id: "c1", name: "Student 3", enrolled_at: "2026-09-01", left_at: null, status: "active" });
-    server.put("attendance", { session_id: "session-1", student_id: "s2", status: "absent" });
+      server.put("attendance", { session_id: "session-1", student_id: "s2", status: "absent" });
+      server.put("attendance", { session_id: "session-1", student_id: "s3", status: "present" });
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
     const c = await import("../data/repositories/comments");
-    expect(c.countAssignDefaultSlips("session-1")).toBe(3);
-    expect(await c.assignDefaultSlipsDurable("session-1")).toBe(3);
+      expect(c.countAssignDefaultSlips("session-1")).toBe(2);
+      expect(await c.assignDefaultSlipsDurable("session-1")).toBe(2);
     const { buildTicketRows } = await import("../data/homework");
     const { getStore } = await import("../data/store");
-    const { sendableCount } = await import("../features/comments/commentsModel");
-    expect(sendableCount(buildTicketRows(getStore(), "session-1"))).toBe(3);
-    await d.syncNow();
-    for (const id of ["s1", "s2", "s3"]) expect(server.rows.get("slip")?.get(`session-1|${id}`), id).toMatchObject({ criteria: 31, comment: generatedSlipSentence(31) });
+      const { sendableCount } = await import("../features/comments/commentsModel");
+        expect(sendableCount(buildTicketRows(getStore(), "session-1"))).toBe(2);
+        const sent = await c.sendSessionTicketsDurable("session-1");
+        expect(sent.sent).toEqual(["s1", "s3"]);
+        await d.syncNow();
+      for (const id of ["s1", "s3"]) expect(server.rows.get("slip")?.get(`session-1|${id}`), id).toMatchObject({ criteria: 31, comment: generatedSlipSentence(31) });
+      expect(server.rows.get("slip")?.get("session-1|s2")).toBeUndefined();
   });
 
   it("assign-all-defaults rewrites unsent slips to the full default and clears the manual homework choice", async () => {
@@ -300,8 +305,9 @@ describe("repository command payload contracts", () => {
     expect(server.hooks.pushBatches.flat().filter((command) => command.type === "slip.set" && (command.payload as any).session_id === "session-2" && (command.payload as any).criteria === 15)).toEqual([]);
   });
 
-  it("regrading homework enqueues slip.set with criteria and comment for the next session's draft", async () => {
-    server.put("class_session", { id: "session-2", class_id: "c1", date: "2026-10-22", start_time: "09:00", origin: "manual", status: "held" });
+    it("regrading homework enqueues slip.set with criteria and comment for the next session's draft", async () => {
+      server.put("class_session", { id: "session-2", class_id: "c1", date: "2026-10-22", start_time: "09:00", origin: "manual", status: "held" });
+      server.put("attendance", { session_id: "session-2", student_id: "s1", status: "present" });
     server.put("slip", { session_id: "session-2", student_id: "s1", criteria: 31, comment: generatedSlipSentence(31), scale: 5, stars: 5, note: "", hw_manual: false, status: "draft", sent_at: null });
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
