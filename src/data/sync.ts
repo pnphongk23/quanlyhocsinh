@@ -327,17 +327,20 @@ export async function retryRejectedCommands(ids: string[]): Promise<void> {
   const identity = identityKey(), wanted = new Set(ids);
   // Máy chủ trả lại kết quả đã lưu cho cùng id, nên lệnh thử lại phải mang id mới mới được xét lại.
     await db.transaction("rw", [db.outbox, db.tests], async () => {
-      const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
-      const pendingAttendance = await db.outbox.where("identity").equals(identity).and((row) => row.status === "pending" && row.type === "attendance.set").toArray();
-      const renamed = new Map(rows.map((row) => [row.id, crypto.randomUUID()]));
-      for (const row of rows) {
-        const fixed = await withTestUpdateId(row, identity);
-        const sessionId = (row.payload as { session_id?: string }).session_id;
-        const sessionAttendance = row.type === "slip.set" || row.type === "slip.send"
-          ? pendingAttendance.filter((attendance) => (attendance.payload as { session_id?: string }).session_id === sessionId)
-          : [];
-        const latestAttendance = sessionAttendance.reduce((latest, attendance) => Math.max(latest, Date.parse(attendance.created_at)), 0);
-        const createdAt = new Date(Math.max(Date.now(), latestAttendance + 1)).toISOString();
+        const rows = await db.outbox.where("identity").equals(identity).and((row) => row.status === "rejected" && wanted.has(row.id)).toArray();
+        rows.sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+        const pendingAttendance = await db.outbox.where("identity").equals(identity).and((row) => row.status === "pending" && row.type === "attendance.set").toArray();
+        const renamed = new Map(rows.map((row) => [row.id, crypto.randomUUID()]));
+        const retryRows = orderRetriedSlips(rows);
+        const retrySessions = new Set(retryRows.filter((row) => row.type === "slip.set" || row.type === "slip.send").map((row) => (row.payload as { session_id?: string }).session_id));
+        const latestAttendance = pendingAttendance.reduce((latest, attendance) => {
+          const sessionId = (attendance.payload as { session_id?: string }).session_id;
+          return retrySessions.has(sessionId) ? Math.max(latest, Date.parse(attendance.created_at)) : latest;
+        }, 0);
+        const firstCreatedAt = Math.max(Date.now(), latestAttendance + 1);
+        for (const [index, row] of retryRows.entries()) {
+          const fixed = await withTestUpdateId(row, identity);
+          const createdAt = new Date(firstCreatedAt + index).toISOString();
         await db.outbox.delete(row.id);
         await db.outbox.put({ ...fixed, id: renamed.get(row.id)!, created_at: createdAt, depends_on: row.depends_on && renamed.get(row.depends_on) || row.depends_on, status: "pending", error: undefined });
       }
@@ -346,6 +349,34 @@ export async function retryRejectedCommands(ids: string[]): Promise<void> {
   publishRejected(await db.outbox.where("identity").equals(identity).toArray());
   setSaveStatus("local");
   await syncNow();
+}
+
+function orderRetriedSlips<T extends { id: string; type: string; payload: unknown }>(rows: T[]): T[] {
+  const prerequisites = rows.map(() => new Set<number>());
+  rows.forEach((row, index) => {
+    const payload = row.payload as { session_id?: string; student_id?: string };
+    rows.forEach((candidate, candidateIndex) => {
+      const candidatePayload = candidate.payload as { session_id?: string; student_id?: string };
+      if (row.type === "slip.send" && candidate.type === "slip.set" && candidatePayload.session_id === payload.session_id && candidatePayload.student_id === payload.student_id) {
+        prerequisites[index].add(candidateIndex);
+      }
+      if (row.type === "slip.set" || row.type === "slip.send") {
+        if (candidate.type === "attendance.set" && candidatePayload.session_id === payload.session_id) {
+          prerequisites[index].add(candidateIndex);
+        }
+      }
+    });
+  });
+
+  const ordered: T[] = [];
+  const completed = new Set<number>();
+  while (ordered.length < rows.length) {
+    const next = rows.findIndex((_, index) => !completed.has(index) && [...prerequisites[index]].every((dependency) => completed.has(dependency)));
+    if (next < 0) break;
+    completed.add(next);
+    ordered.push(rows[next]);
+  }
+  return ordered;
 }
 /** Bỏ các lệnh ghi ô bị từ chối (theo id) rồi lấy lại giá trị hiện tại của từng ô từ máy chủ, không động tới lệnh khác. */
 export async function discardRejectedCommands(ids: string[]): Promise<void> {
