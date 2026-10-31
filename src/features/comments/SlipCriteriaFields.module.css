@@ -113,14 +113,23 @@
   color: var(--state-selected-fg);
 }
 
-.criterion:disabled {
+/* Khoá vì chưa điểm danh xong: nền trung tính + mờ theo token, không giữ màu "đang bật". */
+.criterion:disabled,
+.criterionOn:disabled {
   opacity: var(--state-disabled-opacity);
   cursor: default;
 }
 
 .criterionOn:disabled {
-  opacity: 1;
-  cursor: default;
+  border-color: transparent;
+  background: var(--color-neutral-soft);
+  color: var(--color-muted);
+}
+
+.criterionOn:disabled .checkbox {
+  border-color: transparent;
+  background: var(--color-border);
+  color: var(--color-muted);
 }
 
 .homeworkCriterion {
@@ -224,6 +233,15 @@
 
 .sentenceInput {
   background: var(--color-neutral-soft);
+}
+
+/* Ô chữ của phiếu bị khoá (chưa điểm danh xong): nền trung tính + mờ theo token như rules.md mục 6. */
+.sentenceInput:read-only,
+.noteInput:read-only {
+  background: var(--color-neutral-soft);
+  color: var(--color-muted);
+  opacity: var(--state-disabled-opacity);
+  cursor: default;
 }
 
 .noteInput::placeholder {

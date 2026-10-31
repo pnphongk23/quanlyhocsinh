@@ -3,7 +3,7 @@ import type { TicketRow } from "../../data/homework";
 import { toggleSlipCriterionDurable } from "../../data/repositories/comments";
 import { defaultSlipCriteria } from "../../data/slip";
 import type { HomeworkGrade } from "../../data/types";
-import { EmptyState, Pill, Segmented } from "../../shared/ui";
+import { EmptyState, Icon, Pill, Segmented } from "../../shared/ui";
 import { canToggleCriterion, criteriaForEditingRow, rowHasCustomComment, SLIP_CRITERIA } from "./criteriaModel";
 import s from "./CriteriaMode.module.css";
 
@@ -123,7 +123,7 @@ export default function CriteriaMode({
             >
               <span className={s.groupTitle}>{index === 4 ? "Hoàn thành BTVN" : criterion}</span>
             <span className={s.count}>đạt {achieved}/{rows.filter((row) => row.attended).length}</span>
-              <span className={`${s.chevron}${expanded ? ` ${s.chevronOpen}` : ""}`} aria-hidden="true">⌄</span>
+              <span className={`${s.chevron}${expanded ? ` ${s.chevronOpen}` : ""}`} aria-hidden="true"><Icon name="chevron-down" /></span>
             </button>
             <div className={`${s.content}${expanded ? ` ${s.contentOpen}` : ""}`} aria-hidden={!expanded} inert={!expanded}>
               <div className={s.contentInner}>
@@ -136,7 +136,8 @@ export default function CriteriaMode({
               const unachieved = (criteria & (1 << index)) === 0;
                 // Tô màu = em đạt; em chưa có phiếu tô nhạt (sẽ đạt khi tạo phiếu).
                 const selected = !unachieved;
-                const provisional = !row.comment && preview?.criteriaByStudent?.[row.student.id] === undefined;
+                // Em Vắng không tự tích (ux-design.md mục 3): chỉ em có mặt/muộn mới được tô nhạt chờ tạo phiếu.
+                const provisional = row.attended && !row.comment && preview?.criteriaByStudent?.[row.student.id] === undefined;
                 const chipTone = provisional ? s.provisional : selected ? s.selected : "";
                 const sent = row.status === "sent" || row.status === "queued";
                 const blockedSentPreview = !!preview && sent && !preview.includeSent;
@@ -157,11 +158,11 @@ export default function CriteriaMode({
                         } else void toggle(row, index);
                       }}
                 >
-                    {row.student.name}{!row.attended && <small className={s.absenceLabel}>Vắng</small>}{sent && <small>Đã gửi</small>}
+                    {row.student.name}{!row.attended && <Pill tone="warning">Vắng</Pill>}{sent && <small>Đã gửi</small>}
                 </button>
               ) : (
                     <span key={row.student.id} aria-disabled="true" aria-current={row.student.id === selectedStudentId ? "true" : undefined} className={`${s.chip}${chipTone ? ` ${chipTone}` : ""}${legacy ? ` ${s.legacy}` : ""} ${s.disabled}`}>
-                    {row.student.name}{!row.attended && <small className={s.absenceLabel}>Vắng</small>}{sent && <small>Đã gửi</small>}{legacy && <small>Phiếu thang cũ</small>}
+                    {row.student.name}{!row.attended && <Pill tone="warning">Vắng</Pill>}{sent && <small>Đã gửi</small>}{legacy && <small>Phiếu thang cũ</small>}
                 </span>
               );
             })}
