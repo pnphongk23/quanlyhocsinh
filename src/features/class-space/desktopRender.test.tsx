@@ -121,6 +121,20 @@ describe("Các màn web desktop dựng được và có đúng chữ chính", ()
       expect(html).toContain("Đã gửi");
     });
 
+    it("Nhận xét: không hiện nút Gửi lẻ khi quyền gửi bị tắt", () => {
+      const seed = createSeed();
+      const absentDraft = seed.comments.find((comment) => comment.sessionId === "6a-session-7" && comment.studentId === "6a-student-1")!;
+      absentDraft.status = "draft";
+      absentDraft.scale = 5;
+      absentDraft.criteria = 31;
+      replaceStore(seed);
+      const html = render(
+        <CommentsDesktop sessionId="6a-session-7" readOnly tabBar={(actions) => <div>{actions}</div>} />,
+        "/lop/6a/buoi-hoc?tab=nhan-xet&student=6a-student-1",
+      );
+      expect(html).not.toContain("Gửi lẻ");
+    });
+
     it("Nhận xét: khóa hàng học sinh và ẩn mũi tên khi điểm danh chưa xong", () => {
       const seed = createSeed();
       seed.attendance = [];

@@ -345,7 +345,7 @@ export default function CommentsPanel({
             {line.text}
           </span>
         </button>
-          {attendance.complete && !row.attended && row.comment && row.status !== "sent" && row.status !== "queued" && (
+            {canSend && attendance.complete && !row.attended && row.comment && row.status !== "sent" && row.status !== "queued" && (
             <div className={s.absentActions}><Button size="sm" variant="secondary" disabled={!online || sendingStudentIds.has(row.student.id)} loading={sendingStudentIds.has(row.student.id)} onClick={() => void sendAbsentStudent(row.student.id)}>Gửi lẻ</Button></div>
           )}
         </li>

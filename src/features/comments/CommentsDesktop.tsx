@@ -301,7 +301,7 @@ export default function CommentsDesktop({
                 compact={mode === "criteria"}
                   readOnly={!canEdit}
               />
-                {attendance.complete && !selected.attended && selected.comment && selected.status !== "sent" && selected.status !== "queued" && <Button size="md" variant="secondary" disabled={!online} onClick={() => void sendAbsentStudent(selected.student.id)}>Gửi lẻ</Button>}
+                  {canSend && attendance.complete && !selected.attended && selected.comment && selected.status !== "sent" && selected.status !== "queued" && <Button size="md" variant="secondary" disabled={!online} onClick={() => void sendAbsentStudent(selected.student.id)}>Gửi lẻ</Button>}
               </>
             ) : (
             <p className={d.muted14}>Chọn một em để soạn phiếu.</p>
