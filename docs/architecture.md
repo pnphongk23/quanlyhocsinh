@@ -19,7 +19,7 @@ Hợp đồng backend đã qua review tổng thể (APPROVED) nằm ở `plans/2
 
 - **Production:** các tài nguyên hiện mang tên `qlh-staging-*` vì URL Workers đã được phát hành cho bản App Store 1.0: Worker `qlh-staging-api`, D1 `qlh-staging-db`, Pages `qlh-staging-web`. Giữ nguyên tên và URL; trong Wrangler đây vẫn là `env.staging`.
 - **Development:** Worker `qlh-dev-api`, D1 `qlh-dev-db`, Pages `qlh-dev-web` (Wrangler `env.dev`). QA và kiểm thử tự động chỉ chạy trên dev.
-- Phạm vi MVP ban đầu chỉ gồm deploy staging, không deploy production. Trước mọi deploy production cần xin General Lead và tạo bản sao lưu D1 trước migration bằng `wrangler d1 export` hoặc Time Travel bookmark.
+- CI/CD deploy development khi cập nhật `develop`; production dùng tài nguyên `qlh-staging-*` khi cập nhật `master`, qua GitHub Environment `production` có bảo vệ phê duyệt. Workflow ghi Time Travel bookmark trước migration; không export toàn bộ D1.
 
 ## 2. Stack
 
@@ -165,6 +165,24 @@ Rủi ro FCM: ký RS256/làm mới OAuth có thể vượt CPU 10 ms; cache kho�
 1. **Nền tảng:** schema D1 (đã có workspace, role, ma trận quyền, gán lớp, role mặc định cài sẵn), tầng truy cập và test phân quyền theo từng role; đăng nhập SĐT + mật khẩu (PBKDF2 30.000 vòng), phụ huynh tự đăng ký và liên kết theo SĐT, người vận hành đặt lại mật khẩu thủ công, đăng ký workspace; điểm danh và nhập điểm với hàng đợi ghi và đồng bộ sau-cùng-thắng.
 2. **Hoàn thiện mobile theo spec mục 8:** nhận xét, báo cáo tháng + PDF, push, màn hướng dẫn cài PWA cho web; dựng nền app iOS native (SwiftUI) dùng chung API; chạy thử với 1–2 giáo viên trên iPhone thật, mạng yếu. Làm cùng giai đoạn: web desktop cho giáo viên (Chi tiết lớp: buổi học, điểm danh, nhận xét, BTVN, bài kiểm tra, bảng điểm, báo cáo). Deploy staging Cloudflare (đã chốt 2026-10-21).
 3. **Mở rộng:** bài giảng (R2), role tuỳ chỉnh, phân công theo lớp, lịch sử, kênh Zalo/SMS, rồi giao diện tiếng Anh.
+
+## CI/CD
+
+### Luồng nhánh
+
+Tạo feature branch từ `develop`, mở pull request vào `develop` để chạy CI. Merge vào `develop` sẽ triển khai phần web/Worker thay đổi lên dev. Sau khi QA, mở pull request từ `develop` vào `master`; CI chạy lại. Push lên `master` triển khai phần thay đổi lên production qua GitHub Environment cần người duyệt.
+
+| Workflow | Kích hoạt | Công việc |
+|---|---|---|
+| `ci.yml` | Pull request vào `develop` hoặc `master` | Chỉ chạy kiểm tra cho Worker (`typecheck`, test), web (`typecheck`, test, build) và/hoặc iOS (XcodeGen, test Simulator) theo file thay đổi. Không deploy. |
+| `deploy-dev.yml` | Push `develop` hoặc chạy tay | Chỉ deploy Worker (D1 migrations rồi Worker) và/hoặc web thay đổi lên `qlh-dev-*`; chạy tay sẽ deploy cả hai. |
+| `deploy-prod.yml` | Push `master` | Chỉ deploy Worker và/hoặc web thay đổi lên `qlh-staging-*`; Worker ghi Time Travel bookmark, chỉ apply migration khi còn migration chờ. Bật required reviewers cho Environment `production`. |
+
+### GitHub Environments và quyền Cloudflare
+
+Tạo Environments `development` và `production`, đặt riêng hai secret `CLOUDFLARE_API_TOKEN` và `CLOUDFLARE_ACCOUNT_ID` trong từng Environment. Bật required reviewers cho `production`. Người vận hành tự thêm secret bằng `gh secret set` với tùy chọn Environment tương ứng; không lưu token trong repository hoặc tài liệu. Token chỉ cần quyền tài khoản: Workers Scripts Edit, D1 Edit, Cloudflare Pages Edit và Account Settings Read.
+
+Mỗi Environment cần GitHub Actions variable `PAGES_PRODUCTION_BRANCH` khớp production branch đã cấu hình cho Pages project tương ứng. `wrangler pages project list` xác nhận cả `qlh-dev-web` và `qlh-staging-web` tồn tại nhưng không trả về branch; cần kiểm tra branch trong Cloudflare Dashboard rồi đặt variable trước deploy.
 
 ## 9. Chưa kiểm chứng
 

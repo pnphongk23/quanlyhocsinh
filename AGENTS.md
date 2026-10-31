@@ -22,3 +22,8 @@ App quản lý lớp tiếng Anh cho giáo viên dạy lớp riêng tại Việt
 
 - Dùng `srcwalk` thay cho `rg`, `grep`, `cat`. Bắt đầu bằng `srcwalk guide`.
 - Tìm theo cấu trúc ở architecture.md mục 3: giao diện ở `src/features`, dữ liệu ở `src/data/repositories`, máy chủ ở `worker/src/db`.
+
+## Quy trình nhánh
+
+- Tạo feature branch từ `develop`, mở PR vào `develop` để CI kiểm tra và deploy dev sau khi merge.
+- Sau QA, mở PR từ `develop` vào `master`; CI kiểm tra thay đổi. Deploy production chạy sau push `master` và cần người duyệt Environment `production`.

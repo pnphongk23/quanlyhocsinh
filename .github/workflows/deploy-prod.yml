@@ -1,0 +1,110 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      worker: ${{ steps.filter.outputs.worker }}
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        name: Detect changed areas
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
+            worker=true
+            web=true
+          else
+            changed_files="$(git diff --name-only "${BEFORE_SHA}...${HEAD_SHA}")"
+            worker=false
+            web=false
+            while IFS= read -r path; do
+              case "$path" in
+                worker/*) worker=true ;;
+                src/*|public/*|package.json|package-lock.json|package*.json|vite.config.*|scripts/*) web=true ;;
+              esac
+            done <<< "$changed_files"
+          fi
+          {
+            echo "worker=$worker"
+            echo "web=$web"
+          } >> "$GITHUB_OUTPUT"
+
+  worker:
+    needs: changes
+    if: needs.changes.outputs.worker == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+      - name: Record D1 Time Travel bookmark
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx wrangler d1 time-travel info qlh-staging-db --env staging | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Apply pending migrations and deploy Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          migration_status="$(npx wrangler d1 migrations list qlh-staging-db --env staging --remote)"
+          printf '%s\n' "$migration_status"
+          printf "### D1 migration status\n\n\`\`\`text\n%s\n\`\`\`\n" "$migration_status" >> "$GITHUB_STEP_SUMMARY"
+          if printf '%s' "$migration_status" | grep -Fq 'No migrations to apply'; then
+            echo 'No pending D1 migrations.' | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            npx wrangler d1 migrations apply qlh-staging-db --env staging --remote
+          fi
+          npx wrangler deploy --env staging
+
+  web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Deploy Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PAGES_PRODUCTION_BRANCH: ${{ vars.PAGES_PRODUCTION_BRANCH }}
+        run: |
+          set -euo pipefail
+          test -n "$PAGES_PRODUCTION_BRANCH"
+          npx wrangler pages deploy dist --project-name qlh-staging-web --branch "$PAGES_PRODUCTION_BRANCH"
