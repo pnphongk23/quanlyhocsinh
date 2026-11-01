@@ -2,7 +2,7 @@
 .note,.summary,.warning,.error{margin:0;font-size:var(--text-md);line-height:var(--leading-base)}
 .note{color:var(--color-muted)}.summary{font-weight:var(--weight-semibold)}.warning{padding:var(--space-8) var(--space-12);border:1px solid var(--card-pending-border);border-radius:var(--radius-row);background:var(--card-pending-bg);color:var(--card-pending-fg)}.error{display:block;color:var(--state-error-fg)}
 .label{font-size:var(--text-md);font-weight:var(--weight-semibold)}
-.textarea{width:100%;min-height:calc(var(--control-h) * 2);resize:vertical;padding:var(--space-12);border:1px solid var(--color-input-border);border-radius:var(--radius-row);background:var(--color-surface);color:var(--color-text);font:inherit}
+.textarea{width:100%;min-height:calc(var(--control-h) * 2);resize:vertical;padding:var(--space-12);border:1px solid var(--color-input-border);border-radius:var(--radius-row);background:var(--color-surface);color:var(--color-text);font:inherit;font-size:var(--text-base)}
 .textarea:focus-visible,.table input:focus-visible,.mobileCard input:focus-visible{outline:var(--state-focus-ring)}
 .fileLabel{display:flex;width:max-content;min-height:var(--tap);align-items:center;padding:0 var(--space-12);border-radius:var(--radius-row);background:var(--color-neutral-soft);color:var(--color-text);font-size:var(--text-md);font-weight:var(--weight-semibold);cursor:pointer}.fileLabel input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .tableWrap{max-height:44dvh;overflow:auto;border:1px solid var(--color-border);border-radius:var(--radius-row)}

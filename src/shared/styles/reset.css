@@ -60,7 +60,7 @@ textarea {
 input,
 textarea,
 select {
-  font-size: max(16px, 1em);
+  font-size: max(var(--text-base), 1em);
 }
 button,
 a,
