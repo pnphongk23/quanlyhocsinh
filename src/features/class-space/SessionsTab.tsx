@@ -150,13 +150,13 @@ export default function SessionsTab() {
                   <p className={s.currentMeta}>
                     {spotlight.time ?? klass.time}
                   </p>
+                  {spotlight.date > today && spotlight.status === "planned" && (
+                    <p className={s.lockedHint}>Điểm danh mở vào ngày học.</p>
+                  )}
                 </div>
                   <span className={s.primaryAction}>
                     Xem buổi
                   </span>
-                {spotlight.date > today && spotlight.status === "planned" && (
-                  <p className={s.lockedHint}>Điểm danh mở vào ngày học.</p>
-                )}
                 </Link>
             </section>
           )}
