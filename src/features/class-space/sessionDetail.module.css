@@ -130,6 +130,9 @@
  * Đệm đáy vùng cuộn = `--sticky-clearance` (safe-area dưới + đệm trang): thanh hành động
  * dính nằm trong luồng nên cao của thanh đã tính sẵn, chỉ cần chừa thêm safe-area để mép thanh
  * không đè lên thẻ cuối khi cuộn hết trên iPhone có home indicator.
+ * Vì đệm gồm cả `--page-bottom`, thanh nằm trong luồng (nội dung ngắn / cuộn hết) cách đáy
+ * `--sticky-bottom` + `--page-bottom`, còn khi đang dính giữa danh sách dài thì đúng `--sticky-bottom`
+ * — chênh nhau `--page-bottom` (16px); giữ nguyên theo chốt "đệm đáy dùng --sticky-clearance".
  */
 .body {
   flex: 1;
@@ -153,19 +156,20 @@
 }
 
 /*
- * Mobile: màn chi tiết buổi chiếm trọn chiều cao màn và tab đang mở được giãn hết chỗ còn lại.
+ * Mobile: màn chi tiết buổi chiếm trọn chiều cao màn và khung tab đang mở được giãn hết chỗ còn lại.
  * Nhờ vậy thanh hành động dính đáy (`--sticky-clearance` vẫn chừa đệm) nằm ở đáy màn kể cả khi
  * danh sách ngắn, không trôi lên giữa màn; danh sách dài vẫn cuộn và thanh dính như trước.
+ * Chỉ nhắm `.tabPane` (ba khung tab) — `.body` còn chứa banner lỗi, thẻ ngày và EmptyState của buổi
+ * huỷ, những khối này phải giữ nguyên cách hiển thị.
  */
 @media (max-width: 1023px) {
   .detail { min-height: 100dvh; }
-  /* Ba tab được render sẵn trong `div hidden`; chỉ tab đang mở mới tham gia giãn. */
-  .body > div:not([hidden]) {
+  .tabPane:not([hidden]) {
     flex: 1 0 auto;
     display: flex;
     flex-direction: column;
   }
-  .body > div:not([hidden]) > * { flex: 1 0 auto; }
+  .tabPane:not([hidden]) > * { flex: 1 0 auto; }
 }
 
 /* Thẻ ngày trong buổi đã huỷ: 76 — trắng, bo 16, đệm 8 */

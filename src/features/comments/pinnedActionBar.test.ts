@@ -21,8 +21,8 @@ describe("thanh hành động ở tab Nhận xét", () => {
   it("mobile: màn chi tiết buổi chiếm trọn màn và tab đang mở giãn hết chỗ", () => {
     const block = mobileBlock(detailCss);
     expect(block).toMatch(/\.detail\s*\{\s*min-height:\s*100dvh;\s*\}/);
-    expect(block).toMatch(/\.body > div:not\(\[hidden\]\)\s*\{[^}]*flex:\s*1 0 auto[^}]*display:\s*flex[^}]*flex-direction:\s*column/s);
-    expect(block).toMatch(/\.body > div:not\(\[hidden\]\) > \*\s*\{\s*flex:\s*1 0 auto;\s*\}/);
+    expect(block).toMatch(/\.tabPane:not\(\[hidden\]\)\s*\{[^}]*flex:\s*1 0 auto[^}]*display:\s*flex[^}]*flex-direction:\s*column/s);
+    expect(block).toMatch(/\.tabPane:not\(\[hidden\]\) > \*\s*\{\s*flex:\s*1 0 auto;\s*\}/);
   });
 
   it("thanh đáy luôn ở đáy khung và vẫn dính khi danh sách dài", () => {
