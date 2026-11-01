@@ -338,6 +338,7 @@
 .editorForm input,
 .editorForm textarea {
   margin-bottom: var(--space-12);
+  font-size: var(--text-base);
 }
 
 .optional {

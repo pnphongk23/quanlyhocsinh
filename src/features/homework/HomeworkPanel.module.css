@@ -527,7 +527,8 @@
   border-radius: var(--radius-button);
   background: var(--color-bg);
   color: var(--color-text);
-  font-size: 15px;
+  /* ≥ 16px: iOS Safari phóng to cả trang khi focus ô nhập nhỏ hơn 16px. */
+  font-size: var(--text-base);
   line-height: 1.5;
   font-family: inherit;
 }
