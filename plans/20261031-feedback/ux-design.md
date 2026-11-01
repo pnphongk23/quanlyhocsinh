@@ -11,6 +11,8 @@ Mọi giá trị giao diện lấy từ `design/tokens/` và theo `design/ux-v2/
 - Chỉ khung mobile (cùng breakpoint đang đổi sang layout desktop). Desktop giữ sidebar.
 - Thanh hành động đáy (Gửi phiếu cả lớp, Lưu điểm danh, …) và nút + nổi đặt sát đáy, cộng safe-area.
 - Người dùng chốt 2026-11-01: thanh hành động LUÔN ghim đáy màn trên mobile, không phụ thuộc độ dài danh sách (danh sách ngắn vẫn giữ thanh ở đáy, không trôi lên giữa màn); vùng cuộn đệm đáy bằng `--sticky-clearance` để hàng cuối không bị che. Desktop giữ nguyên (nút ở hàng hành động trên cùng).
+  - Vị trí thanh (đo 390×844): danh sách ngắn hoặc cuộn hết → cách đáy `--sticky-bottom` + `--page-bottom` (16px; có safe-area 34px thì 50px). Đang cuộn giữa danh sách dài, thanh dính đúng `--sticky-bottom` (0px; có safe-area: 34px). Chênh nhau đúng `--page-bottom`; giữ `--sticky-clearance` nên chấp nhận khoảng chênh này thay vì bỏ đệm trang.
+  - Còn tồn: pill `SaveStatus` ở đầu khung giáo viên nằm trong luồng nên khi hiện (Chờ đồng bộ/Lỗi lưu) trang cao thêm ~40px, có thể gây cuộn thừa; chưa sửa vì cần đổi sang lớp phủ và kiểm lại trên máy thật.
 - Back của trình duyệt và nút back ở đầu màn đều quay đúng màn trước; thanh dưới hiện lại khi về màn gốc.
 
 ## 2. Thẻ "Buổi hiện tại": nút "Xem buổi" bên phải
