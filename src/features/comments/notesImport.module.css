@@ -18,7 +18,8 @@
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
-  font-size: var(--text-md);
+  /* ≥ 16px: iOS Safari phóng to trang khi focus ô nhập nhỏ hơn 16px. */
+  font-size: var(--text-base);
   resize: vertical;
 }
 
@@ -78,6 +79,7 @@
 
 .line select {
   width: 100%;
+  font-size: var(--text-base);
   min-height: var(--tap);
   padding: 0 var(--space-8);
   border: 1px solid var(--color-input-border);

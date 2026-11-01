@@ -524,14 +524,15 @@
   }
   .prefix {
     padding: 0 14px;
-    font-size: 15px;
+    font-size: var(--text-base);
   }
   .phoneInput,
   .passwordInput,
   .textInput {
     height: 46px;
     padding: 0 14px;
-    font-size: 15px;
+    /* ≥ 16px: iPad/desktop Safari cũng không phóng to trang khi focus ô nhập. */
+    font-size: var(--text-base);
   }
   .eye {
     width: 40px;

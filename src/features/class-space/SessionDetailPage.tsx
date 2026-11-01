@@ -302,7 +302,7 @@ export default function SessionDetailPage() {
           </>
         ) : (
           <>
-            <div hidden={tab !== "diem-danh"}>
+            <div className={s.tabPane} hidden={tab !== "diem-danh"}>
               <AttendancePanel
                 classId={classId}
                 sessionId={session.id}
@@ -311,14 +311,14 @@ export default function SessionDetailPage() {
                 saveRef={saveRef}
               />
             </div>
-            <div hidden={tab !== "nhan-xet"}>
+            <div className={s.tabPane} hidden={tab !== "nhan-xet"}>
               <CommentsPanel
                 classId={classId}
                 sessionId={session.id}
                 readOnly={future}
               />
             </div>
-            <div hidden={tab !== "btvn"}>
+            <div className={s.tabPane} hidden={tab !== "btvn"}>
               <HomeworkPanel
                 session={session}
                 onDirtyChange={setHomeworkDirty}

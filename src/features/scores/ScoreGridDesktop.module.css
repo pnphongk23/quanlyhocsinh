@@ -137,7 +137,8 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-family: inherit;
-  font-size: var(--text-md);
+  /* ≥ 16px: iOS Safari phóng to trang khi focus ô nhập nhỏ hơn 16px. */
+  font-size: var(--text-base);
   font-variant-numeric: tabular-nums;
 }
 

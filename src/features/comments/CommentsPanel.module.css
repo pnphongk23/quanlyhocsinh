@@ -223,12 +223,21 @@
   background: var(--color-bg);
 }
 
+/*
+ * Thanh hành động luôn ở đáy màn trên mobile: `margin-top: auto` đẩy xuống đáy khung tab (khung được
+ * giãn trong sessionDetail.module.css), sticky giữ nguyên khi danh sách dài.
+ * Hai vị trí (đã đo, 390×844): đang cuộn giữa danh sách dài thì thanh dính đúng `--sticky-bottom`
+ * (0px, có safe-area: 34px); khi nội dung ngắn hoặc cuộn hết thì thanh nằm trong luồng, cách đáy
+ * `--sticky-clearance` = `--sticky-bottom` + `--page-bottom` (16px, có safe-area: 50px). Chênh nhau
+ * đúng `--page-bottom` (16px) khi chuyển giữa hai trạng thái.
+ */
 .footerGroup {
   position: sticky;
   bottom: var(--sticky-bottom);
   z-index: var(--z-sticky);
   display: grid;
   gap: var(--space-4);
+  margin-top: auto;
   background: var(--color-bg);
 }
 
@@ -470,7 +479,7 @@
   border-radius: var(--radius-button);
   background: var(--color-bg);
   color: var(--color-text);
-  font-size: 15px;
+  font-size: var(--text-base);
   line-height: 1.55;
   resize: vertical;
 }

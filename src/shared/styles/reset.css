@@ -52,6 +52,16 @@ select,
 textarea {
   font: inherit;
 }
+/*
+ * iOS Safari (PWA) tự phóng to cả trang khi focus ô nhập có cỡ chữ < 16px. Mặc định mọi ô nhập ở mức
+ * ≥ 16px thay vì dùng `maximum-scale`/`user-scalable=no` (chặn zoom làm mất trợ năng phóng to).
+ * Đặt sau `font: inherit` và chỉ dùng selector phần tử nên rule riêng của từng ô nhập vẫn thắng.
+ */
+input,
+textarea,
+select {
+  font-size: max(var(--text-base), 1em);
+}
 button,
 a,
 input,

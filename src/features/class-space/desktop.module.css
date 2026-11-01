@@ -484,7 +484,7 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-family: inherit;
-  font-size: 15px;
+  font-size: var(--text-base);
 }
 
 .textarea {
@@ -497,7 +497,7 @@
   background: var(--color-surface);
   color: var(--color-text);
   font-family: inherit;
-  font-size: 15px;
+  font-size: var(--text-base);
   line-height: 1.45;
   resize: vertical;
 }

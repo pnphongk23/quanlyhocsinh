@@ -246,7 +246,7 @@
   background: var(--color-bg);
   color: var(--color-text);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--text-base);
   line-height: 1.55;
   resize: vertical;
 }
