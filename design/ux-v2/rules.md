@@ -12,7 +12,8 @@
 ## 2. Nút
 - Desktop: nút luôn rộng theo nội dung (`width: auto`, `min-width: 96px`), kể cả `size="lg"`. Không có nút trải hết chiều ngang ở desktop.
 - Nhóm hành động: hành động chính bên phải, phụ ở trái nó (`Huỷ` · `Lưu`); ở cuối form căn phải theo lề form; ở đầu trang nằm cùng hàng tiêu đề.
-- Mobile: nút chính ở đáy màn/sheet được tràn ngang như hiện tại; nút trong thẻ theo nội dung.
+- Mobile: nút chính ở đáy màn/sheet được tràn ngang như hiện tại; nút trong thẻ theo nội dung. Thanh hành động đáy **luôn ghim đáy màn** (kể cả khi nội dung ngắn) và cộng safe-area; vùng cuộn đệm đáy `--sticky-clearance`.
+- Ô nhập chữ trên mobile: cỡ chữ ≥ 16px (`--text-base`) để iOS Safari không tự phóng to trang khi focus; không dùng `maximum-scale`/`user-scalable=no`.
 - Vùng bấm ≥ 44px trên mobile, ≥ 36px trên desktop.
 
 ## 3. Khoảng cách

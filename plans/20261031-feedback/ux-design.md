@@ -10,6 +10,7 @@ Mọi giá trị giao diện lấy từ `design/tokens/` và theo `design/ux-v2/
 - Ẩn bottom nav (Lớp/Lịch/Cài đặt) ở: chi tiết lớp (mọi tab) và chi tiết buổi (mọi tab). Danh sách lớp, Lịch, Cài đặt vẫn hiện.
 - Chỉ khung mobile (cùng breakpoint đang đổi sang layout desktop). Desktop giữ sidebar.
 - Thanh hành động đáy (Gửi phiếu cả lớp, Lưu điểm danh, …) và nút + nổi đặt sát đáy, cộng safe-area.
+- Người dùng chốt 2026-11-01: thanh hành động LUÔN ghim đáy màn trên mobile, không phụ thuộc độ dài danh sách (danh sách ngắn vẫn giữ thanh ở đáy, không trôi lên giữa màn); vùng cuộn đệm đáy bằng `--sticky-clearance` để hàng cuối không bị che. Desktop giữ nguyên (nút ở hàng hành động trên cùng).
 - Back của trình duyệt và nút back ở đầu màn đều quay đúng màn trước; thanh dưới hiện lại khi về màn gốc.
 
 ## 2. Thẻ "Buổi hiện tại": nút "Xem buổi" bên phải

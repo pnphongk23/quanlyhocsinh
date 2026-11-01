@@ -152,6 +152,22 @@
   line-height: 1.5;
 }
 
+/*
+ * Mobile: màn chi tiết buổi chiếm trọn chiều cao màn và tab đang mở được giãn hết chỗ còn lại.
+ * Nhờ vậy thanh hành động dính đáy (`--sticky-clearance` vẫn chừa đệm) nằm ở đáy màn kể cả khi
+ * danh sách ngắn, không trôi lên giữa màn; danh sách dài vẫn cuộn và thanh dính như trước.
+ */
+@media (max-width: 1023px) {
+  .detail { min-height: 100dvh; }
+  /* Ba tab được render sẵn trong `div hidden`; chỉ tab đang mở mới tham gia giãn. */
+  .body > div:not([hidden]) {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .body > div:not([hidden]) > * { flex: 1 0 auto; }
+}
+
 /* Thẻ ngày trong buổi đã huỷ: 76 — trắng, bo 16, đệm 8 */
 .dateCard {
   display: flex;
