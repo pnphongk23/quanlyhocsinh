@@ -64,6 +64,8 @@
           "PBKDF2_ITERATIONS": "30000",
           "MAIL_MODE": "test",
           "RESET_LINK_BASE": "https://qlh-dev-web.pages.dev",
+          // Cờ THỬ NGHIỆM tiêu chí 3 mức + "Hôm nay học" (KHÔNG đặt ở staging/prod, tức là tắt).
+          "CRITERIA_LEVELS": "1",
           "ALLOWED_ORIGINS": "http://localhost:5173,http://localhost:4173,http://localhost:3000,https://qlh-dev-web.pages.dev"
         },
         "d1_databases": [

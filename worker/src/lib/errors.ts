@@ -62,6 +62,9 @@ export const rateLimited = (retryAfterSeconds: number) =>
     retry_after: retryAfterSeconds,
   });
 
+export const featureDisabled = () =>
+  new ApiError(422, 'feature_disabled', 'Feature is disabled.');
+
 export const notImplemented = (group: string) =>
   new ApiError(501, 'not_implemented', 'Endpoint group is not implemented yet.', { group });
 
