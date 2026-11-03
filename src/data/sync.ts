@@ -280,6 +280,7 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
     if (!outboxChanged && !pullWhenIdle) return;
     const changed = await pull(identity, membershipId);
     if (changed || outboxChanged) await hydrateStore();
+    if (await retryLessonCommandsAhead(identity)) scheduleSync(0);
     const remaining = await db.outbox.where("identity").equals(identity).toArray();
     publishRejected(remaining);
     setSaveStatus(remaining.some((x) => x.status === "rejected") ? "error" : remaining.length ? "local" : "synced");
@@ -290,6 +291,35 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
     if (await db.outbox.where("identity").equals(identity).count()) setSaveStatus("error");
   }
 }
+/**
+ * `session.lesson.set` bị từ chối `base_version_ahead` (máy khác vừa bump version):
+ * sau khi pull, gửi lại MỘT lần với command ID mới và `base_version` mới nhất.
+ * Quá một lần thì giữ lệnh bị từ chối để người dùng thấy lỗi, không lặp vô hạn.
+ */
+const LESSON_VERSION_RETRY_LIMIT = 1;
+async function retryLessonCommandsAhead(identity: string): Promise<boolean> {
+  return db.transaction("rw", [db.outbox, db.sessions], async () => {
+    const rows = await db.outbox.where("identity").equals(identity)
+      .and((row) => row.type === "session.lesson.set" && row.status === "rejected" && row.error === "base_version_ahead").toArray();
+    let changed = false;
+    for (const row of rows) {
+      if ((row.retries ?? 0) >= LESSON_VERSION_RETRY_LIMIT) continue;
+      const sessionId = (row.payload as { session_id?: string }).session_id;
+      if (!sessionId) continue;
+      // Đã có lệnh mới hơn cho cùng buổi thì lệnh cũ không còn giá trị.
+      const newer = await db.outbox.where("identity").equals(identity)
+        .and((other) => other.id !== row.id && other.cell_key === row.cell_key && other.status !== "rejected").first();
+      if (newer) { await db.outbox.delete(row.id); continue; }
+      const cached = await db.sessions.get(`${identity}|class_session|${sessionId}`) as { version?: number } | undefined;
+      const baseVersion = Math.max(Number(row.base_version ?? 0), Number(cached?.version ?? 0));
+      await db.outbox.delete(row.id);
+      await db.outbox.put({ ...row, id: crypto.randomUUID(), base_version: baseVersion, created_at: new Date().toISOString(), status: "pending", error: undefined, retries: (row.retries ?? 0) + 1 });
+      changed = true;
+    }
+    return changed;
+  });
+}
+
 /** Lệnh còn trong hàng đợi từ bản cũ: bỏ `max` của bài kiểm tra; điểm danh "có phép" gửi thành vắng, không gửi giờ đến và ghi chú. */
 function payloadWithoutLegacyFields(type: string, payload: SyncCommand["payload"]): SyncCommand["payload"] {
   if (type === "attendance.set") {

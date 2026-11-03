@@ -9,6 +9,11 @@ const messages: Record<string, string> = {
   student_class_mismatch: "Học sinh không thuộc lớp này.",
   command_expired: "Thay đổi đã quá cũ nên máy chủ không nhận.",
   base_version_ahead: "Dữ liệu trên máy lệch với máy chủ.",
+  invalid_levels: "Phiếu có mức không hợp lệ.",
+  invalid_skill_levels: "Mức kỹ năng không hợp lệ.",
+  invalid_topics: "Mục \"Hôm nay học\" không hợp lệ.",
+  invalid_graded_skills: "Kỹ năng chấm riêng phải nằm trong mục Hôm nay học.",
+  feature_disabled: "Tính năng phiếu 3 mức chưa bật trên máy chủ.",
   attendance_incomplete: "Điểm danh chưa đồng bộ xong, thử lại sau.",
 };
 

@@ -15,6 +15,7 @@ function keyForCommand(command: SyncCommand): string | undefined {
     case "attendance.set": return `${command.type}:${p.session_id}:${p.student_id}`;
     case "score.set": return `${command.type}:${p.test_id}:${p.student_id}`;
     case "slip.set": return `${command.type}:${p.session_id}:${p.student_id}`;
+    case "session.lesson.set": return `${command.type}:${p.session_id}`;
     case "homework.grade.set": return `${command.type}:${p.section_id}:${p.student_id}`;
     default: return undefined;
   }
@@ -23,9 +24,23 @@ function keyForCommand(command: SyncCommand): string | undefined {
 function mergeSlipPayload(previous: unknown, next: unknown): Record<string, unknown> {
   const merged = { ...(previous as Record<string, unknown>), ...(next as Record<string, unknown>) };
   const incoming = next as Record<string, unknown>;
-  if ("criteria" in incoming) delete merged.stars;
-  else if ("stars" in incoming) { delete merged.criteria; delete merged.comment; }
+  if ("criteria" in incoming || "stars" in incoming) {
+    // Lệnh kiểu cũ (cờ tắt/iOS): máy chủ xoá levels; bỏ chúng khỏi payload gộp để không gửi kèm.
+    delete merged.levels;
+    delete merged.skill_levels;
+  }
+  if ("levels" in incoming) {
+    // Lệnh mức: máy chủ tự tính criteria/stars, bỏ các trường cũ khỏi payload gộp.
+    delete merged.criteria;
+    delete merged.stars;
+  }
+  if ("criteria" in incoming && !("levels" in incoming)) delete merged.stars;
+  else if ("stars" in incoming && !("levels" in incoming)) { delete merged.criteria; delete merged.comment; }
   return merged;
+}
+/** Lệnh cấp buổi gộp theo buổi, giữ lệnh mới nhất (topics/graded_skills cùng đi một lệnh). */
+function mergeLessonPayload(previous: unknown, next: unknown): Record<string, unknown> {
+  return { ...(previous as Record<string, unknown>), ...(next as Record<string, unknown>) };
 }
 export async function persistCommand(entity: EntityName, parts: Array<string | number | null>, wireRecord: Record<string, unknown> | null, command: SyncCommand): Promise<void> {
   const identity = identityKey(); const cache = getCacheIdentity(); if (!cache) throw new Error("Đăng nhập để lưu thay đổi.");
@@ -38,7 +53,12 @@ export async function persistCommand(entity: EntityName, parts: Array<string | n
         if (wireRecord) await recordTable.put(stored(entity, key, wireRecord) as any); else await recordTable.delete(key);
         const matching = cellKey ? await db.outbox.where("identity").equals(identity).and((candidate) => candidate.cell_key === cellKey && candidate.status === "pending").first() : undefined;
         // Phiếu chỉ gửi trường vừa đổi: gộp vào lệnh chờ cũ để không làm mất tiêu chí đã soạn trước đó.
-        const mergedPayload = matching && command.type === "slip.set" ? (mergeSlipPayload(matching.payload, row.payload) as OutboxRow["payload"]) : row.payload;
+        // Lệnh "Hôm nay học"/"Chấm riêng" gộp theo buổi: luôn giữ lệnh mới nhất.
+        const mergedPayload = matching && command.type === "slip.set"
+          ? (mergeSlipPayload(matching.payload, row.payload) as OutboxRow["payload"])
+          : matching && command.type === "session.lesson.set"
+            ? (mergeLessonPayload(matching.payload, row.payload) as OutboxRow["payload"])
+            : row.payload;
         // Điểm danh đã chờ trước phiếu cùng buổi: gộp mà lấy giờ mới sẽ đẩy nó ra sau phiếu và máy chủ từ chối phiếu vì thiếu điểm danh.
         const mergedCreatedAt = matching && command.type === "attendance.set" ? matching.created_at : row.created_at;
         const finalRow = matching ? { ...row, payload: mergedPayload, base_version: matching.base_version, created_at: mergedCreatedAt } : row;

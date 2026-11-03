@@ -8,6 +8,8 @@ export interface OutboxRow {
   base_version: number; membership_id: string; created_at: string; status: OutboxStatus;
   error?: string; depends_on?: string; entity_key?: string;
   cell_key?: string;
+  /** Số lần tự thử lại do lệch `base_version` (tối đa 1). */
+  retries?: number;
 }
 export interface MetaRow { key: string; identity: string; cursor: number; epoch: number; logoutState?: "pending" | "needs_login"; updatedAt?: number; }
 type Stored<T> = T & { identity: string; key: string; entity: string };
