@@ -241,6 +241,16 @@ describe("sheet phiếu 3 mức", () => {
     expect(save.mock.calls.at(-1)![0]).toMatchObject({ note: "Ghi chú mới", comment: "Câu cô sửa tay" });
   });
 
+  it("phiếu đã gửi không tự thêm dòng kỹ năng khi buổi vừa bật Chấm riêng", () => {
+    const comment = levelComment({ status: "sent", sentAt: "2026-10-26T00:00:00.000Z", skillLevels: {} });
+    const { row, session, homework } = setup(comment, { gradedSkills: ["speaking", "reading"] });
+    render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+    expect(screen.queryByTestId("slip-skill-row-speaking")).toBeNull();
+    expect(screen.queryByTestId("slip-skill-row-reading")).toBeNull();
+    expect(screen.getByTestId("slip-save-button")).toBeDisabled();
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it("phiếu ĐÃ GỬI sửa được mức nhưng không tự sinh lại câu", async () => {
     const comment = levelComment({ status: "sent", sendQueued: false, sentAt: "2026-10-26T00:00:00.000Z" });
     const { row, session, homework } = setup(comment);
@@ -257,6 +267,37 @@ describe("sheet phiếu 3 mức", () => {
 });
 
 describe("desktop phiếu 3 mức", () => {
+  it("buổi vừa bật kỹ năng mới: effect thêm Đạt vào cả draft, note blur không xoá mức/câu", async () => {
+    const { row, session, homework } = setup(levelComment({ skillLevels: {} }), { gradedSkills: ["speaking"] });
+    render(<TicketEditor session={session} row={row} homework={homework} />);
+    await waitFor(() => expect(screen.getByTestId("slip-skill-row-speaking")).toHaveTextContent("Đạt"));
+    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
+    expect(sentence.value).toContain("Phần nói con làm được, cần luyện thêm.");
+
+    const note = screen.getByTestId("slip-note");
+    fireEvent.change(note, { target: { value: "Ghi chú sau khi bật" } });
+    fireEvent.blur(note);
+    await waitFor(() => expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ note: "Ghi chú sau khi bật" })));
+    expect(save.mock.calls.at(-1)![0]).toMatchObject({ skillLevels: { speaking: "ok" } });
+    expect(save.mock.calls.at(-1)![0].comment).toContain("Phần nói con làm được");
+  });
+
+  it("phiếu vừa chuyển sang 3 mức khi editor đang mở: xoá câu vẫn sinh câu theo mức", async () => {
+    const legacy = {
+      id: "c", classId: "6a", sessionId, studentId, criteria: 30, comment: generatedSlipSentence(30), scale: 5,
+      stars: 4, note: "", hwManual: false, status: "draft", sendQueued: false, sentAt: null,
+      updatedAt: "2026-10-26T00:00:00.000Z", createdAt: "2026-10-26T00:00:00.000Z",
+    } as Comment;
+    const { row, session, homework } = setup(legacy);
+    const view = render(<TicketEditor session={session} row={row} homework={homework} />);
+    view.rerender(<TicketEditor session={session} row={{ ...row, comment: levelComment() }} homework={homework} />);
+    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
+    fireEvent.change(sentence, { target: { value: "" } });
+    fireEvent.blur(sentence);
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect(save.mock.calls.at(-1)![0].comment).toContain("Con nắm được phần chính của từ vựng và nói hôm nay");
+  });
+
   it("sửa câu rồi sửa ghi chú: lưu ghi chú không ghi đè câu sửa tay", async () => {
     const { row, session, homework } = setup(levelComment());
     render(<TicketEditor session={session} row={row} homework={homework} />);

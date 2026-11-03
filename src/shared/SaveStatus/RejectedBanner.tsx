@@ -51,7 +51,7 @@ export function RejectedBanner() {
             {busy ? "Đang thử lại" : "Thử lại"}
           </button>
         )}
-        {retryIds.length === ids.length && rejected.every((row) => canDiscardRejected(row.type)) && (
+        {rejected.every((row) => canDiscardRejected(row.type)) && (
           <button type="button" className={styles.button} disabled={busy} onClick={() => setConfirming(ids)}>
             Bỏ thay đổi
           </button>

@@ -110,6 +110,31 @@ describe("sync rejection persistence", () => {
     expect(await db.slips.get(`${identityId}|slip|session-a|student-a`)).toMatchObject({ status: "draft", comment: "Phiếu nháp" });
   });
 
+  it("duplicate của lệnh rejected đã lưu cũng dùng lý do hiệu dụng trong details.reason", async () => {
+    const { api, syncNow } = await import("../data/sync");
+    const { rejectionMessage } = await import("../data/rejectionMessages");
+    await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });
+    await db.outbox.put({
+      id: "dup-rejected", identity: identityKey(), type: "slip.set",
+      payload: { session_id: "session-a", student_id: "student-a", note: "" },
+      base_version: 0, membership_id: identity.membershipId, created_at: "2026-10-31T00:00:00Z", status: "pending",
+    });
+    vi.spyOn(api, "request").mockImplementation((async (endpoint: string) => {
+      if (endpoint === "POST /sync/push") return {
+        epoch: 1, cursor: 1, results: [{
+          id: "dup-rejected", status: "duplicate", original_status: "rejected",
+          error: { code: "validation_error", details: { reason: "invalid_levels" }, message: "Invalid request.", request_id: "fake" },
+        }],
+      };
+      if (endpoint === "GET /sync/pull") return { cursor: 1, epoch: 1, has_more: false, server_time: "2026-10-31T00:00:00Z", upserts: {}, deleted: [] };
+      throw new Error(`Unexpected fake endpoint: ${endpoint}`);
+    }) as never);
+
+    await syncNow();
+    expect(await db.outbox.get("dup-rejected")).toMatchObject({ status: "rejected", error: "invalid_levels" });
+    expect(rejectionMessage("invalid_levels")).toBe("Phiếu có mức không hợp lệ.");
+  });
+
   it("orders attendance before slip commands sharing a queue timestamp", async () => {
     const { api, syncNow } = await import("../data/sync");
     await db.meta.put({ key: identityId, identity: identityId, cursor: 0, epoch: 1 });

@@ -451,7 +451,8 @@ async function applyCommandResult(result: CommandResult, identity: string): Prom
       return;
     }
   if (result.status === "duplicate" && (result as { original_status?: string }).original_status === "rejected") {
-    await db.outbox.put({ ...row, status: "rejected", error: (result as { error?: { code?: string } }).error?.code ?? row.error ?? "rejected" }); return;
+    const error = (result as { error?: { code?: string; details?: { reason?: string } } }).error;
+    await db.outbox.put({ ...row, status: "rejected", error: error?.details?.reason ?? error?.code ?? row.error ?? "rejected" }); return;
   }
   if (row.type === "slip.send" && result.status === "applied") {
     // Gửi xong: ghi ngay trạng thái đã gửi vào máy để tải lại trước lần kéo về kế tiếp không hiện lại phiếu như nháp.

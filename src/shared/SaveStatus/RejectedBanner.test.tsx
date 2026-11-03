@@ -47,6 +47,13 @@ describe("RejectedBanner", () => {
     expect(screen.queryByRole("button", { name: "Bỏ thay đổi" })).toBeNull();
   });
 
+  it("session_cancelled của lệnh ghi một ô: ẩn Thử lại nhưng vẫn cho Bỏ thay đổi", () => {
+    render(<RejectedBanner />);
+    act(() => setRejectedCommands([{ id: "a", type: "attendance.set", error: "session_cancelled" }]));
+    expect(screen.queryByRole("button", { name: "Thử lại" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Bỏ thay đổi" })).toBeTruthy();
+  });
+
   it("không cho bỏ khi có lệnh không phải ghi một ô", () => {
     render(<RejectedBanner />);
     act(() => setRejectedCommands([{ id: "a", type: "test.create", error: "forbidden" }]));

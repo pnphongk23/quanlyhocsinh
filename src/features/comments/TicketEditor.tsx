@@ -185,13 +185,19 @@ export default function TicketEditor({
     void persist({ criteria: next, comment: nextComment, note: draft.current.note, hwManual: draft.current.hwManual });
   }, [gradeKey, criteria, comment, note, manualHomework, row.status, scale, session.id, row.student.id]);
 
-  // Buổi vừa bật "Chấm riêng" cho kỹ năng mới: thêm mức mặc định Đạt để câu/skill_levels đủ khoá.
+  // Buổi vừa bật "Chấm riêng" cho kỹ năng mới: thêm mức mặc định Đạt cho phiếu CHƯA gửi;
+  // phiếu đã gửi/chờ gửi giữ nguyên mức đã lưu. Cập nhật cả draft để lần ghi sau không xoá mức này.
   useEffect(() => {
-    if (!levelMode) return;
+    if (!levelMode || slipFrozenForAutoUpdate(row.status)) return;
     const missing = gradedSkills.filter((key) => skillLevels[key] === undefined);
     if (!missing.length) return;
-    setSkillLevels((current) => ({ ...defaultSkillLevels(missing), ...current }));
-  }, [gradedSkills, levelMode, skillLevels]);
+    const nextSkills = { ...defaultSkillLevels(missing), ...skillLevels };
+    const nextComment = row.status === "sent" ? comment : levelComment(levels, nextSkills);
+    setSkillLevels(nextSkills);
+    if (nextComment !== comment) setComment(nextComment);
+    draft.current = { ...draft.current, skillLevels: nextSkills, ...(nextComment !== comment ? { comment: nextComment } : {}) };
+    writeDraft(session.id, row.student.id, draft.current);
+  }, [gradedSkills, levelMode, skillLevels, levels, comment, row.status, session.id, row.student.id]);
 
   // Chấm lại BTVN ở phiếu 3 mức: tự đổi phiếu chưa gửi, chưa chọn tay; phiếu đã gửi giữ câu.
   useEffect(() => {
@@ -265,7 +271,7 @@ export default function TicketEditor({
     const text = draft.current.comment?.trim()
       ? draft.current.comment
       : levelMode
-        ? levelComment(draft.current.levels!, draft.current.skillLevels ?? {})
+        ? levelComment(draft.current.levels ?? levels, draft.current.skillLevels ?? {})
         : generatedSlipSentence(draft.current.criteria);
     if (text !== draft.current.comment) changeComment(text);
     draft.current = { ...draft.current, comment: text };
