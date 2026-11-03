@@ -125,6 +125,9 @@
   --criteria-check-size: 20px;
   --criteria-check-icon-size: 12px;
   --level-row-icon-size: 20px; /* icon tiêu chí/kỹ năng ở phiếu 3 mức */
+  --level-row-label-min: 9rem;   /* nhãn tiêu chí/kỹ năng trước khi segmented xuống dòng */
+  --level-row-control-min: 15rem; /* bề rộng tối thiểu của segmented 3 mức */
+  --focus-ring-offset: 1px;
   --comment-star-size: 24px;
   --dialog-action-gap: 8px; /* khoảng giữa các nút xác nhận */
   --control-h: 52px;        /* ô nhập */

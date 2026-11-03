@@ -231,8 +231,8 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
   try {
     await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
     while (true) {
-        const rows = (await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").toArray())
-          .sort((a, b) => a.created_at.localeCompare(b.created_at) || pushPhase(a.type) - pushPhase(b.type) || a.id.localeCompare(b.id));
+        // Pha phụ thuộc trước (điểm danh → Hôm nay học → phiếu → gửi), rồi mới theo giờ tạo/id.
+        const rows = orderPushBatch(await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").toArray());
       if (!rows.length) break;
       let batch = [] as typeof rows;
       for (const row of rows) {
@@ -391,9 +391,15 @@ export async function retryRejectedCommands(ids: string[]): Promise<void> {
   await syncNow();
 }
 
-/** Thứ tự đẩy lệnh: điểm danh của buổi trước, rồi phiếu của từng em, cuối cùng lệnh gửi phiếu (một em hay cả lớp). */
-const pushPhase = (type: string): number => type === "attendance.set" ? 0 : type === "slip.send" ? 2 : 1;
-const isSlipQueue = (type: string): boolean => type === "attendance.set" || type === "slip.set" || type === "slip.send";
+/**
+ * Thứ tự đẩy theo pha phụ thuộc: điểm danh của buổi, rồi "Hôm nay học" của buổi, rồi phiếu của từng em,
+ * cuối cùng lệnh gửi phiếu (một em hay cả lớp).
+ */
+const pushPhase = (type: string): number => type === "attendance.set" ? 0
+  : type === "session.lesson.set" ? 1
+  : type === "slip.send" ? 3
+  : 2;
+const isSlipQueue = (type: string): boolean => type === "attendance.set" || type === "session.lesson.set" || type === "slip.set" || type === "slip.send";
 const queueSession = (row: { payload: unknown }): string | undefined => (row.payload as { session_id?: string }).session_id;
 export type QueueOrderRow = { id: string; type: string; payload: unknown; created_at: string };
 /** Xếp một lượt đẩy theo phụ thuộc nghiệp vụ: cùng pha thì theo giờ tạo rồi tới id, nên kết quả luôn xác định. */

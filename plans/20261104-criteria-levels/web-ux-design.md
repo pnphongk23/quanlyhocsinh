@@ -10,8 +10,8 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 - Mobile (< 1024px): `Sheet` toàn màn hiện có; thân sheet cuộn, thanh hành động vẫn ghim đáy với
   `--sticky-bottom` + `--page-bottom`, chừa `--safe-bottom`. Đầu sheet: tên em (2 dòng tối đa, cắt "…"),
   avatar như danh sách, `Pill` trạng thái phiếu.
-- Desktop (≥ 1024px): `Modal`/panel phải rộng 380px (mẫu hai cột `minmax(0,1fr) 380px`, panel sticky
-  `top: var(--space-24)`), form bên trong giữ `--form-max`.
+- Desktop (≥ 1024px): hai cột như hiện tại — danh sách 400px, khung soạn phiếu bên phải co giãn; chế độ
+  "Theo tiêu chí" (chỉ khi cờ tắt) mới dùng panel 380px sticky `top: var(--space-24)`. Form giữ `--form-max`.
 - Khung sao + Mít (giữ nguyên khối hiện có): Mít dáng `sao-0…sao-5` cỡ `--empty-mascot-compact`, hàng 5 sao
   `--comment-star-size`, dòng "N/5 sao" (`--text-base`, `--weight-bold`). Sao = số tiêu chí mức Tốt;
   kỹ năng không tính sao.
@@ -38,11 +38,13 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 
 - Hàng chip "Hôm nay học" (chọn nhiều, lưu theo buổi, mặc định không chọn):
   Từ vựng · Mẫu câu/Ngữ pháp · Nghe · Nói · Đọc · Viết. Dùng `Chip` hiện có (`--radius-chip`,
-  `--tap`, `--text-control`; chọn = `--state-selected-bg` + `--state-selected-fg`, không viền), cuộn ngang
-  khi hẹp với `overflow-x:auto`, `scrollbar-width:none`, đệm phải `--page-x` để chip cuối không sát mép.
+  `--tap`, `--text-control`; chọn = `--state-selected-bg` + `--state-selected-fg`, không viền), xuống nhiều
+  dòng khi hẹp (`flex-wrap: wrap`, `gap: var(--space-8)`); không cuộn ngang, không cắt chip.
 - Mỗi chip đã chọn có công tắc "Chấm riêng" ngay dưới hàng chip: một hàng `--text-sm`, công tắc dùng
   token trạng thái chọn (`--state-selected-bg`/`--state-selected-fg`), vùng chạm `--tap`. Công tắc chỉ
-  hiện cho chip đang chọn; tắt công tắc/bỏ chip không xoá dữ liệu mức đã lưu.
+  hiện cho chip đang chọn; tắt công tắc/bỏ chip không xoá dữ liệu mức đã lưu. Khoá toàn bộ hàng chip khi
+  buổi chưa điểm danh xong là **quyết định sản phẩm** (contract 3.2 không buộc), giữ khoá để phiếu không
+  soạn trên danh sách chưa chốt.
 - Hàng hành động hiện có ("Gán tất cả mặc định" kiểu nút phụ + "Gửi phiếu cả lớp") giữ nguyên vị trí;
   cờ bật thì bỏ segmented "Theo học sinh / Theo tiêu chí" — chỉ còn danh sách theo học sinh
   (mã `CriteriaMode` giữ nguyên, không render).
@@ -74,9 +76,10 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 
 ## 6. Trạng thái và kích thước kiểm
 
-- Mobile 375 và 390 (safe-area trên/dưới): segmented không tràn, chip cuộn ngang, sheet cuộn được,
+- Mobile 375 và 390 (safe-area trên/dưới): segmented không tràn, chip xuống nhiều dòng, sheet cuộn được,
   bàn phím mở không che segmented/ô nhận xét (ô nhập `--text-base` để iOS không zoom).
-- Desktop 1440: panel 380px, hàng tiêu chí một dòng, segmented đủ 3 vùng chạm; nút theo nội dung.
+- Desktop 1440: danh sách 400px + khung soạn co giãn (chế độ tiêu chí cũ: panel 380px sticky), hàng tiêu chí
+  một dòng, segmented đủ 3 vùng chạm; nút theo nội dung.
 - Chữ dài: tên em, tên tiêu chí, nhận xét dài — xuống dòng, không cắt chữ, không đẩy segmented ra ngoài.
 - 0 kỹ năng (không có nhóm "Kiến thức hôm nay") và 2 kỹ năng (2 hàng).
 - Phiếu cũ đạt/chưa đạt và phiếu thang 3 sao: đọc đúng, không hiện segmented, không đổi số sao.

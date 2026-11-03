@@ -243,13 +243,13 @@ describe("outbox lệnh cấp buổi", () => {
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
     const id = d.identityKey();
-    const same = "2026-10-31T00:00:00.000Z";
-    const base = { identity: id, membership_id: "m-staff", created_at: same, status: "pending" as const, base_version: 1 };
+    const base = { identity: id, membership_id: "m-staff", status: "pending" as const, base_version: 1 };
     await d.db.outbox.bulkPut([
-      { ...base, id: "send", type: "slip.send", payload: { session_id: "session-1", student_ids: ["s1"] } },
-      { ...base, id: "slip", type: "slip.set", payload: { session_id: "session-1", student_id: "s1", levels: LEVELS, skill_levels: {}, comment: "x", note: "" } },
-      { ...base, id: "lesson", type: "session.lesson.set", payload: { session_id: "session-1", topics: ["speaking"], graded_skills: ["speaking"] } },
-      { ...base, id: "attendance", type: "attendance.set", payload: { session_id: "session-1", student_id: "s1", status: "present" } },
+      // Giờ tạo ngược hẳn thứ tự pha: pha phụ thuộc phải thắng created_at.
+      { ...base, id: "send", type: "slip.send", payload: { session_id: "session-1", student_ids: ["s1"] }, created_at: "2026-10-31T00:00:00.000Z" },
+      { ...base, id: "slip", type: "slip.set", payload: { session_id: "session-1", student_id: "s1", levels: LEVELS, skill_levels: {}, comment: "x", note: "" }, created_at: "2026-10-31T00:00:01.000Z" },
+      { ...base, id: "lesson", type: "session.lesson.set", payload: { session_id: "session-1", topics: ["speaking"], graded_skills: ["speaking"] }, created_at: "2026-10-31T00:00:02.000Z" },
+      { ...base, id: "attendance", type: "attendance.set", payload: { session_id: "session-1", student_id: "s1", status: "present" }, created_at: "2026-10-31T00:00:03.000Z" },
     ] as never);
 
     await d.syncNow();

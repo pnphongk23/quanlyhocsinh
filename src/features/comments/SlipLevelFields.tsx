@@ -37,7 +37,6 @@ export function SlipLevelFields({
   hwManual,
   sent,
   disabled,
-  compact = false,
   onLevelChange,
   onSkillChange,
   onCommentChange,
@@ -55,7 +54,6 @@ export function SlipLevelFields({
   hwManual: boolean;
   sent: boolean;
   disabled: boolean;
-  compact?: boolean;
   onLevelChange: (key: CriterionKey, level: Level) => void;
   onSkillChange: (key: SkillKey, level: Level) => void;
   onCommentChange: (value: string) => void;
@@ -73,10 +71,7 @@ export function SlipLevelFields({
   const shownSkills = sent ? SKILL_KEYS.filter((key) => skillLevels[key] !== undefined) : gradedSkills;
 
   return (
-    <section
-      className={`${s.fields}${compact ? ` ${s.compact}` : ""}`}
-      aria-label="Phiếu nhận xét"
-    >
+    <section className={s.fields} aria-label="Phiếu nhận xét">
       <div className={s.starPanel} data-testid="slip-star-panel">
         <div className={s.mascotWrap} data-testid="slip-mascot">
           <Mascot pose={starPose(stars, 5)} cssSize="var(--empty-mascot-compact)" />

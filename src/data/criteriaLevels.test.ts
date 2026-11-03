@@ -4,7 +4,6 @@ import {
   CRITERION_KEYS,
   CRITERION_LABELS,
   DEFAULT_CRITERION_LEVELS,
-  HOMEWORK_LEVELS,
   LEVEL_LABELS,
   LEVELS,
   SKILL_KEYS,
@@ -15,22 +14,14 @@ import {
   defaultLevels,
   defaultSkillLevels,
   effortSummary,
-  gradedSkillEntries,
-  hasLevels,
   homeworkLevelFromGrades,
-  joinWithVa,
-  legacyCriterionAchieved,
-  legacyLevelsFromCriteria,
-  lowestLevel,
   needsWorkCount,
   normalizeGradedSkills,
   normalizeTopics,
   parseLevels,
   parseSkillLevels,
-  regenerateSlipText,
   sameLevels,
   sameSkillLevels,
-  starsForSlip,
   starsFromLevels,
   todayTopicsPhrase,
   type Levels,
@@ -90,7 +81,6 @@ describe("phiếu mặc định và BTVN buổi trước", () => {
   });
 
   it("ánh xạ Hoàn thành tốt → Tốt, Hoàn thành → Đạt, Chưa hoàn thành → Cần cố gắng", () => {
-    expect(HOMEWORK_LEVELS).toEqual({ excellent: "good", done: "ok", not_done: "needs_work" });
     expect(homeworkLevelFromGrades([grade("excellent")])).toBe("good");
     expect(homeworkLevelFromGrades([grade("done")])).toBe("ok");
     expect(homeworkLevelFromGrades([grade("not_done")])).toBe("needs_work");
@@ -99,8 +89,6 @@ describe("phiếu mặc định và BTVN buổi trước", () => {
   it("nhiều phần đã chấm lấy mức thấp nhất", () => {
     expect(homeworkLevelFromGrades([grade("excellent"), grade("done")])).toBe("ok");
     expect(homeworkLevelFromGrades([grade("done"), grade("not_done"), grade("excellent")])).toBe("needs_work");
-    expect(lowestLevel("good", "ok")).toBe("ok");
-    expect(lowestLevel("needs_work", "good")).toBe("needs_work");
   });
 
   it("mức kỹ năng mặc định là Đạt", () => {
@@ -117,24 +105,6 @@ describe("criteria bit và sao", () => {
     expect(starsFromLevels(DEFAULT_CRITERION_LEVELS)).toBe(4);
     expect(starsFromLevels({ ...ALL_GOOD, focus: "needs_work", participation: "ok" })).toBe(3);
   });
-
-  it("phiếu cũ không levels suy ra hiển thị theo bit (5 sao) hoặc stars (3 sao)", () => {
-    expect(hasLevels({ levels: null })).toBe(false);
-    expect(hasLevels({ levels: ALL_GOOD })).toBe(true);
-    expect(hasLevels(null)).toBe(false);
-
-    const legacy = legacyLevelsFromCriteria(23); // 1+2+4+16, thiếu notes
-    expect(legacy.focus).toBe("good");
-    expect(legacy.notes).toBe("needs_work");
-    expect(legacyCriterionAchieved(23, "focus")).toBe(true);
-    expect(legacyCriterionAchieved(23, "notes")).toBe(false);
-
-    expect(starsForSlip({ criteria: 31, scale: 5 })).toBe(5);
-    expect(starsForSlip({ criteria: 23, scale: 5 })).toBe(4);
-    expect(starsForSlip({ scale: 3, stars: 2 })).toBe(2);
-    expect(starsForSlip({ scale: 5, criteria: null, stars: 3 })).toBe(3);
-    expect(starsForSlip({ levels: DEFAULT_CRITERION_LEVELS })).toBe(4);
-  });
 });
 
 describe("chip Hôm nay học", () => {
@@ -150,9 +120,6 @@ describe("chip Hôm nay học", () => {
     expect(todayTopicsPhrase([])).toBe("bài");
     expect(todayTopicsPhrase(["vocabulary", "grammar"])).toBe("từ vựng và mẫu câu");
     expect(todayTopicsPhrase(["listening", "speaking", "reading"])).toBe("nghe, nói và đọc");
-    expect(joinWithVa([])).toBe("");
-    expect(joinWithVa(["a"])).toBe("a");
-    expect(joinWithVa(["a", "b"])).toBe("a và b");
   });
 
   it("graded_skills chỉ gồm tập con của topics, theo thứ tự kỹ năng cố định", () => {
@@ -219,7 +186,6 @@ describe("ghép câu nhận xét", () => {
       "Con học tập trung, hăng hái tham gia các hoạt động, nắm chắc bài hôm nay, ghi bài và làm bài trên lớp cẩn thận, làm bài tập về nhà đầy đủ và nói tốt. Phần đọc con làm được, cần luyện thêm. Phần viết con còn yếu, bố mẹ cho con luyện thêm nhé.",
     );
     expect(text).not.toContain("Phần nói");
-    expect(gradedSkillEntries({ speaking: "good" })).toEqual([{ key: "speaking", level: "good" }]);
 
     const ungraded = composeComment({
       levels: ALL_GOOD,
@@ -274,19 +240,5 @@ describe("đọc và so sánh dữ liệu mức", () => {
     expect(sameSkillLevels({ speaking: "ok" }, { speaking: "good" })).toBe(false);
     expect(sameSkillLevels({ speaking: "ok" }, { reading: "ok" })).toBe(false);
     expect(sameSkillLevels({}, undefined)).toBe(true);
-  });
-});
-
-describe("sinh lại câu giữ phần gõ thêm", () => {
-  it("ghi đè phần câu nhưng giữ nguyên note", () => {
-    const result = regenerateSlipText({
-      levels: DEFAULT_CRITERION_LEVELS,
-      topics: ["speaking"],
-      note: "Con cần mang vở bài tập.",
-    });
-    expect(result.comment).toBe(
-      "Con học tập trung, hăng hái tham gia các hoạt động, ghi bài và làm bài trên lớp cẩn thận và làm bài tập về nhà đầy đủ. Con nắm được phần chính của nói hôm nay, cần ôn thêm cho chắc.",
-    );
-    expect(result.note).toBe("Con cần mang vở bài tập.");
   });
 });

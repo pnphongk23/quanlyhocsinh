@@ -89,7 +89,7 @@
 .rowLabel {
   display: grid;
   gap: var(--space-2);
-  flex: 1 1 9rem;
+  flex: 1 1 var(--level-row-label-min);
   min-width: 0;
 }
 
@@ -106,7 +106,7 @@
 }
 
 .row > :last-child {
-  flex: 1 1 15rem;
+  flex: 1 1 var(--level-row-control-min);
   min-width: 0;
 }
 
@@ -174,7 +174,7 @@
 .sentenceInput:focus-visible,
 .noteInput:focus-visible {
   outline: var(--state-focus-ring);
-  outline-offset: 1px;
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* Phiếu khoá: giữ chữ đọc được như phiếu cũ, không làm mờ hai lần. */

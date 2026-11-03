@@ -1,5 +1,5 @@
 import { starsFromCriteria } from "./slip";
-import type { HomeworkGrade, HomeworkLevel, SlipScale, StarLevel } from "./types";
+import type { HomeworkGrade, HomeworkLevel, StarLevel } from "./types";
 
 /**
  * Mô hình thuần của phiếu nhận xét thử nghiệm "3 mức" (sau cờ VITE_CRITERIA_LEVELS).
@@ -76,7 +76,7 @@ export const LEVEL_LABELS: Record<Level, string> = {
 };
 
 /** Thấp nhất trước: dùng khi gộp nhiều phần BTVN. */
-export const LEVEL_RANK: Record<Level, number> = {
+const LEVEL_RANK: Record<Level, number> = {
   needs_work: 0,
   ok: 1,
   good: 2,
@@ -91,9 +91,9 @@ export const DEFAULT_CRITERION_LEVELS: Levels = {
   homework: "good",
 };
 
-export const DEFAULT_SKILL_LEVEL: Level = "ok";
+const DEFAULT_SKILL_LEVEL: Level = "ok";
 
-export const HOMEWORK_LEVELS: Record<HomeworkLevel, Level> = {
+const HOMEWORK_LEVELS: Record<HomeworkLevel, Level> = {
   excellent: "good",
   done: "ok",
   not_done: "needs_work",
@@ -135,20 +135,16 @@ const CRITERION_PRAISE: Record<CriterionKey, string> = {
   homework: "làm bài tập về nhà đầy đủ",
 };
 
-export function isCriterionKey(value: string): value is CriterionKey {
-  return (CRITERION_KEYS as readonly string[]).includes(value);
-}
-
-export function isSkillKey(value: string): value is SkillKey {
+function isSkillKey(value: string): value is SkillKey {
   return (SKILL_KEYS as readonly string[]).includes(value);
 }
 
-export function isLevel(value: string): value is Level {
+function isLevel(value: string): value is Level {
   return (LEVELS as readonly string[]).includes(value);
 }
 
 /** Mức thấp hơn trong hai mức (nhiều phần BTVN: lấy mức thấp nhất). */
-export function lowestLevel(a: Level, b: Level): Level {
+function lowestLevel(a: Level, b: Level): Level {
   return LEVEL_RANK[a] <= LEVEL_RANK[b] ? a : b;
 }
 
@@ -188,41 +184,6 @@ export function starsFromLevels(levels: Levels): StarLevel {
   return starsFromCriteria(criteriaFromLevels(levels));
 }
 
-/** Phiếu cũ không có `levels`: bit đặt = Đạt, bit trống = Chưa đạt (chỉ để hiển thị). */
-export function legacyLevelsFromCriteria(criteria: number): Levels {
-  starsFromCriteria(criteria); // Validate 0..31 như phiếu cũ.
-  return CRITERION_KEYS.reduce<Levels>((levels, key) => {
-    levels[key] = (criteria & CRITERION_BITS[key]) !== 0 ? "good" : "needs_work";
-    return levels;
-  }, { ...DEFAULT_CRITERION_LEVELS });
-}
-
-/** Phiếu cũ đạt/chưa đạt từng tiêu chí để hiện nhãn, không dùng để sửa. */
-export function legacyCriterionAchieved(criteria: number, key: CriterionKey): boolean {
-  return (criteria & CRITERION_BITS[key]) !== 0;
-}
-
-export function hasLevels(
-  slip: { levels?: Levels | null } | null | undefined,
-): boolean {
-  return Boolean(slip?.levels);
-}
-
-export interface SlipStarsInput {
-  levels?: Levels | null;
-  criteria?: number | null;
-  stars?: number | null;
-  scale?: SlipScale;
-}
-
-/** Số sao hiển thị: phiếu mức tính theo Tốt, phiếu cũ giữ bit (5 sao) hoặc stars (3 sao). */
-export function starsForSlip(slip: SlipStarsInput): number {
-  if (slip.levels) return starsFromLevels(slip.levels);
-  if (slip.scale === 3) return slip.stars ?? 0;
-  if (typeof slip.criteria === "number") return starsFromCriteria(slip.criteria);
-  return slip.stars ?? 0;
-}
-
 /** Lọc khoá hợp lệ, bỏ trùng, giữ thứ tự chip người dùng chọn. */
 export function normalizeTopics(input: readonly string[] | null | undefined): SkillKey[] {
   const topics: SkillKey[] = [];
@@ -246,7 +207,7 @@ function lower(label: string): string {
   return label.toLocaleLowerCase("vi-VN");
 }
 
-export function joinWithVa(parts: readonly string[]): string {
+function joinWithVa(parts: readonly string[]): string {
   if (parts.length === 0) return "";
   if (parts.length === 1) return parts[0]!;
   return `${parts.slice(0, -1).join(", ")} và ${parts.at(-1)}`;
@@ -262,7 +223,7 @@ function fillContent(sentence: string, content: string): string {
   return sentence.replaceAll("{nội dung}", content);
 }
 
-export function criterionSentence(
+function criterionSentence(
   key: CriterionKey,
   level: Level,
   content: string,
@@ -270,7 +231,7 @@ export function criterionSentence(
   return fillContent(CRITERION_SENTENCES[key][level], content);
 }
 
-export function skillSentence(key: SkillKey, level: "ok" | "needs_work"): string {
+function skillSentence(key: SkillKey, level: "ok" | "needs_work"): string {
   const label = lower(SKILL_LABELS[key]);
   return level === "ok"
     ? `Phần ${label} con làm được, cần luyện thêm.`
@@ -287,7 +248,7 @@ export interface ComposeCommentInput {
 }
 
 /** Kỹ năng có mức và đang bật chấm, theo thứ tự cố định. */
-export function gradedSkillEntries(
+function gradedSkillEntries(
   skillLevels: SkillLevels | null | undefined,
   gradedSkills?: readonly SkillKey[] | null,
 ): Array<{ key: SkillKey; level: Level }> {
@@ -385,14 +346,4 @@ export function needsWorkCount({
 export function effortSummary(input: ComposeCommentInput): string | null {
   const count = needsWorkCount(input);
   return count > 0 ? `${count} mục cần cố gắng` : null;
-}
-
-/**
- * Sinh lại câu khi đổi mức/chip/chấm BTVN: ghi đè phần câu (kể cả giáo viên đã
- * sửa tay) nhưng giữ nguyên phần gõ thêm `note`.
- */
-export function regenerateSlipText(
-  input: ComposeCommentInput & { note?: string | null },
-): { comment: string; note: string } {
-  return { comment: composeComment(input), note: input.note ?? "" };
 }

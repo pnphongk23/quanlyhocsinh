@@ -305,7 +305,6 @@ export default function TicketEditor({
           hwManual={manualHomework}
           sent={slipFrozenForAutoUpdate(row.status)}
           disabled={!canWrite}
-          compact={compact}
           onLevelChange={updateLevel}
           onSkillChange={updateSkill}
           onCommentChange={changeComment}

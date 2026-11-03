@@ -30,7 +30,7 @@
 .chip:focus-visible,
 .switchRow:focus-visible {
   outline: var(--state-focus-ring);
-  outline-offset: 1px;
+  outline-offset: var(--focus-ring-offset);
 }
 
 .chip:active:not(:disabled) {
@@ -90,14 +90,14 @@
 }
 
 .trackOn {
-  background: var(--color-primary);
+  background: var(--state-selected-accent-bg);
 }
 
 .thumb {
   width: var(--space-16);
   height: var(--space-16);
   border-radius: var(--radius-pill);
-  background: var(--color-on-primary);
+  background: var(--state-selected-accent-fg);
   transition: transform var(--dur-fast) var(--ease-standard);
 }
 

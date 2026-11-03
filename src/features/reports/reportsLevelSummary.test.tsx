@@ -53,6 +53,17 @@ describe("báo cáo tháng có tóm tắt tiêu chí/kỹ năng", () => {
     expect(screen.queryByText("Tóm tắt tiêu chí")).toBeNull();
   });
 
+  it("toàn 0 hiện '0', không hiện '0 Tốt'", () => {
+    const zero = { good: 0, ok: 0, needs_work: 0 };
+    const decoded = decodeServerReport(snapshot({
+      criteria_summary: { focus: zero, participation: zero, mastery: zero, notes: zero, homework: zero },
+      skill_summary: { speaking: { ...zero, sessions: 0 } },
+    }), student, "r1")!;
+    render(<ReportPreview report={decoded.report} range={decoded.range} className="Lớp 6A" />);
+    expect(screen.queryByText(/0 Tốt/)).toBeNull();
+    expect(screen.getAllByText("0", { exact: true }).length).toBeGreaterThan(0);
+  });
+
   it("dữ liệu tóm tắt sai dạng thì bỏ qua, không đoán số", () => {
     const decoded = decodeServerReport(snapshot({ criteria_summary: { focus: { good: 1 } } }), student, "r1")!;
     expect(decoded.report.criteriaSummary).toBeUndefined();
