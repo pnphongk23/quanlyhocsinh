@@ -34,6 +34,12 @@ export interface MonthlyStudentReportData {
   generalComment: string;
 }
 
+/** Đếm mức Tốt/Đạt/Cần cố gắng của một tiêu chí/kỹ năng (thử nghiệm sau cờ). */
+export type LevelTally = Record<"good" | "ok" | "needs_work", number>;
+export type CriteriaSummary = Record<"focus" | "participation" | "mastery" | "notes" | "homework", LevelTally>;
+export type SkillSummaryRow = LevelTally & { sessions: number };
+export type SkillSummary = Partial<Record<"vocabulary" | "grammar" | "listening" | "speaking" | "reading" | "writing", SkillSummaryRow>>;
+
 /** Số buổi theo từng mức sao, tính trên phiếu ĐÃ GỬI trong tháng. */
 export interface MonthlyStarTally {
   /** Số buổi có phiếu đã gửi (mọi mức sao). */
@@ -72,6 +78,9 @@ export interface MonthlyStudentReport {
   /** Kết quả BTVN theo từng loại phần, theo thứ tự Luyện từ vựng → Bài tập. */
   homework: MonthlyHomeworkTally[];
   generalComment: string;
+  /** Thử nghiệm sau cờ; vắng khi máy chủ không trả (cờ tắt hoặc chưa có phiếu mức). */
+  criteriaSummary?: CriteriaSummary;
+  skillSummary?: SkillSummary;
   /** Câu gợi ý nhận xét chung theo số buổi 3/2/1 sao; null khi chưa có phiếu nào. */
   suggestion: string | null;
   ready: boolean;
@@ -326,6 +335,36 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isCount = (object: Record<string, unknown>, key: string) =>
   typeof object[key] === "number" && Number.isInteger(object[key]) && (object[key] as number) >= 0;
 
+const CRITERIA_SUMMARY_KEYS = ["focus", "participation", "mastery", "notes", "homework"] as const;
+const SKILL_SUMMARY_KEYS = ["vocabulary", "grammar", "listening", "speaking", "reading", "writing"] as const;
+const LEVEL_SUMMARY_KEYS = ["good", "ok", "needs_work"] as const;
+const isTally = (value: unknown): value is LevelTally =>
+  isRecord(value) && LEVEL_SUMMARY_KEYS.every((key) => isCount(value, key));
+
+function parseCriteriaSummary(value: unknown): CriteriaSummary | undefined {
+  if (!isRecord(value)) return undefined;
+  if (!CRITERIA_SUMMARY_KEYS.every((key) => isTally(value[key]))) return undefined;
+  return CRITERIA_SUMMARY_KEYS.reduce((summary, key) => {
+    const tally = value[key] as LevelTally;
+    summary[key] = { good: tally.good, ok: tally.ok, needs_work: tally.needs_work };
+    return summary;
+  }, {} as CriteriaSummary);
+}
+
+function parseSkillSummary(value: unknown): SkillSummary | undefined {
+  if (!isRecord(value)) return undefined;
+  const summary: SkillSummary = {};
+  let found = false;
+  for (const key of SKILL_SUMMARY_KEYS) {
+    const row = value[key];
+    if (row === undefined) continue;
+    if (!isTally(row) || !isCount(row, "sessions")) return undefined;
+    summary[key] = { good: row.good, ok: row.ok, needs_work: row.needs_work, sessions: (row as unknown as { sessions: number }).sessions };
+    found = true;
+  }
+  return found ? summary : undefined;
+}
+
 function rangeFromServer(value: unknown, month: string): RangeLabels {
   if (
     isRecord(value) &&
@@ -393,6 +432,8 @@ export function decodeServerReport(value: unknown, student: Student, key: string
     5: byFiveStars.s5,
   } as Record<StarLevel, number>;
   const ready = value.ready;
+  const criteriaSummary = parseCriteriaSummary(value.criteria_summary);
+  const skillSummary = parseSkillSummary(value.skill_summary);
   return {
     month,
     range: rangeFromServer(value.range, month),
@@ -401,6 +442,8 @@ export function decodeServerReport(value: unknown, student: Student, key: string
       gradedTestCount: tests.filter(({ score }) => score?.value != null).length,
       attendanceCount: counts.present + counts.late, lateCount: counts.late, absentCount: counts.absent + counts.excused,
       stars: { ticketCount: starCounts.one + starCounts.two + starCounts.three + Object.values(byFiveStars).reduce((sum, count) => sum + count, 0), byStars, byFiveStars, legacy }, homework,
+      ...(criteriaSummary ? { criteriaSummary } : {}),
+      ...(skillSummary ? { skillSummary } : {}),
       generalComment: value.general_comment.trim(), suggestion: buildStarSuggestion(byStars, "range"), ready, missing: ready ? [] : ["Báo cáo chưa đủ dữ liệu"],
     },
   };

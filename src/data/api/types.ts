@@ -74,6 +74,9 @@ export interface ReportBody {
     stars5?: { s5: number; s4: number; s3: number; s2: number; s1: number; s0: number };
   homework: { kind: HomeworkKind; excellent: number; done: number; not_done: number }[];
   general_comment: string; ready: boolean;
+  /** Thử nghiệm sau cờ: chỉ có khi có phiếu đã gửi có mức trong phạm vi báo cáo. */
+  criteria_summary?: Partial<Record<string, Partial<Record<string, number>>>> | null;
+  skill_summary?: Partial<Record<string, Partial<Record<string, number>>>> | null;
 }
 export interface ApiReportRange { from_key: string; to_key: string; from_number: number | null; to_number: number | null; session_count?: number; label?: string }
 export interface ReportPreview extends ReportBody { report_id?: string; batch_id?: string }

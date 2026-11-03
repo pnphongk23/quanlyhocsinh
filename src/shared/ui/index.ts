@@ -5,6 +5,7 @@ export { Chip } from "./Chip";
 export { Pill } from "./Pill";
 export { InfoNotice } from "./InfoNotice";
 export { Segmented } from "./Segmented";
+export { LevelSummary } from "./LevelSummary";
 export { LevelSegmented } from "./LevelSegmented";
 export type { LevelSegmentedOption, LevelSegmentedProps } from "./LevelSegmented";
 export { PageHeader } from "./PageHeader";
