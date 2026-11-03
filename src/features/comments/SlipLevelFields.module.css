@@ -110,6 +110,15 @@
   min-width: 0;
 }
 
+.skillRow {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.skillRow > :last-child {
+  flex: 0 0 auto;
+}
+
 .skills {
   display: grid;
   gap: var(--space-8);

@@ -100,7 +100,9 @@ export function SlipLevelFields({
                 <span className={s.criterionName}>{CRITERION_LABELS[key]}</span>
                 {homework && (
                   <span className={s.autoLabel} data-testid="slip-homework-auto-label">
-                    {automaticHomework ? (homeworkState === "has" ? "Theo chấm BTVN" : "Buổi trước chưa có BTVN") : "Chọn tay"}
+                    {automaticHomework
+                      ? homeworkState === "has" ? "Theo chấm BTVN" : "Buổi trước chưa có BTVN"
+                      : hwManual ? "Chọn tay" : "Theo chấm BTVN"}
                   </span>
                 )}
               </div>
@@ -121,7 +123,7 @@ export function SlipLevelFields({
           <h3 className={s.skillsTitle}>Kiến thức hôm nay</h3>
           <div className={s.rows}>
             {gradedSkills.map((key) => (
-              <div key={key} className={s.row} data-testid={`slip-skill-row-${key}`}>
+              <div key={key} className={`${s.row} ${s.skillRow}`} data-testid={`slip-skill-row-${key}`}>
                 <span className={s.criterionName}>{SKILL_LABELS[key]}</span>
                 <LevelSegmented
                   options={OPTIONS}

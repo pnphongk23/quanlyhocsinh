@@ -130,6 +130,9 @@ export default function GuardianSessionPage() {
                         <span className={g.levelValue}>{LEVEL_LABELS[ticketLevels[key]]}</span>
                       </li>
                     ))}
+                    {gradedSkills.length > 0 && (
+                      <li className={g.levelGroupLabel}>Kiến thức hôm nay</li>
+                    )}
                     {gradedSkills.map((key) => (
                       <li key={`skill-${key}`} className={g.levelRow} data-testid={`guardian-skill-${key}`}>
                         <span className={g.levelLabel}>{SKILL_LABELS[key]}</span>

@@ -289,7 +289,7 @@ export default function CommentsDesktop({
                           {homeworkCountsLine(state, row)}
                         </span>
                         {row.comment?.levels && effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session.gradedSkills ?? [] }) && (
-                          <span className={s.ticketMeta}>
+                          <span className={s.ticketEffort}>
                             {effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session.gradedSkills ?? [] })}
                           </span>
                         )}

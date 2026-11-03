@@ -213,6 +213,8 @@ describe("sheet phiếu 3 mức", () => {
     const { row, session, homework } = setup(comment);
     render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
     const before = (screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value;
+    // Phiếu đã gửi không tự đổi nhãn BTVN thành "Chọn tay" khi giáo viên chưa chọn tay.
+    expect(screen.getByTestId("slip-homework-auto-label")).toHaveTextContent("Theo chấm BTVN");
     fireEvent.click(withinGroup("Nắm bài hôm nay").querySelector('[role="radio"][aria-checked="false"]')!);
     expect((screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value).toBe(before);
     fireEvent.click(screen.getByTestId("slip-save-button"));
