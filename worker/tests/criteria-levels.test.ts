@@ -42,8 +42,8 @@ async function setup() {
     callFlag(on, '/v1/sync/push', post({ membership_id: a.membershipId, device_id: uid(), commands }), a.token);
   const page = async (entity: string, who: { token: string; mid: string }, on = true) =>
     (await callFlag(on, `/v1/sync/snapshot/${entity}?membership_id=${who.mid}`, {}, who.token)).body.items;
-  const slips = (who: { token: string; mid: string }, on = true) =>
-    callFlag(on, `/v1/sessions/${ses}/slips`, {}, who.token);
+  const slips = (who: { token: string; mid: string }, on = true, sessionId: string = ses) =>
+    callFlag(on, `/v1/sessions/${sessionId}/slips`, {}, who.token);
   const row = (student: string = students[0]!) =>
     db.prepare('SELECT * FROM session_comments WHERE session_id=? AND student_id=?').bind(ses, student).first<any>();
   const sessionRow = async () => db.prepare('SELECT * FROM class_sessions WHERE id=?').bind(ses).first<any>();
@@ -258,8 +258,11 @@ describe('criteria levels reads and reports', () => {
     // Ba phiếu trong tháng: hai ĐÃ GỬI của S1, một NHÁP của S1 (không được đếm).
     const monthSessionA = await insertSession(f.a.workspaceId, f.cls, '2026-10-21', f.a.userId);
     const monthSessionB = await insertSession(f.a.workspaceId, f.cls, '2026-10-22', f.a.userId);
-    const att = (sessionId: string) => db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
-      VALUES(?,?,?,?,'present','',1,?,?)`).bind(f.a.workspaceId, f.cls, sessionId, f.students[0], now, now).run();
+    const att = async (sessionId: string) => {
+      for (const studentId of f.students)
+        await db.prepare(`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,note,version,created_at,updated_at)
+          VALUES(?,?,?,?,'present','',1,?,?)`).bind(f.a.workspaceId, f.cls, sessionId, studentId, now, now).run();
+    };
     await att(monthSessionA);
     await att(monthSessionB);
     const slip = (sessionId: string, student: string, values: any, status: 'draft' | 'sent') => db.prepare(
@@ -305,6 +308,23 @@ describe('criteria levels reads and reports', () => {
     const offPreview = await callFlag(false, `/v1/reports/${reportId}/preview`, {}, f.a.token);
     expect(offPreview.body).not.toHaveProperty('criteria_summary');
     expect(offPreview.body).not.toHaveProperty('skill_summary');
+
+    // Đợt thứ hai: `publishBatch` gộp MỘT query mức cho cả lớp, mỗi học sinh vẫn đúng số của mình.
+    const batch2 = await callFlag(true, `/v1/classes/${f.cls}/report-batches`, post({ from_session_id: monthSessionA, to_session_id: monthSessionB }), f.a.token);
+    const reports = batch2.body.reports as { report_id: string; student_id: string }[];
+    for (const item of reports)
+      await callFlag(true, `/v1/reports/${item.report_id}`, put({ general_comment: 'Nhận xét chung.' }), f.a.token);
+    const publishedAll = await callFlag(true, `/v1/report-batches/${batch2.body.batch.id}/publish`, post({}), f.a.token);
+    expect(publishedAll.status).toBe(200);
+    expect(publishedAll.body.published).toHaveLength(3);
+    const snapshotOf = async (studentId: string) =>
+      (await callFlag(true, `/v1/reports/${reports.find((x) => x.student_id === studentId)!.report_id}/publications/1`, {}, f.a.token)).body.snapshot;
+    const firstSnapshot = await snapshotOf(f.students[0]!);
+    expect(firstSnapshot.criteria_summary.focus).toEqual({ good: 1, ok: 0, needs_work: 1 });
+    expect(firstSnapshot.skill_summary.speaking).toMatchObject({ good: 1, ok: 1, sessions: 2 });
+    const secondSnapshot = await snapshotOf(f.students[1]!);
+    expect(secondSnapshot).not.toHaveProperty('criteria_summary');
+    expect(secondSnapshot).not.toHaveProperty('skill_summary');
   });
 
   it('has the 0016 columns and keeps the existing behavior without any levels slip', async () => {
@@ -321,5 +341,68 @@ describe('criteria levels reads and reports', () => {
     await db.prepare("DELETE FROM attendance WHERE session_id=? AND student_id=?").bind(f.ses, f.students[0]).run();
     expect((await f.slipSet({ levels: levels(), comment: 'Câu.' })).body.results[0].error.code).toBe('attendance_incomplete');
     expect((await call('/v1/sessions/' + f.ses + '/slips', {}, f.a.token)).status).toBe(200);
+  });
+
+  it('treats corrupt level JSON as absent instead of failing reads or reports', async () => {
+    const f = await setup();
+    const month = '2026-10', now = new Date().toISOString();
+    const corrupt = await insertSession(f.a.workspaceId, f.cls, '2026-10-21', f.a.userId);
+    const good = await insertSession(f.a.workspaceId, f.cls, '2026-10-22', f.a.userId);
+    const slip = (sessionId: string, levelsJson: string, skillJson: string) => db.prepare(
+      `INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,hw_manual,levels,skill_levels,status,sent_at,version,created_at,updated_at)
+       VALUES(?,?,?,?,3,5,21,'Câu.','',0,?,?,'sent',?,1,?,?)`)
+      .bind(f.a.workspaceId, f.cls, sessionId, f.students[0], levelsJson, skillJson, now, now, now).run();
+    await slip(corrupt, '{bad', '[1,2]');
+    await slip(good, JSON.stringify(levels()), JSON.stringify({ speaking: 'good' }));
+    // Buổi có cột JSON hỏng cũng chỉ bị coi như vắng khoá.
+    await db.prepare("UPDATE class_sessions SET today_topics='[bad' WHERE id=?").bind(corrupt).run();
+
+    const pulled = await callFlag(true, `/v1/sync/pull?membership_id=${f.teacher.mid}&cursor=0&epoch=1&limit=300`, {}, f.teacher.token);
+    expect(pulled.status).toBe(200);
+    const pulledCorrupt = pulled.body.upserts.slip.find((x: any) => x.session_id === corrupt);
+    expect(pulledCorrupt).toBeDefined();
+    expect(pulledCorrupt).not.toHaveProperty('levels');
+    expect(pulledCorrupt).not.toHaveProperty('skill_levels');
+    expect(pulled.body.upserts.slip.find((x: any) => x.session_id === good)).toMatchObject({ levels: levels(), skill_levels: { speaking: 'good' } });
+    expect(pulled.body.upserts.class_session.find((x: any) => x.id === corrupt)).not.toHaveProperty('today_topics');
+
+    const corruptList = await f.slips(f.teacher, true, corrupt);
+    expect(corruptList.status).toBe(200);
+    expect(corruptList.body.items.find((x: any) => x.session_id === corrupt)).not.toHaveProperty('levels');
+    const goodList = await f.slips(f.teacher, true, good);
+    expect(goodList.status).toBe(200);
+    expect(goodList.body.items.find((x: any) => x.session_id === good)).toMatchObject({ levels: levels() });
+
+    const preview = await callFlag(true, `/v1/students/${f.students[0]}/report-preview?month=${month}`, {}, f.a.token);
+    expect(preview.status).toBe(200);
+    // Dòng hỏng không bị đếm; dòng tốt vẫn đếm bình thường.
+    expect(preview.body.criteria_summary.focus).toEqual({ good: 1, ok: 0, needs_work: 0 });
+    expect(preview.body.skill_summary).toEqual({ speaking: { good: 1, ok: 0, needs_work: 0, sessions: 1 } });
+  });
+
+  it('rejects level defaults while the flag is off and keeps guardians out of session.lesson.set', async () => {
+    const f = await setup();
+    const rejected = await f.send([command('slip.send', {
+      session_id: f.ses, student_ids: [f.students[0]],
+      defaults: [{ student_id: f.students[0], levels: levels(), comment: 'Câu.' }],
+    })], false);
+    expect(rejected.body.results[0]).toMatchObject({ status: 'rejected', error: { code: 'feature_disabled' } });
+    expect(await f.row()).toBeNull();
+    const guardian = await callFlag(true, '/v1/sync/push', post({
+      membership_id: f.guardian.mid, device_id: uid(),
+      commands: [command('session.lesson.set', { session_id: f.ses, topics: ['speaking'], graded_skills: [] })],
+    }), f.guardian.token);
+    expect(guardian.body.results[0]).toMatchObject({ status: 'rejected', error: { code: 'forbidden' } });
+    expect(await f.sessionRow()).toMatchObject({ today_topics: null, version: 1 });
+  });
+
+  it('still reads stored levels and today topics while the flag is off', async () => {
+    const f = await setup();
+    await f.slipSet({ levels: levels(), skill_levels: { speaking: 'ok' }, comment: 'Câu.' }, 0, true);
+    await f.send([command('session.lesson.set', { session_id: f.ses, topics: ['speaking'], graded_skills: ['speaking'] })], true);
+    const pulled = await callFlag(false, `/v1/sync/pull?membership_id=${f.teacher.mid}&cursor=0&epoch=1&limit=200`, {}, f.teacher.token);
+    expect(pulled.status).toBe(200);
+    expect(pulled.body.upserts.slip).toContainEqual(expect.objectContaining({ student_id: f.students[0], levels: levels(), skill_levels: { speaking: 'ok' } }));
+    expect(pulled.body.upserts.class_session).toContainEqual(expect.objectContaining({ id: f.ses, today_topics: ['speaking'], graded_skills: ['speaking'] }));
   });
 });
