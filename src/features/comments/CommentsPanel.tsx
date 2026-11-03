@@ -25,6 +25,7 @@ import CommentTicketSheet, { type SheetHomework } from "./CommentTicketSheet";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import AssignDefaultsAction from "./AssignDefaultsAction";
 import SendTicketsDialog from "./SendTicketsDialog";
+import { effortSummary } from "../../data/criteriaLevels";
 import {
   filterTicketRows,
   homeworkLine,
@@ -43,7 +44,9 @@ import {
 import s from "./CommentsPanel.module.css";
 import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 import NotesImportDialog from "./NotesImportDialog";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { FEATURE_NOTES_IMPORT } from "../../shared/featureFlags";
+import LessonTopicsBar from "./LessonTopicsBar";
 
 function Star({ size = 16 }: { size?: number }) {
   return (
@@ -51,8 +54,8 @@ function Star({ size = 16 }: { size?: number }) {
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="#E5A50A"
-      stroke="#E5A50A"
+      fill="var(--color-star)"
+      stroke="var(--color-star)"
       strokeWidth={1.5}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -178,6 +181,7 @@ export default function CommentsPanel({
   const rows = buildTicketRows(state, sessionId);
   const attendance = session ? attendanceCompletion(state, session) : { complete: false, missing: rows.length };
   const canEdit = canWrite && attendance.complete;
+  const levelsOn = criteriaLevelsEnabled();
   const counts = ticketCounts(rows);
   const filteredRows = filterTicketRows(rows, filter);
   const visibleRows = attendance.complete
@@ -322,6 +326,9 @@ export default function CommentsPanel({
   function ticketRow(row: TicketRow) {
     const badge = ticketBadge(row);
     const line = homeworkLine(row.previousHomework);
+    const effort = row.comment?.levels
+      ? effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session?.gradedSkills ?? [] })
+      : null;
     return (
       <li key={row.student.id}>
           <button
@@ -348,12 +355,13 @@ export default function CommentsPanel({
             </span>
           </span>
           {row.stars !== null && (
-            <span className={s.starsLine}>
+            <span className={s.starsLine} role="img" aria-label={`${row.stars} sao`}>
               {Array.from({ length: row.stars }, (_, index) => (
                 <Star key={index} />
               ))}
             </span>
           )}
+          {effort && <span className={s.effortLine}>{effort}</span>}
           <span
             className={
               line.tone === "warning" ? s.homeworkLineWarning : s.homeworkLine
@@ -417,9 +425,10 @@ export default function CommentsPanel({
         </p>
         )}
 
-        <CriteriaModeToggle mode={mode} onChange={setMode} />
+        {levelsOn && <LessonTopicsBar session={session} disabled={!canEdit} />}
+        {!levelsOn && <CriteriaModeToggle mode={mode} onChange={setMode} />}
 
-        {mode === "criteria" ? (
+        {!levelsOn && mode === "criteria" ? (
           <CriteriaMode
             sessionId={sessionId}
             rows={rows}

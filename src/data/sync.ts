@@ -7,6 +7,7 @@ import { setRejectedCommands, setSaveStatus } from "./saveStatus";
 import { logoutLockKey } from "./outbox";
 import { classFromApi, reportBatchFromApi, reportFromApi } from "./api/mapping";
 import { starsFromCriteria } from "./slip";
+import { criteriaFromLevels, normalizeTopics, parseLevels, parseSkillLevels, starsFromLevels } from "./criteriaLevels";
 import { clearReportBatchTombstones, isReportBatchDeleted, isReportDeleted } from "./reportBatchTombstones";
 import { resolveApiBase } from "./api/baseUrl";
 export const api = createApiClient({ baseUrl: resolveApiBase(import.meta.env.VITE_API_BASE), getToken: () => getToken() });
@@ -33,11 +34,17 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
   switch (entity) {
     case "class": return classFromApi(item as unknown as ApiClass);
     case "student": return { id: item.id, classId: item.class_id, name: item.name, parentPhone: item.parent_phone ?? "", enrolledAt: item.enrolled_at, leftAt: item.left_at, status: item.status };
-    case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status === "excused" ? "absent" : item.status, note: item.note, version: item.version };
+    case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status === "excused" ? "absent" : item.status, note: item.note, version: item.version, ...(Array.isArray(item.today_topics) ? { todayTopics: normalizeTopics(item.today_topics) } : {}), ...(Array.isArray(item.graded_skills) ? { gradedSkills: normalizeTopics(item.graded_skills) } : {}) };
     case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };
     case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, archived: item.archived, version: item.version };
     case "score": return { id: `${item.test_id}:${item.student_id}`, testId: item.test_id, studentId: item.student_id, value: item.value, version: item.version };
-    case "slip": { const scale = item.scale ?? (item.criteria == null ? 3 : 5); const criteria = item.criteria ?? null; return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, criteria, comment: item.comment ?? null, scale, stars: scale === 5 && criteria !== null ? starsFromCriteria(criteria) : item.stars ?? null, note: item.note ?? "", hwManual: item.hw_manual === true || item.hw_manual === 1, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at }; }
+    case "slip": {
+      const scale = item.scale ?? (item.criteria == null ? 3 : 5);
+      const levels = parseLevels(item.levels);
+      const skillLevels = parseSkillLevels(item.skill_levels);
+      const criteria = levels ? criteriaFromLevels(levels) : item.criteria ?? null;
+      return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, criteria, comment: item.comment ?? null, scale, ...(levels ? { levels } : {}), ...(skillLevels ? { skillLevels } : {}), stars: levels ? starsFromLevels(levels) : scale === 5 && criteria !== null ? starsFromCriteria(criteria) : item.stars ?? null, note: item.note ?? "", hwManual: item.hw_manual === true || item.hw_manual === 1, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at };
+    }
     case "homework_section": return { id: item.id, sessionId: item.session_id, kind: item.kind, title: item.title, description: item.description, version: item.version };
     case "homework_grade": return { sectionId: item.section_id, studentId: item.student_id, level: item.level ?? null, version: item.version };
     case "report_batch": return reportBatchFromApi(item as unknown as ApiReportBatch);
@@ -224,8 +231,8 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
   try {
     await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
     while (true) {
-        const rows = (await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").toArray())
-          .sort((a, b) => a.created_at.localeCompare(b.created_at) || pushPhase(a.type) - pushPhase(b.type) || a.id.localeCompare(b.id));
+        // Pha phụ thuộc trước (điểm danh → Hôm nay học → phiếu → gửi), rồi mới theo giờ tạo/id.
+        const rows = orderPushBatch(await db.outbox.where("identity").equals(identity).and((x) => x.status === "pending").toArray());
       if (!rows.length) break;
       let batch = [] as typeof rows;
       for (const row of rows) {
@@ -273,6 +280,7 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
     if (!outboxChanged && !pullWhenIdle) return;
     const changed = await pull(identity, membershipId);
     if (changed || outboxChanged) await hydrateStore();
+    if (await retryLessonCommandsAhead(identity)) scheduleSync(0);
     const remaining = await db.outbox.where("identity").equals(identity).toArray();
     publishRejected(remaining);
     setSaveStatus(remaining.some((x) => x.status === "rejected") ? "error" : remaining.length ? "local" : "synced");
@@ -283,6 +291,35 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
     if (await db.outbox.where("identity").equals(identity).count()) setSaveStatus("error");
   }
 }
+/**
+ * `session.lesson.set` bị từ chối `base_version_ahead` (máy khác vừa bump version):
+ * sau khi pull, gửi lại MỘT lần với command ID mới và `base_version` mới nhất.
+ * Quá một lần thì giữ lệnh bị từ chối để người dùng thấy lỗi, không lặp vô hạn.
+ */
+const LESSON_VERSION_RETRY_LIMIT = 1;
+async function retryLessonCommandsAhead(identity: string): Promise<boolean> {
+  return db.transaction("rw", [db.outbox, db.sessions], async () => {
+    const rows = await db.outbox.where("identity").equals(identity)
+      .and((row) => row.type === "session.lesson.set" && row.status === "rejected" && row.error === "base_version_ahead").toArray();
+    let changed = false;
+    for (const row of rows) {
+      if ((row.retries ?? 0) >= LESSON_VERSION_RETRY_LIMIT) continue;
+      const sessionId = (row.payload as { session_id?: string }).session_id;
+      if (!sessionId) continue;
+      // Đã có lệnh mới hơn cho cùng buổi thì lệnh cũ không còn giá trị.
+      const newer = await db.outbox.where("identity").equals(identity)
+        .and((other) => other.id !== row.id && other.cell_key === row.cell_key && other.status !== "rejected").first();
+      if (newer) { await db.outbox.delete(row.id); continue; }
+      const cached = await db.sessions.get(`${identity}|class_session|${sessionId}`) as { version?: number } | undefined;
+      const baseVersion = Math.max(Number(row.base_version ?? 0), Number(cached?.version ?? 0));
+      await db.outbox.delete(row.id);
+      await db.outbox.put({ ...row, id: crypto.randomUUID(), base_version: baseVersion, created_at: new Date().toISOString(), status: "pending", error: undefined, retries: (row.retries ?? 0) + 1 });
+      changed = true;
+    }
+    return changed;
+  });
+}
+
 /** Lệnh còn trong hàng đợi từ bản cũ: bỏ `max` của bài kiểm tra; điểm danh "có phép" gửi thành vắng, không gửi giờ đến và ghi chú. */
 function payloadWithoutLegacyFields(type: string, payload: SyncCommand["payload"]): SyncCommand["payload"] {
   if (type === "attendance.set") {
@@ -294,7 +331,14 @@ function payloadWithoutLegacyFields(type: string, payload: SyncCommand["payload"
   return currentPayload as SyncCommand["payload"];
 }
 function publishRejected(rows: OutboxRow[]): void {
-  setRejectedCommands(rows.filter((x) => x.status === "rejected").map((x) => ({ id: x.id, type: x.type, error: x.error ?? "rejected" })));
+  setRejectedCommands(rows.filter((x) => x.status === "rejected").map((x) => {
+    const payload = x.payload as { session_id?: string; student_id?: string };
+    return {
+      id: x.id, type: x.type, error: x.error ?? "rejected",
+      ...(payload.session_id ? { sessionId: payload.session_id } : {}),
+      ...(payload.student_id ? { studentId: payload.student_id } : {}),
+    };
+  }));
 }
 /** Lệnh ghi một ô (điểm, điểm danh, phiếu, chấm BTVN): có thể bỏ vì ô đó lấy lại được từ máy chủ. */
 const cellEntity: Record<string, EntityName> = { "score.set": "score", "attendance.set": "attendance", "slip.set": "slip", "homework.grade.set": "homework_grade" };
@@ -347,9 +391,15 @@ export async function retryRejectedCommands(ids: string[]): Promise<void> {
   await syncNow();
 }
 
-/** Thứ tự đẩy lệnh: điểm danh của buổi trước, rồi phiếu của từng em, cuối cùng lệnh gửi phiếu (một em hay cả lớp). */
-const pushPhase = (type: string): number => type === "attendance.set" ? 0 : type === "slip.send" ? 2 : 1;
-const isSlipQueue = (type: string): boolean => type === "attendance.set" || type === "slip.set" || type === "slip.send";
+/**
+ * Thứ tự đẩy theo pha phụ thuộc: điểm danh của buổi, rồi "Hôm nay học" của buổi, rồi phiếu của từng em,
+ * cuối cùng lệnh gửi phiếu (một em hay cả lớp).
+ */
+const pushPhase = (type: string): number => type === "attendance.set" ? 0
+  : type === "session.lesson.set" ? 1
+  : type === "slip.send" ? 3
+  : 2;
+const isSlipQueue = (type: string): boolean => type === "attendance.set" || type === "session.lesson.set" || type === "slip.set" || type === "slip.send";
 const queueSession = (row: { payload: unknown }): string | undefined => (row.payload as { session_id?: string }).session_id;
 export type QueueOrderRow = { id: string; type: string; payload: unknown; created_at: string };
 /** Xếp một lượt đẩy theo phụ thuộc nghiệp vụ: cùng pha thì theo giờ tạo rồi tới id, nên kết quả luôn xác định. */
@@ -393,13 +443,16 @@ export async function discardRejectedCommands(ids: string[]): Promise<void> {
 async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {
   const row = await db.outbox.get(result.id); if (!row) return;
     if (result.status === "rejected") {
+      // Máy chủ thật trả lý do nghiệp vụ trong `details.reason` (validation_error/conflict);
+      // mã hiệu dụng dùng reason nếu có, nếu không mới tới `error.code`.
       const reason = (result.error.details as { reason?: string } | undefined)?.reason;
-      const error = result.error.code === "attendance_incomplete" || (result.error.code === "conflict" && reason === "attendance_incomplete") ? "attendance_incomplete" : result.error.code;
+      const error = reason ?? result.error.code;
       await db.outbox.put({ ...row, status: "rejected", error });
       return;
     }
   if (result.status === "duplicate" && (result as { original_status?: string }).original_status === "rejected") {
-    await db.outbox.put({ ...row, status: "rejected", error: (result as { error?: { code?: string } }).error?.code ?? row.error ?? "rejected" }); return;
+    const error = (result as { error?: { code?: string; details?: { reason?: string } } }).error;
+    await db.outbox.put({ ...row, status: "rejected", error: error?.details?.reason ?? error?.code ?? row.error ?? "rejected" }); return;
   }
   if (row.type === "slip.send" && result.status === "applied") {
     // Gửi xong: ghi ngay trạng thái đã gửi vào máy để tải lại trước lần kéo về kế tiếp không hiện lại phiếu như nháp.

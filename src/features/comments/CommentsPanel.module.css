@@ -704,3 +704,9 @@
     color: var(--color-placeholder);
   }
 }
+
+/* Dòng "N mục cần cố gắng" của phiếu 3 mức (thử nghiệm). */
+.effortLine {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}

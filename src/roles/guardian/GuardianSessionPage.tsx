@@ -6,12 +6,14 @@ import {
   type ChildTicket,
 } from "../../data/repositories/guardian";
 import { sessionPrefix } from "../../data/repositories/sessions";
+import { CRITERION_KEYS, CRITERION_LABELS, LEVEL_LABELS, SKILL_KEYS, SKILL_LABELS, type CriterionKey } from "../../data/criteriaLevels";
 import { PageHeader } from "../../shared/ui";
 import { useGuardianContext } from "./guardianContext";
 import {
   childAttendanceOf,
   childSessionById,
   childTeacherName,
+  childTicketParagraph,
 } from "./guardianRead";
 import { markSessionSeen } from "./guardianSeen";
 import {
@@ -39,6 +41,11 @@ import g from "./guardian.module.css";
  * bài tập về nhà (đề giao buổi này, kèm kết quả khi phiếu buổi chấm đã gửi).
  * Buổi đã huỷ hiện nhãn "Đã huỷ" ở đầu trang, tách khỏi phần BTVN.
  */
+/** Màu chữ theo mức: Tốt = success, Đạt = primary, Cần cố gắng = warning. */
+function levelValueClass(level: "good" | "ok" | "needs_work"): string {
+  return `${g.levelValue} ${level === "good" ? g.levelGood : level === "ok" ? g.levelOk : g.levelNeedsWork}`;
+}
+
 export default function GuardianSessionPage() {
   const { sessionId = "" } = useParams();
   const { child, error } = useGuardianContext();
@@ -85,6 +92,14 @@ export default function GuardianSessionPage() {
   const teacher = childTeacherName(studentId);
   const ticketHomework =
     ticket && ticket.homework.sections.length > 0 ? ticket.homework : null;
+  const ticketLevels = ticket?.comment.levels ?? null;
+  const ticketParagraph = ticket ? childTicketParagraph(ticket) : null;
+  const ticketSkillLevels = ticket?.comment.skillLevels ?? {};
+  const ticketTopics = ticket?.session.todayTopics ?? [];
+  // Phiếu đã gửi: lấy dòng kỹ năng từ mức đã lưu trên phiếu, không theo cấu hình buổi hiện tại.
+  const gradedSkills = ticketLevels ? SKILL_KEYS.filter((key) => ticketSkillLevels[key] !== undefined) : [];
+  // Không giao BTVN buổi trước thì phụ huynh không thấy dòng BTVN trên phiếu.
+  const criterionKeys = CRITERION_KEYS.filter((key) => key !== "homework" || Boolean(ticketHomework));
 
   return (
     <div className={g.page}>
@@ -110,14 +125,38 @@ export default function GuardianSessionPage() {
                   <h2>Nhận xét của {teacher ?? "giáo viên"}</h2>
                   <span><StarRow level={ticket.stars} /><span className={g.muted}> {ticket.stars}/{ticket.scale} sao</span></span>
                 </div>
+                {ticketTopics.length > 0 && (
+                  <p className={g.levelMeta} data-testid="guardian-today-topics">
+                    Hôm nay học: {ticketTopics.map((key) => SKILL_LABELS[key]).join(", ")}
+                  </p>
+                )}
+                {ticketLevels && (
+                  <ul className={g.levelList} data-testid="guardian-criteria">
+                    {criterionKeys.map((key: CriterionKey) => (
+                      <li key={key} className={g.levelRow}>
+                        <span className={g.levelLabel}>{CRITERION_LABELS[key]}</span>
+                        <span className={levelValueClass(ticketLevels[key])}>{LEVEL_LABELS[ticketLevels[key]]}</span>
+                      </li>
+                    ))}
+                    {gradedSkills.length > 0 && (
+                      <li className={g.levelGroupLabel}>Kiến thức hôm nay</li>
+                    )}
+                    {gradedSkills.map((key) => (
+                      <li key={`skill-${key}`} className={g.levelRow} data-testid={`guardian-skill-${key}`}>
+                        <span className={g.levelLabel}>{SKILL_LABELS[key]}</span>
+                        <span className={levelValueClass(ticketSkillLevels[key] ?? "ok")}>{LEVEL_LABELS[ticketSkillLevels[key] ?? "ok"]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <div className={g.ticketBody}>
                   <Mascot pose={starPose(ticket.stars, ticket.scale)} size={88} />
-                  <p className={g.ticketText}>{ticket.template}</p>
+                  <p className={g.ticketText} data-testid="guardian-ticket-text">{ticketParagraph!.text}</p>
                 </div>
-                {ticket.note && (
-                  <div className={g.noteBlock}>
+                {ticketParagraph!.legacyNote && (
+                  <div className={g.noteBlock} data-testid="guardian-note-block">
                     <span className={g.noteBlockLabel}>Ghi chú</span>
-                    <p>{ticket.note}</p>
+                    <p>{ticketParagraph!.legacyNote}</p>
                   </div>
                 )}
               </section>

@@ -166,7 +166,7 @@
 .stars {
   display: inline-flex;
   gap: 2px;
-  color: #e5a50a;
+  color: var(--color-star);
 }
 .star {
   display: block;
@@ -473,7 +473,7 @@
   display: block;
   height: 100%;
   border-radius: var(--radius-pill);
-  background: #e5a50a;
+  background: var(--color-star);
 }
 .barCount {
   font-size: 15px;
@@ -806,4 +806,60 @@
   .sessionCols {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Phiếu 3 mức ở màn phụ huynh (thử nghiệm sau cờ). */
+.levelMeta {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.levelList {
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  padding: var(--space-12) 0;
+  border-top: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
+  list-style: none;
+}
+
+.levelRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+  min-width: 0;
+  font-size: var(--text-md);
+}
+
+.levelLabel {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.levelGroupLabel {
+  padding-top: var(--space-4);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.levelValue {
+  color: var(--color-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.levelGood {
+  color: var(--level-good-fg);
+}
+
+.levelOk {
+  color: var(--level-ok-fg);
+}
+
+.levelNeedsWork {
+  color: var(--level-needs-work-fg);
 }

@@ -8,7 +8,7 @@ import {
   type ChildReport,
   type ChildReportItem,
 } from "../../data/repositories/guardian";
-import { Button, Card, EmptyState, PageHeader, Spinner } from "../../shared/ui";
+import { Button, Card, EmptyState, LevelSummary, PageHeader, Spinner } from "../../shared/ui";
 import { motionClass } from "../../shared/motion";
 import { useGuardianContext } from "./guardianContext";
 import { useStore } from "../../data/store";
@@ -318,6 +318,16 @@ function ReportDetail({
             </div>
           </>}
       </Card>
+
+      {(body.criteriaSummary || body.skillSummary) && (
+        <Card className={g.card}>
+          <div className={g.cardHead}>
+            <h2>Tóm tắt tiêu chí</h2>
+          </div>
+          <p className={g.reportNote}>Tính trên các phiếu đã gửi có chấm mức.</p>
+          <LevelSummary criteria={body.criteriaSummary} skills={body.skillSummary} />
+        </Card>
+      )}
 
       <Card className={g.card}>
         <div className={g.cardHead}>

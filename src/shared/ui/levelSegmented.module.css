@@ -1,0 +1,94 @@
+/* Phiếu 3 mức: chỉ dùng token trong design/tokens (không màu/cỡ chữ/khoảng cách ghi cứng). */
+.group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 var(--space-8);
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-muted);
+  font-family: inherit;
+  font-size: var(--text-control);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+
+.option:hover:not(:disabled) {
+  background: var(--state-hover-bg);
+}
+
+.option:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.option:focus-visible {
+  outline: var(--state-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.optionOn,
+.optionOn:hover:not(:disabled) {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
+}
+
+.optionOn[data-tone="success"] {
+  background: var(--level-good-bg);
+  color: var(--level-good-fg);
+}
+
+.optionOn[data-tone="primary"] {
+  background: var(--level-ok-bg);
+  color: var(--level-ok-fg);
+}
+
+.optionOn[data-tone="warning"] {
+  background: var(--level-needs-work-bg);
+  color: var(--level-needs-work-fg);
+}
+
+.option:disabled {
+  opacity: var(--state-disabled-opacity);
+  cursor: default;
+}
+
+.optionLabel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.icon svg {
+  width: var(--level-row-icon-size);
+  height: var(--level-row-icon-size);
+}
+
+@media (min-width: 1024px) {
+  .option {
+    min-height: var(--tap-desktop);
+  }
+}

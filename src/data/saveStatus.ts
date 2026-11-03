@@ -12,7 +12,14 @@ export function setSaveStatus(next: SaveState): void {
 }
 
 /** Lệnh bị máy chủ từ chối (đang giữ trong outbox) để màn hình hiện lỗi cụ thể. */
-export interface RejectedCommand { id: string; type: string; error: string }
+export interface RejectedCommand {
+  id: string;
+  type: string;
+  error: string;
+  /** Khoá ô liên quan (buổi/em) để màn hình hiện lỗi đúng dòng. */
+  sessionId?: string;
+  studentId?: string;
+}
 let rejected: RejectedCommand[] = [];
 export const getRejectedCommands = (): RejectedCommand[] => rejected;
 export function setRejectedCommands(next: RejectedCommand[]): void {

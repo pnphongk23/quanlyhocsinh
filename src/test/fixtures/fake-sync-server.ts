@@ -17,6 +17,27 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const apiError = (status: number, code: string, details?: Record<string, unknown>) => json({ error: { code, message: code, ...(details ? { details } : {}), request_id: "fake" } }, status);
 
 const generatedStars = (criteria: number): number => criteria.toString(2).split("1").length - 1;
+const CRITERION_BITS: Record<string, number> = { focus: 1, participation: 2, mastery: 4, notes: 8, homework: 16 };
+const LEVELS = ["good", "ok", "needs_work"];
+const SKILLS = ["vocabulary", "grammar", "listening", "speaking", "reading", "writing"];
+const isLevels = (value: unknown): value is Record<string, string> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const keys = Object.keys(value);
+  return keys.length === 5 && Object.keys(CRITERION_BITS).every((key) => LEVELS.includes((value as Record<string, string>)[key]));
+};
+const isSkillLevels = (value: unknown): boolean =>
+  !value || (typeof value === "object" && !Array.isArray(value) && Object.entries(value).every(([key, level]) => SKILLS.includes(key) && LEVELS.includes(level as string)));
+const criteriaOfLevels = (levels: Record<string, string>): number =>
+  Object.entries(CRITERION_BITS).reduce((bits, [key, bit]) => levels[key] === "good" ? bits | bit : bits, 0);
+/** Lý do nghiệp vụ thử nghiệm mà worker thật trả trong `details.reason` (validation_error/conflict). */
+const REASON_CODES = new Set(["base_version_ahead", "invalid_levels", "invalid_skill_levels", "invalid_topics", "invalid_graded_skills", "session_cancelled"]);
+function rejectedFor(id: string, code: string): Row {
+  if (!REASON_CODES.has(code)) return { id, status: "rejected", error: { code, message: code, request_id: "fake" } };
+  return {
+    id, status: "rejected",
+    error: { code: code === "session_cancelled" ? "conflict" : "validation_error", message: code === "session_cancelled" ? "Conflict." : "Invalid request.", details: { reason: code }, request_id: "fake" },
+  };
+}
 
 export function createFakeServer() {
   const rows = new Map<string, Map<string, Row>>();
@@ -60,11 +81,17 @@ export function createFakeServer() {
       if (!Number.isFinite(p.value) || p.value < 0 || p.value > 1000) return { id: command.id, status: "rejected", error: { code: "invalid_score", message: "invalid_score", request_id: "fake" } };
       if (Math.round(p.value * 2) !== p.value * 2) return { id: command.id, status: "rejected", error: { code: "invalid_score_step", message: "invalid_score_step", request_id: "fake" } };
     }
+      if (command.type === "session.lesson.set") {
+        if (!Array.isArray(p.topics) || !p.topics.every((key: string) => SKILLS.includes(key)) || new Set(p.topics).size !== p.topics.length) return rejectedFor(command.id, "invalid_topics");
+        if (!Array.isArray(p.graded_skills) || !p.graded_skills.every((key: string) => p.topics.includes(key))) return rejectedFor(command.id, "invalid_graded_skills");
+      }
       if (command.type === "slip.set") {
+        if (p.levels !== undefined && !isLevels(p.levels)) return rejectedFor(command.id, "invalid_levels");
+        if (p.skill_levels !== undefined && (!isSkillLevels(p.skill_levels) || (p.levels === undefined && !table("slip").get(`${p.session_id}|${p.student_id}`)?.levels))) return rejectedFor(command.id, "invalid_skill_levels");
         if (p.criteria !== undefined && (!Number.isInteger(p.criteria) || p.criteria < 0 || p.criteria > 31)) return { id: command.id, status: "rejected", error: { code: "invalid_criteria", message: "invalid_criteria", request_id: "fake" } };
         if (p.comment !== undefined && p.comment !== null && typeof p.comment !== "string") return { id: command.id, status: "rejected", error: { code: "invalid_comment", message: "invalid_comment", request_id: "fake" } };
         if (p.hw_manual !== undefined && typeof p.hw_manual !== "boolean") return { id: command.id, status: "rejected", error: { code: "invalid_hw_manual", message: "invalid_hw_manual", request_id: "fake" } };
-        if (p.criteria !== undefined && !(typeof p.comment === "string" && p.comment.trim())) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "comment_required", request_id: "fake" } };
+        if ((p.criteria !== undefined || p.levels !== undefined) && !(typeof p.comment === "string" && p.comment.trim())) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "comment_required", request_id: "fake" } };
     }
     switch (command.type) {
       case "attendance.set": if (!["present", "late", "absent"].includes(p.status)) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "invalid_status", request_id: "fake" } }; put("attendance", { session_id: p.session_id, student_id: p.student_id, status: p.status }); break;
@@ -72,8 +99,24 @@ export function createFakeServer() {
         case "test.update": { const current = table("test").get(p.id); if (!current) return { id: command.id, status: "rejected", error: { code: "not_found", message: "not_found", request_id: "fake" } }; const { max: _oldMax, ...withoutMax } = current; const { max: _ignoredMax, ...patch } = p; put("test", { ...withoutMax, ...patch }); break; }
       case "test.delete": { const current = table("test").get(p.id); if (current?.archived) put("test", { ...current, archived: true }); else remove("test", p.id); break; }
         case "score.set": put("score", { test_id: p.test_id, student_id: p.student_id, value: p.value }); break;
-          case "slip.set": { const previous = table("slip").get(`${p.session_id}|${p.student_id}`); const hasCriteria = p.criteria !== undefined; const criteria = hasCriteria ? p.criteria : previous?.criteria ?? null; const comment = typeof p.comment === "string" && p.comment.trim() ? p.comment.trim() : previous?.comment ?? null; put("slip", { session_id: p.session_id, student_id: p.student_id, ...(criteria === null ? { stars: p.stars ?? previous?.stars, scale: 3 } : { criteria, comment, scale: 5 }), note: p.note ?? previous?.note ?? "", hw_manual: p.hw_manual ?? previous?.hw_manual ?? false, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); break; }
-        case "slip.send": for (const studentId of p.student_ids) { const current = table("slip").get(`${p.session_id}|${studentId}`); if (current) put("slip", { ...current, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); else { const attendance = table("attendance").get(`${p.session_id}|${studentId}`); const fallback = (p.defaults ?? []).find((item: Row) => item.student_id === studentId); if (attendance?.status === "present" || attendance?.status === "late") { if (fallback) put("slip", { session_id: p.session_id, student_id: studentId, criteria: fallback.criteria, comment: fallback.comment, scale: 5, stars: generatedStars(fallback.criteria), note: "", hw_manual: false, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); else (skipped ??= []).push({ student_id: studentId, reason: "no_default" }); } else (skipped ??= []).push({ student_id: studentId, reason: "not_attended" }); } } break;
+          case "slip.set": {
+            const previous = table("slip").get(`${p.session_id}|${p.student_id}`);
+            const levels = p.levels !== undefined ? p.levels : p.criteria !== undefined || p.stars !== undefined ? null : previous?.levels ?? null;
+            const skillLevels = p.skill_levels !== undefined ? p.skill_levels : levels ? previous?.skill_levels ?? null : null;
+            const hasCriteria = p.criteria !== undefined;
+            const criteria = levels ? criteriaOfLevels(levels) : hasCriteria ? p.criteria : previous?.criteria ?? null;
+            const comment = typeof p.comment === "string" && p.comment.trim() ? p.comment.trim() : previous?.comment ?? null;
+            put("slip", { session_id: p.session_id, student_id: p.student_id, ...(levels ? { criteria, comment, levels, ...(skillLevels === null ? {} : { skill_levels: skillLevels }), scale: 5 } : criteria === null ? { stars: p.stars ?? previous?.stars, scale: 3 } : { criteria, comment, scale: 5 }), note: p.note ?? previous?.note ?? "", hw_manual: p.hw_manual ?? previous?.hw_manual ?? false, status: "sent", sent_at: "2026-10-23T00:00:00Z" });
+            break;
+          }
+          case "session.lesson.set": {
+            const current = table("class_session").get(p.session_id);
+            if (current?.status === "cancelled") return rejectedFor(command.id, "session_cancelled");
+            if (command.base_version > (current?.version ?? 0)) return rejectedFor(command.id, "base_version_ahead");
+            put("class_session", { ...(current ?? { id: p.session_id }), today_topics: p.topics, graded_skills: p.graded_skills });
+            break;
+          }
+        case "slip.send": for (const studentId of p.student_ids) { const current = table("slip").get(`${p.session_id}|${studentId}`); if (current) put("slip", { ...current, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); else { const attendance = table("attendance").get(`${p.session_id}|${studentId}`); const fallback = (p.defaults ?? []).find((item: Row) => item.student_id === studentId); if (attendance?.status === "present" || attendance?.status === "late") { if (fallback) { const criteria = fallback.levels ? criteriaOfLevels(fallback.levels) : fallback.criteria; put("slip", { session_id: p.session_id, student_id: studentId, criteria, comment: fallback.comment, scale: 5, stars: generatedStars(criteria), ...(fallback.levels ? { levels: fallback.levels, skill_levels: fallback.skill_levels ?? {} } : {}), note: "", hw_manual: false, status: "sent", sent_at: "2026-10-23T00:00:00Z" }); } else (skipped ??= []).push({ student_id: studentId, reason: "no_default" }); } else (skipped ??= []).push({ student_id: studentId, reason: "not_attended" }); } } break;
       case "homework.assign": for (const s of p.sections) put("homework_section", { ...s, class_id: "class-1", session_id: p.session_id }); break;
       case "homework.section.upsert": { const session = table("class_session").get(p.session_id); put("homework_section", { ...p, class_id: session?.class_id ?? "class-1" }); break; }
       case "homework.section.delete": remove("homework_section", p.id); break;
@@ -123,10 +166,10 @@ export function createFakeServer() {
           if (body.commands.length > 50) return apiError(422, "validation_error");
           hooks.pushBatches.push(body.commands);
         const results = body.commands.map((command: Row) => {
-            const required: Record<string, string[]> = { "attendance.set": ["session_id", "student_id", "status"], "test.create": ["id", "class_id", "name", "date"], "test.update": ["id"], "test.delete": ["id"], "score.set": ["test_id", "student_id", "value"], "slip.set": ["session_id", "student_id", "note"], "slip.send": ["session_id", "student_ids"], "homework.assign": ["session_id", "sections"], "homework.section.upsert": ["id", "session_id", "kind", "title", "description"], "homework.section.delete": ["id"], "homework.grade.set": ["section_id", "student_id", "level"], "conflict.resolve": ["conflict_id", "choice"] };
+            const required: Record<string, string[]> = { "attendance.set": ["session_id", "student_id", "status"], "test.create": ["id", "class_id", "name", "date"], "test.update": ["id"], "test.delete": ["id"], "score.set": ["test_id", "student_id", "value"], "slip.set": ["session_id", "student_id", "note"], "slip.send": ["session_id", "student_ids"], "session.lesson.set": ["session_id", "topics", "graded_skills"], "homework.assign": ["session_id", "sections"], "homework.section.upsert": ["id", "session_id", "kind", "title", "description"], "homework.section.delete": ["id"], "homework.grade.set": ["section_id", "student_id", "level"], "conflict.resolve": ["conflict_id", "choice"] };
           if ((required[command.type] ?? []).some((key) => !Object.hasOwn(command.payload, key))) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "missing_required_field", request_id: "fake" } };
           const code = hooks.rejectCommand?.(command);
-        return code ? { id: command.id, status: "rejected", error: { code, message: code, request_id: "fake" } } : apply(command);
+        return code ? rejectedFor(command.id, code) : apply(command);
       });
       hooks.pushDoneAt.push(performance.now());
       return json({ epoch: 1, cursor: log.length, results });

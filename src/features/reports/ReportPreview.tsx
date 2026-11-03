@@ -1,5 +1,5 @@
 import { formatDate, formatScore } from "../../shared/format";
-import { EmptyState } from "../../shared/ui";
+import { EmptyState, LevelSummary } from "../../shared/ui";
 import type { PeriodStudentReport } from "../../data/reportModel";
 import type { RangeLabels } from "../../data/reportRange";
 import styles from "./ReportsPage.module.css";
@@ -100,6 +100,14 @@ export default function ReportPreview({
           <EmptyState size="compact" title="Chưa có phiếu nào được gửi trong đợt này" />
         )}
       </section>
+
+      {(report.criteriaSummary || report.skillSummary) && (
+        <section className={`${styles.block} ${styles.previewCard}`}>
+          <h3>Tóm tắt tiêu chí</h3>
+          <p className={styles.blockNote}>Tính trên các phiếu đã gửi có chấm mức.</p>
+          <LevelSummary criteria={report.criteriaSummary} skills={report.skillSummary} />
+        </section>
+      )}
 
       <section className={`${styles.block} ${styles.previewCard}`}>
         <h3>Bài tập về nhà</h3>

@@ -29,8 +29,8 @@ export function StarRow({
           width={size}
           height={size}
           viewBox="0 0 24 24"
-          fill="#E5A50A"
-          stroke="#E5A50A"
+          fill="var(--color-star)"
+          stroke="var(--color-star)"
           strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"

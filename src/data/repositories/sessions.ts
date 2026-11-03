@@ -1,8 +1,8 @@
 import { dateISO, todayISO } from "../../shared/date";
 import type { Class, Session } from "../types";
 import { getStore } from "../store";
-import { commitState } from "../outbox";
-import { requirePermission, requireClassAccess } from "./access";
+import { commitState, persistCommand } from "../outbox";
+import { requirePermission, requireClassAccess, requireSessionAccess } from "./access";
 import { ApiError } from "../api/client";
 import { api, syncNow } from "../sync";
 import { identityKey } from "../db";
@@ -10,8 +10,12 @@ import { commitRemote, createOnce } from "./rest-cache";
 import { setSaveStatus } from "../saveStatus";
 import { isoWeekday, normalizeWeekdays } from "../../shared/weekdays";
 import { sessionDateLabel } from "../sessionLabel";
+import { normalizeGradedSkills, normalizeTopics } from "../criteriaLevels";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
+import { runDurably, type WritePlan } from "./durable";
+import type { SyncCommand } from "../api/types";
 
-const sessionWire = (s: Session) => ({ id: s.id, class_id: s.classId, date: s.date, start_time: s.time, origin: s.origin ?? "manual", is_makeup: s.makeup ?? false, status: s.status ?? "planned", note: s.note ?? "", version: s.version });
+const sessionWire = (s: Session) => ({ id: s.id, class_id: s.classId, date: s.date, start_time: s.time, origin: s.origin ?? "manual", is_makeup: s.makeup ?? false, status: s.status ?? "planned", note: s.note ?? "", version: s.version, ...(Array.isArray(s.todayTopics) ? { today_topics: s.todayTopics, graded_skills: s.gradedSkills ?? [] } : {}) });
 export function localToday(): string { return todayISO(); }
 let extraSessionUpdateError: string | null = null;
 export function getExtraSessionUpdateError(): string | null { return extraSessionUpdateError; }
@@ -23,6 +27,25 @@ export const getSession: (id: string) => Session | undefined = (id) => getStore(
 export const hasSession: (id: string) => boolean = (id) => getStore().sessions.some(s=>s.id===id);
 
 export function getSessionClass(sessionId: string): Class | undefined { const s=getSession(sessionId);return s?getStore().classes.find(c=>c.id===s.classId):undefined; }
+
+export interface SessionLessonInput { topics: readonly string[]; gradedSkills: readonly string[] }
+/**
+ * "Hôm nay học" + "Chấm riêng" của một buổi (thử nghiệm sau cờ): kiểm khoá/mức, gộp lệnh trong outbox
+ * theo buổi (giữ lệnh mới nhất), `base_version` = version buổi đang giữ. Đổi topics không tự đổi phiếu.
+ */
+function planSessionLesson(sessionId: string, input: SessionLessonInput): WritePlan<Session> {
+  requirePermission("comments_reports", "write");
+  if (!criteriaLevelsEnabled()) throw new Error("Tính năng Hôm nay học chưa bật.");
+  const current = requireSessionAccess(sessionId);
+  const topics = normalizeTopics(input.topics);
+  const gradedSkills = normalizeGradedSkills(input.gradedSkills, topics);
+  const next: Session = { ...current, todayTopics: topics, gradedSkills };
+  const command = { id: crypto.randomUUID(), type: "session.lesson.set", payload: { session_id: sessionId, topics, graded_skills: gradedSkills }, base_version: current.version ?? 0, created_at: new Date().toISOString() } as SyncCommand;
+  const apply = (value: Session) => () => commitState("session-lesson", sessionId, (draft) => { draft.sessions = draft.sessions.map((session) => session.id === sessionId ? value : session); });
+  return { result: next, apply: apply(next), undo: apply(current), persist: () => persistCommand("class_session", [sessionId], sessionWire(next), command) };
+}
+/** Chờ ghi bền; ghi lỗi ⇒ topics/graded_skills của buổi trở lại như trước. */
+export const saveSessionLessonDurable = (sessionId: string, input: SessionLessonInput): Promise<Session> => runDurably(planSessionLesson(sessionId, input));
 
 export async function createSession(input: Omit<Session, "id">): Promise<Session> { requirePermission("sessions_attendance","write");requireClassAccess(input.classId);if(!getStore().classes.some(c=>c.id===input.classId&&c.status==="active"))throw new Error("Không tìm thấy lớp đang hoạt động.");if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||!input.time||!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.time))throw new Error("Ngày hoặc giờ học không hợp lệ.");if(getStore().sessions.some(s=>s.classId===input.classId&&s.date===input.date&&s.time===input.time))throw new Error("Đã có buổi học vào thời gian này.");if(typeof navigator!=="undefined"&&!navigator.onLine)throw new Error("Thêm buổi học cần kết nối mạng.");const body={date:input.date,start_time:input.time,is_makeup:input.makeup??false,note:input.note??""};const identity=identityKey();const result:any=await createOnce(`session:${input.classId}`,body,(id)=>api.request(`POST /classes/${input.classId}/sessions` as any,{body:{id,...body}} as any));const item={...input,id:result.id,version:result.version};await commitRemote(identity,"class_session",result,sessionWire(item as Session),()=>commitState("session",item.id,d=>{d.sessions=[...d.sessions.filter(s=>s.id!==item.id),item as Session];}));return item; }
 

@@ -1,4 +1,5 @@
 import type { CorePermissionGroup, PermissionLevel, HomeworkKind, HomeworkLevel, SlipScale, StarLevel } from "../types";
+import type { Levels, SkillKey, SkillLevels } from "../criteriaLevels";
 /** Wire types from api-spec.md; dates YYYY-MM-DD, timestamps UTC, weekdays ISO 1..7. */
 export type ScopeKind = "workspace" | "assigned_classes" | "linked_students";
 export interface ApiErrorBody {
@@ -56,11 +57,11 @@ interface Versioned { version: number }
 interface Cell extends Versioned { student_id: string; updated_at: string }
 export interface ApiClass extends Versioned { id: string; name: string; status: "active" | "archived"; weekdays: number[]; start_time: string; teacher_name: string | null }
 export interface ApiStudent extends Versioned { id: string; class_id: string; name: string; parent_phone?: string | null; enrolled_at: string; left_at: string | null; status: "active" | "left" }
-export interface ApiSession extends Versioned { id: string; class_id: string; date: string; start_time: string; origin: "recurring" | "manual"; is_makeup: boolean; status: "planned" | "held" | "cancelled"; note?: string }
+export interface ApiSession extends Versioned { id: string; class_id: string; date: string; start_time: string; origin: "recurring" | "manual"; is_makeup: boolean; status: "planned" | "held" | "cancelled"; note?: string; /** Chỉ có khi khác NULL (thử nghiệm sau cờ). */ today_topics?: SkillKey[] | null; graded_skills?: SkillKey[] | null }
 export interface ApiAttendance extends Cell { session_id: string; status: "present" | "late" | "excused" | "absent"; note: string; late_at: string | null }
 export interface ApiTest extends Versioned { id: string; class_id: string; name: string; date: string; archived: boolean }
 export interface ApiScore extends Cell { test_id: string; value: number | null }
-export interface ApiSlip extends Cell { session_id: string; criteria?: number | null; comment?: string | null; scale?: SlipScale; stars?: StarLevel | null; note: string; hw_manual?: boolean | 0 | 1; status: "draft" | "sent"; sent_at: string | null }
+export interface ApiSlip extends Cell { session_id: string; criteria?: number | null; comment?: string | null; scale?: SlipScale; stars?: StarLevel | null; note: string; hw_manual?: boolean | 0 | 1; status: "draft" | "sent"; sent_at: string | null; /** Chỉ có khi khác NULL; vắng = phiếu kiểu cũ. */ levels?: Levels | null; skill_levels?: SkillLevels | null }
 export interface ApiHomeworkSection extends Versioned { id: string; class_id: string; session_id: string; kind: HomeworkKind; title: string; description: string }
 export interface ApiHomeworkGrade extends Cell { section_id: string; level: HomeworkLevel | null }
 /** Nội dung báo cáo một đợt, dùng cho xem trước (`GET /reports/:id/preview`) và bản chụp đã phát hành. */
@@ -73,6 +74,9 @@ export interface ReportBody {
     stars5?: { s5: number; s4: number; s3: number; s2: number; s1: number; s0: number };
   homework: { kind: HomeworkKind; excellent: number; done: number; not_done: number }[];
   general_comment: string; ready: boolean;
+  /** Thử nghiệm sau cờ: chỉ có khi có phiếu đã gửi có mức trong phạm vi báo cáo. */
+  criteria_summary?: Partial<Record<string, Partial<Record<string, number>>>> | null;
+  skill_summary?: Partial<Record<string, Partial<Record<string, number>>>> | null;
 }
 export interface ApiReportRange { from_key: string; to_key: string; from_number: number | null; to_number: number | null; session_count?: number; label?: string }
 export interface ReportPreview extends ReportBody { report_id?: string; batch_id?: string }
@@ -95,8 +99,9 @@ export interface CommandPayloads {
   "test.update": { id: string; name?: string; date?: string };
   "test.delete": { id: string };
   "score.set": { test_id: string; student_id: string; value: number | null };
-  "slip.set": { session_id: string; student_id: string; criteria?: number; comment?: string | null; note: string; stars?: StarLevel; hw_manual?: boolean };
-  "slip.send": { session_id: string; student_ids: string[]; defaults?: Array<{ student_id: string; criteria: number; comment: string }> };
+  "slip.set": { session_id: string; student_id: string; criteria?: number; comment?: string | null; note: string; stars?: StarLevel; hw_manual?: boolean; levels?: Levels; skill_levels?: SkillLevels };
+  "slip.send": { session_id: string; student_ids: string[]; defaults?: Array<{ student_id: string; criteria?: number; comment: string; levels?: Levels; skill_levels?: SkillLevels }> };
+  "session.lesson.set": { session_id: string; topics: SkillKey[]; graded_skills: SkillKey[] };
   "homework.assign": { session_id: string; sections: { id: string; kind: HomeworkKind; title: string; description: string }[] };
   "homework.section.upsert": { id: string; session_id: string; kind: HomeworkKind; title: string; description: string };
   "homework.section.delete": { id: string };

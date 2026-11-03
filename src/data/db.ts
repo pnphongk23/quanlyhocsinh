@@ -8,6 +8,8 @@ export interface OutboxRow {
   base_version: number; membership_id: string; created_at: string; status: OutboxStatus;
   error?: string; depends_on?: string; entity_key?: string;
   cell_key?: string;
+  /** Số lần tự thử lại do lệch `base_version` (tối đa 1). */
+  retries?: number;
 }
 export interface MetaRow { key: string; identity: string; cursor: number; epoch: number; logoutState?: "pending" | "needs_login"; updatedAt?: number; }
 type Stored<T> = T & { identity: string; key: string; entity: string };
@@ -44,6 +46,9 @@ export class AppDatabase extends Dexie {
       reportBatches: "key, identity, class_id, id",
       reports: "key, identity, class_id, student_id, month, batch_id",
     }).upgrade((tx) => tx.table("meta").filter((row: MetaRow) => !row.logoutState).delete());
+    // Chỉ thêm trường không đánh chỉ mục (levels/skill_levels của phiếu, today_topics/graded_skills của buổi):
+    // không đổi bảng, giữ nguyên dữ liệu cũ; phiếu cũ thiếu khoá vẫn hiện theo bit/sao.
+    this.version(3).stores({});
   }
 }
 

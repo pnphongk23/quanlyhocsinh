@@ -1,3 +1,5 @@
+import type { Levels, SkillKey, SkillLevels } from "./criteriaLevels";
+
 export interface Class {
   id: string;
   name: string;
@@ -32,6 +34,10 @@ export interface Session {
   makeup?: boolean;
   status: "held" | "cancelled" | "planned";
   version?: number;
+  /** Chip "Hôm nay học" của buổi (thử nghiệm sau cờ); vắng khoá = chưa từng lưu. */
+  todayTopics?: SkillKey[] | null;
+  /** Kỹ năng bật "Chấm riêng" của buổi; tập con của todayTopics. */
+  gradedSkills?: SkillKey[] | null;
 }
 
 export interface Attendance {
@@ -78,6 +84,10 @@ export interface Comment {
   comment?: string | null;
   /** Thang phiếu; phiếu cũ mặc định là thang 3. */
   scale?: SlipScale;
+  /** Phiếu 3 mức (thử nghiệm): đủ 5 khoá; vắng/null = phiếu kiểu cũ hiện theo bit/sao. */
+  levels?: Levels | null;
+  /** Mức kỹ năng chấm thêm; chỉ có nghĩa khi phiếu có `levels`. */
+  skillLevels?: SkillLevels | null;
   /** Sao hiển thị: client tính từ criteria hoặc giữ nguyên giá trị cũ thang 3. */
   stars: StarLevel | null;
   /** Ghi chú tự do, không bắt buộc. */

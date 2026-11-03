@@ -24,6 +24,7 @@ import { Button, EmptyState, InfoNotice, Pill } from "../../shared/ui";
 import AssignDefaultsAction from "./AssignDefaultsAction";
 import SendTicketsDialog from "./SendTicketsDialog";
 import TicketEditor, { StarRow, desktopTicketLabel } from "./TicketEditor";
+import { effortSummary } from "../../data/criteriaLevels";
 import {
   filterTicketRows,
   sendButtonLabel,
@@ -38,7 +39,9 @@ import s from "./CommentsDesktop.module.css";
 import d from "../class-space/desktop.module.css";
 import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 import NotesImportDialog from "./NotesImportDialog";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { FEATURE_NOTES_IMPORT } from "../../shared/featureFlags";
+import LessonTopicsBar from "./LessonTopicsBar";
 
 /**
  * Tab Nhận xét trên web desktop (ảnh 04): danh sách em + khung soạn phiếu nằm
@@ -71,6 +74,7 @@ export default function CommentsDesktop({
     const rows = buildTicketRows(state, sessionId);
     const attendance = session ? attendanceCompletion(state, session) : { complete: false, missing: rows.length };
     const canEdit = canWrite && attendance.complete;
+    const levelsOn = criteriaLevelsEnabled();
   const visibleRows = filterTicketRows(rows, filter);
   const requestedId = searchParams.get("student");
   const selected =
@@ -222,7 +226,8 @@ export default function CommentsDesktop({
         ) : undefined,
         )}
 
-        <CriteriaModeToggle mode={mode} onChange={setMode} />
+        {levelsOn && <LessonTopicsBar session={session} disabled={!canEdit} />}
+        {!levelsOn && <CriteriaModeToggle mode={mode} onChange={setMode} />}
 
         {!attendance.complete && (
           <InfoNotice
@@ -232,8 +237,8 @@ export default function CommentsDesktop({
           />
         )}
 
-        <div className={mode === "criteria" ? `${d.split} ${s.criteriaSplit}` : d.split}>
-          {mode === "criteria" ? <section className={s.listColumn}>
+        <div className={!levelsOn && mode === "criteria" ? `${d.split} ${s.criteriaSplit}` : d.split}>
+          {!levelsOn && mode === "criteria" ? <section className={s.listColumn}>
             <CriteriaMode
               sessionId={sessionId}
               rows={rows}
@@ -283,6 +288,11 @@ export default function CommentsDesktop({
                         <span className={s.ticketMeta}>
                           {homeworkCountsLine(state, row)}
                         </span>
+                        {row.comment?.levels && effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session.gradedSkills ?? [] }) && (
+                          <span className={s.ticketEffort}>
+                            {effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session.gradedSkills ?? [] })}
+                          </span>
+                        )}
                       </span>
                       {row.stars === null ? <span className={s.stars} /> : <StarRow level={row.stars} />}
                       <Pill
