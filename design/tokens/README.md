@@ -29,6 +29,7 @@ Màu thương hiệu, bo góc và chuyển động giữ nguyên. Trạng thái 
 | `--dialog-action-gap`, `--textarea-min`, `--chip-grid-min`, `--date-col`, `--row-chevron-size` | Khoảng nút hộp xác nhận, kích thước nhập nhiều dòng, chip, cột ngày và mũi tên cuối dòng |
 | `--empty-mascot` 96px, `--empty-mascot-compact` 56px | Cỡ Mít trong `EmptyState` |
 | `--criteria-check-size` 20px, `--criteria-check-icon-size` 12px, `--comment-star-size` 24px | Kích thước tick tiêu chí và sao trong phiếu nhận xét |
+| `--level-row-icon-size` 20px | Icon tiêu chí/kỹ năng của phiếu 3 mức (thử nghiệm sau cờ) |
 | `--textarea-min` 200px, `--chip-grid-min` 132px, `--date-col` 64px, `--row-chevron-size` 12px | Hộp dán nhiều dòng, chip tên ở "Theo tiêu chí", cột ngày thẻ buổi học phụ huynh, mũi tên cuối thẻ dòng (thêm cho iOS, web chưa bắt buộc dùng) |
 | `--grid-col-name-min/max`, `--grid-col-test-max`, `--grid-cell-input-min`, `--grid-resize-step` | Độ rộng cột và bước kéo của bảng điểm |
 

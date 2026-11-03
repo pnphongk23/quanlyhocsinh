@@ -105,6 +105,7 @@
   --tap-desktop: 36px;
   --criteria-check-size: 20px;
   --criteria-check-icon-size: 12px;
+  --level-row-icon-size: 20px; /* icon tiêu chí/kỹ năng ở phiếu 3 mức */
   --comment-star-size: 24px;
   --dialog-action-gap: 8px; /* khoảng giữa các nút xác nhận */
   --control-h: 52px;        /* ô nhập */
