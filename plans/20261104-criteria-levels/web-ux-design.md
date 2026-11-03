@@ -98,7 +98,9 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
   `--dur-press`, `--page-x`, `--form-max`, `--guardian-max`, `--safe-*`, `--sticky-*`.
 - Cần thêm (đã thêm cùng thay đổi này): `--level-row-icon-size: 20px` (icon tiêu chí/kỹ năng),
   `--level-row-label-min: 9rem`, `--level-row-control-min: 15rem` (nhãn và bề rộng segmented trước khi
-  xuống dòng), `--focus-ring-offset: 1px` (vòng focus).
+  xuống dòng), `--focus-ring-offset: 1px` (vòng focus), `--color-star` (một màu sao cho danh sách, phiếu cũ,
+  phiếu 3 mức, màn phụ huynh), `--level-good/ok/needs-work-bg/fg` (mức đang chọn: Tốt = success,
+  Đạt = primary, Cần cố gắng = warning, không đỏ; chữ trên nền đạt AA).
 - Không thêm màu/cỡ chữ mới; icon mức lấy từ bộ icon thiết kế khi có, chưa có thì chỉ dùng nhãn chữ.
 
 ## 8. Việc còn mở

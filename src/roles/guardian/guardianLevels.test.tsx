@@ -12,14 +12,14 @@ import GuardianSessionPage from "./GuardianSessionPage";
 
 const CHILD_KEY = "guardian-selected-child-v1";
 
-function seedGuardian(comment: Comment, gradedSkills: SkillKey[] = ["speaking"]): void {
+function seedGuardian(comment: Comment, gradedSkills: SkillKey[] = ["speaking"], topics: SkillKey[] = ["vocabulary", "speaking"]): void {
   const state = createSeed();
   state.comments = state.comments.filter((item) => item.sessionId !== comment.sessionId || item.studentId !== comment.studentId);
   state.comments.push(comment);
   state.sessions = state.sessions.map((session) => session.id === comment.sessionId ? {
     ...session,
-    todayTopics: ["vocabulary", "speaking"],
-    gradedSkills
+    todayTopics: topics,
+    gradedSkills,
   } : session);
   replaceStore(state);
   switchRole(MEMBER_IDS.lanGuardian);
@@ -84,6 +84,13 @@ describe("PH · phiếu 3 mức ở màn buổi học", () => {
     expect(paragraph.textContent).toContain("Con học tập trung, ghi bài đầy đủ.");
     expect(paragraph.textContent).toContain("Ghi chú của cô");
     expect(host.querySelector('[data-testid="guardian-note-block"]')).toBeNull();
+  });
+
+  it("dòng Hôm nay học giữ tên chip đầy đủ (Mẫu câu/Ngữ pháp)", () => {
+    seedGuardian(levelSlip("6a-session-2"), ["grammar"], ["vocabulary", "grammar"]);
+    storeSelectedChild("6a-student-1");
+    const host = renderSession("6a-session-2");
+    expect(host.querySelector('[data-testid="guardian-today-topics"]')?.textContent).toContain("Hôm nay học: Từ vựng, Mẫu câu/Ngữ pháp");
   });
 
   it("dòng kỹ năng lấy từ mức đã lưu trên phiếu, không theo cấu hình buổi hiện tại", () => {
