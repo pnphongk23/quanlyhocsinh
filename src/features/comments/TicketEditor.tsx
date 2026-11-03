@@ -44,7 +44,7 @@ function Star({ filled }: { filled: boolean }) {
 /** Hàng 3 sao đầy/trống theo mức đang chọn (luôn hiện đủ 3 sao). */
 export function StarRow({ level }: { level: StarLevel | null }) {
   return (
-    <span className={s.stars}>
+    <span className={s.stars} role="img" aria-label={`${level ?? 0} sao`}>
         {[1, 2, 3, 4, 5].map((index) => (
         <Star key={index} filled={level !== null && index <= level} />
       ))}

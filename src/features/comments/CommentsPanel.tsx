@@ -355,7 +355,7 @@ export default function CommentsPanel({
             </span>
           </span>
           {row.stars !== null && (
-            <span className={s.starsLine}>
+            <span className={s.starsLine} role="img" aria-label={`${row.stars} sao`}>
               {Array.from({ length: row.stars }, (_, index) => (
                 <Star key={index} />
               ))}

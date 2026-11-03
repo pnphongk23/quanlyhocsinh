@@ -7,14 +7,16 @@ const tokens = read("src/shared/styles/tokens.css");
 
 describe("một token sao dùng chung", () => {
   it("không còn màu sao ghi cứng ở danh sách, phiếu cũ/mức và màn phụ huynh", () => {
-    for (const path of [
-      "src/features/comments/CommentsPanel.tsx",
-      "src/features/comments/TicketEditor.tsx",
-      "src/roles/guardian/guardianUi.tsx",
-    ]) {
+    const ariaLabels: Record<string, RegExp> = {
+      "src/features/comments/CommentsPanel.tsx": /aria-label=\{`\$\{row\.stars\} sao`\}/,
+      "src/features/comments/TicketEditor.tsx": /aria-label=\{`\$\{level \?\? 0\} sao`\}/,
+      "src/roles/guardian/guardianUi.tsx": /aria-label=\{label \?\? `\$\{level\} sao`\}/,
+    };
+    for (const [path, ariaLabel] of Object.entries(ariaLabels)) {
       const source = read(path);
       expect(source, path).not.toMatch(/#E5A50A|#B7791F|#D2D7DF/i);
       expect(source, path).toContain("var(--color-star)");
+      expect(source, path).toMatch(ariaLabel);
     }
     for (const path of [
       "src/features/comments/SlipCriteriaFields.module.css",
@@ -22,6 +24,6 @@ describe("một token sao dùng chung", () => {
     ]) {
       expect(read(path), path).toMatch(/\.starFilled\s*\{[^}]*fill:\s*var\(--color-star\)/s);
     }
-    expect(tokens).toMatch(/--color-star:\s*#e5a50a/i);
+    expect(tokens).toMatch(/--color-star:\s*#b7791f/i);
   });
 });

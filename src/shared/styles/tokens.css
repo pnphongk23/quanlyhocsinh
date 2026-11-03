@@ -51,7 +51,7 @@
   --color-error: #b42318;
   --color-error-soft: #fdecec;
   --color-neutral-soft: #f0f2f5;
-  --color-star: #e5a50a; /* sao đánh giá: danh sách, phiếu, màn phụ huynh */
+  --color-star: #b7791f; /* sao đánh giá: danh sách, phiếu, màn phụ huynh */
   --color-scrim: rgb(20 24 31 / 0.4);
 
   /* Chữ: cỡ (px) theo reset.css/ui.module.css hiện có */
