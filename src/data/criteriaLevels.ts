@@ -57,14 +57,14 @@ export const SKILL_LABELS: Record<SkillKey, string> = {
   writing: "Viết",
 };
 
-/**
- * Tên dùng trong câu "{nội dung}" và dòng "Hôm nay học" của phụ huynh.
- * Requirements.md lấy ví dụ "từ vựng và mẫu câu" (grammar rút gọn là "Mẫu câu"),
- * trong khi nhãn chip đầy đủ là "Mẫu câu/Ngữ pháp".
- */
-export const TOPIC_LABELS: Record<SkillKey, string> = {
-  ...SKILL_LABELS,
-  grammar: "Mẫu câu",
+/** Tên dùng trong câu "{nội dung}" (viết thường, đúng ngữ pháp); dòng "Hôm nay học" dùng SKILL_LABELS. */
+export const CONTENT_LABELS: Record<SkillKey, string> = {
+  vocabulary: "từ vựng",
+  grammar: "mẫu câu",
+  listening: "phần nghe",
+  speaking: "phần nói",
+  reading: "phần đọc",
+  writing: "phần viết",
 };
 
 export const LEVELS: readonly Level[] = ["good", "ok", "needs_work"];
@@ -213,9 +213,18 @@ function joinWithVa(parts: readonly string[]): string {
   return `${parts.slice(0, -1).join(", ")} và ${parts.at(-1)}`;
 }
 
-/** {nội dung} của câu "Nắm bài hôm nay": chip đã chọn, không chọn = "bài". */
-export function todayTopicsPhrase(topics: readonly string[] | null | undefined): string {
-  const labels = normalizeTopics(topics).map((key) => lower(TOPIC_LABELS[key]));
+/**
+ * {nội dung} của câu "Nắm bài hôm nay": chip đã chọn trừ kỹ năng đang "Chấm riêng"
+ * (câu kỹ năng đã nói riêng), không còn mục nào = "bài".
+ */
+export function todayTopicsPhrase(
+  topics: readonly string[] | null | undefined,
+  gradedSkills: readonly string[] | null | undefined = [],
+): string {
+  const graded = new Set(normalizeTopics(gradedSkills));
+  const labels = normalizeTopics(topics)
+    .filter((key) => !graded.has(key))
+    .map((key) => CONTENT_LABELS[key]);
   return labels.length > 0 ? joinWithVa(labels) : "bài";
 }
 
@@ -307,7 +316,7 @@ export function composeComment({
   topics,
   gradedSkills,
 }: ComposeCommentInput): string {
-  const content = todayTopicsPhrase(topics);
+  const content = todayTopicsPhrase(topics, gradedSkills);
   const skills = gradedSkillEntries(skillLevels, gradedSkills);
   const praise = [
     ...CRITERION_KEYS.filter((key) => levels[key] === "good").map((key) =>

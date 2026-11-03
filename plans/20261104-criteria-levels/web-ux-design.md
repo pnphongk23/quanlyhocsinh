@@ -60,9 +60,13 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 
 ## 4. Màn phụ huynh
 
-- Mỗi phiếu đã gửi: "Hôm nay học: …" (`--text-sm`, `--color-muted`) nếu buổi có chip; rồi 5 dòng tiêu chí
-  dạng nhãn + mức (chỉ đọc; dùng `Pill`/chữ, không segmented), kỹ năng đã chấm thêm nếu có, sau cùng đoạn
-  nhận xét như hiện tại. Sao vẫn hiện x/5; kỹ năng không ảnh hưởng sao.
+- Mỗi phiếu đã gửi: "Hôm nay học: …" (`--text-sm`, `--color-muted`, tên chip đầy đủ) nếu buổi có chip; rồi
+  5 dòng tiêu chí dạng nhãn + mức (chỉ đọc; dùng `Pill`/chữ, không segmented; màu theo mức), kỹ năng đã chấm
+  thêm nếu có, sau cùng đoạn nhận xét như hiện tại. Sao vẫn hiện x/5; kỹ năng không ảnh hưởng sao.
+  - Phiếu 3 mức: câu tự sinh + phần gõ thêm là **một đoạn** (như `slipForViewer` của máy chủ); chỉ phiếu cũ
+    mới tách "Ghi chú" thành khung riêng.
+  - {nội dung} trong câu 🎯 bỏ các kỹ năng đang "Chấm riêng"; ánh xạ: Từ vựng→"từ vựng", Mẫu câu/Ngữ pháp→
+    "mẫu câu", Nghe/Nói/Đọc/Viết→"phần nghe/phần nói/phần đọc/phần viết"; không còn mục nào → "bài".
 - Buổi không có BTVN: không hiện dòng BTVN. Phiếu cũ: chỉ sao + đoạn nhận xét như hiện tại.
 - Bố cục `--guardian-max`, mobile 375/390 chừa `--safe-*`; chữ dài xuống dòng, không cắt dấu tiếng Việt.
 

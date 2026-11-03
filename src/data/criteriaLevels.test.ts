@@ -8,7 +8,7 @@ import {
   LEVELS,
   SKILL_KEYS,
   SKILL_LABELS,
-  TOPIC_LABELS,
+  CONTENT_LABELS,
   composeComment,
   criteriaFromLevels,
   defaultLevels,
@@ -62,7 +62,10 @@ describe("hằng số và thứ tự tiêu chí", () => {
       reading: "Đọc",
       writing: "Viết",
     });
-    expect(TOPIC_LABELS.grammar).toBe("Mẫu câu");
+    expect(CONTENT_LABELS).toEqual({
+      vocabulary: "từ vựng", grammar: "mẫu câu", listening: "phần nghe",
+      speaking: "phần nói", reading: "phần đọc", writing: "phần viết",
+    });
   });
 });
 
@@ -119,7 +122,10 @@ describe("chip Hôm nay học", () => {
   it("ghép {nội dung}: dấu phẩy + và, không chọn = bài", () => {
     expect(todayTopicsPhrase([])).toBe("bài");
     expect(todayTopicsPhrase(["vocabulary", "grammar"])).toBe("từ vựng và mẫu câu");
-    expect(todayTopicsPhrase(["listening", "speaking", "reading"])).toBe("nghe, nói và đọc");
+    expect(todayTopicsPhrase(["listening", "speaking", "reading"])).toBe("phần nghe, phần nói và phần đọc");
+    // Kỹ năng đang "Chấm riêng" không lặp lại trong {nội dung}; bỏ hết thì dùng "bài".
+    expect(todayTopicsPhrase(["vocabulary", "speaking"], ["speaking"])).toBe("từ vựng");
+    expect(todayTopicsPhrase(["speaking", "reading"], ["speaking", "reading"])).toBe("bài");
   });
 
   it("graded_skills chỉ gồm tập con của topics, theo thứ tự kỹ năng cố định", () => {
@@ -178,12 +184,12 @@ describe("ghép câu nhận xét", () => {
   it("kỹ năng Tốt vào câu khen; Đạt/Cần cố gắng sau tiêu chí, chỉ kỹ năng đang chấm", () => {
     const text = composeComment({
       levels: ALL_GOOD,
-      topics: [],
+      topics: ["vocabulary", "speaking"],
       skillLevels: { speaking: "good", reading: "ok", writing: "needs_work" },
       gradedSkills: ["speaking", "reading", "writing"],
     });
     expect(text).toBe(
-      "Con học tập trung, hăng hái tham gia các hoạt động, nắm chắc bài hôm nay, ghi bài và làm bài trên lớp cẩn thận, làm bài tập về nhà đầy đủ và nói tốt. Phần đọc con làm được, cần luyện thêm. Phần viết con còn yếu, bố mẹ cho con luyện thêm nhé.",
+      "Con học tập trung, hăng hái tham gia các hoạt động, nắm chắc từ vựng hôm nay, ghi bài và làm bài trên lớp cẩn thận, làm bài tập về nhà đầy đủ và nói tốt. Phần đọc con làm được, cần luyện thêm. Phần viết con còn yếu, bố mẹ cho con luyện thêm nhé.",
     );
     expect(text).not.toContain("Phần nói");
 

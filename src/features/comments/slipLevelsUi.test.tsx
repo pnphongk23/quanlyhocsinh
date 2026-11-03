@@ -295,7 +295,7 @@ describe("desktop phiếu 3 mức", () => {
     fireEvent.change(sentence, { target: { value: "" } });
     fireEvent.blur(sentence);
     await waitFor(() => expect(save).toHaveBeenCalled());
-    expect(save.mock.calls.at(-1)![0].comment).toContain("Con nắm được phần chính của từ vựng và nói hôm nay");
+    expect(save.mock.calls.at(-1)![0].comment).toContain("Con nắm được phần chính của từ vựng hôm nay");
   });
 
   it("sửa câu rồi sửa ghi chú: lưu ghi chú không ghi đè câu sửa tay", async () => {

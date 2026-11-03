@@ -114,7 +114,7 @@ describe("ghi phiếu 3 mức và Gán tất cả mặc định", () => {
       note: NOTE,
       hwManual: false,
     });
-    expect(storeSlip(d, "s1")?.comment).toContain("từ vựng và nói");
+    expect(storeSlip(d, "s1")?.comment).toContain("từ vựng");
     expect(storeSlip(d, "s2")).toBeUndefined();
     expect(storeSlip(d, "s3")).toMatchObject({ comment: "Phiếu đã gửi", levels: { ...LEVELS, mastery: "ok" } });
     const written = pushed("slip.set").at(-1)!;
@@ -143,7 +143,7 @@ describe("ghi phiếu 3 mức và Gán tất cả mặc định", () => {
       student_id: "s4",
       levels: { focus: "good", participation: "good", mastery: "ok", notes: "good", homework: "good" },
       skill_levels: { speaking: "ok" },
-      comment: expect.stringContaining("nắm được phần chính của từ vựng và nói hôm nay"),
+      comment: expect.stringContaining("nắm được phần chính của từ vựng hôm nay"),
     });
     expect(fallback).not.toHaveProperty("criteria");
     expect(server.rows.get("slip")!.get("session-1|s4")).toMatchObject({ levels: fallback.levels, skill_levels: fallback.skill_levels, status: "sent" });
@@ -194,7 +194,7 @@ describe("ghi phiếu 3 mức và Gán tất cả mặc định", () => {
     await d.syncNow();
 
     const slip = storeSlip(d, "s1")!;
-    expect(slip.comment).toContain("nắm chắc nói hôm nay");
+    expect(slip.comment).toContain("nắm chắc bài hôm nay");
     expect(slip.comment).toContain("và nói tốt");
     expect(slip.note).toBe(NOTE);
     expect(storeSlip(d, "s3")).toMatchObject({ comment: "Phiếu đã gửi", levels: { ...LEVELS, mastery: "ok" } });

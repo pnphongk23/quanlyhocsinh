@@ -6,7 +6,7 @@ import {
   type ChildTicket,
 } from "../../data/repositories/guardian";
 import { sessionPrefix } from "../../data/repositories/sessions";
-import { CRITERION_KEYS, CRITERION_LABELS, LEVEL_LABELS, SKILL_KEYS, SKILL_LABELS, TOPIC_LABELS, type CriterionKey } from "../../data/criteriaLevels";
+import { CRITERION_KEYS, CRITERION_LABELS, LEVEL_LABELS, SKILL_KEYS, SKILL_LABELS, type CriterionKey } from "../../data/criteriaLevels";
 import { PageHeader } from "../../shared/ui";
 import { useGuardianContext } from "./guardianContext";
 import {
@@ -120,7 +120,7 @@ export default function GuardianSessionPage() {
                 </div>
                 {ticketTopics.length > 0 && (
                   <p className={g.levelMeta} data-testid="guardian-today-topics">
-                    Hôm nay học: {ticketTopics.map((key) => TOPIC_LABELS[key]).join(", ")}
+                    Hôm nay học: {ticketTopics.map((key) => SKILL_LABELS[key]).join(", ")}
                   </p>
                 )}
                 {ticketLevels && (
