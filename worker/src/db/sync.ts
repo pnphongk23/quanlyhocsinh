@@ -424,10 +424,10 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
               !selected.has(item.student_id) || defaults.has(item.student_id)) throw validationError(undefined,'invalid_defaults');
           // THỬ NGHIỆM (cờ CRITERIA_LEVELS): mục `defaults` được thêm `levels`/`skill_levels` như `slip.set`.
           if ((item.levels!==undefined || item.skill_levels!==undefined) && !levelsEnabled) throw featureDisabled();
-          if (typeof item.comment!=='string') throw validationError(undefined,'invalid_comment');
-          const comment=item.comment.trim();
-          if (!comment) throw validationError(undefined,'comment_required');
           if (item.levels!==undefined) {
+            if (typeof item.comment!=='string') throw validationError(undefined,'invalid_comment');
+            const comment=item.comment.trim();
+            if (!comment) throw validationError(undefined,'comment_required');
             const parsed=parseLevels(item.levels);
             const skillLevels=item.skill_levels===undefined ? null : parseSkillLevels(item.skill_levels);
             defaults.set(item.student_id,{criteria:parsed.criteria,comment,levels:parsed.json,skillLevels});
@@ -436,6 +436,9 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
           if (item.skill_levels!==undefined) throw validationError(undefined,'invalid_skill_levels');
           if (typeof item.criteria!=='number' || !Number.isInteger(item.criteria) || item.criteria<0 || item.criteria>CRITERIA_MASK)
             throw validationError(undefined,'invalid_criteria');
+          if (typeof item.comment!=='string') throw validationError(undefined,'invalid_comment');
+          const comment=item.comment.trim();
+          if (!comment) throw validationError(undefined,'comment_required');
           defaults.set(item.student_id,{criteria:item.criteria,comment,levels:null,skillLevels:null});
         }
       }
