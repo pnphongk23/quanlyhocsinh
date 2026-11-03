@@ -1,0 +1,125 @@
+.bar {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-8);
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: var(--space-4);
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  min-height: var(--tap);
+  padding: 0 var(--space-12);
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-family: inherit;
+  font-size: var(--text-control);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip:focus-visible,
+.switchRow:focus-visible {
+  outline: var(--state-focus-ring);
+  outline-offset: 1px;
+}
+
+.chip:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.chipOn,
+.chipOn:active:not(:disabled) {
+  background: var(--state-selected-bg);
+  color: var(--state-selected-fg);
+}
+
+.chip:disabled,
+.switchRow:disabled {
+  opacity: var(--state-disabled-opacity);
+  cursor: default;
+}
+
+.gradedRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8) var(--space-12);
+  min-width: 0;
+}
+
+.gradedLabel {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.switchRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--tap);
+  padding: 0 var(--space-8);
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.track {
+  display: inline-flex;
+  align-items: center;
+  width: var(--space-32);
+  height: var(--space-20);
+  padding: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-input-border);
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+
+.trackOn {
+  background: var(--color-primary);
+}
+
+.thumb {
+  width: var(--space-16);
+  height: var(--space-16);
+  border-radius: var(--radius-pill);
+  background: var(--color-on-primary);
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.trackOn .thumb {
+  transform: translateX(var(--space-12));
+}
+
+.error {
+  margin: 0;
+  color: var(--state-error-fg);
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 1024px) {
+  .chip,
+  .switchRow {
+    min-height: var(--tap-desktop);
+  }
+}

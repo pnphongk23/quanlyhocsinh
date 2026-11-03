@@ -43,7 +43,8 @@ import {
 import s from "./CommentsPanel.module.css";
 import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 import NotesImportDialog from "./NotesImportDialog";
-import { FEATURE_NOTES_IMPORT } from "../../shared/featureFlags";
+import { FEATURE_NOTES_IMPORT, criteriaLevelsEnabled } from "../../shared/featureFlags";
+import LessonTopicsBar from "./LessonTopicsBar";
 
 function Star({ size = 16 }: { size?: number }) {
   return (
@@ -178,6 +179,7 @@ export default function CommentsPanel({
   const rows = buildTicketRows(state, sessionId);
   const attendance = session ? attendanceCompletion(state, session) : { complete: false, missing: rows.length };
   const canEdit = canWrite && attendance.complete;
+  const levelsOn = criteriaLevelsEnabled();
   const counts = ticketCounts(rows);
   const filteredRows = filterTicketRows(rows, filter);
   const visibleRows = attendance.complete
@@ -417,9 +419,10 @@ export default function CommentsPanel({
         </p>
         )}
 
-        <CriteriaModeToggle mode={mode} onChange={setMode} />
+        {levelsOn && <LessonTopicsBar session={session} disabled={!canEdit} />}
+        {!levelsOn && <CriteriaModeToggle mode={mode} onChange={setMode} />}
 
-        {mode === "criteria" ? (
+        {!levelsOn && mode === "criteria" ? (
           <CriteriaMode
             sessionId={sessionId}
             rows={rows}
