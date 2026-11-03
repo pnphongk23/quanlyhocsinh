@@ -7,6 +7,7 @@ import { setRejectedCommands, setSaveStatus } from "./saveStatus";
 import { logoutLockKey } from "./outbox";
 import { classFromApi, reportBatchFromApi, reportFromApi } from "./api/mapping";
 import { starsFromCriteria } from "./slip";
+import { criteriaFromLevels, normalizeTopics, parseLevels, parseSkillLevels, starsFromLevels } from "./criteriaLevels";
 import { clearReportBatchTombstones, isReportBatchDeleted, isReportDeleted } from "./reportBatchTombstones";
 import { resolveApiBase } from "./api/baseUrl";
 export const api = createApiClient({ baseUrl: resolveApiBase(import.meta.env.VITE_API_BASE), getToken: () => getToken() });
@@ -33,11 +34,17 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
   switch (entity) {
     case "class": return classFromApi(item as unknown as ApiClass);
     case "student": return { id: item.id, classId: item.class_id, name: item.name, parentPhone: item.parent_phone ?? "", enrolledAt: item.enrolled_at, leftAt: item.left_at, status: item.status };
-    case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status === "excused" ? "absent" : item.status, note: item.note, version: item.version };
+    case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status === "excused" ? "absent" : item.status, note: item.note, version: item.version, ...(Array.isArray(item.today_topics) ? { todayTopics: normalizeTopics(item.today_topics) } : {}), ...(Array.isArray(item.graded_skills) ? { gradedSkills: normalizeTopics(item.graded_skills) } : {}) };
     case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };
     case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, archived: item.archived, version: item.version };
     case "score": return { id: `${item.test_id}:${item.student_id}`, testId: item.test_id, studentId: item.student_id, value: item.value, version: item.version };
-    case "slip": { const scale = item.scale ?? (item.criteria == null ? 3 : 5); const criteria = item.criteria ?? null; return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, criteria, comment: item.comment ?? null, scale, stars: scale === 5 && criteria !== null ? starsFromCriteria(criteria) : item.stars ?? null, note: item.note ?? "", hwManual: item.hw_manual === true || item.hw_manual === 1, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at }; }
+    case "slip": {
+      const scale = item.scale ?? (item.criteria == null ? 3 : 5);
+      const levels = parseLevels(item.levels);
+      const skillLevels = parseSkillLevels(item.skill_levels);
+      const criteria = levels ? criteriaFromLevels(levels) : item.criteria ?? null;
+      return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, criteria, comment: item.comment ?? null, scale, ...(levels ? { levels } : {}), ...(skillLevels ? { skillLevels } : {}), stars: levels ? starsFromLevels(levels) : scale === 5 && criteria !== null ? starsFromCriteria(criteria) : item.stars ?? null, note: item.note ?? "", hwManual: item.hw_manual === true || item.hw_manual === 1, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at };
+    }
     case "homework_section": return { id: item.id, sessionId: item.session_id, kind: item.kind, title: item.title, description: item.description, version: item.version };
     case "homework_grade": return { sectionId: item.section_id, studentId: item.student_id, level: item.level ?? null, version: item.version };
     case "report_batch": return reportBatchFromApi(item as unknown as ApiReportBatch);

@@ -44,6 +44,9 @@ export class AppDatabase extends Dexie {
       reportBatches: "key, identity, class_id, id",
       reports: "key, identity, class_id, student_id, month, batch_id",
     }).upgrade((tx) => tx.table("meta").filter((row: MetaRow) => !row.logoutState).delete());
+    // Chỉ thêm trường không đánh chỉ mục (levels/skill_levels của phiếu, today_topics/graded_skills của buổi):
+    // không đổi bảng, giữ nguyên dữ liệu cũ; phiếu cũ thiếu khoá vẫn hiện theo bit/sao.
+    this.version(3).stores({});
   }
 }
 
