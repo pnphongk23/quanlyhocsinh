@@ -92,3 +92,11 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 - Cần thêm (đã thêm cùng thay đổi này): `--level-row-icon-size: 20px` — icon tiêu chí/kỹ năng trong
   hàng 5 tiêu chí (không dùng cỡ tick 20px/12px của phiếu cũ để tránh lẫn nghĩa).
 - Không thêm màu/cỡ chữ mới; icon mức lấy từ bộ icon thiết kế khi có, chưa có thì chỉ dùng nhãn chữ.
+
+## 8. Việc còn mở
+
+- **Icon 3 mức/tiêu chí:** bộ icon thiết kế chưa có icon cho Tốt/Đạt/Cần cố gắng và cho 5 tiêu chí, nên hàng
+  tiêu chí hiện chỉ có chữ. Đã chừa token `--level-row-icon-size`; khi có bộ icon chính thức thì gắn vào
+  `LevelSegmented`/hàng tiêu chí, không đổi bố cục.
+- **Timeline "Nhận xét của cô" (phụ huynh):** mới hiện câu + ghi chú như cũ; danh sách tiêu chí/mức và
+  "Hôm nay học" mới có ở màn chi tiết buổi. Cần chốt có thêm bản rút gọn vào thẻ timeline hay không.

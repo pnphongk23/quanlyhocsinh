@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSeed } from "../../test/fixtures/seed";
@@ -81,6 +83,12 @@ describe("LessonTopicsBar", () => {
     expect(chip).toBeDisabled();
     fireEvent.click(chip);
     expect(repo.lesson).not.toHaveBeenCalled();
+  });
+
+  it("hàng chip xuống nhiều dòng, không cuộn ngang ở 375/390", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/features/comments/LessonTopicsBar.module.css"), "utf8");
+    expect(css).toMatch(/\.chips\s*\{[^}]*flex-wrap:\s*wrap/s);
+    expect(css).not.toMatch(/\.chips\s*\{[^}]*overflow-x/s);
   });
 
   it("lỗi từ chối cuối hiện lỗi dòng 'chỉ có trên máy'", () => {
