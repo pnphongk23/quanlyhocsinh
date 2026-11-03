@@ -7,7 +7,7 @@ import { sessionPrefix } from "../../data/repositories/sessions";
 import { PageHeader } from "../../shared/ui";
 import { motionClass } from "../../shared/motion";
 import { useGuardianContext } from "./guardianContext";
-import { childTeacherWords, type ChildTeacherWord } from "./guardianRead";
+import { childTeacherWords, childTicketParagraph, type ChildTeacherWord } from "./guardianRead";
 import { longDayMonth, monthYearLabel } from "./guardianFormat";
 import GuardianNoChild from "./guardianEmpty";
 import { ChildEmpty, FROM_COMMENTS, StarRow } from "./guardianUi";
@@ -110,12 +110,12 @@ export default function GuardianCommentsPage() {
                     {item === newestTicket && (
                       <Mascot pose={starPose(item.ticket.stars, item.ticket.scale)} size={56} />
                     )}
-                    <p className={g.ticketText}>{item.ticket.template}</p>
+                    <p className={g.ticketText} data-testid="guardian-ticket-text">{childTicketParagraph(item.ticket).text}</p>
                   </div>
-                  {item.ticket.note && (
-                    <div className={g.noteBlock}>
+                  {childTicketParagraph(item.ticket).legacyNote && (
+                    <div className={g.noteBlock} data-testid="guardian-note-block">
                       <span className={g.noteBlockLabel}>Ghi chú</span>
-                      <p>{item.ticket.note}</p>
+                      <p>{childTicketParagraph(item.ticket).legacyNote}</p>
                     </div>
                   )}
                 </Link>

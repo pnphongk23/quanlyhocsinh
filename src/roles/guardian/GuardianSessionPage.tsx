@@ -13,6 +13,7 @@ import {
   childAttendanceOf,
   childSessionById,
   childTeacherName,
+  childTicketParagraph,
 } from "./guardianRead";
 import { markSessionSeen } from "./guardianSeen";
 import {
@@ -87,6 +88,7 @@ export default function GuardianSessionPage() {
   const ticketHomework =
     ticket && ticket.homework.sections.length > 0 ? ticket.homework : null;
   const ticketLevels = ticket?.comment.levels ?? null;
+  const ticketParagraph = ticket ? childTicketParagraph(ticket) : null;
   const ticketSkillLevels = ticket?.comment.skillLevels ?? {};
   const ticketTopics = ticket?.session.todayTopics ?? [];
   // Phiếu đã gửi: lấy dòng kỹ năng từ mức đã lưu trên phiếu, không theo cấu hình buổi hiện tại.
@@ -144,12 +146,12 @@ export default function GuardianSessionPage() {
                 )}
                 <div className={g.ticketBody}>
                   <Mascot pose={starPose(ticket.stars, ticket.scale)} size={88} />
-                  <p className={g.ticketText}>{ticket.template}</p>
+                  <p className={g.ticketText} data-testid="guardian-ticket-text">{ticketParagraph!.text}</p>
                 </div>
-                {ticket.note && (
-                  <div className={g.noteBlock}>
+                {ticketParagraph!.legacyNote && (
+                  <div className={g.noteBlock} data-testid="guardian-note-block">
                     <span className={g.noteBlockLabel}>Ghi chú</span>
-                    <p>{ticket.note}</p>
+                    <p>{ticketParagraph!.legacyNote}</p>
                   </div>
                 )}
               </section>

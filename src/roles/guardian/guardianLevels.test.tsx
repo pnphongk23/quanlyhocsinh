@@ -79,7 +79,11 @@ describe("PH · phiếu 3 mức ở màn buổi học", () => {
     expect(criteria.textContent).toContain("Đạt");
     expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Nói");
     expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Cần cố gắng");
-    expect(host.textContent).toContain("Con học tập trung, ghi bài đầy đủ.");
+    // Phiếu 3 mức: câu tự sinh + phần gõ thêm là MỘT đoạn, không có khung "Ghi chú" riêng.
+    const paragraph = host.querySelector('[data-testid="guardian-ticket-text"]')!;
+    expect(paragraph.textContent).toContain("Con học tập trung, ghi bài đầy đủ.");
+    expect(paragraph.textContent).toContain("Ghi chú của cô");
+    expect(host.querySelector('[data-testid="guardian-note-block"]')).toBeNull();
   });
 
   it("dòng kỹ năng lấy từ mức đã lưu trên phiếu, không theo cấu hình buổi hiện tại", () => {
@@ -109,5 +113,8 @@ describe("PH · phiếu 3 mức ở màn buổi học", () => {
     const host = renderSession("6a-session-4");
     expect(host.querySelector('[data-testid="guardian-criteria"]')).toBeNull();
     expect(host.textContent).toContain("/3 sao");
+    // Phiếu cũ giữ "Ghi chú" riêng.
+    expect(host.querySelector('[data-testid="guardian-ticket-text"]')?.textContent).not.toContain("Ghi chú kiểm thử.");
+    expect(host.querySelector('[data-testid="guardian-note-block"]')?.textContent).toContain("Ghi chú kiểm thử.");
   });
 });

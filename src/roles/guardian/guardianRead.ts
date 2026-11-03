@@ -6,12 +6,14 @@ import {
   getChildHomework,
   listChildTickets,
   listMyChildren,
+  type ChildTicket,
   type GuardianChild,
 } from "../../data/repositories/guardian";
 import { sessionNumber } from "../../data/repositories/sessions";
 import { compareSessions } from "../../data/homework";
 import { todayISO } from "../../shared/date";
 import type { Session, StarLevel, Student, Test } from "../../data/types";
+import { slipDisplayText } from "../../data/slip";
 import type { AttendanceStatus } from "./guardianFormat";
 
 /**
@@ -217,6 +219,16 @@ export function childClassInfo(studentId: string): ChildClassInfo {
     time: klass?.time ?? "",
     teacher: childTeacherName(studentId),
   };
+}
+
+/**
+ * Nội dung phiếu cho phụ huynh: phiếu 3 mức gộp câu tự sinh + phần gõ thêm thành MỘT đoạn
+ * (như `slipForViewer` của máy chủ); phiếu cũ giữ "Ghi chú" riêng.
+ */
+export function childTicketParagraph(ticket: ChildTicket): { text: string; legacyNote: string } {
+  return ticket.comment.levels
+    ? { text: slipDisplayText(ticket.template, ticket.note), legacyNote: "" }
+    : { text: ticket.template, legacyNote: ticket.note };
 }
 
 /** Buổi thuộc lớp con trong khoảng ngày vào lớp..rời lớp (mọi trạng thái). */
