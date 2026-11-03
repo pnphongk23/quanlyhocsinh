@@ -212,6 +212,14 @@ export default function CommentTicketSheet({
     writeDraft(session.id, row.student.id, draft.current);
   }, [gradeKey, criteria, comment, manualHomework, row.status, scale, session.id, row.student.id]);
 
+  // Buổi vừa bật "Chấm riêng" cho kỹ năng mới: thêm mức mặc định Đạt để câu/skill_levels đủ khoá.
+  useEffect(() => {
+    if (!levelMode) return;
+    const missing = gradedSkills.filter((key) => skillLevels[key] === undefined);
+    if (!missing.length) return;
+    setSkillLevels((current) => ({ ...defaultSkillLevels(missing), ...current }));
+  }, [gradedSkills, levelMode, skillLevels]);
+
   // Chấm lại BTVN ở phiếu 3 mức: chỉ tự đổi phiếu chưa gửi, chưa chọn tay.
   useEffect(() => {
     if (!levelMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;

@@ -6,19 +6,20 @@ import { createSeed } from "../../data/seed";
 import { replaceStore } from "../../data/store";
 import { switchRole } from "../../data/repositories/access";
 import type { Comment } from "../../data/types";
+import type { SkillKey } from "../../data/criteriaLevels";
 import { GuardianProvider } from "./guardianContext";
 import GuardianSessionPage from "./GuardianSessionPage";
 
 const CHILD_KEY = "guardian-selected-child-v1";
 
-function seedGuardian(comment: Comment): void {
+function seedGuardian(comment: Comment, gradedSkills: SkillKey[] = ["speaking"]): void {
   const state = createSeed();
   state.comments = state.comments.filter((item) => item.sessionId !== comment.sessionId || item.studentId !== comment.studentId);
   state.comments.push(comment);
   state.sessions = state.sessions.map((session) => session.id === comment.sessionId ? {
     ...session,
     todayTopics: ["vocabulary", "speaking"],
-    gradedSkills: ["speaking"],
+    gradedSkills
   } : session);
   replaceStore(state);
   switchRole(MEMBER_IDS.lanGuardian);
@@ -79,6 +80,13 @@ describe("PH · phiếu 3 mức ở màn buổi học", () => {
     expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Nói");
     expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Cần cố gắng");
     expect(host.textContent).toContain("Con học tập trung, ghi bài đầy đủ.");
+  });
+
+  it("dòng kỹ năng lấy từ mức đã lưu trên phiếu, không theo cấu hình buổi hiện tại", () => {
+    seedGuardian(levelSlip("6a-session-2"), []);
+    storeSelectedChild("6a-student-1");
+    const host = renderSession("6a-session-2");
+    expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Cần cố gắng");
   });
 
   it("buổi trước không giao BTVN: không hiện dòng Bài tập về nhà trên phiếu", () => {

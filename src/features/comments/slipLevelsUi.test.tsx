@@ -121,6 +121,28 @@ describe("SlipLevelFields", () => {
     expect(onSkillChange).toHaveBeenCalledWith("reading", "good");
   });
 
+  it("phiếu đã gửi giữ dòng kỹ năng đã lưu dù buổi đã tắt Chấm riêng", () => {
+    render(
+      <SlipLevelFields
+        levels={LEVELS}
+        skillLevels={{ speaking: "needs_work" }}
+        gradedSkills={[]}
+        comment="Câu"
+        note=""
+        previousGrades={null}
+        homeworkState="has"
+        hwManual={false}
+        sent
+        disabled={false}
+        onLevelChange={vi.fn()}
+        onSkillChange={vi.fn()}
+        onCommentChange={vi.fn()}
+        onNoteChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("slip-skill-row-speaking")).toHaveTextContent("Cần cố gắng");
+  });
+
   it("BTVN chưa chọn tay hiện theo chấm buổi trước; chọn tay thì gọi onLevelChange", () => {
     const onLevelChange = vi.fn();
     render(

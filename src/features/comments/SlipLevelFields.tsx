@@ -3,6 +3,7 @@ import {
   CRITERION_LABELS,
   LEVELS,
   LEVEL_LABELS,
+  SKILL_KEYS,
   SKILL_LABELS,
   homeworkLevelFromGrades,
   starsFromLevels,
@@ -68,6 +69,8 @@ export function SlipLevelFields({
     ? { ...levels, homework: homeworkLevelFromGrades(previousGrades) }
     : levels;
   const stars = starsFromLevels(visible);
+  // Phiếu đã gửi giữ các dòng kỹ năng đã chấm trên phiếu, không theo cấu hình buổi hiện tại.
+  const shownSkills = sent ? SKILL_KEYS.filter((key) => skillLevels[key] !== undefined) : gradedSkills;
 
   return (
     <section
@@ -118,11 +121,11 @@ export function SlipLevelFields({
         })}
       </div>
 
-      {gradedSkills.length > 0 && (
+      {shownSkills.length > 0 && (
         <section className={s.skills} aria-label="Kiến thức hôm nay">
           <h3 className={s.skillsTitle}>Kiến thức hôm nay</h3>
           <div className={s.rows}>
-            {gradedSkills.map((key) => (
+            {shownSkills.map((key) => (
               <div key={key} className={`${s.row} ${s.skillRow}`} data-testid={`slip-skill-row-${key}`}>
                 <span className={s.criterionName}>{SKILL_LABELS[key]}</span>
                 <LevelSegmented

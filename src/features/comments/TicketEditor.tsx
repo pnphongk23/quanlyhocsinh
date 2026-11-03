@@ -185,6 +185,14 @@ export default function TicketEditor({
     void persist({ criteria: next, comment: nextComment, note: draft.current.note, hwManual: draft.current.hwManual });
   }, [gradeKey, criteria, comment, note, manualHomework, row.status, scale, session.id, row.student.id]);
 
+  // Buổi vừa bật "Chấm riêng" cho kỹ năng mới: thêm mức mặc định Đạt để câu/skill_levels đủ khoá.
+  useEffect(() => {
+    if (!levelMode) return;
+    const missing = gradedSkills.filter((key) => skillLevels[key] === undefined);
+    if (!missing.length) return;
+    setSkillLevels((current) => ({ ...defaultSkillLevels(missing), ...current }));
+  }, [gradedSkills, levelMode, skillLevels]);
+
   // Chấm lại BTVN ở phiếu 3 mức: tự đổi phiếu chưa gửi, chưa chọn tay; phiếu đã gửi giữ câu.
   useEffect(() => {
     if (!levelMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;

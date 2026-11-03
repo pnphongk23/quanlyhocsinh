@@ -99,10 +99,11 @@ export function planRegenerateSlipComments(sessionId:string):WritePlan<number>{
   const state=getStore();
   const plans=getStore().comments.filter(c=>c.sessionId===sessionId&&c.levels&&c.status!=="sent"&&!c.sendQueued).flatMap(old=>{
     const levels={...old.levels!,...(old.hwManual?{}:{homework:homeworkLevelFromGrades(previousHomeworkGrades(state,sessionId,old.studentId))})};
-    const skillLevels=old.skillLevels??undefined;
+    // Bật "Chấm riêng" cho kỹ năng mới: thêm mức mặc định Đạt để câu và skill_levels gửi lên đủ khoá.
+    const skillLevels={...defaultSkillLevels(session.gradedSkills??[]),...(old.skillLevels??{})};
     const comment=composeComment({levels,skillLevels,topics:session.todayTopics??[],gradedSkills:session.gradedSkills??[]});
     if(sameLevels(levels,old.levels)&&old.comment===comment)return [];
-    const plan=planComment({sessionId,studentId:old.studentId,levels,...(skillLevels?{skillLevels}:{}),note:old.note});
+    const plan=planComment({sessionId,studentId:old.studentId,levels,skillLevels,note:old.note});
     return [guardUnsent(plan,sessionId,old.studentId)];
   });
   return composePlans(plans,plans.length);
@@ -212,7 +213,7 @@ export interface SendTicketsResult { sent:string[];skipped:string[];skippedReaso
   return{result,
       apply:()=>{for(const comment of targets)commitState("comment-send",comment.id,d=>{const next={...comment,sendQueued:true,updatedAt:new Date().toISOString()};d.comments=d.comments.filter(c=>c.id!==comment.id).concat(next);});},
       undo:()=>commitState("comment-send",sessionId,d=>{d.comments=d.comments.filter(c=>!ids.has(c.id)).concat(previous.filter((p):p is Comment=>p!==null));}),
-      persist:async()=>{if(!sent.length)return;const row:any={id:cmd.id,identity,type:cmd.type,payload:cmd.payload,base_version:0,membership_id:membership!.membershipId,created_at:cmd.created_at,status:"pending"};await db.transaction("rw",[db.slips,db.outbox],async()=>{for(const comment of targets){const wire={session_id:sessionId,student_id:comment.studentId,criteria:comment.criteria??null,comment:comment.comment??null,scale:comment.scale??3,stars:comment.stars,note:comment.note,status:comment.status,sent_at:comment.sentAt,version:(comment as any).version??0,updated_at:comment.updatedAt};await db.slips.put(stored("slip",`${identity}|slip|${sessionId}|${comment.studentId}`,wire) as any);}await db.outbox.put(row);});scheduleSync();}};}
+      persist:async()=>{if(!sent.length)return;const row:any={id:cmd.id,identity,type:cmd.type,payload:cmd.payload,base_version:0,membership_id:membership!.membershipId,created_at:cmd.created_at,status:"pending"};await db.transaction("rw",[db.slips,db.outbox],async()=>{for(const comment of targets){const wire={session_id:sessionId,student_id:comment.studentId,criteria:comment.criteria??null,comment:comment.comment??null,scale:comment.scale??3,stars:comment.stars,...(comment.levels?{levels:comment.levels}:{}),...(comment.skillLevels!==undefined?{skill_levels:comment.skillLevels}:{}),note:comment.note,status:comment.status,sent_at:comment.sentAt,version:(comment as any).version??0,updated_at:comment.updatedAt};await db.slips.put(stored("slip",`${identity}|slip|${sessionId}|${comment.studentId}`,wire) as any);}await db.outbox.put(row);});scheduleSync();}};}
 /** Chờ ghi bền hàng đợi gửi; ghi lỗi ⇒ ném lỗi gốc và các phiếu bỏ trạng thái đang chờ gửi. */
 export const sendSessionTicketsDurable=async(sessionId:string,studentIds?:string[]):Promise<SendTicketsResult>=>{
   return runDurably(planSendTickets(sessionId,studentIds));

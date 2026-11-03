@@ -6,7 +6,7 @@ import {
   type ChildTicket,
 } from "../../data/repositories/guardian";
 import { sessionPrefix } from "../../data/repositories/sessions";
-import { CRITERION_KEYS, CRITERION_LABELS, LEVEL_LABELS, SKILL_LABELS, TOPIC_LABELS, type CriterionKey } from "../../data/criteriaLevels";
+import { CRITERION_KEYS, CRITERION_LABELS, LEVEL_LABELS, SKILL_KEYS, SKILL_LABELS, TOPIC_LABELS, type CriterionKey } from "../../data/criteriaLevels";
 import { PageHeader } from "../../shared/ui";
 import { useGuardianContext } from "./guardianContext";
 import {
@@ -89,7 +89,8 @@ export default function GuardianSessionPage() {
   const ticketLevels = ticket?.comment.levels ?? null;
   const ticketSkillLevels = ticket?.comment.skillLevels ?? {};
   const ticketTopics = ticket?.session.todayTopics ?? [];
-  const gradedSkills = ticket?.session.gradedSkills ?? [];
+  // Phiếu đã gửi: lấy dòng kỹ năng từ mức đã lưu trên phiếu, không theo cấu hình buổi hiện tại.
+  const gradedSkills = ticketLevels ? SKILL_KEYS.filter((key) => ticketSkillLevels[key] !== undefined) : [];
   // Không giao BTVN buổi trước thì phụ huynh không thấy dòng BTVN trên phiếu.
   const criterionKeys = CRITERION_KEYS.filter((key) => key !== "homework" || Boolean(ticketHomework));
 

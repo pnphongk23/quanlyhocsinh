@@ -133,6 +133,8 @@ describe("ghi phiếu 3 mức và Gán tất cả mặc định", () => {
     const { sendSessionTicketsDurable } = await import("../data/repositories/comments");
 
     await sendSessionTicketsDurable("session-1", ["s4"]);
+    // Cache Dexie của lần gửi phải giữ levels/skill_levels cho lần mở sau.
+    expect(await d.db.slips.get(`${id}|slip|session-1|s4`)).toMatchObject({ levels: expect.objectContaining({ mastery: "ok" }), skill_levels: { speaking: "ok" } });
     await d.syncNow();
 
     const command = pushed("slip.send").at(-1)! as { payload: { defaults: Array<Record<string, unknown>> } };
@@ -145,6 +147,25 @@ describe("ghi phiếu 3 mức và Gán tất cả mặc định", () => {
     });
     expect(fallback).not.toHaveProperty("criteria");
     expect(server.rows.get("slip")!.get("session-1|s4")).toMatchObject({ levels: fallback.levels, skill_levels: fallback.skill_levels, status: "sent" });
+  });
+
+  it("bật Chấm riêng cho kỹ năng mới: sinh lại câu + gửi skill_levels mặc định Đạt", async () => {
+    server.put("slip", {
+      session_id: "session-1", student_id: "s1", comment: "Câu cũ", levels: LEVELS, skill_levels: {}, scale: 5,
+      note: NOTE, hw_manual: 0, status: "draft", sent_at: null,
+    });
+    const d = await bootDevice(server, "t", me);
+    await d.syncNow();
+    const { regenerateSlipCommentsDurable } = await import("../data/repositories/comments");
+
+    await regenerateSlipCommentsDurable("session-1");
+    await d.syncNow();
+
+    const slip = storeSlip(d, "s1")!;
+    expect(slip.skillLevels).toEqual({ speaking: "ok" });
+    expect(slip.comment).toContain("Phần nói con làm được, cần luyện thêm.");
+    expect(slip.note).toBe(NOTE);
+    expect(pushed("slip.set").at(-1)!.payload).toMatchObject({ levels: { ...LEVELS, homework: "needs_work" }, skill_levels: { speaking: "ok" } });
   });
 
   it("chấm lại BTVN chỉ tính lại phiếu 3 mức chưa gửi, giữ phần gõ thêm", async () => {
