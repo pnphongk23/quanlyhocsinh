@@ -25,13 +25,17 @@ import {
   needsWorkCount,
   normalizeGradedSkills,
   normalizeTopics,
+  parseLevels,
+  parseSkillLevels,
   regenerateSlipText,
+  sameLevels,
+  sameSkillLevels,
   starsForSlip,
   starsFromLevels,
   todayTopicsPhrase,
   type Levels,
 } from "./criteriaLevels";
-import type { HomeworkGrade } from "../../data/types";
+import type { HomeworkGrade } from "./types";
 
 const ALL_GOOD: Levels = {
   focus: "good",
@@ -241,6 +245,35 @@ describe("tóm tắt mục cần cố gắng", () => {
     expect(needsWorkCount(input)).toBe(3);
     expect(effortSummary(input)).toBe("3 mục cần cố gắng");
     expect(effortSummary({ levels: ALL_GOOD })).toBeNull();
+  });
+});
+
+describe("đọc và so sánh dữ liệu mức", () => {
+  it("parse levels chỉ nhận đủ 5 khoá và mức hợp lệ", () => {
+    expect(parseLevels(ALL_GOOD)).toEqual(ALL_GOOD);
+    expect(parseLevels({ ...ALL_GOOD, extra: "good" })).toBeNull();
+    expect(parseLevels({ focus: "good" })).toBeNull();
+    expect(parseLevels({ ...ALL_GOOD, focus: "bad" })).toBeNull();
+    expect(parseLevels(null)).toBeNull();
+  });
+
+  it("parse skill_levels bỏ khoá lạ, giữ object rỗng hợp lệ", () => {
+    expect(parseSkillLevels({ speaking: "good", unknown: "ok" })).toEqual({ speaking: "good" });
+    expect(parseSkillLevels({ speaking: "bad", reading: "ok" })).toEqual({ reading: "ok" });
+    expect(parseSkillLevels({})).toEqual({});
+    expect(parseSkillLevels([])).toBeNull();
+    expect(parseSkillLevels(null)).toBeNull();
+  });
+
+  it("so sánh mức để tránh lệnh thừa", () => {
+    expect(sameLevels(ALL_GOOD, { ...ALL_GOOD })).toBe(true);
+    expect(sameLevels(ALL_GOOD, { ...ALL_GOOD, notes: "ok" })).toBe(false);
+    expect(sameLevels(null, null)).toBe(true);
+    expect(sameLevels(null, ALL_GOOD)).toBe(false);
+    expect(sameSkillLevels({ speaking: "ok" }, { speaking: "ok" })).toBe(true);
+    expect(sameSkillLevels({ speaking: "ok" }, { speaking: "good" })).toBe(false);
+    expect(sameSkillLevels({ speaking: "ok" }, { reading: "ok" })).toBe(false);
+    expect(sameSkillLevels({}, undefined)).toBe(true);
   });
 });
 

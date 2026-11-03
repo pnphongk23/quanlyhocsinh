@@ -1,5 +1,5 @@
-import { starsFromCriteria } from "../../data/slip";
-import type { HomeworkGrade, HomeworkLevel, SlipScale, StarLevel } from "../../data/types";
+import { starsFromCriteria } from "./slip";
+import type { HomeworkGrade, HomeworkLevel, SlipScale, StarLevel } from "./types";
 
 /**
  * Mô hình thuần của phiếu nhận xét thử nghiệm "3 mức" (sau cờ VITE_CRITERIA_LEVELS).
@@ -298,6 +298,42 @@ export function gradedSkillEntries(
     if (allowed && !allowed.has(key)) return [];
     return [{ key, level }];
   });
+}
+
+
+/** Đọc `levels` từ API/Dexie; sai dạng hoặc thiếu/thừa khoá thì coi như phiếu cũ. */
+export function parseLevels(value: unknown): Levels | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (Object.keys(record).length !== CRITERION_KEYS.length) return null;
+  const levels = {} as Levels;
+  for (const key of CRITERION_KEYS) {
+    const level = record[key];
+    if (typeof level !== "string" || !isLevel(level)) return null;
+    levels[key] = level;
+  }
+  return levels;
+}
+
+/** Đọc `skill_levels`: bỏ khoá/mức lạ; object rỗng hợp lệ, không phải object thì null. */
+export function parseSkillLevels(value: unknown): SkillLevels | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const levels: SkillLevels = {};
+  for (const [key, level] of Object.entries(value)) {
+    if (!isSkillKey(key) || typeof level !== "string" || !isLevel(level)) continue;
+    levels[key] = level;
+  }
+  return levels;
+}
+
+export function sameLevels(a: Levels | null | undefined, b: Levels | null | undefined): boolean {
+  if (!a || !b) return a === b;
+  return CRITERION_KEYS.every((key) => a[key] === b[key]);
+}
+
+export function sameSkillLevels(a: SkillLevels | null | undefined, b: SkillLevels | null | undefined): boolean {
+  const keys = new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})]) as Set<SkillKey>;
+  return [...keys].every((key) => (a?.[key] ?? null) === (b?.[key] ?? null));
 }
 
 /**
