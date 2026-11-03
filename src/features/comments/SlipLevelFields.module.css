@@ -41,8 +41,8 @@
 }
 
 .starFilled {
-  fill: var(--color-warning);
-  color: var(--color-warning);
+  fill: var(--color-star);
+  color: var(--color-star);
 }
 
 .starEmpty {

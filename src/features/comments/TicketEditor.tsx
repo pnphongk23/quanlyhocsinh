@@ -29,8 +29,8 @@ function Star({ filled }: { filled: boolean }) {
       width={15}
       height={15}
       viewBox="0 0 24 24"
-      fill={filled ? "#B7791F" : "#D2D7DF"}
-      stroke={filled ? "#B7791F" : "#D2D7DF"}
+      fill={filled ? "var(--color-star)" : "var(--color-border)"}
+      stroke={filled ? "var(--color-star)" : "var(--color-border)"}
       strokeWidth={1.5}
       strokeLinejoin="round"
       aria-hidden="true"
