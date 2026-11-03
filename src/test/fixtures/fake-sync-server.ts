@@ -29,6 +29,15 @@ const isSkillLevels = (value: unknown): boolean =>
   !value || (typeof value === "object" && !Array.isArray(value) && Object.entries(value).every(([key, level]) => SKILLS.includes(key) && LEVELS.includes(level as string)));
 const criteriaOfLevels = (levels: Record<string, string>): number =>
   Object.entries(CRITERION_BITS).reduce((bits, [key, bit]) => levels[key] === "good" ? bits | bit : bits, 0);
+/** Lý do nghiệp vụ thử nghiệm mà worker thật trả trong `details.reason` (validation_error/conflict). */
+const REASON_CODES = new Set(["base_version_ahead", "invalid_levels", "invalid_skill_levels", "invalid_topics", "invalid_graded_skills", "session_cancelled"]);
+function rejectedFor(id: string, code: string): Row {
+  if (!REASON_CODES.has(code)) return { id, status: "rejected", error: { code, message: code, request_id: "fake" } };
+  return {
+    id, status: "rejected",
+    error: { code: code === "session_cancelled" ? "conflict" : "validation_error", message: code === "session_cancelled" ? "Conflict." : "Invalid request.", details: { reason: code }, request_id: "fake" },
+  };
+}
 
 export function createFakeServer() {
   const rows = new Map<string, Map<string, Row>>();
@@ -73,12 +82,12 @@ export function createFakeServer() {
       if (Math.round(p.value * 2) !== p.value * 2) return { id: command.id, status: "rejected", error: { code: "invalid_score_step", message: "invalid_score_step", request_id: "fake" } };
     }
       if (command.type === "session.lesson.set") {
-        if (!Array.isArray(p.topics) || !p.topics.every((key: string) => SKILLS.includes(key)) || new Set(p.topics).size !== p.topics.length) return { id: command.id, status: "rejected", error: { code: "invalid_topics", message: "invalid_topics", request_id: "fake" } };
-        if (!Array.isArray(p.graded_skills) || !p.graded_skills.every((key: string) => p.topics.includes(key))) return { id: command.id, status: "rejected", error: { code: "invalid_graded_skills", message: "invalid_graded_skills", request_id: "fake" } };
+        if (!Array.isArray(p.topics) || !p.topics.every((key: string) => SKILLS.includes(key)) || new Set(p.topics).size !== p.topics.length) return rejectedFor(command.id, "invalid_topics");
+        if (!Array.isArray(p.graded_skills) || !p.graded_skills.every((key: string) => p.topics.includes(key))) return rejectedFor(command.id, "invalid_graded_skills");
       }
       if (command.type === "slip.set") {
-        if (p.levels !== undefined && !isLevels(p.levels)) return { id: command.id, status: "rejected", error: { code: "invalid_levels", message: "invalid_levels", request_id: "fake" } };
-        if (p.skill_levels !== undefined && (!isSkillLevels(p.skill_levels) || (p.levels === undefined && !table("slip").get(`${p.session_id}|${p.student_id}`)?.levels))) return { id: command.id, status: "rejected", error: { code: "invalid_skill_levels", message: "invalid_skill_levels", request_id: "fake" } };
+        if (p.levels !== undefined && !isLevels(p.levels)) return rejectedFor(command.id, "invalid_levels");
+        if (p.skill_levels !== undefined && (!isSkillLevels(p.skill_levels) || (p.levels === undefined && !table("slip").get(`${p.session_id}|${p.student_id}`)?.levels))) return rejectedFor(command.id, "invalid_skill_levels");
         if (p.criteria !== undefined && (!Number.isInteger(p.criteria) || p.criteria < 0 || p.criteria > 31)) return { id: command.id, status: "rejected", error: { code: "invalid_criteria", message: "invalid_criteria", request_id: "fake" } };
         if (p.comment !== undefined && p.comment !== null && typeof p.comment !== "string") return { id: command.id, status: "rejected", error: { code: "invalid_comment", message: "invalid_comment", request_id: "fake" } };
         if (p.hw_manual !== undefined && typeof p.hw_manual !== "boolean") return { id: command.id, status: "rejected", error: { code: "invalid_hw_manual", message: "invalid_hw_manual", request_id: "fake" } };
@@ -102,8 +111,8 @@ export function createFakeServer() {
           }
           case "session.lesson.set": {
             const current = table("class_session").get(p.session_id);
-            if (current?.status === "cancelled") return { id: command.id, status: "rejected", error: { code: "session_cancelled", message: "session_cancelled", request_id: "fake" } };
-            if (command.base_version > (current?.version ?? 0)) return { id: command.id, status: "rejected", error: { code: "base_version_ahead", message: "base_version_ahead", request_id: "fake" } };
+            if (current?.status === "cancelled") return rejectedFor(command.id, "session_cancelled");
+            if (command.base_version > (current?.version ?? 0)) return rejectedFor(command.id, "base_version_ahead");
             put("class_session", { ...(current ?? { id: p.session_id }), today_topics: p.topics, graded_skills: p.graded_skills });
             break;
           }
@@ -160,7 +169,7 @@ export function createFakeServer() {
             const required: Record<string, string[]> = { "attendance.set": ["session_id", "student_id", "status"], "test.create": ["id", "class_id", "name", "date"], "test.update": ["id"], "test.delete": ["id"], "score.set": ["test_id", "student_id", "value"], "slip.set": ["session_id", "student_id", "note"], "slip.send": ["session_id", "student_ids"], "session.lesson.set": ["session_id", "topics", "graded_skills"], "homework.assign": ["session_id", "sections"], "homework.section.upsert": ["id", "session_id", "kind", "title", "description"], "homework.section.delete": ["id"], "homework.grade.set": ["section_id", "student_id", "level"], "conflict.resolve": ["conflict_id", "choice"] };
           if ((required[command.type] ?? []).some((key) => !Object.hasOwn(command.payload, key))) return { id: command.id, status: "rejected", error: { code: "validation_error", message: "missing_required_field", request_id: "fake" } };
           const code = hooks.rejectCommand?.(command);
-        return code ? { id: command.id, status: "rejected", error: { code, message: code, request_id: "fake" } } : apply(command);
+        return code ? rejectedFor(command.id, code) : apply(command);
       });
       hooks.pushDoneAt.push(performance.now());
       return json({ epoch: 1, cursor: log.length, results });

@@ -437,8 +437,10 @@ export async function discardRejectedCommands(ids: string[]): Promise<void> {
 async function applyCommandResult(result: CommandResult, identity: string): Promise<void> {
   const row = await db.outbox.get(result.id); if (!row) return;
     if (result.status === "rejected") {
+      // Máy chủ thật trả lý do nghiệp vụ trong `details.reason` (validation_error/conflict);
+      // mã hiệu dụng dùng reason nếu có, nếu không mới tới `error.code`.
       const reason = (result.error.details as { reason?: string } | undefined)?.reason;
-      const error = result.error.code === "attendance_incomplete" || (result.error.code === "conflict" && reason === "attendance_incomplete") ? "attendance_incomplete" : result.error.code;
+      const error = reason ?? result.error.code;
       await db.outbox.put({ ...row, status: "rejected", error });
       return;
     }
