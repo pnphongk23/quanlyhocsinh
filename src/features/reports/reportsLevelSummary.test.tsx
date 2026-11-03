@@ -42,7 +42,7 @@ describe("báo cáo tháng có tóm tắt tiêu chí/kỹ năng", () => {
     expect(screen.getByText("Theo tiêu chí")).toBeInTheDocument();
     expect(screen.getByText("Học tập trung")).toBeInTheDocument();
     expect(screen.getByText("Theo kỹ năng")).toBeInTheDocument();
-    expect(screen.getByText(/3 Tốt · 1 Đạt trong 4 buổi có chấm/)).toBeInTheDocument();
+    expect(screen.getByTestId("report-level-summary").textContent).toContain("3 Tốt · 1 Đạt trong 4 buổi có chấm");
   });
 
   it("vắng khoá thì báo cáo y như cũ", () => {

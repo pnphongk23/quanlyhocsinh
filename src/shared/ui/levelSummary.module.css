@@ -44,3 +44,15 @@
   color: var(--color-muted);
   text-align: right;
 }
+
+.toneGood {
+  color: var(--level-good-fg);
+}
+
+.toneOk {
+  color: var(--level-ok-fg);
+}
+
+.toneNeedsWork {
+  color: var(--level-needs-work-fg);
+}

@@ -41,6 +41,11 @@ import g from "./guardian.module.css";
  * bài tập về nhà (đề giao buổi này, kèm kết quả khi phiếu buổi chấm đã gửi).
  * Buổi đã huỷ hiện nhãn "Đã huỷ" ở đầu trang, tách khỏi phần BTVN.
  */
+/** Màu chữ theo mức: Tốt = success, Đạt = primary, Cần cố gắng = warning. */
+function levelValueClass(level: "good" | "ok" | "needs_work"): string {
+  return `${g.levelValue} ${level === "good" ? g.levelGood : level === "ok" ? g.levelOk : g.levelNeedsWork}`;
+}
+
 export default function GuardianSessionPage() {
   const { sessionId = "" } = useParams();
   const { child, error } = useGuardianContext();
@@ -130,7 +135,7 @@ export default function GuardianSessionPage() {
                     {criterionKeys.map((key: CriterionKey) => (
                       <li key={key} className={g.levelRow}>
                         <span className={g.levelLabel}>{CRITERION_LABELS[key]}</span>
-                        <span className={g.levelValue}>{LEVEL_LABELS[ticketLevels[key]]}</span>
+                        <span className={levelValueClass(ticketLevels[key])}>{LEVEL_LABELS[ticketLevels[key]]}</span>
                       </li>
                     ))}
                     {gradedSkills.length > 0 && (
@@ -139,7 +144,7 @@ export default function GuardianSessionPage() {
                     {gradedSkills.map((key) => (
                       <li key={`skill-${key}`} className={g.levelRow} data-testid={`guardian-skill-${key}`}>
                         <span className={g.levelLabel}>{SKILL_LABELS[key]}</span>
-                        <span className={g.levelValue}>{LEVEL_LABELS[ticketSkillLevels[key] ?? "ok"]}</span>
+                        <span className={levelValueClass(ticketSkillLevels[key] ?? "ok")}>{LEVEL_LABELS[ticketSkillLevels[key] ?? "ok"]}</span>
                       </li>
                     ))}
                   </ul>

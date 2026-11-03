@@ -6,6 +6,8 @@ export interface LevelSegmentedOption<T extends string = string> {
   label: string;
   /** Icon của bộ thiết kế nếu có; không có thì chỉ hiện nhãn chữ. */
   icon?: ReactNode;
+  /** Màu mức đang chọn: Tốt = success, Đạt = primary, Cần cố gắng = warning. */
+  tone?: "success" | "primary" | "warning";
 }
 
 export interface LevelSegmentedProps<T extends string> {
@@ -81,6 +83,7 @@ export function LevelSegmented<T extends string>({
             aria-checked={checked}
             aria-disabled={disabled || undefined}
             disabled={disabled}
+            data-tone={option.tone}
             tabIndex={disabled ? -1 : checked || (activeIndex < 0 && index === 0) ? 0 : -1}
             className={s.option + (checked ? " " + s.optionOn : "")}
             onClick={() => {

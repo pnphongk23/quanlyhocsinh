@@ -10,9 +10,18 @@ import s from "./levelSummary.module.css";
 
 const TALLY_KEYS = ["good", "ok", "needs_work"] as const;
 
-function tallyLine(tally: LevelTally): string {
-  const parts = TALLY_KEYS.filter((key) => tally[key] > 0).map((key) => `${tally[key]} ${LEVEL_LABELS[key]}`);
-  return parts.length > 0 ? parts.join(" · ") : "0";
+function Tally({ tally }: { tally: LevelTally }) {
+  const parts = TALLY_KEYS.filter((key) => tally[key] > 0);
+  if (parts.length === 0) return <>0</>;
+  return (
+    <>
+      {parts.map((key, index) => (
+        <span key={key} className={s[`tone${key === "good" ? "Good" : key === "ok" ? "Ok" : "NeedsWork"}`]}>
+          {index > 0 ? " · " : ""}{tally[key]} {LEVEL_LABELS[key]}
+        </span>
+      ))}
+    </>
+  );
 }
 
 /**
@@ -37,7 +46,7 @@ export function LevelSummary({
             {CRITERION_KEYS.map((key) => (
               <li key={key} className={s.row}>
                 <span className={s.label}>{CRITERION_LABELS[key]}</span>
-                <span className={s.value}>{tallyLine(criteria[key])}</span>
+                <span className={s.value}><Tally tally={criteria[key]} /></span>
               </li>
             ))}
           </ul>
@@ -53,7 +62,7 @@ export function LevelSummary({
                 <li key={key} className={s.row}>
                   <span className={s.label}>{SKILL_LABELS[key]}:</span>
                   <span className={s.value}>
-                    {tallyLine(row)} trong {row.sessions} buổi có chấm
+                    <Tally tally={row} /> trong {row.sessions} buổi có chấm
                   </span>
                 </li>
               );

@@ -70,6 +70,24 @@ describe("LevelSegmented", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("mang tone của từng mức để CSS tô Tốt/Đạt/Cần cố gắng bằng token", () => {
+    render(
+      <LevelSegmented
+        options={[
+          { value: "good", label: "Tốt", tone: "success" },
+          { value: "ok", label: "Đạt", tone: "primary" },
+          { value: "needs_work", label: "Cần cố gắng", tone: "warning" },
+        ]}
+        value="needs_work"
+        onChange={vi.fn()}
+        label="Học tập trung"
+      />,
+    );
+    expect(screen.getByRole("radio", { name: "Tốt" })).toHaveAttribute("data-tone", "success");
+    expect(screen.getByRole("radio", { name: "Đạt" })).toHaveAttribute("data-tone", "primary");
+    expect(screen.getByRole("radio", { name: "Cần cố gắng" })).toHaveAttribute("data-tone", "warning");
+  });
+
   it("hiện icon của bộ thiết kế khi được truyền, ẩn với trình đọc màn hình", () => {
     render(
       <LevelSegmented

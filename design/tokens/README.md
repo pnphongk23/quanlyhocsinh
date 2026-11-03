@@ -23,6 +23,7 @@ Màu thương hiệu, bo góc và chuyển động giữ nguyên. Trạng thái 
 | `--fab-*`, `--fab-pad`, `:root[data-has-fab]` | FAB neo màn hình và chừa đáy nội dung |
 | `--dur-press` | Thay 100ms ghi cứng |
 | `--state-selected-*`, `--state-hover-bg`, `--state-pressed-bg`, `--state-focus-ring`, `--state-disabled-opacity`, `--state-success-*`, `--state-error-*`, `--state-pending-*` | Trạng thái thành phần dùng chung; bảng ở `design/ux-v2/rules.md` mục 6 |
+| `--level-good/ok/needs-work-bg/fg` | Màu theo mức của phiếu 3 mức: Tốt = success, Đạt = primary, Cần cố gắng = warning; chữ trên nền đạt AA |
 | `--color-star` | Một màu sao dùng chung cho danh sách, phiếu nhận xét (cũ và 3 mức) và màn phụ huynh |
 | `--color-on-accent`, `--state-selected-accent-*` | Chữ trắng và chip tối trong thẻ lớp được chọn trên nền accent; không đổi màu chọn chung của nav, lịch và chip |
 | `--card-success-*`, `--card-error-*`, `--card-pending-*` | Nền mềm, viền và chữ đậm cho card/banner trạng thái lớn |

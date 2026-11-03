@@ -52,6 +52,21 @@
   color: var(--state-selected-fg);
 }
 
+.optionOn[data-tone="success"] {
+  background: var(--level-good-bg);
+  color: var(--level-good-fg);
+}
+
+.optionOn[data-tone="primary"] {
+  background: var(--level-ok-bg);
+  color: var(--level-ok-fg);
+}
+
+.optionOn[data-tone="warning"] {
+  background: var(--level-needs-work-bg);
+  color: var(--level-needs-work-fg);
+}
+
 .option:disabled {
   opacity: var(--state-disabled-opacity);
   cursor: default;

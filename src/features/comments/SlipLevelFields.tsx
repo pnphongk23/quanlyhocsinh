@@ -19,7 +19,11 @@ import { Mascot, starPose } from "../../shared/ui/Mascot";
 import { LevelSegmented } from "../../shared/ui";
 import s from "./SlipLevelFields.module.css";
 
-const OPTIONS = LEVELS.map((level) => ({ value: level, label: LEVEL_LABELS[level] }));
+const OPTIONS = LEVELS.map((level) => ({
+  value: level,
+  label: LEVEL_LABELS[level],
+  tone: level === "good" ? "success" as const : level === "ok" ? "primary" as const : "warning" as const,
+}));
 
 /**
  * Phiếu 3 mức (thử nghiệm sau cờ): 5 hàng tiêu chí + nhóm "Kiến thức hôm nay",
