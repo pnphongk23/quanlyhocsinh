@@ -78,3 +78,10 @@ Snapshot báo cáo (bản xem trước và `report_publications.snapshot`, xây 
 - Test cờ tắt: mọi test hiện có (239+) vẫn qua; `slip.set` có `levels` và `session.lesson.set` → `feature_disabled`.
 - Cờ bật: `slip.set` levels (tính `criteria`/`stars`, bỏ qua `criteria`/`stars` client, `comment` lưu nguyên); `levels`+`skill_levels`; thiếu/sai khoá/mức → mã lỗi đúng; payload cũ (`criteria` không `levels`) xoá `levels`; chỉ đổi `note` giữ `levels`; `slip.send defaults` với `levels`; `session.lesson.set` (hợp lệ, trùng, graded ⊄ topics, buổi huỷ, conflict, offline idempotent); đọc: giáo viên/phụ huynh thấy đúng trường, khoá vắng khi NULL (JSON phiếu cũ bất biến); gửi cả lớp bỏ em Vắng và cổng điểm danh vẫn đúng; báo cáo tháng có/không có hai khoá.
 - Không migration nào khác ngoài `0016`; `wrangler.jsonc` thêm `CRITERIA_LEVELS` ở `env.dev` (`"1"`), KHÔNG ở staging.
+
+## 7. Làm rõ (web hỏi 2026-11-04)
+
+- `feature_disabled` là `rejected` cuối, không retry; client giữ phiếu và báo lỗi dòng.
+- `skill_levels` hợp lệ khi payload cùng có `levels` (hoặc phiếu đã có `levels`). `{}` hợp lệ. Khoá kỹ năng không nằm trong `today_topics` của buổi vẫn được nhận và lưu (không đối chiếu với buổi, để offline và để giữ dữ liệu mức của kỹ năng đã tắt "Chấm riêng").
+- `class_session.version` đã có trong snapshot/pull `class_session` (trường `version`); `session.lesson.set` lệch `base_version` trả `conflict` đúng như `test.update` (kèm bản hiện tại theo cùng giao thức đó).
+- `criteria_summary`/`skill_summary` chỉ đếm phiếu ĐÃ GỬI (`status='sent'`), không bao giờ phiếu nháp; phụ huynh chỉ nhận chúng trong snapshot của báo cáo đã xuất bản (kênh hiện có), không có kênh mới.
