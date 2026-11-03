@@ -4,6 +4,7 @@ import { readJsonObject } from '../lib/http';
 import { payloadTooLarge, validationError } from '../lib/errors';
 import { syncIdentity, push, validatePush } from '../db/sync';
 import { pull, snapshot, snapshotPage } from '../db/sync-read';
+import { criteriaLevelsEnabled } from '../lib/flags';
 
 export const syncRoutes = new Hono<AppEnv>();
 function integer(value: string | undefined, fallback?: number): number {
@@ -15,7 +16,7 @@ syncRoutes.post('/sync/push', async (c) => {
   if ((await c.req.raw.clone().arrayBuffer()).byteLength > 256 * 1024) throw payloadTooLarge();
   const input = validatePush(await readJsonObject(c.req.raw));
   const identity = await syncIdentity(c.env.DB, c.get('identity'), input.membership_id);
-  return c.json(await push(c.env.DB, identity, input.commands, c.get('requestId')));
+  return c.json(await push(c.env.DB, identity, input.commands, c.get('requestId'), criteriaLevelsEnabled(c.env)));
 });
 syncRoutes.get('/sync/pull', async (c) => {
   const identity = await syncIdentity(c.env.DB, c.get('identity'), c.req.query('membership_id'));

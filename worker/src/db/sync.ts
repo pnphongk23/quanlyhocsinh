@@ -1,5 +1,5 @@
 import type { Identity, Permissions, PermGroup } from '../types';
-import { ApiError, notFound, validationError, conflict, forbidden, errorBody, passwordChangeRequired } from '../lib/errors';
+import { ApiError, notFound, validationError, conflict, forbidden, errorBody, passwordChangeRequired, featureDisabled } from '../lib/errors';
 import { assertStaffWrite, requireAccess, mapTriggerError } from './authz';
 import { assertSessionAttendanceComplete } from './attendance';
 
@@ -12,13 +12,13 @@ type Plan = { result: Result; first?: SQL; rest: SQL[]; receiptOnly?: boolean };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const types = new Set(['attendance.set','score.set','slip.set','homework.grade.set',
   'test.create','test.update','test.delete','slip.send','homework.assign',
-  'homework.section.upsert','homework.section.delete','conflict.resolve']);
+  'homework.section.upsert','homework.section.delete','conflict.resolve','session.lesson.set']);
 const groups: Record<string, PermGroup> = { attendance:'sessions_attendance',score:'scores',
   slip:'comments_reports',homework_grade:'comments_reports' };
 const cells: Record<string, { table: string; key: string; fields: string[]; parent: string }> = {
   attendance: {table:'attendance',key:'session_id',fields:['status'],parent:'class_sessions'},
   score: {table:'scores',key:'test_id',fields:['value'],parent:'tests'},
-  slip: {table:'session_comments',key:'session_id',fields:['stars','scale','criteria','comment','note','hw_manual'],parent:'class_sessions'},
+  slip: {table:'session_comments',key:'session_id',fields:['stars','scale','criteria','comment','note','hw_manual','levels','skill_levels'],parent:'class_sessions'},
   homework_grade: {table:'homework_grades',key:'section_id',fields:['level'],parent:'homework_sections'},
 };
 const q = (sql: string, ...args: any[]): SQL => ({sql,args});
@@ -197,34 +197,89 @@ function notifications(i:SyncIdentity,c:Command,kind:string,classId:string,stude
   score ? 'scores' : 'comments_reports',i.workspaceId,classId,...(studentId ? [studentId] : [sessionId,sessionId]));
 }
 const CRITERIA_MASK=31;
+// THỬ NGHIỆM (cờ CRITERIA_LEVELS): mức của 5 tiêu chí và 6 kỹ năng, hợp đồng mục 1.
+const LEVELS=['good','ok','needs_work'] as const;
+/** Khoá tiêu chí kèm bit của nó, theo đúng thứ tự bit của hợp đồng mục 1. */
+const CRITERIA_LEVELS=[['focus',1],['participation',2],['mastery',4],['notes',8],['homework',16]] as const;
+const SKILL_KEYS=['vocabulary','grammar','listening','speaking','reading','writing'] as const;
 // Attendance states that get a default slip when the teacher sends the whole class; easy to change.
 const DEFAULT_SLIP_ATTENDANCE=['present','late'];
 const bits=(n:number):number => { let c=0; for (let m=n;m;m&=m-1) c++; return c; };
+/** JSON text of a complete 5-criteria level map (fixed key order); returns the "good" bit mask. */
+function parseLevels(value: unknown): {json: string; criteria: number} {
+  if (!value || typeof value!=='object' || Array.isArray(value)) throw validationError(undefined,'invalid_levels');
+  const map=value as Row;
+  if (Object.keys(map).length!==CRITERIA_LEVELS.length || CRITERIA_LEVELS.some(([key])=>!Object.hasOwn(map,key)))
+    throw validationError(undefined,'invalid_levels');
+  let criteria=0;
+  const ordered:Row={};
+  for (const [key,bit] of CRITERIA_LEVELS) {
+    const level=map[key];
+    if (!LEVELS.includes(level)) throw validationError(undefined,'invalid_levels');
+    ordered[key]=level;
+    if (level==='good') criteria|=bit;
+  }
+  return {json:JSON.stringify(ordered),criteria};
+}
+/** JSON text of a skill level map; `{}` is valid (clears every skill level). */
+function parseSkillLevels(value: unknown): string {
+  if (!value || typeof value!=='object' || Array.isArray(value)) throw validationError(undefined,'invalid_skill_levels');
+  const map=value as Row,ordered:Row={};
+  for (const [key,level] of Object.entries(map)) {
+    if (!(SKILL_KEYS as readonly string[]).includes(key) || !LEVELS.includes(level)) throw validationError(undefined,'invalid_skill_levels');
+    ordered[key]=level;
+  }
+  return JSON.stringify(Object.fromEntries(SKILL_KEYS.filter((key)=>key in ordered).map((key)=>[key,ordered[key]])));
+}
+/** Skill key list for `session.lesson.set`: valid keys only, order kept. */
+function skillKeys(value: unknown,reason: string): string[] {
+  if (!Array.isArray(value) || value.some((key)=>typeof key!=='string' || !(SKILL_KEYS as readonly string[]).includes(key)))
+    throw validationError(undefined,reason);
+  return value as string[];
+}
 /** Slip fields from a slip.set payload. Scale 5 slips carry criteria (stars = criteria met); a payload with
- * only stars writes or keeps a legacy scale 3 slip so installed clients keep working. */
-function slipValues(p:Row,row:Row|null):Row {
+ * only stars writes or keeps a legacy scale 3 slip so installed clients keep working.
+ * THỬ NGHIỆM (cờ CRITERIA_LEVELS): `levels`/`skill_levels` (hợp đồng mục 3.1) — cờ tắt thì từ chối lệnh. */
+function slipValues(p:Row,row:Row|null,levelsEnabled:boolean):Row {
   const note=p.note===undefined ? (row?.note ?? '') : typeof p.note==='string' ? p.note : (()=>{throw validationError(undefined,'invalid_text')})();
   if (p.hw_manual!==undefined && typeof p.hw_manual!=='boolean') throw validationError(undefined,'invalid_hw_manual');
   const hw_manual=p.hw_manual===undefined ? (row?.hw_manual ?? 0) : Number(p.hw_manual);
+  const hasLevels=p.levels!==undefined,hasSkillLevels=p.skill_levels!==undefined;
+  if ((hasLevels || hasSkillLevels) && !levelsEnabled) throw featureDisabled();
+  if (hasLevels) {
+    if (row?.scale===3 && row.status==='sent') throw validationError(undefined,'legacy_scale');
+    const parsed=parseLevels(p.levels);
+    // Kỹ năng tắt "Chấm riêng" vẫn gửi lại map đầy đủ; không gửi map thì giữ giá trị cũ của phiếu.
+    const skill_levels=hasSkillLevels ? parseSkillLevels(p.skill_levels) : (row?.skill_levels ?? null);
+    if (p.comment!==undefined && p.comment!==null && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
+    const comment=typeof p.comment==='string' ? p.comment.trim() : '';
+    if (!comment) throw validationError(undefined,'comment_required');
+    return {stars:bits(parsed.criteria),scale:5,criteria:parsed.criteria,comment,note,hw_manual,
+      levels:parsed.json,skill_levels};
+  }
+  if (hasSkillLevels && (row?.levels===null || row?.levels===undefined)) throw validationError(undefined,'invalid_skill_levels');
+  const keptSkillLevels=hasSkillLevels ? parseSkillLevels(p.skill_levels) : undefined;
   if (p.criteria!==undefined) {
     if (typeof p.criteria!=='number' || !Number.isInteger(p.criteria) || p.criteria<0 || p.criteria>CRITERIA_MASK) throw validationError(undefined,'invalid_criteria');
     if (row?.scale===3 && row.status==='sent') throw validationError(undefined,'legacy_scale');
     if (p.comment!==undefined && p.comment!==null && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
     const comment=typeof p.comment==='string' ? p.comment.trim() : '';
     if (!comment) throw validationError(undefined,'comment_required');
-    return {stars:bits(p.criteria),scale:5,criteria:p.criteria,comment,note,hw_manual};
+    // Client cũ (không gửi `levels`) là nguồn đúng: phiếu quay về kiểu bit, bỏ dữ liệu mức.
+    return {stars:bits(p.criteria),scale:5,criteria:p.criteria,comment,note,hw_manual,levels:null,skill_levels:null};
   }
   if (row && row.scale===5) {
     if (p.stars!==undefined) throw validationError(undefined,'criteria_required');
     if (p.comment!==undefined && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
     const kept=p.comment===undefined ? row.comment : p.comment.trim();
     if (kept==='') throw validationError(undefined,'comment_required');
-    return {stars:row.stars,scale:5,criteria:row.criteria,comment:kept,note,hw_manual};
+    return {stars:row.stars,scale:5,criteria:row.criteria,comment:kept,note,hw_manual,
+      levels:row.levels ?? null,skill_levels:keptSkillLevels ?? row.skill_levels ?? null};
   }
-  return {stars:memberOf(p.stars,[null,1,2,3]),scale:3,criteria:null,comment:null,note,hw_manual};
+  return {stars:memberOf(p.stars,[null,1,2,3]),scale:3,criteria:null,comment:null,note,hw_manual,levels:null,skill_levels:null};
 }
 
-async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Promise<Plan> {
+async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string,levelsEnabled:boolean):Promise<Plan> {
   const def=cells[entity]!,p=c.payload,now=new Date().toISOString();
   const parent=await resource(db,i,def.parent,p[def.key],groups[entity]!);
   const enrolled=await student(db,i,p.student_id,parent,entity==='attendance'||entity==='slip' ? parent.date : undefined);
@@ -247,7 +302,7 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
   } else if (entity==='slip') values={};
   else values={level:memberOf(p.level,[null,'excellent','done','not_done'])};
   const row=await stateRow(db,i,def.table,parent.id,p.student_id);
-  if (entity==='slip') values=slipValues(p,row);
+  if (entity==='slip') values=slipValues(p,row,levelsEnabled);
   if (entity==='slip' && row?.status==='sent' && values.stars===null) throw validationError(undefined,'stars_required');
   const v=row?.version ?? 0;
   if (!row && c.base_version>0) throw notFound();
@@ -277,7 +332,7 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string):Pr
     if (entity==='score' && values.value!==null && (!row || row.value!==values.value)) rest.push(notifications(i,c,'score_updated',parent.class_id,p.student_id,null,parent.id,now));
     return {result,first,rest};
 }
-export async function push(db:D1Database,i:SyncIdentity,commands:Command[],requestId:string) {
+export async function push(db:D1Database,i:SyncIdentity,commands:Command[],requestId:string,levelsEnabled=false) {
   i={...i,attendanceCompleteness:new Map()};
   await initialState(db,i,commands);
   const results:Result[]=[];
@@ -292,7 +347,7 @@ export async function push(db:D1Database,i:SyncIdentity,commands:Command[],reque
           throw forbidden();
         }
         const entity=c.type==='homework.grade.set' ? 'homework_grade' : c.type.split('.')[0]!;
-        const plan=cells[entity] && c.type.endsWith('.set') ? await cellPlan(db,i,c,entity) : await objectPlan(db,i,c);
+        const plan=cells[entity] && c.type.endsWith('.set') ? await cellPlan(db,i,c,entity,levelsEnabled) : await objectPlan(db,i,c,levelsEnabled);
         if (plan.result.status==='rejected') plan.result.error.request_id=requestId;
         if (!await commit(db,i,c,plan)) {
           i.syncState?.clear();
@@ -326,7 +381,7 @@ export async function push(db:D1Database,i:SyncIdentity,commands:Command[],reque
   return {epoch:i.scopeEpoch,cursor:row!.cursor,results};
 }
 
-async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> {
+async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:boolean):Promise<Plan> {
   const p=c.payload,now=new Date().toISOString(),rest:SQL[]=[],result:Result={id:c.id,status:'applied'};
   if (c.type.startsWith('test.')) {
     if (c.type==='test.create') {
@@ -361,18 +416,27 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
         if (!Array.isArray(p.student_ids) || p.student_ids.length>50) throw validationError(undefined,'invalid_student_ids');
         const selected=new Set<unknown>(p.student_ids);
         const classBatch=selected.size>1;
-      const defaults=new Map<string,{criteria:number;comment:string}>();
+      const defaults=new Map<string,{criteria:number;comment:string;levels:string|null;skillLevels:string|null}>();
       if (p.defaults!==undefined) {
         if (!Array.isArray(p.defaults)) throw validationError(undefined,'invalid_defaults');
         for (const item of p.defaults) {
           if (!item || typeof item!=='object' || Array.isArray(item) || typeof item.student_id!=='string' ||
               !selected.has(item.student_id) || defaults.has(item.student_id)) throw validationError(undefined,'invalid_defaults');
-          if (typeof item.criteria!=='number' || !Number.isInteger(item.criteria) || item.criteria<0 || item.criteria>CRITERIA_MASK)
-            throw validationError(undefined,'invalid_criteria');
+          // THỬ NGHIỆM (cờ CRITERIA_LEVELS): mục `defaults` được thêm `levels`/`skill_levels` như `slip.set`.
+          if ((item.levels!==undefined || item.skill_levels!==undefined) && !levelsEnabled) throw featureDisabled();
           if (typeof item.comment!=='string') throw validationError(undefined,'invalid_comment');
           const comment=item.comment.trim();
           if (!comment) throw validationError(undefined,'comment_required');
-          defaults.set(item.student_id,{criteria:item.criteria,comment});
+          if (item.levels!==undefined) {
+            const parsed=parseLevels(item.levels);
+            const skillLevels=item.skill_levels===undefined ? null : parseSkillLevels(item.skill_levels);
+            defaults.set(item.student_id,{criteria:parsed.criteria,comment,levels:parsed.json,skillLevels});
+            continue;
+          }
+          if (item.skill_levels!==undefined) throw validationError(undefined,'invalid_skill_levels');
+          if (typeof item.criteria!=='number' || !Number.isInteger(item.criteria) || item.criteria<0 || item.criteria>CRITERIA_MASK)
+            throw validationError(undefined,'invalid_criteria');
+          defaults.set(item.student_id,{criteria:item.criteria,comment,levels:null,skillLevels:null});
         }
       }
       const sent:string[]=[],skipped:Row[]=[],guards:SQL[]=[];
@@ -391,11 +455,11 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
             if (!value) {skipped.push({student_id:sid,reason:'no_default'});continue;}
             sent.push(sid as string);
             guards.push(q('NOT EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?) AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)',i.workspaceId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
-          rest.push(q(`INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,hw_manual,status,sent_at,version,created_at,updated_at,updated_by)
-            SELECT ?,?,?,?,?,5,?,?, '',0,'sent',?,1,?,?,? WHERE ${ack(c)}
+          rest.push(q(`INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,hw_manual,levels,skill_levels,status,sent_at,version,created_at,updated_at,updated_by)
+            SELECT ?,?,?,?,?,5,?,?, '',0,?,?,'sent',?,1,?,?,? WHERE ${ack(c)}
             AND NOT EXISTS(SELECT 1 FROM session_comments WHERE session_id=? AND student_id=?)
               AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)`,
-            i.workspaceId,session.class_id,session.id,sid,bits(value.criteria),value.criteria,value.comment,now,now,now,i.userId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
+            i.workspaceId,session.class_id,session.id,sid,bits(value.criteria),value.criteria,value.comment,value.levels,value.skillLevels,now,now,now,i.userId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
           } else {
             const needsDefault=row.stars===null && row.scale===3;
             const value=needsDefault ? defaults.get(sid as string) : undefined;
@@ -406,8 +470,8 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
             guards.push(q(`${commentGuard}${attendanceGuard}`,
               i.workspaceId,session.id,sid,row.version,
               ...(session.status==='cancelled' ? [] : [i.workspaceId,session.id,sid,att!.status,att!.version])));
-            if (value) rest.push(q(`UPDATE session_comments SET stars=?,scale=5,criteria=?,comment=?,hw_manual=0,status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
-              WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,bits(value.criteria),value.criteria,value.comment,now,now,i.userId,i.workspaceId,session.id,sid));
+            if (value) rest.push(q(`UPDATE session_comments SET stars=?,scale=5,criteria=?,comment=?,hw_manual=0,levels=?,skill_levels=?,status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
+              WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,bits(value.criteria),value.criteria,value.comment,value.levels,value.skillLevels,now,now,i.userId,i.workspaceId,session.id,sid));
             else rest.push(q(`UPDATE session_comments SET status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
               WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,now,now,i.userId,i.workspaceId,session.id,sid));
       }
@@ -467,6 +531,22 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command):Promise<Plan> 
     if (graded) throw validationError(undefined,'section_has_grades');
     result.version=row.version+1;
     return {result,rest,first:q('DELETE FROM homework_sections WHERE workspace_id=? AND id=? AND version=?',i.workspaceId,row.id,row.version)};
+  }
+  if (c.type==='session.lesson.set') {
+    // THỬ NGHIỆM (cờ CRITERIA_LEVELS): "Hôm nay học" + công tắc "Chấm riêng", cấp buổi (hợp đồng mục 3.2).
+    if (!levelsEnabled) throw featureDisabled();
+    const session=await resource(db,i,'class_sessions',p.session_id,'comments_reports');
+    if (session.status==='cancelled') throw conflict('session_cancelled');
+    const topics=skillKeys(p.topics,'invalid_topics');
+    if (new Set(topics).size!==topics.length) throw validationError(undefined,'invalid_topics');
+    const graded=skillKeys(p.graded_skills,'invalid_graded_skills');
+    if (graded.some((key)=>!topics.includes(key))) throw validationError(undefined,'invalid_graded_skills');
+    // Cùng quy tắc `base_version` như `test.update` (lệnh đối tượng): chỉ chặn base_version ở tương lai.
+    version(c,session);
+    result.version=session.version+1;
+    return {result,rest,first:q(`UPDATE class_sessions SET today_topics=?,graded_skills=?,version=version+1,updated_at=?,updated_by=?
+      WHERE workspace_id=? AND id=? AND version=?`,
+      JSON.stringify(topics),JSON.stringify(graded),now,i.userId,i.workspaceId,session.id,session.version)};
   }
   if (c.type==='conflict.resolve') {
     // Conflicts are never recorded in the MVP: the later command always wins (docs/architecture.md 5,
