@@ -1,5 +1,100 @@
 # Thay đổi hợp đồng API · 2026-10-25 · Câu nhận xét phiếu không giới hạn ký tự
 
+# Thay đổi hợp đồng API · 2026-11-04 · THỬ NGHIỆM sau cờ: tiêu chí 3 mức, "Hôm nay học", kỹ năng chấm thêm
+
+Trạng thái: **thử nghiệm trên dev**, chưa vào spec chính thức. Hợp đồng chốt ở
+`plans/20261104-criteria-levels/contract.md` (nguồn yêu cầu `requirements.md` cùng thư mục). Chỉ THÊM, không
+đổi/xoá hành vi cũ. **Chưa chạy migration `0016` và chưa deploy Worker lên dev/staging/prod khi ghi mục này.**
+
+## Cờ
+
+- Worker var `CRITERIA_LEVELS` (chuỗi): `"1"` = bật, đặt ở `env.dev` (`wrangler.jsonc`). KHÔNG đặt ở
+  local/`env.staging` (prod) và cấp gốc ⇒ tắt.
+- Cờ tắt: lệnh `slip.set` có `levels`/`skill_levels`, `slip.send` có `levels`/`skill_levels` trong `defaults[]`,
+  hoặc lệnh `session.lesson.set` ⇒ kết quả lệnh `rejected` với `error.code = "feature_disabled"`
+  (cuối, client không thử lại; vẫn lưu receipt theo command ID). Mọi payload khác y như trước.
+- Cờ KHÔNG chặn đọc: dữ liệu mới (nếu có) vẫn trả ra như mục "Đọc". Web tự bật/tắt giao diện bằng biến build
+  riêng của web; máy chủ chỉ chặn ghi.
+
+## Quy ước giá trị
+
+- Mức: `good` (Tốt) · `ok` (Đạt) · `needs_work` (Cần cố gắng).
+- 5 tiêu chí theo thứ tự bit của `criteria`: `focus`=1, `participation`=2, `mastery`=4, `notes`=8, `homework`=16.
+- 6 kỹ năng: `vocabulary`, `grammar`, `listening`, `speaking`, `reading`, `writing`.
+
+## Lệnh ghi (`POST /v1/sync/push`)
+
+### `slip.set` (mở rộng, chỉ thêm trường tuỳ chọn)
+
+- `levels`: object ĐỦ 5 khoá tiêu chí, mỗi giá trị một mức; sai dạng/thiếu/thừa khoá ⇒ `invalid_levels`.
+  Máy chủ TÍNH `criteria` = OR bit của các mức `good` (mức `ok`/`needs_work` không đặt bit), `stars` = số bit,
+  phiếu thành `scale` 5; `criteria`/`stars` client gửi kèm bị BỎ QUA (không lỗi). `comment` vẫn bắt buộc không
+  rỗng sau trim (`comment_required`) và được lưu nguyên (máy chủ không sinh/sửa câu).
+- `skill_levels`: object, khoá ∈ 6 kỹ năng, giá trị mức; sai ⇒ `invalid_skill_levels`. Chỉ hợp lệ khi payload có
+  `levels` hoặc phiếu đã có `levels`, ngược lại `invalid_skill_levels`; `{}` hợp lệ (xoá hết). Không gửi thì GIỮ
+  map cũ của phiếu. Khoá kỹ năng không nằm trong "Hôm nay học" của buổi vẫn được nhận và lưu.
+- Phiếu ĐÃ GỬI vẫn sửa được `levels`/`skill_levels` (như sửa tiêu chí hiện nay: phụ huynh thấy bản sửa ngay,
+  không gửi lại); vẫn áp `legacy_scale` cho phiếu thang 3 đã gửi, cổng điểm danh, quyền và `base_version` hiện có.
+- Payload có `criteria` hoặc `stars` mà KHÔNG có `levels` (iOS cũ, web cờ tắt): ghi như cũ VÀ đặt `levels = NULL`,
+  `skill_levels = NULL`. Payload chỉ đổi `note`/`comment`: giữ `levels`/`skill_levels`.
+- `slip.send`: payload không đổi; mục `defaults[]` được thêm `levels` và `skill_levels` (cùng quy tắc kiểm và tính
+  `criteria`/`stars`; có `levels` thì `criteria` của mục bị bỏ qua; `skill_levels` không có `levels` ⇒
+  `invalid_skill_levels`). Phiếu đã có thì `defaults` bỏ qua như hiện tại.
+
+### `session.lesson.set` (lệnh mới, cấp buổi)
+
+- Payload: `{session_id, topics: [khoá kỹ năng], graded_skills: [khoá kỹ năng], base_version}`; cả hai mảng đều
+  bắt buộc có mặt (mảng rỗng hợp lệ, lưu `[]`).
+- `topics` sai dạng/khoá lạ/trùng ⇒ `invalid_topics`; `graded_skills` sai dạng/khoá lạ hoặc không phải tập con của
+  `topics` ⇒ `invalid_graded_skills`. Buổi huỷ ⇒ `rejected`, `error.details.reason = session_cancelled`.
+- Quyền nhóm `comments_reports` mức write (như `slip.set`). Ghi `class_sessions.today_topics`, `graded_skills` và
+  tăng `class_sessions.version`; kết quả `applied` kèm `version` mới.
+- `base_version` theo đúng quy tắc lệnh đối tượng hiện có (`test.update`): `base_version` LỚN HƠN `version` hiện tại
+  ⇒ `rejected` `validation_error` `details.reason = base_version_ahead`; `base_version` cũ hơn vẫn được áp dụng
+  (thứ tự máy chủ nhận lệnh quyết định, giao thức xung đột không đổi). Đổi `topics` không đụng phiếu nào.
+- Mã lỗi mới: `invalid_levels`, `invalid_skill_levels`, `invalid_topics`, `invalid_graded_skills`, `feature_disabled`.
+
+## Đọc
+
+- `slip` (snapshot, pull, `GET /sessions/:id/slips`): thêm `levels` (object) và `skill_levels` (object) khi khác
+  NULL; khi NULL thì BỎ HẲN khoá nên JSON phiếu cũ y hệt trước. Giáo viên nhận `levels`/`skill_levels` cùng
+  `criteria` (đã suy ra) và `stars`; phụ huynh nhận `levels`/`skill_levels`, vẫn KHÔNG nhận `criteria`/`hw_manual`,
+  gộp `comment`+`note` như cũ.
+- `class_session` (snapshot, pull): thêm `today_topics` (array) và `graded_skills` (array) khi khác NULL; phụ huynh
+  cũng nhận (không có `note` như cũ).
+- iOS hiện tại đọc phiếu mức qua trường cũ (`scale` 5, `criteria` bit mức Tốt, `stars` = số mức Tốt) nên không lỗi;
+  phiếu iOS cũ ghi lại thì `levels` về NULL (client cũ là nguồn đúng). Bản iOS không đổi trong lần thử.
+
+## Báo cáo tháng
+
+- Snapshot báo cáo (bản xem trước `GET /reports/{id}/preview`, `GET /students/{id}/report-preview`, và
+  `report_publications.snapshot`) thêm, CHỈ khi cờ bật và có ít nhất một phiếu ĐÃ GỬI (`status='sent'`) trong phạm vi
+  báo cáo mang `levels`:
+  - `criteria_summary`: `{focus|participation|mastery|notes|homework: {good, ok, needs_work}}`;
+  - `skill_summary`: `{<kỹ năng>: {good, ok, needs_work, sessions}}`, chỉ các kỹ năng có mặt trong `skill_levels`;
+    `sessions` = số phiếu có chấm kỹ năng đó.
+- Phiếu nháp không bao giờ được đếm. Cờ tắt hoặc không phiếu nào có `levels` ⇒ KHÔNG có hai khoá mới (snapshot y
+  như cũ). `stars`/`stars5` và phần đếm cũ giữ nguyên. Phụ huynh chỉ thấy hai khoá này trong snapshot báo cáo đã
+  xuất bản (kênh hiện có), không có kênh mới.
+
+## Migration `0016` (`worker/migrations/0016_criteria_levels.sql`)
+
+- Chỉ `ALTER TABLE ADD COLUMN`, không dựng lại bảng, không CHECK mới (kiểm ở mã): `session_comments.levels TEXT`,
+  `session_comments.skill_levels TEXT`, `class_sessions.today_topics TEXT`, `class_sessions.graded_skills TEXT`
+  (đều NULL-able). Trigger `change_log_slip_*`/`change_log_session_*` và bump `version` giữ nguyên.
+- Rollback: SQLite không bỏ được một cột riêng lẻ nên file không có câu rollback; khôi phục từ export D1 trước khi
+  chạy (như 0006/0008/0009/0010). Bốn cột NULL-able nên bản Worker cũ vẫn đọc/ghi bình thường ⇒ rollback mã không bắt
+  buộc khôi phục DB.
+- Đã kiểm cục bộ bằng test harness (`npm test`, harness áp mọi migration); **chưa chạy trên staging/prod** (người
+  vận hành chạy khi deploy dev).
+
+## Kiểm chứng
+
+- `cd worker && npm run typecheck && npm test`: 256 test qua (239 test cũ giữ nguyên + 17 test mới
+  `tests/criteria-levels.test.ts`) — cả cờ tắt và cờ bật, gồm: `defaults[]` có `levels` khi cờ tắt ⇒
+  `feature_disabled`, phụ huynh bị `forbidden` với `session.lesson.set`, cờ tắt vẫn ĐỌC được dữ liệu mới,
+  và JSON hỏng/sai kiểu được coi như vắng khoá ở pull/slips/report preview.
+
 ## 2026-10-26 · Brief 96 · Hợp đồng CHỐT (chưa code, chưa migration): câu sửa tay, kiểm tra SĐT, điểm danh 3 trạng thái
 
 ### C8 v2 · Câu nhận xét do CLIENT sinh, máy chủ chỉ lưu (thay mọi bản C8 trước; spec 50003f7)

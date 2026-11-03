@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { ApiError, notFound, validationError } from "../lib/errors";
+import { criteriaLevelsEnabled } from "../lib/flags";
 import {
   createReportBatch,
   deleteReportBatch,
@@ -54,14 +55,14 @@ reportsRoutes.get("/report-batches/:id/reports", async (c) => {
   return c.json({ batch, items: reports });
 });
 reportsRoutes.post("/report-batches/:id/publish", async (c) =>
-  c.json(await publishBatch(c.env.DB, c.get("identity"), c.req.param("id"))),
+  c.json(await publishBatch(c.env.DB, c.get("identity"), c.req.param("id"), criteriaLevelsEnabled(c.env))),
 );
 reportsRoutes.delete("/report-batches/:id", async (c) =>
   c.json(await deleteReportBatch(c.env.DB, c.get("identity"), c.req.param("id"))),
 );
 reportsRoutes.get("/reports/:id/preview", async (c) =>
   c.json(
-    await previewBatchReport(c.env.DB, c.get("identity"), c.req.param("id")),
+    await previewBatchReport(c.env.DB, c.get("identity"), c.req.param("id"), criteriaLevelsEnabled(c.env)),
   ),
 );
 reportsRoutes.put("/reports/:id", async (c) => {
@@ -83,7 +84,7 @@ reportsRoutes.put("/reports/:id", async (c) => {
   );
 });
 reportsRoutes.post("/reports/:id/publish", async (c) =>
-  c.json(await publishReport(c.env.DB, c.get("identity"), c.req.param("id")), 201),
+  c.json(await publishReport(c.env.DB, c.get("identity"), c.req.param("id"), criteriaLevelsEnabled(c.env)), 201),
 );
 
 reportsRoutes.get("/classes/:id/reports", async (c) => {
@@ -105,6 +106,7 @@ reportsRoutes.get("/students/:id/report-preview", async (c) => {
     c.get("identity"),
     c.req.param("id"),
     month,
+    criteriaLevelsEnabled(c.env),
   );
   if (!result) throw notFound();
   return c.json(result);

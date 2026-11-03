@@ -51,6 +51,11 @@ export interface Env {
   MAIL_FROM?: string;
   /** Gốc URL web để dựng link đặt lại mật khẩu, ví dụ `https://qlh-staging-web.pages.dev`. */
   RESET_LINK_BASE?: string;
+  /**
+   * Cờ THỬ NGHIỆM tiêu chí 3 mức: `"1"` = bật (dev). Không đặt = tắt (local, staging/prod).
+   * Tắt thì máy chủ chỉ chặn ghi; đọc dữ liệu mới vẫn chạy. Hợp đồng: plans/20261104-criteria-levels.
+   */
+  CRITERIA_LEVELS?: string;
   /** Binding Email Service (`send_email`); chưa khai báo trong wrangler.jsonc vì chưa có miền. */
   EMAIL?: EmailSender;
 }
