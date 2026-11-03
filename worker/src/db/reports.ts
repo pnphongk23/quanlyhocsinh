@@ -272,29 +272,44 @@ type LevelCounts = { good: number; ok: number; needs_work: number };
 const emptyLevelCounts = (): LevelCounts => ({ good: 0, ok: 0, needs_work: 0 });
 const isLevel = (value: unknown): value is keyof LevelCounts =>
   value === 'good' || value === 'ok' || value === 'needs_work';
+/** JSON object đã lưu; hỏng/sai kiểu ⇒ `null` (coi như vắng, không làm 500 đường đọc/báo cáo). */
+function storedLevelMap(value: unknown): Row | null {
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Row) : null;
+  } catch {
+    return null;
+  }
+}
 
 /** `criteria_summary`/`skill_summary` từ các dòng đã gộp `GROUP BY levels,skill_levels` của phiếu ĐÃ GỬI.
- * Không có phiếu nào mang `levels` ⇒ `{}` (snapshot y như cũ). */
+ * Dòng có JSON hỏng/sai kiểu bị bỏ qua như phiếu không có `levels`. Không có dòng nào dùng được ⇒ `{}`
+ * (snapshot y như cũ). */
 function summarizeLevels(rows: Row[]) {
-  if (!rows.length) return {};
   const criteria: Record<string, LevelCounts> = Object.fromEntries(
     CRITERIA_LEVEL_KEYS.map((key) => [key, emptyLevelCounts()]),
   );
   const skills = new Map<string, LevelCounts & { sessions: number }>();
+  let counted = false;
   for (const row of rows) {
-    const count = row.count as number, levels = JSON.parse(row.levels) as Row;
+    const count = row.count as number, levels = storedLevelMap(row.levels);
+    if (!levels) continue;
+    counted = true;
     for (const key of CRITERIA_LEVEL_KEYS) {
       const level = levels[key];
       if (isLevel(level)) criteria[key]![level] += count;
     }
-    if (!row.skill_levels) continue;
-    for (const [key, level] of Object.entries(JSON.parse(row.skill_levels) as Row)) {
+    const skillLevels = storedLevelMap(row.skill_levels);
+    if (!skillLevels) continue;
+    for (const [key, level] of Object.entries(skillLevels)) {
       const summary = skills.get(key) ?? { ...emptyLevelCounts(), sessions: 0 };
       if (isLevel(level)) summary[level] += count;
       summary.sessions += count;
       skills.set(key, summary);
     }
   }
+  if (!counted) return {};
   return {
     criteria_summary: criteria,
     skill_summary: Object.fromEntries(
@@ -303,7 +318,43 @@ function summarizeLevels(rows: Row[]) {
   };
 }
 
-async function buildBatchPreview(db: D1Database, workspaceId: string, report: ReportRow, levelsEnabled = false) {
+/** Dòng mức đã gộp của nhiều học sinh trong MỘT đợt báo cáo (một query cho cả `publishBatch`). */
+type LevelsRows = Map<string, Row[]>;
+async function loadLevelsRows(
+  db: D1Database,
+  workspaceId: string,
+  studentIds: string[],
+  fromKey: string,
+  toKey: string,
+): Promise<LevelsRows> {
+  const byStudent: LevelsRows = new Map();
+  if (!studentIds.length) return byStudent;
+  const { results } = await db
+    .prepare(
+      `SELECT c.student_id,c.levels,c.skill_levels,count(*) AS count FROM session_comments c
+      JOIN class_sessions s ON s.id=c.session_id JOIN students st ON st.id=c.student_id
+      WHERE c.workspace_id=? AND c.student_id IN (${studentIds.map(() => '?').join(',')})
+      AND c.status='sent' AND c.levels IS NOT NULL AND s.status<>'cancelled'
+      AND s.date>=st.enrolled_at AND (st.left_at IS NULL OR s.date<=st.left_at) AND ${SESSION_IN_RANGE}
+      GROUP BY c.student_id,c.levels,c.skill_levels`,
+    )
+    .bind(workspaceId, ...studentIds, fromKey, toKey)
+    .all<Row>();
+  for (const row of results) {
+    const list = byStudent.get(row.student_id);
+    if (list) list.push(row);
+    else byStudent.set(row.student_id, [row]);
+  }
+  return byStudent;
+}
+
+async function buildBatchPreview(
+  db: D1Database,
+  workspaceId: string,
+  report: ReportRow,
+  levelsEnabled = false,
+  levelsRows?: LevelsRows,
+) {
   const batch = await db
     .prepare(`${BATCH_SELECT} WHERE b.workspace_id=? AND b.id=?`)
     .bind(workspaceId, report.batch_id)
@@ -358,7 +409,7 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
           AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.workspace_id=s.workspace_id AND a.session_id=s.id AND a.student_id=st.id)`,
       )
       .bind(studentId, workspaceId, report.class_id, fromKey, toKey),
-    ...(levelsEnabled
+    ...(levelsEnabled && !levelsRows
       ? [
           db
             .prepare(
@@ -430,7 +481,9 @@ async function buildBatchPreview(db: D1Database, workspaceId: string, report: Re
     stars: starSummary.stars,
     stars5: starSummary.stars5,
     homework: homeworkSummary,
-    ...(levelsEnabled && levels ? summarizeLevels(levels.results) : {}),
+    ...(levelsEnabled
+      ? summarizeLevels(levelsRows ? levelsRows.get(studentId) ?? [] : levels?.results ?? [])
+      : {}),
     general_comment: report.general_comment,
     ready: missing.length === 0,
     missing,
@@ -468,8 +521,9 @@ async function publishStatements(
   report: ReportRow,
   now: string,
   levelsEnabled = false,
+  levelsRows?: LevelsRows,
 ) {
-  const preview = await buildBatchPreview(db, i.workspaceId, report, levelsEnabled),
+  const preview = await buildBatchPreview(db, i.workspaceId, report, levelsEnabled, levelsRows),
     no = report.publication_count + 1,
     snapshot = preview;
   const notifications = await reportNotificationStatements(
@@ -533,9 +587,9 @@ export async function publishReport(db: D1Database, i: Identity, reportId: strin
 
 export async function publishBatch(db: D1Database, i: Identity, batchId: string, levelsEnabled = false) {
   const batch = await db
-    .prepare("SELECT class_id FROM report_batches WHERE workspace_id=? AND id=? AND deleted_at IS NULL")
+    .prepare("SELECT class_id,from_key,to_key FROM report_batches WHERE workspace_id=? AND id=? AND deleted_at IS NULL")
     .bind(i.workspaceId, batchId)
-    .first<{ class_id: string }>();
+    .first<{ class_id: string; from_key: string; to_key: string }>();
   if (!batch) throw notFound();
   requireAccess(i, "comments_reports", "write", { classId: batch.class_id });
   const { results } = await db
@@ -549,8 +603,12 @@ export async function publishBatch(db: D1Database, i: Identity, batchId: string,
     statements: D1PreparedStatement[] = [],
     published: { report_id: string; publication_no: number }[] = [],
     skipped: { report_id: string; missing: string[] }[] = [];
+  // Một query mức cho cả đợt thay vì một query mỗi báo cáo.
+  const levelsRows = levelsEnabled
+    ? await loadLevelsRows(db, i.workspaceId, results.map((report) => report.student_id), batch.from_key, batch.to_key)
+    : undefined;
   for (const report of results) {
-    const built = await publishStatements(db, i, report, now, levelsEnabled);
+    const built = await publishStatements(db, i, report, now, levelsEnabled, levelsRows);
     if (!built.snapshot.ready) {
       skipped.push({ report_id: report.id, missing: built.snapshot.missing });
       continue;

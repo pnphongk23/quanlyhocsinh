@@ -14,5 +14,5 @@ commentsRoutes.get("/sessions/:id/slips", async (c) => {
   );
   if (!result) throw notFound();
   const identity = c.get("identity");
-  return c.json({ items: result.results.map((row) => slipForViewer(identity, decodeJsonColumns(row, SLIP_JSON_COLUMNS))) });
+  return c.json({ items: result.results.map((row) => slipForViewer(identity, decodeJsonColumns(row, SLIP_JSON_COLUMNS, "object"))) });
 });

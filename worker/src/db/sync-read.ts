@@ -63,11 +63,11 @@ function fields(i:Identity,name:string):string {
   return list.map(f=>`e.${f}`).join(',');
 }
 function decode(i:Identity,name:string,row:Row):Row {
-  if (name==='slip') return slipForViewer(i,decodeJsonColumns(row,SLIP_JSON_COLUMNS));
+  if (name==='slip') return slipForViewer(i,decodeJsonColumns(row,SLIP_JSON_COLUMNS,'object'));
   if (name==='class' && row.weekdays!==undefined) row.weekdays=Array.from({length:7},(_,i)=>i+1).filter(day=>(row.weekdays & (1<<(day-1)))!==0);
   if (name==='report_publication') row.snapshot=JSON.parse(row.snapshot);
   if (name==='test') row.archived=Boolean(row.archived);
-  if (name==='class_session') { decodeJsonColumns(row,CLASS_SESSION_JSON_COLUMNS); row.is_makeup=Boolean(row.is_makeup); }
+  if (name==='class_session') { decodeJsonColumns(row,CLASS_SESSION_JSON_COLUMNS,'array'); row.is_makeup=Boolean(row.is_makeup); }
   if (name==='report') row.needs_republish=Boolean(row.needs_republish);
   return row;
 }
