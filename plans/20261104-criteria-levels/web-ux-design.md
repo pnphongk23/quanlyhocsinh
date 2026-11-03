@@ -92,8 +92,9 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
   `--space-4/8/12/16/20/24/32`, `--radius-chip/control/card`, `--color-*`, `--state-selected-*`,
   `--state-focus-ring`, `--state-disabled-opacity`, `--comment-star-size`, `--empty-mascot-compact`,
   `--dur-press`, `--page-x`, `--form-max`, `--guardian-max`, `--safe-*`, `--sticky-*`.
-- Cần thêm (đã thêm cùng thay đổi này): `--level-row-icon-size: 20px` — icon tiêu chí/kỹ năng trong
-  hàng 5 tiêu chí (không dùng cỡ tick 20px/12px của phiếu cũ để tránh lẫn nghĩa).
+- Cần thêm (đã thêm cùng thay đổi này): `--level-row-icon-size: 20px` (icon tiêu chí/kỹ năng),
+  `--level-row-label-min: 9rem`, `--level-row-control-min: 15rem` (nhãn và bề rộng segmented trước khi
+  xuống dòng), `--focus-ring-offset: 1px` (vòng focus).
 - Không thêm màu/cỡ chữ mới; icon mức lấy từ bộ icon thiết kế khi có, chưa có thì chỉ dùng nhãn chữ.
 
 ## 8. Việc còn mở
