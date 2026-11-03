@@ -254,7 +254,11 @@ export default function TicketEditor({
 
   function commitComment() {
     if (!canWrite || scale === 3 || draft.current.comment === savedComment.current) return;
-    const text = draft.current.comment?.trim() ? draft.current.comment : generatedSlipSentence(draft.current.criteria);
+    const text = draft.current.comment?.trim()
+      ? draft.current.comment
+      : levelMode
+        ? levelComment(draft.current.levels!, draft.current.skillLevels ?? {})
+        : generatedSlipSentence(draft.current.criteria);
     if (text !== draft.current.comment) changeComment(text);
     draft.current = { ...draft.current, comment: text };
     void persist({ ...(levelMode ? { levels: draft.current.levels, skillLevels: draft.current.skillLevels } : { criteria: draft.current.criteria }), comment: text, note: draft.current.note, hwManual: draft.current.hwManual });
@@ -301,7 +305,12 @@ export default function TicketEditor({
           onNoteChange={changeNote}
           onNoteBlur={() => {
             if (canWrite && draft.current.note !== savedNote.current) {
-              void persist({ ...(levelMode ? { levels: draft.current.levels, skillLevels: draft.current.skillLevels } : {}), note: draft.current.note });
+              // Chỉ đổi ghi chú: gửi kèm câu hiện có để repository không sinh lại câu (kể cả phiếu đã gửi).
+              void persist({
+                ...(levelMode ? { levels: draft.current.levels, skillLevels: draft.current.skillLevels } : {}),
+                ...(levelMode ? { comment: draft.current.comment } : {}),
+                note: draft.current.note,
+              });
             }
           }}
         />

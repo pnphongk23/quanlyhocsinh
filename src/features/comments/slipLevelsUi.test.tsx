@@ -208,6 +208,17 @@ describe("sheet phiếu 3 mức", () => {
     expect(screen.queryByTestId("slip-level-row-focus")).toBeNull();
   });
 
+  it("sửa câu rồi sửa ghi chú trên mobile: lưu giữ câu sửa tay", async () => {
+    const { row, session, homework } = setup(levelComment());
+    render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
+    fireEvent.change(sentence, { target: { value: "Câu cô sửa tay" } });
+    fireEvent.change(screen.getByTestId("slip-note"), { target: { value: "Ghi chú mới" } });
+    fireEvent.click(screen.getByTestId("slip-save-button"));
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect(save.mock.calls.at(-1)![0]).toMatchObject({ note: "Ghi chú mới", comment: "Câu cô sửa tay" });
+  });
+
   it("phiếu ĐÃ GỬI sửa được mức nhưng không tự sinh lại câu", async () => {
     const comment = levelComment({ status: "sent", sendQueued: false, sentAt: "2026-10-26T00:00:00.000Z" });
     const { row, session, homework } = setup(comment);
@@ -224,6 +235,32 @@ describe("sheet phiếu 3 mức", () => {
 });
 
 describe("desktop phiếu 3 mức", () => {
+  it("sửa câu rồi sửa ghi chú: lưu ghi chú không ghi đè câu sửa tay", async () => {
+    const { row, session, homework } = setup(levelComment());
+    render(<TicketEditor session={session} row={row} homework={homework} />);
+    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
+    fireEvent.change(sentence, { target: { value: "Câu cô sửa tay" } });
+    fireEvent.blur(sentence);
+    await waitFor(() => expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ comment: "Câu cô sửa tay" })));
+
+    const note = screen.getByTestId("slip-note");
+    fireEvent.change(note, { target: { value: "Ghi chú mới" } });
+    fireEvent.blur(note);
+    await waitFor(() => expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ note: "Ghi chú mới" })));
+    expect(save.mock.calls.at(-1)![0]).toMatchObject({ note: "Ghi chú mới", comment: "Câu cô sửa tay" });
+  });
+
+  it("phiếu đã gửi: sửa ghi chú vẫn giữ câu đã lưu", async () => {
+    const comment = levelComment({ status: "sent", sentAt: "2026-10-26T00:00:00.000Z" });
+    const { row, session, homework } = setup(comment);
+    render(<TicketEditor session={session} row={row} homework={homework} />);
+    const note = screen.getByTestId("slip-note");
+    fireEvent.change(note, { target: { value: "Ghi chú sau gửi" } });
+    fireEvent.blur(note);
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect(save.mock.calls.at(-1)![0]).toMatchObject({ note: "Ghi chú sau gửi", comment: comment.comment });
+  });
+
   it("TicketEditor dùng cùng hàng mức và lưu levels", async () => {
     const { row, session, homework } = setup(levelComment());
     render(<TicketEditor session={session} row={row} homework={homework} />);
