@@ -331,7 +331,14 @@ function payloadWithoutLegacyFields(type: string, payload: SyncCommand["payload"
   return currentPayload as SyncCommand["payload"];
 }
 function publishRejected(rows: OutboxRow[]): void {
-  setRejectedCommands(rows.filter((x) => x.status === "rejected").map((x) => ({ id: x.id, type: x.type, error: x.error ?? "rejected" })));
+  setRejectedCommands(rows.filter((x) => x.status === "rejected").map((x) => {
+    const payload = x.payload as { session_id?: string; student_id?: string };
+    return {
+      id: x.id, type: x.type, error: x.error ?? "rejected",
+      ...(payload.session_id ? { sessionId: payload.session_id } : {}),
+      ...(payload.student_id ? { studentId: payload.student_id } : {}),
+    };
+  }));
 }
 /** Lệnh ghi một ô (điểm, điểm danh, phiếu, chấm BTVN): có thể bỏ vì ô đó lấy lại được từ máy chủ. */
 const cellEntity: Record<string, EntityName> = { "score.set": "score", "attendance.set": "attendance", "slip.set": "slip", "homework.grade.set": "homework_grade" };

@@ -13,7 +13,7 @@ describe("RejectedBanner", () => {
 
   it("nêu lý do theo loại lệnh và cho thử lại, bỏ thay đổi", () => {
     render(<RejectedBanner />);
-    act(() => setRejectedCommands([{ id: "a", type: "attendance.set", error: "session_cancelled" }]));
+    act(() => setRejectedCommands([{ id: "a", type: "attendance.set", error: "attendance_incomplete" }]));
     expect(screen.getByRole("alert").textContent).toContain("Điểm danh chưa lưu được");
     expect(screen.getByRole("button", { name: "Thử lại" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Bỏ thay đổi" })).toBeTruthy();
@@ -24,6 +24,27 @@ describe("RejectedBanner", () => {
     act(() => setRejectedCommands([{ id: "slip", type: "slip.set", error: "attendance_incomplete" }]));
     expect(screen.getByRole("alert").textContent).toContain("Điểm danh chưa đồng bộ xong, thử lại sau.");
     expect(screen.getByRole("button", { name: "Thử lại" })).toBeTruthy();
+  });
+
+  it("mã từ chối cuối chỉ hiện lỗi, không cho thử lại hay bỏ", () => {
+    render(<RejectedBanner />);
+    act(() => setRejectedCommands([
+      { id: "lesson", type: "session.lesson.set", error: "feature_disabled" },
+      { id: "slip", type: "slip.set", error: "invalid_levels" },
+    ]));
+    expect(screen.getByRole("alert").textContent).toContain("chưa lưu được");
+    expect(screen.queryByRole("button", { name: "Thử lại" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Bỏ thay đổi" })).toBeNull();
+  });
+
+  it("trộn lỗi thường và lỗi cuối: chỉ thử lại lệnh thường", () => {
+    render(<RejectedBanner />);
+    act(() => setRejectedCommands([
+      { id: "lesson", type: "session.lesson.set", error: "session_cancelled" },
+      { id: "slip", type: "slip.set", error: "attendance_incomplete" },
+    ]));
+    expect(screen.getByRole("button", { name: "Thử lại" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Bỏ thay đổi" })).toBeNull();
   });
 
   it("không cho bỏ khi có lệnh không phải ghi một ô", () => {

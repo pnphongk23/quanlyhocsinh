@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { rejectionMessage } from "../../data/rejectionMessages";
+import { isFinalRejection, rejectionMessage } from "../../data/rejectionMessages";
 import { canDiscardRejected, discardRejectedCommands, retryRejectedCommands } from "../../data/sync";
 import { ConfirmDialog } from "../../features/classes/ConfirmDialog";
 import { useRejectedCommands } from "./index";
@@ -24,6 +24,8 @@ export function RejectedBanner() {
   const [failure, setFailure] = useState("");
   if (!rejected.length) return null;
   const ids = rejected.map((row) => row.id);
+  const retryable = rejected.filter((row) => !isFinalRejection(row.error));
+  const retryIds = retryable.map((row) => row.id);
   const first = rejected[0];
   const text =
     `${subjects[first.type] ?? "Thay đổi"} chưa lưu được: ${rejectionMessage(first.error)}` +
@@ -43,10 +45,13 @@ export function RejectedBanner() {
     <>
       <div className={styles.banner} role="alert">
         <span className={styles.text}>{failure || text}</span>
-        <button type="button" className={styles.button} disabled={busy} onClick={() => void run(() => retryRejectedCommands(ids))}>
-          {busy ? "Đang thử lại" : "Thử lại"}
-        </button>
-        {rejected.every((row) => canDiscardRejected(row.type)) && (
+        {/* Lỗi cuối (cờ tắt, dữ liệu sai, buổi huỷ) không thử lại; ô bị từ chối cuối vẫn giữ giá trị trên máy. */}
+        {retryIds.length > 0 && (
+          <button type="button" className={styles.button} disabled={busy} onClick={() => void run(() => retryRejectedCommands(retryIds))}>
+            {busy ? "Đang thử lại" : "Thử lại"}
+          </button>
+        )}
+        {retryIds.length === ids.length && rejected.every((row) => canDiscardRejected(row.type)) && (
           <button type="button" className={styles.button} disabled={busy} onClick={() => setConfirming(ids)}>
             Bỏ thay đổi
           </button>
