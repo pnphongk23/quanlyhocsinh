@@ -48,7 +48,7 @@ Trường mới:
 Payload: `{session_id, topics: [khoá kỹ năng], graded_skills: [khoá kỹ năng], base_version}`.
 
 - Quy tắc kiểm: `topics` không trùng, khoá hợp lệ (`invalid_topics`); `graded_skills` ⊆ `topics` (`invalid_graded_skills`); mảng rỗng hợp lệ.
-- Ghi: `class_sessions.today_topics`, `graded_skills` (rỗng lưu `[]`), tăng `class_sessions.version`. Theo mẫu `test.update`: `base_version` so với `class_sessions.version`; lệch → kết quả `conflict` đúng giao thức hiện có cho lệnh đối tượng (đừng chế giao thức mới).
+- Ghi: `class_sessions.today_topics`, `graded_skills` (rỗng lưu `[]`), tăng `class_sessions.version`. `base_version` đúng như `test.update` (lệnh đối tượng, đừng chế giao thức mới): `base_version` LỚN HƠN `version` hiện tại → `rejected` `base_version_ahead`; `base_version` cũ hơn vẫn được áp dụng (thứ tự máy chủ nhận lệnh quyết định, later-write-wins); không có kết quả `conflict` và không trả kèm bản ghi hiện tại.
 - Buổi huỷ (`cancelled`): `rejected` `session_cancelled` (hoặc mã tương đương đã có trong mã cho buổi huỷ). Không áp cổng điểm danh (cấu hình buổi không phải phiếu).
 - Quyền: nhóm `comments_reports` mức write (giống `slip.set`); xử lý offline/idempotency/`applied_commands` như các lệnh khác.
 - Kết quả `applied` trả như `test.update`: kèm `version` mới.
@@ -83,5 +83,5 @@ Snapshot báo cáo (bản xem trước và `report_publications.snapshot`, xây 
 
 - `feature_disabled` là `rejected` cuối, không retry; client giữ phiếu và báo lỗi dòng.
 - `skill_levels` hợp lệ khi payload cùng có `levels` (hoặc phiếu đã có `levels`). `{}` hợp lệ. Khoá kỹ năng không nằm trong `today_topics` của buổi vẫn được nhận và lưu (không đối chiếu với buổi, để offline và để giữ dữ liệu mức của kỹ năng đã tắt "Chấm riêng").
-- `class_session.version` đã có trong snapshot/pull `class_session` (trường `version`); `session.lesson.set` lệch `base_version` trả `conflict` đúng như `test.update` (kèm bản hiện tại theo cùng giao thức đó).
+- `class_session.version` đã có trong snapshot/pull `class_session` (trường `version`); `session.lesson.set` lệch `base_version` xử đúng như `test.update`: chỉ `base_version` ở tương lai bị `rejected` `base_version_ahead`, `base_version` cũ hơn vẫn được áp dụng (later-write-wins); không có kết quả `conflict` và không trả kèm bản ghi hiện tại.
 - `criteria_summary`/`skill_summary` chỉ đếm phiếu ĐÃ GỬI (`status='sent'`), không bao giờ phiếu nháp; phụ huynh chỉ nhận chúng trong snapshot của báo cáo đã xuất bản (kênh hiện có), không có kênh mới.

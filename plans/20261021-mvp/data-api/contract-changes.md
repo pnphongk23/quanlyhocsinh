@@ -90,8 +90,10 @@ Trạng thái: **thử nghiệm trên dev**, chưa vào spec chính thức. Hợ
 
 ## Kiểm chứng
 
-- `cd worker && npm run typecheck && npm test`: 252 test qua (239 test cũ giữ nguyên + 13 test mới
-  `tests/criteria-levels.test.ts`) — cả cờ tắt và cờ bật.
+- `cd worker && npm run typecheck && npm test`: 256 test qua (239 test cũ giữ nguyên + 17 test mới
+  `tests/criteria-levels.test.ts`) — cả cờ tắt và cờ bật, gồm: `defaults[]` có `levels` khi cờ tắt ⇒
+  `feature_disabled`, phụ huynh bị `forbidden` với `session.lesson.set`, cờ tắt vẫn ĐỌC được dữ liệu mới,
+  và JSON hỏng/sai kiểu được coi như vắng khoá ở pull/slips/report preview.
 
 ## 2026-10-26 · Brief 96 · Hợp đồng CHỐT (chưa code, chưa migration): câu sửa tay, kiểm tra SĐT, điểm danh 3 trạng thái
 
