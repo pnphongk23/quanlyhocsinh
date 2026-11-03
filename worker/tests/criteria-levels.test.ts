@@ -163,6 +163,17 @@ describe('criteria levels writes', () => {
     expect(await f.row(f.students[1]!)).toBeNull();
   });
 
+  it('keeps legacy three-star slips out of the levels path', async () => {
+    const f = await setup();
+    await db.prepare(
+      `INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,status,sent_at,version,created_at,updated_at)
+       VALUES(?,?,?,?,2,3,NULL,NULL,'','sent','2026-01-01',1,'2026-01-01','2026-01-01')`)
+      .bind(f.a.workspaceId, f.cls, f.ses, f.students[0]).run();
+    expect((await f.slipSet({ levels: levels(), comment: 'Câu.' }, 1)).body.results[0].error.details.reason).toBe('legacy_scale');
+    expect((await f.slipSet({ skill_levels: { speaking: 'good' } }, 1)).body.results[0].error.details.reason).toBe('invalid_skill_levels');
+    expect(await f.row()).toMatchObject({ scale: 3, stars: 2, levels: null, skill_levels: null });
+  });
+
   it('stores today_topics and graded_skills with session.lesson.set', async () => {
     const f = await setup();
     const applied = await f.send([command('session.lesson.set', { session_id: f.ses, topics: ['speaking', 'grammar'], graded_skills: ['speaking'] })]);
