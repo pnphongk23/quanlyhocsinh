@@ -1,0 +1,256 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import { buildTicketRows } from "../../data/homework";
+import { replaceStore } from "../../data/store";
+import { getSession } from "../../data/repositories/sessions";
+import { createSeed } from "../../test/fixtures/seed";
+import type { Comment } from "../../data/types";
+import { composeComment, defaultLevels, type Levels } from "../../data/criteriaLevels";
+import { generatedSlipSentence } from "../../data/slip";
+import CommentsPanel from "./CommentsPanel";
+import CommentTicketSheet from "./CommentTicketSheet";
+import TicketEditor from "./TicketEditor";
+import { SlipLevelFields } from "./SlipLevelFields";
+import { resetSessionDrafts } from "./draftStore";
+
+const save = vi.hoisted(() => vi.fn());
+vi.mock("../../data/repositories/comments", async (original) => ({
+  ...(await original<typeof import("../../data/repositories/comments")>()),
+  saveSessionCommentDurable: save,
+}));
+vi.mock("../../data/repositories/access", async (original) => ({
+  ...(await original<typeof import("../../data/repositories/access")>()),
+  useAccess: () => ({ can: () => true, member: null, role: null, isAdmin: true, multipleRoles: false }),
+}));
+
+const sessionId = "6a-session-7";
+const studentId = "6a-student-1";
+const LEVELS: Levels = { focus: "good", participation: "good", mastery: "good", notes: "good", homework: "good" };
+
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.setAttribute("open", ""); };
+  HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) { this.removeAttribute("open"); };
+  save.mockReset().mockResolvedValue(undefined);
+  sessionStorage.clear();
+  vi.stubEnv("VITE_CRITERIA_LEVELS", "1");
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllEnvs();
+});
+
+function setup(comment: Comment | null = null, options: { gradedSkills?: ("speaking" | "reading")[]; topics?: ("vocabulary" | "speaking")[] } = {}) {
+  const seed = createSeed();
+  seed.sessions = seed.sessions.map((session) => session.id === sessionId ? {
+    ...session,
+    todayTopics: options.topics ?? ["vocabulary", "speaking"],
+    gradedSkills: options.gradedSkills ?? ["speaking"],
+  } : session);
+  replaceStore(seed);
+  const row = buildTicketRows(seed, sessionId).find((item) => item.student.id === studentId)!;
+  if (comment) row.comment = comment;
+  else row.comment = null;
+  row.status = comment?.status ?? "draft";
+  row.stars = comment?.stars ?? null;
+  const session = getSession(sessionId)!;
+  return { seed, row, session, homework: { state: "first" as const, sections: [] } };
+}
+
+function levelComment(patch: Partial<Comment> = {}): Comment {
+  const levels = patch.levels ?? LEVELS;
+  const skillLevels = patch.skillLevels ?? { speaking: "ok" as const };
+  return {
+    id: "c", classId: "6a", sessionId, studentId, criteria: 31,
+    comment: composeComment({ levels, skillLevels, topics: ["vocabulary", "speaking"], gradedSkills: ["speaking"] }),
+    scale: 5, stars: 5, levels, skillLevels, note: "Giữ ghi chú", hwManual: false,
+    status: "draft", sendQueued: false, sentAt: null, updatedAt: "2026-10-26T00:00:00.000Z", createdAt: "2026-10-26T00:00:00.000Z",
+    ...patch,
+  } as Comment;
+}
+
+describe("SlipLevelFields", () => {
+  it("5 hàng tiêu chí, không có nhóm kỹ năng khi 0 kỹ năng, sao = số mức Tốt", () => {
+    render(
+      <SlipLevelFields
+        levels={defaultLevels(null)}
+        skillLevels={{}}
+        gradedSkills={[]}
+        comment="Câu"
+        note=""
+        previousGrades={null}
+        homeworkState="first"
+        hwManual={false}
+        sent={false}
+        disabled={false}
+        onLevelChange={vi.fn()}
+        onSkillChange={vi.fn()}
+        onCommentChange={vi.fn()}
+        onNoteChange={vi.fn()}
+      />,
+    );
+    expect(screen.getAllByTestId(/^slip-level-row-/)).toHaveLength(5);
+    expect(screen.getByText("4/5 sao")).toBeInTheDocument();
+    expect(screen.getByTestId("slip-level-row-homework")).toHaveTextContent("Buổi trước chưa có BTVN");
+  });
+
+  it("2 kỹ năng chấm riêng: 2 hàng, đổi mức gọi onSkillChange, không đổi sao", () => {
+    const onSkillChange = vi.fn();
+    render(
+      <SlipLevelFields
+        levels={LEVELS}
+        skillLevels={{ speaking: "ok", reading: "needs_work" }}
+        gradedSkills={["speaking", "reading"]}
+        comment="Câu"
+        note=""
+        previousGrades={null}
+        homeworkState="has"
+        hwManual={false}
+        sent={false}
+        disabled={false}
+        onLevelChange={vi.fn()}
+        onSkillChange={onSkillChange}
+        onCommentChange={vi.fn()}
+        onNoteChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("slip-skill-row-speaking")).toBeInTheDocument();
+    expect(screen.getByTestId("slip-skill-row-reading")).toBeInTheDocument();
+    expect(screen.getByText("5/5 sao")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radiogroup", { name: "Đọc" }).querySelector('[role="radio"][aria-checked="false"]')!);
+    expect(onSkillChange).toHaveBeenCalledWith("reading", "good");
+  });
+
+  it("BTVN chưa chọn tay hiện theo chấm buổi trước; chọn tay thì gọi onLevelChange", () => {
+    const onLevelChange = vi.fn();
+    render(
+      <SlipLevelFields
+        levels={{ ...LEVELS, homework: "good" }}
+        skillLevels={{}}
+        gradedSkills={[]}
+        comment="Câu"
+        note=""
+        previousGrades={[{ sectionId: "sec", studentId, level: "not_done" }]}
+        homeworkState="has"
+        hwManual={false}
+        sent={false}
+        disabled={false}
+        onLevelChange={onLevelChange}
+        onSkillChange={vi.fn()}
+        onCommentChange={vi.fn()}
+        onNoteChange={vi.fn()}
+      />,
+    );
+    const homework = screen.getByTestId("slip-level-row-homework");
+    expect(homework).toHaveTextContent("Theo chấm BTVN");
+    expect(withinGroup("Bài tập về nhà").querySelector('[aria-checked="true"]')).toHaveTextContent("Cần cố gắng");
+    fireEvent.click(withinGroup("Bài tập về nhà").querySelector('[role="radio"][aria-checked="false"]')!);
+    expect(onLevelChange).toHaveBeenCalledWith("homework", "good");
+  });
+
+  it("khoá theo quyền: radio disabled, chữ dài vẫn hiện", () => {
+    render(
+      <SlipLevelFields
+        levels={LEVELS}
+        skillLevels={{}}
+        gradedSkills={[]}
+        comment={"Câu nhận xét rất dài ".repeat(10)}
+        note=""
+        previousGrades={null}
+        homeworkState="first"
+        hwManual={false}
+        sent
+        disabled
+        onLevelChange={vi.fn()}
+        onSkillChange={vi.fn()}
+        onCommentChange={vi.fn()}
+        onNoteChange={vi.fn()}
+      />,
+    );
+    for (const radio of screen.getAllByRole("radio")) expect(radio).toBeDisabled();
+    expect((screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value).toContain("Câu nhận xét rất dài");
+  });
+});
+
+function withinGroup(name: string): HTMLElement {
+  return screen.getByRole("radiogroup", { name });
+}
+
+describe("sheet phiếu 3 mức", () => {
+  it("phiếu mới hiện 5 hàng mức (không còn ô chọn cũ), đổi mức sinh lại câu và giữ ghi chú", async () => {
+    const { row, session, homework } = setup();
+    render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+    expect(screen.getByTestId("slip-level-row-focus")).toBeInTheDocument();
+    expect(screen.queryByTestId("slip-criterion-0")).toBeNull();
+    fireEvent.change(screen.getByTestId("slip-note"), { target: { value: "Gõ thêm" } });
+    fireEvent.click(withinGroup("Học tập trung").querySelector('[role="radio"][aria-checked="false"]')!);
+    expect(screen.getByText("3/5 sao")).toBeInTheDocument();
+    expect((screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value).toContain("Con khá tập trung");
+    expect(screen.getByTestId("slip-save-button")).toBeEnabled();
+    fireEvent.click(screen.getByTestId("slip-save-button"));
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    const input = save.mock.calls.at(-1)![0];
+    expect(input.levels).toMatchObject({ focus: "ok", mastery: "ok", homework: "good" });
+    expect(input.skillLevels).toEqual({ speaking: "ok" });
+    expect(input.comment).toContain("Con khá tập trung");
+    expect(input.note).toBe("Gõ thêm");
+  });
+
+  it("phiếu cũ không có levels vẫn hiện ô chọn đạt/chưa đạt như cũ", () => {
+    const legacy = {
+      id: "c", classId: "6a", sessionId, studentId, criteria: 30, comment: generatedSlipSentence(30), scale: 5,
+      stars: 4, note: "", hwManual: false, status: "draft", sendQueued: false, sentAt: null,
+      updatedAt: "2026-10-26T00:00:00.000Z", createdAt: "2026-10-26T00:00:00.000Z",
+    } as Comment;
+    const { row, session, homework } = setup(legacy);
+    render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+    expect(screen.getByTestId("slip-criterion-0")).toBeInTheDocument();
+    expect(screen.queryByTestId("slip-level-row-focus")).toBeNull();
+  });
+
+  it("phiếu ĐÃ GỬI sửa được mức nhưng không tự sinh lại câu", async () => {
+    const comment = levelComment({ status: "sent", sendQueued: false, sentAt: "2026-10-26T00:00:00.000Z" });
+    const { row, session, homework } = setup(comment);
+    render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+    const before = (screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value;
+    fireEvent.click(withinGroup("Nắm bài hôm nay").querySelector('[role="radio"][aria-checked="false"]')!);
+    expect((screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value).toBe(before);
+    fireEvent.click(screen.getByTestId("slip-save-button"));
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect(save.mock.calls.at(-1)![0].levels.mastery).not.toBe("good");
+  });
+});
+
+describe("desktop phiếu 3 mức", () => {
+  it("TicketEditor dùng cùng hàng mức và lưu levels", async () => {
+    const { row, session, homework } = setup(levelComment());
+    render(<TicketEditor session={session} row={row} homework={homework} />);
+    expect(screen.getByTestId("slip-level-row-mastery")).toBeInTheDocument();
+    fireEvent.click(withinGroup("Ghi chép và làm bài trên lớp").querySelector('[role="radio"][aria-checked="false"]')!);
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    expect(save.mock.calls.at(-1)![0].levels.notes).not.toBe("good");
+  });
+});
+
+describe("tab Nhận xét theo cờ", () => {
+  it("cờ tắt: không có Hôm nay học, vẫn có segmented Theo học sinh/Theo tiêu chí", () => {
+    vi.stubEnv("VITE_CRITERIA_LEVELS", "0");
+    setup();
+    render(<MemoryRouter><CommentsPanel classId="6a" sessionId={sessionId} /></MemoryRouter>);
+    expect(screen.queryByTestId("lesson-topics")).toBeNull();
+    expect(screen.getByRole("tab", { name: "Theo tiêu chí" })).toBeInTheDocument();
+  });
+
+  it("cờ bật: có Hôm nay học, ẩn segmented, danh sách hiện 'N mục cần cố gắng'", () => {
+    const { seed } = setup();
+    const levels: Levels = { ...LEVELS, mastery: "needs_work", focus: "needs_work" };
+    const comment = levelComment({ levels, comment: "Câu", status: "draft" });
+    replaceStore({ ...seed, comments: [comment] });
+    render(<MemoryRouter><CommentsPanel classId="6a" sessionId={sessionId} /></MemoryRouter>);
+    expect(screen.getByTestId("lesson-topics")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Theo tiêu chí" })).toBeNull();
+    expect(screen.getByText("2 mục cần cố gắng")).toBeInTheDocument();
+  });
+});
+
+afterEach(() => resetSessionDrafts(sessionId));

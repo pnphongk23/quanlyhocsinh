@@ -9,7 +9,7 @@ import { composePlans, runDurably, type WritePlan } from "./durable";
 import { scheduleSync, syncNow } from "../sync";
 import { db, getCacheIdentity, identityKey, stored } from "../db";
 import { todayISO } from "../../shared/date";
-import { criteriaLevelsEnabled } from "../../shared/featureFlags";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import {
   composeComment,
   criteriaFromLevels,

@@ -24,6 +24,7 @@ import { Button, EmptyState, InfoNotice, Pill } from "../../shared/ui";
 import AssignDefaultsAction from "./AssignDefaultsAction";
 import SendTicketsDialog from "./SendTicketsDialog";
 import TicketEditor, { StarRow, desktopTicketLabel } from "./TicketEditor";
+import { effortSummary } from "../../data/criteriaLevels";
 import {
   filterTicketRows,
   sendButtonLabel,
@@ -38,7 +39,8 @@ import s from "./CommentsDesktop.module.css";
 import d from "../class-space/desktop.module.css";
 import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 import NotesImportDialog from "./NotesImportDialog";
-import { FEATURE_NOTES_IMPORT, criteriaLevelsEnabled } from "../../shared/featureFlags";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
+import { FEATURE_NOTES_IMPORT } from "../../shared/featureFlags";
 import LessonTopicsBar from "./LessonTopicsBar";
 
 /**
@@ -286,6 +288,11 @@ export default function CommentsDesktop({
                         <span className={s.ticketMeta}>
                           {homeworkCountsLine(state, row)}
                         </span>
+                        {row.comment?.levels && effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session.gradedSkills ?? [] }) && (
+                          <span className={s.ticketMeta}>
+                            {effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session.gradedSkills ?? [] })}
+                          </span>
+                        )}
                       </span>
                       {row.stars === null ? <span className={s.stars} /> : <StarRow level={row.stars} />}
                       <Pill

@@ -25,6 +25,7 @@ import CommentTicketSheet, { type SheetHomework } from "./CommentTicketSheet";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import AssignDefaultsAction from "./AssignDefaultsAction";
 import SendTicketsDialog from "./SendTicketsDialog";
+import { effortSummary } from "../../data/criteriaLevels";
 import {
   filterTicketRows,
   homeworkLine,
@@ -43,7 +44,8 @@ import {
 import s from "./CommentsPanel.module.css";
 import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 import NotesImportDialog from "./NotesImportDialog";
-import { FEATURE_NOTES_IMPORT, criteriaLevelsEnabled } from "../../shared/featureFlags";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
+import { FEATURE_NOTES_IMPORT } from "../../shared/featureFlags";
 import LessonTopicsBar from "./LessonTopicsBar";
 
 function Star({ size = 16 }: { size?: number }) {
@@ -324,6 +326,9 @@ export default function CommentsPanel({
   function ticketRow(row: TicketRow) {
     const badge = ticketBadge(row);
     const line = homeworkLine(row.previousHomework);
+    const effort = row.comment?.levels
+      ? effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session?.gradedSkills ?? [] })
+      : null;
     return (
       <li key={row.student.id}>
           <button
@@ -356,6 +361,7 @@ export default function CommentsPanel({
               ))}
             </span>
           )}
+          {effort && <span className={s.effortLine}>{effort}</span>}
           <span
             className={
               line.tone === "warning" ? s.homeworkLineWarning : s.homeworkLine

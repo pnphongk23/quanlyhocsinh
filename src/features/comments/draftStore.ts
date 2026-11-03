@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { StarLevel } from "../../data/types";
+import { parseLevels, parseSkillLevels, type Levels, type SkillLevels } from "../../data/criteriaLevels";
 
 /**
  * Nháp của sheet nhận xét được giữ khi đóng sheet (ảnh 41: "Nháp, chưa lưu").
@@ -11,6 +12,9 @@ export interface TicketDraft {
   comment: string | null;
   note: string;
   hwManual?: boolean;
+  /** Nháp của phiếu 3 mức (thử nghiệm); phiếu cũ không có. */
+  levels?: Levels;
+  skillLevels?: SkillLevels;
 }
 
 const PREFIX = "comment-draft:";
@@ -43,7 +47,9 @@ export function readDraft(
       const criteria = Number.isInteger(record.criteria) && Number(record.criteria) >= 0 && Number(record.criteria) <= 31
         ? Number(record.criteria)
         : legacyStars === null ? 31 : (1 << legacyStars) - 1;
-      return { criteria, comment: typeof record.comment === "string" ? record.comment : null, note: typeof record.note === "string" ? record.note : "", ...(typeof record.hwManual === "boolean" ? { hwManual: record.hwManual } : {}) };
+      const levels = parseLevels(record.levels) ?? undefined;
+      const skillLevels = parseSkillLevels(record.skillLevels) ?? undefined;
+      return { criteria, comment: typeof record.comment === "string" ? record.comment : null, note: typeof record.note === "string" ? record.note : "", ...(typeof record.hwManual === "boolean" ? { hwManual: record.hwManual } : {}), ...(levels ? { levels } : {}), ...(skillLevels ? { skillLevels } : {}) };
   } catch {
     return null;
   }

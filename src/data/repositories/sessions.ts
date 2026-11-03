@@ -11,7 +11,7 @@ import { setSaveStatus } from "../saveStatus";
 import { isoWeekday, normalizeWeekdays } from "../../shared/weekdays";
 import { sessionDateLabel } from "../sessionLabel";
 import { normalizeGradedSkills, normalizeTopics } from "../criteriaLevels";
-import { criteriaLevelsEnabled } from "../../shared/featureFlags";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { runDurably, type WritePlan } from "./durable";
 import type { SyncCommand } from "../api/types";
 

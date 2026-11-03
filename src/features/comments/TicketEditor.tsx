@@ -17,6 +17,11 @@ import s from "./CommentsDesktop.module.css";
 import { SlipCriteriaFields } from "./SlipCriteriaFields";
 import { UNOPENED_LABEL, initialsOf, criteriaWithHomeworkResult, hwManualAfterCriterionToggle, slipFrozenForAutoUpdate } from "./commentsModel";
 import { sessionPrefix } from "../../data/repositories/sessions";
+import { composeComment, criteriaFromLevels, defaultLevels, defaultSkillLevels, homeworkLevelFromGrades, type CriterionKey, type Level, type Levels, type SkillKey, type SkillLevels } from "../../data/criteriaLevels";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
+import { useRejectedCommands } from "../../shared/SaveStatus";
+import { isFinalRejection, localOnlyRejectionMessage } from "../../data/rejectionMessages";
+import { SlipLevelFields } from "./SlipLevelFields";
 
 function Star({ filled }: { filled: boolean }) {
   return (
@@ -77,20 +82,32 @@ export default function TicketEditor({
   const stored = readDraft(session.id, row.student.id);
   const scale = row.comment?.scale === 3 ? 3 : 5;
   const previousGrades: HomeworkGrade[] = homework.sections.flatMap((section) => section.level === null ? [] : [{ sectionId: section.id, studentId: row.student.id, level: section.level }]);
+  const levelsOn = criteriaLevelsEnabled();
+  const levelMode = levelsOn && (row.comment?.levels != null || row.comment === null);
+  const topics = session.todayTopics ?? [];
+  const gradedSkills = session.gradedSkills ?? [];
+  const levelComment = (value: Levels, skills: SkillLevels) => composeComment({ levels: value, skillLevels: skills, topics, gradedSkills });
   const rawCriteria = stored?.criteria ?? row.comment?.criteria ?? (scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31);
   const initialManual = stored?.hwManual ?? row.comment?.hwManual ?? false;
   const initialCriteria = criteriaWithHomeworkResult(rawCriteria, previousGrades, initialManual, slipFrozenForAutoUpdate(row.status), scale);
   const storedComment = stored ? stored.comment : row.comment?.comment ?? null;
-  const initialComment = scale === 3 ? storedComment : (storedComment && initialCriteria === rawCriteria ? storedComment : generatedSlipSentence(initialCriteria));
-  const draft = useRef<{ criteria: number; comment: string | null; note: string; hwManual: boolean }>({
-    criteria: initialCriteria,
+  const initialLevels = stored?.levels ?? row.comment?.levels ?? defaultLevels(previousGrades);
+  const initialSkillLevels = stored?.skillLevels ?? row.comment?.skillLevels ?? defaultSkillLevels(gradedSkills);
+  const initialComment = levelMode
+    ? (stored ? (storedComment ?? levelComment(initialLevels, initialSkillLevels)) : (row.comment?.comment ?? levelComment(initialLevels, initialSkillLevels)))
+    : scale === 3 ? storedComment : (storedComment && initialCriteria === rawCriteria ? storedComment : generatedSlipSentence(initialCriteria));
+  const draft = useRef<{ criteria: number; comment: string | null; note: string; hwManual: boolean; levels?: Levels; skillLevels?: SkillLevels }>({
+    criteria: levelMode ? criteriaFromLevels(initialLevels) : initialCriteria,
     comment: initialComment,
     note: stored ? stored.note : (row.comment?.note ?? ""),
     hwManual: initialManual,
+    ...(levelMode ? { levels: initialLevels, skillLevels: initialSkillLevels } : {}),
   });
   const [criteria, setCriteria] = useState(draft.current.criteria);
   const [comment, setComment] = useState<string | null>(draft.current.comment);
   const [note, setNote] = useState(draft.current.note);
+  const [levels, setLevels] = useState(initialLevels);
+  const [skillLevels, setSkillLevels] = useState(initialSkillLevels);
   const savedNote = useRef(row.comment?.note ?? "");
   const savedComment = useRef<string | null>(scale === 3 ? null : (row.comment?.comment ?? generatedSlipSentence(rawCriteria)));
   const [manualHomework, setManualHomework] = useState(draft.current.hwManual);
@@ -98,12 +115,24 @@ export default function TicketEditor({
   const [saving, setSaving] = useState(false);
   const [unsaved, setUnsaved] = useState(canWrite && (!row.comment || Boolean(stored)));
   const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
+  const rejected = useRejectedCommands().filter((item) =>
+    item.type === "slip.set" && item.sessionId === session.id && item.studentId === row.student.id && isFinalRejection(item.error),
+  );
+  const rejectionText = rejected[0] ? localOnlyRejectionMessage(rejected[0].error) : "";
 
   /** Nạp lại từ phiếu đã lưu: bỏ nội dung đang soạn để blur/lưu sau đó không ghi ngược bản cũ. */
   useSessionDraftReset(session.id, () => {
     const saved = getSessionComment(session.id, row.student.id);
     if (!saved) return;
-    const next = { criteria: saved.criteria ?? 31, comment: saved.comment ?? generatedSlipSentence(saved.criteria ?? 31), note: saved.note ?? "", hwManual: saved.hwManual ?? false };
+    const savedLevels = saved.levels ?? defaultLevels(previousGrades);
+    const savedSkills = saved.skillLevels ?? defaultSkillLevels(gradedSkills);
+    const next = {
+      criteria: saved.criteria ?? criteriaFromLevels(savedLevels),
+      comment: saved.comment ?? (saved.levels ? levelComment(savedLevels, savedSkills) : generatedSlipSentence(saved.criteria ?? 31)),
+      note: saved.note ?? "",
+      hwManual: saved.hwManual ?? false,
+      ...(saved.levels ? { levels: savedLevels, skillLevels: savedSkills } : {}),
+    };
     draft.current = next;
     savedNote.current = next.note;
     savedComment.current = next.comment;
@@ -111,19 +140,20 @@ export default function TicketEditor({
     setComment(next.comment);
     setNote(next.note);
     setManualHomework(next.hwManual);
+    if (saved.levels) { setLevels(savedLevels); setSkillLevels(savedSkills); }
     setUnsaved(false);
     setError("");
   });
 
   const hasUnsavedText = () => draft.current.note !== savedNote.current || (scale === 5 && draft.current.comment !== savedComment.current);
 
-  async function persist(next: { criteria?: number; comment?: string | null; note: string; hwManual?: boolean }) {
+  async function persist(next: { criteria?: number; comment?: string | null; note: string; hwManual?: boolean; levels?: Levels; skillLevels?: SkillLevels }) {
     setSaving(true);
     try {
       await saveSessionCommentDurable({
         sessionId: session.id,
         studentId: row.student.id,
-        ...(next.criteria === undefined ? {} : { criteria: next.criteria }),
+        ...(next.levels === undefined ? { ...(next.criteria === undefined ? {} : { criteria: next.criteria }) } : { levels: next.levels, ...(next.skillLevels === undefined ? {} : { skillLevels: next.skillLevels }) }),
         ...(next.comment === undefined ? {} : { comment: next.comment }),
         note: next.note,
         ...(next.hwManual === undefined ? {} : { hwManual: next.hwManual }),
@@ -143,7 +173,7 @@ export default function TicketEditor({
   }
 
   useEffect(() => {
-    if (scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
+    if (levelMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
     const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
     if (next === criteria) return;
     const nextComment = generatedSlipSentence(next);
@@ -154,6 +184,50 @@ export default function TicketEditor({
     setUnsaved(true);
     void persist({ criteria: next, comment: nextComment, note: draft.current.note, hwManual: draft.current.hwManual });
   }, [gradeKey, criteria, comment, note, manualHomework, row.status, scale, session.id, row.student.id]);
+
+  // Chấm lại BTVN ở phiếu 3 mức: tự đổi phiếu chưa gửi, chưa chọn tay; phiếu đã gửi giữ câu.
+  useEffect(() => {
+    if (!levelMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
+    const nextHomework = homeworkLevelFromGrades(previousGrades);
+    if (nextHomework === levels.homework) return;
+    const nextLevels = { ...levels, homework: nextHomework };
+    const nextComment = row.status === "sent" ? comment : levelComment(nextLevels, skillLevels);
+    draft.current = { ...draft.current, levels: nextLevels, comment: nextComment };
+    writeDraft(session.id, row.student.id, draft.current);
+    setLevels(nextLevels);
+    if (nextComment !== comment) setComment(nextComment);
+    setUnsaved(true);
+    if (canWrite) void persist({ levels: nextLevels, skillLevels, comment: nextComment, note: draft.current.note, hwManual: draft.current.hwManual });
+  }, [gradeKey, levelMode, levels, skillLevels, comment, manualHomework, row.status, scale, session.id, row.student.id]);
+
+  function updateLevel(key: CriterionKey, level: Level) {
+    if (!canWrite) return;
+    const nextLevels = { ...levels, [key]: level };
+    const nextManual = key === "homework" ? true : manualHomework;
+    const nextComment = row.status === "sent" ? comment : levelComment(nextLevels, skillLevels);
+    const nextValue = { levels: nextLevels, skillLevels, comment: nextComment, note, hwManual: nextManual };
+    draft.current = { ...draft.current, ...nextValue };
+    writeDraft(session.id, row.student.id, draft.current);
+    setLevels(nextLevels);
+    if (nextManual !== manualHomework) setManualHomework(nextManual);
+    setComment(nextComment);
+    setUnsaved(true);
+    setError("");
+    void persist({ ...nextValue, note });
+  }
+
+  function updateSkill(key: SkillKey, level: Level) {
+    if (!canWrite) return;
+    const nextSkills = { ...skillLevels, [key]: level };
+    const nextComment = row.status === "sent" ? comment : levelComment(levels, nextSkills);
+    draft.current = { ...draft.current, skillLevels: nextSkills, comment: nextComment };
+    writeDraft(session.id, row.student.id, draft.current);
+    setSkillLevels(nextSkills);
+    setComment(nextComment);
+    setUnsaved(true);
+    setError("");
+    void persist({ levels, skillLevels: nextSkills, comment: nextComment, note });
+  }
 
   function updateCriteria(next: number, index: number) {
     if (!canWrite) return;
@@ -183,7 +257,7 @@ export default function TicketEditor({
     const text = draft.current.comment?.trim() ? draft.current.comment : generatedSlipSentence(draft.current.criteria);
     if (text !== draft.current.comment) changeComment(text);
     draft.current = { ...draft.current, comment: text };
-    void persist({ criteria: draft.current.criteria, comment: text, note: draft.current.note, hwManual: draft.current.hwManual });
+    void persist({ ...(levelMode ? { levels: draft.current.levels, skillLevels: draft.current.skillLevels } : { criteria: draft.current.criteria }), comment: text, note: draft.current.note, hwManual: draft.current.hwManual });
   }
 
   function changeNote(value: string) {
@@ -207,31 +281,57 @@ export default function TicketEditor({
         </Pill>
       </div>
 
-      <SlipCriteriaFields
-        criteria={criteria}
-        comment={comment}
-        note={note}
-        scale={scale}
-        previousGrades={previousGrades}
-        homeworkState={homework.state}
-        hwManual={manualHomework}
-        sent={slipFrozenForAutoUpdate(row.status)}
-        disabled={!canWrite}
-        compact={compact}
-        onCriteriaChange={updateCriteria}
-        onCommentChange={changeComment}
-        onCommentBlur={commitComment}
-        onNoteChange={changeNote}
-        onNoteBlur={() => {
-          if (canWrite && draft.current.note !== savedNote.current) {
-            void persist({ note: draft.current.note });
-          }
-        }}
-      />
+      {levelMode ? (
+        <SlipLevelFields
+          levels={levels}
+          skillLevels={skillLevels}
+          gradedSkills={gradedSkills}
+          comment={comment ?? ""}
+          note={note}
+          previousGrades={previousGrades}
+          homeworkState={homework.state}
+          hwManual={manualHomework}
+          sent={slipFrozenForAutoUpdate(row.status)}
+          disabled={!canWrite}
+          compact={compact}
+          onLevelChange={updateLevel}
+          onSkillChange={updateSkill}
+          onCommentChange={changeComment}
+          onCommentBlur={commitComment}
+          onNoteChange={changeNote}
+          onNoteBlur={() => {
+            if (canWrite && draft.current.note !== savedNote.current) {
+              void persist({ ...(levelMode ? { levels: draft.current.levels, skillLevels: draft.current.skillLevels } : {}), note: draft.current.note });
+            }
+          }}
+        />
+      ) : (
+        <SlipCriteriaFields
+          criteria={criteria}
+          comment={comment}
+          note={note}
+          scale={scale}
+          previousGrades={previousGrades}
+          homeworkState={homework.state}
+          hwManual={manualHomework}
+          sent={slipFrozenForAutoUpdate(row.status)}
+          disabled={!canWrite}
+          compact={compact}
+          onCriteriaChange={updateCriteria}
+          onCommentChange={changeComment}
+          onCommentBlur={commitComment}
+          onNoteChange={changeNote}
+          onNoteBlur={() => {
+            if (canWrite && draft.current.note !== savedNote.current) {
+              void persist({ note: draft.current.note });
+            }
+          }}
+        />
+      )}
 
-      {error && (
+      {(error || rejectionText) && (
         <p role="alert" className={s.error}>
-          {error}
+          {error || rejectionText}
         </p>
       )}
       {canWrite && <div className={s.editorFooter}>
