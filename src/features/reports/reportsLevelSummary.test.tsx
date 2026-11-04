@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { decodeServerReport } from "../../data/reportModel";
 import ReportPreview from "./ReportPreview";
@@ -30,7 +30,8 @@ function snapshot(extra: Record<string, unknown> = {}) {
   };
 }
 
-afterEach(cleanup);
+beforeEach(() => { vi.stubEnv("VITE_CRITERIA_LEVELS", "1"); });
+afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
 
 describe("báo cáo tháng có tóm tắt tiêu chí/kỹ năng", () => {
   it("đọc criteria_summary/skill_summary và hiện trong bản xem trước", () => {
@@ -43,6 +44,8 @@ describe("báo cáo tháng có tóm tắt tiêu chí/kỹ năng", () => {
     expect(screen.getByText("Học tập trung")).toBeInTheDocument();
     expect(screen.getByText("Theo kỹ năng")).toBeInTheDocument();
     expect(screen.getByTestId("report-level-summary").textContent).toContain("3 Tốt · 1 Đạt trong 4 buổi có chấm");
+    // Meter trong báo cáo là trang trí: không có role=img/nhãn lặp số đếm.
+    expect(screen.queryByRole("img", { name: /3 Tốt/ })).toBeNull();
   });
 
   it("vắng khoá thì báo cáo y như cũ", () => {

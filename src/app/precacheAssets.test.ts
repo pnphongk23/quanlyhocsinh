@@ -43,6 +43,13 @@ describe("app shell precache assets", () => {
     }
   });
 
+  it("bỏ ảnh đầu gà khỏi precache khi cờ tắt", () => {
+    const list = listMascotAssets(MASCOT_DIR, false);
+    expect(list.some((url) => /mit-head-/.test(url))).toBe(false);
+    expect(list).toContain("/mascot/mit-main.webp");
+    expect(createAppShellPrecacheList({} as OutputBundle, list).some((url) => url.includes("mit-head-"))).toBe(false);
+  });
+
   it("precaches every webp in public/mascot and nothing else", () => {
     const onDisk = readdirSync(MASCOT_DIR, { withFileTypes: true })
       .filter((entry) => entry.isFile() && entry.name.endsWith(".webp"))

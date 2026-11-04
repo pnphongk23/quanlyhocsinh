@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { MEMBER_IDS } from "../../data/defaults";
@@ -52,7 +52,8 @@ function renderSession(sessionId: string): HTMLElement {
   return host;
 }
 
-afterEach(() => { delete (globalThis as { sessionStorage?: Storage }).sessionStorage; });
+beforeEach(() => { vi.stubEnv("VITE_CRITERIA_LEVELS", "1"); });
+afterEach(() => { vi.unstubAllEnvs(); delete (globalThis as { sessionStorage?: Storage }).sessionStorage; });
 
 const LEVELS = { focus: "good", participation: "ok", mastery: "ok", notes: "good", homework: "needs_work" } as const;
 
@@ -76,9 +77,9 @@ describe("PH · phiếu 3 mức ở màn buổi học", () => {
     const criteria = host.querySelector('[data-testid="guardian-criteria"]')!;
     expect(criteria.textContent).toContain("Học tập trung");
     expect(criteria.textContent).toContain("Tích cực tham gia");
-    expect(criteria.textContent).toContain("Đạt");
+    expect(criteria.querySelector('[role="img"][aria-label="Đạt, 2 trên 3"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Nói");
-    expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Cần cố gắng");
+    expect(host.querySelector('[data-testid="guardian-skill-speaking"] [role="img"]')?.getAttribute("aria-label")).toBe("Cần cố gắng, 1 trên 3");
     // Phiếu 3 mức: câu tự sinh + phần gõ thêm là MỘT đoạn, không có khung "Ghi chú" riêng.
     const paragraph = host.querySelector('[data-testid="guardian-ticket-text"]')!;
     expect(paragraph.textContent).toContain("Con học tập trung, ghi bài đầy đủ.");
@@ -97,7 +98,7 @@ describe("PH · phiếu 3 mức ở màn buổi học", () => {
     seedGuardian(levelSlip("6a-session-2"), []);
     storeSelectedChild("6a-student-1");
     const host = renderSession("6a-session-2");
-    expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Cần cố gắng");
+    expect(host.querySelector('[data-testid="guardian-skill-speaking"] [role="img"]')?.getAttribute("aria-label")).toBe("Cần cố gắng, 1 trên 3");
   });
 
   it("buổi trước không giao BTVN: không hiện dòng Bài tập về nhà trên phiếu", () => {

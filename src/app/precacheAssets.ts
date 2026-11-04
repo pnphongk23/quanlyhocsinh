@@ -13,9 +13,10 @@ const PRECACHE_ASSET = /\.(?:m?js|css|woff2?|ttf|otf|webp|png|jpe?g|gif|svg|avif
  * Toàn bộ ảnh Mít trong `public/mascot` (1x và @2x). Đọc thư mục lúc build nên thêm tư thế mới
  * không phải sửa danh sách tay; thiếu một tư thế là nó phải tải qua mạng mỗi lần hiện.
  */
-export function listMascotAssets(dir: string): string[] {
+export function listMascotAssets(dir: string, includeChickHeads = true): string[] {
   return readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isFile() && /\.webp$/i.test(entry.name))
+    .filter((entry) => includeChickHeads || !/^mit-head-(?:on|off)(?:@[23]x)?\.webp$/i.test(entry.name))
     .map((entry) => `/mascot/${entry.name}`)
     .sort();
 }

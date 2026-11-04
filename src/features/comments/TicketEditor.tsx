@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   type TicketRow,
 } from "../../data/homework";
@@ -21,7 +21,7 @@ import { composeComment, criteriaFromLevels, defaultLevels, defaultSkillLevels, 
 import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { useRejectedCommands } from "../../shared/SaveStatus";
 import { isFinalRejection, localOnlyRejectionMessage } from "../../data/rejectionMessages";
-import { SlipLevelFields } from "./SlipLevelFields";
+import { LazySlipLevelFields, SlipLevelSkeleton } from "./LazySlipLevelFields";
 
 function Star({ filled }: { filled: boolean }) {
   return (
@@ -300,7 +300,7 @@ export default function TicketEditor({
       </div>
 
       {levelMode ? (
-        <SlipLevelFields
+        <Suspense fallback={<SlipLevelSkeleton />}><LazySlipLevelFields
           levels={levels}
           skillLevels={skillLevels}
           gradedSkills={gradedSkills}
@@ -326,7 +326,7 @@ export default function TicketEditor({
               });
             }
           }}
-        />
+        /></Suspense>
       ) : (
         <SlipCriteriaFields
           criteria={criteria}

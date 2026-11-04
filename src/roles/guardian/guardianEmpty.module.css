@@ -25,6 +25,8 @@
   cursor: pointer;
 }
 
-.secondary:hover {
-  background: var(--color-neutral-soft);
+@media (hover: hover) {
+  .secondary:hover {
+    background: var(--color-neutral-soft);
+  }
 }

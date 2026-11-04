@@ -1,8 +1,6 @@
 import {
   CRITERION_KEYS,
   CRITERION_LABELS,
-  LEVELS,
-  LEVEL_LABELS,
   SKILL_KEYS,
   SKILL_LABELS,
   homeworkLevelFromGrades,
@@ -16,20 +14,33 @@ import {
 import type { HomeworkPreviousState } from "../../data/homework";
 import type { HomeworkGrade } from "../../data/types";
 import { Mascot, starPose } from "../../shared/ui/Mascot";
-import { LevelSegmented } from "../../shared/ui";
+import { LevelChicks } from "../../shared/ui/LevelChicks";
 import s from "./SlipLevelFields.module.css";
-
-const OPTIONS = LEVELS.map((level) => ({
-  value: level,
-  label: LEVEL_LABELS[level],
-  tone: level === "good" ? "success" as const : level === "ok" ? "primary" as const : "warning" as const,
-}));
 
 /**
  * Phiếu 3 mức (thử nghiệm sau cờ): 5 hàng tiêu chí + nhóm "Kiến thức hôm nay",
  * khung sao + Mít theo số mức Tốt, ô câu tự sinh và phần gõ thêm.
  * Component thuần: cha giữ mức/câu và quyết định sinh lại câu.
  */
+export interface SlipLevelFieldsProps {
+  levels: Levels;
+  skillLevels: SkillLevels;
+  gradedSkills: readonly SkillKey[];
+  comment: string;
+  note: string;
+  previousGrades: readonly HomeworkGrade[] | null;
+  homeworkState: HomeworkPreviousState;
+  hwManual: boolean;
+  sent: boolean;
+  disabled: boolean;
+  onLevelChange: (key: CriterionKey, level: Level) => void;
+  onSkillChange: (key: SkillKey, level: Level) => void;
+  onCommentChange: (value: string) => void;
+  onCommentBlur?: () => void;
+  onNoteChange: (value: string) => void;
+  onNoteBlur?: () => void;
+}
+
 export function SlipLevelFields({
   levels,
   skillLevels,
@@ -47,24 +58,7 @@ export function SlipLevelFields({
   onCommentBlur,
   onNoteChange,
   onNoteBlur,
-}: {
-  levels: Levels;
-  skillLevels: SkillLevels;
-  gradedSkills: readonly SkillKey[];
-  comment: string;
-  note: string;
-  previousGrades: readonly HomeworkGrade[] | null;
-  homeworkState: HomeworkPreviousState;
-  hwManual: boolean;
-  sent: boolean;
-  disabled: boolean;
-  onLevelChange: (key: CriterionKey, level: Level) => void;
-  onSkillChange: (key: SkillKey, level: Level) => void;
-  onCommentChange: (value: string) => void;
-  onCommentBlur?: () => void;
-  onNoteChange: (value: string) => void;
-  onNoteBlur?: () => void;
-}) {
+}: SlipLevelFieldsProps) {
   // BTVN tự theo chấm buổi trước khi phiếu chưa gửi và giáo viên chưa chọn tay.
   const automaticHomework = !sent && !hwManual;
   const visible: Levels = automaticHomework
@@ -108,8 +102,7 @@ export function SlipLevelFields({
                   </span>
                 )}
               </div>
-              <LevelSegmented
-                options={OPTIONS}
+              <LevelChicks
                 value={visible[key]}
                 onChange={(level) => onLevelChange(key, level)}
                 label={CRITERION_LABELS[key]}
@@ -125,10 +118,11 @@ export function SlipLevelFields({
           <h3 className={s.skillsTitle}>Kiến thức hôm nay</h3>
           <div className={s.rows}>
             {shownSkills.map((key) => (
-              <div key={key} className={`${s.row} ${s.skillRow}`} data-testid={`slip-skill-row-${key}`}>
-                <span className={s.criterionName}>{SKILL_LABELS[key]}</span>
-                <LevelSegmented
-                  options={OPTIONS}
+              <div key={key} className={s.row} data-testid={`slip-skill-row-${key}`}>
+                <div className={s.rowLabel}>
+                  <span className={s.criterionName}>{SKILL_LABELS[key]}</span>
+                </div>
+                <LevelChicks
                   value={skillLevels[key] ?? "ok"}
                   onChange={(level) => onSkillChange(key, level)}
                   label={SKILL_LABELS[key]}

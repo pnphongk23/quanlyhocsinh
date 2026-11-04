@@ -14,7 +14,7 @@
 - Nhóm hành động: hành động chính bên phải, phụ ở trái nó (`Huỷ` · `Lưu`); ở cuối form căn phải theo lề form; ở đầu trang nằm cùng hàng tiêu đề.
 - Mobile: nút chính ở đáy màn/sheet được tràn ngang như hiện tại; nút trong thẻ theo nội dung. Thanh hành động đáy **luôn ghim đáy màn** (kể cả khi nội dung ngắn) và cộng safe-area; vùng cuộn đệm đáy `--sticky-clearance`. Khi đang dính giữa danh sách dài, thanh nằm đúng `--sticky-bottom`; khi nội dung ngắn hoặc cuộn hết, thanh nằm trong luồng nên cách đáy thêm `--page-bottom` (16px) — chênh lệch đã biết, giữ nguyên để không bỏ đệm trang.
 - Ô nhập chữ trên mobile: cỡ chữ ≥ 16px (`--text-base`) để iOS Safari không tự phóng to trang khi focus; không dùng `maximum-scale`/`user-scalable=no`.
-- Vùng bấm ≥ 44px trên mobile, ≥ 36px trên desktop.
+- Vùng bấm ≥ 44px mặc định trên mọi thiết bị cảm ứng (kể cả iPad dùng bố cục desktop ≥ 1024px); chỉ `@media (pointer: fine)` (chuột/bút) mới dùng ≥ 36px.
 
 ## 3. Khoảng cách
 - Thang 4/8/12/16/24/32/48. Trong thẻ 16 (mobile) / 20 (desktop); giữa thẻ 12 / 16; giữa khối trang 24 / 32.

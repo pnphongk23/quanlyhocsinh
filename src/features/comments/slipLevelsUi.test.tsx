@@ -8,8 +8,10 @@ import { createSeed } from "../../test/fixtures/seed";
 import type { Comment } from "../../data/types";
 import { composeComment, defaultLevels, type Levels } from "../../data/criteriaLevels";
 import { generatedSlipSentence } from "../../data/slip";
+import { LEVEL_LABELS } from "../../data/criteriaLevels";
 import CommentsPanel from "./CommentsPanel";
 import CommentTicketSheet from "./CommentTicketSheet";
+import { SlipLevelSkeleton } from "./LazySlipLevelFields";
 import TicketEditor from "./TicketEditor";
 import { SlipLevelFields } from "./SlipLevelFields";
 import { resetSessionDrafts } from "./draftStore";
@@ -69,6 +71,15 @@ function levelComment(patch: Partial<Comment> = {}): Comment {
   } as Comment;
 }
 
+describe("khung giữ chỗ khi nạp phiếu 3 mức", () => {
+  it("5 hàng ~ chiều cao phiếu, ẩn với trình đọc màn hình", () => {
+    render(<SlipLevelSkeleton />);
+    const skeleton = screen.getByTestId("slip-level-skeleton");
+    expect(skeleton).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getAllByTestId("slip-level-skeleton-row")).toHaveLength(5);
+  });
+});
+
 describe("SlipLevelFields", () => {
   it("5 hàng tiêu chí, không có nhóm kỹ năng khi 0 kỹ năng, sao = số mức Tốt", () => {
     render(
@@ -91,6 +102,7 @@ describe("SlipLevelFields", () => {
     );
     expect(screen.getAllByTestId(/^slip-level-row-/)).toHaveLength(5);
     expect(screen.getByText("4/5 sao")).toBeInTheDocument();
+    expect(screen.queryByText("Kiến thức hôm nay")).toBeNull();
     expect(screen.getByTestId("slip-level-row-homework")).toHaveTextContent("Buổi trước chưa có BTVN");
   });
 
@@ -117,7 +129,7 @@ describe("SlipLevelFields", () => {
     expect(screen.getByTestId("slip-skill-row-speaking")).toBeInTheDocument();
     expect(screen.getByTestId("slip-skill-row-reading")).toBeInTheDocument();
     expect(screen.getByText("5/5 sao")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radiogroup", { name: "Đọc" }).querySelector('[role="radio"][aria-checked="false"]')!);
+    fireEvent.click(chick("Đọc", "good"));
     expect(onSkillChange).toHaveBeenCalledWith("reading", "good");
   });
 
@@ -140,7 +152,7 @@ describe("SlipLevelFields", () => {
         onNoteChange={vi.fn()}
       />,
     );
-    expect(screen.getByTestId("slip-skill-row-speaking")).toHaveTextContent("Cần cố gắng");
+    expect(chick("Nói", "needs_work")).toHaveAttribute("aria-checked", "true");
   });
 
   it("BTVN chưa chọn tay hiện theo chấm buổi trước; chọn tay thì gọi onLevelChange", () => {
@@ -165,8 +177,8 @@ describe("SlipLevelFields", () => {
     );
     const homework = screen.getByTestId("slip-level-row-homework");
     expect(homework).toHaveTextContent("Theo chấm BTVN");
-    expect(withinGroup("Bài tập về nhà").querySelector('[aria-checked="true"]')).toHaveTextContent("Cần cố gắng");
-    fireEvent.click(withinGroup("Bài tập về nhà").querySelector('[role="radio"][aria-checked="false"]')!);
+    expect(chick("Bài tập về nhà", "needs_work")).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(chick("Bài tập về nhà", "good"));
     expect(onLevelChange).toHaveBeenCalledWith("homework", "good");
   });
 
@@ -194,18 +206,21 @@ describe("SlipLevelFields", () => {
   });
 });
 
-function withinGroup(name: string): HTMLElement {
-  return screen.getByRole("radiogroup", { name });
-}
+const chick = (label: string, level: "good" | "ok" | "needs_work") => {
+  const count = level === "good" ? 3 : level === "ok" ? 2 : 1;
+  return screen.getByRole("radio", { name: `${label}: ${LEVEL_LABELS[level]}, ${count} trên 3` });
+};
 
 describe("sheet phiếu 3 mức", () => {
   it("phiếu mới hiện 5 hàng mức (không còn ô chọn cũ), đổi mức sinh lại câu và giữ ghi chú", async () => {
     const { row, session, homework } = setup();
     render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+    expect(await screen.findByTestId("slip-star-panel")).toBeInTheDocument();
+    expect(screen.getByText("4/5 sao")).toBeInTheDocument();
     expect(screen.getByTestId("slip-level-row-focus")).toBeInTheDocument();
     expect(screen.queryByTestId("slip-criterion-0")).toBeNull();
     fireEvent.change(screen.getByTestId("slip-note"), { target: { value: "Gõ thêm" } });
-    fireEvent.click(withinGroup("Học tập trung").querySelector('[role="radio"][aria-checked="false"]')!);
+    fireEvent.click(chick("Học tập trung", "ok"));
     expect(screen.getByText("3/5 sao")).toBeInTheDocument();
     expect((screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value).toContain("Con khá tập trung");
     expect(screen.getByTestId("slip-save-button")).toBeEnabled();
@@ -258,7 +273,7 @@ describe("sheet phiếu 3 mức", () => {
     const before = (screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value;
     // Phiếu đã gửi không tự đổi nhãn BTVN thành "Chọn tay" khi giáo viên chưa chọn tay.
     expect(screen.getByTestId("slip-homework-auto-label")).toHaveTextContent("Theo chấm BTVN");
-    fireEvent.click(withinGroup("Nắm bài hôm nay").querySelector('[role="radio"][aria-checked="false"]')!);
+    fireEvent.click(chick("Nắm bài hôm nay", "needs_work"));
     expect((screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value).toBe(before);
     fireEvent.click(screen.getByTestId("slip-save-button"));
     await waitFor(() => expect(save).toHaveBeenCalled());
@@ -270,7 +285,7 @@ describe("desktop phiếu 3 mức", () => {
   it("buổi vừa bật kỹ năng mới: effect thêm Đạt vào cả draft, note blur không xoá mức/câu", async () => {
     const { row, session, homework } = setup(levelComment({ skillLevels: {} }), { gradedSkills: ["speaking"] });
     render(<TicketEditor session={session} row={row} homework={homework} />);
-    await waitFor(() => expect(screen.getByTestId("slip-skill-row-speaking")).toHaveTextContent("Đạt"));
+    await waitFor(() => expect(chick("Nói", "ok")).toHaveAttribute("aria-checked", "true"));
     const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
     expect(sentence.value).toContain("Phần nói con làm được, cần luyện thêm.");
 
@@ -328,7 +343,7 @@ describe("desktop phiếu 3 mức", () => {
     const { row, session, homework } = setup(levelComment());
     render(<TicketEditor session={session} row={row} homework={homework} />);
     expect(screen.getByTestId("slip-level-row-mastery")).toBeInTheDocument();
-    fireEvent.click(withinGroup("Ghi chép và làm bài trên lớp").querySelector('[role="radio"][aria-checked="false"]')!);
+    fireEvent.click(chick("Ghi chép và làm bài trên lớp", "needs_work"));
     await waitFor(() => expect(save).toHaveBeenCalled());
     expect(save.mock.calls.at(-1)![0].levels.notes).not.toBe("good");
   });

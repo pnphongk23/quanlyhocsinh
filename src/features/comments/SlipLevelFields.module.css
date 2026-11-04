@@ -79,9 +79,9 @@
 
 .row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: var(--space-8) var(--space-12);
+  gap: var(--space-8);
   min-width: 0;
   padding: var(--space-8) 0;
 }
@@ -106,17 +106,7 @@
 }
 
 .row > :last-child {
-  flex: 1 1 var(--level-row-control-min);
-  min-width: 0;
-}
-
-.skillRow {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.skillRow > :last-child {
-  flex: 0 0 auto;
+  flex: none;
 }
 
 .skills {

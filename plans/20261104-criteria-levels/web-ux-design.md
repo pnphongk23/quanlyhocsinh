@@ -16,13 +16,15 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
   `--comment-star-size`, dòng "N/5 sao" (`--text-base`, `--weight-bold`). Sao = số tiêu chí mức Tốt;
   kỹ năng không tính sao.
 - 5 hàng tiêu chí, thứ tự cố định `focus, participation, mastery, notes, homework`:
-  - mỗi hàng `display:grid; grid-template-columns: var(--level-row-icon-size) minmax(0,1fr) auto;
-    gap: var(--space-12); align-items:center; padding: var(--space-8) 0;`
-  - icon `--level-row-icon-size` (`color: var(--color-muted)`; tiêu chí đang Cần cố gắng vẫn dùng
-    `--color-muted`, không tô màu cảnh báo), tên `--text-md`, `--weight-semibold`, chữ dài xuống dòng.
-  - `LevelSegmented` 3 mức (Tốt · Đạt · Cần cố gắng) chiếm cột phải, tối thiểu 3 × `--tap` vùng chạm;
-    mobile hẹp 375px cho hàng cao 2 dòng (tên trên, segmented dưới) bằng `flex-wrap`/`grid` —
-    segmented không bị bóp dưới 3 × 44px.
+  - mỗi hàng `display:flex; align-items:center; gap: var(--space-8); padding: var(--space-8) 0;`
+  - nhãn `--text-md`, `--weight-semibold`, chữ dài xuống dòng trong `--level-row-label-min`; đầu gà
+    `flex: none`. Icon tiêu chí vẫn chờ bộ thiết kế (hiện chỉ chữ).
+  - Mỗi tiêu chí **một hàng**: tên bên trái (được xuống tối đa 2 dòng, không cắt chữ), 3 đầu gà bên phải.
+    Không dùng segmented. Chạm đầu thứ N đặt mức N (1 = Cần cố gắng, 2 = Đạt, 3 = Tốt); đầu đã chọn dùng
+    ảnh `mit-head-on`, đầu chưa chọn dùng `mit-head-off` (xám). Không có mức 0: chạm lại đầu đang chọn thì
+    giữ nguyên. Mỗi đầu là vùng chạm ≥ `--tap` (44px) trên mọi thiết bị cảm ứng — kể cả iPad dùng bố cục
+    desktop ≥ 1024px; chỉ `@media (pointer: fine)` (chuột/bút) mới hạ xuống `--tap-desktop` (36px). Ảnh
+    `--level-chick-size`.
   - Hàng `homework` có nhãn phụ "Theo chấm BTVN" / "Buổi trước chưa có BTVN" (`--text-xs`, `--color-muted`)
     như hiện tại; chạm tay thì giữ lựa chọn tay.
 - Nhóm "Kiến thức hôm nay" chỉ hiện khi buổi có ít nhất một kỹ năng bật "Chấm riêng":
@@ -54,14 +56,15 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 ## 3. Danh sách em (tab Nhận xét)
 
 - Giữ hàng sao 5 sao; thêm dòng tóm tắt `--text-xs`, `--color-muted` "N mục cần cố gắng" chỉ khi N > 0
-  (đếm tiêu chí + kỹ năng đang bật ở mức Cần cố gắng). Không thêm badge/chi tiết khác.
+  (đếm tiêu chí + kỹ năng đang bật ở mức Cần cố gắng). **Không thêm icon đầu gà vào danh sách em**
+  (đầu gà chỉ ở phiếu, màn phụ huynh và tóm tắt báo cáo); không thêm badge/chi tiết khác.
 - Em chưa có phiếu: "Chưa nhận xét", không sao. Dòng BTVN buổi trước giữ nguyên.
 - Nhãn trạng thái phiếu ("Đã gửi"/"Chờ mạng"/"Chưa gửi") giữ nguyên chỗ, không đè tên (rules.md mục 5).
 
 ## 4. Màn phụ huynh
 
 - Mỗi phiếu đã gửi: "Hôm nay học: …" (`--text-sm`, `--color-muted`, tên chip đầy đủ) nếu buổi có chip; rồi
-  5 dòng tiêu chí dạng nhãn + mức (chỉ đọc; dùng `Pill`/chữ, không segmented; màu theo mức), kỹ năng đã chấm
+  5 dòng tiêu chí dạng nhãn + N đầu gà cỡ nhỏ chỉ xem (`role="img"`, nhãn "Tốt, 3 trên 3"), kỹ năng đã chấm
   thêm nếu có, sau cùng đoạn nhận xét như hiện tại. Sao vẫn hiện x/5; kỹ năng không ảnh hưởng sao.
   - Phiếu 3 mức: câu tự sinh + phần gõ thêm là **một đoạn** (như `slipForViewer` của máy chủ); chỉ phiếu cũ
     mới tách "Ghi chú" thành khung riêng.
@@ -73,17 +76,19 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 ## 5. Báo cáo tháng
 
 - Thêm hai khối trong báo cáo (chỉ khi snapshot có dữ liệu, đếm trên phiếu ĐÃ GỬI):
-  - "Theo tiêu chí": 5 hàng `Tên tiêu chí` + `N 🌟 · N 👍 · N 💪` (số, không phần trăm, không trung bình).
-  - "Theo kỹ năng": mỗi kỹ năng có chấm `Nói: 3 🌟 · 2 👍 trong 5 buổi có chấm`.
+  - "Theo tiêu chí": 5 hàng `Tên tiêu chí` + `N` kèm N đầu gà cỡ nhỏ (chỉ xem), nối bằng `·`; vẫn là số
+    đếm, không phần trăm, không trung bình. Nhãn a11y đọc `N Tốt` một lần (đầu gà trang trí, có chữ ẩn).
+  - "Theo kỹ năng": mỗi kỹ năng có chấm `Nói: 3 [đầu gà] · 2 [đầu gà] trong 5 buổi có chấm`.
 - Bảng đếm sao hiện có giữ nguyên bên trên. Khối mới dùng `--card-pad`, `--text-sm`, `--color-muted`;
   desktop cùng lưới thẻ hiện có, mobile xếp dọc; không thêm biểu đồ.
 
 ## 6. Trạng thái và kích thước kiểm
 
-- Mobile 375 và 390 (safe-area trên/dưới): segmented không tràn, chip xuống nhiều dòng, sheet cuộn được,
+- Mobile 320/375/390 (safe-area trên/dưới) và chữ lớn: 3 đầu gà không tràn/chồng, vùng chạm đo được ≥ 44px,
+  chip xuống nhiều dòng, sheet cuộn được,
   bàn phím mở không che segmented/ô nhận xét (ô nhập `--text-base` để iOS không zoom).
 - Desktop 1440: danh sách 400px + khung soạn co giãn (chế độ tiêu chí cũ: panel 380px sticky), hàng tiêu chí
-  một dòng, segmented đủ 3 vùng chạm; nút theo nội dung.
+  một dòng; vùng chạm 36px chỉ khi `(pointer: fine)`, còn cảm ứng ở 1440 vẫn ≥ 44px; nút theo nội dung.
 - Chữ dài: tên em, tên tiêu chí, nhận xét dài — xuống dòng, không cắt chữ, không đẩy segmented ra ngoài.
 - 0 kỹ năng (không có nhóm "Kiến thức hôm nay") và 2 kỹ năng (2 hàng).
 - Phiếu cũ đạt/chưa đạt và phiếu thang 3 sao: đọc đúng, không hiện segmented, không đổi số sao.
@@ -96,17 +101,20 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
   `--space-4/8/12/16/20/24/32`, `--radius-chip/control/card`, `--color-*`, `--state-selected-*`,
   `--state-focus-ring`, `--state-disabled-opacity`, `--comment-star-size`, `--empty-mascot-compact`,
   `--dur-press`, `--page-x`, `--form-max`, `--guardian-max`, `--safe-*`, `--sticky-*`.
-- Cần thêm (đã thêm cùng thay đổi này): `--level-row-icon-size: 20px` (icon tiêu chí/kỹ năng),
-  `--level-row-label-min: 9rem`, `--level-row-control-min: 15rem` (nhãn và bề rộng segmented trước khi
-  xuống dòng), `--focus-ring-offset: 1px` (vòng focus), `--color-star` (một màu sao cho danh sách, phiếu cũ,
-  phiếu 3 mức, màn phụ huynh), `--level-good/ok/needs-work-bg/fg` (mức đang chọn: Tốt = success,
-  Đạt = primary, Cần cố gắng = warning, không đỏ; chữ trên nền đạt AA).
+- Cần thêm (đã thêm cùng thay đổi này): `--level-row-icon-size: 20px` (icon tiêu chí/kỹ năng và đầu gà cỡ
+  nhỏ), `--level-row-label-min: 9rem` (nhãn trước khi xuống dòng), `--level-chick-size: 28px` (đầu gà trong
+  phiếu; vùng chạm dùng `--tap`), `--focus-ring-offset: 1px`, `--color-star` (một màu sao cho danh sách,
+  phiếu cũ, phiếu 3 mức, màn phụ huynh).
 - Không thêm màu/cỡ chữ mới; icon mức lấy từ bộ icon thiết kế khi có, chưa có thì chỉ dùng nhãn chữ.
 
 ## 8. Việc còn mở
 
-- **Icon 3 mức/tiêu chí:** bộ icon thiết kế chưa có icon cho Tốt/Đạt/Cần cố gắng và cho 5 tiêu chí, nên hàng
-  tiêu chí hiện chỉ có chữ. Đã chừa token `--level-row-icon-size`; khi có bộ icon chính thức thì gắn vào
-  `LevelSegmented`/hàng tiêu chí, không đổi bố cục.
+- **Icon tiêu chí:** bộ icon thiết kế chưa có icon cho 5 tiêu chí, nên hàng tiêu chí hiện chỉ có chữ.
+  Đã chừa token `--level-row-icon-size`; khi có bộ icon chính thức thì gắn vào hàng tiêu chí, không đổi bố cục.
+- **Ảnh đầu gà:** đã có bộ thật `mit-head-on|off[@2x|@3x].webp` (64/128/192px, trong suốt, dùng bản `off`
+  riêng chứ không filter) ở `public/mascot/` và bản prototype; `srcset` chọn 1x/2x/3x, hiển thị
+  `--level-chick-size` 28px.
+- **Hover ngoài phạm vi:** còn ~14 file `:hover` cũ ngoài comments/shared/ui/guardian chưa rà `@media (hover: hover)`
+  (ngoài phạm vi lần này).
 - **Timeline "Nhận xét của cô" (phụ huynh):** mới hiện câu + ghi chú như cũ; danh sách tiêu chí/mức và
   "Hôm nay học" mới có ở màn chi tiết buổi. Cần chốt có thêm bản rút gọn vào thẻ timeline hay không.

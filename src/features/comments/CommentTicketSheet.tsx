@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   type HomeworkPreviousState,
   type TicketRow,
@@ -25,7 +25,7 @@ import { composeComment, criteriaFromLevels, defaultLevels, defaultSkillLevels, 
 import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { useRejectedCommands } from "../../shared/SaveStatus";
 import { isFinalRejection, localOnlyRejectionMessage } from "../../data/rejectionMessages";
-import { SlipLevelFields } from "./SlipLevelFields";
+import { LazySlipLevelFields, SlipLevelSkeleton } from "./LazySlipLevelFields";
 
 export interface SheetHomeworkSection {
   id: string;
@@ -291,7 +291,7 @@ export default function CommentTicketSheet({
   const body = (
     <div className={s.sheetBody}>
       {levelMode ? (
-        <SlipLevelFields
+        <Suspense fallback={<SlipLevelSkeleton />}><LazySlipLevelFields
           levels={levels}
           skillLevels={skillLevels}
           gradedSkills={gradedSkills}
@@ -306,7 +306,7 @@ export default function CommentTicketSheet({
           onSkillChange={updateSkill}
           onCommentChange={changeComment}
           onNoteChange={changeNote}
-        />
+        /></Suspense>
       ) : (
         <SlipCriteriaFields
           criteria={criteria}
