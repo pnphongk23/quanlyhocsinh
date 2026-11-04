@@ -66,11 +66,14 @@
 }
 
 @media (hover: hover) {
-.menuButton:hover,
-.menuButton:focus-visible {
+.menuButton:hover {
   color: var(--color-text);
   border-color: var(--color-input-border-strong);
 }
+}
+.menuButton:focus-visible {
+  color: var(--color-text);
+  border-color: var(--color-input-border-strong);
 }
 
 .menuWrap {
@@ -112,10 +115,12 @@
 }
 
 @media (hover: hover) {
-.tab:hover,
-.tab:focus-visible {
+.tab:hover {
   color: var(--color-text);
 }
+}
+.tab:focus-visible {
+  color: var(--color-text);
 }
 
 .tabActive {
@@ -308,11 +313,14 @@
   text-decoration: none;
 }
 @media (hover: hover) {
-.link:hover,
-.link:focus-visible {
+.link:hover {
   color: var(--color-primary-ink);
   text-decoration: underline;
 }
+}
+.link:focus-visible {
+  color: var(--color-primary-ink);
+  text-decoration: underline;
 }
 
 .rowButton {
@@ -340,11 +348,14 @@
   transform: translateX(-50%);
 }
 @media (hover: hover) {
-.rowButton:hover,
-.rowButton:focus-visible {
+.rowButton:hover {
   background: var(--color-bg);
   color: var(--color-text);
 }
+}
+.rowButton:focus-visible {
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .actionsRow {

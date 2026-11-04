@@ -98,10 +98,12 @@
 }
 
 @media (hover: hover) {
-.menuItem:hover,
-.menuItem:focus-visible {
+.menuItem:hover {
   background: var(--color-bg);
 }
+}
+.menuItem:focus-visible {
+  background: var(--color-bg);
 }
 
 .menuItem:disabled {

@@ -390,9 +390,11 @@
     text-align: left;
     cursor: pointer;
   }
-  .roleRow:hover {
+  @media (hover: hover) {
+.roleRow:hover {
     background: var(--color-neutral-soft);
   }
+}
   .roleAvatar {
     width: 44px;
     height: 44px;

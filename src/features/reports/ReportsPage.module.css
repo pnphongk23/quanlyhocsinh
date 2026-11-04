@@ -638,11 +638,14 @@ a.batchRow:focus-visible {
   cursor: pointer;
 }
 @media (hover: hover) {
-.batchMenuButton:hover,
-.batchMenuButton:focus-visible {
+.batchMenuButton:hover {
   color: var(--color-text);
   border-color: var(--color-input-border-strong);
 }
+}
+.batchMenuButton:focus-visible {
+  color: var(--color-text);
+  border-color: var(--color-input-border-strong);
 }
 .offlineHint {
   max-width: 96px;

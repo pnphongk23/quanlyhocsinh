@@ -75,10 +75,12 @@
 }
 
 @media (hover: hover) {
-.resizer:hover,
-.resizer:active {
+.resizer:hover {
   background: var(--state-hover-bg);
 }
+}
+.resizer:active {
+  background: var(--state-hover-bg);
 }
 
 .resizer:focus-visible {

@@ -56,11 +56,14 @@
 }
 
 @media (hover: hover) {
-.moreButton:hover,
-.moreButton:focus-visible {
+.moreButton:hover {
   background: var(--color-bg);
   color: var(--color-text);
 }
+}
+.moreButton:focus-visible {
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 /* Thao tác trong sheet tuỳ chọn: nút rộng hết khung, đủ 44px để bấm. */
