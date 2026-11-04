@@ -10,6 +10,8 @@ if (!credentials.phone || !credentials.password) throw new Error('Required smoke
 
 const testName = `QA-Web-${randomBytes(3).toString('hex')}-Blank-Score`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-24/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let phase = 'login';
@@ -52,7 +54,7 @@ try {
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await mkdir(out, { recursive: true });
   await writeFile(`${out}/scores-blank-average-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-scores-blank-average" tests="2" failures="1"><testcase classname="web" name="TC-TST-004/005"><failure message="${escaped}"/></testcase></testsuite>\n`);
-  await page.screenshot({ path: `${out}/scores-blank-average-failure.png` }).catch(() => {});
+  await page.screenshot({ path: `${shots}/scores-blank-average-failure.png` }).catch(() => {});
   process.exitCode = 1;
 } finally {
   await page.context().close();

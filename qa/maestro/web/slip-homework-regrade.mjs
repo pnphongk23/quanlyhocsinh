@@ -14,6 +14,8 @@ const className = `QA-Web-${suffix}-Slip-HW-Class`;
 const students = ['Sent', 'Draft'].map((part) => `QA-Web-${suffix}-${part}`);
 const title = `QA-Web-${suffix}-Reading`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-26/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-26/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
 const page = await context.newPage();
@@ -202,7 +204,7 @@ try {
   rec('CMT-013-sent-unchanged', sentStatus === 'Đã gửi' && sent.on && sent.stars === '5' ? 'PASS' : 'FAIL', `status=${sentStatus} on=${sent.on} stars=${sent.stars}`);
   await openSlip(students[1]);
   await page.waitForTimeout(2500);
-  await page.screenshot({ path: `${out}/slip-homework-draft-after-regrade.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}/slip-homework-draft-after-regrade.png`, fullPage: true });
   const draft = await homeworkState();
   const sentence = (await page.getByTestId('slip-generated-comment').evaluate((e) => e.value ?? e.innerText)).trim();
   rec('CMT-014-draft-auto-untick', !draft.on && draft.stars === '4' && /chưa hoàn thành bài tập về nhà/.test(sentence) && draft.auto === 1 ? 'PASS' : 'FAIL', `on=${draft.on} stars=${draft.stars} auto=${draft.auto} sentenceHasHw=${/chưa hoàn thành bài tập về nhà/.test(sentence)}`);
@@ -218,7 +220,7 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : 'unknown error';
   await mkdir(out, { recursive: true });
-  await page.screenshot({ path: `${out}/slip-homework-regrade-failure.png`, fullPage: true }).catch(() => {});
+  await page.screenshot({ path: `${shots}/slip-homework-regrade-failure.png`, fullPage: true }).catch(() => {});
   console.log(`${message.startsWith('fixture_missing:') ? 'BLOCKED' : 'FAIL'} CMT-013/014 at ${phase}: ${message.slice(0, 300)}`);
   process.exitCode = 1;
 } finally {

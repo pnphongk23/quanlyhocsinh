@@ -20,6 +20,8 @@ const manualDates = [2, 3].map((offset) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 });
 const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-24/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let phase = 'teacher login';
@@ -88,7 +90,7 @@ try {
   console.log(`FAIL TC-CLS-007 at ${phase}: ${message}`);
   if (!message.startsWith('fixture_missing:')) {
     await mkdir(out, { recursive: true });
-    await page.screenshot({ path: `${out}/class-cancel-renumber-failure.png` }).catch(() => {});
+    await page.screenshot({ path: `${shots}/class-cancel-renumber-failure.png` }).catch(() => {});
   }
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await mkdir(out, { recursive: true });

@@ -13,6 +13,8 @@ const testName = `QA-Web-${randomBytes(3).toString('hex')}-Score-Step`;
 const className = `QA-Web-${randomBytes(3).toString('hex')}-Scores-Class`;
 const studentNames = Array.from({ length: 4 }, (_, index) => `QA-Web-${randomBytes(2).toString('hex')}-Score-${index + 1}`);
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
 const page = await context.newPage();
@@ -106,7 +108,7 @@ try {
   const message = error instanceof Error ? error.message : 'unknown error';
   console.log(`FAIL TC-TST-003 at ${phase}: ${message}`);
   await mkdir(out, { recursive: true });
-  if (!message.startsWith('fixture_missing:')) await page.screenshot({ path: `${out}/scores-step-validation-failure.png` }).catch(() => {});
+  if (!message.startsWith('fixture_missing:')) await page.screenshot({ path: `${shots}/scores-step-validation-failure.png` }).catch(() => {});
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   const skipped = message.startsWith('fixture_missing:');
   await writeFile(`${out}/scores-step-validation-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-scores-step-validation" tests="2" failures="${skipped ? 0 : 2}" skipped="${skipped ? 2 : 0}"><testcase classname="web" name="TC-TST-002">${skipped ? `<skipped message="${escaped}"/>` : `<failure message="${escaped}"/>`}</testcase><testcase classname="web" name="TC-TST-003">${skipped ? `<skipped message="${escaped}"/>` : `<failure message="${escaped}"/>`}</testcase></testsuite>\n`);

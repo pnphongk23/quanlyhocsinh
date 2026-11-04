@@ -8,9 +8,9 @@ appId: com.study.teacherthu
 - waitForAnimationToEnd:
     timeout: 3000
 - tapOn: "Nhận xét"
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/30-before-send
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/30-before-send
 - tapOn:
     id: comment.sendClass
 - waitForAnimationToEnd:
     timeout: 2000
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/31-send-confirm
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/31-send-confirm

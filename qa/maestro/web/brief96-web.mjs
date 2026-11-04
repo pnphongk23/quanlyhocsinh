@@ -15,6 +15,8 @@ const students = ['S1-Sent', 'S2-Auto', 'S3-Manual', 'S4-Cold', 'S5-Absent'].map
 const guardianPhone = '+84' + String(7 + Math.floor(Math.random() * 3)) + String(Math.floor(10000000 + Math.random() * 89999999));
 const title = `QA-Web-${suffix}-Reading`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-26/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-26/web`;
+await mkdir(shots, { recursive: true });
 const NOTE = `QA-note-${suffix}`;
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
@@ -115,7 +117,7 @@ async function check(id, fn) {
     const message = error instanceof Error ? error.message : 'unknown';
     rec(id, 'FAIL', `exception at ${phase}: ${message.slice(0, 200)}`);
     await mkdir(out, { recursive: true });
-    await page.screenshot({ path: `${out}/brief96-${id}-failure.png`, fullPage: true }).catch(() => {});
+    await page.screenshot({ path: `${shots}/brief96-${id}-failure.png`, fullPage: true }).catch(() => {});
   }
 }
 const sentenceBox = () => page.getByTestId('slip-generated-comment');
@@ -268,7 +270,7 @@ try {
   await page.goto(listUrl);
   await page.waitForTimeout(3000);
   console.log('LIST_AFTER_SEND', JSON.stringify((await page.getByRole('main').last().innerText()).split('\n').filter((l) => /T2 ·|Xem buổi|buổi/.test(l)).slice(0, 12)));
-  await page.screenshot({ path: `${out}/brief96-list-after-send.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}/brief96-list-after-send.png`, fullPage: true });
   phase = 'add S2..S5 (S4 declared parent phone), attendance N+1 and N+2';
   await nav.getByRole('link', { name: 'Học sinh' }).click();
   for (const [i, name] of students.slice(1).entries()) await addStudent(name, i === 2 ? guardianPhone : undefined);
@@ -364,7 +366,7 @@ try {
     const sendText = (await page.getByRole('button', { name: /Gửi phiếu cả lớp/ }).innerText()).replace(/\s+/g, ' ');
     const absentRowBefore = (await page.getByRole('button', { name: new RegExp(students[4]) }).first().innerText()).replace(/\s+/g, ' ');
     rec('CMT-021-count-excludes-absent', /\(3\)/.test(sendText) ? 'PASS' : 'FAIL', `button=${sendText} absentRow=${absentRowBefore.slice(0, 60)}`);
-    await page.screenshot({ path: `${out}/brief96-before-assign-defaults.png`, fullPage: true });
+    await page.screenshot({ path: `${shots}/brief96-before-assign-defaults.png`, fullPage: true });
     // pre-state: S2 hand-edited? S3 manual BTVN on (graded not-done) with NOTE
     await openSlip(students[2]);
     await page.waitForTimeout(2000);
@@ -423,7 +425,7 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : 'unknown error';
   await mkdir(out, { recursive: true });
-  await page.screenshot({ path: `${out}/brief96-web-failure.png`, fullPage: true }).catch(() => {});
+  await page.screenshot({ path: `${shots}/brief96-web-failure.png`, fullPage: true }).catch(() => {});
   console.log(`${message.startsWith('fixture_missing:') ? 'BLOCKED' : 'FAIL'} brief96-web at ${phase}: ${message.slice(0, 300)}`);
   process.exitCode = 1;
 } finally {

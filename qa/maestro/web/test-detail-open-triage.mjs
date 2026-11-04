@@ -11,6 +11,8 @@ const credentials = Object.fromEntries((await readFile(credentialPath, 'utf8')).
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
 
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const runId = randomBytes(3).toString('hex');
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
@@ -57,7 +59,7 @@ async function classify(id) {
   console.log(`${id}: ${outcome}`);
   if (outcome !== 'opens') {
     await mkdir(out, { recursive: true });
-    await page.screenshot({ path: `${out}/WEB-005-${id}-${runId}.png`, fullPage: true }).catch(() => {});
+    await page.screenshot({ path: `${shots}/WEB-005-${id}-${runId}.png`, fullPage: true }).catch(() => {});
   }
   return outcome;
 }

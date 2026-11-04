@@ -9,6 +9,8 @@ const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.con
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
 
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: 'Asia/Ho_Chi_Minh' });
 const page = await context.newPage();
@@ -73,13 +75,13 @@ async function record(label, callback, { offlineShell = false } = {}) {
     const ok = !hasAssetFailure && !relevantErrors.some((event) => ['console-error', 'page-error', 'http-error', 'request-failed'].includes(event.kind));
     results.push({ label, ok, ...detail, errors: phaseErrors.length });
     console.log(`${label}: ${ok ? 'PASS' : 'FAIL'}${detail.bundle ? ` bundle=${detail.bundle}` : ''}`);
-    if (!ok) await page.screenshot({ path: `${out}/sw-deploy-recovery-failure.png`, fullPage: true }).catch(() => {});
+    if (!ok) await page.screenshot({ path: `${shots}/sw-deploy-recovery-failure.png`, fullPage: true }).catch(() => {});
     return ok;
   } catch (error) {
     const phaseErrors = diagnostics.slice(before);
     results.push({ label, ok: false, error: sanitize(error instanceof Error ? error.message : 'unknown error'), errors: phaseErrors.length });
     console.log(`FAIL ${label}: ${sanitize(error instanceof Error ? error.message : 'unknown error')}`);
-    await page.screenshot({ path: `${out}/sw-deploy-recovery-failure.png`, fullPage: true }).catch(() => {});
+    await page.screenshot({ path: `${shots}/sw-deploy-recovery-failure.png`, fullPage: true }).catch(() => {});
     return false;
   }
 }
@@ -187,7 +189,7 @@ try {
   const blocked = message.startsWith('fixture_missing:');
   results.push({ label: phase, ok: false, blocked, error: sanitize(message) });
   console.log(`${blocked ? 'BLOCKED' : 'FAIL'} ${phase}: ${sanitize(message)}`);
-  await page.screenshot({ path: `${out}/sw-deploy-recovery-failure.png`, fullPage: true }).catch(() => {});
+  await page.screenshot({ path: `${shots}/sw-deploy-recovery-failure.png`, fullPage: true }).catch(() => {});
 } finally {
   const report = {
     bundle: EXPECTED_BUNDLE,

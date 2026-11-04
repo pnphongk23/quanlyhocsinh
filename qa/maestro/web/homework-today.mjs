@@ -13,6 +13,8 @@ const suffix = randomBytes(3).toString('hex');
 const className = `QA-Web-${suffix}-HW-Class`;
 const homeworkTitle = `QA-Web-${suffix}-Vocabulary U1`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-24/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let phase = 'teacher login';
@@ -67,7 +69,7 @@ try {
   const alerts = await page.getByRole('alert').allTextContents().catch(() => []);
   if (alerts.length) console.log('FORM_ALERT', alerts.map((text) => text.trim()).filter(Boolean).join(' | '));
   const screenshot = phase === 'create today class' ? 'class-sunday-validation.png' : 'homework-today-failure.png';
-  await page.screenshot({ path: `${out}/${screenshot}` }).catch(() => {});
+  await page.screenshot({ path: `${shots}/${screenshot}` }).catch(() => {});
   await mkdir(out, { recursive: true });
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await writeFile(`${out}/homework-today-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-homework-today" tests="1" failures="1"><testcase classname="web" name="TC-HW-001"><failure message="${escaped}"/></testcase></testsuite>\n`);

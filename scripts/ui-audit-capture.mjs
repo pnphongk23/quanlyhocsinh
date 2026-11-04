@@ -9,7 +9,7 @@ const team = args.team ?? "all";
 const phase = args.phase ?? "before";
 const scenario = args.scenario ?? "default";
 const base = args.base ?? "http://127.0.0.1:5181";
-const out = path.resolve(args.out ?? "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/shots/ui-audit");
+const out = path.resolve(args.out ?? path.join(process.env.QLH_EVIDENCE_DIR ?? "/tmp/qlh-evidence", "20261021-mvp/web/shots/ui-audit"));
 const phaseOut = ["before", "after"].includes(path.basename(out)) ? out : path.join(out, phase);
   if (!/^(T|A|B|C|all)$/.test(team) || !/^(before|after)$/.test(phase) || !/^(default|save-error|offline|save-states)$/.test(scenario)) throw new Error("Usage: --team T|A|B|C|all --phase before|after [--scenario save-error|offline|save-states] [--base URL] [--out DIR]");
 const credentialPath = process.env.QLH_STAGING_CREDENTIAL_FILE ?? "/tmp/qlh-staging-demo.txt";

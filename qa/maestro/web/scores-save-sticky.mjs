@@ -14,6 +14,8 @@ const className = `QA-${suffix}-Scores-Sticky`;
 const students = Array.from({ length: 10 }, (_, index) => `QA-${suffix}-Student-${String(index + 1).padStart(2, '0')}`);
 const testName = `QA-${suffix}-Scores-Sticky-Test`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: 'Asia/Ho_Chi_Minh' });
 const page = await context.newPage();
@@ -30,7 +32,7 @@ async function check(id, callback) {
     const message = error instanceof Error ? error.message : 'unknown error';
     results.push({ id, passed: false, error: message });
     console.log(`FAIL ${id}: ${message}`);
-    await page.screenshot({ path: `${out}/scores-save-sticky-${id}-failure.png`, fullPage: true }).catch(() => {});
+    await page.screenshot({ path: `${shots}/scores-save-sticky-${id}-failure.png`, fullPage: true }).catch(() => {});
   }
 }
 
@@ -59,7 +61,7 @@ async function geometry(label) {
   if (button.top < 0 || button.bottom > viewport.height) throw new Error(`${label}: Lưu điểm is outside viewport: ${JSON.stringify(measured)}`);
   if (!lastRow || lastRow.bottom > button.top + 2) throw new Error(`${label}: save footer overlaps the last student row: ${JSON.stringify(measured)}`);
   if (!(await save.isEnabled())) throw new Error(`${label}: Lưu điểm is disabled after score edit`);
-  await page.screenshot({ path: `${out}/scores-save-sticky-${label}.png`, fullPage: false });
+  await page.screenshot({ path: `${shots}/scores-save-sticky-${label}.png`, fullPage: false });
   await save.click();
   await page.waitForFunction(() => {
     const button = Array.from(document.querySelectorAll('button')).find((node) => node.textContent?.trim() === 'Lưu điểm');
@@ -125,7 +127,7 @@ try {
   const message = error instanceof Error ? error.message : 'unknown error';
   results.push({ id: phase, passed: false, error: message });
   console.log(`FAIL ${phase}: ${message}`);
-  await page.screenshot({ path: `${out}/scores-save-sticky-setup-failure.png`, fullPage: true }).catch(() => {});
+  await page.screenshot({ path: `${shots}/scores-save-sticky-setup-failure.png`, fullPage: true }).catch(() => {});
 } finally {
   const failures = results.filter((item) => !item.passed);
   const cases = results.map((item) => `<testcase classname="web" name="${item.id}">${item.passed ? '' : `<failure message="${item.error.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')}"/>`}</testcase>`).join('');

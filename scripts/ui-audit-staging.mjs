@@ -5,7 +5,7 @@ import { chromium } from "playwright";
 const base = "https://eb6ba846.qlh-staging-web.pages.dev";
 const credentialPathInput = process.env.QLH_STAGING_CREDENTIAL_FILE ?? "~/.config/qlh/staging-demo.txt";
 const credentialPath = credentialPathInput.startsWith("~/") ? path.join(process.env.HOME ?? "", credentialPathInput.slice(2)) : credentialPathInput;
-const output = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/shots/ui-audit/after/staging";
+const output = path.join(process.env.QLH_EVIDENCE_DIR ?? "/tmp/qlh-evidence", "20261021-mvp/web/shots/ui-audit/after/staging");
 const accountLines = (await readFile(credentialPath, "utf8")).split(/\r?\n/);
 const accounts = [];
 let pendingPhone = "";

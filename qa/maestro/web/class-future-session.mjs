@@ -6,6 +6,8 @@ const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.con
   const i = line.indexOf('='); return i > 0 ? [line.slice(0, i).trim(), line.slice(i + 1).trim()] : ['', ''];
 }).filter(([key]) => key));
 const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-24/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let phase = 'login';
@@ -56,7 +58,7 @@ try {
   console.log(`FAIL TC-CLS-016 at ${phase}: ${message}`);
   if (!message.startsWith('fixture_missing:')) {
     await mkdir(out, { recursive: true });
-    await page.screenshot({ path: `${out}/class-future-session-failure.png` }).catch(() => {});
+    await page.screenshot({ path: `${shots}/class-future-session-failure.png` }).catch(() => {});
   }
   const blocked = message.startsWith('fixture_missing:');
   await mkdir(out, { recursive: true });

@@ -13,6 +13,8 @@ const suffix = className.match(/^QA-(\w+)-Scores-Sticky$/)?.[1];
 if (!suffix) throw new Error('No QA sticky-score fixture from the preceding run');
 const testName = `QA-${suffix}-Scores-Sticky-Test`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: 'Asia/Ho_Chi_Minh' });
 const page = await context.newPage();
@@ -47,7 +49,7 @@ async function measure(label, width, height, scoreValue) {
   if (!geometry) throw new Error(`${label}: button/last row geometry unavailable`);
   const visible = geometry.button.top >= 0 && geometry.button.bottom <= height;
   const unobscured = Boolean(geometry.lastRow) && geometry.lastRow.bottom <= geometry.button.top + 2;
-  await page.screenshot({ path: `${out}/scores-save-sticky-${label}-recheck.png`, fullPage: false });
+  await page.screenshot({ path: `${shots}/scores-save-sticky-${label}-recheck.png`, fullPage: false });
   const save = page.getByRole('button', { name: 'Lưu điểm', exact: true });
   if (!geometry.button.enabled || !(await save.isEnabled())) throw new Error(`${label}: Lưu điểm is not clickable after editing`);
   await save.click();
@@ -82,7 +84,7 @@ try {
   const message = error instanceof Error ? error.message : 'unknown error';
   results.push({ id: 'setup', passed: false, error: message });
   console.log(`FAIL setup: ${message}`);
-  await page.screenshot({ path: `${out}/scores-save-sticky-recheck-setup-failure.png`, fullPage: true }).catch(() => {});
+  await page.screenshot({ path: `${shots}/scores-save-sticky-recheck-setup-failure.png`, fullPage: true }).catch(() => {});
 } finally {
   const failures = results.filter((item) => !item.passed);
   const cases = results.map((item) => `<testcase classname="web" name="${item.id}">${item.passed ? '' : `<failure message="${JSON.stringify(item.geometry ?? item.error).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')}"/>`}</testcase>`).join('');

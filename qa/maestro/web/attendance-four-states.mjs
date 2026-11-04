@@ -14,6 +14,8 @@ const suffix = randomBytes(3).toString('hex');
 const className = `QA-Web-${suffix}-Attendance-Class`;
 const students = ['One', 'Two', 'Three', 'Four'].map((part) => `QA-Web-${suffix}-${part}`);
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: 'Asia/Ho_Chi_Minh', serviceWorkers: 'block' });
 const page = await context.newPage();
@@ -96,7 +98,7 @@ try {
   const message = error instanceof Error ? error.message : 'unknown error';
   console.log(`FAIL attendance group at ${phase}: ${message}`);
   await mkdir(out, { recursive: true });
-  await page.screenshot({ path: `${out}/attendance-four-states-failure.png` }).catch(() => {});
+  await page.screenshot({ path: `${shots}/attendance-four-states-failure.png` }).catch(() => {});
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   const failure = `<failure message="${escaped}"/>`;
   await writeFile(`${out}/attendance-four-states-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-attendance-four-states" tests="2" failures="2"><testcase classname="web" name="TC-ATT-001">${failure}</testcase><testcase classname="web" name="TC-ATT-002">${failure}</testcase></testsuite>\n`);

@@ -190,8 +190,9 @@ async function doubleClickAndMeasure(page, button, label, options = {}) {
     const disabled = buttonVisible ? await settledButton.isDisabled() : false;
     if (!disabled && (label.startsWith("Score entry") || label === "Score grid")) {
       const safe = label.toLowerCase().replaceAll(" ", "-");
-      await mkdir("/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024/shots/after", { recursive: true });
-      await page.screenshot({ path: `/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024/shots/after/F8-${safe}-button-enabled.png`, fullPage: false });
+      const evidenceShots = path.join(process.env.QLH_EVIDENCE_DIR ?? "/tmp/qlh-evidence", "20261021-mvp/web/ui-feedback-20261024/shots/after");
+      await mkdir(evidenceShots, { recursive: true });
+      await page.screenshot({ path: path.join(evidenceShots, `F8-${safe}-button-enabled.png`), fullPage: false });
     }
     check(`${label} · save button returns disabled`, buttonVisible && disabled, buttonVisible ? `expected save button disabled after success hold ended; enabled=${!disabled}` : `no accessible button named '${options.returnName ?? initialName}' after success hold`);
   }

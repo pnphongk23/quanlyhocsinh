@@ -14,6 +14,8 @@ const className = `QA-iOS-${suffix}-HW`;
 const students = ['HS1', 'HS2', 'HS3'].map((part) => `QA-iOS-${suffix}-${part}`);
 const title = `QA-iOS-${suffix}-Reading`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-26/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-26/web`;
+await mkdir(shots, { recursive: true });
 // Fixture only: builds a class for iOS slip checks (previous-session homework assigned, N+1 and N+2 today, attendance saved).
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
@@ -165,7 +167,7 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : 'unknown error';
   await mkdir(out, { recursive: true });
-  await page.screenshot({ path: `${out}/ios-fixture-failure.png`, fullPage: true }).catch(() => {});
+  await page.screenshot({ path: `${shots}/ios-fixture-failure.png`, fullPage: true }).catch(() => {});
   console.log(`FAIL fixture at ${phase}: ${message.slice(0, 300)}`);
   process.exitCode = 1;
 } finally {

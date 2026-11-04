@@ -22,3 +22,5 @@ plans/**/*.mov
 # Ngoại lệ: mock/design gốc và bộ ảnh chuẩn của design-review vẫn nằm trong repo.
 !plans/20261021-mvp/design/**
 !plans/design-review/2026-10-19-phieu-buoi-hoc/final/**
+# Ngoại lệ trên mở lại cả các tệp rác của macOS trong thư mục được giữ.
+.DS_Store

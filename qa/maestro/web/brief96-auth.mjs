@@ -1,7 +1,7 @@
 import { API_BASE, WEB_BASE } from "./config.mjs";
 // Brief 96 auth checks on web: two-step login branches, removed elements, phone formats.
 // Uses the smoke phone once (branch 1, no password submit) and fake numbers elsewhere.
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/node_modules/playwright/index.mjs';
 import { assertConfiguredBundle } from './staging-bundle-check.mjs';
@@ -11,6 +11,8 @@ const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.con
 }).filter(([key]) => key));
 const guardianPhone = (await readFile('/tmp/b96-guardian-phone.txt', 'utf8')).trim();
 const base = WEB_BASE;
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-26/web`;
+await mkdir(shots, { recursive: true });
 const rec = (id, status, note = '') => console.log(`${status} ${id}${note ? ': ' + note : ''}`);
 const nat = (p) => p.replace(/^\+84/, '');
 const fake = () => `+84${7 + Math.floor(Math.random() * 3)}${Math.floor(10000000 + Math.random() * 89999999)}`;
@@ -38,7 +40,7 @@ try {
   const body = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
   const gone = ['Dành cho giáo viên và phụ huynh', 'Chưa có không gian làm việc', 'Đăng ký cho giáo viên', 'Tạo tài khoản phụ huynh'].filter((t) => body.includes(t));
   const hasPassword = await page.locator('#login-password').count();
-  await page.screenshot({ path: 'plans/20261021-mvp/qa/runs/2026-10-26/web/brief96-login-step1.png' });
+  await page.screenshot({ path: `${shots}/brief96-login-step1.png` });
   rec('AUTH-024-removed-elements', gone.length === 0 && hasPassword === 0 ? 'PASS' : 'FAIL', `stillShown=${gone.join('|') || 'none'} passwordFieldOnStep1=${hasPassword}`);
   await context.close();
 

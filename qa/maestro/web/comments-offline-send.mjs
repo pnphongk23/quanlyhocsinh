@@ -11,6 +11,8 @@ const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.con
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
 
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const suffix = randomBytes(3).toString('hex');
 const className = `QA-CMT-${suffix}-Offline-Class`;
 const studentName = `QA-CMT-${suffix}-Student`;
@@ -88,12 +90,12 @@ try {
       await writeFile(`${out}/comments-offline-send-junit.xml`, '<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-comments-offline-send" tests="1" failures="0" skipped="1"><testcase classname="web" name="TC-CMT-012"><skipped message="Offline draft, network-required hint, disabled send, and online publish confirmation verified; parent visibility could not be checked without a linked parent smoke session."/></testcase></testsuite>\n');
       console.log('PARTIAL TC-CMT-012: offline draft/lock and online publish pass; parent visibility unverified');
   } catch (error) {
-    await mkdir(out, { recursive: true }); await page.screenshot({ path: `${out}/comments-offline-send-failure.png`, fullPage: true }).catch(() => {});
+    await mkdir(out, { recursive: true }); await page.screenshot({ path: `${shots}/comments-offline-send-failure.png`, fullPage: true }).catch(() => {});
     const message = error instanceof Error ? error.message : 'unknown error';
     const blocked = message.startsWith('blocked_WEB-003:') || message.startsWith('fixture_missing:');
     console.log(`${blocked ? 'BLOCKED' : 'FAIL'} TC-CMT-012 at ${phase}: ${message}`);
     await mkdir(out, { recursive: true });
-    await page.screenshot({ path: `${out}/comments-offline-send-failure.png` }).catch(() => {});
+    await page.screenshot({ path: `${shots}/comments-offline-send-failure.png` }).catch(() => {});
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await writeFile(`${out}/comments-offline-send-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-comments-offline-send" tests="1" failures="${blocked ? 0 : 1}" skipped="${blocked ? 1 : 0}"><testcase classname="web" name="TC-CMT-012">${blocked ? `<skipped message="${escaped}"/>` : `<failure message="${escaped}"/>`}</testcase></testsuite>\n`);
   if (!blocked) process.exitCode = 1;

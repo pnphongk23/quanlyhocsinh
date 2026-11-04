@@ -8,7 +8,7 @@ const mockTeacherOnly = process.argv.includes('--mock-teacher-login-check');
 const parentOnly = process.argv.includes('--parent-only');
 const teacherOnly = process.argv.includes('--teacher-only');
 const credentialPath = process.env.QLH_STAGING_CREDENTIAL_FILE ?? `${process.env.HOME}/.config/qlh/staging-demo.txt`;
-const output = '/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/shots/ui-audit/after/staging';
+const output = path.join(process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence', '20261021-mvp/web/shots/ui-audit/after/staging');
 const reportPath = '/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-audit/compare.md';
 function readCredentialSections(raw) {
   const parsed = { api: '', teacher: {}, parent: {} };
