@@ -5,7 +5,7 @@ import {
   SKILL_KEYS,
   SKILL_LABELS,
 } from "../../data/criteriaLevels";
-import { LevelChickMeter } from "./LevelChicks";
+import { LevelChickMeter } from "./LevelChickMeter";
 import type { CriteriaSummary, LevelTally, SkillSummary } from "../../data/reportModel";
 import s from "./levelSummary.module.css";
 
@@ -18,9 +18,10 @@ function Tally({ tally }: { tally: LevelTally }) {
     <>
       {parts.map((key, index) => (
         <span key={key} className={s.tally}>
-          {index > 0 ? <span className={s.separator}>·</span> : null}
-          {tally[key]}
-          <LevelChickMeter level={key} small ariaLabel={`${tally[key]} ${LEVEL_LABELS[key]}`} />
+          {index > 0 ? <span className={s.separator}> · </span> : null}
+          {tally[key]}{" "}
+          <LevelChickMeter level={key} small decorative />
+          <span className={s.srOnly}>{LEVEL_LABELS[key]}</span>
         </span>
       ))}
     </>

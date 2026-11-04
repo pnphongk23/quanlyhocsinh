@@ -108,7 +108,7 @@
   --criteria-check-icon-size: 12px;
   --level-row-icon-size: 20px; /* icon tiêu chí/kỹ năng ở phiếu 3 mức */
   --level-row-label-min: 9rem;   /* nhãn tiêu chí/kỹ năng trước khi đầu gà xuống dòng */
-  --level-chick-size: 28px; /* bề rộng tối thiểu của segmented 3 mức */
+  --level-chick-size: 28px;      /* đầu gà trong phiếu; vùng chạm dùng --tap */
   --focus-ring-offset: 1px;
   --comment-star-size: 24px;
   --dialog-action-gap: 8px; /* khoảng giữa các nút xác nhận */

@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { LevelChicks, LevelChickMeter, levelChickCount } from "./LevelChicks";
+import { LevelChicks } from "./LevelChicks";
+import { LevelChickMeter, levelChickCount } from "./LevelChickMeter";
 
 const label = "Học tập trung";
 
@@ -62,11 +63,26 @@ describe("LevelChicks", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("value lạ: không đầu nào checked, đầu đầu tiên nhận tab và phím chạy", () => {
+    const onChange = vi.fn();
+    render(<LevelChicks value={"unknown" as never} onChange={onChange} label={label} />);
+    const radios = screen.getAllByRole("radio");
+    expect(radios.map((radio) => radio.getAttribute("aria-checked"))).toEqual(["false", "false", "false"]);
+    expect(radios.map((radio) => radio.tabIndex)).toEqual([0, -1, -1]);
+    fireEvent.keyDown(screen.getByRole("radiogroup", { name: label }), { key: "ArrowRight" });
+    expect(onChange).toHaveBeenLastCalledWith("ok");
+  });
+
   it("chỉ xem: N đầu gà + nhãn 'Tốt, 3 trên 3'; đếm mức đúng", () => {
     expect([levelChickCount("needs_work"), levelChickCount("ok"), levelChickCount("good")]).toEqual([1, 2, 3]);
     render(<LevelChickMeter level="ok" />);
     const meter = screen.getByRole("img", { name: "Đạt, 2 trên 3" });
     expect(meter.querySelectorAll("img")).toHaveLength(2);
+    for (const level of ["needs_work", "ok", "good"] as const) {
+      const view = render(<LevelChickMeter level={level} />);
+      expect(view.container.querySelectorAll("img").length).toBeLessThanOrEqual(3);
+      view.unmount();
+    }
   });
 
   it("vùng chạm và hover dùng token, hover chỉ trong @media (hover: hover)", () => {

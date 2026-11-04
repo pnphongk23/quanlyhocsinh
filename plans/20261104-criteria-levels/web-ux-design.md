@@ -73,8 +73,9 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 ## 5. Báo cáo tháng
 
 - Thêm hai khối trong báo cáo (chỉ khi snapshot có dữ liệu, đếm trên phiếu ĐÃ GỬI):
-  - "Theo tiêu chí": 5 hàng `Tên tiêu chí` + `N 🌟 · N 👍 · N 💪` (số, không phần trăm, không trung bình).
-  - "Theo kỹ năng": mỗi kỹ năng có chấm `Nói: 3 🌟 · 2 👍 trong 5 buổi có chấm`.
+  - "Theo tiêu chí": 5 hàng `Tên tiêu chí` + `N` kèm N đầu gà cỡ nhỏ (chỉ xem), nối bằng `·`; vẫn là số
+    đếm, không phần trăm, không trung bình. Nhãn a11y đọc `N Tốt` một lần (đầu gà trang trí, có chữ ẩn).
+  - "Theo kỹ năng": mỗi kỹ năng có chấm `Nói: 3 [đầu gà] · 2 [đầu gà] trong 5 buổi có chấm`.
 - Bảng đếm sao hiện có giữ nguyên bên trên. Khối mới dùng `--card-pad`, `--text-sm`, `--color-muted`;
   desktop cùng lưới thẻ hiện có, mobile xếp dọc; không thêm biểu đồ.
 

@@ -92,6 +92,7 @@ describe("SlipLevelFields", () => {
     );
     expect(screen.getAllByTestId(/^slip-level-row-/)).toHaveLength(5);
     expect(screen.getByText("4/5 sao")).toBeInTheDocument();
+    expect(screen.queryByText("Kiến thức hôm nay")).toBeNull();
     expect(screen.getByTestId("slip-level-row-homework")).toHaveTextContent("Buổi trước chưa có BTVN");
   });
 
@@ -194,10 +195,6 @@ describe("SlipLevelFields", () => {
     expect((screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value).toContain("Câu nhận xét rất dài");
   });
 });
-
-function withinGroup(name: string): HTMLElement {
-  return screen.getByRole("radiogroup", { name });
-}
 
 const chick = (label: string, level: "good" | "ok" | "needs_work") => {
   const count = level === "good" ? 3 : level === "ok" ? 2 : 1;

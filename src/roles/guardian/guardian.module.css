@@ -845,9 +845,3 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
 }
-
-.levelValue {
-  color: var(--color-muted);
-  text-align: right;
-  white-space: nowrap;
-}
