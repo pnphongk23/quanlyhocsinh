@@ -10,6 +10,8 @@ const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.con
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
 
 const out = 'plans/20261021-mvp/qa/runs/2026-10-26/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-26/web`;
+await mkdir(shots, { recursive: true });
 const suffix = randomBytes(3).toString('hex');
 const className = `QA-CMT-${suffix}-Slip-Class`;
 const studentName = `QA-CMT-${suffix}-Student`;
@@ -97,19 +99,19 @@ try {
   const zeroSentence = (await gen.evaluate((e) => e.value ?? e.innerText)).trim();
   const zeroOk = zeroSentence === 'Con chưa chú ý nghe giảng, chưa ghi bài đầy đủ, chưa tích cực tham gia hoạt động, còn mất trật tự và chưa hoàn thành bài tập về nhà.';
   const distinct = new Set([...seen.values()].filter(Boolean).map((v) => v.src)).size;
-  await page.screenshot({ path: `${out}/slip-v4-zero-star.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}/slip-v4-zero-star.png`, fullPage: true });
   rec('TC-CMT-016', broken.length === 0 && distinct >= 6 ? 'PASS' : 'FAIL', `levels=${rows.join(' ')} broken=${broken.length} distinct=${distinct}`);
   console.log('ZERO_SENTENCE', zeroSentence);
   console.log('MASCOT_SRC', [...seen.values()].filter(Boolean).map((v) => v.full).join(' | '));
   rec('TC-CMT-001-zero-sentence', zeroOk ? 'PASS' : 'FAIL', zeroOk ? '' : 'sentence mismatch for 0 stars');
   await mkdir(out, { recursive: true });
   } catch (error) {
-    await mkdir(out, { recursive: true }); await page.screenshot({ path: `${out}/slip-v4-smoke-failure.png`, fullPage: true }).catch(() => {});
+    await mkdir(out, { recursive: true }); await page.screenshot({ path: `${shots}/slip-v4-smoke-failure.png`, fullPage: true }).catch(() => {});
     const message = error instanceof Error ? error.message : 'unknown error';
     const blocked = message.startsWith('blocked_WEB-003:') || message.startsWith('fixture_missing:');
     console.log(`${blocked ? 'BLOCKED' : 'FAIL'} TC-CMT-005/016 at ${phase}: ${message}`);
     await mkdir(out, { recursive: true });
-    await page.screenshot({ path: `${out}/slip-v4-smoke-failure.png` }).catch(() => {});
+    await page.screenshot({ path: `${shots}/slip-v4-smoke-failure.png` }).catch(() => {});
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await writeFile(`${out}/slip-v4-smoke-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-slip-v4-smoke" tests="1" failures="${blocked ? 0 : 1}" skipped="${blocked ? 1 : 0}"><testcase classname="web" name="TC-CMT-005/016">${blocked ? `<skipped message="${escaped}"/>` : `<failure message="${escaped}"/>`}</testcase></testsuite>\n`);
   if (!blocked) process.exitCode = 1;

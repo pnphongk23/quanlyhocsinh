@@ -14,6 +14,8 @@ const tests = [
   { caseId: 'legacy-score-2', id: '7daf9942-c51a-41b6-94af-e84ee98755dc' },
 ];
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
 const page = await context.newPage();
@@ -45,7 +47,7 @@ page.on('requestfailed', (request) => diagnostics.push({ kind: 'request-failed',
 
 async function saveFailureShot(name) {
   await mkdir(out, { recursive: true });
-  await page.screenshot({ path: `${out}/${name}-failure.png`, fullPage: true }).catch(() => {});
+  await page.screenshot({ path: `${shots}/${name}-failure.png`, fullPage: true }).catch(() => {});
 }
 
 try {

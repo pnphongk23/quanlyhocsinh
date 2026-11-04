@@ -6,6 +6,8 @@ import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/
 
 const base = WEB_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const credentialPath = `${homedir()}/.config/qlh/dev-qa.txt`;
 const runTag = randomBytes(3).toString('hex');
 const results = [];
@@ -109,7 +111,7 @@ async function inspectSendDialog(runNumber) {
   const counts = copy.match(/(\d+)\s*phiếu sẽ gửi\s*(\d+)\s*em chưa chọn sao/iu);
   const sent = counts ? Number(counts[1]) : null;
   const skipped = counts ? Number(counts[2]) : null;
-  await dialog.screenshot({ path: `${out}/web008-confirm-${runNumber}.png` });
+  await dialog.screenshot({ path: `${shots}/web008-confirm-${runNumber}.png` });
   const expected = sent === 1 && skipped === 1;
   record(`WEB-008-RUN-${runNumber}`, expected ? 'pass' : 'fail', `send=${sent ?? 'unparsed'}; skipped=${skipped ?? 'unparsed'}`);
   await dialog.getByRole('button', { name: 'Quay lại', exact: true }).click();

@@ -8,7 +8,7 @@ const mockTeacherOnly = process.argv.includes('--mock-teacher-login-check');
 const parentOnly = process.argv.includes('--parent-only');
 const teacherOnly = process.argv.includes('--teacher-only');
 const credentialPath = process.env.QLH_STAGING_CREDENTIAL_FILE ?? `${process.env.HOME}/.config/qlh/staging-demo.txt`;
-const output = '/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/shots/ui-audit/after/staging';
+const output = path.join(process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence', '20261021-mvp/web/shots/ui-audit/after/staging');
 const reportPath = '/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-audit/compare.md';
 function readCredentialSections(raw) {
   const parsed = { api: '', teacher: {}, parent: {} };
@@ -153,7 +153,7 @@ async function capture(page, team, vp, route, label) {
   const filename = `${String(++sequence).padStart(3, '0')}-${label}.png`;
   const image = path.join(dir, filename);
   await page.screenshot({ path: image, fullPage: false, animations: 'disabled' });
-  rows.push({ team, viewport: vp.key, route: new URL(page.url()).pathname, label, image: `after/staging/${team}/${vp.key}/${filename}`, residue });
+  rows.push({ team, viewport: vp.key, route: new URL(page.url()).pathname, label, image, residue });
 }
 
 try {
@@ -203,7 +203,7 @@ const old = await readFile(reportPath, 'utf8');
 const roleResult = successfulRoles.length ? `Đăng nhập thành công: ${successfulRoles.join(', ')}.` : 'Chưa có vai đăng nhập thành công.';
 const stopText = stopReason ? ` Dừng: ${stopReason}` : '';
 const priorRows = [...(old.match(/\n## Staging\n[\s\S]*$/)?.[0] ?? '').matchAll(/^\| [AC] \| [^\n]*\[ảnh\]\([^\n]+\) \| \d+ \|$/gm)].map((m) => m[0]);
-const currentRows = rows.map((r) => `| ${r.team} | ${r.viewport} | ${base}${r.route} | ${r.label} | [ảnh](../shots/ui-audit/${r.image}) | ${r.residue} |`);
+const currentRows = rows.map((r) => `| ${r.team} | ${r.viewport} | ${base}${r.route} | ${r.label} | [ảnh](${r.image}) | ${r.residue} |`);
 const tableRows = [...new Set([...priorRows, ...currentRows])];
 const summary = `\n## Staging\n\nNguồn: ${base}. OPTIONS preflight trước đăng nhập: HTTP ${preflight.status}, origin khớp, POST được phép. Parser readCredentialSections và selector/form login theo scripts/e2e-staging-ui.mjs; mỗi vai gửi tối đa một lần trong browser context mới, không tái dùng storage. ${roleResult} Chỉ mở route và chụp, không ghi dữ liệu.${stopText} Lần đầu teacher harness ghi nhận response nhưng lỗi biến trước khi ghi mã HTTP; lần sau lỗi CORS ở deployment URL nên không tới API. Dry-run parser đúng 2 mục vai. CSS/DOM che số điện thoại trước mỗi ảnh; kiểm tra regex DOM trước khi chụp: 0 kết quả.\n\n| Team | Viewport | URL thật | Màn | Ảnh | Phone residue |\n|---|---|---|---|---|---:|\n${tableRows.join('\n') || '| — | — | — | — | — | — |'}\n`;
 await (await import('node:fs/promises')).writeFile(reportPath, `${old.replace(/\n## Staging\n[\s\S]*$/, '').trimEnd()}\n${summary}`);

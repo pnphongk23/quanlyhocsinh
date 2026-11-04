@@ -10,6 +10,8 @@ const credentials = Object.fromEntries((await readFile(credentialPath, 'utf8')).
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
 
 const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-24/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' });
 const page = await context.newPage();
@@ -42,7 +44,7 @@ try {
     const message = error instanceof Error ? error.message : 'unknown error';
     console.log(`FAIL TC-CLS-017 at ${phase}: ${message}`);
     await mkdir(out, { recursive: true });
-    await page.screenshot({ path: `${out}/class-sunday-validation-postfix-failure.png` }).catch(() => {});
+    await page.screenshot({ path: `${shots}/class-sunday-validation-postfix-failure.png` }).catch(() => {});
     const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
     await writeFile(`${out}/sunday-class-validation-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-sunday-class-validation" tests="1" failures="1"><testcase classname="web" name="TC-CLS-017"><failure message="${escaped}"/></testcase></testsuite>\n`);
     process.exitCode = 1;

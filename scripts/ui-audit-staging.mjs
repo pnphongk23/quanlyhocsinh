@@ -5,7 +5,7 @@ import { chromium } from "playwright";
 const base = "https://eb6ba846.qlh-staging-web.pages.dev";
 const credentialPathInput = process.env.QLH_STAGING_CREDENTIAL_FILE ?? "~/.config/qlh/staging-demo.txt";
 const credentialPath = credentialPathInput.startsWith("~/") ? path.join(process.env.HOME ?? "", credentialPathInput.slice(2)) : credentialPathInput;
-const output = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/shots/ui-audit/after/staging";
+const output = path.join(process.env.QLH_EVIDENCE_DIR ?? "/tmp/qlh-evidence", "20261021-mvp/web/shots/ui-audit/after/staging");
 const accountLines = (await readFile(credentialPath, "utf8")).split(/\r?\n/);
 const accounts = [];
 let pendingPhone = "";
@@ -65,7 +65,7 @@ async function capture(page, team, viewport, route, label) {
   const file = `${String(++sequence).padStart(3, "0")}-${label}.png`;
   const image = path.join(dir, file);
   await page.screenshot({ path: image, fullPage: false, animations: "disabled" });
-  rows.push({ team, viewport: viewport.name, route, url: page.url(), label, image: `after/staging/${team}/${viewport.name}/${file}`, phoneResidueCount: residue });
+  rows.push({ team, viewport: viewport.name, route, url: page.url(), label, image, phoneResidueCount: residue });
 }
 
 async function navTo(page, href) {
@@ -139,7 +139,7 @@ try {
 await browser.close();
 
 const report = `/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-audit/compare.md`;
-const summary = `\n## Staging\n\nNguồn: ${base}. Đăng nhập từng tài khoản tối đa một lần trong context riêng; chỉ điều hướng GET và chụp, không lưu/tạo/xoá dữ liệu. Số điện thoại được thay bằng ••• trong DOM trước mỗi ảnh; kiểm tra regex sau khi che: 0 kết quả cho mọi ảnh. ${stopReason ? `Kết quả: ${stopReason}` : `Đã chụp ${rows.length} ảnh.`}\n\n| Team | Viewport | Route thật | Màn | Ảnh | Phone residue |\n|---|---|---|---|---|---:|\n${rows.map((row) => `| ${row.team} | ${row.viewport} | \`${row.route}\` | ${row.label} | [ảnh](../shots/ui-audit/${row.image}) | ${row.phoneResidueCount} |`).join("\n") || "| — | — | — | — | — | — |"}\n`;
+const summary = `\n## Staging\n\nNguồn: ${base}. Đăng nhập từng tài khoản tối đa một lần trong context riêng; chỉ điều hướng GET và chụp, không lưu/tạo/xoá dữ liệu. Số điện thoại được thay bằng ••• trong DOM trước mỗi ảnh; kiểm tra regex sau khi che: 0 kết quả cho mọi ảnh. ${stopReason ? `Kết quả: ${stopReason}` : `Đã chụp ${rows.length} ảnh.`}\n\n| Team | Viewport | Route thật | Màn | Ảnh | Phone residue |\n|---|---|---|---|---|---:|\n${rows.map((row) => `| ${row.team} | ${row.viewport} | \`${row.route}\` | ${row.label} | [ảnh](${row.image}) | ${row.phoneResidueCount} |`).join("\n") || "| — | — | — | — | — | — |"}\n`;
 const oldReport = await readFile(report, "utf8").catch(() => "# UI audit compare\n");
 await writeFile(report, `${oldReport.replace(/\n## Staging\n[\s\S]*$/, "").trimEnd()}\n${summary}`);
 console.log(`Staging captures: ${rows.length}; phone residue checks passed; compare updated.`);

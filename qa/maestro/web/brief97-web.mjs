@@ -11,6 +11,8 @@ const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.con
 const [whole, one] = process.argv.slice(2).map((a) => a.split(':'));
 const base = WEB_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-26/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-26/web`;
+await mkdir(shots, { recursive: true });
 await mkdir(out, { recursive: true });
 const rec = (id, ok, note = '') => console.log(`${ok ? 'PASS' : 'FAIL'} ${id}${note ? ': ' + note : ''}`);
 const browser = await chromium.launch({ headless: true });
@@ -51,7 +53,7 @@ try {
   // Fresh session: not attended, no slips
   await openComments(whole);
   t = await panel();
-  await page.screenshot({ path: `${out}/brief97-w-fresh.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}/brief97-w-fresh.png`, fullPage: true });
   rec('CMT-024-no-stars-chua-nhan-xet', count(t, /Chưa nhận xét/g) === 3 && !/\d\/5|sao/.test(t), `chuaNhanXet=${count(t, /Chưa nhận xét/g)}`);
   const l0 = await sendLabel();
   rec('CMT-024-send-count-zero', /\(0\)/.test(l0), l0);
@@ -66,7 +68,7 @@ try {
   rec('CMT-022-slips-created-5-stars', count(t, /Nháp/g) === 3 && !/Chưa nhận xét/.test(t), `nhap=${count(t, /Nháp/g)}`);
   const l3 = await sendLabel();
   rec('CMT-021-send-count-3-after-assign', /\(3\)/.test(l3), l3);
-  await page.screenshot({ path: `${out}/brief97-w-assigned.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}/brief97-w-assigned.png`, fullPage: true });
 
   // Send; sent label has no time
   await page.getByRole('button', { name: /Gửi phiếu cả lớp/ }).click();
@@ -76,7 +78,7 @@ try {
   await page.waitForTimeout(2500);
   t = await panel();
   rec('CMT-025-sent-label-no-time', count(t, /Đã gửi/g) >= 3 && !/Đã gửi\s*·|Đã gửi\s*\d/.test(t), (t.match(/Đã gửi.{0,8}/g) || []).slice(0, 3).join(' | '));
-  await page.screenshot({ path: `${out}/brief97-w-sent.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}/brief97-w-sent.png`, fullPage: true });
 
   // Assign again must not touch sent slips
   const before = count(t, /Nháp|Đã gửi/g);
@@ -101,7 +103,7 @@ try {
   await crit.click(); await page.waitForTimeout(700); await crit.click();
   await page.getByText('Đã lưu trên máy').waitFor({ timeout: 12000 }).catch(() => {});
   await page.waitForTimeout(2500);
-  await page.screenshot({ path: `${out}/brief97-m-typed.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}/brief97-m-typed.png`, fullPage: true });
   await openComments(one);
   t = await panel();
   rec('CMT-026-hand-slip-only-one-counted', /\(1\)/.test(await sendLabel()) && count(t, /Chưa nhận xét/g) === 2, `label=${await sendLabel()} chuaNhanXet=${count(t, /Chưa nhận xét/g)}`);
@@ -111,9 +113,9 @@ try {
   await page.waitForTimeout(3000);
   t = await panel();
   rec('CMT-026-others-not-sent', count(t, /Đã gửi/g) === 1 && count(t, /Chưa nhận xét/g) === 2, `sent=${count(t, /Đã gửi/g)} chuaNhanXet=${count(t, /Chưa nhận xét/g)}`);
-  await page.screenshot({ path: `${out}/brief97-m-after-send.png`, fullPage: true });
+  await page.screenshot({ path: `${shots}/brief97-m-after-send.png`, fullPage: true });
 } catch (e) {
   console.log('FAIL run', String(e.message).split('\n')[0].slice(0, 200));
-  await page.screenshot({ path: `${out}/brief97-failure.png`, fullPage: true }).catch(() => {});
+  await page.screenshot({ path: `${shots}/brief97-failure.png`, fullPage: true }).catch(() => {});
 }
 await browser.close();

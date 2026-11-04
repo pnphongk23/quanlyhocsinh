@@ -14,6 +14,8 @@ const className = `AAA-QA-${suffix}-HW`;
 const students = ['HS1', 'HS2', 'HS3'].map((part) => `AAA-QA-${suffix}-${part}`);
 const title = `AAA-QA-${suffix}-Reading`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-26/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-26/web`;
+await mkdir(shots, { recursive: true });
 // Fixture only: S1 18:00 (no homework), S2 21:00 (homework assigned, drafts), S3 22:00 (one sent slip, drafts, gradeable previous homework).
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
@@ -187,7 +189,7 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : 'unknown error';
   await mkdir(out, { recursive: true });
-  await page.screenshot({ path: `${out}/ios-fixture2-failure.png`, fullPage: true }).catch(() => {});
+  await page.screenshot({ path: `${shots}/ios-fixture2-failure.png`, fullPage: true }).catch(() => {});
   console.log(`FAIL fixture at ${phase}: ${message.slice(0, 300)}`);
   process.exitCode = 1;
 } finally {

@@ -1,4 +1,5 @@
+# Ảnh chụp của flow này ghi cố định vào /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/ (YAML Maestro không đọc env; muốn đổi thì sửa đường dẫn ngay trong file).
 appId: com.study.teacherthu
 ---
 - tapOn: "Lớp Smoke FB2"
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/31b-class-after-attendance
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/31b-class-after-attendance

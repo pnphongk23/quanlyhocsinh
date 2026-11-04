@@ -14,6 +14,7 @@ const root = target === "web" ? webRoot : protoRoot;
 const port = target === "web" ? 5198 : 5199;
 const base = `http://127.0.0.1:${port}`;
 const planDir = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024";
+const shotsDir = path.join(process.env.QLH_EVIDENCE_DIR ?? "/tmp/qlh-evidence", "20261021-mvp/web/ui-feedback-20261024/shots/after");
 const runTag = (process.env.STATE_RUN ?? "latest").replace(/[^a-zA-Z0-9_-]/g, "");
 const results = [];
 const viewports = [
@@ -97,7 +98,7 @@ async function open(vp, route) {
 
   async function checkStorageFailure(vp, name, route, prepare, retain, extraCheck = async () => true) {
     const { page, context } = await open(vp, route);
-    const out = path.join(planDir, "shots", "after");
+    const out = shotsDir;
     try {
       await installStorageFailure(page);
       const state = await prepare(page);
@@ -109,11 +110,12 @@ async function open(vp, route) {
         const extra = await extraCheck(page, state);
         const editor = await state.editor.isVisible().catch(() => false);
         const passed = Boolean(error) && retained && editor && extra;
+        const shotPath = path.join(out, `F8-save-error-${name}-${vp.width}.png`);
         await page.screenshot({ path: path.join(out, `F8-save-error-${name}-${vp.width}.png`), fullPage: false }).catch(() => {});
-        results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: passed ? "PASS" : "FAIL", evidence: `visible error=${Boolean(error)}; editor=${editor}; value retained=${retained}; extra check=${extra}; screenshot=F8-save-error-${name}-${vp.width}.png` });
+        results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: passed ? "PASS" : "FAIL", evidence: `visible error=${Boolean(error)}; editor=${editor}; value retained=${retained}; extra check=${extra}; screenshot=${shotPath}` });
     } catch (error) {
       await page.screenshot({ path: path.join(out, `F8-save-error-${name}-${vp.width}.png`), fullPage: false }).catch(() => {});
-      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: "FAIL", evidence: `${String(error).split("\n")[0]}; screenshot=F8-save-error-${name}-${vp.width}.png` });
+      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: "FAIL", evidence: `${String(error).split("\n")[0]}; screenshot=${path.join(out, `F8-save-error-${name}-${vp.width}.png`)}` });
     } finally { await context.close(); }
   }
 
@@ -234,7 +236,7 @@ async function inspect(vp, label, route) {
     const text = await page.locator("body").innerText();
     const invalidLogin = /đăng nhập[\s\S]*số điện thoại/i.test(text) && !text.includes("Lớp") || /Chọn vai trò/.test(text);
     const file = `${target}-${label}-${vp.width}.png`;
-    const out = path.join(planDir, "shots", "after");
+    const out = shotsDir;
     await mkdir(out, { recursive: true });
     await page.screenshot({ path: path.join(out, file), fullPage: vp.width > 430, animations: "disabled" });
     const unsupportedNoClass = target === "proto" && label === "F1-no-class";
@@ -309,7 +311,7 @@ async function captureF8(vp) {
     return;
   }
   const { page, context } = await open(vp, "/lop/demo-6a/bai-kiem-tra/demo-test");
-  const out = path.join(planDir, "shots", "after");
+  const out = shotsDir;
   try {
     const input = page.getByRole("textbox", { name: "Điểm Học sinh 1" });
     await input.fill("10.5");
@@ -354,7 +356,7 @@ async function captureF8(vp) {
         results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F8 offline pill", result: "PASS", evidence: "visible offline SaveStatus instance; entered score retained" });
     } catch (error) {
       const evidence = await offline.page.locator("body").innerText().catch(() => "");
-      const out = path.join(planDir, "shots", "after");
+      const out = shotsDir;
       await offline.page.screenshot({ path: path.join(out, `F8-offline-failure-${vp.width}.png`), fullPage: false }).catch(() => {});
       results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F8 offline pill", result: "FAIL", evidence: `${String(error).split("\n")[0]}; body=${evidence.replace(/\s+/g," ").slice(0,180)}` });
     }
@@ -391,13 +393,13 @@ async function captureF8(vp) {
       const remains=await editor.isVisible().catch(()=>false);
       const result=hasError&&kept==="Bài tập lỗi lưu kiểm tra"&&remains?"PASS":"FAIL";
       if(result==="FAIL"){
-        const out=path.join(planDir,"shots","after");
+        const out=shotsDir;
         await homework.page.screenshot({path:path.join(out,`F8-homework-error-${vp.width}.png`),fullPage:false}).catch(()=>{});
       }
         results.push({target,viewport:`${vp.width}x${vp.height}`,item:"F8 homework storage error retains editor/value",result,evidence:`error=${hasError?((await errorMessage.innerText()).trim().slice(0,80)):"missing visible role=status/alert containing 'Lỗi'"}; editor=${remains}; value retained=${kept==="Bài tập lỗi lưu kiểm tra"}; known behavior: src/data/repositories/homework.ts:8 catches persistCommand rejection`});
     } catch(error) {
       const body=await homework.page.locator("body").innerText().catch(()=>"");
-      const out=path.join(planDir,"shots","after");
+      const out=shotsDir;
       await homework.page.screenshot({path:path.join(out,`F8-homework-error-${vp.width}.png`),fullPage:false}).catch(()=>{});
       results.push({target,viewport:`${vp.width}x${vp.height}`,item:"F8 homework storage error retains editor/value",result:"FAIL",evidence:`known behavior: src/data/repositories/homework.ts:8 catches persistCommand rejection; ${String(error).split("\n")[0]}; body=${body.replace(/\s+/g," ").slice(0,120)}`});
     } finally { await homework.context.close(); }
@@ -437,7 +439,7 @@ async function captureF8(vp) {
       }
       const flashCount = await page.evaluate(() => window.__f9NoTestFlash);
       const passed = badDown === 0 && badUp === 0 && badEnter === 0 && focusLoss === 0 && flashCount === 0;
-      if (!passed) await page.screenshot({ path: path.join(planDir, "shots", "after", `F9-score-keyboard-failure-${vp.width}.png`), fullPage: false }).catch(() => {});
+      if (!passed) await page.screenshot({ path: path.join(shotsDir, `F9-score-keyboard-failure-${vp.width}.png`), fullPage: false }).catch(() => {});
       results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F9 Enter/↓/↑ moves score cell ×20", result: passed ? "PASS" : "FAIL", evidence: `cycles=20; focusLoss=${focusLoss}; ArrowDown unchanged=${badDown}; ArrowUp failedToReturn=${badUp}; Enter failedToMove=${badEnter}; Chưa có bài kiểm tra flashes=${flashCount}` });
   } catch (error) { results.push({ target, viewport: `${vp.width}x${vp.height}`, item: "F9 Enter/↓/↑ moves score cell", result: "FAIL", evidence: String(error).split("\n")[0] }); }
   finally { await context.close(); }

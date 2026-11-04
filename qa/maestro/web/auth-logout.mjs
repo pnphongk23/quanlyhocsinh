@@ -8,6 +8,8 @@ const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.con
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
 
 const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-24/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let phase = 'login';
@@ -33,7 +35,7 @@ try {
   const message = error instanceof Error ? error.message : 'unknown error';
   console.log(`FAIL TC-AUTH-019 at ${phase}: ${message}`);
   await mkdir(out, { recursive: true });
-  await page.screenshot({ path: `${out}/auth-logout-failure.png` }).catch(() => {});
+  await page.screenshot({ path: `${shots}/auth-logout-failure.png` }).catch(() => {});
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await writeFile(`${out}/auth-logout-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-auth-logout" tests="1" failures="1"><testcase classname="web" name="TC-AUTH-019"><failure message="${escaped}"/></testcase></testsuite>\n`);
   process.exitCode = 1;

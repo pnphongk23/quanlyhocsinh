@@ -10,6 +10,7 @@ const values = Object.fromEntries((await readFile(configPath, 'utf8')).split(/\r
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const apiErrors = [];
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-24/web`;
 page.on('response', async (response) => {
   if (response.status() < 400 || !new URL(response.url()).pathname.startsWith('/v1/')) return;
   const record = { path: new URL(response.url()).pathname, status: response.status() };
@@ -49,8 +50,8 @@ try {
     const failure = apiErrors.at(-1);
     console.log(JSON.stringify({ case: testCase.label, saved, apiError: failure ?? null }));
     if (!saved) {
-      await mkdir('plans/20261021-mvp/qa/runs/2026-10-24/web', { recursive: true });
-      await page.screenshot({ path: 'plans/20261021-mvp/qa/runs/2026-10-24/web/student-diagnostic-failure.png' });
+      await mkdir(shots, { recursive: true });
+      await page.screenshot({ path: `${shots}/student-diagnostic-failure.png` });
       const close = page.getByRole('button', { name: /Đóng|Huỷ|Hủy/ });
       if (await close.count()) await close.last().click().catch(() => {});
     }

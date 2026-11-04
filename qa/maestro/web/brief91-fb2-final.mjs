@@ -7,6 +7,8 @@ import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/
 const web = WEB_BASE;
 const api = API_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const tag = randomBytes(3).toString('hex');
 const className = `QA-Web-FB2-Final-${tag}`;
 const studentName = `QA-Web-FB2-Final-Student-${tag}`;
@@ -83,7 +85,7 @@ async function phase(name, work) {
       const masks = [activePage.locator('input'), activePage.locator('textarea'), activePage.locator('[contenteditable="true"]')];
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '').slice(0, 40);
       await activePage.screenshot({
-        path: `${out}/fb2-timeout-${slug}-${tag}.jpg`,
+        path: `${shots}/fb2-timeout-${slug}-${tag}.jpg`,
         type: 'jpeg', quality: 35, fullPage: false, mask: masks,
       }).catch(() => {});
     }
@@ -184,7 +186,7 @@ async function createQaClassAndStudent(guardianPhone) {
     await dialog.waitFor({ state: 'detached', timeout: 15000 });
     await teacherPage.getByText(studentName, { exact: true }).waitFor({ state: 'visible', timeout: 12000 });
   } catch (error) {
-    await teacherPage.getByText(studentName, { exact: true }).screenshot({ path: `${out}/fb2-student-save-timeout-name.png` }).catch(() => {});
+    await teacherPage.getByText(studentName, { exact: true }).screenshot({ path: `${shots}/fb2-student-save-timeout-name.png` }).catch(() => {});
     throw new Error(`UI save dialog/name wait timeout: ${safe(error)}`);
   }
   const students = await request(`/classes/${encodeURIComponent(classId)}/students`, teacherToken);
@@ -260,7 +262,7 @@ async function checkParentChildAndFeedback(note) {
       if (savedGuardianPhoneMatches) await writeLateLinkBug();
       return false;
   }
-  await parentPage.getByText(studentName, { exact: true }).first().screenshot({ path: `${out}/fb2-child-visible-name.png` });
+  await parentPage.getByText(studentName, { exact: true }).first().screenshot({ path: `${shots}/fb2-child-visible-name.png` });
   await parentPage.goto(`${web}/ph/nhan-xet`, { waitUntil: 'domcontentloaded' });
   const commentVisible = await parentPage.getByText(studentName, { exact: true }).waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
   if (commentVisible) {

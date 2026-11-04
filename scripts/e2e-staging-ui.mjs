@@ -6,7 +6,7 @@ const STAGING = "https://qlh-staging-web.pages.dev";
 const DEPLOYMENT_URL = process.env.QLH_W8_DEPLOYMENT_URL ?? STAGING;
 const credentialPath = process.env.QLH_STAGING_CREDENTIAL_FILE ?? "/tmp/qlh-staging-demo.txt";
 const outputRoot = process.env.QLH_W8_OUTPUT ?? "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web";
-const shotsRoot = path.join(outputRoot, "shots", "w8");
+const shotsRoot = path.join(process.env.QLH_EVIDENCE_DIR ?? "/tmp/qlh-evidence", "20261021-mvp/web/shots/w8");
 const reportPath = path.join(outputRoot, "w8-report.md");
 const jsonPath = path.resolve("artifacts", "w8-results.json");
 const attemptLedgerPath = "/tmp/qlh-w8-login-submit-counts.json";
@@ -138,7 +138,7 @@ async function screenshot(page, role, viewport, name) {
   await applyScreenshotRedaction(page);
   const file = `${role}-${viewport}-${safeSlug(name)}.png`;
   await page.screenshot({ path: path.join(shotsRoot, file), fullPage: true, animations: "disabled" });
-  return `shots/w8/${file}`;
+  return path.join(shotsRoot, file);
 }
 
 async function routeSnapshot(page, role, viewport, route, results, screenName = "screen") {

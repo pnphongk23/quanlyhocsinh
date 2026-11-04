@@ -1,3 +1,4 @@
+# Ảnh chụp của flow này ghi cố định vào /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/ (YAML Maestro không đọc env; muốn đổi thì sửa đường dẫn ngay trong file).
 appId: com.study.teacherthu
 ---
 - launchApp:
@@ -11,13 +12,13 @@ appId: com.study.teacherthu
       id: comment.stars
     timeout: 10000
 - assertVisible: "Đã gửi"
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/33-sent-slip
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/33-sent-slip
 - tapOn:
     id: comment.criterion.3
 - tapOn:
     id: comment.save
 - waitForAnimationToEnd:
     timeout: 3000
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/34-sent-slip-edited
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/34-sent-slip-edited
 - assertVisible: "Đã gửi"
 - assertVisible: ".*4/5 sao.*"

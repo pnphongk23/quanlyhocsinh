@@ -10,6 +10,8 @@ const renamed = `${original}-Renamed`;
 const student = `QA-P1-${suffix}-Attendance`;
 const testName = `${original}-Scores`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
 const page = await context.newPage();
@@ -149,7 +151,7 @@ try {
     console.log(`BLOCKED/FAIL at ${phase}: ${message}`);
     console.log('CURRENT_PATH', new URL(page.url()).pathname);
     await mkdir(out, { recursive: true });
-    await page.screenshot({ path: `${out}/p1-class-edit-archive-failure.png` }).catch(() => {});
+    await page.screenshot({ path: `${shots}/p1-class-edit-archive-failure.png` }).catch(() => {});
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   const cases = `${cls003 ? '<testcase classname="web" name="TC-CLS-003"/>' : `<testcase classname="web" name="TC-CLS-003"><failure message="${escaped}"/></testcase>`}${cls004Partial ? '<testcase classname="web" name="TC-CLS-004"><skipped message="data history not verified"/></testcase>' : '<testcase classname="web" name="TC-CLS-004"><skipped message="fixture or earlier step unavailable"/></testcase>'}`;
   await writeFile(`${out}/p1-class-edit-archive-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-p1-class-edit-archive" tests="2" failures="${cls003 ? 0 : 1}" skipped="${cls004Partial ? 1 : 2}">${cases}</testsuite>\n`);

@@ -6,7 +6,7 @@ import { mockWriteResponse } from "./ui-audit-fixtures/mock-write-responses.mjs"
 
 const base = "http://127.0.0.1:5191";
 const root = process.cwd();
-const failureShots = "/Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/web/ui-feedback-20261024/shots/after";
+const failureShots = `${process.env.QLH_EVIDENCE_DIR ?? "/tmp/qlh-evidence"}/20261021-mvp/web/ui-feedback-20261024/shots/after`;
 const results = [];
 let server;
 const LEGACY_REPORT_RANGE_LABEL = /Buổi \d+–\d+ · \d{2}\/\d{2}–\d{2}\/\d{2}/g;

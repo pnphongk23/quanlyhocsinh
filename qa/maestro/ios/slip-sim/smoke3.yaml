@@ -1,3 +1,4 @@
+# Ảnh chụp của flow này ghi cố định vào /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/ (YAML Maestro không đọc env; muốn đổi thì sửa đường dẫn ngay trong file).
 appId: com.study.teacherthu
 ---
 - launchApp:
@@ -6,8 +7,8 @@ appId: com.study.teacherthu
 - tapOn: "Học sinh"
 - waitForAnimationToEnd:
     timeout: 2000
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/44-students
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/44-students
 - tapOn: "Báo cáo"
 - waitForAnimationToEnd:
     timeout: 2000
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/45-reports
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/45-reports

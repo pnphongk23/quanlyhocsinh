@@ -1,3 +1,4 @@
+# Ảnh chụp của flow này ghi cố định vào /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/ (YAML Maestro không đọc env; muốn đổi thì sửa đường dẫn ngay trong file).
 appId: com.study.teacherthu
 ---
 - launchApp:
@@ -15,7 +16,7 @@ appId: com.study.teacherthu
 - assertNotVisible: "Theo chấm BTVN"
 - assertNotVisible:
     id: comment.unsaved
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/20-slip-reopened
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/20-slip-reopened
 - tapOn:
     id: comment.note
 - eraseText: 60
@@ -25,7 +26,7 @@ appId: com.study.teacherthu
     id: comment.counter
 - assertNotVisible:
     id: comment.tooLong
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/21-slip-long-note
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/21-slip-long-note
 - tapOn:
     id: comment.save
 - extendedWaitUntil:
@@ -33,4 +34,4 @@ appId: com.study.teacherthu
     timeout: 8000
 - waitForAnimationToEnd:
     timeout: 3000
-- takeScreenshot: /Users/phamnhuphong/Git/quanlyhocsinh/plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/22-slip-long-saved
+- takeScreenshot: /tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/22-slip-long-saved

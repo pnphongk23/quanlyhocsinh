@@ -6,6 +6,8 @@ import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/
 const web = WEB_BASE;
 const api = API_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const results = [];
 const errors = [];
 let browser;
@@ -219,7 +221,7 @@ async function main() {
       return;
     }
     const child = ppage.getByText(studentName, { exact: true }).first();
-    await child.screenshot({ path: `${out}/fb2-child-visibility.png` });
+    await child.screenshot({ path: `${shots}/fb2-child-visibility.png` });
   });
   if (parentSeesStudent) {
     record('PRM-004', 'blocked', 'no confirmed unlinked QA student fixture in this class');

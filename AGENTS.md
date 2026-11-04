@@ -16,6 +16,7 @@ App quản lý lớp tiếng Anh cho giáo viên dạy lớp riêng tại Việt
 - Đổi nghiệp vụ hoặc kiến trúc thì cập nhật docs trong cùng thay đổi.
 - Không hoàn thành nếu chưa kiểm chứng (test, build hoặc mở thử). Không kiểm chứng được thì nói rõ vì sao.
 - Không ghi SĐT hoặc nội dung nhận xét vào log.
+- Ảnh/video bằng chứng QA không commit vào repo, lưu ở `/tmp/qlh-evidence` (hoặc `QLH_EVIDENCE_DIR`); báo cáo chỉ ghi đường dẫn.
 - Mọi task liên quan thiết kế giao diện (sửa, sáng tạo mới hay thêm mới màn/thành phần) đều phải đọc file token `design/tokens/` và `design/ux-v2/rules.md` trước khi làm; chỉ dùng token, không ghi cứng màu/cỡ chữ/khoảng cách. Cần giá trị mới thì thêm vào token trước rồi mới dùng.
 
 ## Tìm kiếm trong dự án

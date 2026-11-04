@@ -12,6 +12,8 @@ const suffix = randomBytes(3).toString('hex');
 const studentName = `QA-Web-${suffix}-Offline-Student`;
 const testName = `QA-Web-${suffix}-Offline-Score`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-24/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const page = await context.newPage();
@@ -79,7 +81,7 @@ try {
   const message = error instanceof Error ? error.message : 'unknown error';
   console.log(`FAIL TC-TST-015 at ${phase}: ${message}`);
   await mkdir(out, { recursive: true });
-  if (!message.startsWith('fixture_missing:')) await page.screenshot({ path: `${out}/scores-offline-sync-failure.png` }).catch(() => {});
+  if (!message.startsWith('fixture_missing:')) await page.screenshot({ path: `${shots}/scores-offline-sync-failure.png` }).catch(() => {});
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await writeFile(`${out}/scores-offline-sync-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-scores-offline-sync" tests="1" failures="1"><testcase classname="web" name="TC-TST-015"><failure message="${escaped}"/></testcase></testsuite>\n`);
   process.exitCode = message.startsWith('fixture_missing:') ? 2 : 1;

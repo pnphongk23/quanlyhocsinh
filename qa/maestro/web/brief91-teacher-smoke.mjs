@@ -6,6 +6,8 @@ import { chromium } from '/Users/phamnhuphong/.paseo/worktrees/0fvr24l0/mvp-web/
 
 const base = WEB_BASE;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const secretsPath = `${homedir()}/.config/qlh/dev-qa.txt`;
 const credentials = Object.fromEntries((await readFile(secretsPath, 'utf8')).split(/\r?\n/).map((line) => {
   const index = line.indexOf('=');
@@ -226,7 +228,7 @@ try {
       const counts = copy.match(/(\d+)\s*phiếu sẽ gửi\s*(\d+)\s*em chưa chọn sao/iu);
       const excludesAbsent = counts?.[1] === '1' && counts?.[2] === '1';
       record('CMT-003/006', excludesAbsent ? 'PASS' : 'FAIL', `Send/skipped counts=${counts ? `${counts[1]}/${counts[2]}` : 'unparsed'}`);
-      await sendDialog.screenshot({ path: `${out}/TC-CMT-003-006-confirm.png` });
+      await sendDialog.screenshot({ path: `${shots}/TC-CMT-003-006-confirm.png` });
       await sendDialog.getByRole('button', { name: 'Quay lại', exact: true }).click();
     } else {
       record('CMT-003/006', 'BLOCKED', 'No fresh controlled Present/Absent fixture');
@@ -256,7 +258,7 @@ try {
     record('CMT-004', allPressed === 'true' && unsentPressed === 'true' ? 'PASS' : 'FAIL', `filter state; row controls seen=${rowCandidates}`);
   const mascot = page.getByTestId('slip-mascot');
   if (await mascot.count()) {
-    await mascot.screenshot({ path: `${out}/TC-CMT-016-mascot.png` }).catch(() => {});
+    await mascot.screenshot({ path: `${shots}/TC-CMT-016-mascot.png` }).catch(() => {});
     record('CMT-016', 'MANUAL', 'Mascot image captured for visual review only; no visual score asserted');
   } else {
     record('CMT-016', 'BLOCKED', 'No standalone mascot image element available for a safe small crop');

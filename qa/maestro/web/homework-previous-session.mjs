@@ -14,6 +14,8 @@ const className = `QA-Web-${suffix}-HW-Previous-Class`;
 const students = ['One', 'Two', 'Three'].map((part) => `QA-Web-${suffix}-${part}`);
 const title = `QA-Web-${suffix}-Reading`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
 const page = await context.newPage();
@@ -192,7 +194,7 @@ try {
     const blocked = message.startsWith('fixture_missing:');
     console.log(`${blocked ? 'BLOCKED' : 'FAIL'} homework previous session at ${phase}: ${message}`);
     await mkdir(out, { recursive: true });
-    await page.screenshot({ path: `${out}/homework-previous-session-failure.png` }).catch(() => {});
+    await page.screenshot({ path: `${shots}/homework-previous-session-failure.png` }).catch(() => {});
     await writeFile(`${out}/homework-previous-session-diagnostics.json`, JSON.stringify({ phase, currentUrl: safeUrl(page.url()), events: diagnostics }, null, 2));
     console.log(`DIAGNOSTICS events=${diagnostics.length} consoleErrors=${diagnostics.filter((item) => item.kind === 'console' && item.level === 'error').length} pageErrors=${diagnostics.filter((item) => item.kind === 'pageerror').length} httpErrors=${diagnostics.filter((item) => item.kind === 'http-error').length} failedRequests=${diagnostics.filter((item) => item.kind === 'requestfailed').length}`);
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');

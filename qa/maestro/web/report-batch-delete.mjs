@@ -8,6 +8,8 @@ const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.con
 }).filter(([key]) => key));
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const discovered = JSON.parse(await readFile(`${out}/report-fixture-discovery.json`, 'utf8'));
 const fixture = discovered.results.find((item) => item.reportAddEnabled && !item.hasBatch && item.className?.startsWith('QA-'));
 if (!fixture) throw new Error('No QA smoke class with an enabled report action was found in the UI discovery');
@@ -108,7 +110,7 @@ async function record(id, run) {
     const message = error instanceof Error ? error.message : 'unknown error';
     results.push({ id, passed: false, error: safeText(message) });
     console.log(`FAIL ${id}: ${safeText(message)}`);
-    await page.screenshot({ path: `${out}/${id}-failure.png`, fullPage: true }).catch(() => {});
+    await page.screenshot({ path: `${shots}/${id}-failure.png`, fullPage: true }).catch(() => {});
     return null;
   }
 }
@@ -196,7 +198,7 @@ try {
   results.push({ id: phase, passed: false, error: safeText(message) });
   console.log(`FAIL ${phase}: ${safeText(message)}`);
   if (!new URL(page.url()).pathname.endsWith('/dang-nhap')) {
-    await page.screenshot({ path: `${out}/report-batch-delete-setup-failure.png`, fullPage: true }).catch(() => {});
+    await page.screenshot({ path: `${shots}/report-batch-delete-setup-failure.png`, fullPage: true }).catch(() => {});
   }
 } finally {
   const report = { bundle: 'index-BhzpF4oY.js', className, fixtureStudentCount, reportUi, selectRangeCount, reportsUrl: reportsUrl ? pathOnly(reportsUrl) : '', results, diagnostics };

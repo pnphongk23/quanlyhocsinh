@@ -10,6 +10,8 @@ const credentials = Object.fromEntries((await readFile(`${process.env.HOME}/.con
 if (!credentials.phone || !credentials.password) throw new Error('Required smoke credential keys are missing');
 
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' });
 const page = await context.newPage();
@@ -51,7 +53,7 @@ try {
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await writeFile(`${out}/scores-page-smoke-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-scores-page-smoke" tests="1" failures="${blank ? 1 : 0}"><testcase classname="web" name="SMOKE-score-page">${blank ? `<failure message="${escaped}"/>` : ''}</testcase></testsuite>\n`);
   console.log(`SMOKE_SCORE_PAGE ${blank ? 'BLANK_OR_CRASH' : 'RENDERED'} path=${path}`);
-  if (blank) await page.screenshot({ path: `${out}/scores-page-smoke-failure.png` }).catch(() => {});
+  if (blank) await page.screenshot({ path: `${shots}/scores-page-smoke-failure.png` }).catch(() => {});
   if (blank) process.exitCode = 1;
 } catch (error) {
   const message = error instanceof Error ? error.message : 'unknown error';
@@ -60,7 +62,7 @@ try {
   await mkdir(out, { recursive: true });
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await writeFile(`${out}/scores-page-smoke-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-scores-page-smoke" tests="1" failures="${skipped ? 0 : 1}" skipped="${skipped ? 1 : 0}"><testcase classname="web" name="SMOKE-score-page">${skipped ? `<skipped message="${escaped}"/>` : `<failure message="${escaped}"/>`}</testcase></testsuite>\n`);
-  if (!skipped) await page.screenshot({ path: `${out}/scores-page-smoke-failure.png` }).catch(() => {});
+  if (!skipped) await page.screenshot({ path: `${shots}/scores-page-smoke-failure.png` }).catch(() => {});
   if (!skipped) process.exitCode = 1;
 } finally {
   await context.close();

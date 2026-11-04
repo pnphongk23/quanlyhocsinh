@@ -13,6 +13,8 @@ const suffix = randomBytes(3).toString('hex');
 const className = `QA-Web-${suffix}-HW-Class`;
 const homeworkTitle = `QA-Web-${suffix}-Vocabulary U1`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-25/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-25/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let phase = 'teacher login';
@@ -112,7 +114,7 @@ try {
   const alerts = await page.getByRole('alert').allTextContents().catch(() => []);
   if (alerts.length) console.log('FORM_ALERT', alerts.map((text) => text.trim()).filter(Boolean).join(' | '));
   const screenshot = phase === 'create today class' ? 'class-sunday-validation.png' : 'homework-today-failure.png';
-  await page.screenshot({ path: `${out}/${screenshot}` }).catch(() => {});
+  await page.screenshot({ path: `${shots}/${screenshot}` }).catch(() => {});
   await mkdir(out, { recursive: true });
   const escaped = message.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
   await writeFile(`${out}/p1-homework-kinds-delete-junit.xml`, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuite name="web-p1-homework-kinds-delete" tests="2" failures="1"><testcase classname="web" name="TC-HW-002"><failure message="${escaped}"/></testcase><testcase classname="web" name="TC-HW-005"><skipped message="blocked before delete check"/></testcase></testsuite>\n`);

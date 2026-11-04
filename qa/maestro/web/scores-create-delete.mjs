@@ -16,6 +16,8 @@ const studentName = `QA-Web-${suffix}-Scores-Student`;
 const defaultTestName = `QA-Web-${suffix}-No-Max`;
 const deleteTestName = `QA-Web-${suffix}-Delete-Unscored`;
 const out = 'plans/20261021-mvp/qa/runs/2026-10-24/web';
+const shots = `${process.env.QLH_EVIDENCE_DIR ?? '/tmp/qlh-evidence'}/20261021-mvp/qa/runs/2026-10-24/web`;
+await mkdir(shots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block', timezoneId: 'Asia/Ho_Chi_Minh' });
 const page = await context.newPage();
@@ -106,7 +108,7 @@ try {
   });
 } catch (error) {
   await mkdir(out, { recursive: true });
-  await page.screenshot({ path: `${out}/scores-create-delete-failure.png` }).catch(() => {});
+  await page.screenshot({ path: `${shots}/scores-create-delete-failure.png` }).catch(() => {});
   if (!results.length) results.push({ id: 'TC-TST-001', failure: error instanceof Error ? error.message : 'unknown error' });
   process.exitCode = 1;
 } finally {
