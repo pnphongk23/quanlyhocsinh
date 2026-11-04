@@ -123,16 +123,18 @@ enum SlipSheetText {
     static let defaultsButton = "Gán tất cả mặc định"
     static let defaultsConfirm = "Gán"
     static let defaultsCancel = "Quay lại"
-    static func defaultsTitle(count: Int) -> String { "Gán mặc định cho \(count) em có mặt?" }
-    static let defaultsBody = "Em vắng không được gán. Phiếu đã gửi không đổi."
+    static func defaultsTitle(count: Int) -> String {
+        String.localizedStringWithFormat(String(localized: "comments.defaults.title", table: "Teacher"), count)
+    }
+    static var defaultsBody: String { String(localized: "comments.defaults.body", table: "Teacher") }
     static let unsaved = "Chưa lưu"
     /// The student card line while the student has no slip: no stars, nothing to send yet.
     static let notCommented = "Chưa nhận xét"
-    /// The send-class dialog's note about students it leaves out because they have no slip.
     /// The send-class dialog's note about slips left out because their last save was refused.
     static func refusedSaveNote(count: Int) -> String {
-        "\(count) phiếu chưa lưu được nên không gửi. Mở phiếu và lưu lại trước khi gửi."
+        String.localizedStringWithFormat(String(localized: "comments.send.refusedNote", table: "Teacher"), count)
     }
+    /// The send-class dialog's note about students it leaves out because they have no slip.
     static func withoutSlipNote(names: String) -> String {
         "Chưa có phiếu nên không gửi: \(names). Mở phiếu của em để nhận xét rồi gửi riêng, hoặc gán mặc định."
     }

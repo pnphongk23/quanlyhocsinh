@@ -140,6 +140,27 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Vắng" } }
       }
     },
+    "comments.defaults.title" : {
+      "comment" : "Tiêu đề hộp thoại Gán tất cả mặc định. %lld là số em có mặt hoặc muộn sẽ được gán.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gán mặc định cho %lld em có mặt?" } }
+      }
+    },
+    "comments.defaults.body" : {
+      "comment" : "Nội dung hộp thoại Gán tất cả mặc định: em vắng không được gán, phiếu đã gửi không đổi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Em vắng không được gán. Phiếu đã gửi không đổi." } }
+      }
+    },
+    "comments.send.refusedNote" : {
+      "comment" : "Ghi chú trong hộp thoại gửi phiếu cả lớp về các phiếu bị giữ lại vì lần lưu cuối bị máy chủ từ chối. %lld là số phiếu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%lld phiếu chưa lưu được nên không gửi. Mở phiếu và lưu lại trước khi gửi." } }
+      }
+    },
     "comments.error.attendanceIncomplete" : {
       "comment" : "Máy chủ từ chối lưu hoặc gửi phiếu vì điểm danh của buổi chưa tới máy chủ; phiếu được giữ.",
       "extractionState" : "manual",
