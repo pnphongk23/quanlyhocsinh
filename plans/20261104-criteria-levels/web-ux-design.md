@@ -22,7 +22,9 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
   - Mỗi tiêu chí **một hàng**: tên bên trái (được xuống tối đa 2 dòng, không cắt chữ), 3 đầu gà bên phải.
     Không dùng segmented. Chạm đầu thứ N đặt mức N (1 = Cần cố gắng, 2 = Đạt, 3 = Tốt); đầu đã chọn dùng
     ảnh `mit-head-on`, đầu chưa chọn dùng `mit-head-off` (xám). Không có mức 0: chạm lại đầu đang chọn thì
-    giữ nguyên. Mỗi đầu là vùng chạm ≥ `--tap` (mobile) / `--tap-desktop` (desktop), ảnh `--level-chick-size`.
+    giữ nguyên. Mỗi đầu là vùng chạm ≥ `--tap` (44px) trên mọi thiết bị cảm ứng — kể cả iPad dùng bố cục
+    desktop ≥ 1024px; chỉ `@media (pointer: fine)` (chuột/bút) mới hạ xuống `--tap-desktop` (36px). Ảnh
+    `--level-chick-size`.
   - Hàng `homework` có nhãn phụ "Theo chấm BTVN" / "Buổi trước chưa có BTVN" (`--text-xs`, `--color-muted`)
     như hiện tại; chạm tay thì giữ lựa chọn tay.
 - Nhóm "Kiến thức hôm nay" chỉ hiện khi buổi có ít nhất một kỹ năng bật "Chấm riêng":
@@ -54,7 +56,8 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 ## 3. Danh sách em (tab Nhận xét)
 
 - Giữ hàng sao 5 sao; thêm dòng tóm tắt `--text-xs`, `--color-muted` "N mục cần cố gắng" chỉ khi N > 0
-  (đếm tiêu chí + kỹ năng đang bật ở mức Cần cố gắng). Không thêm badge/chi tiết khác.
+  (đếm tiêu chí + kỹ năng đang bật ở mức Cần cố gắng). **Không thêm icon đầu gà vào danh sách em**
+  (đầu gà chỉ ở phiếu, màn phụ huynh và tóm tắt báo cáo); không thêm badge/chi tiết khác.
 - Em chưa có phiếu: "Chưa nhận xét", không sao. Dòng BTVN buổi trước giữ nguyên.
 - Nhãn trạng thái phiếu ("Đã gửi"/"Chờ mạng"/"Chưa gửi") giữ nguyên chỗ, không đè tên (rules.md mục 5).
 
@@ -85,7 +88,7 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
   chip xuống nhiều dòng, sheet cuộn được,
   bàn phím mở không che segmented/ô nhận xét (ô nhập `--text-base` để iOS không zoom).
 - Desktop 1440: danh sách 400px + khung soạn co giãn (chế độ tiêu chí cũ: panel 380px sticky), hàng tiêu chí
-  một dòng, đủ 3 đầu gà với vùng chạm ≥ 36px; nút theo nội dung.
+  một dòng; vùng chạm 36px chỉ khi `(pointer: fine)`, còn cảm ứng ở 1440 vẫn ≥ 44px; nút theo nội dung.
 - Chữ dài: tên em, tên tiêu chí, nhận xét dài — xuống dòng, không cắt chữ, không đẩy segmented ra ngoài.
 - 0 kỹ năng (không có nhóm "Kiến thức hôm nay") và 2 kỹ năng (2 hàng).
 - Phiếu cũ đạt/chưa đạt và phiếu thang 3 sao: đọc đúng, không hiện segmented, không đổi số sao.

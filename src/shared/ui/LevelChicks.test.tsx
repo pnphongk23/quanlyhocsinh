@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { globalCss, mediaBlocks, readCss } from "../../test/cssMedia";
 import { LevelChicks } from "./LevelChicks";
 import { LevelChickMeter, levelChickCount } from "./LevelChickMeter";
 
@@ -83,6 +84,13 @@ describe("LevelChicks", () => {
       expect(view.container.querySelectorAll("img").length).toBeLessThanOrEqual(3);
       view.unmount();
     }
+  });
+
+  it("chỉ pointer: fine mới hạ vùng chạm xuống --tap-desktop; cảm ứng giữ --tap", () => {
+    const css = readCss("src/shared/ui/levelChicks.module.css");
+    expect(globalCss(css)).toMatch(/min-width:\s*var\(--tap\)/);
+    expect(globalCss(css)).not.toContain("--tap-desktop");
+    expect(mediaBlocks(css, "(pointer: fine)").join("\n")).toMatch(/min-width:\s*var\(--tap-desktop\)/);
   });
 
   it("vùng chạm và hover dùng token, hover chỉ trong @media (hover: hover)", () => {
