@@ -250,8 +250,10 @@
   font-size: var(--text-control);
   font-weight: 600;
 }
-.segment:hover:not(.segmentOn):not([aria-disabled="true"]) {
-  background: var(--state-hover-bg);
+@media (hover: hover) {
+  .segment:hover:not(.segmentOn):not([aria-disabled="true"]) {
+    background: var(--state-hover-bg);
+  }
 }
 .segment[aria-disabled="true"] {
   opacity: var(--state-disabled-opacity);
