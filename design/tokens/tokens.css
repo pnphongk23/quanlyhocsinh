@@ -107,8 +107,8 @@
   --criteria-check-size: 20px;
   --criteria-check-icon-size: 12px;
   --level-row-icon-size: 20px; /* icon tiêu chí/kỹ năng ở phiếu 3 mức */
-  --level-row-label-min: 9rem;   /* nhãn tiêu chí/kỹ năng trước khi segmented xuống dòng */
-  --level-row-control-min: 15rem; /* bề rộng tối thiểu của segmented 3 mức */
+  --level-row-label-min: 9rem;   /* nhãn tiêu chí/kỹ năng trước khi đầu gà xuống dòng */
+  --level-chick-size: 28px;      /* đầu gà trong phiếu; vùng chạm dùng --tap */
   --focus-ring-offset: 1px;
   --comment-star-size: 24px;
   --dialog-action-gap: 8px; /* khoảng giữa các nút xác nhận */
@@ -166,13 +166,6 @@
   --state-error-fg: var(--color-error);
   --state-pending-bg: var(--color-warning-soft);  /* đã lưu trên máy, chờ đồng bộ */
   --state-pending-fg: var(--color-warning);
-  /* Mức phiếu 3 mức: Tốt = success, Đạt = primary, Cần cố gắng = warning (không đỏ). */
-  --level-good-bg: var(--state-success-bg);
-  --level-good-fg: var(--state-success-fg);
-  --level-ok-bg: var(--state-selected-bg);
-  --level-ok-fg: var(--state-selected-fg);
-  --level-needs-work-bg: var(--state-pending-bg);
-  --level-needs-work-fg: var(--state-pending-fg);
   --card-success-bg: var(--color-success-soft);
   --card-success-border: var(--color-success);
   --card-success-fg: var(--color-success);

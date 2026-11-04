@@ -1,8 +1,6 @@
 import {
   CRITERION_KEYS,
   CRITERION_LABELS,
-  LEVELS,
-  LEVEL_LABELS,
   SKILL_KEYS,
   SKILL_LABELS,
   homeworkLevelFromGrades,
@@ -16,14 +14,8 @@ import {
 import type { HomeworkPreviousState } from "../../data/homework";
 import type { HomeworkGrade } from "../../data/types";
 import { Mascot, starPose } from "../../shared/ui/Mascot";
-import { LevelSegmented } from "../../shared/ui";
+import { LevelChicks } from "../../shared/ui";
 import s from "./SlipLevelFields.module.css";
-
-const OPTIONS = LEVELS.map((level) => ({
-  value: level,
-  label: LEVEL_LABELS[level],
-  tone: level === "good" ? "success" as const : level === "ok" ? "primary" as const : "warning" as const,
-}));
 
 /**
  * Phiếu 3 mức (thử nghiệm sau cờ): 5 hàng tiêu chí + nhóm "Kiến thức hôm nay",
@@ -108,8 +100,7 @@ export function SlipLevelFields({
                   </span>
                 )}
               </div>
-              <LevelSegmented
-                options={OPTIONS}
+              <LevelChicks
                 value={visible[key]}
                 onChange={(level) => onLevelChange(key, level)}
                 label={CRITERION_LABELS[key]}
@@ -125,10 +116,9 @@ export function SlipLevelFields({
           <h3 className={s.skillsTitle}>Kiến thức hôm nay</h3>
           <div className={s.rows}>
             {shownSkills.map((key) => (
-              <div key={key} className={`${s.row} ${s.skillRow}`} data-testid={`slip-skill-row-${key}`}>
+              <div key={key} className={s.row} data-testid={`slip-skill-row-${key}`}>
                 <span className={s.criterionName}>{SKILL_LABELS[key]}</span>
-                <LevelSegmented
-                  options={OPTIONS}
+                <LevelChicks
                   value={skillLevels[key] ?? "ok"}
                   onChange={(level) => onSkillChange(key, level)}
                   label={SKILL_LABELS[key]}

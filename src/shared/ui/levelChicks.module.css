@@ -1,0 +1,77 @@
+/* Đầu gà thay segmented 3 mức: chỉ token, vùng chạm tối thiểu --tap. */
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: none;
+}
+
+.tap {
+  display: grid;
+  place-items: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  cursor: pointer;
+}
+
+.tap:focus-visible {
+  outline: var(--state-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.tap:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  .tap:hover:not(:disabled) {
+    background: var(--state-hover-bg);
+  }
+}
+
+.tap:disabled {
+  opacity: var(--state-disabled-opacity);
+  cursor: default;
+}
+
+.head {
+  display: grid;
+  place-items: center;
+  width: var(--level-chick-size);
+  height: var(--level-chick-size);
+  flex: none;
+}
+
+.headSmall {
+  width: var(--level-row-icon-size);
+  height: var(--level-row-icon-size);
+}
+
+.head img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.meter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+
+.meterSmall {
+  gap: var(--space-2);
+}
+
+@media (min-width: 1024px) {
+  .tap {
+    min-width: var(--tap-desktop);
+    min-height: var(--tap-desktop);
+  }
+}
