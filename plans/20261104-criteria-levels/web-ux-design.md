@@ -114,5 +114,7 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 - **Ảnh đầu gà:** đã có bộ thật `mit-head-on|off[@2x|@3x].webp` (64/128/192px, trong suốt, dùng bản `off`
   riêng chứ không filter) ở `public/mascot/` và bản prototype; `srcset` chọn 1x/2x/3x, hiển thị
   `--level-chick-size` 28px.
+- **Hover ngoài phạm vi:** còn ~14 file `:hover` cũ ngoài comments/shared/ui/guardian chưa rà `@media (hover: hover)`
+  (ngoài phạm vi lần này).
 - **Timeline "Nhận xét của cô" (phụ huynh):** mới hiện câu + ghi chú như cũ; danh sách tiêu chí/mức và
   "Hôm nay học" mới có ở màn chi tiết buổi. Cần chốt có thêm bản rút gọn vào thẻ timeline hay không.
