@@ -15,6 +15,8 @@ ARTIFACT_DIR="/tmp/maestro-ios-auth-artifacts"
 maestro --udid "$IOS_SIMULATOR_UDID" test -e DEV_PHONE="$DEV_PHONE" -e DEV_PASSWORD="$DEV_PASSWORD" --format=JUNIT --output "$REPORT_FILE" --test-output-dir "$ARTIFACT_DIR" "$FLOW_FILE"
 ```
 
+Đích ảnh bằng chứng QA là cố định: `slip-sim/*.yaml` chụp vào `/tmp/qlh-evidence/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/` (hoặc theo `QLH_EVIDENCE_DIR` khi chạy script Node); ảnh/video không commit vào repo, báo cáo chỉ ghi đường dẫn.
+
 Không dùng `env`, `printenv` hoặc `set`; không echo biến, ghi credential vào file, hay đưa chúng vào log. Khi chạy lại, tối đa một lần submit đăng nhập cho mỗi tài khoản trong một lượt. Chỉ chạy simulator/Maestro khi lead xác nhận simulator đã được trả cho QA.
 
 ## Preflight (chỉ chạy khi được giao simulator)

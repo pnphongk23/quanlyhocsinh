@@ -293,7 +293,7 @@ Phạm vi: spec 51–63, 218 (cập nhật theo spec 2026-10-26, main 34bdf69: 5
   1. Mở phiếu HS-1; đọc nhãn dưới ô "Hoàn thành BTVN" và trạng thái tích.
   2. Mở phiếu HS-2, HS-3; đọc nhãn.
   3. Giáo viên bỏ tích tay tiêu chí BTVN của HS-1.
-- Kết quả mong đợi: HS-1: nhãn "Buổi trước chưa có BTVN" (không phải "Theo chấm BTVN"), tiêu chí mặc định tích. HS-2/HS-3: nhãn "Theo chấm BTVN". Bước 3 đổi được; app iOS đã thấy cùng trạng thái này trên màn thật (ảnh `plans/20261021-mvp/ios/ux-v3-mobile-fix/shots/qa-slip/42-homework-tab.png` hiện "Buổi trước không giao BTVN" ở tab BTVN).
+- Kết quả mong đợi: HS-1: nhãn "Buổi trước chưa có BTVN" (không phải "Theo chấm BTVN"), tiêu chí mặc định tích. HS-2/HS-3: nhãn "Theo chấm BTVN". Bước 3 đổi được; app iOS đã thấy cùng trạng thái này trên màn thật (hiện "Buổi trước không giao BTVN" ở tab BTVN; ảnh minh hoạ cũ đã gỡ khỏi repo).
 - Flow tự động: (chưa gán)
 
 ### TC-CMT-024 · Em chưa có phiếu: thẻ không hiện sao, ghi "Chưa nhận xét"; mở phiếu ra mặc định chưa lưu

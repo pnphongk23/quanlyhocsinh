@@ -138,7 +138,7 @@ async function screenshot(page, role, viewport, name) {
   await applyScreenshotRedaction(page);
   const file = `${role}-${viewport}-${safeSlug(name)}.png`;
   await page.screenshot({ path: path.join(shotsRoot, file), fullPage: true, animations: "disabled" });
-  return `shots/w8/${file}`;
+  return path.join(shotsRoot, file);
 }
 
 async function routeSnapshot(page, role, viewport, route, results, screenName = "screen") {

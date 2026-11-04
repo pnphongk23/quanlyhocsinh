@@ -110,11 +110,12 @@ async function open(vp, route) {
         const extra = await extraCheck(page, state);
         const editor = await state.editor.isVisible().catch(() => false);
         const passed = Boolean(error) && retained && editor && extra;
+        const shotPath = path.join(out, `F8-save-error-${name}-${vp.width}.png`);
         await page.screenshot({ path: path.join(out, `F8-save-error-${name}-${vp.width}.png`), fullPage: false }).catch(() => {});
-        results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: passed ? "PASS" : "FAIL", evidence: `visible error=${Boolean(error)}; editor=${editor}; value retained=${retained}; extra check=${extra}; screenshot=F8-save-error-${name}-${vp.width}.png` });
+        results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: passed ? "PASS" : "FAIL", evidence: `visible error=${Boolean(error)}; editor=${editor}; value retained=${retained}; extra check=${extra}; screenshot=${shotPath}` });
     } catch (error) {
       await page.screenshot({ path: path.join(out, `F8-save-error-${name}-${vp.width}.png`), fullPage: false }).catch(() => {});
-      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: "FAIL", evidence: `${String(error).split("\n")[0]}; screenshot=F8-save-error-${name}-${vp.width}.png` });
+      results.push({ target, viewport: `${vp.width}x${vp.height}`, item: `F8 ${name} storage error keeps editor/value`, result: "FAIL", evidence: `${String(error).split("\n")[0]}; screenshot=${path.join(out, `F8-save-error-${name}-${vp.width}.png`)}` });
     } finally { await context.close(); }
   }
 
