@@ -342,12 +342,14 @@ final class I4FeatureStore: ObservableObject {
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
     }
 
-    /// The message to show when the server refused one of these slip writes because attendance has not reached it
-    /// yet. The slip stays on the device and on screen, and a later save replaces the refused command with a new one.
+    /// The message to show when the server refused one of these slip writes: the attendance one when it has not reached
+    /// the server yet (the slip stays on the device and on screen, and a later save replaces the refused command with a
+    /// new one), the usual save failure for any other refusal. nil when none was refused.
     private func attendanceRefusal(forKeys keys: Set<String>) async -> String? {
         let queued = (try? await store?.queuedCommands()) ?? []
-        return queued.first { $0.state == "rejected" && keys.contains($0.command.recordKey) }
-            .flatMap { SlipServerError.message(for: $0.error) }
+        guard let refused = queued.first(where: { $0.state == "rejected" && keys.contains($0.command.recordKey) })
+        else { return nil }
+        return SlipServerError.message(for: refused.error) ?? String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc")
     }
 
     /// The slip row and the `slip.set` that save `grading` on top of the slip as currently loaded; nil when the
@@ -355,6 +357,12 @@ final class I4FeatureStore: ObservableObject {
     private func slipWrite(sessionID: String, student: Student, grading: SlipGrading,
                            note: String) -> (row: SessionSlip, command: PendingCommand)? {
         let old = slip(sessionID: sessionID, studentID: student.id)
+        // A slip the server never confirmed (a draft kept after a refusal) has no server row for a note-only
+        // command to land on, so it goes out whole.
+        var grading = grading
+        if case .noteOnly = grading, let old, old.version <= 0, let criteria = old.criteria {
+            grading = .criteria(criteria, comment: old.comment ?? SlipRules.sentence(for: old), hwManual: old.hwManual)
+        }
         var fields: [String: JSONValue] = [
             "session_id": .string(sessionID),
             "student_id": .string(student.id),
@@ -500,8 +508,14 @@ final class I4FeatureStore: ObservableObject {
         let chosen = studentIDs.filter { id in slip(sessionID: sessionID, studentID: id)?.status != .sent }
         guard !chosen.isEmpty else { return .failed(String(localized: "comments.send.nothing", table: "Teacher")) }
         let slipKeys = Set(chosen.map { key("slip", sessionID, $0) })
-        let waiting = (try? await store.pendingCommands()) ?? []
-        if waiting.contains(where: { slipKeys.contains($0.recordKey) }) { return failure }
+        // A slip the server refused for incomplete attendance stays queued as rejected; that does not hold a send
+        // back, the server answers it with the attendance message when attendance still has not reached it.
+        let waiting = (try? await store.queuedCommands()) ?? []
+        let blocked = waiting.contains { queued in
+            slipKeys.contains(queued.command.recordKey)
+                && !(queued.state == "rejected" && queued.error?.code == APIError.attendanceIncompleteCode)
+        }
+        if blocked { return failure }
 
         var fields: [String: JSONValue] = [
             "session_id": .string(sessionID),

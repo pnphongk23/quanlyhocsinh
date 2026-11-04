@@ -616,6 +616,62 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(failure, Self.attendanceMessage)
     }
 
+    func testReopeningARefusedNewSlipAndSavingItAgainSendsTheWholeSlip() async throws {
+        let api = SlipPushAPI(mode: .attendanceIncomplete)
+        let (store, data) = try await seededRoster(api: api)
+        let student = try XCTUnwrap(data.students.first { $0.id == "c" } ?? data.students.first)
+        let key = data.key("slip", "fresh", student.id)
+        let sentence = SlipRules.generatedSentence(criteria: 15)
+        _ = await data.saveSlip(sessionID: "fresh", student: student, grading: .criteria(15, comment: sentence), note: "Giữ")
+
+        // The sheet opens on the kept draft and nothing is touched, so it asks for a note-only save.
+        let failure = await data.saveSlip(sessionID: "fresh", student: student, grading: .noteOnly, note: "Giữ")
+
+        XCTAssertEqual(failure, Self.attendanceMessage)
+        let last = try XCTUnwrap(api.pushedPayloads.last)
+        XCTAssertEqual(last["criteria"] as? Int, 15, "a slip the server never had goes out whole")
+        XCTAssertEqual(last["comment"] as? String, sentence)
+        XCTAssertEqual(last["note"] as? String, "Giữ")
+        XCTAssertEqual(data.slip(sessionID: "fresh", studentID: student.id)?.criteria, 15)
+        let queued = try await store.queuedCommands().filter { $0.command.recordKey == key }
+        XCTAssertEqual(queued.map(\.state), ["rejected"], "the older refused command is replaced by the new one")
+    }
+
+    func testNoteOnlySaveOfASlipTheServerHasStaysNoteOnly() async throws {
+        let api = SlipPushAPI(mode: .sentAll)
+        let (_, data) = try await seededRoster(api: api)
+        let student = try XCTUnwrap(data.students.first { $0.id == "b" })
+
+        _ = await data.saveSlip(sessionID: "session", student: student, grading: .noteOnly, note: "Chỉ ghi chú")
+
+        let sent = try XCTUnwrap(api.pushedPayloads.last)
+        XCTAssertNil(sent["criteria"])
+        XCTAssertEqual(sent["note"] as? String, "Chỉ ghi chú")
+    }
+
+    func testASlipRefusedForAnotherReasonIsNotReportedAsSaved() async throws {
+        let (_, data) = try await seededRoster(api: SlipPushAPI(mode: .validationError))
+        let student = try XCTUnwrap(data.students.first { $0.id == "b" })
+
+        let failure = await data.saveSlip(sessionID: "session", student: student,
+                                          grading: .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)), note: "x")
+
+        XCTAssertEqual(failure, String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc"))
+    }
+
+    func testClassSendAfterARefusedSaveStillReachesTheServerAndSaysAttendanceIsNotThere() async throws {
+        let api = SlipPushAPI(mode: .attendanceIncomplete)
+        let (_, data) = try await seededRoster(api: api)
+        let student = try XCTUnwrap(data.students.first { $0.id == "b" })
+        _ = await data.saveSlip(sessionID: "session", student: student,
+                                grading: .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)), note: "Giữ")
+
+        let outcome = await data.sendSlips(sessionID: "session", studentIDs: ["b"])
+
+        XCTAssertEqual(outcome, .failed(Self.attendanceMessage))
+        XCTAssertTrue(api.pushedCommandTypes.contains("slip.send"), "the refused command does not hold the send back")
+    }
+
     func testAServerSkipForAnotherReasonStillCountsAsNotSent() async throws {
         let store = try await seededStore()
         let api = SlipPushAPI(mode: .sentOnlyA)
@@ -657,7 +713,7 @@ final class SendSlipsTests: XCTestCase {
 
 /// Answers the sync endpoints and one `slip.send` push; `pushedCommandTypes` shows what reached the wire.
 final class SlipPushAPI: APIClient, @unchecked Sendable {
-    enum Mode { case offline, pushFails, sentAll, slowSentAll, sentOnlyA, attendanceIncomplete }
+    enum Mode { case offline, pushFails, sentAll, slowSentAll, sentOnlyA, attendanceIncomplete, validationError }
 
     let baseURL = URL(string: "https://fixture.invalid/v1")!
     private let mode: Mode
@@ -665,8 +721,12 @@ final class SlipPushAPI: APIClient, @unchecked Sendable {
     private var types: [String] = []
     private var studentIDs: [String] = []
     private var defaults: [[String: Any]]?
+    private var payloads: [[String: Any]] = []
 
     init(mode: Mode) { self.mode = mode }
+
+    /// The payload of every pushed command, in order.
+    var pushedPayloads: [[String: Any]] { lock.lock(); defer { lock.unlock() }; return payloads }
 
     var pushedDefaults: [[String: Any]]? { lock.lock(); defer { lock.unlock() }; return defaults }
     var pushedStudentIDs: [String] { lock.lock(); defer { lock.unlock() }; return studentIDs }
@@ -688,10 +748,12 @@ final class SlipPushAPI: APIClient, @unchecked Sendable {
             lock.withLock {
                 studentIDs = payload?["student_ids"] as? [String] ?? []
                 defaults = payload?["defaults"] as? [[String: Any]]
+                payloads.append(contentsOf: commands.compactMap { $0["payload"] as? [String: Any] })
             }
-            if mode == .attendanceIncomplete {
+            if mode == .attendanceIncomplete || mode == .validationError {
+                let code = mode == .validationError ? "validation_error" : "attendance_incomplete"
                 let refused = commands.compactMap { $0["id"] as? String }.map {
-                    "{\"id\":\"\($0)\",\"status\":\"rejected\",\"error\":{\"code\":\"attendance_incomplete\",\"message\":\"Attendance is incomplete.\",\"request_id\":\"r1\",\"details\":{\"missing_count\":2}}}"
+                    "{\"id\":\"\($0)\",\"status\":\"rejected\",\"error\":{\"code\":\"\(code)\",\"message\":\"Attendance is incomplete.\",\"request_id\":\"r1\",\"details\":{\"missing_count\":2}}}"
                 }.joined(separator: ",")
                 let body = "{\"epoch\":1,\"cursor\":1,\"results\":[\(refused)]}"
                 return try WireJSON.decoder().decode(type, from: Data(body.utf8))
