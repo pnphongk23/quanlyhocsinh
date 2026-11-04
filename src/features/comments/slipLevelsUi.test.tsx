@@ -11,6 +11,7 @@ import { generatedSlipSentence } from "../../data/slip";
 import { LEVEL_LABELS } from "../../data/criteriaLevels";
 import CommentsPanel from "./CommentsPanel";
 import CommentTicketSheet from "./CommentTicketSheet";
+import { SlipLevelSkeleton } from "./LazySlipLevelFields";
 import TicketEditor from "./TicketEditor";
 import { SlipLevelFields } from "./SlipLevelFields";
 import { resetSessionDrafts } from "./draftStore";
@@ -69,6 +70,15 @@ function levelComment(patch: Partial<Comment> = {}): Comment {
     ...patch,
   } as Comment;
 }
+
+describe("khung giữ chỗ khi nạp phiếu 3 mức", () => {
+  it("5 hàng ~ chiều cao phiếu, ẩn với trình đọc màn hình", () => {
+    render(<SlipLevelSkeleton />);
+    const skeleton = screen.getByTestId("slip-level-skeleton");
+    expect(skeleton).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getAllByTestId("slip-level-skeleton-row")).toHaveLength(5);
+  });
+});
 
 describe("SlipLevelFields", () => {
   it("5 hàng tiêu chí, không có nhóm kỹ năng khi 0 kỹ năng, sao = số mức Tốt", () => {

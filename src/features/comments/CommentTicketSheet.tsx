@@ -25,7 +25,7 @@ import { composeComment, criteriaFromLevels, defaultLevels, defaultSkillLevels, 
 import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { useRejectedCommands } from "../../shared/SaveStatus";
 import { isFinalRejection, localOnlyRejectionMessage } from "../../data/rejectionMessages";
-import { LazySlipLevelFields } from "./LazySlipLevelFields";
+import { LazySlipLevelFields, SlipLevelSkeleton } from "./LazySlipLevelFields";
 
 export interface SheetHomeworkSection {
   id: string;
@@ -291,7 +291,7 @@ export default function CommentTicketSheet({
   const body = (
     <div className={s.sheetBody}>
       {levelMode ? (
-        <Suspense fallback={null}><LazySlipLevelFields
+        <Suspense fallback={<SlipLevelSkeleton />}><LazySlipLevelFields
           levels={levels}
           skillLevels={skillLevels}
           gradedSkills={gradedSkills}

@@ -21,7 +21,7 @@ import { composeComment, criteriaFromLevels, defaultLevels, defaultSkillLevels, 
 import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { useRejectedCommands } from "../../shared/SaveStatus";
 import { isFinalRejection, localOnlyRejectionMessage } from "../../data/rejectionMessages";
-import { LazySlipLevelFields } from "./LazySlipLevelFields";
+import { LazySlipLevelFields, SlipLevelSkeleton } from "./LazySlipLevelFields";
 
 function Star({ filled }: { filled: boolean }) {
   return (
@@ -300,7 +300,7 @@ export default function TicketEditor({
       </div>
 
       {levelMode ? (
-        <Suspense fallback={null}><LazySlipLevelFields
+        <Suspense fallback={<SlipLevelSkeleton />}><LazySlipLevelFields
           levels={levels}
           skillLevels={skillLevels}
           gradedSkills={gradedSkills}
