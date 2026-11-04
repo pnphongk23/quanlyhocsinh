@@ -201,6 +201,23 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertEqual(CommentsRules.sendable([blocked]).count, 0)
     }
 
+    func testTheSendDialogCountsTheSlipsHeldBackByARefusedSave() {
+        func held(_ id: String, attendance: AttendanceStatus = .present, sent: Bool = false, refused: Bool = true) -> I4TicketRow {
+            I4TicketRow(student: student(id, id), slip: row(id, id, stars: 5, sent: sent).slip, attendance: attendance,
+                        previousHomework: I4HomeworkSummary(total: 0, graded: 0), previousDate: nil,
+                        previousHadSections: false, hasUnappliedEdit: refused)
+        }
+        let rows = [held("a"), held("late", attendance: .late), held("absent", attendance: .absent),
+                    held("sent", sent: true), held("saved", refused: false)]
+
+        XCTAssertEqual(CommentsRules.refusedSave(rows).map(\.student.id), ["a", "late"])
+        XCTAssertEqual(CommentsRules.sendable(rows).map(\.student.id), ["saved"], "held-back slips are not in the count")
+        XCTAssertEqual(SlipSheetText.refusedSaveNote(count: 2),
+                       "2 phiếu chưa lưu được nên không gửi. Mở phiếu và lưu lại trước khi gửi.")
+        XCTAssertTrue(CommentsRules.refusedSave([held("a"), row("n", "n", stars: nil, sent: false, attendance: nil)]).isEmpty,
+                      "nothing is said while attendance is unfinished")
+    }
+
     func testCardHasNoStarsAndSaysNotCommentedWhenThereIsNoSlip() {
         let none = row("a", "An", stars: nil, sent: false, attendance: .present)
         XCTAssertNil(none.stars)

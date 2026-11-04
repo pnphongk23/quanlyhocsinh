@@ -325,7 +325,7 @@ struct SessionCommentsView: View {
     }
 
     private var absentPill: some View {
-        AppPill(title: String(localized: "comments.absent.label", table: "Teacher"), tone: .warning)
+        AppPill(title: String(localized: "comments.absent.label", table: "Teacher"), tone: .warningSoft)
     }
 
     /// Gửi phiếu cả lớp luôn ghim đáy màn, không cuộn theo danh sách.
@@ -408,6 +408,7 @@ struct SessionCommentsView: View {
         let sendableCount = CommentsRules.sendable(shownRows).count
         let ungraded = CommentsRules.ungradedNotice(shownRows)
         let skipped = CommentsRules.withoutSlip(shownRows.filter { !$0.isSent })
+        let blocked = CommentsRules.refusedSave(shownRows)
         let previousLabel = CommentsRules.previousLabel(date: rows.first?.previousDate)
         return I4Dialog(title: String.localizedStringWithFormat(String(localized: "feature.comments.gui.phieu.buoi"), sessionInline), content: {
             VStack(alignment: .leading, spacing: 12) {
@@ -426,6 +427,10 @@ struct SessionCommentsView: View {
                   Text(LocalizedStringKey(SlipSheetText.sendDialogNote(homeworkSuffix: homeworkSuffix)))
                     .appText(AppTextStyle(size: 15, weight: .regular, lineHeight: 22.5))
                     .foregroundStyle(AppColors.muted)
+                if !blocked.isEmpty {
+                    warningText(SlipSheetText.refusedSaveNote(count: blocked.count))
+                        .accessibilityIdentifier("comment.sendClass.refusedNote")
+                }
                 if !skipped.isEmpty {
                     warningText(SlipSheetText.withoutSlipNote(names: skipped.map(\.student.name).joined(separator: ", ")))
                 }

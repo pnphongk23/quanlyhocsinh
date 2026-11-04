@@ -96,6 +96,13 @@ enum CommentsRules {
         return rows.filter { !$0.isSent && $0.slip != nil && $0.isAttending && !$0.hasUnappliedEdit }
     }
 
+    /// Slips the class send holds back only because their last save was refused: unsent, with a slip, present or late.
+    /// The send dialog says so, and they are not in the number on the button.
+    static func refusedSave(_ rows: [I4TicketRow]) -> [I4TicketRow] {
+        guard isAttendanceComplete(rows) else { return [] }
+        return rows.filter { !$0.isSent && $0.slip != nil && $0.isAttending && $0.hasUnappliedEdit }
+    }
+
     struct DefaultSlip: Equatable {
         let studentID: String
         let criteria: Int

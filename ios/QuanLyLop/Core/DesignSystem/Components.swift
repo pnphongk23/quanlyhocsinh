@@ -252,7 +252,8 @@ struct AppChip: View {
 
 /// `.pill` with the five tones of `src/shared/ui/Pill.tsx`.
 struct AppPill: View {
-    enum Tone: Sendable { case neutral, success, warning, error, primary }
+    /// `warningSoft` is the light amber label (`--card-pending-*`), for a mark that sits in a list row.
+    enum Tone: Sendable { case neutral, success, warning, warningSoft, error, primary }
 
     let title: String
     var tone: Tone = .neutral
@@ -273,6 +274,7 @@ struct AppPill: View {
         case .neutral: AppColors.muted
         case .success: AppState.successFg
         case .warning: AppState.pendingFg
+        case .warningSoft: AppState.cardPendingFg
         case .error: AppState.errorFg
         case .primary: AppColors.primaryInk
         }
@@ -282,6 +284,7 @@ struct AppPill: View {
         case .neutral: AppColors.neutralSoft
         case .success: AppState.successBg
         case .warning: AppState.pendingBg
+        case .warningSoft: AppState.cardPendingBg
         case .error: AppState.errorBg
         case .primary: AppColors.primarySoft
         }

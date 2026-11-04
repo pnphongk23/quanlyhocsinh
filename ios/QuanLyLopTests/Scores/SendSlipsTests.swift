@@ -689,6 +689,32 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertFalse(api.pushedCommandTypes.contains("slip.send"))
     }
 
+    func testAClassSendHeldBackByMixedRefusalCodesAsksToSaveAgain() async throws {
+        let (api, data, _) = try await refusedDraft(mode: .setRefusedSendApplied)
+        api.use(.setInvalidSendApplied)
+        let other = try XCTUnwrap(data.students.first { $0.id == "a" })
+        _ = await data.saveSlip(sessionID: "session", student: other,
+                                grading: .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)), note: "x")
+
+        let outcome = await data.sendSlips(sessionID: "session", studentIDs: ["a", "b"])
+
+        XCTAssertEqual(outcome, .failed("Cần lưu lại phiếu trước khi gửi."))
+        XCTAssertFalse(api.pushedCommandTypes.contains("slip.send"))
+    }
+
+    func testAClassSendWithASlipStillWaitingInTheOutboxFailsGenericallyAndSendsNothing() async throws {
+        let api = SlipPushAPI(mode: .pushFails)
+        let (_, data) = try await seededRoster(api: api)
+        let student = try XCTUnwrap(data.students.first { $0.id == "b" })
+        _ = await data.saveSlip(sessionID: "session", student: student,
+                                grading: .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)), note: "x")
+
+        let outcome = await data.sendSlips(sessionID: "session", studentIDs: ["b"])
+
+        XCTAssertEqual(outcome, .failed(String(localized: "comments.send.failed", table: "Teacher")))
+        XCTAssertFalse(api.pushedCommandTypes.contains("slip.send"))
+    }
+
     func testSavingARefusedSlipAgainFreesItForTheSend() async throws {
         let (api, data, student) = try await refusedDraft(mode: .setRefusedSendApplied)
         api.use(.sentAll)

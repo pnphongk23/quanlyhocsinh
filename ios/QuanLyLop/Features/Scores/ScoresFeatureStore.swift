@@ -524,8 +524,8 @@ final class I4FeatureStore: ObservableObject {
         if waiting.contains(where: { $0.state != "rejected" }) { return failure }
         if !waiting.isEmpty {
             let attendanceOnly = waiting.allSatisfy { $0.error?.code == APIError.attendanceIncompleteCode }
-            return .failed(attendanceOnly ? SlipServerError.message(for: waiting.first?.error) ?? ""
-                                          : String(localized: "comments.send.needsResave", table: "Teacher"))
+            let message = attendanceOnly ? SlipServerError.message(for: waiting.first?.error) : nil
+            return .failed(message ?? String(localized: "comments.send.needsResave", table: "Teacher"))
         }
 
         var fields: [String: JSONValue] = [

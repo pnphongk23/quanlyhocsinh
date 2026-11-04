@@ -129,6 +129,10 @@ enum SlipSheetText {
     /// The student card line while the student has no slip: no stars, nothing to send yet.
     static let notCommented = "Chưa nhận xét"
     /// The send-class dialog's note about students it leaves out because they have no slip.
+    /// The send-class dialog's note about slips left out because their last save was refused.
+    static func refusedSaveNote(count: Int) -> String {
+        "\(count) phiếu chưa lưu được nên không gửi. Mở phiếu và lưu lại trước khi gửi."
+    }
     static func withoutSlipNote(names: String) -> String {
         "Chưa có phiếu nên không gửi: \(names). Mở phiếu của em để nhận xét rồi gửi riêng, hoặc gán mặc định."
     }
