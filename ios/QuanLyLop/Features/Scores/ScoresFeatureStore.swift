@@ -12,6 +12,8 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var tests: [TestDefinition] = []
     @Published private(set) var scores: [Score] = []
     @Published private(set) var slips: [SessionSlip] = []
+    /// Record keys of slips whose last save the server refused: what the teacher sees is a draft on this device only.
+    @Published private(set) var unappliedSlipKeys: Set<String> = []
     @Published private(set) var sections: [HomeworkSection] = []
     @Published private(set) var grades: [HomeworkGrade] = []
     @Published private(set) var publications: [ReportPublication] = []
@@ -114,6 +116,8 @@ final class I4FeatureStore: ObservableObject {
             let testIds = Set(tests.map(\.id))
             scores = try await store.records(Score.self, entity: "score").filter { !restricted || testIds.contains($0.testId) }
             slips = try await store.records(SessionSlip.self, entity: "slip").filter { !restricted || sessionIds.contains($0.sessionId) }
+            unappliedSlipKeys = Set(try await store.queuedCommands()
+                .filter { $0.state == "rejected" && $0.command.kind == "slip.set" }.map(\.command.recordKey))
             sections = try await store.records(HomeworkSection.self, entity: "homework_section").filter { seen($0.classId) }
             grades = try await store.records(HomeworkGrade.self, entity: "homework_grade").filter { !restricted || studentIds.contains($0.studentId) }
             publications = try await store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication").values.filter { seen($0.classId) }
@@ -126,6 +130,11 @@ final class I4FeatureStore: ObservableObject {
     }
 
     // MARK: - Reads
+
+    /// The slip's last save was refused, so the server still holds an older version (or none) than the one shown.
+    func hasUnappliedSlip(sessionID: String, studentID: String) -> Bool {
+        unappliedSlipKeys.contains(key("slip", sessionID, studentID))
+    }
 
     func tests(in classID: String) -> [TestDefinition] {
         tests.filter { $0.classId == classID && !$0.archived }.sorted { $0.date > $1.date }
@@ -508,14 +517,16 @@ final class I4FeatureStore: ObservableObject {
         let chosen = studentIDs.filter { id in slip(sessionID: sessionID, studentID: id)?.status != .sent }
         guard !chosen.isEmpty else { return .failed(String(localized: "comments.send.nothing", table: "Teacher")) }
         let slipKeys = Set(chosen.map { key("slip", sessionID, $0) })
-        // A slip the server refused for incomplete attendance stays queued as rejected; that does not hold a send
-        // back, the server answers it with the attendance message when attendance still has not reached it.
-        let waiting = (try? await store.queuedCommands()) ?? []
-        let blocked = waiting.contains { queued in
-            slipKeys.contains(queued.command.recordKey)
-                && !(queued.state == "rejected" && queued.error?.code == APIError.attendanceIncompleteCode)
+        // A slip still queued is not what the server holds, and sending it would hand parents the older version. One
+        // the server refused stays queued as rejected until it is saved again, so it holds the send back too, with the
+        // reason: attendance not there yet, or a save to redo.
+        let waiting = ((try? await store.queuedCommands()) ?? []).filter { slipKeys.contains($0.command.recordKey) }
+        if waiting.contains(where: { $0.state != "rejected" }) { return failure }
+        if !waiting.isEmpty {
+            let attendanceOnly = waiting.allSatisfy { $0.error?.code == APIError.attendanceIncompleteCode }
+            return .failed(attendanceOnly ? SlipServerError.message(for: waiting.first?.error) ?? ""
+                                          : String(localized: "comments.send.needsResave", table: "Teacher"))
         }
-        if blocked { return failure }
 
         var fields: [String: JSONValue] = [
             "session_id": .string(sessionID),

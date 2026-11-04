@@ -70,6 +70,13 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tuỳ chọn chấm cả lớp" } }
       }
     },
+    "comments.send.needsResave" : {
+      "comment" : "Gửi phiếu cả lớp bị chặn vì phiếu có bản lưu bị máy chủ từ chối; lưu lại phiếu trước.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cần lưu lại phiếu trước khi gửi." } }
+      }
+    },
     "comments.send.failed" : {
       "comment" : "Lỗi khi gửi phiếu cả lớp không được máy chủ xác nhận.",
       "extractionState" : "manual",

@@ -659,17 +659,46 @@ final class SendSlipsTests: XCTestCase {
         XCTAssertEqual(failure, String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc"))
     }
 
-    func testClassSendAfterARefusedSaveStillReachesTheServerAndSaysAttendanceIsNotThere() async throws {
-        let api = SlipPushAPI(mode: .attendanceIncomplete)
+    private func refusedDraft(mode: SlipPushAPI.Mode) async throws -> (api: SlipPushAPI, data: I4FeatureStore, student: Student) {
+        let api = SlipPushAPI(mode: mode)
         let (_, data) = try await seededRoster(api: api)
         let student = try XCTUnwrap(data.students.first { $0.id == "b" })
         _ = await data.saveSlip(sessionID: "session", student: student,
-                                grading: .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)), note: "Giữ")
+                                grading: .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)), note: "Mới")
+        XCTAssertTrue(data.hasUnappliedSlip(sessionID: "session", studentID: "b"))
+        return (api, data, student)
+    }
+
+    func testAClassSendNeverCarriesASlipWhoseDraftTheServerRefused() async throws {
+        // Attendance is complete on the server by now, so a send would be applied: it must not go out at all.
+        let (api, data, _) = try await refusedDraft(mode: .setRefusedSendApplied)
 
         let outcome = await data.sendSlips(sessionID: "session", studentIDs: ["b"])
 
         XCTAssertEqual(outcome, .failed(Self.attendanceMessage))
-        XCTAssertTrue(api.pushedCommandTypes.contains("slip.send"), "the refused command does not hold the send back")
+        XCTAssertFalse(api.pushedCommandTypes.contains("slip.send"), "the older server version is never sent")
+        XCTAssertEqual(data.slip(sessionID: "session", studentID: "b")?.status, .draft)
+    }
+
+    func testAClassSendBlockedByAnotherRefusalAsksToSaveTheSlipAgain() async throws {
+        let (api, data, _) = try await refusedDraft(mode: .setInvalidSendApplied)
+
+        let outcome = await data.sendSlips(sessionID: "session", studentIDs: ["b"])
+
+        XCTAssertEqual(outcome, .failed("Cần lưu lại phiếu trước khi gửi."))
+        XCTAssertFalse(api.pushedCommandTypes.contains("slip.send"))
+    }
+
+    func testSavingARefusedSlipAgainFreesItForTheSend() async throws {
+        let (api, data, student) = try await refusedDraft(mode: .setRefusedSendApplied)
+        api.use(.sentAll)
+
+        _ = await data.saveSlip(sessionID: "session", student: student,
+                                grading: .criteria(15, comment: SlipRules.generatedSentence(criteria: 15)), note: "Mới")
+        let outcome = await data.sendSlips(sessionID: "session", studentIDs: ["b"])
+
+        XCTAssertFalse(data.hasUnappliedSlip(sessionID: "session", studentID: "b"))
+        XCTAssertEqual(outcome, .sent(1))
     }
 
     func testAServerSkipForAnotherReasonStillCountsAsNotSent() async throws {
@@ -713,17 +742,23 @@ final class SendSlipsTests: XCTestCase {
 
 /// Answers the sync endpoints and one `slip.send` push; `pushedCommandTypes` shows what reached the wire.
 final class SlipPushAPI: APIClient, @unchecked Sendable {
-    enum Mode { case offline, pushFails, sentAll, slowSentAll, sentOnlyA, attendanceIncomplete, validationError }
+    enum Mode { case offline, pushFails, sentAll, slowSentAll, sentOnlyA, attendanceIncomplete, validationError,
+              /// `slip.set` is refused and `slip.send` applied: the server would send whatever it stores.
+              setRefusedSendApplied, setInvalidSendApplied }
 
     let baseURL = URL(string: "https://fixture.invalid/v1")!
-    private let mode: Mode
+    private var currentMode: Mode
     private let lock = NSLock()
     private var types: [String] = []
     private var studentIDs: [String] = []
     private var defaults: [[String: Any]]?
     private var payloads: [[String: Any]] = []
 
-    init(mode: Mode) { self.mode = mode }
+    init(mode: Mode) { currentMode = mode }
+
+    private var mode: Mode { lock.lock(); defer { lock.unlock() }; return currentMode }
+    /// Changes how the server answers from now on.
+    func use(_ mode: Mode) { lock.withLock { currentMode = mode } }
 
     /// The payload of every pushed command, in order.
     var pushedPayloads: [[String: Any]] { lock.lock(); defer { lock.unlock() }; return payloads }
@@ -750,13 +785,26 @@ final class SlipPushAPI: APIClient, @unchecked Sendable {
                 defaults = payload?["defaults"] as? [[String: Any]]
                 payloads.append(contentsOf: commands.compactMap { $0["payload"] as? [String: Any] })
             }
-            if mode == .attendanceIncomplete || mode == .validationError {
+            func refusal(_ id: String, _ code: String) -> String {
+                "{\"id\":\"\(id)\",\"status\":\"rejected\",\"error\":{\"code\":\"\(code)\",\"message\":\"Refused.\",\"request_id\":\"r1\",\"details\":{\"missing_count\":2}}}"
+            }
+            switch mode {
+            case .attendanceIncomplete, .validationError:
                 let code = mode == .validationError ? "validation_error" : "attendance_incomplete"
-                let refused = commands.compactMap { $0["id"] as? String }.map {
-                    "{\"id\":\"\($0)\",\"status\":\"rejected\",\"error\":{\"code\":\"\(code)\",\"message\":\"Attendance is incomplete.\",\"request_id\":\"r1\",\"details\":{\"missing_count\":2}}}"
-                }.joined(separator: ",")
+                let refused = commands.compactMap { $0["id"] as? String }.map { refusal($0, code) }.joined(separator: ",")
                 let body = "{\"epoch\":1,\"cursor\":1,\"results\":[\(refused)]}"
                 return try WireJSON.decoder().decode(type, from: Data(body.utf8))
+            case .setRefusedSendApplied, .setInvalidSendApplied:
+                let code = mode == .setInvalidSendApplied ? "validation_error" : "attendance_incomplete"
+                let results = commands.map { command -> String in
+                    let id = command["id"] as? String ?? ""
+                    return command["type"] as? String == "slip.set"
+                        ? refusal(id, code)
+                        : "{\"id\":\"\(id)\",\"status\":\"applied\",\"sent\":[\"a\",\"b\"],\"skipped\":[]}"
+                }.joined(separator: ",")
+                let body = "{\"epoch\":1,\"cursor\":1,\"results\":[\(results)]}"
+                return try WireJSON.decoder().decode(type, from: Data(body.utf8))
+            default: break
             }
             let sent: String
             let skipped: String

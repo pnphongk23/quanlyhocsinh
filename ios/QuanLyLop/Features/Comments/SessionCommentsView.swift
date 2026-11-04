@@ -58,7 +58,8 @@ struct SessionCommentsView: View {
                 previousHomework: HomeworkRules.summary(sections: sections, grades: data.grades,
                                                         studentID: student.id),
                 previousDate: previous?.date,
-                previousHadSections: previous != nil
+                previousHadSections: previous != nil,
+                hasUnappliedEdit: data.hasUnappliedSlip(sessionID: sessionID, studentID: student.id)
             )
         }
     }

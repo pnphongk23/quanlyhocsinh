@@ -190,6 +190,17 @@ final class CommentsRulesTests: XCTestCase {
         XCTAssertEqual(CommentsRules.withoutSlip(rows).map(\.student.id), ["present", "late"])
     }
 
+    func testASlipWhoseLastSaveWasRefusedIsNotInTheClassSendOrItsCount() {
+        let blocked = I4TicketRow(student: student("blocked", "Giang"),
+                                  slip: row("blocked", "Giang", stars: 5, sent: false).slip, attendance: .present,
+                                  previousHomework: I4HomeworkSummary(total: 0, graded: 0), previousDate: nil,
+                                  previousHadSections: false, hasUnappliedEdit: true)
+        let rows = [row("ok", "An", stars: 5, sent: false), blocked]
+
+        XCTAssertEqual(CommentsRules.sendable(rows).map(\.student.id), ["ok"], "the number on the button follows")
+        XCTAssertEqual(CommentsRules.sendable([blocked]).count, 0)
+    }
+
     func testCardHasNoStarsAndSaysNotCommentedWhenThereIsNoSlip() {
         let none = row("a", "An", stars: nil, sent: false, attendance: .present)
         XCTAssertNil(none.stars)

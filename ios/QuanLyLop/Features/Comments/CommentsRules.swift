@@ -23,8 +23,13 @@ struct I4TicketRow: Identifiable {
     /// Whether the session before this one had homework sections at all.
     let previousHadSections: Bool
 
+    /// The slip's last save was refused: the server holds an older version, so a send would hand parents that one.
+    let hasUnappliedEdit: Bool
+
     init(student: Student, slip: SessionSlip?, attendance: AttendanceStatus? = nil,
-         previousHomework: I4HomeworkSummary, previousDate: String?, previousHadSections: Bool) {
+         previousHomework: I4HomeworkSummary, previousDate: String?, previousHadSections: Bool,
+         hasUnappliedEdit: Bool = false) {
+        self.hasUnappliedEdit = hasUnappliedEdit
         self.student = student; self.slip = slip; self.attendance = attendance
         self.previousHomework = previousHomework; self.previousDate = previousDate
         self.previousHadSections = previousHadSections
@@ -83,11 +88,12 @@ enum CommentsRules {
     }
 
     /// What "Gửi phiếu cả lớp" sends: the unsent slips of students marked Có mặt or Muộn. An absent student is left
-    /// out even with a slip (it can still be sent on its own); a student with no slip has nothing to send. Nothing
-    /// is sent while attendance is unfinished.
+    /// out even with a slip (it can still be sent on its own); a student with no slip has nothing to send; a slip whose
+    /// last save the server refused is left out too, as the send would carry the older version. Nothing is sent
+    /// while attendance is unfinished.
     static func sendable(_ rows: [I4TicketRow]) -> [I4TicketRow] {
         guard isAttendanceComplete(rows) else { return [] }
-        return rows.filter { !$0.isSent && $0.slip != nil && $0.isAttending }
+        return rows.filter { !$0.isSent && $0.slip != nil && $0.isAttending && !$0.hasUnappliedEdit }
     }
 
     struct DefaultSlip: Equatable {
