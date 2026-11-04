@@ -205,7 +205,7 @@ describe("sheet phiếu 3 mức", () => {
   it("phiếu mới hiện 5 hàng mức (không còn ô chọn cũ), đổi mức sinh lại câu và giữ ghi chú", async () => {
     const { row, session, homework } = setup();
     render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
-    expect(screen.getByTestId("slip-star-panel")).toBeInTheDocument();
+    expect(await screen.findByTestId("slip-star-panel")).toBeInTheDocument();
     expect(screen.getByText("4/5 sao")).toBeInTheDocument();
     expect(screen.getByTestId("slip-level-row-focus")).toBeInTheDocument();
     expect(screen.queryByTestId("slip-criterion-0")).toBeNull();
