@@ -55,6 +55,7 @@ const SAMPLE_PATHS = [
   "/fonts/plus-jakarta-sans-latin.woff2",
   "/mascot/mit-main.webp",
   "/mascot/mit-sao-2@2x.webp",
+  "/mascot/mit-head-on@3x.webp",
   "/privacy",
 ];
 
