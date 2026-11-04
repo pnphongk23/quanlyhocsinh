@@ -55,7 +55,12 @@
   cursor: pointer;
 }
 
-.moreButton:hover,
+@media (hover: hover) {
+.moreButton:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+}
 .moreButton:focus-visible {
   background: var(--color-bg);
   color: var(--color-text);

@@ -77,7 +77,10 @@ describe("PH · phiếu 3 mức ở màn buổi học", () => {
     const criteria = host.querySelector('[data-testid="guardian-criteria"]')!;
     expect(criteria.textContent).toContain("Học tập trung");
     expect(criteria.textContent).toContain("Tích cực tham gia");
-    expect(criteria.querySelector('[role="img"][aria-label="Đạt, 2 trên 3"]')).not.toBeNull();
+    const meter = criteria.querySelector('[role="img"][aria-label="Đạt, 2 trên 3"]')!;
+    expect(meter).not.toBeNull();
+    expect(meter.querySelectorAll("img")).toHaveLength(3);
+    expect(meter.querySelectorAll('img[src*="mit-head-off"]')).toHaveLength(1);
     expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Nói");
     expect(host.querySelector('[data-testid="guardian-skill-speaking"] [role="img"]')?.getAttribute("aria-label")).toBe("Cần cố gắng, 1 trên 3");
     // Phiếu 3 mức: câu tự sinh + phần gõ thêm là MỘT đoạn, không có khung "Ghi chú" riêng.

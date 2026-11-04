@@ -28,21 +28,26 @@ export function ChickHead({ filled, small = false }: { filled: boolean; small?: 
   );
 }
 
-/** Chỉ xem: hiện N đầu gà của mức đang có, nhãn "Tốt, 3 trên 3" (hoặc nhãn rút gọn cho báo cáo). */
-export function LevelChickMeter({ level, small = true, ariaLabel, decorative = false }: {
+/** Chỉ xem: mặc định đủ 3 đầu (N đầu đầy + đầu trống) để cột mức thẳng hàng; showEmpty=false chỉ N đầu đầy. Nhãn "Tốt, 3 trên 3". */
+export function LevelChickMeter({ level, small = true, ariaLabel, decorative = false, showEmpty = true }: {
   level: Level;
   small?: boolean;
   ariaLabel?: string;
   decorative?: boolean;
+  /** true: luôn đủ 3 đầu (đầy + trống) để cột mức thẳng hàng; false: chỉ N đầu đầy. */
+  showEmpty?: boolean;
 }) {
   const count = levelChickCount(level);
+  const heads = showEmpty
+    ? Array.from({ length: 3 }, (_, index) => <ChickHead key={index} filled={index < count} small={small} />)
+    : Array.from({ length: count }, (_, index) => <ChickHead key={index} filled small={small} />);
   return (
     <span
       className={small ? `${s.meter} ${s.meterSmall}` : s.meter}
       {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": ariaLabel ?? `${LEVEL_LABELS[level]}, ${count} trên 3` })}
       data-level={level}
     >
-      {Array.from({ length: count }, (_, index) => <ChickHead key={index} filled small={small} />)}
+      {heads}
     </span>
   );
 }

@@ -74,7 +74,11 @@
   touch-action: none;
 }
 
-.resizer:hover,
+@media (hover: hover) {
+.resizer:hover {
+  background: var(--state-hover-bg);
+}
+}
 .resizer:active {
   background: var(--state-hover-bg);
 }

@@ -97,7 +97,11 @@
   text-align: left;
 }
 
-.menuItem:hover,
+@media (hover: hover) {
+.menuItem:hover {
+  background: var(--color-bg);
+}
+}
 .menuItem:focus-visible {
   background: var(--color-bg);
 }

@@ -131,8 +131,10 @@
   color: var(--color-muted);
   cursor: pointer;
 }
+@media (hover: hover) {
 .eye:hover {
   background: var(--color-neutral-soft);
+}
 }
 .readOnlyTag {
   display: flex;
@@ -206,8 +208,10 @@
   font-family: inherit;
   cursor: pointer;
 }
+@media (hover: hover) {
 .submit:hover:not(:disabled) {
   background: var(--color-primary-ink);
+}
 }
 .submit:disabled {
   background: var(--color-input-border);
@@ -239,8 +243,10 @@
   font-weight: 700;
   text-decoration: none;
 }
+@media (hover: hover) {
 .forgotLink:hover {
   text-decoration: underline;
+}
 }
 
 /* --------------------------------------------------------- khối dưới biểu mẫu */
@@ -266,8 +272,10 @@
   font-weight: 700;
   text-decoration: none;
 }
+@media (hover: hover) {
 .registerLink:hover {
   text-decoration: underline;
+}
 }
 .hintCard {
   padding: 14px 16px;
@@ -370,8 +378,10 @@
   cursor: pointer;
   box-shadow: 0 1px 2px rgb(20 24 31 / 0.04);
 }
+@media (hover: hover) {
 .backButton:hover {
   background: var(--color-neutral-soft);
+}
 }
 .backLink {
   display: none;
@@ -383,8 +393,10 @@
   font-weight: 700;
   text-decoration: none;
 }
+@media (hover: hover) {
 .backLink:hover {
   text-decoration: underline;
+}
 }
 .backRow {
   margin-bottom: 20px;
@@ -444,8 +456,10 @@
   cursor: pointer;
   font-family: inherit;
 }
+@media (hover: hover) {
 .roleCard:hover {
   background: var(--color-neutral-soft);
+}
 }
 .roleAvatar {
   width: 52px;

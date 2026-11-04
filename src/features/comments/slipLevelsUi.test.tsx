@@ -256,6 +256,23 @@ describe("sheet phiếu 3 mức", () => {
     expect(save.mock.calls.at(-1)![0]).toMatchObject({ note: "Ghi chú mới", comment: "Câu cô sửa tay" });
   });
 
+  it("0 kỹ năng: sheet không có tiêu đề Kiến thức hôm nay", () => {
+    const { row, session, homework } = setup(levelComment(), { gradedSkills: [] });
+    render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+    expect(screen.queryByText("Kiến thức hôm nay")).toBeNull();
+  });
+
+  it("2 kỹ năng: tiêu đề + đúng 2 hàng ngay dưới trong sheet", () => {
+    const { row, session, homework } = setup(levelComment(), { gradedSkills: ["speaking", "reading"] });
+    render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+    const heading = screen.getByText("Kiến thức hôm nay");
+    expect(heading).toBeInTheDocument();
+    const rows = screen.getAllByTestId(/^slip-skill-row-/);
+    expect(rows.map((row) => row.getAttribute("data-testid"))).toEqual(["slip-skill-row-speaking", "slip-skill-row-reading"]);
+    expect(heading.parentElement).toContainElement(rows[0]);
+    expect(heading.parentElement).toContainElement(rows[1]);
+  });
+
   it("phiếu đã gửi không tự thêm dòng kỹ năng khi buổi vừa bật Chấm riêng", () => {
     const comment = levelComment({ status: "sent", sentAt: "2026-10-26T00:00:00.000Z", skillLevels: {} });
     const { row, session, homework } = setup(comment, { gradedSkills: ["speaking", "reading"] });

@@ -192,7 +192,12 @@
   color: var(--color-muted);
   cursor: pointer;
 }
-.moreButton:hover,
+@media (hover: hover) {
+.moreButton:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+}
 .moreButton:focus-visible {
   background: var(--color-bg);
   color: var(--color-text);
@@ -537,7 +542,11 @@
   color: inherit;
   text-decoration: none;
 }
-.cellLink:hover,
+@media (hover: hover) {
+.cellLink:hover {
+  background: var(--color-bg);
+}
+}
 .cellLink:focus-visible {
   background: var(--color-bg);
 }

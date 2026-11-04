@@ -78,11 +78,16 @@ describe("LevelChicks", () => {
     expect([levelChickCount("needs_work"), levelChickCount("ok"), levelChickCount("good")]).toEqual([1, 2, 3]);
     render(<LevelChickMeter level="ok" />);
     const meter = screen.getByRole("img", { name: "Đạt, 2 trên 3" });
-    expect(meter.querySelectorAll("img")).toHaveLength(2);
+    expect(meter.querySelectorAll("img")).toHaveLength(3);
+    expect(meter.querySelectorAll('img[src*="mit-head-on"]')).toHaveLength(2);
+    expect(meter.querySelectorAll('img[src*="mit-head-off"]')).toHaveLength(1);
     for (const [level, count] of [["needs_work", 1], ["ok", 2], ["good", 3]] as const) {
-      const view = render(<LevelChickMeter level={level} />);
-      expect(view.container.querySelectorAll("img")).toHaveLength(count);
-      view.unmount();
+      const full = render(<LevelChickMeter level={level} />);
+      expect(full.container.querySelectorAll("img")).toHaveLength(3);
+      full.unmount();
+      const compact = render(<LevelChickMeter level={level} showEmpty={false} />);
+      expect(compact.container.querySelectorAll("img")).toHaveLength(count);
+      compact.unmount();
     }
   });
 

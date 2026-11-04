@@ -64,7 +64,8 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 ## 4. Màn phụ huynh
 
 - Mỗi phiếu đã gửi: "Hôm nay học: …" (`--text-sm`, `--color-muted`, tên chip đầy đủ) nếu buổi có chip; rồi
-  5 dòng tiêu chí dạng nhãn + N đầu gà cỡ nhỏ chỉ xem (`role="img"`, nhãn "Tốt, 3 trên 3"), kỹ năng đã chấm
+  5 dòng tiêu chí dạng nhãn + đủ 3 đầu gà cỡ nhỏ chỉ xem (N đầu đầy + đầu trống, `role="img"`, nhãn
+  "Tốt, 3 trên 3"), kỹ năng đã chấm
   thêm nếu có, sau cùng đoạn nhận xét như hiện tại. Sao vẫn hiện x/5; kỹ năng không ảnh hưởng sao.
   - Phiếu 3 mức: câu tự sinh + phần gõ thêm là **một đoạn** (như `slipForViewer` của máy chủ); chỉ phiếu cũ
     mới tách "Ghi chú" thành khung riêng.
@@ -76,7 +77,8 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 ## 5. Báo cáo tháng
 
 - Thêm hai khối trong báo cáo (chỉ khi snapshot có dữ liệu, đếm trên phiếu ĐÃ GỬI):
-  - "Theo tiêu chí": 5 hàng `Tên tiêu chí` + `N` kèm N đầu gà cỡ nhỏ (chỉ xem), nối bằng `·`; vẫn là số
+  - "Theo tiêu chí": 5 hàng `Tên tiêu chí` + `N` kèm **N đầu gà** cỡ nhỏ (chỉ xem, không đầu trống để không
+    dày), nối bằng `·`; vẫn là số
     đếm, không phần trăm, không trung bình. Nhãn a11y đọc `N Tốt` một lần (đầu gà trang trí, có chữ ẩn).
   - "Theo kỹ năng": mỗi kỹ năng có chấm `Nói: 3 [đầu gà] · 2 [đầu gà] trong 5 buổi có chấm`.
 - Bảng đếm sao hiện có giữ nguyên bên trên. Khối mới dùng `--card-pad`, `--text-sm`, `--color-muted`;
@@ -114,7 +116,5 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 - **Ảnh đầu gà:** đã có bộ thật `mit-head-on|off[@2x|@3x].webp` (64/128/192px, trong suốt, dùng bản `off`
   riêng chứ không filter) ở `public/mascot/` và bản prototype; `srcset` chọn 1x/2x/3x, hiển thị
   `--level-chick-size` 28px.
-- **Hover ngoài phạm vi:** còn ~14 file `:hover` cũ ngoài comments/shared/ui/guardian chưa rà `@media (hover: hover)`
-  (ngoài phạm vi lần này).
 - **Timeline "Nhận xét của cô" (phụ huynh):** mới hiện câu + ghi chú như cũ; danh sách tiêu chí/mức và
   "Hôm nay học" mới có ở màn chi tiết buổi. Cần chốt có thêm bản rút gọn vào thẻ timeline hay không.

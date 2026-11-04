@@ -161,8 +161,10 @@
   cursor: pointer;
 }
 
+@media (hover: hover) {
 .backlogToggle:hover {
   background: var(--state-hover-bg);
+}
 }
 
 .backlogToggle:active {
