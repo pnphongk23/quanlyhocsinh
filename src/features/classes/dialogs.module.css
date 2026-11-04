@@ -97,9 +97,11 @@
   text-align: left;
 }
 
+@media (hover: hover) {
 .menuItem:hover,
 .menuItem:focus-visible {
   background: var(--color-bg);
+}
 }
 
 .menuItem:disabled {

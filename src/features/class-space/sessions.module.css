@@ -93,8 +93,10 @@
   box-shadow: var(--state-focus-ring);
 }
 
+@media (hover: hover) {
 .primaryAction:hover {
   background: var(--color-primary-ink);
+}
 }
 
 .lockedHint {

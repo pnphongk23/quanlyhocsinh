@@ -121,8 +121,10 @@
 .menuRow + .menuRow {
   border-top: 1px solid var(--color-divider);
 }
+@media (hover: hover) {
 .menuRow:hover {
   background: var(--color-neutral-soft);
+}
 }
 .menuValue {
   display: flex;
@@ -144,8 +146,10 @@
   font-family: inherit;
   cursor: pointer;
 }
+@media (hover: hover) {
 .logout:hover {
   background: var(--color-input-border);
+}
 }
 
 .sampleData {

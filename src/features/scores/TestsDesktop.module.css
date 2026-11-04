@@ -90,9 +90,11 @@
   color: var(--color-error);
 }
 
+@media (hover: hover) {
 .menuItem:hover,
 .menuItemDanger:hover {
   background: var(--color-bg);
+}
 }
 
 .badge {

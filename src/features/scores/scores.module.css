@@ -192,10 +192,12 @@
   color: var(--color-muted);
   cursor: pointer;
 }
+@media (hover: hover) {
 .moreButton:hover,
 .moreButton:focus-visible {
   background: var(--color-bg);
   color: var(--color-text);
+}
 }
 /* Thao tác trong sheet tuỳ chọn: nút rộng hết khung, đủ 44px để bấm. */
 .sheetActions {
@@ -537,9 +539,11 @@
   color: inherit;
   text-decoration: none;
 }
+@media (hover: hover) {
 .cellLink:hover,
 .cellLink:focus-visible {
   background: var(--color-bg);
+}
 }
 .cellEmpty {
   display: inline-flex;

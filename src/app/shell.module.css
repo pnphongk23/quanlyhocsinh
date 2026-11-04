@@ -37,13 +37,17 @@
   .staffClassChevron { flex: none; font-size: 16px; line-height: 1; }
   .staffClassMenu { position: absolute; z-index: var(--z-menu); top: calc(100% + var(--space-4)); right: 0; left: 0; display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-button); background: var(--color-surface); box-shadow: var(--shadow-menu); }
   .staffClassMenu button { min-height: var(--tap); padding: var(--space-8); border: 0; border-radius: 8px; background: transparent; color: var(--color-text); text-align: left; font: inherit; cursor: pointer; }
-  .staffClassMenu button:hover { background: var(--state-hover-bg); }
+  @media (hover: hover) {
+.staffClassMenu button:hover { background: var(--state-hover-bg); }
+}
   .staffClassMenu button[aria-selected="true"] { background: var(--state-selected-bg); color: var(--state-selected-fg); }
   .staffClassMenu button:focus-visible { outline: none; box-shadow: var(--state-focus-ring); }
   .staffSideNav { display: grid; gap: 6px; }
   .staffNavItem { display: flex; min-height: var(--tap); align-items: center; padding: 0 var(--space-12); border-radius: var(--radius-button); color: var(--color-muted); text-decoration: none; font-size: var(--text-control); font-weight: 600; }
   .staffNavChild { min-height: calc(var(--tap) - var(--space-4)); padding-inline-start: var(--space-32); font-size: var(--text-md); }
-  .staffNavItem:hover:not(.staffNavActive) { background: var(--state-hover-bg); }
+  @media (hover: hover) {
+.staffNavItem:hover:not(.staffNavActive) { background: var(--state-hover-bg); }
+}
   .staffNavItem:active:not(.staffNavActive) { background: var(--state-pressed-bg); }
   .staffNavItem:focus-visible { outline: none; box-shadow: var(--state-focus-ring); }
   .staffNavGroupOpen { color: var(--color-text); }

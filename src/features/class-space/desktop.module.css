@@ -65,10 +65,12 @@
   cursor: pointer;
 }
 
+@media (hover: hover) {
 .menuButton:hover,
 .menuButton:focus-visible {
   color: var(--color-text);
   border-color: var(--color-input-border-strong);
+}
 }
 
 .menuWrap {
@@ -109,9 +111,11 @@
   white-space: nowrap;
 }
 
+@media (hover: hover) {
 .tab:hover,
 .tab:focus-visible {
   color: var(--color-text);
+}
 }
 
 .tabActive {
@@ -188,8 +192,10 @@
   font-weight: 600;
 }
 
+@media (hover: hover) {
 .currentCard:hover .primaryAction {
   background: var(--color-primary-ink);
+}
 }
 
 .cardFlush {
@@ -301,10 +307,12 @@
   color: inherit;
   text-decoration: none;
 }
+@media (hover: hover) {
 .link:hover,
 .link:focus-visible {
   color: var(--color-primary-ink);
   text-decoration: underline;
+}
 }
 
 .rowButton {
@@ -331,10 +339,12 @@
   width: 36px;
   transform: translateX(-50%);
 }
+@media (hover: hover) {
 .rowButton:hover,
 .rowButton:focus-visible {
   background: var(--color-bg);
   color: var(--color-text);
+}
 }
 
 .actionsRow {
@@ -438,7 +448,9 @@
   font-size: var(--text-md);
 }
 
+@media (hover: hover) {
 .segment:hover:not(.segmentActive) { background: var(--state-hover-bg); }
+}
 .segment:focus-visible { outline: none; box-shadow: var(--state-focus-ring); }
 
 .segmentActive {
