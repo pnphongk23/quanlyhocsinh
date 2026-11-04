@@ -76,9 +76,9 @@ describe("PH · phiếu 3 mức ở màn buổi học", () => {
     const criteria = host.querySelector('[data-testid="guardian-criteria"]')!;
     expect(criteria.textContent).toContain("Học tập trung");
     expect(criteria.textContent).toContain("Tích cực tham gia");
-    expect(criteria.textContent).toContain("Đạt");
+    expect(criteria.querySelector('[role="img"][aria-label="Đạt, 2 trên 3"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Nói");
-    expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Cần cố gắng");
+    expect(host.querySelector('[data-testid="guardian-skill-speaking"] [role="img"]')?.getAttribute("aria-label")).toBe("Cần cố gắng, 1 trên 3");
     // Phiếu 3 mức: câu tự sinh + phần gõ thêm là MỘT đoạn, không có khung "Ghi chú" riêng.
     const paragraph = host.querySelector('[data-testid="guardian-ticket-text"]')!;
     expect(paragraph.textContent).toContain("Con học tập trung, ghi bài đầy đủ.");
@@ -97,7 +97,7 @@ describe("PH · phiếu 3 mức ở màn buổi học", () => {
     seedGuardian(levelSlip("6a-session-2"), []);
     storeSelectedChild("6a-student-1");
     const host = renderSession("6a-session-2");
-    expect(host.querySelector('[data-testid="guardian-skill-speaking"]')?.textContent).toContain("Cần cố gắng");
+    expect(host.querySelector('[data-testid="guardian-skill-speaking"] [role="img"]')?.getAttribute("aria-label")).toBe("Cần cố gắng, 1 trên 3");
   });
 
   it("buổi trước không giao BTVN: không hiện dòng Bài tập về nhà trên phiếu", () => {

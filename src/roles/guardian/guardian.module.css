@@ -851,15 +851,3 @@
   text-align: right;
   white-space: nowrap;
 }
-
-.levelGood {
-  color: var(--level-good-fg);
-}
-
-.levelOk {
-  color: var(--level-ok-fg);
-}
-
-.levelNeedsWork {
-  color: var(--level-needs-work-fg);
-}

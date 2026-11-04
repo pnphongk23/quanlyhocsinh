@@ -45,14 +45,12 @@
   text-align: right;
 }
 
-.toneGood {
-  color: var(--level-good-fg);
+.tally {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.toneOk {
-  color: var(--level-ok-fg);
-}
-
-.toneNeedsWork {
-  color: var(--level-needs-work-fg);
+.separator {
+  margin: 0 var(--space-2);
 }
