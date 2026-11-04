@@ -39,6 +39,20 @@ const firstRoutes = ["src/features/classes/ClassListPage.tsx", "src/roles/guardi
 for (const key of firstRoutes) assert(manifest[key]?.isDynamicEntry, `${key} must be a lazy first route`);
 const jsFiles = readdirSync(outDir, { recursive: true }).filter((file) => typeof file === "string" && file.endsWith(".js"));
 const bundle = jsFiles.map((file) => readFileSync(join(outDir, file), "utf8")).join("\n");
+const mascotDir = join(outDir, "mascot");
+const headFiles = readdirSync(mascotDir).filter((file) => file.startsWith("mit-head-"));
+const swSource = readFileSync(join(outDir, "sw.js"), "utf8");
+const chunkNames = jsFiles.join("\n");
+if (target === "dev") {
+  assert(headFiles.length === 6, `Dev should ship 6 chick-head images, found ${headFiles.length}`);
+  assert(swSource.includes("mit-head"), "Dev sw.js should precache chick heads");
+  assert(/SlipLevelFields/.test(chunkNames), "Dev should ship the SlipLevelFields chunk");
+} else {
+  assert(!/LevelChicks|SlipLevelFields/.test(chunkNames + bundle), "Staging must not ship criteria-level UI chunks");
+  assert(headFiles.length === 0, `Staging must not ship chick-head images: ${headFiles.join(", ")}`);
+  assert(!swSource.includes("mit-head"), "Staging sw.js must not precache chick heads");
+  assert(!bundle.includes("mit-head"), "Staging JS must not reference chick-head images");
+}
 const stagingUrl = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
 const devUrl = "https://qlh-dev-api.tolaphamnhuphong.workers.dev/v1";
 assert(bundle.includes(target === "dev" ? devUrl : stagingUrl), `Expected ${target} API URL in ${outDir} bundle`);

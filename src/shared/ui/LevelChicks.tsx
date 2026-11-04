@@ -1,37 +1,10 @@
 import { useRef } from "react";
 import { LEVEL_LABELS, type Level } from "../../data/criteriaLevels";
+import { ChickHead } from "./LevelChickMeter";
 import s from "./levelChicks.module.css";
 
 /** Thứ tự 3 đầu gà trái → phải: 1 = Cần cố gắng, 2 = Đạt, 3 = Tốt. */
 const CHICK_LEVELS: readonly Level[] = ["needs_work", "ok", "good"];
-const LEVEL_COUNT: Record<Level, 1 | 2 | 3> = { needs_work: 1, ok: 2, good: 3 };
-
-export const CHICK_HEAD_FILES = { on: "head-on", off: "head-off" } as const;
-
-/** Số đầu gà của một mức (không có mức 0). */
-export function levelChickCount(level: Level): 1 | 2 | 3 {
-  return LEVEL_COUNT[level];
-}
-
-function chickAsset(state: "on" | "off"): string {
-  return `${import.meta.env.BASE_URL}mascot/mit-${CHICK_HEAD_FILES[state]}`;
-}
-
-function ChickHead({ filled, small = false }: { filled: boolean; small?: boolean }) {
-  const base = chickAsset(filled ? "on" : "off");
-  return (
-    <span className={small ? `${s.head} ${s.headSmall}` : s.head} aria-hidden="true">
-      <img
-        src={`${base}.webp`}
-        srcSet={`${base}.webp 1x, ${base}@2x.webp 2x, ${base}@3x.webp 3x`}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        draggable={false}
-      />
-    </span>
-  );
-}
 
 /**
  * Ba đầu gà thay segmented Tốt/Đạt/Cần cố gắng. Chạm đầu thứ N đặt mức N; đầu đã chọn
@@ -50,7 +23,8 @@ export function LevelChicks({
   disabled?: boolean;
 }) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
-  const selected = levelChickCount(value) - 1;
+  const selectedIndex = CHICK_LEVELS.indexOf(value);
+  const selected = selectedIndex >= 0 ? selectedIndex : 0;
 
   const go = (index: number) => {
     if (disabled) return;
@@ -100,7 +74,7 @@ export function LevelChicks({
             aria-label={`${label}: ${LEVEL_LABELS[level]}, ${index + 1} trên 3`}
             aria-disabled={disabled || undefined}
             disabled={disabled}
-            tabIndex={disabled ? -1 : checked ? 0 : -1}
+            tabIndex={disabled ? -1 : checked || (selectedIndex < 0 && index === 0) ? 0 : -1}
             className={s.tap}
             data-level={level}
             onClick={() => { if (!disabled && level !== value) onChange(level); }}
@@ -112,20 +86,3 @@ export function LevelChicks({
     </div>
   );
 }
-
-/** Chỉ xem: hiện N đầu gà của mức đang có, nhãn "Tốt, 3 trên 3". */
-export function LevelChickMeter({ level, small = true, ariaLabel }: { level: Level; small?: boolean; ariaLabel?: string }) {
-  const count = levelChickCount(level);
-  return (
-    <span
-      className={small ? `${s.meter} ${s.meterSmall}` : s.meter}
-      role="img"
-      aria-label={ariaLabel ?? `${LEVEL_LABELS[level]}, ${count} trên 3`}
-      data-level={level}
-    >
-      {Array.from({ length: count }, (_, index) => <ChickHead key={index} filled small={small} />)}
-    </span>
-  );
-}
-
-export default LevelChicks;

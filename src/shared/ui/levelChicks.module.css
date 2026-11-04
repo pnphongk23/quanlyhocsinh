@@ -16,6 +16,9 @@
   border-radius: var(--radius-chip);
   background: transparent;
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard);
 }
 
 .tap:focus-visible {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { MEMBER_IDS } from "../../data/defaults";
@@ -52,7 +52,8 @@ function renderSession(sessionId: string): HTMLElement {
   return host;
 }
 
-afterEach(() => { delete (globalThis as { sessionStorage?: Storage }).sessionStorage; });
+beforeEach(() => { vi.stubEnv("VITE_CRITERIA_LEVELS", "1"); });
+afterEach(() => { vi.unstubAllEnvs(); delete (globalThis as { sessionStorage?: Storage }).sessionStorage; });
 
 const LEVELS = { focus: "good", participation: "ok", mastery: "ok", notes: "good", homework: "needs_work" } as const;
 

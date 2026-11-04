@@ -1,5 +1,6 @@
 import { formatDate, formatScore } from "../../shared/format";
 import { EmptyState, LevelSummary } from "../../shared/ui";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import type { PeriodStudentReport } from "../../data/reportModel";
 import type { RangeLabels } from "../../data/reportRange";
 import styles from "./ReportsPage.module.css";
@@ -101,7 +102,7 @@ export default function ReportPreview({
         )}
       </section>
 
-      {(report.criteriaSummary || report.skillSummary) && (
+      {criteriaLevelsEnabled() && (report.criteriaSummary || report.skillSummary) && (
         <section className={`${styles.block} ${styles.previewCard}`}>
           <h3>Tóm tắt tiêu chí</h3>
           <p className={styles.blockNote}>Tính trên các phiếu đã gửi có chấm mức.</p>

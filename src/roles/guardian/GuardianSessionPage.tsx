@@ -7,7 +7,8 @@ import {
 } from "../../data/repositories/guardian";
 import { sessionPrefix } from "../../data/repositories/sessions";
 import { CRITERION_KEYS, CRITERION_LABELS, SKILL_KEYS, SKILL_LABELS, type CriterionKey } from "../../data/criteriaLevels";
-import { LevelChickMeter } from "../../shared/ui";
+import { LevelChickMeter } from "../../shared/ui/LevelChickMeter";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { PageHeader } from "../../shared/ui";
 import { useGuardianContext } from "./guardianContext";
 import {
@@ -88,7 +89,7 @@ export default function GuardianSessionPage() {
   const teacher = childTeacherName(studentId);
   const ticketHomework =
     ticket && ticket.homework.sections.length > 0 ? ticket.homework : null;
-  const ticketLevels = ticket?.comment.levels ?? null;
+  const ticketLevels = criteriaLevelsEnabled() ? ticket?.comment.levels ?? null : null;
   const ticketParagraph = ticket ? childTicketParagraph(ticket) : null;
   const ticketSkillLevels = ticket?.comment.skillLevels ?? {};
   const ticketTopics = ticket?.session.todayTopics ?? [];

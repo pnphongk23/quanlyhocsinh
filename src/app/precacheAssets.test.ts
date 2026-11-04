@@ -3,7 +3,6 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MASCOT_FILES } from "../shared/ui/Mascot";
-import { CHICK_HEAD_FILES } from "../shared/ui/LevelChicks";
 import { createAppShellPrecacheList, listMascotAssets } from "./precacheAssets";
 
 const MASCOT_DIR = join(process.cwd(), "public", "mascot");
@@ -41,15 +40,6 @@ describe("app shell precache assets", () => {
     for (const file of Object.values(MASCOT_FILES)) {
       expect(list).toContain(`/mascot/mit-${file}.webp`);
       expect(list).toContain(`/mascot/mit-${file}@2x.webp`);
-    }
-  });
-
-  it("precaches both chick-head states at 1x/2x/3x", () => {
-    const list = createAppShellPrecacheList({} as OutputBundle, listMascotAssets(MASCOT_DIR));
-    for (const file of Object.values(CHICK_HEAD_FILES)) {
-      for (const suffix of ["", "@2x", "@3x"]) {
-        expect(list).toContain(`/mascot/mit-${file}${suffix}.webp`);
-      }
     }
   });
 

@@ -9,6 +9,7 @@ import {
   type ChildReportItem,
 } from "../../data/repositories/guardian";
 import { Button, Card, EmptyState, LevelSummary, PageHeader, Spinner } from "../../shared/ui";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { motionClass } from "../../shared/motion";
 import { useGuardianContext } from "./guardianContext";
 import { useStore } from "../../data/store";
@@ -319,7 +320,7 @@ function ReportDetail({
           </>}
       </Card>
 
-      {(body.criteriaSummary || body.skillSummary) && (
+      {criteriaLevelsEnabled() && (body.criteriaSummary || body.skillSummary) && (
         <Card className={g.card}>
           <div className={g.cardHead}>
             <h2>Tóm tắt tiêu chí</h2>
