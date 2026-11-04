@@ -20,7 +20,7 @@ function Tally({ tally }: { tally: LevelTally }) {
         <span key={key} className={s.tally}>
           {index > 0 ? " · " : null}
           {tally[key]}{" "}
-          <LevelChickMeter level={key} small decorative />
+          <LevelChickMeter level={key} small decorative showEmpty={false} />
           <span className={s.srOnly}>{LEVEL_LABELS[key]}</span>
         </span>
       ))}
