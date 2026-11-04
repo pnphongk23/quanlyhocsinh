@@ -47,11 +47,13 @@ if (target === "dev") {
   assert(headFiles.length === 6, `Dev should ship 6 chick-head images, found ${headFiles.length}`);
   assert(swSource.includes("mit-head"), "Dev sw.js should precache chick heads");
   assert(/SlipLevelFields/.test(chunkNames), "Dev should ship the SlipLevelFields chunk");
+  assert(bundle.includes("head-on") && bundle.includes("head-off"), "Dev JS should carry chick-head file keys");
 } else {
   assert(!/LevelChicks|SlipLevelFields/.test(chunkNames + bundle), "Staging must not ship criteria-level UI chunks");
   assert(headFiles.length === 0, `Staging must not ship chick-head images: ${headFiles.join(", ")}`);
   assert(!swSource.includes("mit-head"), "Staging sw.js must not precache chick heads");
   assert(!bundle.includes("mit-head"), "Staging JS must not reference chick-head images");
+  assert(!bundle.includes("head-on") && !bundle.includes("head-off"), "Staging JS must not carry chick-head file keys");
 }
 const stagingUrl = "https://qlh-staging-api.tolaphamnhuphong.workers.dev/v1";
 const devUrl = "https://qlh-dev-api.tolaphamnhuphong.workers.dev/v1";

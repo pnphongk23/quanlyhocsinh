@@ -5,7 +5,7 @@ import type { OutputChunk } from "rollup";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createAppShellPrecacheList, listMascotAssets } from "./src/app/precacheAssets";
 import { buildServiceWorkerSource } from "./src/app/serviceWorkerSource";
 
@@ -60,8 +60,22 @@ function chickHeadAssets(includeChickHeads: boolean): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const includeChickHeads = env.VITE_CRITERIA_LEVELS === "1";
+  // Build cờ tắt: thay module meter bằng stub để không còn chuỗi head-on/head-off trong JS.
+  // Bỏ qua khi chạy Vitest để test dùng module thật.
+  const meterStub: Plugin | null = !process.env.VITEST && !includeChickHeads
+    ? {
+        name: "level-chick-meter-stub",
+        apply: "build",
+        enforce: "pre",
+        resolveId(source) {
+          return /(?:^|\/)LevelChickMeter$/.test(source)
+            ? resolve(process.cwd(), "src/shared/ui/LevelChickMeterStub.tsx")
+            : null;
+        },
+      }
+    : null;
   return {
-  plugins: [react(), appShellServiceWorker(includeChickHeads), chickHeadAssets(includeChickHeads)],
+  plugins: [react(), ...(meterStub ? [meterStub] : []), appShellServiceWorker(includeChickHeads), chickHeadAssets(includeChickHeads)],
   build: { manifest: true },
   test: {
     environment: "jsdom",
