@@ -44,6 +44,8 @@ describe("báo cáo tháng có tóm tắt tiêu chí/kỹ năng", () => {
     expect(screen.getByText("Học tập trung")).toBeInTheDocument();
     expect(screen.getByText("Theo kỹ năng")).toBeInTheDocument();
     expect(screen.getByTestId("report-level-summary").textContent).toContain("3 Tốt · 1 Đạt trong 4 buổi có chấm");
+    // Meter trong báo cáo là trang trí: không có role=img/nhãn lặp số đếm.
+    expect(screen.queryByRole("img", { name: /3 Tốt/ })).toBeNull();
   });
 
   it("vắng khoá thì báo cáo y như cũ", () => {

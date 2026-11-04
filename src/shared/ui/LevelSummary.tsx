@@ -18,7 +18,7 @@ function Tally({ tally }: { tally: LevelTally }) {
     <>
       {parts.map((key, index) => (
         <span key={key} className={s.tally}>
-          {index > 0 ? <span className={s.separator}> · </span> : null}
+          {index > 0 ? " · " : null}
           {tally[key]}{" "}
           <LevelChickMeter level={key} small decorative />
           <span className={s.srOnly}>{LEVEL_LABELS[key]}</span>
