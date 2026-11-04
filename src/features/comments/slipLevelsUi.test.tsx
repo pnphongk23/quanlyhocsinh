@@ -265,9 +265,12 @@ describe("sheet phiếu 3 mức", () => {
   it("2 kỹ năng: tiêu đề + đúng 2 hàng ngay dưới trong sheet", () => {
     const { row, session, homework } = setup(levelComment(), { gradedSkills: ["speaking", "reading"] });
     render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
-    expect(screen.getByText("Kiến thức hôm nay")).toBeInTheDocument();
-    expect(screen.getByTestId("slip-skill-row-speaking")).toBeInTheDocument();
-    expect(screen.getByTestId("slip-skill-row-reading")).toBeInTheDocument();
+    const heading = screen.getByText("Kiến thức hôm nay");
+    expect(heading).toBeInTheDocument();
+    const rows = screen.getAllByTestId(/^slip-skill-row-/);
+    expect(rows.map((row) => row.getAttribute("data-testid"))).toEqual(["slip-skill-row-speaking", "slip-skill-row-reading"]);
+    expect(heading.parentElement).toContainElement(rows[0]);
+    expect(heading.parentElement).toContainElement(rows[1]);
   });
 
   it("phiếu đã gửi không tự thêm dòng kỹ năng khi buổi vừa bật Chấm riêng", () => {

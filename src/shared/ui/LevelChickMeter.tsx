@@ -28,7 +28,7 @@ export function ChickHead({ filled, small = false }: { filled: boolean; small?: 
   );
 }
 
-/** Chỉ xem: hiện N đầu gà của mức đang có, nhãn "Tốt, 3 trên 3" (hoặc nhãn rút gọn cho báo cáo). */
+/** Chỉ xem: mặc định đủ 3 đầu (N đầu đầy + đầu trống) để cột mức thẳng hàng; showEmpty=false chỉ N đầu đầy. Nhãn "Tốt, 3 trên 3". */
 export function LevelChickMeter({ level, small = true, ariaLabel, decorative = false, showEmpty = true }: {
   level: Level;
   small?: boolean;

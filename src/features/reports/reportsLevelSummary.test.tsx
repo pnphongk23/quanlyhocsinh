@@ -46,6 +46,15 @@ describe("báo cáo tháng có tóm tắt tiêu chí/kỹ năng", () => {
     expect(screen.getByTestId("report-level-summary").textContent).toContain("3 Tốt · 1 Đạt trong 4 buổi có chấm");
     // Meter trong báo cáo là trang trí: không có role=img/nhãn lặp số đếm.
     expect(screen.queryByRole("img", { name: /3 Tốt/ })).toBeNull();
+    // Báo cáo dùng showEmpty=false: đếm đúng N đầu, không có đầu trống.
+    const summary = screen.getByTestId("report-level-summary");
+    expect(summary.querySelectorAll('img[src*="mit-head-off"]')).toHaveLength(0);
+    const expectedHeads = { good: 3, ok: 2, needs_work: 1 } as const;
+    const meters = [...summary.querySelectorAll<HTMLElement>("[data-level]")];
+    expect(meters.length).toBeGreaterThan(0);
+    for (const meter of meters) {
+      expect(meter.querySelectorAll("img")).toHaveLength(expectedHeads[meter.dataset.level as keyof typeof expectedHeads]);
+    }
   });
 
   it("vắng khoá thì báo cáo y như cũ", () => {
