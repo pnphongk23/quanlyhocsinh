@@ -111,7 +111,8 @@ và bản chép `src/shared/styles/tokens.css` trước khi dùng.
 
 - **Icon tiêu chí:** bộ icon thiết kế chưa có icon cho 5 tiêu chí, nên hàng tiêu chí hiện chỉ có chữ.
   Đã chừa token `--level-row-icon-size`; khi có bộ icon chính thức thì gắn vào hàng tiêu chí, không đổi bố cục.
-- **Ảnh đầu gà thật:** đang dùng placeholder tròn vàng/xám đúng tên `mit-head-on|off[@2x|@3x].webp`; thay bằng
-  bộ ảnh Codex khi có, giữ nguyên đường dẫn/kích thước lớn nhất 192px.
+- **Ảnh đầu gà:** đã có bộ thật `mit-head-on|off[@2x|@3x].webp` (64/128/192px, trong suốt, dùng bản `off`
+  riêng chứ không filter) ở `public/mascot/` và bản prototype; `srcset` chọn 1x/2x/3x, hiển thị
+  `--level-chick-size` 28px.
 - **Timeline "Nhận xét của cô" (phụ huynh):** mới hiện câu + ghi chú như cũ; danh sách tiêu chí/mức và
   "Hôm nay học" mới có ở màn chi tiết buổi. Cần chốt có thêm bản rút gọn vào thẻ timeline hay không.
