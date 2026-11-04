@@ -79,9 +79,9 @@ describe("LevelChicks", () => {
     render(<LevelChickMeter level="ok" />);
     const meter = screen.getByRole("img", { name: "Đạt, 2 trên 3" });
     expect(meter.querySelectorAll("img")).toHaveLength(2);
-    for (const level of ["needs_work", "ok", "good"] as const) {
+    for (const [level, count] of [["needs_work", 1], ["ok", 2], ["good", 3]] as const) {
       const view = render(<LevelChickMeter level={level} />);
-      expect(view.container.querySelectorAll("img").length).toBeLessThanOrEqual(3);
+      expect(view.container.querySelectorAll("img")).toHaveLength(count);
       view.unmount();
     }
   });
