@@ -18,7 +18,7 @@ const groups: Record<string, PermGroup> = { attendance:'sessions_attendance',sco
 const cells: Record<string, { table: string; key: string; fields: string[]; parent: string }> = {
   attendance: {table:'attendance',key:'session_id',fields:['status'],parent:'class_sessions'},
   score: {table:'scores',key:'test_id',fields:['value'],parent:'tests'},
-  slip: {table:'session_comments',key:'session_id',fields:['stars','scale','criteria','comment','note','hw_manual','levels','skill_levels'],parent:'class_sessions'},
+  slip: {table:'session_comments',key:'session_id',fields:['stars','scale','criteria','comment','note','hw_manual','levels','skill_levels','criteria_levels'],parent:'class_sessions'},
   homework_grade: {table:'homework_grades',key:'section_id',fields:['level'],parent:'homework_sections'},
 };
 const q = (sql: string, ...args: any[]): SQL => ({sql,args});
@@ -245,6 +245,20 @@ function slipValues(p:Row,row:Row|null,levelsEnabled:boolean):Row {
   if (p.hw_manual!==undefined && typeof p.hw_manual!=='boolean') throw validationError(undefined,'invalid_hw_manual');
   const hw_manual=p.hw_manual===undefined ? (row?.hw_manual ?? 0) : Number(p.hw_manual);
   const hasLevels=p.levels!==undefined,hasSkillLevels=p.skill_levels!==undefined;
+  const hasCriteriaLevels=p.criteria_levels!==undefined;
+  if (hasCriteriaLevels && !levelsEnabled) throw featureDisabled();
+  if (row?.criteria_levels && !hasCriteriaLevels && (p.criteria!==undefined || p.stars!==undefined || hasLevels || hasSkillLevels))
+    throw validationError(undefined,'criteria_set_slip');
+  if (hasCriteriaLevels) {
+    if (hasLevels || hasSkillLevels) throw validationError(undefined,'invalid_criteria_levels');
+    if (row?.scale===3 && row.status==='sent') throw validationError(undefined,'legacy_scale');
+    const parsed=parseCriteriaLevels(p.criteria_levels);
+    if (p.comment!==undefined && p.comment!==null && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
+    const comment=typeof p.comment==='string' ? p.comment.trim() : '';
+    if (!comment) throw validationError(undefined,'comment_required');
+    const stars=Math.floor(parsed.good/parsed.total*5+0.5);
+    return {stars,scale:5,criteria:(1<<stars)-1,comment,note,hw_manual,levels:null,skill_levels:null,criteria_levels:parsed.json};
+  }
   if ((hasLevels || hasSkillLevels) && !levelsEnabled) throw featureDisabled();
   if (hasLevels) {
     if (row?.scale===3 && row.status==='sent') throw validationError(undefined,'legacy_scale');
@@ -254,8 +268,8 @@ function slipValues(p:Row,row:Row|null,levelsEnabled:boolean):Row {
     if (p.comment!==undefined && p.comment!==null && typeof p.comment!=='string') throw validationError(undefined,'invalid_comment');
     const comment=typeof p.comment==='string' ? p.comment.trim() : '';
     if (!comment) throw validationError(undefined,'comment_required');
-    return {stars:bits(parsed.criteria),scale:5,criteria:parsed.criteria,comment,note,hw_manual,
-      levels:parsed.json,skill_levels};
+      return {stars:bits(parsed.criteria),scale:5,criteria:parsed.criteria,comment,note,hw_manual,
+      levels:parsed.json,skill_levels,criteria_levels:null};
   }
   if (hasSkillLevels && (row?.levels===null || row?.levels===undefined)) throw validationError(undefined,'invalid_skill_levels');
   const keptSkillLevels=hasSkillLevels ? parseSkillLevels(p.skill_levels) : undefined;
@@ -266,7 +280,7 @@ function slipValues(p:Row,row:Row|null,levelsEnabled:boolean):Row {
     const comment=typeof p.comment==='string' ? p.comment.trim() : '';
     if (!comment) throw validationError(undefined,'comment_required');
     // Client cũ (không gửi `levels`) là nguồn đúng: phiếu quay về kiểu bit, bỏ dữ liệu mức.
-    return {stars:bits(p.criteria),scale:5,criteria:p.criteria,comment,note,hw_manual,levels:null,skill_levels:null};
+    return {stars:bits(p.criteria),scale:5,criteria:p.criteria,comment,note,hw_manual,levels:null,skill_levels:null,criteria_levels:null};
   }
   if (row && row.scale===5) {
     if (p.stars!==undefined) throw validationError(undefined,'criteria_required');
@@ -274,9 +288,33 @@ function slipValues(p:Row,row:Row|null,levelsEnabled:boolean):Row {
     const kept=p.comment===undefined ? row.comment : p.comment.trim();
     if (kept==='') throw validationError(undefined,'comment_required');
     return {stars:row.stars,scale:5,criteria:row.criteria,comment:kept,note,hw_manual,
-      levels:row.levels ?? null,skill_levels:keptSkillLevels ?? row.skill_levels ?? null};
+      levels:row.levels ?? null,skill_levels:keptSkillLevels ?? row.skill_levels ?? null,criteria_levels:row.criteria_levels ?? null};
   }
-  return {stars:memberOf(p.stars,[null,1,2,3]),scale:3,criteria:null,comment:null,note,hw_manual,levels:null,skill_levels:null};
+  return {stars:memberOf(p.stars,[null,1,2,3]),scale:3,criteria:null,comment:null,note,hw_manual,levels:null,skill_levels:null,criteria_levels:null};
+}
+
+/** Parse the immutable 1..8 criterion snapshot and retain only contract keys. */
+function parseCriteriaLevels(value: unknown): { json: string; good: number; total: number } {
+  if (!Array.isArray(value) || value.length<1 || value.length>8) throw validationError(undefined,'invalid_criteria_levels');
+  const ids=new Set<string>(); let homeworkCount=0,good=0;
+  const normalized=value.map((raw) => {
+    if (!raw || typeof raw!=='object' || Array.isArray(raw)) throw validationError(undefined,'invalid_criteria_levels');
+    const item=raw as Row;
+    if (typeof item.id!=='string' || Array.from(item.id).length<1 || Array.from(item.id).length>64 || ids.has(item.id))
+      throw validationError(undefined,'invalid_criteria_levels');
+    ids.add(item.id);
+    if (typeof item.name!=='string' || Array.from(item.name.trim().normalize('NFC')).length<1 || Array.from(item.name.trim().normalize('NFC')).length>40)
+      throw validationError(undefined,'invalid_criteria_levels');
+    if (!LEVELS.includes(item.level)) throw validationError(undefined,'invalid_criteria_levels');
+    const textValue=item.text;
+    if (textValue!==undefined && (typeof textValue!=='string' || Array.from(textValue).length>200)) throw validationError(undefined,'invalid_criteria_levels');
+    if (item.homework!==undefined && typeof item.homework!=='boolean') throw validationError(undefined,'invalid_criteria_levels');
+    if (item.homework===true && ++homeworkCount>1) throw validationError(undefined,'invalid_criteria_levels');
+    if (item.level==='good') good++;
+    return {id:item.id,name:item.name.trim().normalize('NFC'),level:item.level,...(textValue===undefined?{}:{text:textValue}),
+      ...(item.homework===undefined?{}:{homework:item.homework})};
+  });
+  return {json:JSON.stringify(normalized),good,total:normalized.length};
 }
 
 async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string,levelsEnabled:boolean):Promise<Plan> {
@@ -416,12 +454,23 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
         if (!Array.isArray(p.student_ids) || p.student_ids.length>50) throw validationError(undefined,'invalid_student_ids');
         const selected=new Set<unknown>(p.student_ids);
         const classBatch=selected.size>1;
-      const defaults=new Map<string,{criteria:number;comment:string;levels:string|null;skillLevels:string|null}>();
+        const defaults=new Map<string,{criteria:number;comment:string;levels:string|null;skillLevels:string|null;criteriaLevels:string|null}>();
       if (p.defaults!==undefined) {
         if (!Array.isArray(p.defaults)) throw validationError(undefined,'invalid_defaults');
         for (const item of p.defaults) {
-          if (!item || typeof item!=='object' || Array.isArray(item) || typeof item.student_id!=='string' ||
-              !selected.has(item.student_id) || defaults.has(item.student_id)) throw validationError(undefined,'invalid_defaults');
+            if (!item || typeof item!=='object' || Array.isArray(item) || typeof item.student_id!=='string' ||
+                !selected.has(item.student_id) || defaults.has(item.student_id)) throw validationError(undefined,'invalid_defaults');
+            if (item.criteria_levels!==undefined) {
+              if (!levelsEnabled) throw featureDisabled();
+              if (item.comment===undefined || item.comment===null) throw validationError(undefined,'comment_required');
+              if (typeof item.comment!=='string') throw validationError(undefined,'invalid_comment');
+              const comment=item.comment.trim();
+              if (!comment) throw validationError(undefined,'comment_required');
+              const parsed=parseCriteriaLevels(item.criteria_levels);
+              const stars=Math.floor(parsed.good/parsed.total*5+0.5);
+              defaults.set(item.student_id,{criteria:(1<<stars)-1,comment,levels:null,skillLevels:null,criteriaLevels:parsed.json});
+              continue;
+            }
           // THỬ NGHIỆM (cờ CRITERIA_LEVELS): mục `defaults` được thêm `levels`/`skill_levels` như `slip.set`.
           if ((item.levels!==undefined || item.skill_levels!==undefined) && !levelsEnabled) throw featureDisabled();
           if (item.levels!==undefined) {
@@ -430,7 +479,7 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
             if (!comment) throw validationError(undefined,'comment_required');
             const parsed=parseLevels(item.levels);
             const skillLevels=item.skill_levels===undefined ? null : parseSkillLevels(item.skill_levels);
-            defaults.set(item.student_id,{criteria:parsed.criteria,comment,levels:parsed.json,skillLevels});
+              defaults.set(item.student_id,{criteria:parsed.criteria,comment,levels:parsed.json,skillLevels,criteriaLevels:null});
             continue;
           }
           if (item.skill_levels!==undefined) throw validationError(undefined,'invalid_skill_levels');
@@ -439,7 +488,7 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
           if (typeof item.comment!=='string') throw validationError(undefined,'invalid_comment');
           const comment=item.comment.trim();
           if (!comment) throw validationError(undefined,'comment_required');
-          defaults.set(item.student_id,{criteria:item.criteria,comment,levels:null,skillLevels:null});
+            defaults.set(item.student_id,{criteria:item.criteria,comment,levels:null,skillLevels:null,criteriaLevels:null});
         }
       }
       const sent:string[]=[],skipped:Row[]=[],guards:SQL[]=[];
@@ -458,11 +507,11 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
             if (!value) {skipped.push({student_id:sid,reason:'no_default'});continue;}
             sent.push(sid as string);
             guards.push(q('NOT EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?) AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)',i.workspaceId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
-          rest.push(q(`INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,hw_manual,levels,skill_levels,status,sent_at,version,created_at,updated_at,updated_by)
-            SELECT ?,?,?,?,?,5,?,?, '',0,?,?,'sent',?,1,?,?,? WHERE ${ack(c)}
+            rest.push(q(`INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,hw_manual,levels,skill_levels,criteria_levels,status,sent_at,version,created_at,updated_at,updated_by)
+              SELECT ?,?,?,?,?,5,?,?, '',0,?,?,?,'sent',?,1,?,?,? WHERE ${ack(c)}
             AND NOT EXISTS(SELECT 1 FROM session_comments WHERE session_id=? AND student_id=?)
               AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)`,
-            i.workspaceId,session.class_id,session.id,sid,bits(value.criteria),value.criteria,value.comment,value.levels,value.skillLevels,now,now,now,i.userId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
+              i.workspaceId,session.class_id,session.id,sid,bits(value.criteria),value.criteria,value.comment,value.levels,value.skillLevels,value.criteriaLevels,now,now,now,i.userId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
           } else {
             const needsDefault=row.stars===null && row.scale===3;
             const value=needsDefault ? defaults.get(sid as string) : undefined;
@@ -473,8 +522,8 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
             guards.push(q(`${commentGuard}${attendanceGuard}`,
               i.workspaceId,session.id,sid,row.version,
               ...(session.status==='cancelled' ? [] : [i.workspaceId,session.id,sid,att!.status,att!.version])));
-            if (value) rest.push(q(`UPDATE session_comments SET stars=?,scale=5,criteria=?,comment=?,hw_manual=0,levels=?,skill_levels=?,status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
-              WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,bits(value.criteria),value.criteria,value.comment,value.levels,value.skillLevels,now,now,i.userId,i.workspaceId,session.id,sid));
+              if (value) rest.push(q(`UPDATE session_comments SET stars=?,scale=5,criteria=?,comment=?,hw_manual=0,levels=?,skill_levels=?,criteria_levels=?,status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
+                WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,bits(value.criteria),value.criteria,value.comment,value.levels,value.skillLevels,value.criteriaLevels,now,now,i.userId,i.workspaceId,session.id,sid));
             else rest.push(q(`UPDATE session_comments SET status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
               WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,now,now,i.userId,i.workspaceId,session.id,sid));
       }
