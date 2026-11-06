@@ -58,12 +58,13 @@ function publicCriteria(rows: Record<string, any>[]): Criterion[] {
 }
 
 async function getCriteria(db: D1Database, workspaceId: string) {
-  const [set, rows] = await Promise.all([
-    db.prepare('SELECT version FROM criteria_sets WHERE workspace_id=?').bind(workspaceId).first<{version:number}>(),
+  const [set, rows] = await db.batch<Record<string, any>>([
+    db.prepare('SELECT version FROM criteria_sets WHERE workspace_id=?').bind(workspaceId),
     db.prepare(`SELECT id,name,text_good,text_ok,text_needs_work,default_level,homework FROM comment_criteria
-      WHERE workspace_id=? AND deleted_at IS NULL ORDER BY position,id`).bind(workspaceId).all<Record<string,any>>(),
+      WHERE workspace_id=? AND deleted_at IS NULL ORDER BY position,id`).bind(workspaceId),
   ]);
-  return set ? { version: set.version, criteria: publicCriteria(rows.results) } : { version: 0, criteria: DEFAULT_CRITERIA };
+  const setRow = set?.results[0] as { version: number } | undefined;
+  return setRow ? { version: setRow.version, criteria: publicCriteria(rows?.results ?? []) } : { version: 0, criteria: DEFAULT_CRITERIA };
 }
 
 export async function readCriteriaSet(db: D1Database, identity: Identity) {
@@ -106,22 +107,27 @@ export async function replaceCriteriaSet(db: D1Database, identity: Identity, bod
   if (new Set(bodyIds).size !== bodyIds.length) throw validation('id_duplicate');
   for (const id of bodyIds) if (!existingIds.has(id)) throw validation('unknown_criterion');
   const now = new Date().toISOString();
+  // `updated_at` is the existing per-set CAS marker. A unique value distinguishes this
+  // request from another writer that wins the same base version.
+  const requestMarker = `${now}:${crypto.randomUUID()}`;
   const rows = criteria.map((item, position) => ({ ...item, id: item.id || `c_${crypto.randomUUID()}`, position }));
   const statements = [db.prepare(`UPDATE criteria_sets SET version=version+1,updated_at=?,updated_by=?
-    WHERE workspace_id=? AND version=?`).bind(now, identity.userId, identity.workspaceId, version.version)];
+    WHERE workspace_id=? AND version=?`).bind(requestMarker, identity.userId, identity.workspaceId, version.version)];
   for (const item of rows) statements.push(db.prepare(`INSERT INTO comment_criteria
       (workspace_id,id,position,name,text_good,text_ok,text_needs_work,default_level,homework,deleted_at,created_at,updated_at)
-      VALUES(?,?,?,?,?,?,?,?,?,NULL,?,?) ON CONFLICT(workspace_id,id) DO UPDATE SET position=excluded.position,
+      SELECT ?,?,?,?,?,?,?,?,?,NULL,?,? WHERE EXISTS(SELECT 1 FROM criteria_sets WHERE workspace_id=? AND version=? AND updated_at=?)
+      ON CONFLICT(workspace_id,id) DO UPDATE SET position=excluded.position,
       name=excluded.name,text_good=excluded.text_good,text_ok=excluded.text_ok,text_needs_work=excluded.text_needs_work,
       default_level=excluded.default_level,homework=excluded.homework,deleted_at=NULL,updated_at=excluded.updated_at
-      WHERE changes()>0 AND EXISTS(SELECT 1 FROM criteria_sets WHERE workspace_id=? AND version=?)`)
+      WHERE EXISTS(SELECT 1 FROM criteria_sets WHERE workspace_id=? AND version=? AND updated_at=?)`)
     .bind(identity.workspaceId,item.id,item.position,item.name,item.texts.good,item.texts.ok,item.texts.needs_work,
-      item.default_level,Number(item.homework),now,now,identity.workspaceId,version.version+1));
+      item.default_level,Number(item.homework),now,now,identity.workspaceId,version.version+1,requestMarker,
+      identity.workspaceId,version.version+1,requestMarker));
   const keepIds = rows.map(x => x.id);
   statements.push(db.prepare(`UPDATE comment_criteria SET deleted_at=?,updated_at=? WHERE workspace_id=?
     AND deleted_at IS NULL AND id NOT IN (${keepIds.map(()=>'?').join(',')})
-    AND changes()>0 AND EXISTS(SELECT 1 FROM criteria_sets WHERE workspace_id=? AND version=?)`)
-    .bind(now,now,identity.workspaceId,...keepIds,identity.workspaceId,version.version+1));
+    AND EXISTS(SELECT 1 FROM criteria_sets WHERE workspace_id=? AND version=? AND updated_at=?)`)
+    .bind(now,now,identity.workspaceId,...keepIds,identity.workspaceId,version.version+1,requestMarker));
   const result = await db.batch(statements);
   if (!result[0]?.meta.changes) {
     const current = await db.prepare('SELECT version FROM criteria_sets WHERE workspace_id=?').bind(identity.workspaceId).first<{version:number}>();

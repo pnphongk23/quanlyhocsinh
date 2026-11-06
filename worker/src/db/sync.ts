@@ -462,6 +462,7 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
                 !selected.has(item.student_id) || defaults.has(item.student_id)) throw validationError(undefined,'invalid_defaults');
             if (item.criteria_levels!==undefined) {
               if (!levelsEnabled) throw featureDisabled();
+              if (item.comment===undefined || item.comment===null) throw validationError(undefined,'comment_required');
               if (typeof item.comment!=='string') throw validationError(undefined,'invalid_comment');
               const comment=item.comment.trim();
               if (!comment) throw validationError(undefined,'comment_required');

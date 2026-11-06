@@ -181,3 +181,7 @@ Mảng 1..8 phần tử, theo thứ tự hiện trên phiếu:
 2. Cột cũ quy đổi thang 5 (`stars = round(g/N×5)`) thay vì `scale = N` (vướng CHECK và nhầm phiếu thang 3). Hệ quả: báo
    cáo tháng hiện tại đếm sao quy đổi; iOS cũ thấy x/5.
 3. iOS cũ sửa tiêu chí trên phiếu bộ tự tạo bị từ chối (`criteria_set_slip`) thay vì ghi đè làm mất bản chụp.
+
+## 10. Giới hạn đã biết (GL chấp nhận 2026-11-06)
+
+iOS hiện tại mở phiếu NHÁP bộ tự tạo sẽ tự tính lại BTVN theo 5 bit cũ nên có thể hiện sai sao (vd 3/5 thành 4/5) và câu mẫu cũ thay comment; không crash; lưu tiêu chí từ iOS bị `criteria_set_slip` nên không mất dữ liệu; phiếu đã gửi hiện đúng; chỉ dev (cờ tắt ở prod); sửa khi làm iOS.
