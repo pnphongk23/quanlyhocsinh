@@ -5,6 +5,7 @@ import XCTest
 final class StudentImportModelTests: XCTestCase {
     private struct Sent: Equatable { let id: String; let name: String; let phone: String? }
 
+    @MainActor
     private final class Server {
         var sent: [Sent] = []
         var created: [String: Sent] = [:]

@@ -26,6 +26,8 @@ struct APIError: Codable, Sendable, Equatable {
     let message: String?
     let details: JSONValue?
     let requestId: String?
+    /// The server refuses a slip write or send while the session's attendance has not all reached it.
+    static let attendanceIncompleteCode = "attendance_incomplete"
     var localizedMessage: String {
         switch code {
         case "unauthorized": String(localized: "core.apiError.unauthorized")

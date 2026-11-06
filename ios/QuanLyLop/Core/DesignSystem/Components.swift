@@ -252,7 +252,8 @@ struct AppChip: View {
 
 /// `.pill` with the five tones of `src/shared/ui/Pill.tsx`.
 struct AppPill: View {
-    enum Tone: Sendable { case neutral, success, warning, error, primary }
+    /// `warningSoft` is the light amber label (`--card-pending-*`), for a mark that sits in a list row.
+    enum Tone: Sendable { case neutral, success, warning, warningSoft, error, primary }
 
     let title: String
     var tone: Tone = .neutral
@@ -273,6 +274,7 @@ struct AppPill: View {
         case .neutral: AppColors.muted
         case .success: AppState.successFg
         case .warning: AppState.pendingFg
+        case .warningSoft: AppState.cardPendingFg
         case .error: AppState.errorFg
         case .primary: AppColors.primaryInk
         }
@@ -282,6 +284,7 @@ struct AppPill: View {
         case .neutral: AppColors.neutralSoft
         case .success: AppState.successBg
         case .warning: AppState.pendingBg
+        case .warningSoft: AppState.cardPendingBg
         case .error: AppState.errorBg
         case .primary: AppColors.primarySoft
         }
@@ -290,13 +293,14 @@ struct AppPill: View {
 
 /// `--card-*`: the soft fill of a large status card, with a 1 px border in the strong colour.
 enum AppStatusTone: Sendable {
-    case success, error, pending
+    case success, error, pending, info
 
     var background: Color {
         switch self {
         case .success: AppState.cardSuccessBg
         case .error: AppState.cardErrorBg
         case .pending: AppState.cardPendingBg
+        case .info: AppState.cardInfoBg
         }
     }
     var border: Color {
@@ -304,6 +308,7 @@ enum AppStatusTone: Sendable {
         case .success: AppState.cardSuccessBorder
         case .error: AppState.cardErrorBorder
         case .pending: AppState.cardPendingBorder
+        case .info: AppState.cardInfoBorder
         }
     }
     var foreground: Color {
@@ -311,6 +316,7 @@ enum AppStatusTone: Sendable {
         case .success: AppState.cardSuccessFg
         case .error: AppState.cardErrorFg
         case .pending: AppState.cardPendingFg
+        case .info: AppState.cardInfoFg
         }
     }
 }

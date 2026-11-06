@@ -204,10 +204,8 @@ final class AuthSyncTriggerTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: "guardian-login-identity-tests"))
         defaults.removePersistentDomain(forName: "guardian-login-identity-tests")
         let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
-            try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
-                                              defaults: defaults, knownIdentity: identity, knownStore: store,
-                                              synchronize: false, syncSucceeded: syncSucceeded,
-                                              recordFreshness: false)
+            try await loadGuardian(api: api, suite: "guardian-login-identity-tests", identity: identity,
+                                store: store, syncSucceeded: syncSucceeded)
         }
 
         let loaded = await root.load()
@@ -235,10 +233,8 @@ final class AuthSyncTriggerTests: XCTestCase {
         let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             loadedIdentity = identity
             loadedScope = store.scope
-            return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
-                                                     defaults: defaults, knownIdentity: identity, knownStore: store,
-                                                     synchronize: false, syncSucceeded: syncSucceeded,
-                                                     recordFreshness: false)
+            return try await loadGuardian(api: api, suite: "guardian-manual-refresh-tests", identity: identity,
+                                       store: store, syncSucceeded: syncSucceeded)
         }
 
         _ = await root.load(manualSync: true)
@@ -270,10 +266,8 @@ final class AuthSyncTriggerTests: XCTestCase {
         let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             loads += 1
             if loads == 1 { await gate.pauseUntilReleased() }
-            return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
-                                                     defaults: defaults, knownIdentity: identity, knownStore: store,
-                                                     synchronize: false, syncSucceeded: syncSucceeded,
-                                                     recordFreshness: false)
+            return try await loadGuardian(api: api, suite: "guardian-superseded-load-tests", identity: identity,
+                                       store: store, syncSucceeded: syncSucceeded)
         }
 
         let older = Task { await root.load() }
@@ -314,10 +308,8 @@ final class AuthSyncTriggerTests: XCTestCase {
         let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             loads += 1
             if loads == 1 { await gate.pauseUntilReleased() }
-            return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
-                                                     defaults: defaults, knownIdentity: identity, knownStore: store,
-                                                     synchronize: false, syncSucceeded: syncSucceeded,
-                                                     recordFreshness: false)
+            return try await loadGuardian(api: api, suite: "guardian-late-freshness-tests", identity: identity,
+                                       store: store, syncSucceeded: syncSucceeded)
         }
 
         let older = Task { await root.load() }
@@ -356,10 +348,8 @@ final class AuthSyncTriggerTests: XCTestCase {
         var loads = 0
         let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             loads += 1
-            let dashboard = try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
-                                                              defaults: defaults, knownIdentity: identity,
-                                                              knownStore: store, synchronize: false,
-                                                              syncSucceeded: syncSucceeded, recordFreshness: false)
+            let dashboard = try await loadGuardian(api: api, suite: "guardian-read-freshness-tests", identity: identity,
+                                                store: store, syncSucceeded: syncSucceeded)
             // The read is done and this result counts as refreshed; the screen has not committed it yet.
             if loads == 1 { await gate.pauseUntilReleased() }
             return dashboard
@@ -397,10 +387,8 @@ final class AuthSyncTriggerTests: XCTestCase {
             let gate = gates[min(loads, gates.count - 1)]
             loads += 1
             await gate.pauseUntilReleased()
-            return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
-                                                     defaults: defaults, knownIdentity: identity, knownStore: store,
-                                                     synchronize: false, syncSucceeded: syncSucceeded,
-                                                     recordFreshness: false)
+            return try await loadGuardian(api: api, suite: "guardian-load-spinner-tests", identity: identity,
+                                       store: store, syncSucceeded: syncSucceeded)
         }
 
         let older = Task { await root.load() }
@@ -442,10 +430,8 @@ final class AuthSyncTriggerTests: XCTestCase {
         var loadFailure: String?
         let root = GuardianRootView(model: model, freshness: defaults) { identity, store, syncSucceeded in
             do {
-                return try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
-                                                         defaults: defaults, knownIdentity: identity, knownStore: store,
-                                                         synchronize: false, syncSucceeded: syncSucceeded,
-                                                         recordFreshness: false)
+                return try await loadGuardian(api: api, suite: "guardian-entry-sync-tests", identity: identity,
+                                           store: store, syncSucceeded: syncSucceeded)
             } catch {
                 loadFailure = String(describing: error)
                 throw error
@@ -476,10 +462,8 @@ final class AuthSyncTriggerTests: XCTestCase {
         let failedModel = makeModel(api: failedAPI, online: true)
         await failedModel.restoreSession()
         let failedRoot = GuardianRootView(model: failedModel, freshness: defaults) { identity, store, syncSucceeded in
-            try await GuardianRepository.load(api: failedAPI, identityStore: MemoryIdentityStore(identity),
-                                              defaults: defaults, knownIdentity: identity, knownStore: store,
-                                              synchronize: false, syncSucceeded: syncSucceeded,
-                                              recordFreshness: false)
+            try await loadGuardian(api: failedAPI, suite: "guardian-entry-sync-tests", identity: identity,
+                                store: store, syncSucceeded: syncSucceeded)
         }
         let failedEntry = Task { await failedModel.synchronizeOnSessionEntry() }
         await failedGate.waitUntilEntered()
@@ -492,6 +476,17 @@ final class AuthSyncTriggerTests: XCTestCase {
         XCTAssertEqual(failedLoad?.dashboard?.updatedAt, oldDate)
         XCTAssertEqual(GuardianFreshness.last(scope, defaults: defaults), oldDate)
     }
+}
+
+/// `UserDefaults` is not `Sendable`, so the guardian loader reopens the suite by name where it runs
+/// instead of receiving the test's instance across an isolation boundary.
+private nonisolated func loadGuardian(api: any APIClient, suite: String, identity: CurrentIdentity,
+                                      store: SQLiteStore, syncSucceeded: Bool) async throws -> GuardianDashboard {
+    try await GuardianRepository.load(api: api, identityStore: MemoryIdentityStore(identity),
+                                      defaults: try XCTUnwrap(UserDefaults(suiteName: suite)),
+                                      knownIdentity: identity, knownStore: store,
+                                      synchronize: false, syncSucceeded: syncSucceeded,
+                                      recordFreshness: false)
 }
 
 private actor MemoryIdentityStore: CachedIdentityStore {

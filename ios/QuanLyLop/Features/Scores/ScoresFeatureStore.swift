@@ -12,6 +12,8 @@ final class I4FeatureStore: ObservableObject {
     @Published private(set) var tests: [TestDefinition] = []
     @Published private(set) var scores: [Score] = []
     @Published private(set) var slips: [SessionSlip] = []
+    /// Record keys of slips whose last save the server refused: what the teacher sees is a draft on this device only.
+    @Published private(set) var unappliedSlipKeys: Set<String> = []
     @Published private(set) var sections: [HomeworkSection] = []
     @Published private(set) var grades: [HomeworkGrade] = []
     @Published private(set) var publications: [ReportPublication] = []
@@ -114,6 +116,8 @@ final class I4FeatureStore: ObservableObject {
             let testIds = Set(tests.map(\.id))
             scores = try await store.records(Score.self, entity: "score").filter { !restricted || testIds.contains($0.testId) }
             slips = try await store.records(SessionSlip.self, entity: "slip").filter { !restricted || sessionIds.contains($0.sessionId) }
+            unappliedSlipKeys = Set(try await store.queuedCommands()
+                .filter { $0.state == "rejected" && $0.command.kind == "slip.set" }.map(\.command.recordKey))
             sections = try await store.records(HomeworkSection.self, entity: "homework_section").filter { seen($0.classId) }
             grades = try await store.records(HomeworkGrade.self, entity: "homework_grade").filter { !restricted || studentIds.contains($0.studentId) }
             publications = try await store.recordsSkippingInvalid(ReportPublication.self, entity: "report_publication").values.filter { seen($0.classId) }
@@ -126,6 +130,11 @@ final class I4FeatureStore: ObservableObject {
     }
 
     // MARK: - Reads
+
+    /// The slip's last save was refused, so the server still holds an older version (or none) than the one shown.
+    func hasUnappliedSlip(sessionID: String, studentID: String) -> Bool {
+        unappliedSlipKeys.contains(key("slip", sessionID, studentID))
+    }
 
     func tests(in classID: String) -> [TestDefinition] {
         tests.filter { $0.classId == classID && !$0.archived }.sorted { $0.date > $1.date }
@@ -338,8 +347,18 @@ final class I4FeatureStore: ObservableObject {
             try await store.write(write.row, forKey: write.command.recordKey, enqueueing: write.command)
             await syncIfNeeded()
             await refresh()
-            return nil
+            return await attendanceRefusal(forKeys: [write.command.recordKey])
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
+    }
+
+    /// The message to show when the server refused one of these slip writes: the attendance one when it has not reached
+    /// the server yet (the slip stays on the device and on screen, and a later save replaces the refused command with a
+    /// new one), the usual save failure for any other refusal. nil when none was refused.
+    private func attendanceRefusal(forKeys keys: Set<String>) async -> String? {
+        let queued = (try? await store?.queuedCommands()) ?? []
+        guard let refused = queued.first(where: { $0.state == "rejected" && keys.contains($0.command.recordKey) })
+        else { return nil }
+        return SlipServerError.message(for: refused.error) ?? String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc")
     }
 
     /// The slip row and the `slip.set` that save `grading` on top of the slip as currently loaded; nil when the
@@ -347,6 +366,12 @@ final class I4FeatureStore: ObservableObject {
     private func slipWrite(sessionID: String, student: Student, grading: SlipGrading,
                            note: String) -> (row: SessionSlip, command: PendingCommand)? {
         let old = slip(sessionID: sessionID, studentID: student.id)
+        // A slip the server never confirmed (a draft kept after a refusal) has no server row for a note-only
+        // command to land on, so it goes out whole.
+        var grading = grading
+        if case .noteOnly = grading, let old, old.version <= 0, let criteria = old.criteria {
+            grading = .criteria(criteria, comment: old.comment ?? SlipRules.sentence(for: old), hwManual: old.hwManual)
+        }
         var fields: [String: JSONValue] = [
             "session_id": .string(sessionID),
             "student_id": .string(student.id),
@@ -407,7 +432,7 @@ final class I4FeatureStore: ObservableObject {
             try await store.writeAll(entries)
             await syncIfNeeded()
             await refresh()
-            return nil
+            return await attendanceRefusal(forKeys: Set(entries.map(\.key)))
         } catch { return String(localized: "feature.scores.khong.luu.uoc.phieu.buoi.hoc") }
     }
 
@@ -492,8 +517,16 @@ final class I4FeatureStore: ObservableObject {
         let chosen = studentIDs.filter { id in slip(sessionID: sessionID, studentID: id)?.status != .sent }
         guard !chosen.isEmpty else { return .failed(String(localized: "comments.send.nothing", table: "Teacher")) }
         let slipKeys = Set(chosen.map { key("slip", sessionID, $0) })
-        let waiting = (try? await store.pendingCommands()) ?? []
-        if waiting.contains(where: { slipKeys.contains($0.recordKey) }) { return failure }
+        // A slip still queued is not what the server holds, and sending it would hand parents the older version. One
+        // the server refused stays queued as rejected until it is saved again, so it holds the send back too, with the
+        // reason: attendance not there yet, or a save to redo.
+        let waiting = ((try? await store.queuedCommands()) ?? []).filter { slipKeys.contains($0.command.recordKey) }
+        if waiting.contains(where: { $0.state != "rejected" }) { return failure }
+        if !waiting.isEmpty {
+            let attendanceOnly = waiting.allSatisfy { $0.error?.code == APIError.attendanceIncompleteCode }
+            let message = attendanceOnly ? SlipServerError.message(for: waiting.first?.error) : nil
+            return .failed(message ?? String(localized: "comments.send.needsResave", table: "Teacher"))
+        }
 
         var fields: [String: JSONValue] = [
             "session_id": .string(sessionID),
@@ -523,6 +556,7 @@ final class I4FeatureStore: ObservableObject {
         }
         guard let result, result.status == .applied else {
             await refresh()
+            if let message = SlipServerError.message(for: result?.error) { return .failed(message) }
             return failure
         }
 
@@ -630,23 +664,25 @@ final class I4FeatureStore: ObservableObject {
         do {
             try await store.write(row, forKey: command.recordKey, enqueueing: command)
             await refresh()
-            await regradeNextSessionSlip(of: section, student: student)
+            let refusal = await regradeNextSessionSlip(of: section, student: student)
             await syncIfNeeded()
             await refresh()
+            if let refusal { errorMessage = refusal }
         } catch { errorMessage = String(localized: "feature.scores.khong.luu.uoc.ket.qua.cham") }
     }
 
     /// The server no longer recomputes a slip when homework is graded again, so the app does: the student's draft
     /// slip in the next session that was not hand-set follows the new result, with its sentence written again.
-    private func regradeNextSessionSlip(of section: HomeworkSection, student: Student) async {
+    /// Returns the message to show when that save failed, such as a server refusal for incomplete attendance.
+    private func regradeNextSessionSlip(of section: HomeworkSection, student: Student) async -> String? {
         guard let graded = session(id: section.sessionId),
               let next = HomeworkRules.gradingPlan(sessions(in: graded.classId), after: graded).session,
               let change = HomeworkRules.regradedSlip(slip: slip(sessionID: next.id, studentID: student.id),
                                                       sections: sections(sessionID: graded.id), grades: grades,
-                                                      studentID: student.id) else { return }
-        _ = await saveSlip(sessionID: next.id, student: student,
-                           grading: .criteria(change.criteria, comment: change.comment),
-                           note: slip(sessionID: next.id, studentID: student.id)?.note ?? "")
+                                                      studentID: student.id) else { return nil }
+        return await saveSlip(sessionID: next.id, student: student,
+                              grading: .criteria(change.criteria, comment: change.comment),
+                              note: slip(sessionID: next.id, studentID: student.id)?.note ?? "")
     }
 
     /// Marks one level for every student in one local write and one sync, like the web: the grades (and the next
@@ -675,6 +711,7 @@ final class I4FeatureStore: ObservableObject {
             if !slipEntries.isEmpty { try await store.writeAll(slipEntries) }
             await syncIfNeeded()
             await refresh()
+            if let message = await attendanceRefusal(forKeys: Set(slipEntries.map(\.key))) { errorMessage = message }
         } catch { errorMessage = String(localized: "feature.scores.khong.luu.uoc.ket.qua.cham") }
     }
 

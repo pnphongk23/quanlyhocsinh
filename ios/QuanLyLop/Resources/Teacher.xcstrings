@@ -70,6 +70,13 @@
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tuỳ chọn chấm cả lớp" } }
       }
     },
+    "comments.send.needsResave" : {
+      "comment" : "Gửi phiếu cả lớp bị chặn vì phiếu có bản lưu bị máy chủ từ chối; lưu lại phiếu trước.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cần lưu lại phiếu trước khi gửi." } }
+      }
+    },
     "comments.send.failed" : {
       "comment" : "Lỗi khi gửi phiếu cả lớp không được máy chủ xác nhận.",
       "extractionState" : "manual",
@@ -89,6 +96,76 @@
       "extractionState" : "manual",
       "localizations" : {
         "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thử lại" } }
+      }
+    },
+    "comments.locked.title" : {
+      "comment" : "Tiêu đề khối thông báo đầu tab Nhận xét khi buổi chưa điểm danh xong (tab chỉ xem).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm danh xong để nhận xét" } }
+      }
+    },
+    "comments.locked.detail" : {
+      "comment" : "Dòng phụ của khối thông báo. %lld là số em chưa có trạng thái điểm danh.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Còn %lld em chưa điểm danh." } }
+      }
+    },
+    "comments.locked.action" : {
+      "comment" : "Nút phụ trong khối thông báo, chuyển sang tab Điểm danh cùng buổi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đến Điểm danh" } }
+      }
+    },
+    "comments.locked.hint" : {
+      "comment" : "Gợi ý đọc cho hàng và chip nhận xét đang bị khoá vì chưa điểm danh xong.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm danh xong để nhận xét" } }
+      }
+    },
+    "comments.absent.group" : {
+      "comment" : "Tiêu đề nhóm em vắng ở cuối danh sách nhận xét.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Vắng buổi này" } }
+      }
+    },
+    "comments.absent.label" : {
+      "comment" : "Nhãn trên dòng của em vắng (danh sách nhận xét và chip Theo tiêu chí).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Vắng" } }
+      }
+    },
+    "comments.defaults.title" : {
+      "comment" : "Tiêu đề hộp thoại Gán tất cả mặc định. %lld là số em có mặt hoặc muộn sẽ được gán.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Gán mặc định cho %lld em có mặt?" } }
+      }
+    },
+    "comments.defaults.body" : {
+      "comment" : "Nội dung hộp thoại Gán tất cả mặc định: em vắng không được gán, phiếu đã gửi không đổi.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Em vắng không được gán. Phiếu đã gửi không đổi." } }
+      }
+    },
+    "comments.send.refusedNote" : {
+      "comment" : "Ghi chú trong hộp thoại gửi phiếu cả lớp về các phiếu bị giữ lại vì lần lưu cuối bị máy chủ từ chối. %lld là số phiếu.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "%lld phiếu chưa lưu được nên không gửi. Mở phiếu và lưu lại trước khi gửi." } }
+      }
+    },
+    "comments.error.attendanceIncomplete" : {
+      "comment" : "Máy chủ từ chối lưu hoặc gửi phiếu vì điểm danh của buổi chưa tới máy chủ; phiếu được giữ.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Điểm danh chưa đồng bộ xong, thử lại sau." } }
       }
     },
     "comments.send.needs_network" : {

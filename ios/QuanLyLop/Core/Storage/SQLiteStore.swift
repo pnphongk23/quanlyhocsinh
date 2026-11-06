@@ -119,11 +119,20 @@ actor SQLiteStore: LocalStore {
         try WireJSON.decoder().decode(type, from: Data(text.utf8))
     }
     func read<Value: Decodable & Sendable>(_ type: Value.Type, forKey key: String) throws -> Value? {
-        guard let text = try db.execute("SELECT json FROM records WHERE scope=? AND key=?", [scope.storageKey, key]).first?["json"] else { return nil }
-        // Only an edit that is still on its way to the server may hide the cached row. A `rejected`
-        // command is not a value the teacher has (`api-spec.md` mục 6: it was never applied), so the
-        // cell falls back to whatever `pull` left in the cache instead of showing a second value.
-        let overlay = try db.execute("SELECT local_json FROM commands WHERE scope=? AND record_key=? AND state IN ('pending','sending') ORDER BY created_at DESC,seq DESC LIMIT 1", [scope.storageKey, key]).first?["local_json"]
+        guard let row = try db.execute("SELECT json,version FROM records WHERE scope=? AND key=?", [scope.storageKey, key]).first,
+              let text = row["json"] else { return nil }
+        // An edit still on its way to the server hides the cached row. A `rejected` command is not a value the
+        // teacher has (`api-spec.md` mục 6: it was never applied), so the cell falls back to whatever `pull` left
+        // in the cache instead of showing a second value. The one exception is a slip the server refused only
+        // because attendance had not reached it yet: it is still the teacher's work, so it stays shown while its
+        // local placeholder is the row. Once a pull replaces that row, the server's value wins.
+        var overlay = try db.execute("SELECT local_json FROM commands WHERE scope=? AND record_key=? AND state IN ('pending','sending') ORDER BY created_at DESC,seq DESC LIMIT 1", [scope.storageKey, key]).first?["local_json"]
+        if overlay == nil, let refused = try db.execute("SELECT json,local_json FROM commands WHERE scope=? AND record_key=? AND state='rejected' AND error LIKE ? ORDER BY created_at DESC,seq DESC LIMIT 1",
+                                                       [scope.storageKey, key, "%\"\(APIError.attendanceIncompleteCode)\"%"]).first,
+           let command = try refused["json"].map({ try decode(PendingCommand.self, $0) }) {
+            let version = Int(row["version"] ?? "") ?? -1
+            if version == -1 || version == command.baseVersion { overlay = refused["local_json"] }
+        }
         return try decode(type, overlay ?? text)
     }
     func records<Value: Decodable & Sendable>(_ type: Value.Type, entity: String) throws -> [Value] {
@@ -208,9 +217,17 @@ actor SQLiteStore: LocalStore {
                 if cells.contains(command.kind), let row = try db.execute("SELECT json FROM commands WHERE scope=? AND record_key=? AND kind=? AND state='pending' AND attempts=0 ORDER BY created_at DESC,seq DESC LIMIT 1", [scope.storageKey,key,command.kind]).first,
                    let old = row["json"] {
                     let previous = try decode(PendingCommand.self, old)
+                    // The queue replays attendance before slips. A slip edit merged into a command older than a queued
+                    // attendance command would jump ahead of it, so it takes the newer place in the queue instead.
+                    var laterAttendance = false
+                    if command.kind == "slip.set" {
+                        laterAttendance = try !db.execute(
+                            "SELECT 1 AS found FROM commands WHERE scope=? AND kind='attendance.set' AND state<>'rejected' AND CAST(created_at AS REAL)>? LIMIT 1",
+                            [scope.storageKey, String(previous.createdAt.timeIntervalSince1970)]).isEmpty
+                    }
                     replacement = PendingCommand(id: command.id, recordKey: key, baseVersion: previous.baseVersion,
                                                  kind: command.kind, payload: command.merged(over: previous).payload,
-                                                 createdAt: previous.createdAt)
+                                                 createdAt: laterAttendance ? command.createdAt : previous.createdAt)
                     try db.execute("DELETE FROM commands WHERE scope=? AND id=?", [scope.storageKey,previous.id.uuidString])
                 }
                 try db.execute("INSERT INTO commands(scope,id,record_key,kind,json,local_json,created_at) VALUES(?,?,?,?,?,?,?)",
@@ -287,7 +304,9 @@ actor SQLiteStore: LocalStore {
         // `version = -1` is the local placeholder written with the command. The server never accepted
         // this edit, so the cell goes back to the last pulled value (or to empty) while the command
         // stays queued as the error label's source.
-        if let key {
+        // A slip refused only for incomplete attendance keeps its placeholder: it is shown until the teacher saves
+        // again or a pull brings the server's own row.
+        if let key, error.code != APIError.attendanceIncompleteCode {
             try db.execute("DELETE FROM records WHERE scope=? AND key=? AND version=-1", [scope.storageKey,key])
         }
     }
