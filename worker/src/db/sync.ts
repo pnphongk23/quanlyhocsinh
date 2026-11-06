@@ -56,25 +56,6 @@ export function validatePush(body: Row): { membership_id: string; commands: Comm
   }
   return {membership_id,commands:body.commands};
 }
-function validateInitialStateLimits(commands:Command[]):void {
-  const ids=new Set<string>();
-  const add=(table:string,value:unknown)=>{if(typeof value==='string'&&uuid.test(value)) ids.add(`${table}:${value}`);};
-  for(const c of commands) {
-    const p=c.payload;
-    if(c.type==='slip.send'&&Array.isArray(p.student_ids)&&p.student_ids.length>50)
-      throw validationError(undefined,'invalid_student_ids');
-    if(c.type==='homework.assign'&&Array.isArray(p.sections)&&p.sections.length>4)
-      throw validationError(undefined,'invalid_sections');
-    add('students',p.student_id);
-    if(Array.isArray(p.student_ids)) for(const sid of p.student_ids) add('students',sid);
-    add('classes',p.class_id);add('class_sessions',p.session_id);add('tests',p.test_id);add('homework_sections',p.section_id);
-    if(c.type.startsWith('test.')) add('tests',p.id);
-    if(c.type.startsWith('homework.section.')) add('homework_sections',p.id);
-    if(c.type==='homework.assign'&&Array.isArray(p.sections)) for(const section of p.sections) add('homework_sections',section?.id);
-  }
-  // initialState uses one workspace bind plus each distinct target ID in a query.
-  if(ids.size>99) throw validationError(undefined,'invalid_commands');
-}
 /** The queue's membership is independent of the currently selected role. */
 export async function syncIdentity(db: D1Database,current: Identity,membershipId: unknown): Promise<Identity> {
   if (current.mustChangePassword) throw passwordChangeRequired();
@@ -111,11 +92,15 @@ async function initialState(db:D1Database,i:SyncIdentity,commands:Command[]):Pro
     if(c.type.startsWith('homework.section.')) add('homework_sections',p.id);
     if(c.type==='homework.assign' && Array.isArray(p.sections)) for(const section of p.sections) add('homework_sections',section?.id);
   }
-  const queries:SQL[]=[q('SELECT timezone FROM workspaces WHERE id=?',i.workspaceId)];
-  const tables=[...targets.keys()];
-  for(const table of tables) {
-    const ids=[...targets.get(table)!];
-    queries.push(q(`SELECT * FROM ${table} WHERE workspace_id=? AND id IN (${ids.map(()=>'?').join(',')})`,i.workspaceId,...ids));
+    const queries:SQL[]=[q('SELECT timezone FROM workspaces WHERE id=?',i.workspaceId)];
+    const targetChunks:{table:string;ids:string[]}[]=[];
+    for(const [table,targetIds] of targets) {
+      const ids=[...targetIds];
+      for(let offset=0;offset<ids.length;offset+=99) {
+        const chunk=ids.slice(offset,offset+99);
+        targetChunks.push({table,ids:chunk});
+        queries.push(q(`SELECT * FROM ${table} WHERE workspace_id=? AND id IN (${chunk.map(()=>'?').join(',')})`,i.workspaceId,...chunk));
+      }
   }
   const cellQueries:{table:string;k1:string;k2:string}[]=[];
   for(const c of commands) {
@@ -129,11 +114,11 @@ async function initialState(db:D1Database,i:SyncIdentity,commands:Command[]):Pro
   const results=await db.batch<Row>(queries.map(s=>stmt(db,s)));
   i.timezone=results[0]!.results[0]!.timezone;
   i.syncState=new Map();
-  tables.forEach((table,idx)=>{
-    for(const key of targets.get(table)!) i.syncState!.set(`${table}:${key}`,null);
-    for(const row of results[idx+1]!.results) i.syncState!.set(`${table}:${row.id}`,row);
-  });
-  cellQueries.forEach((c,idx)=>i.syncState!.set(`${c.table}:${c.k1}:${c.k2}`,results[tables.length+idx+1]!.results[0]??null));
+    for(const [table,ids] of targets) for(const key of ids) i.syncState!.set(`${table}:${key}`,null);
+    targetChunks.forEach(({table},idx)=>{
+      for(const row of results[idx+1]!.results) i.syncState!.set(`${table}:${row.id}`,row);
+    });
+    cellQueries.forEach((c,idx)=>i.syncState!.set(`${c.table}:${c.k1}:${c.k2}`,results[targetChunks.length+idx+1]!.results[0]??null));
 }
 async function stateRow(db:D1Database,i:SyncIdentity,table:string,key:string,second?:string):Promise<Row|null> {
   const cacheKey=`${table}:${key}${second ? ':'+second : ''}`;
@@ -394,7 +379,6 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string,lev
 }
 export async function push(db:D1Database,i:SyncIdentity,commands:Command[],requestId:string,levelsEnabled=false) {
   i={...i,attendanceCompleteness:new Map()};
-  validateInitialStateLimits(commands);
   await initialState(db,i,commands);
   const results:Result[]=[];
   for (const c of commands) {
