@@ -9,6 +9,6 @@ describe('schema smoke', () => {
             AND name <> 'd1_migrations'
             AND name NOT IN ('staff_declarations','staff_declaration_classes')`,
     ).first<{ n: number }>();
-    expect(row?.n).toBe(32);
+    expect(row?.n).toBe(34);
   });
 });
