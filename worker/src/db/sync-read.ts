@@ -14,7 +14,7 @@ const entities:Record<string,Entity>={
   attendance:{table:'attendance',keys:['session_id','student_id'],fields:['session_id','student_id','status','version','updated_at'],group:'sessions_attendance',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   test:{table:'tests',keys:['id'],fields:['id','class_id','name','date','archived','version'],group:'scores',day:'e.date'},
   score:{table:'scores',keys:['test_id','student_id'],fields:['test_id','student_id','value','version','updated_at'],group:'scores',join:'JOIN tests parent ON parent.id=e.test_id',day:'parent.date'},
-    slip:{table:'session_comments',keys:['session_id','student_id'],fields:['session_id','student_id','stars','scale','criteria','comment','note','hw_manual','levels','skill_levels','status','sent_at','version','updated_at'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
+    slip:{table:'session_comments',keys:['session_id','student_id'],fields:['session_id','student_id','stars','scale','criteria','comment','note','hw_manual','levels','skill_levels','criteria_levels','status','sent_at','version','updated_at'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   homework_section:{table:'homework_sections',keys:['id'],fields:['id','class_id','session_id','kind','title','description','version'],group:'comments_reports',join:'JOIN class_sessions parent ON parent.id=e.session_id',day:'parent.date'},
   homework_grade:{table:'homework_grades',keys:['section_id','student_id'],fields:['section_id','student_id','level','version','updated_at'],group:'comments_reports',join:'JOIN homework_sections hs ON hs.id=e.section_id JOIN class_sessions parent ON parent.id=hs.session_id',day:'parent.date'},
   report_batch:{table:'report_batches',keys:['id'],fields:['id','class_id','month','from_session_id','to_session_id','from_key','to_key','version'],group:'comments_reports',day:'substr(e.to_key,1,10)'},
@@ -63,7 +63,7 @@ function fields(i:Identity,name:string):string {
   return list.map(f=>`e.${f}`).join(',');
 }
 function decode(i:Identity,name:string,row:Row):Row {
-  if (name==='slip') return slipForViewer(i,decodeJsonColumns(row,SLIP_JSON_COLUMNS,'object'));
+    if (name==='slip') return slipForViewer(i,decodeJsonColumns(row,SLIP_JSON_COLUMNS,'object',['criteria_levels']));
   if (name==='class' && row.weekdays!==undefined) row.weekdays=Array.from({length:7},(_,i)=>i+1).filter(day=>(row.weekdays & (1<<(day-1)))!==0);
   if (name==='report_publication') row.snapshot=JSON.parse(row.snapshot);
   if (name==='test') row.archived=Boolean(row.archived);
@@ -81,9 +81,14 @@ function window(timezone:string):{from:string;to:string} {
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone}).format(new Date());
   const day=Date.parse(today);return {from:new Date(day-90*86400000).toISOString().slice(0,10),to:new Date(day+56*86400000).toISOString().slice(0,10)};
 }
-export async function snapshot(db:D1Database,i:Identity) {
+export async function snapshot(db:D1Database,i:Identity,criteriaEnabled=false) {
   const r=await meta(db,i).first<Row>();if (!r) throw notFound();
-  return {cursor:r.cursor,epoch:r.scope_epoch,window:window(r.timezone),entities:Object.keys(entities).filter(n=>allowed(i,n))};
+  const result:Row={cursor:r.cursor,epoch:r.scope_epoch,window:window(r.timezone),entities:Object.keys(entities).filter(n=>allowed(i,n))};
+  if (criteriaEnabled && i.scopeKind!=='linked_students' && allowed(i,'slip')) {
+    const criteria=await db.prepare('SELECT version FROM criteria_sets WHERE workspace_id=?').bind(i.workspaceId).first<{version:number}>();
+    result.criteria_set_version=criteria?.version ?? 0;
+  }
+  return result;
 }
 export async function snapshotPage(db:D1Database,i:Identity,name:string,after:string|undefined,limit:number) {
   const e=entities[name];if (!e) throw notFound();
@@ -105,7 +110,7 @@ export async function snapshotPage(db:D1Database,i:Identity,name:string,after:st
   for (const row of page) for (const k of e.keys) delete row[`_${k}`];
   return {items:page.map(row=>decode(i,name,row)),next_after};
 }
-export async function pull(db:D1Database,i:Identity,cursor:number,epoch:number,limit:number) {
+export async function pull(db:D1Database,i:Identity,cursor:number,epoch:number,limit:number,criteriaEnabled=false) {
   const names=Object.keys(entities).filter(n=>allowed(i,n));
   const logScope=scope(i,'l',false);
   const own=i.scopeKind==='linked_students' ? `AND (l.student_id IS NULL OR l.student_id IN (SELECT student_id FROM guardian_student WHERE workspace_id=${literal(i.workspaceId)} AND user_id=${literal(i.userId)}))` : '';
@@ -136,6 +141,11 @@ export async function pull(db:D1Database,i:Identity,cursor:number,epoch:number,l
     const key=JSON.stringify([l.entity,l.k1,l.k2]);
     if (!seen.has(key)) deletedMap.set(key,{entity:l.entity,k1:l.k1,k2:l.k2});
   }
-  return {cursor:logs.at(-1)?.seq ?? Math.max(cursor,m.cursor),epoch:m.scope_epoch,
+  const result:Row={cursor:logs.at(-1)?.seq ?? Math.max(cursor,m.cursor),epoch:m.scope_epoch,
     has_more:batches[1]!.results.length>limit,server_time:new Date().toISOString(),upserts,deleted:[...deletedMap.values()]};
+  if (criteriaEnabled && i.scopeKind!=='linked_students' && allowed(i,'slip')) {
+    const criteria=await db.prepare('SELECT version FROM criteria_sets WHERE workspace_id=?').bind(i.workspaceId).first<{version:number}>();
+    result.criteria_set_version=criteria?.version ?? 0;
+  }
+  return result;
 }

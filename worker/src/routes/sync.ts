@@ -21,11 +21,11 @@ syncRoutes.post('/sync/push', async (c) => {
 syncRoutes.get('/sync/pull', async (c) => {
   const identity = await syncIdentity(c.env.DB, c.get('identity'), c.req.query('membership_id'));
   return c.json(await pull(c.env.DB, identity, integer(c.req.query('cursor')), integer(c.req.query('epoch')),
-    Math.min(300, Math.max(1, integer(c.req.query('limit'), 200)))));
+    Math.min(300, Math.max(1, integer(c.req.query('limit'), 200))), criteriaLevelsEnabled(c.env)));
 });
 syncRoutes.get('/sync/snapshot', async (c) => {
   const identity = await syncIdentity(c.env.DB, c.get('identity'), c.req.query('membership_id'));
-  return c.json(await snapshot(c.env.DB, identity));
+  return c.json(await snapshot(c.env.DB, identity, criteriaLevelsEnabled(c.env)));
 });
 syncRoutes.get('/sync/snapshot/:entity', async (c) => {
   const identity = await syncIdentity(c.env.DB, c.get('identity'), c.req.query('membership_id'));

@@ -13,6 +13,7 @@ import { syncRoutes } from './sync';
 import { notificationsRoutes } from './notifications';
 import { devicesRoutes } from './devices';
 import { staffRoutes } from './staff';
+import { criteriaSetRoutes } from './criteria-set';
 import { requireAuth } from '../middleware/auth';
 
 export const apiRoutes = new Hono<AppEnv>();
@@ -40,4 +41,5 @@ stubs.route('/', syncRoutes);
 stubs.route('/', notificationsRoutes);
 stubs.route('/', devicesRoutes);
 stubs.route('/', staffRoutes);
+stubs.route('/', criteriaSetRoutes);
 apiRoutes.route('/', stubs);

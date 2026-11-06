@@ -2,6 +2,7 @@ import { conflict, forbidden, notFound, ApiError } from '../lib/errors';
 import { isoAfterMs, isoAt } from '../lib/time';
 import { classTeacherNameSql } from './class-teacher';
 import { mapTriggerError } from './authz';
+import { seedCriteriaStatements } from './criteria-set';
 import type { PermGroup, PermLevel, Permissions, ScopeKind } from '../types';
 
 export const ROLE_SYSTEM_KEYS = ['admin', 'teacher', 'assistant', 'guardian'] as const;
@@ -420,6 +421,7 @@ function workspaceStatements(
       )
       .bind(workspaceId, workspaceName, now),
   ];
+  statements.push(...seedCriteriaStatements(db, workspaceId, now));
 
   for (const role of DEFAULT_ROLES) {
     const roleId = roleIds[role.systemKey];
