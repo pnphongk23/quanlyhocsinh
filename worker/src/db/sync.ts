@@ -8,7 +8,7 @@ type SyncIdentity = Identity & { syncState?: Map<string,Row|null>; attendanceCom
 type SQL = { sql: string; args: any[] };
 export interface Command { id: string; type: string; base_version: number; created_at: string; payload: Row }
 type Result = { id: string; status: string; [key: string]: any };
-type Plan = { result: Result; first?: SQL; rest: SQL[]; receiptOnly?: boolean };
+type Plan = { result: Result; first?: SQL; rest: SQL[]; receiptOnly?: boolean; guardStatements?: SQL[] };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const types = new Set(['attendance.set','score.set','slip.set','homework.grade.set',
   'test.create','test.update','test.delete','slip.send','homework.assign',
@@ -92,11 +92,15 @@ async function initialState(db:D1Database,i:SyncIdentity,commands:Command[]):Pro
     if(c.type.startsWith('homework.section.')) add('homework_sections',p.id);
     if(c.type==='homework.assign' && Array.isArray(p.sections)) for(const section of p.sections) add('homework_sections',section?.id);
   }
-  const queries:SQL[]=[q('SELECT timezone FROM workspaces WHERE id=?',i.workspaceId)];
-  const tables=[...targets.keys()];
-  for(const table of tables) {
-    const ids=[...targets.get(table)!];
-    queries.push(q(`SELECT * FROM ${table} WHERE workspace_id=? AND id IN (${ids.map(()=>'?').join(',')})`,i.workspaceId,...ids));
+    const queries:SQL[]=[q('SELECT timezone FROM workspaces WHERE id=?',i.workspaceId)];
+    const targetChunks:{table:string;ids:string[]}[]=[];
+    for(const [table,targetIds] of targets) {
+      const ids=[...targetIds];
+      for(let offset=0;offset<ids.length;offset+=99) {
+        const chunk=ids.slice(offset,offset+99);
+        targetChunks.push({table,ids:chunk});
+        queries.push(q(`SELECT * FROM ${table} WHERE workspace_id=? AND id IN (${chunk.map(()=>'?').join(',')})`,i.workspaceId,...chunk));
+      }
   }
   const cellQueries:{table:string;k1:string;k2:string}[]=[];
   for(const c of commands) {
@@ -110,11 +114,11 @@ async function initialState(db:D1Database,i:SyncIdentity,commands:Command[]):Pro
   const results=await db.batch<Row>(queries.map(s=>stmt(db,s)));
   i.timezone=results[0]!.results[0]!.timezone;
   i.syncState=new Map();
-  tables.forEach((table,idx)=>{
-    for(const key of targets.get(table)!) i.syncState!.set(`${table}:${key}`,null);
-    for(const row of results[idx+1]!.results) i.syncState!.set(`${table}:${row.id}`,row);
-  });
-  cellQueries.forEach((c,idx)=>i.syncState!.set(`${c.table}:${c.k1}:${c.k2}`,results[tables.length+idx+1]!.results[0]??null));
+    for(const [table,ids] of targets) for(const key of ids) i.syncState!.set(`${table}:${key}`,null);
+    targetChunks.forEach(({table},idx)=>{
+      for(const row of results[idx+1]!.results) i.syncState!.set(`${table}:${row.id}`,row);
+    });
+    cellQueries.forEach((c,idx)=>i.syncState!.set(`${c.table}:${c.k1}:${c.k2}`,results[targetChunks.length+idx+1]!.results[0]??null));
 }
 async function stateRow(db:D1Database,i:SyncIdentity,table:string,key:string,second?:string):Promise<Row|null> {
   const cacheKey=`${table}:${key}${second ? ':'+second : ''}`;
@@ -171,10 +175,13 @@ function marker(i:SyncIdentity,c:Command,r:Result,conditional:boolean):SQL {
 }
 /** CAS + receipt + side effects are atomic for one command, never the whole HTTP batch. */
 async function commit(db:D1Database,i:SyncIdentity,c:Command,plan:Plan):Promise<boolean> {
-  const statements=plan.receiptOnly ? [plan.first!] : plan.first ? [plan.first,marker(i,c,plan.result,true)] : [marker(i,c,plan.result,false)];
+  const statements=plan.receiptOnly
+    ? [plan.first!,...(plan.guardStatements??[]),q('UPDATE applied_commands SET result=result WHERE command_id=? AND workspace_id=?',c.id,i.workspaceId)]
+    : plan.first ? [plan.first,marker(i,c,plan.result,true)] : [marker(i,c,plan.result,false)];
   statements.push(...plan.rest);
   const results=await db.batch(statements.map(s=>stmt(db,s)));
-  return (results[plan.first && !plan.receiptOnly ? 1 : 0]!.meta.changes ?? 0)>0;
+  const receiptIndex=plan.receiptOnly ? 1+(plan.guardStatements?.length??0) : plan.first ? 1 : 0;
+  return (results[receiptIndex]!.meta.changes ?? 0)>0;
 }
 // UUID has been validated before interpolation; only the command's committed receipt permits side effects.
 function ack(c:Command):string { return `EXISTS(SELECT 1 FROM applied_commands WHERE command_id='${c.id}')`; }
@@ -491,7 +498,7 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
             defaults.set(item.student_id,{criteria:item.criteria,comment,levels:null,skillLevels:null,criteriaLevels:null});
         }
       }
-      const sent:string[]=[],skipped:Row[]=[],guards:SQL[]=[];
+        const sent:string[]=[],skipped:Row[]=[],guards:SQL[]=[];
       for (const sid of new Set(p.student_ids)) {
         await student(db,i,sid,session,session.date);
         const att=await one(db,'SELECT status,version FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=?',i.workspaceId,session.id,sid);
@@ -506,7 +513,10 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
             const value=defaults.get(sid as string);
             if (!value) {skipped.push({student_id:sid,reason:'no_default'});continue;}
             sent.push(sid as string);
-            guards.push(q('NOT EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?) AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)',i.workspaceId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
+              guards.push(q(`DELETE FROM applied_commands WHERE command_id=? AND NOT (
+                NOT EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=?)
+                AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?))`,
+                c.id,i.workspaceId,session.id,sid,i.workspaceId,session.id,sid,att.status,att.version));
             rest.push(q(`INSERT INTO session_comments(workspace_id,class_id,session_id,student_id,stars,scale,criteria,comment,note,hw_manual,levels,skill_levels,criteria_levels,status,sent_at,version,created_at,updated_at,updated_by)
               SELECT ?,?,?,?,?,5,?,?, '',0,?,?,?,'sent',?,1,?,?,? WHERE ${ack(c)}
             AND NOT EXISTS(SELECT 1 FROM session_comments WHERE session_id=? AND student_id=?)
@@ -516,14 +526,14 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
             const needsDefault=row.stars===null && row.scale===3;
             const value=needsDefault ? defaults.get(sid as string) : undefined;
             if (needsDefault && !value) {skipped.push({student_id:sid,reason:'no_default'});continue;}
-          sent.push(sid as string);
-            const commentGuard='EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=?)';
+            sent.push(sid as string);
             const attendanceGuard=session.status==='cancelled' ? '' : ' AND EXISTS(SELECT 1 FROM attendance WHERE workspace_id=? AND session_id=? AND student_id=? AND status=? AND version=?)';
-            guards.push(q(`${commentGuard}${attendanceGuard}`,
-              i.workspaceId,session.id,sid,row.version,
+            guards.push(q(`DELETE FROM applied_commands WHERE command_id=? AND NOT (
+              EXISTS(SELECT 1 FROM session_comments WHERE workspace_id=? AND session_id=? AND student_id=? AND version=?)${attendanceGuard})`,
+              c.id,i.workspaceId,session.id,sid,row.version,
               ...(session.status==='cancelled' ? [] : [i.workspaceId,session.id,sid,att!.status,att!.version])));
-              if (value) rest.push(q(`UPDATE session_comments SET stars=?,scale=5,criteria=?,comment=?,hw_manual=0,levels=?,skill_levels=?,criteria_levels=?,status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
-                WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,bits(value.criteria),value.criteria,value.comment,value.levels,value.skillLevels,value.criteriaLevels,now,now,i.userId,i.workspaceId,session.id,sid));
+            if (value) rest.push(q(`UPDATE session_comments SET stars=?,scale=5,criteria=?,comment=?,hw_manual=0,levels=?,skill_levels=?,criteria_levels=?,status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
+              WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,bits(value.criteria),value.criteria,value.comment,value.levels,value.skillLevels,value.criteriaLevels,now,now,i.userId,i.workspaceId,session.id,sid));
             else rest.push(q(`UPDATE session_comments SET status='sent',sent_at=?,updated_at=?,updated_by=?,version=version+1
               WHERE workspace_id=? AND session_id=? AND student_id=? AND ${ack(c)}`,now,now,i.userId,i.workspaceId,session.id,sid));
       }
@@ -534,12 +544,10 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
         WHERE g.workspace_id=? AND g.student_id=? AND ?=(SELECT n.id FROM class_sessions n WHERE n.class_id=s.class_id AND n.status<>'cancelled'
           AND (n.date>s.date OR (n.date=s.date AND n.start_time>s.start_time)) ORDER BY n.date,n.start_time LIMIT 1) AND ${ack(c)}`,i.workspaceId,sid,session.id));
     }
-    result.sent=sent;result.skipped=skipped;
-    // A guarded receipt is the CAS for this multi-row operation; all row versions must still match.
-    const receipt=marker(i,c,result,false);
-    receipt.sql+=` WHERE (${guards.length ? guards.map(g=>g.sql).join(' AND ') : '1'}) OR ${ack(c)}`;
-    receipt.args.push(...guards.flatMap(g=>g.args));
-    return {result,first:receipt,receiptOnly:true,rest};
+      result.sent=sent;result.skipped=skipped;
+      // A guarded receipt is the CAS for this multi-row operation; all row versions must still match.
+      const receipt=marker(i,c,result,false);
+      return {result,first:receipt,receiptOnly:true,guardStatements:guards,rest};
   }
   if (c.type==='homework.assign' || c.type==='homework.section.upsert') {
     const session=await resource(db,i,'class_sessions',p.session_id,'comments_reports');
