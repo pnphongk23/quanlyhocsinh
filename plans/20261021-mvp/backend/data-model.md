@@ -497,7 +497,7 @@ CREATE TABLE device_tokens (
   membership_id TEXT NOT NULL,
   auth_session_id TEXT NOT NULL REFERENCES auth_sessions(id),
   token TEXT NOT NULL UNIQUE CHECK (length(token) BETWEEN 1 AND 4096),
-  platform TEXT NOT NULL CHECK (platform IN ('ios','web')),
+  platform TEXT NOT NULL CHECK (platform IN ('ios','web')),  -- chỉ ghi 'ios' từ 2026-11-08 (web không push nữa); 'web' chỉ còn ở hàng cũ, chặn ghi mới bằng trigger 0018_device_tokens_ios_only.sql
   registration_version INTEGER NOT NULL DEFAULT 1,  -- thế hệ binding; chỉ tăng khi đổi user/membership/phiên
   bound_at TEXT NOT NULL,                          -- thời điểm binding hiện hành được lập; mốc xét fanout
   created_at TEXT NOT NULL,

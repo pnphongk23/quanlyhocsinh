@@ -219,13 +219,126 @@ describe('device token routes', () => {
     }
   });
 
+  it('rejects the retired web platform without touching stored registrations', async () => {
+    const registered = await putToken(fixture.admin, { token: 'FAKE_FCM_ios_only', platform: 'ios' });
+    expect(registered.status).toBe(200);
+    const before = await deviceRow('FAKE_FCM_ios_only');
+
+    // Web không còn push (2026-11-08): token mới với platform 'web' bị từ chối.
+    for (const platform of ['web', 'WEB', 'android', '']) {
+      const result = await putToken(fixture.admin, { token: 'FAKE_FCM_web_new', platform });
+      expect(result.status).toBe(422);
+      expect(result.body.error.code).toBe('validation_error');
+      expect(result.body.error.details.fields.platform).toBe(
+        platform === 'web' ? 'web_not_supported' : 'must_be_ios',
+      );
+    }
+    expect(await deviceRow('FAKE_FCM_web_new')).toBeNull();
+
+    // Đang giữ token ios mà gửi platform 'web' để làm mới cũng bị từ chối, hàng cũ không đổi.
+    const refresh = await putToken(fixture.admin, { token: 'FAKE_FCM_ios_only', platform: 'web' });
+    expect(refresh.status).toBe(422);
+    const after = await deviceRow('FAKE_FCM_ios_only');
+    expect(after).toEqual(before);
+  });
+
+  it('keeps legacy web rows in D1 and blocks new web writes at the database level', async () => {
+    const session = await db
+      .prepare('SELECT id FROM auth_sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
+      .bind(fixture.guardian.userId)
+      .first<{ id: string }>();
+    const legacyId = crypto.randomUUID();
+    const now = nowIso();
+
+    // Dữ liệu cũ: giả lập hàng 'web' được tạo trước migration 0018 (bỏ trigger trong lúc seed).
+    const insertTrigger = await db
+      .prepare(
+        "SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = 'device_tokens_platform_ios_ins'",
+      )
+      .first<{ sql: string }>();
+    expect(insertTrigger?.sql).toBeTruthy();
+    await db.exec('DROP TRIGGER device_tokens_platform_ios_ins');
+    try {
+      await db
+        .prepare(
+          `INSERT INTO device_tokens
+            (id, workspace_id, user_id, membership_id, auth_session_id, token, platform,
+             registration_version, bound_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'FAKE_FCM_legacy_web', 'web', 1, ?, ?, ?)`,
+        )
+        .bind(
+          legacyId,
+          fixture.ws.workspaceId,
+          fixture.guardian.userId,
+          fixture.guardian.membershipId,
+          session!.id,
+          now,
+          now,
+          now,
+        )
+        .run();
+    } finally {
+      await db.prepare(insertTrigger!.sql).run();
+    }
+
+    // Hàng cũ còn nguyên và vẫn cập nhật được các cột khác (không xoá/sửa dữ liệu cũ).
+    await db
+      .prepare('UPDATE device_tokens SET updated_at = ? WHERE id = ?')
+      .bind('2030-01-01T00:00:00.000Z', legacyId)
+      .run();
+    expect(await deviceRow('FAKE_FCM_legacy_web')).toMatchObject({
+      id: legacyId,
+      platform: 'web',
+      updated_at: '2030-01-01T00:00:00.000Z',
+    });
+
+    // Ghi mới 'web' bị D1 chặn, kể cả khi bỏ qua API.
+    await expect(
+      db
+        .prepare(
+          `INSERT INTO device_tokens
+            (id, workspace_id, user_id, membership_id, auth_session_id, token, platform,
+             registration_version, bound_at, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'FAKE_FCM_web_direct', 'web', 1, ?, ?, ?)`,
+        )
+        .bind(
+          crypto.randomUUID(),
+          fixture.ws.workspaceId,
+          fixture.guardian.userId,
+          fixture.guardian.membershipId,
+          session!.id,
+          now,
+          now,
+          now,
+        )
+        .run(),
+    ).rejects.toThrow(/device_token_platform_ios_only/);
+
+    // Đổi một đăng ký ios sang 'web' cũng bị D1 chặn.
+    const iosOnly = await putToken(fixture.admin, { token: 'FAKE_FCM_ios_target', platform: 'ios' });
+    expect(iosOnly.status).toBe(200);
+    await expect(
+      db.prepare("UPDATE device_tokens SET platform = 'web' WHERE id = ?").bind(iosOnly.body.id).run(),
+    ).rejects.toThrow(/device_token_platform_ios_only/);
+    expect(await deviceRow('FAKE_FCM_ios_target')).toMatchObject({ platform: 'ios' });
+
+    // Thiết bị đăng ký lại theo iOS thì hàng cũ chuyển sang ios, không tạo hàng mới, không bump version.
+    const refreshed = await putToken(fixture.guardian.token, {
+      token: 'FAKE_FCM_legacy_web',
+      platform: 'ios',
+    });
+    expect(refreshed.status).toBe(200);
+    expect(refreshed.body).toMatchObject({ id: legacyId, platform: 'ios', registration_version: 1 });
+    expect(await deviceRow('FAKE_FCM_legacy_web')).toMatchObject({ id: legacyId, platform: 'ios' });
+  });
+
   it('refreshes the same binding without bumping version or bound_at', async () => {
     const first = await putToken(fixture.teacher, { token: 'FAKE_FCM_refresh', platform: 'ios' });
     expect(first.status).toBe(200);
     const before = await deviceRow('FAKE_FCM_refresh');
 
     await new Promise((resolve) => setTimeout(resolve, 5));
-    const second = await putToken(fixture.teacher, { token: 'FAKE_FCM_refresh', platform: 'web' });
+    const second = await putToken(fixture.teacher, { token: 'FAKE_FCM_refresh', platform: 'ios' });
     expect(second.status).toBe(200);
     expect(second.body.id).toBe(first.body.id);
     expect(second.body.registration_version).toBe(1);
@@ -233,7 +346,7 @@ describe('device token routes', () => {
     const after = await deviceRow('FAKE_FCM_refresh');
     expect(after!.registration_version).toBe(1);
     expect(after!.bound_at).toBe(before!.bound_at);
-    expect(after!.platform).toBe('web');
+    expect(after!.platform).toBe('ios');
     expect(after!.updated_at >= before!.updated_at).toBe(true);
   });
 
@@ -323,10 +436,10 @@ describe('device token routes', () => {
   it('does not let the previous owner delete a transferred registration', async () => {
     const registered = await putToken(fixture.guardian.token, {
       token: 'FAKE_FCM_transfer2',
-      platform: 'web',
+      platform: 'ios',
     });
     const id = registered.body.id as string;
-    await putToken(fixture.otherGuardian.token, { token: 'FAKE_FCM_transfer2', platform: 'web' });
+    await putToken(fixture.otherGuardian.token, { token: 'FAKE_FCM_transfer2', platform: 'ios' });
     const stale = await call(
       `/v1/device-tokens/${id}?registration_version=1`,
       { method: 'DELETE' },
