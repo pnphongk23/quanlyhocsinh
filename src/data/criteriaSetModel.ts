@@ -1,5 +1,16 @@
 import type { CriteriaLevel, CriteriaSetItem, CriteriaSetWriteItem } from "./api/types";
 
+export function applyHomeworkAbsenceRule(
+  set: readonly CriteriaSetItem[],
+  previousHomeworkGiven: boolean,
+): { criteria: readonly CriteriaSetItem[]; hwManual: boolean } {
+  if (previousHomeworkGiven) return { criteria: set, hwManual: false };
+  const withoutHomework = set.filter((item) => !item.homework);
+  if (withoutHomework.length) return { criteria: withoutHomework, hwManual: false };
+  if (set.length === 1 && set[0]?.homework) return { criteria: set, hwManual: true };
+  return { criteria: [], hwManual: false };
+}
+
 export const CRITERIA_LEVELS: readonly CriteriaLevel[] = ["good", "ok", "needs_work"];
 export const CRITERIA_LEVEL_LABELS: Record<CriteriaLevel, string> = {
   good: "Tốt", ok: "Đạt", needs_work: "Cần cố gắng",

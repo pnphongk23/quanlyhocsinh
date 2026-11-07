@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { db, setCacheIdentity } from "../db";
+import { db, rowKey, setCacheIdentity } from "../db";
 import { createSeed } from "../seed";
 import { replaceStore } from "../store";
 
@@ -25,8 +25,9 @@ beforeEach(async () => {
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
 });
 
-afterEach(async () => {
-  setCacheIdentity(null);
+  afterEach(async () => {
+    vi.unstubAllEnvs();
+    setCacheIdentity(null);
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   await db.delete();
 });
@@ -62,7 +63,7 @@ afterEach(async () => {
     expect(sets[0].payload).toMatchObject({ criteria: 23, note: "Ghi thêm" });
   });
 
-  it("phiếu mới chỉ gõ ghi chú vẫn gửi criteria để máy chủ nhận", async () => {
+    it("phiếu mới chỉ gõ ghi chú vẫn gửi criteria để máy chủ nhận", async () => {
     const { saveSessionCommentDurable } = await import("./comments");
     await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", note: "Chỉ ghi chú" });
     const [set] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
@@ -226,20 +227,65 @@ afterEach(async () => {
     const { getSessionComment, saveSessionCommentDurable } = await import("./comments");
     await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-0", note: "Ghi chú mới." });
 
-    expect(getSessionComment("6a-session-7", "6a-student-0")).toMatchObject({
+      expect(getSessionComment("6a-session-7", "6a-student-0")).toMatchObject({
       criteria: 15,
       stars: 4,
       scale: 5,
       hwManual: true,
       comment: "Câu nhận xét đã lưu.",
-      note: "Ghi chú mới.",
+        note: "Ghi chú mới.",
+      });
+      const command = (await db.outbox.toArray()).find((row) => row.type === "slip.set");
+      expect(command?.payload).not.toHaveProperty("criteria");
+      expect(command?.payload).toMatchObject({ note: "Ghi chú mới." });
     });
-    const command = (await db.outbox.toArray()).find((row) => row.type === "slip.set");
-    expect(command?.payload).not.toHaveProperty("criteria");
-    expect(command?.payload).toMatchObject({ note: "Ghi chú mới." });
-  });
 
-    it("gửi cả lớp chỉ gửi phiếu đã có; em chưa có phiếu (kể cả có mặt) bị bỏ qua và không tạo phiếu", async () => {
+      it("ghi phiếu theo bản chụp tiêu chí, không kèm levels cũ", async () => {
+      Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+      const { saveSessionCommentDurable } = await import("./comments");
+      const criteriaLevels = [
+        { id: "focus", name: "Tập trung", level: "good" as const, text: "Câu tốt.", homework: false },
+        { id: "homework", name: "BTVN", level: "needs_work" as const, text: "Câu cố gắng.", homework: true },
+      ];
+      await saveSessionCommentDurable({ sessionId: "6a-session-7", studentId: "6a-student-1", criteriaLevels, comment: "Câu tốt. Câu cố gắng.", note: "Ghi thêm" });
+      const [command] = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+      expect(command.payload).toMatchObject({ criteria_levels: criteriaLevels, comment: "Câu tốt. Câu cố gắng.", note: "Ghi thêm" });
+      expect(command.payload).not.toHaveProperty("levels");
+      expect(command.payload).not.toHaveProperty("skill_levels");
+      expect(await db.slips.get("teacher:workspace:member|slip|6a-session-7|6a-student-1")).toMatchObject({ criteria_levels: criteriaLevels });
+    });
+
+      it("assigns all present draft slips from the cached custom set", async () => {
+        Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+        vi.stubEnv("VITE_CRITERIA_LEVELS", "1");
+        const { assignDefaultSlipsDurable } = await import("./comments");
+      const set = { version: 1, criteria: [{ id: "focus", name: "Tập trung", texts: { good: "Câu tốt.", ok: "Câu đạt.", needs_work: "Câu cố gắng." }, default_level: "ok" as const, homework: false }] };
+      const count = await assignDefaultSlipsDurable("6a-session-7", undefined, set);
+      expect(count).toBeGreaterThan(0);
+      const commands = (await db.outbox.toArray()).filter((row) => row.type === "slip.set");
+      expect(commands.length).toBe(count);
+        expect(commands[0]?.payload).toMatchObject({ criteria_levels: [{ id: "focus", name: "Tập trung", level: "ok", text: "Câu đạt." }] });
+        expect(commands[0]?.payload).not.toHaveProperty("levels");
+      });
+
+      it("sends custom criteria defaults when a legacy blank slip is sent", async () => {
+        vi.stubEnv("VITE_CRITERIA_LEVELS", "1");
+        const identity = "teacher:workspace:member";
+        const set = { version: 1, criteria: [{ id: "focus", name: "Tập trung", texts: { good: "Câu tốt.", ok: "Câu đạt.", needs_work: "Câu cố gắng." }, default_level: "ok" as const, homework: false }] };
+        await db.criteriaSets.put({ ...set, identity, key: rowKey("criteria_set", ["current"]), entity: "criteria_set" });
+        const { getStore } = await import("../store");
+        const state = getStore();
+        state.comments.push({ id: "legacy-blank", classId: "6a", sessionId: "6a-session-7", studentId: "6a-student-1", criteria: null, comment: null, scale: 3, stars: null, note: "", hwManual: false, status: "draft", sendQueued: false, sentAt: null, updatedAt: "", createdAt: "" });
+        replaceStore(state);
+        const { sendSessionTicketsDurable } = await import("./comments");
+        const result = await sendSessionTicketsDurable("6a-session-7", ["6a-student-1"]);
+        expect(result.sent).toEqual(["6a-student-1"]);
+        const command = (await db.outbox.toArray()).find((row) => row.type === "slip.send");
+        expect(command?.payload).toMatchObject({ defaults: [{ student_id: "6a-student-1", criteria_levels: [{ id: "focus", level: "ok", text: "Câu đạt." }], comment: "Câu đạt." }] });
+        expect(command?.payload).not.toHaveProperty("levels");
+        expect(await db.slips.get(`${identity}|slip|6a-session-7|6a-student-1`)).toMatchObject({ criteria_levels: [{ id: "focus", level: "ok" }] });
+      });
+      it("gửi cả lớp chỉ gửi phiếu đã có; em chưa có phiếu (kể cả có mặt) bị bỏ qua và không tạo phiếu", async () => {
     const { getStore } = await import("../store");
     const seed = getStore();
     seed.attendance = seed.attendance.map((item) => item.sessionId === "6a-session-6" && item.studentId === "6a-student-0" ? { ...item, status: "absent" } : item);

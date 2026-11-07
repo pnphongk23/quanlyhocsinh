@@ -4,12 +4,15 @@ import { resetSessionDrafts } from "./draftStore";
 import { Button } from "../../shared/ui";
 import type { ButtonSize } from "../../shared/ui";
 import s from "./CommentsPanel.module.css";
+import { useCriteriaSet } from "./useCriteriaSet";
+import { criteriaLevelsEnabled } from "../../app/featureFlags";
 
 /**
  * Nút "Gán tất cả mặc định" cạnh "Gửi phiếu cả lớp": hỏi xác nhận rồi đặt mọi phiếu chưa gửi
  * về đủ năm tiêu chí (BTVN theo chấm) với câu tự sinh lại. Ghi được khi mất mạng.
  */
 export default function AssignDefaultsAction({ sessionId, sessionLabel, size, eligibleStudentIds, disabled = false }: { sessionId: string; sessionLabel: string; size: ButtonSize; eligibleStudentIds?: string[]; disabled?: boolean }) {
+  const customSet = useCriteriaSet(criteriaLevelsEnabled());
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -32,8 +35,9 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size, el
   async function confirm() {
     setBusy(true);
     try {
-        if (eligibleStudentIds) await assignDefaultSlipsDurable(sessionId, eligibleStudentIds);
-        else await assignDefaultSlipsDurable(sessionId);
+          if (customSet) await assignDefaultSlipsDurable(sessionId, eligibleStudentIds, customSet);
+          else if (eligibleStudentIds) await assignDefaultSlipsDurable(sessionId, eligibleStudentIds);
+          else await assignDefaultSlipsDurable(sessionId);
       resetSessionDrafts(sessionId);
       setError("");
       setOpen(false);
@@ -46,7 +50,7 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size, el
 
   return (
     <>
-      <Button size={size} variant="secondary" data-testid="slip-assign-defaults" disabled={disabled} aria-disabled={disabled} onClick={() => { if (disabled) return; setError(""); setCount(eligibleStudentIds ? countAssignDefaultSlips(sessionId, eligibleStudentIds) : countAssignDefaultSlips(sessionId)); setOpen(true); }}>
+        <Button size={size} variant="secondary" data-testid="slip-assign-defaults" disabled={disabled} aria-disabled={disabled} onClick={() => { if (disabled) return; setError(""); setCount(customSet ? countAssignDefaultSlips(sessionId, eligibleStudentIds, customSet) : countAssignDefaultSlips(sessionId, eligibleStudentIds)); setOpen(true); }}>
         Gán tất cả mặc định
       </Button>
       {open && (
@@ -54,7 +58,7 @@ export default function AssignDefaultsAction({ sessionId, sessionLabel, size, el
           <div className={s.confirm} role="dialog" aria-modal="true" aria-label={`Gán mặc định ${sessionLabel}?`}>
             <p className={s.confirmTitle}>Gán mặc định {sessionLabel}?</p>
             <p className={s.confirmNote}>
-                <strong data-testid="slip-assign-count">{count} em có mặt</strong> sẽ được tích đủ 5 tiêu chí (BTVN theo chấm) và câu nhận xét được sinh lại,
+                  <strong data-testid="slip-assign-count">{count} em có mặt</strong> sẽ được tích đủ {customSet?.criteria.length ?? 5} tiêu chí (BTVN theo chấm) và câu nhận xét được sinh lại,
                 kể cả phần bạn đã sửa tay. Em vắng không được gán. Ghi chú riêng được giữ.
               Phiếu đã gửi hoặc đang chờ gửi không đổi.
             </p>

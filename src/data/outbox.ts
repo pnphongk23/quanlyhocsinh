@@ -23,16 +23,23 @@ function keyForCommand(command: SyncCommand): string | undefined {
 /** Lệnh mới thắng; mức sao cũ (stars) và tiêu chí (criteria) loại trừ nhau nên bên mới xoá bên kia của lệnh cũ. */
 function mergeSlipPayload(previous: unknown, next: unknown): Record<string, unknown> {
   const merged = { ...(previous as Record<string, unknown>), ...(next as Record<string, unknown>) };
-  const incoming = next as Record<string, unknown>;
-  if ("criteria" in incoming || "stars" in incoming) {
+    const incoming = next as Record<string, unknown>;
+    if ("criteria_levels" in incoming) {
+      delete merged.levels;
+      delete merged.skill_levels;
+      delete merged.criteria;
+      delete merged.stars;
+    }
+    if ("criteria" in incoming || "stars" in incoming) {
     // Lệnh kiểu cũ (cờ tắt/iOS): máy chủ xoá levels; bỏ chúng khỏi payload gộp để không gửi kèm.
     delete merged.levels;
     delete merged.skill_levels;
   }
-  if ("levels" in incoming) {
+    if ("levels" in incoming) {
     // Lệnh mức: máy chủ tự tính criteria/stars, bỏ các trường cũ khỏi payload gộp.
     delete merged.criteria;
-    delete merged.stars;
+      delete merged.stars;
+      delete merged.criteria_levels;
   }
   if ("criteria" in incoming && !("levels" in incoming)) delete merged.stars;
   else if ("stars" in incoming && !("levels" in incoming)) { delete merged.criteria; delete merged.comment; }

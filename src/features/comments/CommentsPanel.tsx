@@ -46,7 +46,7 @@ import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 import NotesImportDialog from "./NotesImportDialog";
 import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { FEATURE_NOTES_IMPORT } from "../../shared/featureFlags";
-import LessonTopicsBar from "./LessonTopicsBar";
+import { criteriaScore } from "./customCriteriaModel";
 
 function Star({ size = 16 }: { size?: number }) {
   return (
@@ -326,9 +326,10 @@ export default function CommentsPanel({
   function ticketRow(row: TicketRow) {
     const badge = ticketBadge(row);
     const line = homeworkLine(row.previousHomework);
-    const effort = row.comment?.levels
-      ? effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session?.gradedSkills ?? [] })
-      : null;
+      const effort = row.comment?.levels
+        ? effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: levelsOn ? [] : session?.gradedSkills ?? [] })
+        : row.comment?.criteriaLevels ? (criteriaScore(row.comment.criteriaLevels).needsWork ? `${criteriaScore(row.comment.criteriaLevels).needsWork} mục cần cố gắng` : null) : null;
+      const customScore = row.comment?.criteriaLevels ? criteriaScore(row.comment.criteriaLevels) : null;
     return (
       <li key={row.student.id}>
           <button
@@ -354,7 +355,9 @@ export default function CommentsPanel({
               <Pill tone={badge.tone}>{badge.label}</Pill>
             </span>
           </span>
-          {row.stars !== null && (
+            {customScore ? (
+              <span className={s.starsLine} role="img" aria-label={`sao ${customScore.good}/${customScore.total}`} data-testid="custom-criteria-list-score">{customScore.good}/{customScore.total}</span>
+            ) : row.stars !== null && (
             <span className={s.starsLine} role="img" aria-label={`${row.stars} sao`}>
               {Array.from({ length: row.stars }, (_, index) => (
                 <Star key={index} />
@@ -425,7 +428,7 @@ export default function CommentsPanel({
         </p>
         )}
 
-        {levelsOn && <LessonTopicsBar session={session} disabled={!canEdit} />}
+
         {!levelsOn && <CriteriaModeToggle mode={mode} onChange={setMode} />}
 
         {!levelsOn && mode === "criteria" ? (

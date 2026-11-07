@@ -35,7 +35,7 @@ export interface SessionLessonInput { topics: readonly string[]; gradedSkills: r
  */
 function planSessionLesson(sessionId: string, input: SessionLessonInput): WritePlan<Session> {
   requirePermission("comments_reports", "write");
-  if (!criteriaLevelsEnabled()) throw new Error("Tính năng Hôm nay học chưa bật.");
+  throw new Error(criteriaLevelsEnabled() ? "Tính năng Hôm nay học đã được thay bằng bộ tiêu chí nhận xét." : "Tính năng Hôm nay học chưa bật.");
   const current = requireSessionAccess(sessionId);
   const topics = normalizeTopics(input.topics);
   const gradedSkills = normalizeGradedSkills(input.gradedSkills, topics);

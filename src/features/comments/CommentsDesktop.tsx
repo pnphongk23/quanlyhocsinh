@@ -41,7 +41,7 @@ import CriteriaMode, { CriteriaModeToggle } from "./CriteriaMode";
 import NotesImportDialog from "./NotesImportDialog";
 import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { FEATURE_NOTES_IMPORT } from "../../shared/featureFlags";
-import LessonTopicsBar from "./LessonTopicsBar";
+import { criteriaScore } from "./customCriteriaModel";
 
 /**
  * Tab Nhận xét trên web desktop (ảnh 04): danh sách em + khung soạn phiếu nằm
@@ -226,7 +226,6 @@ export default function CommentsDesktop({
         ) : undefined,
         )}
 
-        {levelsOn && <LessonTopicsBar session={session} disabled={!canEdit} />}
         {!levelsOn && <CriteriaModeToggle mode={mode} onChange={setMode} />}
 
         {!attendance.complete && (
@@ -288,13 +287,13 @@ export default function CommentsDesktop({
                         <span className={s.ticketMeta}>
                           {homeworkCountsLine(state, row)}
                         </span>
-                        {row.comment?.levels && effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session.gradedSkills ?? [] }) && (
-                          <span className={s.ticketEffort}>
-                            {effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: session.gradedSkills ?? [] })}
-                          </span>
-                        )}
+                          {(row.comment?.criteriaLevels ? (criteriaScore(row.comment.criteriaLevels).needsWork ? `${criteriaScore(row.comment.criteriaLevels).needsWork} mục cần cố gắng` : null) : row.comment?.levels ? effortSummary({ levels: row.comment.levels, skillLevels: row.comment.skillLevels ?? {}, gradedSkills: levelsOn ? [] : session.gradedSkills ?? [] }) : null) && (
+                            <span className={s.ticketEffort}>
+                              {row.comment?.criteriaLevels ? `${criteriaScore(row.comment.criteriaLevels).needsWork} mục cần cố gắng` : effortSummary({ levels: row.comment!.levels!, skillLevels: row.comment!.skillLevels ?? {}, gradedSkills: levelsOn ? [] : session.gradedSkills ?? [] })}
+                            </span>
+                          )}
                       </span>
-                      {row.stars === null ? <span className={s.stars} /> : <StarRow level={row.stars} />}
+                        {row.comment?.criteriaLevels ? <span className={s.stars} data-testid="custom-criteria-list-score">{criteriaScore(row.comment.criteriaLevels).good}/{criteriaScore(row.comment.criteriaLevels).total}</span> : row.stars === null ? <span className={s.stars} /> : <StarRow level={row.stars} />}
                       <Pill
                         tone={row.status === "sent" ? "success" : "neutral"}
                         className={s.ticketBadge}
@@ -307,7 +306,7 @@ export default function CommentsDesktop({
                   {attendance.complete && visibleRows.some((row) => !row.attended) && <div className={s.absentHeading}>Vắng buổi này</div>}
                   {attendance.complete && visibleRows.filter((row) => !row.attended).map((row) => {
                     const active = row.student.id === selected?.student.id;
-                    return <button key={row.student.id} type="button" aria-pressed={active} className={s.ticketRow + (active ? " " + s.ticketRowSelected : "")} onClick={() => selectStudent(row.student.id)}><span className={s.ticketText}><span className={s.ticketName}>{row.student.name}</span><span className={s.ticketMeta}>Vắng · {homeworkCountsLine(state, row)}</span></span>{row.stars === null ? <span className={s.stars} /> : <StarRow level={row.stars} />}<Pill tone={row.status === "sent" ? "success" : "neutral"} className={s.ticketBadge}>{desktopTicketLabel(row)}</Pill></button>;
+                      return <button key={row.student.id} type="button" aria-pressed={active} className={s.ticketRow + (active ? " " + s.ticketRowSelected : "")} onClick={() => selectStudent(row.student.id)}><span className={s.ticketText}><span className={s.ticketName}>{row.student.name}</span><span className={s.ticketMeta}>Vắng · {homeworkCountsLine(state, row)}</span></span>{row.comment?.criteriaLevels ? <span className={s.stars}>{criteriaScore(row.comment.criteriaLevels).good}/{criteriaScore(row.comment.criteriaLevels).total}</span> : row.stars === null ? <span className={s.stars} /> : <StarRow level={row.stars} />}<Pill tone={row.status === "sent" ? "success" : "neutral"} className={s.ticketBadge}>{desktopTicketLabel(row)}</Pill></button>;
                   })}
                   </>
               ) : (

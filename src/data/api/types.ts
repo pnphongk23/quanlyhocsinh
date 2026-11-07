@@ -1,4 +1,4 @@
-import type { CorePermissionGroup, PermissionLevel, HomeworkKind, HomeworkLevel, SlipScale, StarLevel } from "../types";
+import type { CorePermissionGroup, PermissionLevel, HomeworkKind, HomeworkLevel, SlipScale, StarLevel, CriteriaSlipLevel } from "../types";
 import type { Levels, SkillKey, SkillLevels } from "../criteriaLevels";
 /** Wire types from api-spec.md; dates YYYY-MM-DD, timestamps UTC, weekdays ISO 1..7. */
 export type ScopeKind = "workspace" | "assigned_classes" | "linked_students";
@@ -66,7 +66,7 @@ export interface ApiSession extends Versioned { id: string; class_id: string; da
 export interface ApiAttendance extends Cell { session_id: string; status: "present" | "late" | "excused" | "absent"; note: string; late_at: string | null }
 export interface ApiTest extends Versioned { id: string; class_id: string; name: string; date: string; archived: boolean }
 export interface ApiScore extends Cell { test_id: string; value: number | null }
-export interface ApiSlip extends Cell { session_id: string; criteria?: number | null; comment?: string | null; scale?: SlipScale; stars?: StarLevel | null; note: string; hw_manual?: boolean | 0 | 1; status: "draft" | "sent"; sent_at: string | null; /** Chỉ có khi khác NULL; vắng = phiếu kiểu cũ. */ levels?: Levels | null; skill_levels?: SkillLevels | null }
+export interface ApiSlip extends Cell { session_id: string; criteria?: number | null; comment?: string | null; scale?: SlipScale; stars?: StarLevel | null; note: string; hw_manual?: boolean | 0 | 1; status: "draft" | "sent"; sent_at: string | null; /** Chỉ có khi khác NULL; vắng = phiếu kiểu cũ. */ levels?: Levels | null; skill_levels?: SkillLevels | null; criteria_levels?: CriteriaSlipLevel[] | null }
 export interface ApiHomeworkSection extends Versioned { id: string; class_id: string; session_id: string; kind: HomeworkKind; title: string; description: string }
 export interface ApiHomeworkGrade extends Cell { section_id: string; level: HomeworkLevel | null }
 /** Nội dung báo cáo một đợt, dùng cho xem trước (`GET /reports/:id/preview`) và bản chụp đã phát hành. */
@@ -104,8 +104,8 @@ export interface CommandPayloads {
   "test.update": { id: string; name?: string; date?: string };
   "test.delete": { id: string };
   "score.set": { test_id: string; student_id: string; value: number | null };
-  "slip.set": { session_id: string; student_id: string; criteria?: number; comment?: string | null; note: string; stars?: StarLevel; hw_manual?: boolean; levels?: Levels; skill_levels?: SkillLevels };
-  "slip.send": { session_id: string; student_ids: string[]; defaults?: Array<{ student_id: string; criteria?: number; comment: string; levels?: Levels; skill_levels?: SkillLevels }> };
+    "slip.set": { session_id: string; student_id: string; criteria?: number; criteria_levels?: CriteriaSlipLevel[]; comment?: string | null; note: string; stars?: StarLevel; hw_manual?: boolean; levels?: Levels; skill_levels?: SkillLevels };
+    "slip.send": { session_id: string; student_ids: string[]; defaults?: Array<{ student_id: string; criteria?: number; criteria_levels?: CriteriaSlipLevel[]; comment: string; levels?: Levels; skill_levels?: SkillLevels }> };
   "session.lesson.set": { session_id: string; topics: SkillKey[]; graded_skills: SkillKey[] };
   "homework.assign": { session_id: string; sections: { id: string; kind: HomeworkKind; title: string; description: string }[] };
   "homework.section.upsert": { id: string; session_id: string; kind: HomeworkKind; title: string; description: string };

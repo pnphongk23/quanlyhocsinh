@@ -212,25 +212,12 @@ const chick = (label: string, level: "good" | "ok" | "needs_work") => {
 };
 
 describe("sheet phiếu 3 mức", () => {
-  it("phiếu mới hiện 5 hàng mức (không còn ô chọn cũ), đổi mức sinh lại câu và giữ ghi chú", async () => {
-    const { row, session, homework } = setup();
-    render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
-    expect(await screen.findByTestId("slip-star-panel")).toBeInTheDocument();
-    expect(screen.getByText("4/5 sao")).toBeInTheDocument();
-    expect(screen.getByTestId("slip-level-row-focus")).toBeInTheDocument();
-    expect(screen.queryByTestId("slip-criterion-0")).toBeNull();
-    fireEvent.change(screen.getByTestId("slip-note"), { target: { value: "Gõ thêm" } });
-    fireEvent.click(chick("Học tập trung", "ok"));
-    expect(screen.getByText("3/5 sao")).toBeInTheDocument();
-    expect((screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement).value).toContain("Con khá tập trung");
-    expect(screen.getByTestId("slip-save-button")).toBeEnabled();
-    fireEvent.click(screen.getByTestId("slip-save-button"));
-    await waitFor(() => expect(save).toHaveBeenCalled());
-    const input = save.mock.calls.at(-1)![0];
-    expect(input.levels).toMatchObject({ focus: "ok", mastery: "ok", homework: "good" });
-    expect(input.skillLevels).toEqual({ speaking: "ok" });
-    expect(input.comment).toContain("Con khá tập trung");
-    expect(input.note).toBe("Gõ thêm");
+    it("phiếu mới chờ bộ tiêu chí cache trước khi cho sửa", async () => {
+      const { row, session, homework } = setup();
+      render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+      expect(await screen.findByTestId("slip-level-skeleton")).toBeInTheDocument();
+      expect(screen.queryByTestId("slip-star-panel")).toBeNull();
+      expect(screen.queryByTestId("slip-criterion-0")).toBeNull();
   });
 
   it("phiếu cũ không có levels vẫn hiện ô chọn đạt/chưa đạt như cũ", () => {
@@ -245,10 +232,10 @@ describe("sheet phiếu 3 mức", () => {
     expect(screen.queryByTestId("slip-level-row-focus")).toBeNull();
   });
 
-  it("sửa câu rồi sửa ghi chú trên mobile: lưu giữ câu sửa tay", async () => {
-    const { row, session, homework } = setup(levelComment());
-    render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
-    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
+    it("sửa câu rồi sửa ghi chú trên mobile: lưu giữ câu sửa tay", async () => {
+      const { row, session, homework } = setup(levelComment());
+      render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
+      const sentence = await screen.findByTestId("slip-generated-comment") as HTMLTextAreaElement;
     fireEvent.change(sentence, { target: { value: "Câu cô sửa tay" } });
     fireEvent.change(screen.getByTestId("slip-note"), { target: { value: "Ghi chú mới" } });
     fireEvent.click(screen.getByTestId("slip-save-button"));
@@ -262,15 +249,11 @@ describe("sheet phiếu 3 mức", () => {
     expect(screen.queryByText("Kiến thức hôm nay")).toBeNull();
   });
 
-  it("2 kỹ năng: tiêu đề + đúng 2 hàng ngay dưới trong sheet", () => {
+  it("không hiện Chấm riêng trong sheet khi cờ bộ tiêu chí bật", () => {
     const { row, session, homework } = setup(levelComment(), { gradedSkills: ["speaking", "reading"] });
     render(<CommentTicketSheet session={session} row={row} homework={homework} onClose={() => {}} />);
-    const heading = screen.getByText("Kiến thức hôm nay");
-    expect(heading).toBeInTheDocument();
-    const rows = screen.getAllByTestId(/^slip-skill-row-/);
-    expect(rows.map((row) => row.getAttribute("data-testid"))).toEqual(["slip-skill-row-speaking", "slip-skill-row-reading"]);
-    expect(heading.parentElement).toContainElement(rows[0]);
-    expect(heading.parentElement).toContainElement(rows[1]);
+    expect(screen.queryByText("Kiến thức hôm nay")).toBeNull();
+    expect(screen.queryAllByTestId(/^slip-skill-row-/)).toHaveLength(0);
   });
 
   it("phiếu đã gửi không tự thêm dòng kỹ năng khi buổi vừa bật Chấm riêng", () => {
@@ -299,19 +282,17 @@ describe("sheet phiếu 3 mức", () => {
 });
 
 describe("desktop phiếu 3 mức", () => {
-  it("buổi vừa bật kỹ năng mới: effect thêm Đạt vào cả draft, note blur không xoá mức/câu", async () => {
+  it("phiếu mức cũ không tự thêm kỹ năng khi cờ bộ tiêu chí bật", async () => {
     const { row, session, homework } = setup(levelComment({ skillLevels: {} }), { gradedSkills: ["speaking"] });
     render(<TicketEditor session={session} row={row} homework={homework} />);
-    await waitFor(() => expect(chick("Nói", "ok")).toHaveAttribute("aria-checked", "true"));
-    const sentence = screen.getByTestId("slip-generated-comment") as HTMLTextAreaElement;
-    expect(sentence.value).toContain("Phần nói con làm được, cần luyện thêm.");
+    expect(screen.queryByTestId("slip-skill-row-speaking")).toBeNull();
 
     const note = screen.getByTestId("slip-note");
     fireEvent.change(note, { target: { value: "Ghi chú sau khi bật" } });
     fireEvent.blur(note);
     await waitFor(() => expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ note: "Ghi chú sau khi bật" })));
-    expect(save.mock.calls.at(-1)![0]).toMatchObject({ skillLevels: { speaking: "ok" } });
-    expect(save.mock.calls.at(-1)![0].comment).toContain("Phần nói con làm được");
+    expect(save.mock.calls.at(-1)![0].skillLevels).toEqual({});
+    expect(save.mock.calls.at(-1)![0].comment).not.toContain("Phần nói");
   });
 
   it("phiếu vừa chuyển sang 3 mức khi editor đang mở: xoá câu vẫn sinh câu theo mức", async () => {
@@ -327,7 +308,7 @@ describe("desktop phiếu 3 mức", () => {
     fireEvent.change(sentence, { target: { value: "" } });
     fireEvent.blur(sentence);
     await waitFor(() => expect(save).toHaveBeenCalled());
-    expect(save.mock.calls.at(-1)![0].comment).toContain("Con nắm được phần chính của từ vựng hôm nay");
+    expect(save.mock.calls.at(-1)![0].comment).not.toContain("từ vựng hôm nay");
   });
 
   it("sửa câu rồi sửa ghi chú: lưu ghi chú không ghi đè câu sửa tay", async () => {
@@ -375,13 +356,13 @@ describe("tab Nhận xét theo cờ", () => {
     expect(screen.getByRole("tab", { name: "Theo tiêu chí" })).toBeInTheDocument();
   });
 
-  it("cờ bật: có Hôm nay học, ẩn segmented, danh sách hiện 'N mục cần cố gắng'", () => {
+  it("cờ bật: ẩn Hôm nay học và segmented, danh sách hiện 'N mục cần cố gắng'", () => {
     const { seed } = setup();
     const levels: Levels = { ...LEVELS, mastery: "needs_work", focus: "needs_work" };
     const comment = levelComment({ levels, comment: "Câu", status: "draft" });
     replaceStore({ ...seed, comments: [comment] });
     render(<MemoryRouter><CommentsPanel classId="6a" sessionId={sessionId} /></MemoryRouter>);
-    expect(screen.getByTestId("lesson-topics")).toBeInTheDocument();
+    expect(screen.queryByTestId("lesson-topics")).toBeNull();
     expect(screen.queryByRole("tab", { name: "Theo tiêu chí" })).toBeNull();
     expect(screen.getByText("2 mục cần cố gắng")).toBeInTheDocument();
   });
