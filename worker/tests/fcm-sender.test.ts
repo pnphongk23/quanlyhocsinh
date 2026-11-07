@@ -14,6 +14,7 @@ import {
   buildAssertion,
   getAccessToken,
   readServiceAccount,
+  readServiceAccountResult,
   sendFcmMessage,
   sendPushToDevice,
   type FetchLike,
@@ -230,6 +231,35 @@ describe('FCM sender (fake fetch, no network)', () => {
       .bind('demo-project')
       .first<{ access_token: string }>();
     expect(call!.access_token).toBe('oauth-token');
+  });
+
+  it('classifies unavailable FCM configuration without returning secret contents', async () => {
+    const marker = 'TEST_SECRET_MARKER_SHOULD_NEVER_BE_LOGGED';
+    expect(await readServiceAccountResult({ DB: db })).toEqual({
+      account: null,
+      reason: 'missing',
+    });
+    expect(await readServiceAccountResult({ DB: db, FCM_SERVICE_ACCOUNT: marker })).toEqual({
+      account: null,
+      reason: 'invalid_json',
+    });
+    expect(await readServiceAccountResult({
+      DB: db,
+      FCM_SERVICE_ACCOUNT: JSON.stringify({ private_key: marker }),
+    })).toEqual({
+      account: null,
+      reason: 'missing_fields',
+    });
+    expect(await readServiceAccountResult({
+      DB: db,
+      FCM_SERVICE_ACCOUNT: JSON.stringify({
+        client_email: 'fake@example.test',
+        private_key: marker,
+      }),
+    })).toEqual({
+      account: null,
+      reason: 'missing_project',
+    });
   });
 
   it('builds a payload with no comment, stars or score content', async () => {

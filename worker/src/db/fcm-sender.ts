@@ -34,6 +34,16 @@ export interface ServiceAccount {
   tokenUri: string;
 }
 
+export type FcmConfigUnavailableReason =
+  | 'missing'
+  | 'invalid_json'
+  | 'missing_fields'
+  | 'missing_project';
+
+export type ServiceAccountReadResult =
+  | { account: ServiceAccount; reason: null }
+  | { account: null; reason: FcmConfigUnavailableReason };
+
 export type FcmKind =
   | 'slip_sent'
   | 'report_published'
@@ -113,41 +123,55 @@ export async function buildAssertion(
   return `${unsigned}.${base64UrlEncode(new Uint8Array(signature))}`;
 }
 
-/** Đọc secret service account. Trả `null` khi thiếu/hỏng (không log nội dung). */
-export async function readServiceAccount(
+/** Đọc cấu hình service account, phân loại lỗi mà không đưa dữ liệu cấu hình ra ngoài. */
+export async function readServiceAccountResult(
   env: FcmEnv,
-): Promise<ServiceAccount | null> {
+): Promise<ServiceAccountReadResult> {
   const raw = env.FCM_SERVICE_ACCOUNT ?? env.FCM_SERVICE_ACCOUNT_JSON;
-  if (typeof raw !== 'string' || raw.trim() === '') return null;
-  let parsed: Record<string, unknown>;
+  if (typeof raw !== 'string' || raw.trim() === '') return { account: null, reason: 'missing' };
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(raw) as Record<string, unknown>;
+    parsed = JSON.parse(raw);
   } catch {
-    return null;
+    return { account: null, reason: 'invalid_json' };
   }
-  const clientEmail = parsed.client_email;
-  const privateKey = parsed.private_key;
-  if (typeof clientEmail !== 'string' || typeof privateKey !== 'string') return null;
-  const projectId =
-    typeof env.FCM_PROJECT_ID === 'string' && env.FCM_PROJECT_ID !== ''
-      ? env.FCM_PROJECT_ID
-      : typeof parsed.project_id === 'string'
-        ? parsed.project_id
-        : '';
-  if (projectId === '') return null;
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { account: null, reason: 'invalid_json' };
+  }
+  const config = parsed as Record<string, unknown>;
+  const clientEmail = config.client_email;
+  const privateKey = config.private_key;
+  if (
+    typeof clientEmail !== 'string' || clientEmail.trim() === '' ||
+    typeof privateKey !== 'string' || privateKey.trim() === ''
+  ) {
+    return { account: null, reason: 'missing_fields' };
+  }
+  const envProjectId = env.FCM_PROJECT_ID?.trim();
+  const secretProjectId = typeof config.project_id === 'string' ? config.project_id.trim() : '';
+  const projectId = envProjectId || secretProjectId;
+  if (projectId === '') return { account: null, reason: 'missing_project' };
   const tokenUri =
-    typeof parsed.token_uri === 'string' && parsed.token_uri !== ''
-      ? parsed.token_uri
+    typeof config.token_uri === 'string' && config.token_uri !== ''
+      ? config.token_uri
       : GOOGLE_TOKEN_URI;
   const privateKeyId =
-    typeof parsed.private_key_id === 'string' ? parsed.private_key_id : null;
+    typeof config.private_key_id === 'string' ? config.private_key_id : null;
   return {
-    projectId,
-    clientEmail,
-    privateKeyPem: privateKey,
-    privateKeyId,
-    tokenUri,
+    account: {
+      projectId,
+      clientEmail,
+      privateKeyPem: privateKey,
+      privateKeyId,
+      tokenUri,
+    },
+    reason: null,
   };
+}
+
+/** Backward-compatible reader: null when required FCM configuration is unavailable. */
+export async function readServiceAccount(env: FcmEnv): Promise<ServiceAccount | null> {
+  return (await readServiceAccountResult(env)).account;
 }
 
 interface CacheRow {

@@ -56,6 +56,9 @@
       "dev": {
         "name": "qlh-dev-api",
         "placement": { "region": "gcp:asia-east2" },
+        "observability": {
+          "enabled": true
+        },
         "triggers": {
           "crons": ["* * * * *", "*/30 * * * *"]
         },
