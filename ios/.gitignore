@@ -12,6 +12,7 @@ DerivedData/
 xcuserdata/
 *.xcuserstate
 *.xcworkspace/xcuserdata/
+GoogleService-Info*.plist
 
 # macOS
 .DS_Store

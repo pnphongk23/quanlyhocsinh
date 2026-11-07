@@ -70,6 +70,15 @@ final class PendingNotificationRoute {
         setPendingIntent(NotificationRoute(notification: notification))
     }
 
+    func receive(route: NotificationRoute?, isGuardian: Bool) {
+        guard isGuardian else { pendingIntent = nil; return }
+        setPendingIntent(route)
+    }
+
+    func discard() {
+        pendingIntent = nil
+    }
+
     func consume(id: UUID) {
         guard pendingIntent?.id == id else { return }
         pendingIntent = nil

@@ -14,6 +14,11 @@ options:
   minimumXcodeGenVersion: "2.40.0"
   xcodeVersion: "16.0"
 
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    exactVersion: 12.19.3
+
 configs:
   Staging: debug
   Production: release
@@ -38,10 +43,26 @@ targets:
         excludes:
           - "Resources/Info.plist"
           - "**/.gitkeep"
-    configFiles:
-      Staging: Config/Staging.xcconfig
-      Production: Config/Production.xcconfig
-    settings:
+      configFiles:
+        Staging: Config/Staging.xcconfig
+        Production: Config/Production.xcconfig
+      dependencies:
+        - package: Firebase
+          product: FirebaseMessaging
+      preBuildScripts:
+        - name: Copy Staging Firebase configuration
+          showEnvVars: false
+          basedOnDependencyAnalysis: false
+          script: |
+            if [ "$CONFIGURATION" = "Staging" ]; then
+              source="$HOME/.config/qlh/GoogleService-Info-dev.plist"
+              if [ -f "$source" ]; then
+                destination="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/GoogleService-Info.plist"
+                mkdir -p "$(dirname "$destination")"
+                cp "$source" "$destination"
+              fi
+            fi
+      settings:
       base:
         PRODUCT_NAME: QuanLyLop
         INFOPLIST_FILE: QuanLyLop/Resources/Info.plist
