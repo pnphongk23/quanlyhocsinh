@@ -31,12 +31,16 @@
 .itemName { min-width: 0; overflow-wrap: anywhere; font-weight: var(--weight-semibold); }
 .itemMeta { display: inline-flex; min-width: 0; align-items: center; flex-wrap: wrap; gap: var(--space-4); color: var(--color-muted); font-size: var(--text-sm); }
 .item.selected .itemMeta { color: var(--state-selected-fg); }
-.homeworkLabel { margin-inline-start: var(--space-4); }
+.homeworkLabel { color: var(--color-muted); font-size: var(--text-sm); }
 .orderTools { display: flex; align-items: center; gap: var(--space-4); }
 .orderButton { display: inline-grid; width: var(--tap); min-width: var(--tap); height: var(--tap); min-height: var(--tap); place-items: center; padding: 0; border: 0; border-radius: var(--radius-chip); background: var(--color-primary-soft); color: var(--color-primary-ink); font: inherit; font-size: var(--text-lg); cursor: pointer; }
 .orderButton:focus-visible { outline: var(--state-focus-ring); outline-offset: var(--focus-ring-offset); }
 .orderButton:disabled { background: var(--color-neutral-soft); color: var(--color-muted); opacity: var(--state-disabled-opacity); cursor: default; }
 .form { display: grid; gap: var(--space-16); }
+.levelField { display: grid; min-width: 0; gap: var(--space-8); }
+.levelLabel { display: flex; align-items: center; gap: var(--space-8); font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.fieldError { color: var(--color-error); font-size: var(--text-md); }
+.sheetClose { width: var(--tap); min-width: var(--tap); min-height: var(--tap); padding: 0; font-size: var(--text-lg); line-height: var(--leading-tight); }
 .form :global(input), .textarea, .select { font-size: var(--text-base); }
 .textarea { width: 100%; min-height: var(--control-h); padding: var(--space-12); border: 1px solid var(--color-input-border); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text); font-family: inherit; line-height: var(--leading-base); resize: vertical; }
 .textarea:focus-visible, .select:focus-visible { outline: none; border-color: var(--color-primary); box-shadow: var(--state-focus-ring); }

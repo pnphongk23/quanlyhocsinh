@@ -71,6 +71,7 @@ function CriteriaSetSettings() {
 
   const ordered = useMemo(() => set?.criteria ?? [], [set]);
   const editorTitle = editingId ? "Sửa tiêu chí" : "Thêm tiêu chí";
+  const closeEditor = () => setEditorOpen(false);
 
   function openNew() {
     setEditingId(null); setDraft({ ...EMPTY_DRAFT, texts: { ...EMPTY_DRAFT.texts } });
@@ -166,10 +167,15 @@ function CriteriaSetSettings() {
           <span className={s.counter}>{codePointLength(draft.name.trim().normalize("NFC"))}/40 ký tự</span>
         </Field>
         {CRITERIA_LEVELS.map((level) => (
-          <Field key={level} label={`Câu mức ${CRITERIA_LEVEL_LABELS[level]}`} htmlFor={`criteria-${level}`} error={errors[level]}>
+          <div key={level} className={s.levelField}>
+            <label htmlFor={`criteria-${level}`} className={s.levelLabel}>
+              <span>Câu mức {CRITERIA_LEVEL_LABELS[level]}</span>
+              <LevelChickMeter level={level} decorative />
+            </label>
             <textarea id={`criteria-${level}`} className={s.textarea} value={draft.texts[level]} maxLength={800} rows={3} onChange={(event) => setDraft((value) => ({ ...value, texts: { ...value.texts, [level]: Array.from(event.target.value).slice(0, 200).join("") } }))} aria-invalid={Boolean(errors[level])} />
             <span className={s.counter}>{codePointLength(draft.texts[level].trim().normalize("NFC"))}/200 ký tự</span>
-          </Field>
+            {errors[level] && <span className={s.fieldError} role="alert">{errors[level]}</span>}
+          </div>
         ))}
         <Field label="Mức mặc định" htmlFor="criteria-default" error={errors.default_level}>
           <select id="criteria-default" className={s.select} value={draft.default_level} onChange={(event) => { setDraft((value) => ({ ...value, default_level: event.target.value as CriteriaLevel })); setErrors((value) => ({ ...value, default_level: undefined })); }}>
@@ -231,10 +237,10 @@ function CriteriaSetSettings() {
                 <div className={`${s.item} ${editingId === item.id ? s.selected : ""}`}>
                   <button type="button" className={s.itemSelect} onClick={() => openEdit(item)} aria-label={`Sửa tiêu chí ${item.name}`} aria-pressed={editingId === item.id} disabled={!online || saving}>
                     <span className={s.itemName}>{item.name}</span>
+                    {item.homework && <span className={s.homeworkLabel}>Theo chấm BTVN</span>}
                     <span className={s.itemMeta}>
                       <LevelChickMeter level={item.default_level} decorative />
                       <span>{CRITERIA_LEVEL_LABELS[item.default_level]}</span>
-                      {item.homework && <span className={s.homeworkLabel}>Theo chấm BTVN</span>}
                     </span>
                   </button>
                   <div className={s.orderTools}>
@@ -247,15 +253,21 @@ function CriteriaSetSettings() {
             {saved && <p className={s.success} role="status" aria-live="polite">✓ Đã lưu</p>}
           </section>
           {desktop && editorOpen && <aside className={s.editorPanel} aria-label={editorTitle}>
-            <header className={s.editorHeader}><h2>{editorTitle}</h2><Button variant="secondary" onClick={() => setEditorOpen(false)} aria-label="Đóng">Đóng</Button></header>
+            <header className={s.editorHeader}><h2>{editorTitle}</h2><Button variant="secondary" className={s.sheetClose} onClick={closeEditor} aria-label="Đóng">×</Button></header>
             {editorBody}{editorFooter}
           </aside>}
         </div>}
-        {!desktop && <Sheet open={editorOpen} onClose={() => setEditorOpen(false)} title={editorTitle} footer={editorFooter}>{editorBody}</Sheet>}
+        {!desktop && <Sheet
+          open={editorOpen}
+          onClose={closeEditor}
+          title={editorTitle}
+          header={<header className={s.editorHeader}><h2>{editorTitle}</h2><Button variant="secondary" className={s.sheetClose} onClick={closeEditor} aria-label="Đóng">×</Button></header>}
+          footer={editorFooter}
+        >{editorBody}</Sheet>}
         <Modal
           open={deleting !== null}
           onClose={() => setDeleting(null)}
-          title="Xoá tiêu chí"
+          title="Xoá tiêu chí này?"
           sheet={!desktop}
           footer={<div className={s.deleteActions}>
             <Button variant="secondary" onClick={() => setDeleting(null)} disabled={deleteSaving}>Huỷ</Button>

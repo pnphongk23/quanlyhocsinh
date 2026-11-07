@@ -60,7 +60,9 @@ describe("custom criteria settings", () => {
   });
 
   it("shows compact default level details and opens edit from the criterion row", async () => {
-    mocks.get.mockResolvedValue(result(2));
+    const criteria = result(2);
+    criteria.criteria[0]!.homework = true;
+    mocks.get.mockResolvedValue(criteria);
     renderPage();
     const name = await screen.findByText("Tiêu chí 1");
     expect(name).toBeInTheDocument();
@@ -72,8 +74,17 @@ describe("custom criteria settings", () => {
     expect(within(row!).getByRole("button", { name: "Chuyển lên: Tiêu chí 1" })).toBeDisabled();
     expect(within(row!).getByRole("button", { name: "Chuyển xuống: Tiêu chí 1" })).toBeEnabled();
     expect(within(row!).queryByRole("button", { name: "Xoá" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" }));
+    const selectRow = within(row!).getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" });
+    expect(selectRow.children[1]).toHaveTextContent("Theo chấm BTVN");
+    expect(selectRow.children[2]).toContainElement(selectRow.querySelector("[data-level='good']"));
+    fireEvent.click(selectRow);
     expect(await screen.findByLabelText("Tên tiêu chí")).toHaveValue("Tiêu chí 1");
+    for (const label of ["Câu mức Tốt", "Câu mức Đạt", "Câu mức Cần cố gắng"]) {
+      const textarea = screen.getByLabelText(label);
+      expect(textarea.previousElementSibling).toHaveTextContent(label);
+      expect(textarea.previousElementSibling?.querySelector("[aria-hidden='true']")).toBeInTheDocument();
+    }
+    expect(screen.getByRole("button", { name: "Đóng" })).toHaveTextContent("×");
     expect(screen.getByRole("button", { name: "Xoá tiêu chí" })).toBeEnabled();
   });
 
@@ -92,7 +103,7 @@ describe("custom criteria settings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" }));
     fireEvent.click(await screen.findByRole("button", { name: "Xoá tiêu chí" }));
     expect(await screen.findByText("Phiếu đã gửi không đổi.")).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "Xoá tiêu chí" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Xoá tiêu chí này?" })).toBeInTheDocument();
   });
 
   it("keeps editor content open on a 409 until the user chooses reload", async () => {
