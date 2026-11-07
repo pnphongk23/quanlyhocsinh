@@ -60,30 +60,44 @@ describe("custom criteria settings", () => {
   });
 
   it("shows compact default level details and opens edit from the criterion row", async () => {
-    const criteria = result(2);
-    criteria.criteria[0]!.homework = true;
+    const source = [
+      ["Độ tập trung", "Con tập trung, chú ý nghe giảng.", "Con thỉnh thoảng còn mất tập trung, còn phải nhắc nhở.", "Con hay nói chuyện riêng trong giờ, cô phải nhắc nhiều. Cần chú ý hơn.", "good", false],
+      ["Sự tích cực tham gia bài học", "Con tập trung, sôi nổi, hăng hái phát biểu.", "Con có tham gia hoạt động khi được yêu cầu, chưa mạnh dạn chủ động.", "Con hơi trầm, còn rụt rè, cần mạnh dạn sôi nổi hơn.", "good", false],
+      ["Ghi chép bài", "Con ghi chép bài đầy đủ, cẩn thận.", "Con ghi chép bài nhưng còn ẩu, cần cẩn thận hơn.", "Con chưa chủ động ghi chép bài, cô phải nhắc nhở.", "ok", false],
+      ["Phản xạ nói Tiếng Anh", "Con phản xạ nhanh, tự tin nói câu hoàn chỉnh, phát âm rõ.", "Con trả lời được khi cô gợi ý, cần tự tin hơn.", "Con còn ngại nói, cần luyện tập các câu đã học ở nhà.", "good", false],
+      ["Nhớ từ và cấu trúc câu", "Con nhớ tốt từ vựng và cấu trúc câu, vận dụng đúng khi trả lời.", "Con nhớ từ vựng và cấu trúc câu nhưng chưa chắc chắn, đôi khi còn nhầm.", "Con chưa nhớ từ và câu của bài. Cần ôn tập nghiêm túc.", "good", false],
+      ["Làm bài tập về nhà", "Con làm bài tập đầy đủ, cẩn thận.", "Con có làm bài tập nhưng chưa đầy đủ.", "Con chưa làm bài về nhà, bố mẹ nhắc con làm bài trước buổi học sau.", "good", true],
+    ] as const;
+    const criteria: CriteriaSet = {
+      version: 1,
+      criteria: source.map(([name, good, ok, needsWork, default_level, homework], index) => ({
+        id: `criterion-${index + 1}`,
+        name,
+        texts: { good, ok, needs_work: needsWork },
+        default_level,
+        homework,
+      })),
+    };
     mocks.get.mockResolvedValue(criteria);
     renderPage();
-    const name = await screen.findByText("Tiêu chí 1");
-    expect(name).toBeInTheDocument();
+    await screen.findByText("Độ tập trung");
     expect(screen.getByText("Áp dụng cho mọi lớp trong workspace")).toBeInTheDocument();
     const list = screen.getByRole("region", { name: "Danh sách tiêu chí" });
-    expect(within(list).getAllByText("Tốt")).toHaveLength(2);
-    const row = name.closest("li");
-    expect(row).not.toBeNull();
-    expect(within(row!).getByRole("button", { name: "Chuyển lên: Tiêu chí 1" })).toBeDisabled();
-    expect(within(row!).getByRole("button", { name: "Chuyển xuống: Tiêu chí 1" })).toBeEnabled();
-    expect(within(row!).queryByRole("button", { name: "Xoá" })).not.toBeInTheDocument();
-    const selectRow = within(row!).getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" });
-    expect(selectRow.children[1]).toHaveTextContent("Theo chấm BTVN");
-    expect(selectRow.children[2]).toContainElement(selectRow.querySelector("[data-level='good']"));
-    fireEvent.click(selectRow);
-    expect(await screen.findByLabelText("Tên tiêu chí")).toHaveValue("Tiêu chí 1");
+    const homeworkRow = within(list).getByRole("button", { name: "Sửa tiêu chí Làm bài tập về nhà" });
+    expect(within(homeworkRow).getByText("Theo chấm BTVN")).toBeInTheDocument();
+    expect(homeworkRow.children[1]).toHaveTextContent("Theo chấm BTVN");
+    expect(homeworkRow.children[2]).toContainElement(homeworkRow.querySelector("[data-level='good']"));
+    const firstRow = within(list).getByRole("button", { name: "Sửa tiêu chí Độ tập trung" });
+    expect(within(firstRow).queryByText("Theo chấm BTVN")).not.toBeInTheDocument();
+    expect(within(list).getAllByText("Theo chấm BTVN")).toHaveLength(1);
+    fireEvent.click(firstRow);
+    expect(await screen.findByLabelText("Tên tiêu chí")).toHaveValue("Độ tập trung");
     for (const label of ["Câu mức Tốt", "Câu mức Đạt", "Câu mức Cần cố gắng"]) {
       const textarea = screen.getByLabelText(label);
       expect(textarea.previousElementSibling).toHaveTextContent(label);
       expect(textarea.previousElementSibling?.querySelector("[aria-hidden='true']")).toBeInTheDocument();
     }
+    expect(screen.getByLabelText("Câu mức Tốt")).toHaveValue(source[0][1]);
     expect(screen.getByRole("button", { name: "Đóng" })).toHaveTextContent("×");
     expect(screen.getByRole("button", { name: "Xoá tiêu chí" })).toBeEnabled();
   });
