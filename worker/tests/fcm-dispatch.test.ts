@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clubToken,
   db,
@@ -299,7 +299,7 @@ describe('notification dispatch cron', () => {
     expect(summary.inboxes).toBe(0);
   });
 
-  it('sends the delivery through the injected fetch and never twice', async () => {
+    it('sends the delivery through the injected fetch and never twice', async () => {
     const f = await setup();
     const now = nowIso();
     await insertDeviceToken(
@@ -351,10 +351,101 @@ describe('notification dispatch cron', () => {
     // Chạy lại: inbox đã đóng băng xong, delivery đã sent ⇒ không gửi trùng.
     const second = await runNotificationDispatch(env, { now, fetchImpl });
     expect(second.sent).toBe(0);
-    expect(fcmCalls).toBe(1);
-  });
+      expect(fcmCalls).toBe(1);
+    });
 
-  it('skips the delivery when the membership is disabled after fanout', async () => {
+    it('keeps a rejected FCM delivery pending and continues sending the next delivery', async () => {
+      const f = await setup();
+      const now = nowIso();
+      const rejectedToken = 'FAKE_FCM_NETWORK_REJECT';
+      const succeedingToken = 'FAKE_FCM_NETWORK_CONTINUE';
+      const rejectedDeviceId = await insertDeviceToken(
+        f.workspaceId,
+        f.userId,
+        f.membershipId,
+        f.deviceSessionId,
+        rejectedToken,
+      );
+      const succeedingDeviceId = await insertDeviceToken(
+        f.workspaceId,
+        f.userId,
+        f.membershipId,
+        f.deviceSessionId,
+        succeedingToken,
+      );
+      await db
+        .prepare('UPDATE device_tokens SET bound_at = ? WHERE id IN (?, ?)')
+        .bind(isoAt(Date.parse(now) - 60_000), rejectedDeviceId, succeedingDeviceId)
+        .run();
+      const notificationId = await seedNotification({ ...f, eventKey: 'network-reject', createdAt: now });
+
+      const fanout = await runNotificationDispatch({ DB: db }, { now });
+      expect(fanout.deliveries).toBe(2);
+
+      const env = await serviceAccountEnv();
+      const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+      const exceptionMessage = `private network error for ${rejectedToken}`;
+      const observedTokens: string[] = [];
+      let oauthCalls = 0;
+      const fetchImpl = async (url: string, init?: RequestInit): Promise<Response> => {
+        if (url === TOKEN_URI) {
+          oauthCalls += 1;
+          return okJson({ access_token: 'oauth', expires_in: 3600 });
+        }
+        const body = JSON.parse(String(init?.body));
+        const token = body.message.token as string;
+        observedTokens.push(token);
+        if (token === rejectedToken) throw new Error(exceptionMessage);
+        return okJson({ name: 'projects/demo-project/messages/continued' });
+      };
+
+      const summary = await runNotificationDispatch(env, { now, fetchImpl });
+      expect(summary.pending).toBe(1);
+      expect(summary.sent).toBe(1);
+      expect(oauthCalls).toBe(1);
+      expect(observedTokens).toHaveLength(2);
+      expect(observedTokens).toContain(rejectedToken);
+      expect(observedTokens).toContain(succeedingToken);
+
+      const rejectedDelivery = await db
+        .prepare(
+          `SELECT status, attempts, next_attempt_at, error_code
+             FROM push_deliveries WHERE notification_id = ? AND device_id = ?`,
+        )
+        .bind(notificationId, rejectedDeviceId)
+        .first<{ status: string; attempts: number; next_attempt_at: string; error_code: string | null }>();
+      expect(rejectedDelivery).toEqual({
+        status: 'pending',
+        attempts: 1,
+        next_attempt_at: isoAt(Date.parse(now) + 2 * 60_000),
+        error_code: 'NETWORK_ERROR',
+      });
+      const sentDelivery = await db
+        .prepare('SELECT status FROM push_deliveries WHERE notification_id = ? AND device_id = ?')
+        .bind(notificationId, succeedingDeviceId)
+        .first<{ status: string }>();
+      expect(sentDelivery?.status).toBe('sent');
+      const retainedRegistration = await db
+        .prepare('SELECT token FROM device_tokens WHERE id = ?')
+        .bind(rejectedDeviceId)
+        .first<{ token: string }>();
+      expect(retainedRegistration?.token).toBe(rejectedToken);
+
+      expect(log).toHaveBeenCalledTimes(2);
+      const serializedLogs = log.mock.calls.map(([line]) => String(line)).join('\n');
+      expect(serializedLogs).not.toContain(exceptionMessage);
+      expect(serializedLogs).not.toContain(rejectedToken);
+      expect(serializedLogs).not.toContain(succeedingToken);
+      expect(log.mock.calls.map(([line]) => JSON.parse(String(line)))).toEqual(
+        expect.arrayContaining([
+          { outcome: 'unavailable', error_code: 'NETWORK_ERROR' },
+          { outcome: 'sent' },
+        ]),
+      );
+      log.mockRestore();
+    });
+
+    it('skips the delivery when the membership is disabled after fanout', async () => {
     const f = await setup();
     const now = nowIso();
     await insertDeviceToken(

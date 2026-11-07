@@ -57,7 +57,7 @@
         "name": "qlh-dev-api",
         "placement": { "region": "gcp:asia-east2" },
         "triggers": {
-          "crons": ["*/30 * * * *"]
+          "crons": ["* * * * *", "*/30 * * * *"]
         },
         "vars": {
           "ENVIRONMENT": "dev",
