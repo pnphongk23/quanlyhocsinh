@@ -1,4 +1,4 @@
-import type { ApiErrorBody, ApiClass, ApiStudent, ApiSession, ApiReport, LoginResponse, MeResponse, Page, PushRequest, PushResponse, PullResponse, SnapshotResponse, ReportPreview, StaffMember, StaffCreateBody, StaffPatchBody, StaffPermissions, RolePermissionsItem } from "./types";
+import type { ApiErrorBody, ApiClass, ApiStudent, ApiSession, ApiReport, LoginResponse, MeResponse, Page, PushRequest, PushResponse, PullResponse, SnapshotResponse, ReportPreview, StaffMember, StaffCreateBody, StaffPatchBody, StaffPermissions, RolePermissionsItem, CriteriaSet, CriteriaSetWriteBody } from "./types";
 export type PhoneCheckNext = "login" | "guardian_setup" | "teacher_register";
 export interface ApiClientOptions { baseUrl: string; getToken: () => string | null; fetch?: typeof fetch }
 export interface RequestOptions<Body> { body?: Body; query?: Record<string, string | number | undefined>; signal?: AbortSignal; requestId?: string; authToken?: string; /** Public endpoint: never attach a stored Bearer token. */ anonymous?: boolean }
@@ -21,6 +21,8 @@ export type ApiEndpoints = {
   "GET /staff": Endpoint<{ items: StaffMember[] }>;
   "POST /staff": Endpoint<StaffMember, StaffCreateBody>;
   "GET /roles/permissions": Endpoint<{ items: RolePermissionsItem[] }>;
+  "GET /criteria-set": Endpoint<CriteriaSet>;
+  "PUT /criteria-set": Endpoint<CriteriaSet, CriteriaSetWriteBody>;
   "POST /sync/push": Endpoint<PushResponse, PushRequest>;
   "GET /sync/pull": Endpoint<PullResponse>;
   "GET /sync/snapshot": Endpoint<SnapshotResponse>;

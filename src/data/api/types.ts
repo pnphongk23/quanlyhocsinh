@@ -48,6 +48,11 @@ export interface StaffMember {
 export interface StaffCreateBody { phone: string; display_name: string; role: StaffRoleKey; class_ids?: string[] }
 export interface StaffPatchBody { role?: StaffRoleKey; class_ids?: string[]; status?: "active" | "disabled"; display_name?: string; base_version?: number }
 export interface RolePermissionsItem { role: { id: string; name: string; system_key: string | null }; permissions: StaffPermissions }
+export type CriteriaLevel = "good" | "ok" | "needs_work";
+export interface CriteriaSetItem { id: string; name: string; texts: Record<CriteriaLevel, string>; default_level: CriteriaLevel; homework: boolean }
+export interface CriteriaSet { version: number; criteria: CriteriaSetItem[] }
+export type CriteriaSetWriteItem = Omit<CriteriaSetItem, "id"> & { id?: string };
+export interface CriteriaSetWriteBody { base_version: number; criteria: CriteriaSetWriteItem[] }
 export interface MeResponse {
   user: ApiUser; active_membership_id: string | null;
     memberships: (ApiMembership & { status: "active" | "disabled"; scope_epoch: number })[];
@@ -118,6 +123,6 @@ type Rejected = { id: string; status: "rejected"; error: ApiErrorBody["error"] }
 export type CommandResult = Applied | ConflictResult | Rejected | { id: string; status: "duplicate"; original_status: "applied" | "conflict"; version?: number; conflict_id?: string; server?: Record<string, unknown> };
 export interface PushRequest { membership_id: string; device_id: string; commands: SyncCommand[] }
 export interface PushResponse { epoch: number; cursor: number; results: CommandResult[] }
-export interface PullResponse { cursor: number; epoch: number; has_more: boolean; server_time: string; upserts: { [K in keyof EntityMap]?: EntityMap[K][] }; deleted: { entity: keyof EntityMap; k1: string; k2: string }[] }
-export interface SnapshotResponse { cursor: number; epoch: number; window: { from: string; to: string }; entities: (keyof EntityMap)[] }
+export interface PullResponse { cursor: number; epoch: number; has_more: boolean; server_time: string; criteria_set_version?: number; upserts: { [K in keyof EntityMap]?: EntityMap[K][] }; deleted: { entity: keyof EntityMap; k1: string; k2: string }[] }
+export interface SnapshotResponse { cursor: number; epoch: number; window: { from: string; to: string }; entities: (keyof EntityMap)[]; criteria_set_version?: number }
 export interface SnapshotPage<T> { items: T[]; next_after: string | null }

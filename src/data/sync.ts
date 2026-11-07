@@ -73,7 +73,7 @@ function updateStoreView(entity: EntityName, item: Record<string, any>): void {
 }
 declare global { interface Window { __QLH_STATE__?: import("./types").StoreState } }
 async function applyPull(page: PullResponse, identity: string): Promise<boolean> {
-  await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
+    await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
     for (const entity of entities) for (const item of page.upserts?.[entity] ?? []) {
       if (isDeletedReportUpsert(entity, item as unknown as Record<string, unknown>, identity)) continue;
       const parts = keyParts(entity, item as unknown as Record<string, unknown>), key = `${identity}|${entity}|${parts.join("|")}`;
@@ -139,8 +139,12 @@ async function snapshot(identity: string, membershipId: string, causedBy409 = fa
         await tableFor(entity).bulkPut(acceptedRows as any);
       }
     }
-    await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
-  });
+      await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
+    });
+    if (import.meta.env.VITE_CRITERIA_LEVELS === "1" && header.criteria_set_version !== undefined) {
+      const { refreshCriteriaSetIfVersion } = await import("./repositories/criteriaSet");
+      await refreshCriteriaSetIfVersion(header.criteria_set_version, identity);
+    }
   if (causedBy409) lastResyncSnapshotAt.set(identity, Date.now());
   await pull(identity, membershipId);
 }
@@ -151,7 +155,11 @@ async function pull(identity: string, membershipId: string): Promise<boolean> {
   do {
     try {
       const page: PullResponse = await api.request("GET /sync/pull", { query: { membership_id: membershipId, cursor: meta.cursor, epoch: meta.epoch, limit: 200 } }) as PullResponse;
-      changed = await applyPull(page, identity) || changed; meta = { ...meta, cursor: page.cursor, epoch: page.epoch };
+        changed = await applyPull(page, identity) || changed; meta = { ...meta, cursor: page.cursor, epoch: page.epoch };
+        if (import.meta.env.VITE_CRITERIA_LEVELS === "1" && page.criteria_set_version !== undefined) {
+          const { refreshCriteriaSetIfVersion } = await import("./repositories/criteriaSet");
+          await refreshCriteriaSetIfVersion(page.criteria_set_version, identity);
+        }
       if (!page.has_more) break;
     } catch (error) {
       if (error instanceof ApiError && error.status === 409 && ["resync_required", "snapshot_required"].includes(error.error.code)) {
@@ -168,8 +176,9 @@ async function pull(identity: string, membershipId: string): Promise<boolean> {
   return changed;
 }
 async function clearIdentityCache(identity: string): Promise<void> {
-  await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
-    for (const entity of entities) await tableFor(entity).where("identity").equals(identity).delete();
+    await db.transaction("rw", [db.meta, db.criteriaSets, ...entities.map((entity) => tableFor(entity))], async () => {
+      for (const entity of entities) await tableFor(entity).where("identity").equals(identity).delete();
+      await db.criteriaSets.where("identity").equals(identity).delete();
     await db.meta.delete(identity);
   });
   lastResyncSnapshotAt.delete(identity);
@@ -177,14 +186,15 @@ async function clearIdentityCache(identity: string): Promise<void> {
 }
 export async function clearUserCache(userId: string): Promise<boolean> {
   const identityPrefix = `${userId}:`;
-  const cleared = await db.transaction("rw", [db.meta, db.outbox, ...entities.map((entity) => tableFor(entity))], async () => {
+    const cleared = await db.transaction("rw", [db.meta, db.outbox, db.criteriaSets, ...entities.map((entity) => tableFor(entity))], async () => {
     const racedRows = await db.outbox.where("identity").startsWith(identityPrefix).count();
     if (racedRows) {
       await db.meta.put({ key: logoutLockKey(userId), identity: `logout:${userId}`, cursor: 0, epoch: 0, logoutState: "needs_login", updatedAt: Date.now() });
       setSaveStatus("error");
       return false;
     }
-    for (const entity of entities) await tableFor(entity).where("identity").startsWith(identityPrefix).delete();
+      for (const entity of entities) await tableFor(entity).where("identity").startsWith(identityPrefix).delete();
+      await db.criteriaSets.where("identity").startsWith(identityPrefix).delete();
     await db.meta.where("identity").startsWith(identityPrefix).delete();
     await db.outbox.where("identity").startsWith(identityPrefix).delete();
     await db.meta.delete(logoutLockKey(userId));

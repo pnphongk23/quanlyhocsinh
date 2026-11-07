@@ -206,14 +206,20 @@ function SettingsMobile() {
             <Icon name="chevron-right" />
           </span>
         </Link>
-        {isAdminRole && (
-          <Link to="/cai-dat/nhan-su" className={s.menuRow}>
+          {isAdminRole && (
+            <Link to="/cai-dat/nhan-su" className={s.menuRow}>
             Nhân sự
             <span className={s.rowLock} aria-hidden="true">
               <Icon name="chevron-right" />
             </span>
-          </Link>
-        )}
+            </Link>
+          )}
+          {import.meta.env.VITE_CRITERIA_LEVELS === "1" && isAdminRole && (
+            <Link to="/cai-dat/bo-tieu-chi" className={s.menuRow}>
+              Bộ tiêu chí nhận xét
+              <span className={s.rowLock} aria-hidden="true"><Icon name="chevron-right" /></span>
+            </Link>
+          )}
         {multipleRoles && (
           <button
             type="button"
@@ -448,8 +454,8 @@ function SettingsDesktop() {
         </div>
 
         <div className={s.column}>
-          {isAdminRole && (
-            <section className={s.card} aria-label="Nhân sự">
+            {isAdminRole && (
+              <section className={s.card} aria-label="Nhân sự">
               <h2 className={s.cardHead}>Nhân sự</h2>
               <p className={s.roleNote}>Thêm giáo viên, trợ giảng, giao lớp và chỉnh quyền theo vai trò.</p>
               <div className={s.roleList}>
@@ -460,8 +466,19 @@ function SettingsDesktop() {
                   </span>
                 </Link>
               </div>
-            </section>
-          )}
+              </section>
+            )}
+            {import.meta.env.VITE_CRITERIA_LEVELS === "1" && isAdminRole && (
+              <section className={s.card} aria-label="Bộ tiêu chí nhận xét">
+                <h2 className={s.cardHead}>Bộ tiêu chí nhận xét</h2>
+                <div className={s.roleList}>
+                  <Link to="/cai-dat/bo-tieu-chi" className={s.menuRow}>
+                    Chỉnh sửa bộ tiêu chí
+                    <span className={s.rowLock} aria-hidden="true"><Icon name="chevron-right" /></span>
+                  </Link>
+                </div>
+              </section>
+            )}
           <section className={s.card} aria-label="Đổi mật khẩu và đăng xuất">
             <h2 className={s.cardHead}>Đổi mật khẩu</h2>
             <form className={s.formBody} onSubmit={savePassword} noValidate>
