@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   db,
   fakePhone,
@@ -234,6 +234,13 @@ describe('FCM sender (fake fetch, no network)', () => {
       student_id: 'stu_fake_1',
       test_id: 'tst_fake_1',
     });
+    expect(sentBody.message.apns).toEqual({
+      headers: {
+        'apns-push-type': 'alert',
+        'apns-priority': '10',
+      },
+    });
+    expect(sentBody.message.apns.payload?.aps?.['content-available']).toBeUndefined();
     const serialized = JSON.stringify(sentBody);
     for (const forbidden of ['stars', 'note', 'value', 'parent_phone', 'password']) {
       expect(serialized.toLowerCase()).not.toContain(forbidden);
@@ -300,6 +307,51 @@ describe('FCM sender (fake fetch, no network)', () => {
       .bind(deviceId)
       .first<{ id: string }>();
     expect(row).toBeNull();
+  });
+
+  it('logs only FCM outcome and error code, without token or user identifiers', async () => {
+    const { account } = await makeServiceAccount();
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const { fetchImpl } = recordingFetch((url) => {
+      if (url === TOKEN_URI) return jsonResponse({ access_token: 'oauth-token', expires_in: 3600 });
+      return jsonResponse(
+        { error: { status: 'NOT_FOUND', details: [{ errorCode: 'UNREGISTERED' }] } },
+        404,
+      );
+    });
+
+    try {
+      const result = await sendPushToDevice(db, fetchImpl, account, {
+        deviceToken: 'PRIVATE_FAKE_TOKEN',
+        deviceId: 'private-device-id',
+        membershipId: 'private-membership-id',
+        registrationVersion: 1,
+        kind: 'slip_sent',
+        refs: {
+          notificationId: 987654,
+          studentId: 'private-student-id',
+          sessionId: null,
+          reportId: null,
+          testId: null,
+        },
+      }, NOW);
+
+      expect(result).toMatchObject({ outcome: 'invalid_token', error_code: 'UNREGISTERED' });
+      expect(log).toHaveBeenCalledTimes(1);
+      const serialized = String(log.mock.calls[0]?.[0]);
+      expect(JSON.parse(serialized)).toEqual({ outcome: 'invalid_token', error_code: 'UNREGISTERED' });
+      for (const forbidden of [
+        'PRIVATE_FAKE_TOKEN',
+        'private-device-id',
+        'private-membership-id',
+        'private-student-id',
+        '987654',
+      ]) {
+        expect(serialized).not.toContain(forbidden);
+      }
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it('refreshes the OAuth token exactly once on 401', async () => {

@@ -324,7 +324,21 @@ export function buildPushMessage(
     token,
     notification: { title: PUSH_TITLES[kind] },
     data,
+    apns: {
+      headers: {
+        'apns-push-type': 'alert',
+        'apns-priority': '10',
+      },
+    },
   };
+}
+
+function logFcmOutcome(result: FcmResult): void {
+  const errorCode = result.error_code ?? (result.status ? `HTTP_${result.status}` : undefined);
+  console.log(JSON.stringify({
+    outcome: result.outcome,
+    ...(result.outcome !== 'sent' && errorCode ? { error_code: errorCode } : {}),
+  }));
 }
 
 function fcmErrorCode(body: unknown): string | null {
@@ -351,17 +365,22 @@ export async function sendFcmMessage(
   accessToken: string,
   message: unknown,
 ): Promise<FcmResult> {
-  const response = await fetchImpl(
-    `${FCM_SEND_BASE}/${encodeURIComponent(projectId)}/messages:send`,
-    {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${accessToken}`,
-        'content-type': 'application/json',
+  let response: Response;
+  try {
+    response = await fetchImpl(
+      `${FCM_SEND_BASE}/${encodeURIComponent(projectId)}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${accessToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
       },
-      body: JSON.stringify({ message }),
-    },
-  );
+    );
+  } catch {
+    return { outcome: 'unavailable', error_code: 'NETWORK_ERROR' };
+  }
   const text = await response.text();
   if (response.ok) return { outcome: 'sent', status: response.status };
 
@@ -418,6 +437,7 @@ export async function sendPushToDevice(
     if (accessToken === null) return result;
     result = await sendFcmMessage(fetchImpl, account.projectId, accessToken, message);
   }
+  logFcmOutcome(result);
   if (result.outcome === 'invalid_token') {
     await invalidateDeviceToken(
       db,
