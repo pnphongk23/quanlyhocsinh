@@ -91,6 +91,11 @@ struct GuardianReportView: View {
     let child: GuardianChildData
     @State private var openID: String?
 
+    init(child: GuardianChildData, reportID: String? = nil) {
+        self.child = child
+        _openID = State(initialValue: child.publishedReports.first { $0.reportId == reportID }?.id)
+    }
+
     private var open: ReportPublication? {
         child.publishedReports.first { $0.id == openID }
     }

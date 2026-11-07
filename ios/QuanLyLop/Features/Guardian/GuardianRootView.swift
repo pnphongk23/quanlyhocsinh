@@ -20,11 +20,13 @@ enum GuardianTab: String, CaseIterable, Identifiable {
     }
 }
 
-enum GuardianDetail: Hashable {
+enum GuardianDetail: Hashable, Sendable {
     case ticket(String)
     case scores
+    case scoresInMonth(String)
     case schedule
     case report
+    case reportByID(String)
 }
 
 struct GuardianLoadOutcome {
@@ -81,6 +83,7 @@ struct GuardianRootView: View {
     typealias DashboardLoader = @MainActor (CurrentIdentity, SQLiteStore, Bool) async throws -> GuardianDashboard
 
     var model: AuthModel? = nil
+    @State private var pendingNotificationRoute: PendingNotificationRoute
     private let loadDashboard: DashboardLoader
     @State var loads: GuardianLoadState
     @State private var selectedChildID: String?
@@ -89,12 +92,15 @@ struct GuardianRootView: View {
     @State private var commentsPath: [GuardianDetail] = []
     @State private var months: [String: String] = [:]
     @State private var showingChildPicker = false
+    @State private var detailAfterChildSelection: GuardianDetail?
 
     init(model: AuthModel? = nil, freshness: UserDefaults = .standard,
+         pendingNotificationRoute: PendingNotificationRoute? = nil,
          loadDashboard: @escaping DashboardLoader = { identity, store, syncSucceeded in
         try await GuardianRepository.load(identity: identity, store: store, syncSucceeded: syncSucceeded)
     }) {
         self.model = model
+        _pendingNotificationRoute = State(initialValue: pendingNotificationRoute ?? PendingNotificationRoute())
         self.loadDashboard = loadDashboard
         _loads = State(initialValue: GuardianLoadState(freshness: freshness))
     }
@@ -144,6 +150,10 @@ struct GuardianRootView: View {
         .onChange(of: selectedChildID) { _, _ in
             classesPath = []
             commentsPath = []
+            if let detail = detailAfterChildSelection {
+                detailAfterChildSelection = nil
+                classesPath = [detail]
+            }
         }
         .background(AppColors.background.ignoresSafeArea())
         .preferredColorScheme(.light)
@@ -164,6 +174,10 @@ struct GuardianRootView: View {
         }
         .onChange(of: model?.syncRevision) { _, _ in
             Task { await syncRevisionDidChange() }
+        }
+        .onChange(of: pendingNotificationRoute.pendingIntent) { _, intent in
+            guard intent != nil else { return }
+            Task { _ = await load(manualSync: true) }
         }
     }
 
@@ -254,10 +268,13 @@ struct GuardianRootView: View {
                 if let session = child.session(id: id) {
                     GuardianTicketView(child: child, session: session)
                 } else { missingTicket }
-            case .scores:
+            case .scores, .scoresInMonth:
+                let routeMonth: String? = if case .scoresInMonth(let value) = detail { value } else { nil }
+                let selectedMonth = months[child.student.id].flatMap { child.months.contains($0) ? $0 : nil }
+                    ?? routeMonth ?? month(for: child)
                 GuardianScroll {
                     GuardianPageHeader(eyebrow: child.student.name, title: nil)
-                    GuardianScoresPage(child: child, month: month(for: child)) { months[child.student.id] = $0 }
+                    GuardianScoresPage(child: child, month: selectedMonth) { months[child.student.id] = $0 }
                 }
                 .navigationTitle(String(localized: "guardian.scores", table: "Guardian"))
                 .navigationBarTitleDisplayMode(.inline)
@@ -265,8 +282,12 @@ struct GuardianRootView: View {
                 GuardianScheduleView(child: child) { classesPath.append($0.destination) }
             case .report:
                 GuardianReportView(child: child)
-                .navigationTitle(String(localized: "feature.guardian.bao.cao"))
-                .navigationBarTitleDisplayMode(.inline)
+                    .navigationTitle(String(localized: "feature.guardian.bao.cao"))
+                    .navigationBarTitleDisplayMode(.inline)
+            case .reportByID(let reportID):
+                GuardianReportView(child: child, reportID: reportID)
+                    .navigationTitle(String(localized: "feature.guardian.bao.cao"))
+                    .navigationBarTitleDisplayMode(.inline)
             }
         } else { missingTicket }
     }
@@ -321,12 +342,15 @@ struct GuardianRootView: View {
             let outcome = GuardianLoadOutcome(dashboard: demo, errorMessage: nil)
             guard loads.commit(token, outcome, refreshedScope: nil) else { return nil }
             selectFirstChild(demo)
+            handlePendingNotificationIntent(using: demo)
             return outcome
         }
         if model?.activeMembership == nil && model?.memberships.isEmpty == true {
-            let outcome = GuardianLoadOutcome(dashboard: GuardianDashboard(children: []), errorMessage: nil)
+            let emptyDashboard = GuardianDashboard(children: [])
+            let outcome = GuardianLoadOutcome(dashboard: emptyDashboard, errorMessage: nil)
             guard loads.commit(token, outcome, refreshedScope: nil) else { return nil }
             selectedChildID = nil
+            handlePendingNotificationIntent(using: emptyDashboard)
             return outcome
         }
         do {
@@ -357,11 +381,13 @@ struct GuardianRootView: View {
             // A refreshed result records its time only if it is still the newest load, in the same step.
             guard loads.commit(token, outcome, refreshedScope: next.isOffline ? nil : loadedScope) else { return nil }
             selectFirstChild(next)
+            handlePendingNotificationIntent(using: next.isOffline ? nil : next)
             return outcome
         } catch {
             let loadError = String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai")
             let outcome = GuardianLoadOutcome(dashboard: loads.dashboard, errorMessage: loadError)
             guard loads.commit(token, outcome, refreshedScope: nil) else { return nil }
+            handlePendingNotificationIntent(using: nil)
             return outcome
         }
     }
@@ -393,6 +419,23 @@ struct GuardianRootView: View {
         if let selectedChildID, dashboard.children.contains(where: { $0.student.id == selectedChildID }) { return }
         selectedChildID = dashboard.children.first?.student.id
     }
+
+    private func handlePendingNotificationIntent(using dashboard: GuardianDashboard?) {
+        let handler = GuardianNotificationIntentHandler(pendingRoute: pendingNotificationRoute)
+        let snapshot = dashboard.map { GuardianNotificationSnapshot(dashboard: $0) }
+        handler.loadCompleted(snapshot: snapshot,
+                              screen: screen, isGuardian: true) { destination, shouldReturnToMain in
+            if shouldReturnToMain { model?.show(.main) }
+            tab = .classes
+            if selectedChildID == destination.studentID {
+                commentsPath = []
+                classesPath = [destination.detail]
+            } else {
+                detailAfterChildSelection = destination.detail
+                selectedChildID = destination.studentID
+            }
+        }
+    }
 }
 
-#Preview { GuardianRootView() }
+#Preview { GuardianRootView(pendingNotificationRoute: PendingNotificationRoute()) }
