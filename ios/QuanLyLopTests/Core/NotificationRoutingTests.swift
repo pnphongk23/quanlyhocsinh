@@ -68,6 +68,51 @@ final class NotificationRoutingTests: XCTestCase {
         XCTAssertNil(GuardianNotificationDestination.resolve(ticket, linkedStudentIDs: ["stu_1"]))
     }
 
+    func testDestinationUsesOnlyFreshlyReloadedLinksAndSessions() async throws {
+        let ticket = try XCTUnwrap(NotificationRoute(payload: [
+            "kind": "slip_sent", "student_id": "stu_1", "session_id": "ses_new"
+        ]))
+        let revoked = try await GuardianNotificationDestination.resolveAfterReload(ticket) {
+            GuardianNotificationSnapshot(linkedStudentIDs: [], sessionIDsByStudent: [:], reportIDsByStudent: [:], testMonthsByStudent: [:])
+        }
+        XCTAssertNil(revoked)
+
+        let newlyAvailable = try await GuardianNotificationDestination.resolveAfterReload(ticket) {
+            GuardianNotificationSnapshot(linkedStudentIDs: ["stu_1"],
+                                         sessionIDsByStudent: ["stu_1": ["ses_old", "ses_new"]],
+                                         reportIDsByStudent: [:], testMonthsByStudent: [:])
+        }
+        XCTAssertEqual(newlyAvailable, .ticket(studentID: "stu_1", sessionID: "ses_new"))
+    }
+
+    func testReportAndScoreDestinationsRetainTargetsAndFallBackToGeneralPages() throws {
+        let report = try XCTUnwrap(NotificationRoute(payload: [
+            "kind": "report_published", "student_id": "stu_1", "report_id": "rep_1"
+        ]))
+        let reportDestination = GuardianNotificationDestination.resolve(
+            report, linkedStudentIDs: ["stu_1"], reportIDsByStudent: ["stu_1": ["rep_1"]])
+        XCTAssertEqual(reportDestination, .report(studentID: "stu_1", reportID: "rep_1"))
+        XCTAssertEqual(reportDestination?.detail, .reportByID("rep_1"))
+        XCTAssertEqual(GuardianNotificationDestination.resolve(
+            report, linkedStudentIDs: ["stu_1"], reportIDsByStudent: [:])?.detail, .report)
+
+        let score = try XCTUnwrap(NotificationRoute(payload: [
+            "kind": "score_updated", "student_id": "stu_1", "test_id": "test_1"
+        ]))
+        let scoreDestination = GuardianNotificationDestination.resolve(
+            score, linkedStudentIDs: ["stu_1"], testMonthsByStudent: ["stu_1": ["test_1": "2026-10"]])
+        XCTAssertEqual(scoreDestination, .scores(studentID: "stu_1", testID: "test_1", month: "2026-10"))
+        XCTAssertEqual(scoreDestination?.detail, .scoresInMonth("2026-10"))
+        XCTAssertEqual(GuardianNotificationDestination.resolve(
+            score, linkedStudentIDs: ["stu_1"], testMonthsByStudent: [:])?.detail, .scores)
+    }
+
+    func testIntentFromSettingsReturnsToMainBeforeOpeningDestination() {
+        XCTAssertTrue(GuardianNotificationDestination.shouldSwitchToMain(from: .settings))
+        XCTAssertTrue(GuardianNotificationDestination.shouldSwitchToMain(from: .changePassword))
+        XCTAssertFalse(GuardianNotificationDestination.shouldSwitchToMain(from: .main))
+    }
+
     func testNonGuardianDoesNotRetainIncomingRoute() {
         let pending = PendingNotificationRoute()
         pending.receive(payload: [

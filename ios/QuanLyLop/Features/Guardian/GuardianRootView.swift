@@ -23,8 +23,10 @@ enum GuardianTab: String, CaseIterable, Identifiable {
 enum GuardianDetail: Hashable, Sendable {
     case ticket(String)
     case scores
+    case scoresInMonth(String)
     case schedule
     case report
+    case reportByID(String)
 }
 
 struct GuardianLoadOutcome {
@@ -160,7 +162,7 @@ struct GuardianRootView: View {
         }
         .task {
             _ = await load()
-            openPendingNotificationRoute()
+            await openPendingNotificationRoute()
             #if DEBUG
             // `selectedChildID` settling clears the stacks, so seed the demo route after it.
             try? await Task.sleep(nanoseconds: 400_000_000)
@@ -176,7 +178,7 @@ struct GuardianRootView: View {
         }
         .onChange(of: pendingNotificationRoute.route) { _, route in
             guard route != nil else { return }
-            openPendingNotificationRoute()
+            Task { await openPendingNotificationRoute() }
         }
     }
 
@@ -267,10 +269,11 @@ struct GuardianRootView: View {
                 if let session = child.session(id: id) {
                     GuardianTicketView(child: child, session: session)
                 } else { missingTicket }
-            case .scores:
+            case .scores, .scoresInMonth:
+                let routeMonth: String? = if case .scoresInMonth(let value) = detail { value } else { nil }
                 GuardianScroll {
                     GuardianPageHeader(eyebrow: child.student.name, title: nil)
-                    GuardianScoresPage(child: child, month: month(for: child)) { months[child.student.id] = $0 }
+                    GuardianScoresPage(child: child, month: routeMonth ?? month(for: child)) { months[child.student.id] = $0 }
                 }
                 .navigationTitle(String(localized: "guardian.scores", table: "Guardian"))
                 .navigationBarTitleDisplayMode(.inline)
@@ -278,8 +281,12 @@ struct GuardianRootView: View {
                 GuardianScheduleView(child: child) { classesPath.append($0.destination) }
             case .report:
                 GuardianReportView(child: child)
-                .navigationTitle(String(localized: "feature.guardian.bao.cao"))
-                .navigationBarTitleDisplayMode(.inline)
+                    .navigationTitle(String(localized: "feature.guardian.bao.cao"))
+                    .navigationBarTitleDisplayMode(.inline)
+            case .reportByID(let reportID):
+                GuardianReportView(child: child, reportID: reportID)
+                    .navigationTitle(String(localized: "feature.guardian.bao.cao"))
+                    .navigationBarTitleDisplayMode(.inline)
             }
         } else { missingTicket }
     }
@@ -407,12 +414,28 @@ struct GuardianRootView: View {
         selectedChildID = dashboard.children.first?.student.id
     }
 
-    private func openPendingNotificationRoute() {
-        guard let route = pendingNotificationRoute.route, let dashboard else { return }
-        guard let destination = GuardianNotificationDestination.resolve(
-            route, linkedStudentIDs: dashboard.children.map { $0.student.id }) else {
+    private func openPendingNotificationRoute() async {
+        guard let route = pendingNotificationRoute.route else { return }
+        // Push identifiers are hints. Refresh through the authenticated guardian repository before
+        // using them; on an error or offline result, leave the active screen and stack untouched.
+        let destination: GuardianNotificationDestination?
+        do {
+            destination = try await GuardianNotificationDestination.resolveAfterReload(route) {
+                guard let outcome = await load(manualSync: true), outcome.errorMessage == nil,
+                      let refreshed = outcome.dashboard, !refreshed.isOffline else {
+                    throw APIFailure.offline
+                }
+                return GuardianNotificationSnapshot(dashboard: refreshed)
+            }
+        } catch {
+            return
+        }
+        guard let destination else {
             pendingNotificationRoute.consume()
             return
+        }
+        if let model, GuardianNotificationDestination.shouldSwitchToMain(from: model.screen) {
+            model.show(.main)
         }
         tab = .classes
         if selectedChildID == destination.studentID {

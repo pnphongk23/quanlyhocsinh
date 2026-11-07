@@ -17,7 +17,7 @@ final class NotificationSessionOrderingTests: XCTestCase {
         let token = await tokenStore.token()
         let recorded = await events.values()
         XCTAssertEqual(token, "FIXTURE_SESSION_TOKEN")
-        XCTAssertEqual(recorded, ["api.failure"])
+        XCTAssertEqual(recorded, ["api.POST.auth/logout.<none>.failure"])
     }
 
     func testLogoutClearsTokenAndDeliveredNotificationsOnlyAfterServerSuccess() async throws {
@@ -32,7 +32,7 @@ final class NotificationSessionOrderingTests: XCTestCase {
         let token = await tokenStore.token()
         let recorded = await events.values()
         XCTAssertNil(token)
-        XCTAssertEqual(recorded, ["api.success.auth/logout", "token.clear", "push.clear"])
+        XCTAssertEqual(recorded, ["api.POST.auth/logout.<none>.success", "token.clear", "push.clear"])
     }
 
     func testMembershipFailureDoesNotClearNotificationsOrReregisterPush() async throws {
@@ -50,7 +50,7 @@ final class NotificationSessionOrderingTests: XCTestCase {
         let token = await tokenStore.token()
         let recorded = await events.values()
         XCTAssertEqual(token, "FIXTURE_SESSION_TOKEN")
-        XCTAssertEqual(recorded, ["api.failure"])
+        XCTAssertEqual(recorded, ["api.PUT.session/membership.{\"membership_id\":\"member_new\"}.failure"])
     }
 
     func testMembershipReregistersOnlyAfterServerSuccessAndLocalClear() async throws {
@@ -60,11 +60,12 @@ final class NotificationSessionOrderingTests: XCTestCase {
                                            store: try store(), push: OrderedPushRegistrar(events: events))
 
         let selection = try await controller.selectMembership("member_new")
-        await events.waitFor("push.register.member_new")
+        let registrationArrived = await events.waitFor("push.register.member_new", timeout: .seconds(2))
+        XCTAssertTrue(registrationArrived)
 
         let recorded = await events.values()
         XCTAssertEqual(selection.activeMembershipId, "member_new")
-        XCTAssertEqual(recorded, ["api.success.session/membership", "push.clear", "push.register.member_new"])
+        XCTAssertEqual(recorded, ["api.PUT.session/membership.{\"membership_id\":\"member_new\"}.success", "push.clear", "push.register.member_new"])
     }
 
     private func store() throws -> SQLiteStore {
@@ -74,20 +75,32 @@ final class NotificationSessionOrderingTests: XCTestCase {
 
 private actor SessionEventLog {
     private var events: [String] = []
-    private var waiters: [String: [CheckedContinuation<Void, Never>]] = [:]
+    private var waiters: [String: [(UUID, CheckedContinuation<Bool, Never>)]] = [:]
 
     func record(_ event: String) {
         events.append(event)
-        for waiter in waiters.removeValue(forKey: event) ?? [] { waiter.resume() }
+        for (_, waiter) in waiters.removeValue(forKey: event) ?? [] { waiter.resume(returning: true) }
     }
 
     func values() -> [String] { events }
 
-    func waitFor(_ event: String) async {
-        guard !events.contains(event) else { return }
-        await withCheckedContinuation { continuation in
-            waiters[event, default: []].append(continuation)
+    func waitFor(_ event: String, timeout: Duration) async -> Bool {
+        guard !events.contains(event) else { return true }
+        let id = UUID()
+        return await withCheckedContinuation { continuation in
+            waiters[event, default: []].append((id, continuation))
+            Task {
+                try? await Task.sleep(for: timeout)
+                self.expire(event, id: id)
+            }
         }
+    }
+
+    private func expire(_ event: String, id: UUID) {
+        guard let index = waiters[event]?.firstIndex(where: { $0.0 == id }) else { return }
+        let (_, continuation) = waiters[event]!.remove(at: index)
+        if waiters[event]?.isEmpty == true { waiters[event] = nil }
+        continuation.resume(returning: false)
     }
 }
 
@@ -110,11 +123,25 @@ private struct OrderedSessionAPI: APIClient {
     let fails: Bool
 
     func send<Response: Decodable & Sendable>(_ endpoint: APIEndpoint, as type: Response.Type) async throws -> Response {
+        let body: String
+        if let data = endpoint.body, let object = try JSONSerialization.jsonObject(with: data) as? [String: String],
+           let membershipId = object["membership_id"] {
+            body = "{\"membership_id\":\"\(membershipId)\"}"
+        } else {
+            body = "<none>"
+        }
+        let descriptor = "api.\(endpoint.method.rawValue).\(endpoint.path).\(body)"
+        let matchesExpectedRequest = (endpoint.path == "auth/logout" && endpoint.method == .post && endpoint.body == nil)
+            || (endpoint.path == "session/membership" && endpoint.method == .put && body == "{\"membership_id\":\"member_new\"}")
+        guard matchesExpectedRequest else {
+            await events.record("\(descriptor).invalid")
+            throw APIFailure.decoding
+        }
         if fails {
-            await events.record("api.failure")
+            await events.record("\(descriptor).failure")
             throw APIFailure.offline
         }
-        await events.record("api.success.\(endpoint.path)")
+        await events.record("\(descriptor).success")
         let data = endpoint.path == "session/membership"
             ? Data(#"{"active_membership_id":"member_new","device_registration_cleared":true}"#.utf8)
             : Data("{}".utf8)
