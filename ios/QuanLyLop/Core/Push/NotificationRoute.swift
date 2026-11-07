@@ -51,19 +51,31 @@ enum NotificationRoute: Hashable, Sendable {
 
 /// App-level handoff for push taps and future inbox actions. Callers must state the active role so
 /// notifications received while a staff membership is active are discarded.
+struct PendingNotificationIntent: Hashable, Sendable, Identifiable {
+    let id: UUID
+    let route: NotificationRoute
+}
+
 @MainActor @Observable
 final class PendingNotificationRoute {
-    private(set) var route: NotificationRoute?
+    private(set) var pendingIntent: PendingNotificationIntent?
 
     func receive(payload: [AnyHashable: Any], isGuardian: Bool) {
-        guard isGuardian else { route = nil; return }
-        route = NotificationRoute(payload: payload)
+        guard isGuardian else { pendingIntent = nil; return }
+        setPendingIntent(NotificationRoute(payload: payload))
     }
 
     func receive(notification: NotificationInboxItem, isGuardian: Bool) {
-        guard isGuardian else { route = nil; return }
-        route = NotificationRoute(notification: notification)
+        guard isGuardian else { pendingIntent = nil; return }
+        setPendingIntent(NotificationRoute(notification: notification))
     }
 
-    func consume() { route = nil }
+    func consume(id: UUID) {
+        guard pendingIntent?.id == id else { return }
+        pendingIntent = nil
+    }
+
+    private func setPendingIntent(_ route: NotificationRoute?) {
+        pendingIntent = route.map { PendingNotificationIntent(id: UUID(), route: $0) }
+    }
 }

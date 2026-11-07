@@ -77,13 +77,36 @@ enum GuardianNotificationDestination: Hashable, Sendable {
                 testMonthsByStudent: snapshot.testMonthsByStudent)
     }
 
-    @MainActor
-    static func resolveAfterReload(_ route: NotificationRoute,
-                                   reload: @MainActor () async throws -> GuardianNotificationSnapshot) async throws -> Self? {
-        resolve(route, in: try await reload())
-    }
-
     static func shouldSwitchToMain(from screen: AuthModel.Screen) -> Bool {
         screen != .main
+    }
+}
+
+@MainActor
+final class GuardianNotificationIntentHandler {
+    private let pendingRoute: PendingNotificationRoute
+
+    init(pendingRoute: PendingNotificationRoute) {
+        self.pendingRoute = pendingRoute
+    }
+
+    /// Failed/offline loads pass no snapshot and preserve the intent for the next successful load.
+    @discardableResult
+    func loadCompleted(snapshot: GuardianNotificationSnapshot?, screen: AuthModel.Screen,
+                       isGuardian: Bool = true,
+                       open: (GuardianNotificationDestination, Bool) -> Void) -> Bool {
+        guard let intent = pendingRoute.pendingIntent else { return false }
+        guard let snapshot else { return false }
+        guard isGuardian else {
+            pendingRoute.consume(id: intent.id)
+            return false
+        }
+        guard let destination = GuardianNotificationDestination.resolve(intent.route, in: snapshot) else {
+            pendingRoute.consume(id: intent.id)
+            return false
+        }
+        open(destination, GuardianNotificationDestination.shouldSwitchToMain(from: screen))
+        pendingRoute.consume(id: intent.id)
+        return true
     }
 }

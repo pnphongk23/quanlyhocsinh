@@ -162,7 +162,6 @@ struct GuardianRootView: View {
         }
         .task {
             _ = await load()
-            await openPendingNotificationRoute()
             #if DEBUG
             // `selectedChildID` settling clears the stacks, so seed the demo route after it.
             try? await Task.sleep(nanoseconds: 400_000_000)
@@ -176,9 +175,9 @@ struct GuardianRootView: View {
         .onChange(of: model?.syncRevision) { _, _ in
             Task { await syncRevisionDidChange() }
         }
-        .onChange(of: pendingNotificationRoute.route) { _, route in
-            guard route != nil else { return }
-            Task { await openPendingNotificationRoute() }
+        .onChange(of: pendingNotificationRoute.pendingIntent) { _, intent in
+            guard intent != nil else { return }
+            Task { _ = await load(manualSync: true) }
         }
     }
 
@@ -271,9 +270,11 @@ struct GuardianRootView: View {
                 } else { missingTicket }
             case .scores, .scoresInMonth:
                 let routeMonth: String? = if case .scoresInMonth(let value) = detail { value } else { nil }
+                let selectedMonth = months[child.student.id].flatMap { child.months.contains($0) ? $0 : nil }
+                    ?? routeMonth ?? month(for: child)
                 GuardianScroll {
                     GuardianPageHeader(eyebrow: child.student.name, title: nil)
-                    GuardianScoresPage(child: child, month: routeMonth ?? month(for: child)) { months[child.student.id] = $0 }
+                    GuardianScoresPage(child: child, month: selectedMonth) { months[child.student.id] = $0 }
                 }
                 .navigationTitle(String(localized: "guardian.scores", table: "Guardian"))
                 .navigationBarTitleDisplayMode(.inline)
@@ -341,12 +342,15 @@ struct GuardianRootView: View {
             let outcome = GuardianLoadOutcome(dashboard: demo, errorMessage: nil)
             guard loads.commit(token, outcome, refreshedScope: nil) else { return nil }
             selectFirstChild(demo)
+            handlePendingNotificationIntent(using: demo)
             return outcome
         }
         if model?.activeMembership == nil && model?.memberships.isEmpty == true {
-            let outcome = GuardianLoadOutcome(dashboard: GuardianDashboard(children: []), errorMessage: nil)
+            let emptyDashboard = GuardianDashboard(children: [])
+            let outcome = GuardianLoadOutcome(dashboard: emptyDashboard, errorMessage: nil)
             guard loads.commit(token, outcome, refreshedScope: nil) else { return nil }
             selectedChildID = nil
+            handlePendingNotificationIntent(using: emptyDashboard)
             return outcome
         }
         do {
@@ -377,11 +381,13 @@ struct GuardianRootView: View {
             // A refreshed result records its time only if it is still the newest load, in the same step.
             guard loads.commit(token, outcome, refreshedScope: next.isOffline ? nil : loadedScope) else { return nil }
             selectFirstChild(next)
+            handlePendingNotificationIntent(using: next.isOffline ? nil : next)
             return outcome
         } catch {
             let loadError = String(localized: "feature.guardian.khong.tai.uoc.du.lieu.cua.con.vui.long.thu.lai")
             let outcome = GuardianLoadOutcome(dashboard: loads.dashboard, errorMessage: loadError)
             guard loads.commit(token, outcome, refreshedScope: nil) else { return nil }
+            handlePendingNotificationIntent(using: nil)
             return outcome
         }
     }
@@ -414,38 +420,21 @@ struct GuardianRootView: View {
         selectedChildID = dashboard.children.first?.student.id
     }
 
-    private func openPendingNotificationRoute() async {
-        guard let route = pendingNotificationRoute.route else { return }
-        // Push identifiers are hints. Refresh through the authenticated guardian repository before
-        // using them; on an error or offline result, leave the active screen and stack untouched.
-        let destination: GuardianNotificationDestination?
-        do {
-            destination = try await GuardianNotificationDestination.resolveAfterReload(route) {
-                guard let outcome = await load(manualSync: true), outcome.errorMessage == nil,
-                      let refreshed = outcome.dashboard, !refreshed.isOffline else {
-                    throw APIFailure.offline
-                }
-                return GuardianNotificationSnapshot(dashboard: refreshed)
+    private func handlePendingNotificationIntent(using dashboard: GuardianDashboard?) {
+        let handler = GuardianNotificationIntentHandler(pendingRoute: pendingNotificationRoute)
+        let snapshot = dashboard.map { GuardianNotificationSnapshot(dashboard: $0) }
+        handler.loadCompleted(snapshot: snapshot,
+                              screen: screen, isGuardian: true) { destination, shouldReturnToMain in
+            if shouldReturnToMain { model?.show(.main) }
+            tab = .classes
+            if selectedChildID == destination.studentID {
+                commentsPath = []
+                classesPath = [destination.detail]
+            } else {
+                detailAfterChildSelection = destination.detail
+                selectedChildID = destination.studentID
             }
-        } catch {
-            return
         }
-        guard let destination else {
-            pendingNotificationRoute.consume()
-            return
-        }
-        if let model, GuardianNotificationDestination.shouldSwitchToMain(from: model.screen) {
-            model.show(.main)
-        }
-        tab = .classes
-        if selectedChildID == destination.studentID {
-            commentsPath = []
-            classesPath = [destination.detail]
-        } else {
-            detailAfterChildSelection = destination.detail
-            selectedChildID = destination.studentID
-        }
-        pendingNotificationRoute.consume()
     }
 }
 

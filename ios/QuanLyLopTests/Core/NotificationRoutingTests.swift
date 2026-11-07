@@ -68,21 +68,99 @@ final class NotificationRoutingTests: XCTestCase {
         XCTAssertNil(GuardianNotificationDestination.resolve(ticket, linkedStudentIDs: ["stu_1"]))
     }
 
-    func testDestinationUsesOnlyFreshlyReloadedLinksAndSessions() async throws {
-        let ticket = try XCTUnwrap(NotificationRoute(payload: [
-            "kind": "slip_sent", "student_id": "stu_1", "session_id": "ses_new"
-        ]))
-        let revoked = try await GuardianNotificationDestination.resolveAfterReload(ticket) {
-            GuardianNotificationSnapshot(linkedStudentIDs: [], sessionIDsByStudent: [:], reportIDsByStudent: [:], testMonthsByStudent: [:])
-        }
-        XCTAssertNil(revoked)
+    func testPendingIntentIsHandledByTheNextSuccessfulLoad() throws {
+        let pending = PendingNotificationRoute()
+        pending.receive(payload: ["kind": "slip_sent", "student_id": "stu_1", "session_id": "ses_1"],
+                        isGuardian: true)
+        let loads = GuardianLoadState()
+        let intentLoad = loads.begin()
+        let syncLoad = loads.begin()
+        let loadedOutcome = GuardianLoadOutcome(dashboard: GuardianDashboard(children: []), errorMessage: nil)
+        let handler = GuardianNotificationIntentHandler(pendingRoute: pending)
+        var opened: GuardianNotificationDestination?
 
-        let newlyAvailable = try await GuardianNotificationDestination.resolveAfterReload(ticket) {
-            GuardianNotificationSnapshot(linkedStudentIDs: ["stu_1"],
-                                         sessionIDsByStudent: ["stu_1": ["ses_old", "ses_new"]],
-                                         reportIDsByStudent: [:], testMonthsByStudent: [:])
+        // A syncRevision load supersedes the intent load, then commits through the shared handler.
+        XCTAssertFalse(loads.commit(intentLoad, loadedOutcome, refreshedScope: nil))
+        XCTAssertTrue(loads.commit(syncLoad, loadedOutcome, refreshedScope: nil))
+        let didOpen = handler.loadCompleted(snapshot: snapshot(), screen: .main) { destination, _ in
+            opened = destination
         }
-        XCTAssertEqual(newlyAvailable, .ticket(studentID: "stu_1", sessionID: "ses_new"))
+
+        XCTAssertTrue(didOpen)
+        XCTAssertEqual(opened, .ticket(studentID: "stu_1", sessionID: "ses_1"))
+        XCTAssertNil(pending.pendingIntent)
+    }
+
+    func testNewerIntentSurvivesAnOlderLoadAttemptAndOpensInstead() throws {
+        let pending = PendingNotificationRoute()
+        pending.receive(payload: ["kind": "slip_sent", "student_id": "stu_1", "session_id": "ses_old"],
+                        isGuardian: true)
+        let olderIntentID = try XCTUnwrap(pending.pendingIntent?.id)
+        let loads = GuardianLoadState()
+        let olderLoad = loads.begin()
+        pending.receive(payload: ["kind": "homework_assigned", "student_id": "stu_1", "session_id": "ses_new"],
+                        isGuardian: true)
+        let newerIntentID = try XCTUnwrap(pending.pendingIntent?.id)
+        let newerLoad = loads.begin()
+        let loadedOutcome = GuardianLoadOutcome(dashboard: GuardianDashboard(children: []), errorMessage: nil)
+        let handler = GuardianNotificationIntentHandler(pendingRoute: pending)
+        var opened: GuardianNotificationDestination?
+
+        XCTAssertFalse(loads.commit(olderLoad, loadedOutcome, refreshedScope: nil))
+        pending.consume(id: olderIntentID)
+        XCTAssertEqual(pending.pendingIntent?.id, newerIntentID)
+        XCTAssertTrue(loads.commit(newerLoad, loadedOutcome, refreshedScope: nil))
+        XCTAssertTrue(handler.loadCompleted(snapshot: snapshot(), screen: .settings) { destination, _ in
+            opened = destination
+        })
+
+        XCTAssertEqual(opened, .ticket(studentID: "stu_1", sessionID: "ses_new"))
+        XCTAssertNil(pending.pendingIntent)
+    }
+
+    func testFailedLoadKeepsIntentForTheNextSuccessfulLoad() throws {
+        let pending = PendingNotificationRoute()
+        pending.receive(payload: ["kind": "slip_sent", "student_id": "stu_1", "session_id": "ses_1"],
+                        isGuardian: true)
+        let loads = GuardianLoadState()
+        let failedLoad = loads.begin()
+        XCTAssertTrue(loads.commit(failedLoad,
+                                   GuardianLoadOutcome(dashboard: nil, errorMessage: "offline"),
+                                   refreshedScope: nil))
+        let intentID = try XCTUnwrap(pending.pendingIntent?.id)
+        let handler = GuardianNotificationIntentHandler(pendingRoute: pending)
+        var opened: GuardianNotificationDestination?
+
+        // A failed/offline load completes with no usable snapshot and must retain the intent.
+        XCTAssertFalse(handler.loadCompleted(snapshot: nil, screen: .main) { destination, _ in
+            opened = destination
+        })
+        XCTAssertEqual(pending.pendingIntent?.id, intentID)
+        let retryLoad = loads.begin()
+        XCTAssertTrue(loads.commit(retryLoad,
+                                   GuardianLoadOutcome(dashboard: GuardianDashboard(children: []), errorMessage: nil),
+                                   refreshedScope: nil))
+        XCTAssertTrue(handler.loadCompleted(snapshot: snapshot(), screen: .main) { destination, _ in
+            opened = destination
+        })
+
+        XCTAssertEqual(opened, .ticket(studentID: "stu_1", sessionID: "ses_1"))
+        XCTAssertNil(pending.pendingIntent)
+    }
+
+    func testSuccessfulLoadDropsIntentWhenGuardianLinkWasRevoked() {
+        let pending = PendingNotificationRoute()
+        pending.receive(payload: ["kind": "slip_sent", "student_id": "stu_1", "session_id": "ses_1"],
+                        isGuardian: true)
+        let handler = GuardianNotificationIntentHandler(pendingRoute: pending)
+        var opened = false
+
+        XCTAssertFalse(handler.loadCompleted(
+            snapshot: GuardianNotificationSnapshot(linkedStudentIDs: [], sessionIDsByStudent: [:],
+                                                     reportIDsByStudent: [:], testMonthsByStudent: [:]),
+            screen: .main) { _, _ in opened = true })
+        XCTAssertFalse(opened)
+        XCTAssertNil(pending.pendingIntent)
     }
 
     func testReportAndScoreDestinationsRetainTargetsAndFallBackToGeneralPages() throws {
@@ -118,7 +196,7 @@ final class NotificationRoutingTests: XCTestCase {
         pending.receive(payload: [
             "kind": "slip_sent", "student_id": "stu_1", "session_id": "ses_1"
         ], isGuardian: false)
-        XCTAssertNil(pending.route)
+        XCTAssertNil(pending.pendingIntent)
     }
 
     private func item(kind: String, studentID: String = "stu_1", sessionID: String? = nil,
@@ -126,5 +204,12 @@ final class NotificationRoutingTests: XCTestCase {
         NotificationInboxItem(id: 42, kind: kind, studentId: studentID, sessionId: sessionID,
                               reportId: reportID, testId: testID,
                               createdAt: "2026-11-07T00:00:00.000Z", readAt: nil)
+    }
+
+    private func snapshot() -> GuardianNotificationSnapshot {
+        GuardianNotificationSnapshot(linkedStudentIDs: ["stu_1"],
+                                     sessionIDsByStudent: ["stu_1": ["ses_1", "ses_old", "ses_new"]],
+                                     reportIDsByStudent: ["stu_1": ["rep_1"]],
+                                     testMonthsByStudent: ["stu_1": ["test_1": "2026-10"]])
     }
 }
