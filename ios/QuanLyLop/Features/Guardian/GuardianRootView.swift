@@ -20,7 +20,7 @@ enum GuardianTab: String, CaseIterable, Identifiable {
     }
 }
 
-enum GuardianDetail: Hashable {
+enum GuardianDetail: Hashable, Sendable {
     case ticket(String)
     case scores
     case schedule
@@ -81,6 +81,7 @@ struct GuardianRootView: View {
     typealias DashboardLoader = @MainActor (CurrentIdentity, SQLiteStore, Bool) async throws -> GuardianDashboard
 
     var model: AuthModel? = nil
+    @State private var pendingNotificationRoute: PendingNotificationRoute
     private let loadDashboard: DashboardLoader
     @State var loads: GuardianLoadState
     @State private var selectedChildID: String?
@@ -89,12 +90,15 @@ struct GuardianRootView: View {
     @State private var commentsPath: [GuardianDetail] = []
     @State private var months: [String: String] = [:]
     @State private var showingChildPicker = false
+    @State private var detailAfterChildSelection: GuardianDetail?
 
     init(model: AuthModel? = nil, freshness: UserDefaults = .standard,
+         pendingNotificationRoute: PendingNotificationRoute? = nil,
          loadDashboard: @escaping DashboardLoader = { identity, store, syncSucceeded in
         try await GuardianRepository.load(identity: identity, store: store, syncSucceeded: syncSucceeded)
     }) {
         self.model = model
+        _pendingNotificationRoute = State(initialValue: pendingNotificationRoute ?? PendingNotificationRoute())
         self.loadDashboard = loadDashboard
         _loads = State(initialValue: GuardianLoadState(freshness: freshness))
     }
@@ -144,6 +148,10 @@ struct GuardianRootView: View {
         .onChange(of: selectedChildID) { _, _ in
             classesPath = []
             commentsPath = []
+            if let detail = detailAfterChildSelection {
+                detailAfterChildSelection = nil
+                classesPath = [detail]
+            }
         }
         .background(AppColors.background.ignoresSafeArea())
         .preferredColorScheme(.light)
@@ -152,6 +160,7 @@ struct GuardianRootView: View {
         }
         .task {
             _ = await load()
+            openPendingNotificationRoute()
             #if DEBUG
             // `selectedChildID` settling clears the stacks, so seed the demo route after it.
             try? await Task.sleep(nanoseconds: 400_000_000)
@@ -164,6 +173,10 @@ struct GuardianRootView: View {
         }
         .onChange(of: model?.syncRevision) { _, _ in
             Task { await syncRevisionDidChange() }
+        }
+        .onChange(of: pendingNotificationRoute.route) { _, route in
+            guard route != nil else { return }
+            openPendingNotificationRoute()
         }
     }
 
@@ -393,6 +406,24 @@ struct GuardianRootView: View {
         if let selectedChildID, dashboard.children.contains(where: { $0.student.id == selectedChildID }) { return }
         selectedChildID = dashboard.children.first?.student.id
     }
+
+    private func openPendingNotificationRoute() {
+        guard let route = pendingNotificationRoute.route, let dashboard else { return }
+        guard let destination = GuardianNotificationDestination.resolve(
+            route, linkedStudentIDs: dashboard.children.map { $0.student.id }) else {
+            pendingNotificationRoute.consume()
+            return
+        }
+        tab = .classes
+        if selectedChildID == destination.studentID {
+            commentsPath = []
+            classesPath = [destination.detail]
+        } else {
+            detailAfterChildSelection = destination.detail
+            selectedChildID = destination.studentID
+        }
+        pendingNotificationRoute.consume()
+    }
 }
 
-#Preview { GuardianRootView() }
+#Preview { GuardianRootView(pendingNotificationRoute: PendingNotificationRoute()) }

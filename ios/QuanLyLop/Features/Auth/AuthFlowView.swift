@@ -2,9 +2,12 @@ import SwiftUI
 
 struct AuthFlowView: View {
     @State private var model: AuthModel
+    private let pendingNotificationRoute: PendingNotificationRoute
     private let configurationIsValid: Bool
 
-    init(configuration: Result<AppConfiguration, AppConfigurationError>) {
+    init(configuration: Result<AppConfiguration, AppConfigurationError>,
+         pendingNotificationRoute: PendingNotificationRoute) {
+        self.pendingNotificationRoute = pendingNotificationRoute
         switch configuration {
         case .success(let value):
             let model = AuthModel(configuration: value)
@@ -82,7 +85,7 @@ struct AuthFlowView: View {
     /// stays visible (`SettingsShell` in `src/app/routes.tsx`). Teachers keep their own shell.
     @ViewBuilder private var mainRoot: some View {
         if isGuardian {
-            GuardianRootView(model: model)
+            GuardianRootView(model: model, pendingNotificationRoute: pendingNotificationRoute)
         } else {
             teacherShell
         }

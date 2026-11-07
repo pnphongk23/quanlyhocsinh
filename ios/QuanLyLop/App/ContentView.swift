@@ -55,6 +55,7 @@ struct ContentView: View {
     /// Shared with every `SyncCoordinator`: only the error state is shown, never a sync chip.
     private let syncStatus = SyncStatusCenter.shared
     @State private var push: AppPush?
+    @State private var pendingNotificationRoute = PendingNotificationRoute()
 
     init(configuration: Result<AppConfiguration, AppConfigurationError>) {
         self.configuration = configuration
@@ -70,7 +71,7 @@ struct ContentView: View {
             if ProcessInfo.processInfo.environment["QLH_DESIGN_GALLERY"] != nil {
                 DesignSystemGallery()
             } else {
-                AuthFlowView(configuration: configuration)
+                AuthFlowView(configuration: configuration, pendingNotificationRoute: pendingNotificationRoute)
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {

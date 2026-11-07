@@ -97,7 +97,7 @@ enum DemoScreens {
               let screen: AuthModel.Screen = name == "change-password" ? .changePassword : .settings
               model.applyDemo(memberships: [teacher, guardian], activeID: guardian.id, screen: screen)
               if name == "settings-blocked" { model.demoPendingCommands = 1 }
-              return AnyView(GuardianRootView(model: model).environment(model))
+                return AnyView(GuardianRootView(model: model, pendingNotificationRoute: PendingNotificationRoute()).environment(model))
         case "teacher-session", "teacher-session-clean", "teacher-class-detail", "teacher-classes", "teacher-classes-tasks":
             model.applyDemo(memberships: [teacher], activeID: teacher.id, screen: .main)
             let data = TeacherDemoData.data(withAbsenceWarning: name != "teacher-session-clean",
@@ -119,7 +119,7 @@ enum DemoScreens {
               return AnyView(DemoI4Screen(kind: name))
           case "guardian", "guardian-empty", "guardian-schedule", "guardian-picker":
             model.applyDemo(memberships: [guardian], activeID: guardian.id, screen: .main)
-            return AnyView(GuardianRootView(model: model).environment(model))
+              return AnyView(GuardianRootView(model: model, pendingNotificationRoute: PendingNotificationRoute()).environment(model))
         default:
             return nil
         }
