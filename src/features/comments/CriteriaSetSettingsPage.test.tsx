@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CriteriaSet, CriteriaSetItem } from "../../data/api/types";
@@ -57,6 +57,42 @@ describe("custom criteria settings", () => {
     mocks.get.mockResolvedValueOnce(result(8));
     renderPage();
     expect(await screen.findByText(/Tiêu chí 8/)).toBeInTheDocument();
+  });
+
+  it("shows compact default level details and opens edit from the criterion row", async () => {
+    mocks.get.mockResolvedValue(result(2));
+    renderPage();
+    const name = await screen.findByText("Tiêu chí 1");
+    expect(name).toBeInTheDocument();
+    expect(screen.getByText("Áp dụng cho mọi lớp trong workspace")).toBeInTheDocument();
+    const list = screen.getByRole("region", { name: "Danh sách tiêu chí" });
+    expect(within(list).getAllByText("Tốt")).toHaveLength(2);
+    const row = name.closest("li");
+    expect(row).not.toBeNull();
+    expect(within(row!).getByRole("button", { name: "Chuyển lên: Tiêu chí 1" })).toBeDisabled();
+    expect(within(row!).getByRole("button", { name: "Chuyển xuống: Tiêu chí 1" })).toBeEnabled();
+    expect(within(row!).queryByRole("button", { name: "Xoá" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" }));
+    expect(await screen.findByLabelText("Tên tiêu chí")).toHaveValue("Tiêu chí 1");
+    expect(screen.getByRole("button", { name: "Xoá tiêu chí" })).toBeEnabled();
+  });
+
+  it("keeps deletion confirmation in the edit flow and prevents deleting the final item", async () => {
+    renderPage();
+    await screen.findByText("Tiêu chí 1");
+    fireEvent.click(screen.getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" }));
+    const deleteButton = await screen.findByRole("button", { name: "Xoá tiêu chí" });
+    expect(deleteButton).toBeDisabled();
+  });
+
+  it("asks for confirmation before deleting from the editor", async () => {
+    mocks.get.mockResolvedValue(result(2));
+    renderPage();
+    await screen.findByText("Tiêu chí 1");
+    fireEvent.click(screen.getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Xoá tiêu chí" }));
+    expect(await screen.findByText("Phiếu đã gửi không đổi.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Xoá tiêu chí" })).toBeInTheDocument();
   });
 
   it("keeps editor content open on a 409 until the user chooses reload", async () => {

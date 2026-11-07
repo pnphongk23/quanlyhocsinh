@@ -6,6 +6,7 @@ import { isAdmin } from "../../data/repositories/access";
 import { useOnline } from "../../shared/hooks/useOnline";
 import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
 import { ActionFooter, Button, Field, InfoNotice, Input, Modal, PageHeader, Sheet } from "../../shared/ui";
+import { LevelChickMeter } from "../../shared/ui/LevelChickMeter";
 import { codePointLength, CRITERIA_LEVEL_LABELS, CRITERIA_LEVELS, toCriteriaDraft, validateCriteria, type CriteriaDraft, type CriteriaField } from "../../data/criteriaSetModel";
 import s from "./criteriaSetSettings.module.css";
 
@@ -149,7 +150,7 @@ function CriteriaSetSettings() {
     setDeleteSaving(true); setDeleteError(""); setDeleteConflict(false);
     try {
       const updated = await replaceCriteriaSet(set.version, ordered.filter((item) => item.id !== deleting.id).map(toCriteriaDraft));
-      setSet(updated); setDeleting(null); setSaved(true); window.setTimeout(() => setSaved(false), 1600);
+      setSet(updated); setDeleting(null); setEditingId(null); setEditorOpen(false); setSaved(true); window.setTimeout(() => setSaved(false), 1600);
     } catch (error) { const result = criteriaSetError(error); setDeleteError(result.message); setDeleteConflict(result.reason === "version_conflict"); }
     finally { setDeleteSaving(false); }
   }
@@ -158,63 +159,88 @@ function CriteriaSetSettings() {
     setEditorOpen(false); setFormError(""); void loadSet();
   }
 
-  const editorBody = (
+    const editorBody = (
       <form id="criteria-editor" className={s.form} onSubmit={(event) => void saveEditor(event)}>
-      <Field label="Tên tiêu chí" htmlFor="criteria-name" error={errors.name}>
+        <Field label="Tên tiêu chí" htmlFor="criteria-name" error={errors.name}>
           <Input id="criteria-name" value={draft.name} maxLength={160} onChange={(event) => setDraft((value) => ({ ...value, name: Array.from(event.target.value).slice(0, 40).join("") }))} aria-invalid={Boolean(errors.name)} />
-        <span className={s.counter}>{codePointLength(draft.name.trim().normalize("NFC"))}/40 ký tự</span>
-      </Field>
-      {CRITERIA_LEVELS.map((level) => (
-        <Field key={level} label={`Câu mức ${CRITERIA_LEVEL_LABELS[level]}`} htmlFor={`criteria-${level}`} error={errors[level]}>
-          <textarea id={`criteria-${level}`} className={s.textarea} value={draft.texts[level]} maxLength={800} rows={3} onChange={(event) => setDraft((value) => ({ ...value, texts: { ...value.texts, [level]: Array.from(event.target.value).slice(0, 200).join("") } }))} aria-invalid={Boolean(errors[level])} />
-          <span className={s.counter}>{codePointLength(draft.texts[level].trim().normalize("NFC"))}/200 ký tự</span>
+          <span className={s.counter}>{codePointLength(draft.name.trim().normalize("NFC"))}/40 ký tự</span>
         </Field>
-      ))}
+        {CRITERIA_LEVELS.map((level) => (
+          <Field key={level} label={`Câu mức ${CRITERIA_LEVEL_LABELS[level]}`} htmlFor={`criteria-${level}`} error={errors[level]}>
+            <textarea id={`criteria-${level}`} className={s.textarea} value={draft.texts[level]} maxLength={800} rows={3} onChange={(event) => setDraft((value) => ({ ...value, texts: { ...value.texts, [level]: Array.from(event.target.value).slice(0, 200).join("") } }))} aria-invalid={Boolean(errors[level])} />
+            <span className={s.counter}>{codePointLength(draft.texts[level].trim().normalize("NFC"))}/200 ký tự</span>
+          </Field>
+        ))}
         <Field label="Mức mặc định" htmlFor="criteria-default" error={errors.default_level}>
           <select id="criteria-default" className={s.select} value={draft.default_level} onChange={(event) => { setDraft((value) => ({ ...value, default_level: event.target.value as CriteriaLevel })); setErrors((value) => ({ ...value, default_level: undefined })); }}>
-          {CRITERIA_LEVELS.map((level) => <option value={level} key={level}>{CRITERIA_LEVEL_LABELS[level]}</option>)}
-        </select>
-      </Field>
-      <label className={s.homeworkToggle}>
-        <input type="checkbox" checked={draft.homework} onChange={(event) => { setDraft((value) => ({ ...value, homework: event.target.checked })); setErrors((value) => ({ ...value, homework: undefined })); }} />
-        <span>Theo chấm BTVN</span>
-      </label>
-      {errors.homework && <p className={s.error} role="alert">{errors.homework}</p>}
-      {draft.homework && ordered.some((item) => item.homework && item.id !== editingId) && (
-        <InfoNotice title="Chỉ có một tiêu chí theo chấm BTVN" description="Khi lưu, tiêu chí BTVN đang bật sẽ được tắt." />
-      )}
-      <div className={s.preview}>
-        <strong>Xem trước · {CRITERIA_LEVEL_LABELS[previewLevel]}</strong>
-        <p>{draft.texts[previewLevel] || "Câu nhận xét sẽ hiện ở đây."}</p>
-        <div className={s.previewLevels} aria-label="Chọn mức xem trước">
-          {CRITERIA_LEVELS.map((level) => <Button key={level} variant={previewLevel === level ? "primary" : "secondary"} size="sm" onClick={() => setPreviewLevel(level)}>{CRITERIA_LEVEL_LABELS[level]}</Button>)}
+            {CRITERIA_LEVELS.map((level) => <option value={level} key={level}>{CRITERIA_LEVEL_LABELS[level]}</option>)}
+          </select>
+        </Field>
+        <label className={s.homeworkToggle}>
+          <input type="checkbox" checked={draft.homework} onChange={(event) => { setDraft((value) => ({ ...value, homework: event.target.checked })); setErrors((value) => ({ ...value, homework: undefined })); }} />
+          <span>Theo chấm BTVN</span>
+        </label>
+        {errors.homework && <p className={s.error} role="alert">{errors.homework}</p>}
+        {draft.homework && ordered.some((item) => item.homework && item.id !== editingId) && (
+          <InfoNotice title="Chỉ có một tiêu chí được theo chấm BTVN" description="Khi lưu, tiêu chí BTVN đang bật sẽ được tắt." />
+        )}
+        <div className={s.preview}>
+          <strong>Xem trước · {CRITERIA_LEVEL_LABELS[previewLevel]}</strong>
+          <p>{draft.texts[previewLevel] || "Câu nhận xét sẽ hiện ở đây."}</p>
+          <div className={s.previewLevels} aria-label="Chọn mức xem trước">
+            {CRITERIA_LEVELS.map((level) => <Button key={level} variant={previewLevel === level ? "primary" : "secondary"} size="sm" onClick={() => setPreviewLevel(level)}>{CRITERIA_LEVEL_LABELS[level]}</Button>)}
+          </div>
         </div>
-      </div>
+        {editingId && <div className={s.editorDelete}>
+          <Button variant="danger" onClick={() => { setDeleteError(""); setDeleteConflict(false); setDeleting(ordered.find((item) => item.id === editingId) ?? null); }} disabled={!online || saving || ordered.length === 1}>Xoá tiêu chí</Button>
+        </div>}
         {formError && <div className={s.error} role="alert">{formError}{conflict && <Button variant="secondary" onClick={serverReload}>Tải lại</Button>}</div>}
-    </form>
-  );
+      </form>
+    );
   const editorFooter = <ActionFooter className={s.footer}>
     <Button variant="secondary" onClick={() => setEditorOpen(false)} disabled={saving}>Huỷ</Button>
     <Button type="submit" form="criteria-editor" loading={saving} done={saved}>{editingId ? "Lưu" : "Thêm tiêu chí"}</Button>
   </ActionFooter>;
 
-  return (
-    <main className={s.page}>
-      {desktop ? <header className={s.header}><p className={s.breadcrumb}><button type="button" onClick={() => navigate("/cai-dat")}>Cài đặt</button><span aria-hidden="true">/</span><span>Bộ tiêu chí nhận xét</span></p><h1>Bộ tiêu chí nhận xét</h1></header> : <PageHeader backTo="/cai-dat" title="Bộ tiêu chí nhận xét" />}
-      {!online && <InfoNotice title="Đang ngoại tuyến" description="Bạn có thể xem bộ đã lưu trên máy. Chỉnh sửa cần kết nối mạng." />}
-      {loadError && <div className={s.error} role="status">{loadError}{online && <Button variant="secondary" onClick={() => void loadSet()}>Tải lại</Button>}</div>}
-      {formError && !editorOpen && <div className={s.error} role="alert">{formError}{conflict && <Button variant="secondary" onClick={() => void loadSet()}>Tải lại</Button>}</div>}
-        {loading && !set ? <p role="status">Đang tải bộ tiêu chí…</p> : set && <div className={s.settingsGrid}>
+    return (
+      <main className={s.page}>
+        {desktop ? (
+          <header className={s.header}>
+            <p className={s.breadcrumb}><button type="button" onClick={() => navigate("/cai-dat")}>Cài đặt</button><span aria-hidden="true">/</span><span>Bộ tiêu chí nhận xét</span></p>
+            <h1>Bộ tiêu chí nhận xét</h1>
+            <p className={s.subtitle}>Một bộ tiêu chí dùng chung cho mọi lớp trong workspace.</p>
+          </header>
+        ) : <>
+          <PageHeader backTo="/cai-dat" title="Cài đặt" compact />
+          <header className={s.mobileHeader}>
+            <h1>Bộ tiêu chí nhận xét</h1>
+            <p className={s.subtitle}>Một bộ tiêu chí dùng chung cho mọi lớp trong workspace.</p>
+          </header>
+        </>}
+        {!online && <InfoNotice title="Đang ngoại tuyến" description="Bạn có thể xem bộ đã lưu trên máy. Chỉnh sửa cần kết nối mạng." />}
+        {loadError && <div className={s.error} role="status">{loadError}{online && <Button variant="secondary" onClick={() => void loadSet()}>Tải lại</Button>}</div>}
+        {formError && !editorOpen && <div className={s.error} role="alert">{formError}{conflict && <Button variant="secondary" onClick={() => void loadSet()}>Tải lại</Button>}</div>}
+        {loading && !set ? <p role="status">Đang tải bộ tiêu chí…</p> : set && <div className={`${s.settingsGrid} ${desktop && editorOpen ? s.settingsGridEditing : ""}`}>
           <section className={s.listPanel} aria-label="Danh sách tiêu chí">
-            <div className={s.listHead}><div><h2>Tiêu chí</h2><p>Một bộ tiêu chí dùng chung cho mọi lớp · Phiên bản {set.version}</p></div><Button onClick={openNew} disabled={!online || saving || ordered.length >= 8}>Thêm tiêu chí</Button></div>
+            <div className={s.listHead}>
+              <div><h2>Tiêu chí</h2><p>Áp dụng cho mọi lớp trong workspace</p></div>
+              <Button onClick={openNew} disabled={!online || saving || ordered.length >= 8}>Thêm tiêu chí</Button>
+            </div>
             <ol className={s.list}>
-              {ordered.map((item, index) => <li className={s.item} key={item.id}>
-                <div className={s.itemText}><strong>{index + 1}. {item.name}</strong>{item.homework && <span className={s.badge}>Theo chấm BTVN</span>}<span className={s.itemDefault}>Mặc định: {CRITERIA_LEVEL_LABELS[item.default_level]}</span></div>
-                <div className={s.itemActions}>
-                  <Button variant="secondary" aria-label={`Đưa ${item.name} lên`} disabled={!online || saving || index === 0} onClick={() => void move(item, -1)}>↑</Button>
-                  <Button variant="secondary" aria-label={`Đưa ${item.name} xuống`} disabled={!online || saving || index === ordered.length - 1} onClick={() => void move(item, 1)}>↓</Button>
-                  <Button variant="secondary" onClick={() => openEdit(item)} disabled={!online || saving}>Sửa</Button>
-                  <Button variant="danger" onClick={() => { setDeleteError(""); setDeleting(item); }} disabled={!online || saving || ordered.length === 1}>Xoá</Button>
+              {ordered.map((item, index) => <li className={s.listItem} key={item.id}>
+                <div className={`${s.item} ${editingId === item.id ? s.selected : ""}`}>
+                  <button type="button" className={s.itemSelect} onClick={() => openEdit(item)} aria-label={`Sửa tiêu chí ${item.name}`} aria-pressed={editingId === item.id} disabled={!online || saving}>
+                    <span className={s.itemName}>{item.name}</span>
+                    <span className={s.itemMeta}>
+                      <LevelChickMeter level={item.default_level} decorative />
+                      <span>{CRITERIA_LEVEL_LABELS[item.default_level]}</span>
+                      {item.homework && <span className={s.homeworkLabel}>Theo chấm BTVN</span>}
+                    </span>
+                  </button>
+                  <div className={s.orderTools}>
+                    <button type="button" className={s.orderButton} aria-label={`Chuyển lên: ${item.name}`} disabled={!online || saving || index === 0} onClick={() => void move(item, -1)}>↑</button>
+                    <button type="button" className={s.orderButton} aria-label={`Chuyển xuống: ${item.name}`} disabled={!online || saving || index === ordered.length - 1} onClick={() => void move(item, 1)}>↓</button>
+                  </div>
                 </div>
               </li>)}
             </ol>
@@ -226,9 +252,20 @@ function CriteriaSetSettings() {
           </aside>}
         </div>}
         {!desktop && <Sheet open={editorOpen} onClose={() => setEditorOpen(false)} title={editorTitle} footer={editorFooter}>{editorBody}</Sheet>}
-        <Modal open={deleting !== null} onClose={() => setDeleting(null)} title="Xoá tiêu chí" sheet={!desktop} footer={<div className={s.deleteActions}><Button variant="secondary" onClick={() => setDeleting(null)} disabled={deleteSaving}>Huỷ</Button><Button variant="danger" loading={deleteSaving} onClick={() => void confirmDelete()}>Xoá tiêu chí</Button></div>}>
-        <p>Bạn có chắc muốn xoá “{deleting?.name}” khỏi bộ tiêu chí?</p><p>Phiếu đã gửi không đổi.</p>{deleteError && <div className={s.error} role="alert">{deleteError}{deleteConflict && <Button variant="secondary" onClick={() => { setDeleting(null); void loadSet(); }}>Tải lại</Button>}</div>}
-      </Modal>
-    </main>
-  );
+        <Modal
+          open={deleting !== null}
+          onClose={() => setDeleting(null)}
+          title="Xoá tiêu chí"
+          sheet={!desktop}
+          footer={<div className={s.deleteActions}>
+            <Button variant="secondary" onClick={() => setDeleting(null)} disabled={deleteSaving}>Huỷ</Button>
+            <Button variant="danger" loading={deleteSaving} onClick={() => void confirmDelete()}>Xoá tiêu chí</Button>
+          </div>}
+        >
+          <p>Bạn có chắc muốn xoá “{deleting?.name}” khỏi bộ tiêu chí?</p>
+          <p>Phiếu đã gửi không đổi.</p>
+          {deleteError && <div className={s.error} role="alert">{deleteError}{deleteConflict && <Button variant="secondary" onClick={() => { setDeleting(null); void loadSet(); }}>Tải lại</Button>}</div>}
+        </Modal>
+      </main>
+    );
 }
