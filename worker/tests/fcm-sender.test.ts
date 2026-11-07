@@ -95,6 +95,42 @@ function recordingFetch(
   };
 }
 
+async function seedRegisteredDevice(label: string, token: string): Promise<{
+  deviceId: string;
+  membershipId: string;
+  studentId: string;
+}> {
+  const ws = await registerWorkspace(fakePhone(), label);
+  const classId = await insertClass(ws.workspaceId, 'C1', ws.userId);
+  const studentId = await insertStudent(
+    ws.workspaceId,
+    classId,
+    'Học sinh giả',
+    '+84900000031',
+    ws.userId,
+  );
+  const userId = await insertUser(fakePhone());
+  const membershipId = await insertGuardianMembership(
+    ws.workspaceId,
+    userId,
+    ws.roles.guardian!,
+    [studentId],
+  );
+  await clubToken(ws.workspaceId, userId, membershipId);
+  const session = await db
+    .prepare('SELECT id FROM auth_sessions WHERE user_id = ? AND revoked_at IS NULL')
+    .bind(userId)
+    .first<{ id: string }>();
+  const deviceId = await insertDeviceToken(
+    ws.workspaceId,
+    userId,
+    membershipId,
+    session!.id,
+    token,
+  );
+  return { deviceId, membershipId, studentId };
+}
+
 describe('FCM sender (fake fetch, no network)', () => {
   beforeEach(async () => {
     await db.prepare('DELETE FROM fcm_oauth_cache').run();
@@ -354,9 +390,10 @@ describe('FCM sender (fake fetch, no network)', () => {
     }
   });
 
-  it('refreshes the OAuth token exactly once on 401', async () => {
-    const { account } = await makeServiceAccount();
-    let oauthCalls = 0;
+    it('refreshes the OAuth token exactly once on 401', async () => {
+      const { account } = await makeServiceAccount();
+      const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+      let oauthCalls = 0;
     let fcmCalls = 0;
     const { fetchImpl } = recordingFetch((url) => {
       if (url === TOKEN_URI) {
@@ -390,18 +427,61 @@ describe('FCM sender (fake fetch, no network)', () => {
       },
       NOW,
     );
-    expect(result.outcome).toBe('sent');
-    expect(oauthCalls).toBe(2);
-    expect(fcmCalls).toBe(2);
-    const row = await db
+      expect(result.outcome).toBe('sent');
+      expect(oauthCalls).toBe(2);
+      expect(fcmCalls).toBe(2);
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toEqual({ outcome: 'sent' });
+      log.mockRestore();
+      const row = await db
       .prepare('SELECT access_token FROM fcm_oauth_cache WHERE project_id = ?')
       .bind('demo-project')
       .first<{ access_token: string }>();
-    expect(row!.access_token).toBe('oauth-token-2');
-  });
+      expect(row!.access_token).toBe('oauth-token-2');
+    });
 
-  it('keeps the registration on a configuration error (403)', async () => {
-    const { account } = await makeServiceAccount();
+    it('logs one final 401 outcome when refreshing OAuth credentials fails', async () => {
+      const { account } = await makeServiceAccount();
+      const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+      let oauthCalls = 0;
+      const fetchImpl: FetchLike = async (url) => {
+        if (url === TOKEN_URI) {
+          oauthCalls += 1;
+          return oauthCalls === 1
+            ? jsonResponse({ access_token: 'oauth-token', expires_in: 3600 })
+            : jsonResponse({ error: 'refresh failed' }, 500);
+        }
+        return jsonResponse({ error: { status: 'UNAUTHENTICATED' } }, 401);
+      };
+
+      const result = await sendPushToDevice(db, fetchImpl, account, {
+        deviceToken: 'FAKE_FCM_401_REFRESH_FAILURE',
+        deviceId: 'unused-device-id',
+        membershipId: 'unused-membership-id',
+        registrationVersion: 1,
+        kind: 'slip_sent',
+        refs: {
+          notificationId: 10,
+          studentId: 'unused-student-id',
+          sessionId: null,
+          reportId: null,
+          testId: null,
+        },
+      }, NOW);
+
+      expect(result).toEqual({ outcome: 'unauthorized', status: 401, error_code: 'UNAUTHENTICATED' });
+      expect(oauthCalls).toBe(2);
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toEqual({
+        outcome: 'unauthorized',
+        error_code: 'UNAUTHENTICATED',
+      });
+      log.mockRestore();
+    });
+
+    it('keeps the registration on a configuration error (403)', async () => {
+      const { account } = await makeServiceAccount();
+      const device = await seedRegisteredDevice('FCM 403 config workspace', 'FAKE_FCM_TOKEN_4');
     const { fetchImpl } = recordingFetch((url) => {
       if (url === TOKEN_URI) return jsonResponse({ access_token: 'oauth-token', expires_in: 3600 });
       return jsonResponse({ error: { status: 'PERMISSION_DENIED' } }, 403);
@@ -412,22 +492,58 @@ describe('FCM sender (fake fetch, no network)', () => {
     expect(result.outcome).toBe('failed');
     expect(result.status).toBe(403);
 
-    const configResult = await sendPushToDevice(
-      db,
-      fetchImpl,
-      account,
-      {
+      const configResult = await sendPushToDevice(db, fetchImpl, account, {
         deviceToken: 'FAKE_FCM_TOKEN_4',
-        deviceId: crypto.randomUUID(),
-        membershipId: 'membership-ignored',
+        deviceId: device.deviceId,
+        membershipId: device.membershipId,
         registrationVersion: 1,
         kind: 'homework_assigned',
-        refs: { notificationId: 9, studentId: 'stu_fake_1', sessionId: 'ses_fake_1', reportId: null, testId: null },
-      },
-      NOW,
-    );
-    expect(configResult.outcome).toBe('failed');
-  });
+        refs: {
+          notificationId: 9,
+          studentId: device.studentId,
+          sessionId: 'ses_fake_1',
+          reportId: null,
+          testId: null,
+        },
+      }, NOW);
+      expect(configResult).toMatchObject({ outcome: 'failed', status: 403, error_code: 'PERMISSION_DENIED' });
+      const retained = await db
+        .prepare('SELECT id FROM device_tokens WHERE id = ?')
+        .bind(device.deviceId)
+        .first<{ id: string }>();
+      expect(retained?.id).toBe(device.deviceId);
+    });
+
+    it('keeps the registration when FCM rejects an invalid payload (400)', async () => {
+      const { account } = await makeServiceAccount();
+      const device = await seedRegisteredDevice('FCM 400 payload workspace', 'FAKE_FCM_INVALID_ARGUMENT');
+      const { fetchImpl } = recordingFetch((url) => {
+        if (url === TOKEN_URI) return jsonResponse({ access_token: 'oauth-token', expires_in: 3600 });
+        return jsonResponse({ error: { status: 'INVALID_ARGUMENT' } }, 400);
+      });
+
+      const result = await sendPushToDevice(db, fetchImpl, account, {
+        deviceToken: 'FAKE_FCM_INVALID_ARGUMENT',
+        deviceId: device.deviceId,
+        membershipId: device.membershipId,
+        registrationVersion: 1,
+        kind: 'homework_assigned',
+        refs: {
+          notificationId: 11,
+          studentId: device.studentId,
+          sessionId: 'ses_fake_2',
+          reportId: null,
+          testId: null,
+        },
+      }, NOW);
+
+      expect(result).toMatchObject({ outcome: 'failed', status: 400, error_code: 'INVALID_ARGUMENT' });
+      const retained = await db
+        .prepare('SELECT id FROM device_tokens WHERE id = ?')
+        .bind(device.deviceId)
+        .first<{ id: string }>();
+      expect(retained?.id).toBe(device.deviceId);
+    });
 
   it('returns no_credentials when the service account secret is missing', async () => {
     const env: FcmEnv = { DB: db };

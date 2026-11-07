@@ -434,7 +434,10 @@ export async function sendPushToDevice(
   if (result.outcome === 'unauthorized') {
     await invalidateAccessToken(db, account.projectId);
     accessToken = await getAccessToken(db, fetchImpl, account, nowMs);
-    if (accessToken === null) return result;
+    if (accessToken === null) {
+      logFcmOutcome(result);
+      return result;
+    }
     result = await sendFcmMessage(fetchImpl, account.projectId, accessToken, message);
   }
   logFcmOutcome(result);
