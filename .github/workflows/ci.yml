@@ -82,7 +82,8 @@ jobs:
 
   ios:
     needs: changes
-    if: needs.changes.outputs.ios == 'true'
+    # Tắt theo yêu cầu người dùng 2026-11-07; bật lại bằng cách khôi phục điều kiện ios == true
+    if: false
     runs-on: macos-latest
     defaults:
       run:
