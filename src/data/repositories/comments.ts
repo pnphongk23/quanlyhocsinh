@@ -1,5 +1,5 @@
 import type { Comment, CriteriaSlipLevel, HomeworkLevel, StarLevel } from "../types";
-import { criteriaWithHomework, defaultSlipCriteria, generatedSlipSentence, starsFromCriteria } from "../slip";
+import { appendedCommentText, composeCriteriaComment, criteriaWithHomework, defaultSlipCriteria, generatedSlipSentence, starsFromCriteria } from "../slip";
 import { getStore } from "../store";
 import { commitState, persistCommand, persistSlipCommands } from "../outbox";
 import { attendanceCompletion, type UngradedHomeworkNotice, gradingSessionFor, homeworkSectionsFor, previousHomeworkGrades, previousHomeworkSession, studentsOnSession, ungradedHomeworkNotice } from "../homework";
@@ -75,13 +75,29 @@ function planComment(input:CommentInput):CommentWritePlan {
  * Chấm lại BTVN: phiếu NHÁP thang 5 của em ở buổi kế (tiêu chí BTVN chưa chọn tay, chưa gửi, chưa chờ gửi)
  * được tính lại tiêu chí và câu; câu sửa tay bị thay bằng câu tự sinh. Không đổi thì không có lệnh.
  */
-export function planRegradedSlip(sectionId:string,studentId:string,level:HomeworkLevel|null):WritePlan<Comment>|null {
+export function planRegradedSlip(sectionId:string,studentId:string,level:HomeworkLevel|null,criteriaSet?:CriteriaSet|null):WritePlan<Comment>|null {
   const state=getStore();
   const section=state.homeworkSections.find(x=>x.id===sectionId);
   const next=section?gradingSessionFor(state.sessions,section.sessionId):null;
   const old=next?getSessionComment(next.id,studentId):null;
   if(!next||!old||old.status==="sent"||old.sendQueued||old.hwManual)return null;
   const grades=previousHomeworkGrades(state,next.id,studentId,{sectionId,level});
+  if(old.criteriaLevels){
+    // Phiếu theo bộ tiêu chí: chỉ đổi mức của tiêu chí BTVN (mức chọn tay đã bị chặn ở trên),
+    // dựng lại câu theo bộ hiện hành và giữ phần giáo viên gõ thêm.
+    if(!criteriaLevelsEnabled())return null;
+    const index=old.criteriaLevels.findIndex(item=>item.homework);
+    if(index<0)return null;
+    const homeworkLevel=homeworkLevelFromGrades(grades);
+    if(old.criteriaLevels[index]?.level===homeworkLevel)return null;
+    const snapshot=old.criteriaLevels.map((item,position)=>{
+      if(position!==index)return item;
+      const text=criteriaSet?.criteria.find(criterion=>criterion.id===item.id)?.texts[homeworkLevel]??item.text;
+      return {...item,level:homeworkLevel,...(text===undefined?{}:{text})};
+    });
+    const appended=appendedCommentText(old.comment??"",old.criteriaLevels);
+    try{return planComment({sessionId:next.id,studentId,criteriaLevels:snapshot,comment:composeCriteriaComment(snapshot,appended),note:old.note});}catch{return null;}
+  }
   if(old.levels){
     // Cờ tắt không tự viết lại phiếu 3 mức (tránh gửi criteria và làm mất levels).
     if(!criteriaLevelsEnabled())return null;
@@ -197,7 +213,9 @@ function guardUnsent(plan:WritePlan<Comment>,sessionId:string,studentId:string):
         if(levelMode&&customSet){
             const defaults=defaultCustomCriteria(customSet,grades,homeworkGiven);
             const criteriaLevels=defaults.criteria;
-            const comment=criteriaLevels.map((item)=>item.text??"").filter(Boolean).join(" ");
+            // Giữ phần giáo viên gõ thêm trong ô nhận xét cũ (tách nhờ `text` trong bản chụp).
+            const appended=old?appendedCommentText(old.comment??"",old.criteriaLevels??[]):"";
+            const comment=composeCriteriaComment(criteriaLevels,appended);
             if(old?.criteriaLevels&&JSON.stringify(old.criteriaLevels)===JSON.stringify(criteriaLevels)&&old.comment===comment&&old.hwManual===defaults.hwManual)continue;
             planned.push(planComment({sessionId,studentId:student.id,criteriaLevels,comment,note:old?.note??"",hwManual:defaults.hwManual}));
           continue;
