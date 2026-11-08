@@ -14,6 +14,9 @@ const messages: Record<string, string> = {
   invalid_topics: "Mục \"Hôm nay học\" không hợp lệ.",
   invalid_graded_skills: "Kỹ năng chấm riêng phải nằm trong mục Hôm nay học.",
   feature_disabled: "Tính năng phiếu 3 mức chưa bật trên máy chủ.",
+  criteria_set_slip: "Bộ tiêu chí đã thay đổi. Hãy mở lại phiếu và lưu theo bộ mới.",
+  invalid_criteria_levels: "Bản chụp tiêu chí không hợp lệ. Hãy mở lại phiếu và thử lưu lại.",
+  comment_required: "Câu nhận xét không được để trống.",
   attendance_incomplete: "Điểm danh chưa đồng bộ xong, thử lại sau.",
 };
 
@@ -22,7 +25,7 @@ const messages: Record<string, string> = {
  * hiện nút "Thử lại" (hợp đồng 2026-11-04). `base_version_ahead` của buổi đã có
  * một lần tự thử nên vẫn cho thử lại thủ công.
  */
-export const FINAL_REJECTION_CODES = ["feature_disabled", "invalid_levels", "invalid_skill_levels", "invalid_topics", "invalid_graded_skills", "session_cancelled"] as const;
+export const FINAL_REJECTION_CODES = ["feature_disabled", "invalid_levels", "invalid_skill_levels", "invalid_topics", "invalid_graded_skills", "invalid_criteria_levels", "criteria_set_slip", "comment_required", "session_cancelled"] as const;
 export function isFinalRejection(code: string): boolean {
   return (FINAL_REJECTION_CODES as readonly string[]).includes(code);
 }

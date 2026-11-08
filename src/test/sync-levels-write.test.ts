@@ -72,7 +72,7 @@ describe("payload cờ tắt giữ nguyên kiểu cũ", () => {
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
     const { saveSessionLessonDurable } = await import("../data/repositories/sessions");
-    expect(() => saveSessionLessonDurable("session-1", { topics: ["speaking"], gradedSkills: [] })).toThrow("chưa bật");
+      expect(() => saveSessionLessonDurable("session-1", { topics: ["speaking"], gradedSkills: [] })).toThrow("chưa bật");
     expect(await d.db.outbox.count()).toBe(0);
     expect(d.getStore().sessions.find((session) => session.id === "session-1")?.todayTopics).toEqual(TOPICS);
   });
@@ -110,15 +110,15 @@ describe("ghi phiếu 3 mức và Gán tất cả mặc định", () => {
 
     expect(storeSlip(d, "s1")).toMatchObject({
       levels: { focus: "good", participation: "good", mastery: "ok", notes: "good", homework: "needs_work" },
-      skillLevels: { speaking: "ok", reading: "needs_work" },
+      skillLevels: { speaking: "good", reading: "needs_work" },
       note: NOTE,
       hwManual: false,
     });
-    expect(storeSlip(d, "s1")?.comment).toContain("từ vựng");
+    expect(storeSlip(d, "s1")?.comment).not.toContain("từ vựng");
     expect(storeSlip(d, "s2")).toBeUndefined();
     expect(storeSlip(d, "s3")).toMatchObject({ comment: "Phiếu đã gửi", levels: { ...LEVELS, mastery: "ok" } });
     const written = pushed("slip.set").at(-1)!;
-    expect(written.payload).toMatchObject({ student_id: "s1", levels: { homework: "needs_work" }, skill_levels: { speaking: "ok", reading: "needs_work" } });
+    expect(written.payload).toMatchObject({ student_id: "s1", levels: { homework: "needs_work" }, skill_levels: { speaking: "good", reading: "needs_work" } });
   });
 
   it("slip.send defaults[] kèm levels/skill_levels khi cờ bật", async () => {
@@ -126,30 +126,26 @@ describe("ghi phiếu 3 mức và Gán tất cả mặc định", () => {
     server.put("attendance", { session_id: "session-1", student_id: "s4", status: "present" });
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
-    // Phiếu nháp thang 3 chỉ có trên máy (chưa đồng bộ): máy chủ chưa có phiếu nên dùng defaults[].
-    const id = d.identityKey();
-    await d.db.slips.put(d.stored("slip", `${id}|slip|session-1|s4`, { session_id: "session-1", student_id: "s4", stars: null, scale: 3, note: "", hw_manual: 0, status: "draft", sent_at: null, version: 0, updated_at: "2026-10-20T00:00:00Z" }) as never);
+      // Phiếu nháp thang 3 chỉ có trên máy (chưa đồng bộ): defaults[] dùng bản chụp tiêu chí hiện hành.
+      const id = d.identityKey();
+      await d.db.slips.put(d.stored("slip", `${id}|slip|session-1|s4`, { session_id: "session-1", student_id: "s4", stars: null, scale: 3, note: "", hw_manual: 0, status: "draft", sent_at: null, version: 0, updated_at: "2026-10-20T00:00:00Z" }) as never);
+      const criteriaSet = { version: 1, criteria: [{ id: "focus", name: "Tập trung", texts: { good: "Câu tốt.", ok: "Câu đạt.", needs_work: "Câu cố gắng." }, default_level: "good" as const, homework: false }] };
+      await d.db.criteriaSets.put({ ...criteriaSet, identity: id, key: d.rowKey("criteria_set", ["current"]), entity: "criteria_set" });
     await d.hydrateStore();
     const { sendSessionTicketsDurable } = await import("../data/repositories/comments");
 
     await sendSessionTicketsDurable("session-1", ["s4"]);
-    // Cache Dexie của lần gửi phải giữ levels/skill_levels cho lần mở sau.
-    expect(await d.db.slips.get(`${id}|slip|session-1|s4`)).toMatchObject({ levels: expect.objectContaining({ mastery: "ok" }), skill_levels: { speaking: "ok" } });
+      // Cache Dexie của lần gửi phải giữ snapshot tiêu chí.
+      expect(await d.db.slips.get(`${id}|slip|session-1|s4`)).toMatchObject({ criteria_levels: [{ id: "focus", level: "good" }] });
     await d.syncNow();
 
     const command = pushed("slip.send").at(-1)! as { payload: { defaults: Array<Record<string, unknown>> } };
     const fallback = command.payload.defaults[0];
-    expect(fallback).toMatchObject({
-      student_id: "s4",
-      levels: { focus: "good", participation: "good", mastery: "ok", notes: "good", homework: "good" },
-      skill_levels: { speaking: "ok" },
-      comment: expect.stringContaining("nắm được phần chính của từ vựng hôm nay"),
-    });
-    expect(fallback).not.toHaveProperty("criteria");
-    expect(server.rows.get("slip")!.get("session-1|s4")).toMatchObject({ levels: fallback.levels, skill_levels: fallback.skill_levels, status: "sent" });
+      expect(fallback).toMatchObject({ student_id: "s4", criteria_levels: [{ id: "focus", level: "good", text: "Câu tốt." }], comment: "Câu tốt." });
+      expect(fallback).not.toHaveProperty("levels");
   });
 
-  it("bật Chấm riêng cho kỹ năng mới: sinh lại câu + gửi skill_levels mặc định Đạt", async () => {
+    it("bỏ Chấm riêng khi cờ bật, không tự thêm kỹ năng từ buổi học", async () => {
     server.put("slip", {
       session_id: "session-1", student_id: "s1", comment: "Câu cũ", levels: LEVELS, skill_levels: {}, scale: 5,
       note: NOTE, hw_manual: 0, status: "draft", sent_at: null,
@@ -162,10 +158,10 @@ describe("ghi phiếu 3 mức và Gán tất cả mặc định", () => {
     await d.syncNow();
 
     const slip = storeSlip(d, "s1")!;
-    expect(slip.skillLevels).toEqual({ speaking: "ok" });
-    expect(slip.comment).toContain("Phần nói con làm được, cần luyện thêm.");
+      expect(slip.skillLevels).toEqual({});
+      expect(slip.comment).not.toContain("Phần nói");
     expect(slip.note).toBe(NOTE);
-    expect(pushed("slip.set").at(-1)!.payload).toMatchObject({ levels: { ...LEVELS, homework: "needs_work" }, skill_levels: { speaking: "ok" } });
+      expect(pushed("slip.set").at(-1)!.payload).not.toMatchObject({ skill_levels: { speaking: "ok" } });
   });
 
   it("chấm lại BTVN chỉ tính lại phiếu 3 mức chưa gửi, giữ phần gõ thêm", async () => {
@@ -183,42 +179,25 @@ describe("ghi phiếu 3 mức và Gán tất cả mặc định", () => {
     expect(storeSlip(d, "s3")).toMatchObject({ comment: "Phiếu đã gửi", levels: { ...LEVELS, mastery: "ok" } });
   });
 
-  it("đổi Hôm nay học rồi sinh lại câu chỉ áp phiếu chưa gửi", async () => {
-    const d = await bootDevice(server, "t", me);
-    await d.syncNow();
-    const { saveSessionLessonDurable } = await import("../data/repositories/sessions");
-    const { regenerateSlipCommentsDurable } = await import("../data/repositories/comments");
-
-    await saveSessionLessonDurable("session-1", { topics: ["speaking"], gradedSkills: ["speaking"] });
-    await regenerateSlipCommentsDurable("session-1");
-    await d.syncNow();
-
-    const slip = storeSlip(d, "s1")!;
-    expect(slip.comment).toContain("nắm chắc bài hôm nay");
-    expect(slip.comment).toContain("và nói tốt");
-    expect(slip.note).toBe(NOTE);
-    expect(storeSlip(d, "s3")).toMatchObject({ comment: "Phiếu đã gửi", levels: { ...LEVELS, mastery: "ok" } });
-    expect(pushed("session.lesson.set").at(-1)!.payload).toEqual({ session_id: "session-1", topics: ["speaking"], graded_skills: ["speaking"] });
+    it("không tạo lệnh Hôm nay học khi cờ bật", async () => {
+      const d = await bootDevice(server, "t", me);
+      await d.syncNow();
+      const { saveSessionLessonDurable } = await import("../data/repositories/sessions");
+      expect(() => saveSessionLessonDurable("session-1", { topics: ["speaking"], gradedSkills: ["speaking"] })).toThrow("đã được thay");
+      expect(await d.db.outbox.where("identity").equals(d.identityKey()).count()).toBe(0);
   });
 });
 
 describe("outbox lệnh cấp buổi", () => {
   beforeEach(() => vi.stubEnv("VITE_CRITERIA_LEVELS", "1"));
 
-  it("gộp lệnh theo buổi, giữ lệnh mới nhất và base_version của lệnh chờ đầu tiên", async () => {
-    const d = await bootDevice(server, "t", me);
-    await d.syncNow();
-    const { saveSessionLessonDurable } = await import("../data/repositories/sessions");
-    online(false);
-    await saveSessionLessonDurable("session-1", { topics: ["vocabulary"], gradedSkills: [] });
-    const first = (await d.db.outbox.toArray()).find((row) => row.type === "session.lesson.set")!;
-    await saveSessionLessonDurable("session-1", { topics: ["speaking", "reading"], gradedSkills: ["reading"] });
-
-    const rows = (await d.db.outbox.toArray()).filter((row) => row.type === "session.lesson.set");
-    expect(rows).toHaveLength(1);
-    expect(rows[0].payload).toEqual({ session_id: "session-1", topics: ["speaking", "reading"], graded_skills: ["reading"] });
-    expect(rows[0].base_version).toBe(first.base_version);
-    expect(d.getStore().sessions.find((session) => session.id === "session-1")).toMatchObject({ todayTopics: ["speaking", "reading"], gradedSkills: ["reading"] });
+    it("không xếp lệnh Hôm nay học mới khi cờ bật", async () => {
+      const d = await bootDevice(server, "t", me);
+      await d.syncNow();
+      const { saveSessionLessonDurable } = await import("../data/repositories/sessions");
+      online(false);
+      expect(() => saveSessionLessonDurable("session-1", { topics: ["speaking", "reading"], gradedSkills: ["reading"] })).toThrow("đã được thay");
+      expect((await d.db.outbox.toArray()).filter((row) => row.type === "session.lesson.set")).toHaveLength(0);
   });
 
   it("gộp lệnh phiếu 3 mức: lệnh mới thắng, không còn criteria/stars", async () => {
@@ -259,80 +238,14 @@ describe("outbox lệnh cấp buổi", () => {
   });
 });
 
-describe("từ chối và base_version của session.lesson.set", () => {
+describe("không tạo session.lesson.set khi bật bộ tiêu chí mới", () => {
   beforeEach(() => vi.stubEnv("VITE_CRITERIA_LEVELS", "1"));
 
-  it("base_version_ahead: pull rồi tự gửi lại MỘT lần với command ID mới", async () => {
+  it("không enqueue Hôm nay học cũ", async () => {
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
-    // Máy cục bộ đang giữ version mới hơn máy chủ (mô phỏng dữ liệu lệch).
-    const raw = await d.db.sessions.get(`${d.identityKey()}|class_session|session-1`) as { version: number };
-    await d.db.sessions.update(`${d.identityKey()}|class_session|session-1`, { version: 5 } as never);
-    await d.hydrateStore();
-    expect(d.getStore().sessions.find((session) => session.id === "session-1")?.version).toBe(5);
-    // Máy khác ghi trong lúc push bị từ chối: pull ngay sau đó thấy version 6 rồi mới gửi lại.
-    let firstAttempt = true;
-    server.hooks.rejectCommand = (command) => {
-      if (command.type !== "session.lesson.set" || !firstAttempt) return undefined;
-      firstAttempt = false;
-      for (let index = 0; index < 5; index++) {
-        server.put("class_session", { id: "session-1", class_id: "c1", date: "2026-10-20", start_time: "09:00", origin: "manual", status: "held", today_topics: ["vocabulary"], graded_skills: [] });
-      }
-      return "base_version_ahead";
-    };
     const { saveSessionLessonDurable } = await import("../data/repositories/sessions");
-    await saveSessionLessonDurable("session-1", { topics: ["speaking"], gradedSkills: [] });
-    expect(raw.version).toBe(1);
-
-    await d.syncNow();
-    await vi.waitFor(() => expect(pushed("session.lesson.set")).toHaveLength(2), { timeout: 2000 });
-
-    const commands = pushed("session.lesson.set");
-    expect(commands).toHaveLength(2);
-    expect(commands[0].id).not.toBe(commands[1].id);
-    expect(commands.map((row) => row.base_version)).toEqual([5, 6]);
-    expect(await d.db.outbox.count()).toBe(0);
-    expect(server.rows.get("class_session")!.get("session-1")).toMatchObject({ today_topics: ["speaking"], graded_skills: [] });
-  });
-
-  it("base_version_ahead quá một lần thì giữ rejected, không lặp vô hạn", async () => {
-    const d = await bootDevice(server, "t", me);
-    await d.syncNow();
-    const key = `${d.identityKey()}|class_session|session-1`;
-    await d.db.sessions.update(key, { version: 9 } as never);
-    await d.hydrateStore();
-    const { saveSessionLessonDurable } = await import("../data/repositories/sessions");
-    await saveSessionLessonDurable("session-1", { topics: ["speaking"], gradedSkills: [] });
-
-    await d.syncNow();
-    await d.syncNow();
-    const rows = await d.db.outbox.where("identity").equals(d.identityKey()).toArray();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ status: "rejected", error: "base_version_ahead", retries: 1 });
-    expect(pushed("session.lesson.set")).toHaveLength(2);
-    // Giữ giá trị cục bộ để người dùng thấy lỗi dòng, không tự xoá.
-    expect(d.getStore().sessions.find((session) => session.id === "session-1")?.todayTopics).toEqual(["speaking"]);
-  });
-
-  it.each([
-    ["feature_disabled", undefined],
-    ["invalid_topics", undefined],
-    ["session_cancelled", "cancelled"],
-  ] as const)("mã %s là rejected cuối, không retry", async (code, sessionStatus) => {
-    if (sessionStatus) server.put("class_session", { id: "session-1", class_id: "c1", date: "2026-10-20", start_time: "09:00", origin: "manual", status: sessionStatus, today_topics: TOPICS, graded_skills: GRADED });
-    const d = await bootDevice(server, "t", me);
-    await d.syncNow();
-    if (!sessionStatus) server.hooks.rejectCommand = (command) => command.type === "session.lesson.set" ? code : undefined;
-    const { saveSessionLessonDurable } = await import("../data/repositories/sessions");
-    await saveSessionLessonDurable("session-1", { topics: ["speaking"], gradedSkills: [] });
-
-    await d.syncNow();
-    await d.syncNow();
-
-    const rows = await d.db.outbox.where("identity").equals(d.identityKey()).toArray();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ status: "rejected", error: code });
-    expect(pushed("session.lesson.set")).toHaveLength(1);
-    expect(d.getStore().sessions.find((session) => session.id === "session-1")?.todayTopics).toEqual(["speaking"]);
+    expect(() => saveSessionLessonDurable("session-1", { topics: ["speaking"], gradedSkills: [] })).toThrow("đã được thay");
+    expect(await d.db.outbox.where("identity").equals(d.identityKey()).count()).toBe(0);
   });
 });

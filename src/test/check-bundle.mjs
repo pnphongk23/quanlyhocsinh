@@ -48,8 +48,9 @@ if (target === "dev") {
   assert(swSource.includes("mit-head"), "Dev sw.js should precache chick heads");
   assert(/SlipLevelFields/.test(chunkNames), "Dev should ship the SlipLevelFields chunk");
   assert(bundle.includes("head-on") && bundle.includes("head-off"), "Dev JS should carry chick-head file keys");
-} else {
-  assert(!/LevelChicks|SlipLevelFields/.test(chunkNames + bundle), "Staging must not ship criteria-level UI chunks");
+  } else {
+    assert(!/LevelChicks|SlipLevelFields/.test(chunkNames + bundle), "Staging must not ship criteria-level UI chunks");
+    assert(!/CriteriaSetSettingsPage|criteriaSetSettings|Bộ tiêu chí nhận xét/.test(chunkNames + bundle), "Staging must not ship custom criteria settings UI");
   assert(headFiles.length === 0, `Staging must not ship chick-head images: ${headFiles.join(", ")}`);
   assert(!swSource.includes("mit-head"), "Staging sw.js must not precache chick heads");
   assert(!bundle.includes("mit-head"), "Staging JS must not reference chick-head images");

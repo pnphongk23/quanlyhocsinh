@@ -1,4 +1,4 @@
-import type { HomeworkGrade, StarLevel } from "./types";
+import type { CriteriaSlipLevel, HomeworkGrade, StarLevel } from "./types";
 
 export const SLIP_CRITERIA = [
   "Chú ý nghe giảng",
@@ -16,6 +16,23 @@ export const DEFAULT_SLIP_COMMENTS: Record<StarLevel, string> = {
   1: "Con chưa tích cực tham gia hoạt động, cần tập trung hơn",
   0: "Con chưa tích cực tham gia hoạt động, cần tập trung hơn",
 };
+
+/** Câu của các mức đã chọn, nối theo thứ tự tiêu chí. */
+export function generatedCriteriaText(criteria: readonly CriteriaSlipLevel[]): string {
+  return criteria.map((item) => item.text ?? "").filter(Boolean).join(" ");
+}
+
+/** Phần giáo viên gõ thêm sau câu tự sinh (tách nhờ `text` trong bản chụp). */
+export function appendedCommentText(comment: string, criteria: readonly CriteriaSlipLevel[]): string {
+  const generated = generatedCriteriaText(criteria);
+  if (!generated) return comment.trim();
+  if (comment === generated) return "";
+  return comment.startsWith(`${generated} `) ? comment.slice(generated.length + 1) : comment;
+}
+
+export function composeCriteriaComment(criteria: readonly CriteriaSlipLevel[], appended = ""): string {
+  return [generatedCriteriaText(criteria), appended.trim()].filter(Boolean).join(" ");
+}
 
 export function starsFromCriteria(criteria: number): StarLevel {
   if (!Number.isInteger(criteria) || criteria < 0 || criteria > 31) throw new RangeError("invalid_criteria");

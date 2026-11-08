@@ -1,10 +1,12 @@
-import type { Comment, HomeworkLevel, StarLevel } from "../types";
-import { criteriaWithHomework, defaultSlipCriteria, generatedSlipSentence, starsFromCriteria } from "../slip";
+import type { Comment, CriteriaSlipLevel, HomeworkLevel, StarLevel } from "../types";
+import { appendedCommentText, composeCriteriaComment, criteriaWithHomework, defaultSlipCriteria, generatedSlipSentence, starsFromCriteria } from "../slip";
 import { getStore } from "../store";
 import { commitState, persistCommand, persistSlipCommands } from "../outbox";
-import { attendanceCompletion, type UngradedHomeworkNotice, gradingSessionFor, previousHomeworkGrades, previousHomeworkSession, studentsOnSession, ungradedHomeworkNotice } from "../homework";
+import { attendanceCompletion, type UngradedHomeworkNotice, gradingSessionFor, homeworkSectionsFor, previousHomeworkGrades, previousHomeworkSession, studentsOnSession, ungradedHomeworkNotice } from "../homework";
 import { requirePermission, requireSessionAccess } from "./access";
-import type { SyncCommand } from "../api/types";
+import type { CriteriaSet, SyncCommand } from "../api/types";
+import { getCachedCriteriaSet, getCriteriaSet } from "./criteriaSet";
+import { applyHomeworkAbsenceRule } from "../criteriaSetModel";
 import { composePlans, runDurably, type WritePlan } from "./durable";
 import { scheduleSync, syncNow } from "../sync";
 import { db, getCacheIdentity, identityKey, stored } from "../db";
@@ -34,7 +36,7 @@ export const listComments=(classId:string):Comment[]=>getStore().comments.filter
 export function listSessionComments(sessionId:string):Comment[]{return getStore().comments.filter(c=>c.sessionId===sessionId);}
 export function getSessionComment(sessionId:string,studentId:string):Comment|null{return getStore().comments.find(c=>c.sessionId===sessionId&&c.studentId===studentId)??null;}
 type CommentWritePlan = WritePlan<Comment> & { batchEntry: { parts: string[]; wireRecord: Record<string, unknown>; command: SyncCommand } };
-export interface CommentInput{sessionId:string;studentId:string;stars?:StarLevel|null;criteria?:number;comment?:string|null;note?:string;hwManual?:boolean;/** Đường 3 mức (cờ bật); có `levels` thì payload không gửi criteria/stars. */levels?:Levels;skillLevels?:SkillLevels}
+  export interface CommentInput{sessionId:string;studentId:string;stars?:StarLevel|null;criteria?:number;criteriaLevels?:CriteriaSlipLevel[];comment?:string|null;note?:string;hwManual?:boolean;/** Đường 3 mức (cờ bật); có `levels` thì payload không gửi criteria/stars. */levels?:Levels;skillLevels?:SkillLevels}
 function planComment(input:CommentInput):CommentWritePlan {
   requirePermission("comments_reports","write");
   requireCompletedAttendance(input.sessionId);
@@ -43,43 +45,65 @@ function planComment(input:CommentInput):CommentWritePlan {
   if(!student||student.classId!==session.classId||student.enrolledAt>session.date||(student.leftAt&&student.leftAt<session.date))throw new Error("Học sinh không thuộc buổi học này.");
   const old=getSessionComment(input.sessionId,input.studentId);
   const scale=old?.scale===3?3:5;
-  const oldLevels=old?.levels??null;
+    const oldLevels=old?.levels??null;
+    const criteriaLevels=scale===5?input.criteriaLevels??old?.criteriaLevels??undefined:undefined;
   const levels=input.levels??oldLevels;
   const skillLevels=input.skillLevels??old?.skillLevels??undefined;
-  const criteria=levels?criteriaFromLevels(levels):input.criteria??(input.stars==null?(old?.criteria??(old?.stars==null?31:(1<<old.stars)-1)):(1<<input.stars)-1);
-  const stars=levels?starsFromLevels(levels):scale===5?starsFromCriteria(criteria):input.stars??old?.stars??3;
+    const goodCount=criteriaLevels?.filter((item)=>item.level==="good").length;
+    const customStars=criteriaLevels?.length?Math.floor((goodCount!*5/criteriaLevels.length)+0.5):undefined;
+    const criteria=criteriaLevels?Math.max(0,(1<<(customStars??0))-1):levels?criteriaFromLevels(levels):input.criteria??(input.stars==null?(old?.criteria??(old?.stars==null?31:(1<<old.stars)-1)):(1<<input.stars)-1);
+    const stars=criteriaLevels?customStars as StarLevel:levels?starsFromLevels(levels):scale===5?starsFromCriteria(criteria):input.stars??old?.stars??3;
   // Phiếu thang 5: câu do client sinh (hoặc giáo viên sửa tay) và luôn đi cùng mức/tiêu chí; máy chủ chỉ lưu.
   const manualComment=scale===5&&typeof input.comment==="string"&&input.comment.trim()!==""?input.comment.trim():null;
-  const sendsLevels=scale===5&&input.levels!==undefined;
+    const sendsCustom=scale===5&&input.criteriaLevels!==undefined;
+    const sendsLevels=scale===5&&!sendsCustom&&input.levels!==undefined;
   const sendsCriteria=scale===5&&!sendsLevels&&(input.criteria!==undefined||!old);
-  const generatedLevelComment=levels?composeComment({levels,skillLevels,topics:session.todayTopics??[],gradedSkills:session.gradedSkills??[]}):null;
-  const comment=scale===5?(sendsLevels?(manualComment??generatedLevelComment):manualComment??(sendsCriteria?generatedSlipSentence(criteria):old?.comment??null)):(input.comment===undefined?old?.comment??null:input.comment);
+    const generatedLevelComment=levels?composeComment({levels,skillLevels,topics:criteriaLevelsEnabled()?[]:session.todayTopics??[],gradedSkills:criteriaLevelsEnabled()?[]:session.gradedSkills??[]}):null;
+    const generatedCustomComment=criteriaLevels?.map((item)=>item.text??"").filter(Boolean).join(" ")??null;
+    const comment=scale===5?(sendsCustom?(manualComment??generatedCustomComment):sendsLevels?(manualComment??generatedLevelComment):manualComment??(sendsCriteria?generatedSlipSentence(criteria):old?.comment??null)):(input.comment===undefined?old?.comment??null:input.comment);
   const now=new Date().toISOString();
-  const item:Comment={id:key(input.sessionId,input.studentId),classId:session.classId,sessionId:input.sessionId,studentId:input.studentId,criteria:scale===5?criteria:null,comment,scale,stars,...(levels?{levels}:{}),...(skillLevels!==undefined?{skillLevels}:{}),note:input.note??old?.note??"",hwManual:input.hwManual??old?.hwManual??false,status:old?.status??"draft",sendQueued:old?.sendQueued??false,sentAt:old?.sentAt??null,updatedAt:now,createdAt:old?.createdAt??now};
-  const payload=scale===3?{session_id:item.sessionId,student_id:item.studentId,stars:item.stars!,note:item.note,...(input.hwManual===undefined?{}:{hw_manual:input.hwManual})}
+    const item:Comment={id:key(input.sessionId,input.studentId),classId:session.classId,sessionId:input.sessionId,studentId:input.studentId,criteria:scale===5?criteria:null,comment,scale,stars,...(criteriaLevels?{criteriaLevels}:{}),...(criteriaLevels?{}:levels?{levels}:{}),...(criteriaLevels?{}:skillLevels!==undefined?{skillLevels}:{}),note:input.note??old?.note??"",hwManual:input.hwManual??old?.hwManual??false,status:old?.status??"draft",sendQueued:old?.sendQueued??false,sentAt:old?.sentAt??null,updatedAt:now,createdAt:old?.createdAt??now};
+    const payload=scale===3?{session_id:item.sessionId,student_id:item.studentId,stars:item.stars!,note:item.note,...(input.hwManual===undefined?{}:{hw_manual:input.hwManual})}
+      :sendsCustom?{session_id:item.sessionId,student_id:item.studentId,criteria_levels:input.criteriaLevels,comment:item.comment,note:item.note,...(input.hwManual===undefined?{}:{hw_manual:input.hwManual})}
     :sendsLevels?{session_id:item.sessionId,student_id:item.studentId,levels:input.levels,comment:item.comment,note:item.note,...(input.skillLevels===undefined?{}:{skill_levels:input.skillLevels}),...(input.hwManual===undefined?{}:{hw_manual:input.hwManual})}
     :{session_id:item.sessionId,student_id:item.studentId,...(sendsCriteria?{criteria:item.criteria}:{}),...(sendsCriteria||manualComment!==null?{comment:item.comment}:{}),...(input.skillLevels!==undefined&&levels?{skill_levels:input.skillLevels}:{}),note:item.note,...(input.hwManual===undefined?{}:{hw_manual:input.hwManual})};
   const cmd={id:crypto.randomUUID(),type:"slip.set",payload,base_version:(old as any)?.version??0,created_at:now} as SyncCommand;
-    const wireRecord={session_id:item.sessionId,student_id:item.studentId,criteria:item.criteria,comment:item.comment,scale:item.scale,stars:item.stars,...(levels?{levels}:{}),...(skillLevels!==undefined?{skill_levels:skillLevels}:{}),note:item.note,status:item.status,sent_at:item.sentAt,version:(old as any)?.version??0,updated_at:now,hw_manual:item.hwManual?1:0};
-    return{result:item,batchEntry:{parts:[item.sessionId,item.studentId],wireRecord,command:cmd},apply:()=>commitState("comment",item.id,d=>{d.comments=d.comments.filter(c=>c.id!==item.id).concat(item);}),undo:()=>commitState("comment",item.id,d=>{d.comments=d.comments.filter(c=>c.id!==item.id).concat(old?[old]:[]);}),persist:async()=>{if(!old&&input.criteria===undefined&&input.stars==null&&!(await db.meta.get(identityKey())))throw new Error("Đang tải dữ liệu phiếu, thử lại sau giây lát.");if(!old&&input.criteria===undefined&&input.stars==null&&await db.slips.get(`${identityKey()}|slip|${item.sessionId}|${item.studentId}`))throw new Error("Đang tải dữ liệu phiếu, thử lại sau giây lát.");await persistCommand("slip",[item.sessionId,item.studentId],wireRecord,cmd);}};
+      const wireRecord={session_id:item.sessionId,student_id:item.studentId,criteria:item.criteria,comment:item.comment,scale:item.scale,stars:item.stars,...(criteriaLevels?{criteria_levels:criteriaLevels}:{}),...(criteriaLevels?{}:levels?{levels}:{}),...(criteriaLevels?{}:skillLevels!==undefined?{skill_levels:skillLevels}:{}),note:item.note,status:item.status,sent_at:item.sentAt,version:(old as any)?.version??0,updated_at:now,hw_manual:item.hwManual?1:0};
+      return{result:item,batchEntry:{parts:[item.sessionId,item.studentId],wireRecord,command:cmd},apply:()=>commitState("comment",item.id,d=>{d.comments=d.comments.filter(c=>c.id!==item.id).concat(item);}),undo:()=>commitState("comment",item.id,d=>{d.comments=d.comments.filter(c=>c.id!==item.id).concat(old?[old]:[]);}),persist:async()=>{if(!old&&input.criteria===undefined&&input.criteriaLevels===undefined&&input.stars==null&&!(await db.meta.get(identityKey())))throw new Error("Đang tải dữ liệu phiếu, thử lại sau giây lát.");if(!old&&input.criteria===undefined&&input.criteriaLevels===undefined&&input.stars==null&&await db.slips.get(`${identityKey()}|slip|${item.sessionId}|${item.studentId}`))throw new Error("Đang tải dữ liệu phiếu, thử lại sau giây lát.");await persistCommand("slip",[item.sessionId,item.studentId],wireRecord,cmd);}};
 }
 /**
  * Chấm lại BTVN: phiếu NHÁP thang 5 của em ở buổi kế (tiêu chí BTVN chưa chọn tay, chưa gửi, chưa chờ gửi)
  * được tính lại tiêu chí và câu; câu sửa tay bị thay bằng câu tự sinh. Không đổi thì không có lệnh.
  */
-export function planRegradedSlip(sectionId:string,studentId:string,level:HomeworkLevel|null):WritePlan<Comment>|null {
+export function planRegradedSlip(sectionId:string,studentId:string,level:HomeworkLevel|null,criteriaSet?:CriteriaSet|null):WritePlan<Comment>|null {
   const state=getStore();
   const section=state.homeworkSections.find(x=>x.id===sectionId);
   const next=section?gradingSessionFor(state.sessions,section.sessionId):null;
   const old=next?getSessionComment(next.id,studentId):null;
   if(!next||!old||old.status==="sent"||old.sendQueued||old.hwManual)return null;
   const grades=previousHomeworkGrades(state,next.id,studentId,{sectionId,level});
+  if(old.criteriaLevels){
+    // Phiếu theo bộ tiêu chí: chỉ đổi mức của tiêu chí BTVN (mức chọn tay đã bị chặn ở trên),
+    // dựng lại câu theo bộ hiện hành và giữ phần giáo viên gõ thêm.
+    if(!criteriaLevelsEnabled())return null;
+    const index=old.criteriaLevels.findIndex(item=>item.homework);
+    if(index<0)return null;
+    const homeworkLevel=homeworkLevelFromGrades(grades);
+    if(old.criteriaLevels[index]?.level===homeworkLevel)return null;
+    const snapshot=old.criteriaLevels.map((item,position)=>{
+      if(position!==index)return item;
+      const text=criteriaSet?.criteria.find(criterion=>criterion.id===item.id)?.texts[homeworkLevel]??item.text;
+      return {...item,level:homeworkLevel,...(text===undefined?{}:{text})};
+    });
+    const appended=appendedCommentText(old.comment??"",old.criteriaLevels);
+    try{return planComment({sessionId:next.id,studentId,criteriaLevels:snapshot,comment:composeCriteriaComment(snapshot,appended),note:old.note});}catch{return null;}
+  }
   if(old.levels){
     // Cờ tắt không tự viết lại phiếu 3 mức (tránh gửi criteria và làm mất levels).
     if(!criteriaLevelsEnabled())return null;
     const levels={...old.levels,homework:homeworkLevelFromGrades(grades)};
     const skillLevels=old.skillLevels??undefined;
-    const comment=composeComment({levels,skillLevels,topics:next.todayTopics??[],gradedSkills:next.gradedSkills??[]});
+      const comment=composeComment({levels,skillLevels,topics:criteriaLevelsEnabled()?[]:next.todayTopics??[],gradedSkills:criteriaLevelsEnabled()?[]:next.gradedSkills??[]});
     if(sameLevels(levels,old.levels)&&old.comment===comment)return null;
     try{return planComment({sessionId:next.id,studentId,levels,...(skillLevels?{skillLevels}:{}),note:old.note});}catch{return null;}
   }
@@ -100,8 +124,8 @@ export function planRegenerateSlipComments(sessionId:string):WritePlan<number>{
   const plans=getStore().comments.filter(c=>c.sessionId===sessionId&&c.levels&&c.status!=="sent"&&!c.sendQueued).flatMap(old=>{
     const levels={...old.levels!,...(old.hwManual?{}:{homework:homeworkLevelFromGrades(previousHomeworkGrades(state,sessionId,old.studentId))})};
     // Bật "Chấm riêng" cho kỹ năng mới: thêm mức mặc định Đạt để câu và skill_levels gửi lên đủ khoá.
-    const skillLevels={...defaultSkillLevels(session.gradedSkills??[]),...(old.skillLevels??{})};
-    const comment=composeComment({levels,skillLevels,topics:session.todayTopics??[],gradedSkills:session.gradedSkills??[]});
+      const skillLevels={...defaultSkillLevels(criteriaLevelsEnabled()?[]:session.gradedSkills??[]),...(old.skillLevels??{})};
+      const comment=composeComment({levels,skillLevels,topics:criteriaLevelsEnabled()?[]:session.todayTopics??[],gradedSkills:criteriaLevelsEnabled()?[]:session.gradedSkills??[]});
     if(sameLevels(levels,old.levels)&&old.comment===comment)return [];
     const plan=planComment({sessionId,studentId:old.studentId,levels,skillLevels,note:old.note});
     return [guardUnsent(plan,sessionId,old.studentId)];
@@ -164,8 +188,12 @@ function guardUnsent(plan:WritePlan<Comment>,sessionId:string,studentId:string):
  * (bỏ lựa chọn tay), câu tự sinh lại; giữ phần gõ thêm. Bỏ qua em Vắng và phiếu thang 3 cũ.
  * Trả số phiếu đã đổi hoặc tạo.
  */
-type DefaultSlipPlan = WritePlan<number> & { batchEntries: CommentWritePlan["batchEntry"][] };
-  function planAssignDefaultSlips(sessionId:string, requested?:Array<{studentId:string;criteria?:number;note?:string;hwManual?:boolean;isDefault?:boolean}>, eligibleStudentIds?:string[]):DefaultSlipPlan{
+  type DefaultSlipPlan = WritePlan<number> & { batchEntries: CommentWritePlan["batchEntry"][] };
+    function defaultCustomCriteria(set:CriteriaSet,grades:readonly import("../types").HomeworkGrade[],homeworkGiven:boolean):{criteria:CriteriaSlipLevel[];hwManual:boolean}{
+      const applicable=applyHomeworkAbsenceRule(set.criteria,homeworkGiven);
+      return {criteria:applicable.criteria.map(item=>{const level=item.homework&&homeworkGiven?homeworkLevelFromGrades(grades):item.default_level;return{id:item.id,name:item.name,level,text:item.texts[level],...(item.homework?{homework:true}:{})};}),hwManual:applicable.hwManual};
+  }
+    function planAssignDefaultSlips(sessionId:string, requested?:Array<{studentId:string;criteria?:number;note?:string;hwManual?:boolean;isDefault?:boolean}>, eligibleStudentIds?:string[], customSet?:CriteriaSet|null):DefaultSlipPlan{
     requirePermission("comments_reports","write");
     requireCompletedAttendance(sessionId);
   const session=requireSessionAccess(sessionId);
@@ -174,18 +202,30 @@ type DefaultSlipPlan = WritePlan<number> & { batchEntries: CommentWritePlan["bat
       const targetStudents=requested
         ? requested.flatMap(target=>{const student=state.students.find(item=>item.id===target.studentId);const absent=state.attendance.some(item=>item.sessionId===sessionId&&item.studentId===target.studentId&&item.status==="absent");return student&&(!target.isDefault||!absent)&&student.classId===session.classId&&student.enrolledAt<=session.date&&(!student.leftAt||student.leftAt>=session.date)?[{student,target}]:[];})
         : studentsOnSession(state,session).filter((student)=>!state.attendance.some((item)=>item.sessionId===sessionId&&item.studentId===student.id&&item.status==="absent")&&(!eligibleStudentIds||eligibleStudentIds.includes(student.id))).map(student=>({student,target:undefined}));
-    const levelMode=criteriaLevelsEnabled();
+      const levelMode=criteriaLevelsEnabled();
+      const givingSession=previousHomeworkSession(state.sessions,sessionId);
+      const homeworkGiven=Boolean(givingSession&&homeworkSectionsFor(state,givingSession.id).length);
     for(const {student,target} of targetStudents){
       const old=getSessionComment(sessionId,student.id);
       if(requested&&old)continue;
       if(old&&(old.status==="sent"||old.sendQueued||old.scale!==5))continue;
-      const grades=previousHomeworkGrades(state,sessionId,student.id);
+        const grades=previousHomeworkGrades(state,sessionId,student.id);
+        if(levelMode&&customSet){
+            const defaults=defaultCustomCriteria(customSet,grades,homeworkGiven);
+            const criteriaLevels=defaults.criteria;
+            // Giữ phần giáo viên gõ thêm trong ô nhận xét cũ (tách nhờ `text` trong bản chụp).
+            const appended=old?appendedCommentText(old.comment??"",old.criteriaLevels??[]):"";
+            const comment=composeCriteriaComment(criteriaLevels,appended);
+            if(old?.criteriaLevels&&JSON.stringify(old.criteriaLevels)===JSON.stringify(criteriaLevels)&&old.comment===comment&&old.hwManual===defaults.hwManual)continue;
+            planned.push(planComment({sessionId,studentId:student.id,criteriaLevels,comment,note:old?.note??"",hwManual:defaults.hwManual}));
+          continue;
+        }
       if(levelMode){
         const levels=defaultLevels(grades);
-        const graded=session.gradedSkills??[];
+          const graded=levelMode&&!customSet&&!criteriaLevelsEnabled()?(session.gradedSkills??[]):[];
         // Bỏ mức kỹ năng đang chấm về Đạt; giữ mức của kỹ năng đã tắt "Chấm riêng".
         const skillLevels={...(old?.skillLevels??{}),...defaultSkillLevels(graded)};
-        const comment=composeComment({levels,skillLevels,topics:session.todayTopics??[],gradedSkills:graded});
+          const comment=composeComment({levels,skillLevels,topics:criteriaLevelsEnabled()?[]:session.todayTopics??[],gradedSkills:graded});
         if(old?.levels&&sameLevels(old.levels,levels)&&sameSkillLevels(old.skillLevels??{},skillLevels)&&old.comment===comment&&!old.hwManual)continue;
         planned.push(planComment({sessionId,studentId:student.id,levels,skillLevels,note:old?.note??"",hwManual:false}));
         continue;
@@ -199,23 +239,23 @@ type DefaultSlipPlan = WritePlan<number> & { batchEntries: CommentWritePlan["bat
     return {...composePlans(plans,plans.length),batchEntries:planned.map(plan=>plan.batchEntry)};
 }
 /** Số phiếu "Gán tất cả mặc định" sẽ đổi hoặc tạo (hộp xác nhận ghi đúng số này). */
-export const countAssignDefaultSlips=(sessionId:string,eligibleStudentIds?:string[]):number=>planAssignDefaultSlips(sessionId,undefined,eligibleStudentIds).result;
+  export const countAssignDefaultSlips=(sessionId:string,eligibleStudentIds?:string[],customSet?:CriteriaSet|null):number=>planAssignDefaultSlips(sessionId,undefined,eligibleStudentIds,customSet).result;
 /** Chờ ghi bền cả lô; một lệnh lỗi ⇒ các phiếu của cả lô trở lại như trước. */
-export const assignDefaultSlipsDurable=(sessionId:string,eligibleStudentIds?:string[]):Promise<number>=>runDurably(planAssignDefaultSlips(sessionId,undefined,eligibleStudentIds));
+  export const assignDefaultSlipsDurable=(sessionId:string,eligibleStudentIds?:string[],customSet?:CriteriaSet|null):Promise<number>=>runDurably(planAssignDefaultSlips(sessionId,undefined,eligibleStudentIds,customSet));
 export interface SendTicketsResult { sent:string[];skipped:string[];skippedReasons:Array<{studentId:string;reason:"no_slip"|"already_sent"}>;queued:boolean;ungraded:UngradedHomeworkNotice; }
-  function planSendTickets(sessionId:string,studentIds?:string[]):WritePlan<SendTicketsResult> {requirePermission("comments_reports","write");requirePermission("send_comments","write");requireCompletedAttendance(sessionId);const session=requireSessionAccess(sessionId);if(session.date>todayISO())throw new Error("Chỉ gửi phiếu từ ngày học.");const roster=studentsOnSession(getStore(),session);const requested=studentIds??roster.filter((student)=>getStore().attendance.some((entry)=>entry.sessionId===sessionId&&entry.studentId===student.id&&entry.status!=="absent")).map(s=>s.id);const sent:string[]=[],skipped:string[]=[],skippedReasons:SendTicketsResult["skippedReasons"]=[];const previous:Array<Comment|null>=[];const targets:Comment[]=[];const defaults:Array<{student_id:string;criteria?:number;comment:string;levels?:Levels;skill_levels?:SkillLevels}>=[];const levelMode=criteriaLevelsEnabled();for(const studentId of requested){const old=getSessionComment(sessionId,studentId);if(old?.status==="sent"||old?.sendQueued){skipped.push(studentId);skippedReasons.push({studentId,reason:"already_sent"});continue;}if(!old){skipped.push(studentId);skippedReasons.push({studentId,reason:"no_slip"});continue;}const now=new Date().toISOString();const needsDefault=old.scale===3&&old.stars===null;const grades=previousHomeworkGrades(getStore(),sessionId,studentId);let fallbackLevels:Levels|undefined;let fallbackSkills:SkillLevels|undefined;let fallbackCriteria:number;let fallbackComment:string;if(levelMode){fallbackLevels=defaultLevels(grades);fallbackSkills={...(old.skillLevels??{}),...defaultSkillLevels(session.gradedSkills??[])};fallbackCriteria=criteriaFromLevels(fallbackLevels);fallbackComment=composeComment({levels:fallbackLevels,skillLevels:fallbackSkills,topics:session.todayTopics??[],gradedSkills:session.gradedSkills??[]});}else{fallbackCriteria=defaultSlipCriteria(grades);fallbackComment=generatedSlipSentence(fallbackCriteria);}if(needsDefault)defaults.push({student_id:studentId,comment:fallbackComment,...(fallbackLevels?{levels:fallbackLevels,skill_levels:fallbackSkills}:{criteria:fallbackCriteria})});const target:Comment=needsDefault?{...old,criteria:fallbackCriteria,comment:fallbackComment,scale:5,stars:starsFromCriteria(fallbackCriteria),...(fallbackLevels?{levels:fallbackLevels,skillLevels:fallbackSkills}:{}),updatedAt:now}:old;sent.push(studentId);previous.push(old);targets.push(target);}
+  function planSendTickets(sessionId:string,studentIds?:string[],customSet?:CriteriaSet|null):WritePlan<SendTicketsResult> {requirePermission("comments_reports","write");requirePermission("send_comments","write");requireCompletedAttendance(sessionId);const session=requireSessionAccess(sessionId);if(session.date>todayISO())throw new Error("Chỉ gửi phiếu từ ngày học.");const roster=studentsOnSession(getStore(),session);const requested=studentIds??roster.filter((student)=>getStore().attendance.some((entry)=>entry.sessionId===sessionId&&entry.studentId===student.id&&entry.status!=="absent")).map(s=>s.id);const sent:string[]=[],skipped:string[]=[],skippedReasons:SendTicketsResult["skippedReasons"]=[];const previous:Array<Comment|null>=[];const targets:Comment[]=[];const defaults:Array<{student_id:string;criteria?:number;criteria_levels?:CriteriaSlipLevel[];comment:string;levels?:Levels;skill_levels?:SkillLevels}>=[];const levelMode=criteriaLevelsEnabled();const giving=previousHomeworkSession(getStore().sessions,sessionId);const homeworkGiven=Boolean(giving&&homeworkSectionsFor(getStore(),giving.id).length);for(const studentId of requested){const old=getSessionComment(sessionId,studentId);if(old?.status==="sent"||old?.sendQueued){skipped.push(studentId);skippedReasons.push({studentId,reason:"already_sent"});continue;}if(!old){skipped.push(studentId);skippedReasons.push({studentId,reason:"no_slip"});continue;}const now=new Date().toISOString();const needsDefault=old.scale===3&&old.stars===null;const grades=previousHomeworkGrades(getStore(),sessionId,studentId);let fallbackLevels:Levels|undefined;let fallbackSkills:SkillLevels|undefined;let fallbackCriteria:number;let fallbackComment:string;let fallbackCriteriaLevels:CriteriaSlipLevel[]|undefined;let fallbackHwManual=false;let fallbackStars:StarLevel;if(levelMode&&customSet){const custom=defaultCustomCriteria(customSet,grades,homeworkGiven);fallbackCriteriaLevels=custom.criteria;fallbackHwManual=custom.hwManual;fallbackComment=custom.criteria.map(item=>item.text??"").filter(Boolean).join(" ");fallbackStars=Math.floor((custom.criteria.filter(item=>item.level==="good").length*5/Math.max(1,custom.criteria.length))+0.5) as StarLevel;fallbackCriteria=Math.max(0,(1<<fallbackStars)-1);}else if(levelMode){fallbackLevels=defaultLevels(grades);fallbackSkills={...(old.skillLevels??{}),...defaultSkillLevels([])};fallbackCriteria=criteriaFromLevels(fallbackLevels);fallbackStars=starsFromLevels(fallbackLevels);fallbackComment=composeComment({levels:fallbackLevels,skillLevels:fallbackSkills,topics:[],gradedSkills:[]});}else{fallbackCriteria=defaultSlipCriteria(grades);fallbackStars=starsFromCriteria(fallbackCriteria);fallbackComment=generatedSlipSentence(fallbackCriteria);}if(needsDefault)defaults.push({student_id:studentId,comment:fallbackComment,...(fallbackCriteriaLevels?{criteria_levels:fallbackCriteriaLevels}:fallbackLevels?{levels:fallbackLevels,skill_levels:fallbackSkills}:{criteria:fallbackCriteria})});const target:Comment=needsDefault?{...old,criteria:fallbackCriteria,comment:fallbackComment,scale:5,stars:fallbackStars,...(fallbackCriteriaLevels?{criteriaLevels:fallbackCriteriaLevels,hwManual:fallbackHwManual}:fallbackLevels?{levels:fallbackLevels,skillLevels:fallbackSkills}:{}),updatedAt:now}:old;sent.push(studentId);previous.push(old);targets.push(target);}
   if(sent.length&&(typeof navigator==="undefined"||!navigator.onLine))throw new Error("Cần có mạng để gửi phiếu.");
     const membership=getCacheIdentity();if(sent.length&&!membership)throw new Error("Đăng nhập để gửi phiếu.");
   const identity=identityKey();const cmd={id:crypto.randomUUID(),type:"slip.send",payload:{session_id:sessionId,student_ids:sent,...(defaults.length?{defaults}:{})},created_at:new Date().toISOString()} as SyncCommand;
-  const giving=previousHomeworkSession(getStore().sessions,sessionId);
       const result:SendTicketsResult={sent,skipped,skippedReasons,queued:sent.length>0&&(typeof navigator==="undefined"||!navigator.onLine),ungraded:giving?ungradedHomeworkNotice(getStore(),giving.id,sent):{students:[],ungradedParts:0}};
     const ids=new Set(targets.map(c=>c.id));
   return{result,
       apply:()=>{for(const comment of targets)commitState("comment-send",comment.id,d=>{const next={...comment,sendQueued:true,updatedAt:new Date().toISOString()};d.comments=d.comments.filter(c=>c.id!==comment.id).concat(next);});},
       undo:()=>commitState("comment-send",sessionId,d=>{d.comments=d.comments.filter(c=>!ids.has(c.id)).concat(previous.filter((p):p is Comment=>p!==null));}),
-      persist:async()=>{if(!sent.length)return;const row:any={id:cmd.id,identity,type:cmd.type,payload:cmd.payload,base_version:0,membership_id:membership!.membershipId,created_at:cmd.created_at,status:"pending"};await db.transaction("rw",[db.slips,db.outbox],async()=>{for(const comment of targets){const wire={session_id:sessionId,student_id:comment.studentId,criteria:comment.criteria??null,comment:comment.comment??null,scale:comment.scale??3,stars:comment.stars,...(comment.levels?{levels:comment.levels}:{}),...(comment.skillLevels!==undefined?{skill_levels:comment.skillLevels}:{}),note:comment.note,status:comment.status,sent_at:comment.sentAt,version:(comment as any).version??0,updated_at:comment.updatedAt};await db.slips.put(stored("slip",`${identity}|slip|${sessionId}|${comment.studentId}`,wire) as any);}await db.outbox.put(row);});scheduleSync();}};}
+      persist:async()=>{if(!sent.length)return;const row:any={id:cmd.id,identity,type:cmd.type,payload:cmd.payload,base_version:0,membership_id:membership!.membershipId,created_at:cmd.created_at,status:"pending"};await db.transaction("rw",[db.slips,db.outbox],async()=>{for(const comment of targets){const wire={session_id:sessionId,student_id:comment.studentId,criteria:comment.criteria??null,comment:comment.comment??null,scale:comment.scale??3,stars:comment.stars,...(comment.criteriaLevels?{criteria_levels:comment.criteriaLevels}:{}),...(comment.levels?{levels:comment.levels}:{}),...(comment.skillLevels!==undefined?{skill_levels:comment.skillLevels}:{}),note:comment.note,hw_manual:comment.hwManual?1:0,status:comment.status,sent_at:comment.sentAt,version:(comment as any).version??0,updated_at:comment.updatedAt};await db.slips.put(stored("slip",`${identity}|slip|${sessionId}|${comment.studentId}`,wire) as any);}await db.outbox.put(row);});scheduleSync();}};}
 /** Chờ ghi bền hàng đợi gửi; ghi lỗi ⇒ ném lỗi gốc và các phiếu bỏ trạng thái đang chờ gửi. */
 export const sendSessionTicketsDurable=async(sessionId:string,studentIds?:string[]):Promise<SendTicketsResult>=>{
-  return runDurably(planSendTickets(sessionId,studentIds));
+    const customSet=criteriaLevelsEnabled()?(await getCachedCriteriaSet()??await getCriteriaSet()):null;
+    return runDurably(planSendTickets(sessionId,studentIds,customSet));
 };
 export function flushQueuedTickets():number {const count=getStore().comments.filter(c=>c.sendQueued).length;scheduleSync(0);return count;}

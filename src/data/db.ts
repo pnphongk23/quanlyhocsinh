@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { EntityMap, SyncCommand } from "./api/types";
+import type { CriteriaSet, EntityMap, SyncCommand } from "./api/types";
 
 export type CacheIdentity = { userId: string; workspaceId: string; membershipId: string };
 export type OutboxStatus = "pending" | "sending" | "rejected";
@@ -13,6 +13,7 @@ export interface OutboxRow {
 }
 export interface MetaRow { key: string; identity: string; cursor: number; epoch: number; logoutState?: "pending" | "needs_login"; updatedAt?: number; }
 type Stored<T> = T & { identity: string; key: string; entity: string };
+export type StoredCriteriaSet = CriteriaSet & { identity: string; key: string; entity: "criteria_set" };
 
 export class AppDatabase extends Dexie {
   classes!: Table<Stored<EntityMap["class"]>, string>;
@@ -28,7 +29,8 @@ export class AppDatabase extends Dexie {
   reports!: Table<Stored<EntityMap["report"]>, string>;
   reportPublications!: Table<Stored<EntityMap["report_publication"]>, string>;
   outbox!: Table<OutboxRow, string>;
-  meta!: Table<MetaRow, string>;
+    meta!: Table<MetaRow, string>;
+    criteriaSets!: Table<StoredCriteriaSet, string>;
 
   constructor() {
     super("qlh-web");
@@ -48,7 +50,8 @@ export class AppDatabase extends Dexie {
     }).upgrade((tx) => tx.table("meta").filter((row: MetaRow) => !row.logoutState).delete());
     // Chỉ thêm trường không đánh chỉ mục (levels/skill_levels của phiếu, today_topics/graded_skills của buổi):
     // không đổi bảng, giữ nguyên dữ liệu cũ; phiếu cũ thiếu khoá vẫn hiện theo bit/sao.
-    this.version(3).stores({});
+      this.version(3).stores({});
+      this.version(4).stores({ criteriaSets: "key, identity, version" });
   }
 }
 

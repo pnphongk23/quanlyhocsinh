@@ -38,8 +38,8 @@ describe("parser dữ liệu mức (snapshot/pull)", () => {
     const d = await bootDevice(server, "t", me);
     await d.syncNow();
 
-    // Migration Dexie chỉ thêm trường (version 3), giữ dữ liệu cũ.
-    expect(d.db.verno).toBe(3);
+      // Migration Dexie thêm bảng tiêu chí, giữ dữ liệu cũ.
+      expect(d.db.verno).toBe(4);
     expect(sessionOf(d, "session-1")).toMatchObject({ todayTopics: ["vocabulary", "speaking"], gradedSkills: ["speaking"] });
     const slip = commentOf(d, "s1")!;
     expect(slip.levels).toEqual(LEVELS);

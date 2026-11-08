@@ -71,6 +71,7 @@ export interface Score {
 
 export type StarLevel = 0 | 1 | 2 | 3 | 4 | 5;
 export type SlipScale = 3 | 5;
+export interface CriteriaSlipLevel { id: string; name: string; level: "good" | "ok" | "needs_work"; text?: string; homework?: boolean }
 
 export interface Comment {
   id: string;
@@ -88,6 +89,8 @@ export interface Comment {
   levels?: Levels | null;
   /** Mức kỹ năng chấm thêm; chỉ có nghĩa khi phiếu có `levels`. */
   skillLevels?: SkillLevels | null;
+  /** Bộ tiêu chí tự tạo theo bản chụp lúc chấm. */
+  criteriaLevels?: CriteriaSlipLevel[] | null;
   /** Sao hiển thị: client tính từ criteria hoặc giữ nguyên giá trị cũ thang 3. */
   stars: StarLevel | null;
   /** Ghi chú tự do, không bắt buộc. */

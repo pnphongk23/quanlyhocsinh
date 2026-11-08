@@ -22,6 +22,9 @@ import { criteriaLevelsEnabled } from "../../app/featureFlags";
 import { useRejectedCommands } from "../../shared/SaveStatus";
 import { isFinalRejection, localOnlyRejectionMessage } from "../../data/rejectionMessages";
 import { LazySlipLevelFields, SlipLevelSkeleton } from "./LazySlipLevelFields";
+import { LazyCustomCriteriaFields } from "./LazyCustomCriteriaFields";
+import { useCriteriaSet } from "./useCriteriaSet";
+import { createCriteriaDraft, reconcileCriteriaDraft, updateCriteriaLevel, type CustomCriteriaDraft } from "./customCriteriaModel";
 
 function Star({ filled }: { filled: boolean }) {
   return (
@@ -82,10 +85,17 @@ export default function TicketEditor({
   const stored = readDraft(session.id, row.student.id);
   const scale = row.comment?.scale === 3 ? 3 : 5;
   const previousGrades: HomeworkGrade[] = homework.sections.flatMap((section) => section.level === null ? [] : [{ sectionId: section.id, studentId: row.student.id, level: section.level }]);
-  const levelsOn = criteriaLevelsEnabled();
-  const levelMode = levelsOn && (row.comment?.levels != null || row.comment === null);
-  const topics = session.todayTopics ?? [];
-  const gradedSkills = session.gradedSkills ?? [];
+    const levelsOn = criteriaLevelsEnabled();
+    const customMode = levelsOn && scale !== 3 && row.comment?.levels == null && (row.comment?.criteriaLevels != null || row.comment === null);
+    // Phiếu theo bộ tiêu chí không đi qua đường 3 mức cũ, kể cả khi chưa có phiếu lưu.
+    const levelMode = levelsOn && !customMode && (row.comment?.levels != null || row.comment === null);
+    const criteriaSet = useCriteriaSet(levelsOn);
+    const [customDraft, setCustomDraft] = useState<CustomCriteriaDraft | null>(() => {
+      const saved = stored?.criteriaLevels ?? row.comment?.criteriaLevels;
+      return saved ? { criteria: saved, comment: stored?.comment ?? row.comment?.comment ?? "", hwManual: stored?.hwManual ?? row.comment?.hwManual ?? false } : null;
+    });
+    const topics = levelsOn ? [] : session.todayTopics ?? [];
+    const gradedSkills = levelsOn ? [] : session.gradedSkills ?? [];
   const levelComment = (value: Levels, skills: SkillLevels) => composeComment({ levels: value, skillLevels: skills, topics, gradedSkills });
   const rawCriteria = stored?.criteria ?? row.comment?.criteria ?? (scale === 3 ? Math.max(0, (1 << (row.stars ?? 3)) - 1) : 31);
   const initialManual = stored?.hwManual ?? row.comment?.hwManual ?? false;
@@ -96,12 +106,13 @@ export default function TicketEditor({
   const initialComment = levelMode
     ? (stored ? (storedComment ?? levelComment(initialLevels, initialSkillLevels)) : (row.comment?.comment ?? levelComment(initialLevels, initialSkillLevels)))
     : scale === 3 ? storedComment : (storedComment && initialCriteria === rawCriteria ? storedComment : generatedSlipSentence(initialCriteria));
-  const draft = useRef<{ criteria: number; comment: string | null; note: string; hwManual: boolean; levels?: Levels; skillLevels?: SkillLevels }>({
+    const draft = useRef<{ criteria: number; comment: string | null; note: string; hwManual: boolean; levels?: Levels; skillLevels?: SkillLevels; criteriaLevels?: CustomCriteriaDraft["criteria"] }>({
     criteria: levelMode ? criteriaFromLevels(initialLevels) : initialCriteria,
     comment: initialComment,
     note: stored ? stored.note : (row.comment?.note ?? ""),
-    hwManual: initialManual,
-    ...(levelMode ? { levels: initialLevels, skillLevels: initialSkillLevels } : {}),
+      hwManual: initialManual,
+      ...(levelMode ? { levels: initialLevels, skillLevels: initialSkillLevels } : {}),
+      ...(customDraft ? { criteriaLevels: customDraft.criteria } : {}),
   });
   const [criteria, setCriteria] = useState(draft.current.criteria);
   const [comment, setComment] = useState<string | null>(draft.current.comment);
@@ -109,12 +120,50 @@ export default function TicketEditor({
   const [levels, setLevels] = useState(initialLevels);
   const [skillLevels, setSkillLevels] = useState(initialSkillLevels);
   const savedNote = useRef(row.comment?.note ?? "");
-  const savedComment = useRef<string | null>(scale === 3 ? null : (row.comment?.comment ?? generatedSlipSentence(rawCriteria)));
+    const savedComment = useRef<string | null>(scale === 3 ? null : (customDraft?.comment ?? row.comment?.comment ?? generatedSlipSentence(rawCriteria)));
   const [manualHomework, setManualHomework] = useState(draft.current.hwManual);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [unsaved, setUnsaved] = useState(canWrite && (!row.comment || Boolean(stored)));
-  const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
+    const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
+    // Phiếu có thể về sau khi panel đã dựng nháp từ mức mặc định (mở trước lúc tải xong).
+    // Người dùng chưa sửa gì thì nạp lại đúng bản chụp đã lưu, để hiện và lưu không bị đè bằng mặc định.
+    const savedSlipLevels = row.comment?.criteriaLevels;
+    const appliedSlip = useRef<string | null>(savedSlipLevels ? `${row.comment?.updatedAt ?? ""}:${savedSlipLevels.map((item) => `${item.id}:${item.level}`).join(",")}` : null);
+    useEffect(() => {
+      if (!customMode || !criteriaSet || !savedSlipLevels) return;
+      const signature = `${row.comment?.updatedAt ?? ""}:${savedSlipLevels.map((item) => `${item.id}:${item.level}`).join(",")}`;
+      if (appliedSlip.current === signature) return;
+      appliedSlip.current = signature;
+      if (readDraft(session.id, row.student.id)) return;
+      const nextCustom = { criteria: savedSlipLevels, comment: row.comment?.comment ?? "", hwManual: row.comment?.hwManual ?? false };
+      setCustomDraft(nextCustom);
+      draft.current = { ...draft.current, criteriaLevels: nextCustom.criteria, comment: nextCustom.comment, note: row.comment?.note ?? "", hwManual: nextCustom.hwManual };
+      savedComment.current = nextCustom.comment;
+      savedNote.current = row.comment?.note ?? "";
+      setNote(row.comment?.note ?? "");
+      setUnsaved(false);
+    }, [customMode, criteriaSet?.version, savedSlipLevels, row.comment?.updatedAt]);
+    useEffect(() => {
+      if (!customMode || !criteriaSet) return;
+      setCustomDraft((current) => {
+        if (!current) return createCriteriaDraft(criteriaSet.criteria, previousGrades, homework.state === "has");
+        if (row.status === "sent") return current;
+        return reconcileCriteriaDraft(current, criteriaSet.criteria, previousGrades, homework.state === "has");
+      });
+    }, [customMode, criteriaSet?.version, gradeKey, homework.state, row.status]);
+    const gradedSignature = useRef(gradeKey);
+    useEffect(() => {
+      if (!customMode || !criteriaSet || !canWrite || row.status === "sent" || stored || !customDraft) return;
+      // Kết quả BTVN buổi trước vừa đổi (chấm ở thiết bị khác hoặc ở tab BTVN):
+      // hoà nháp đang mở theo kết quả mới rồi lưu, không chờ giáo viên bấm Lưu.
+      if (gradedSignature.current === gradeKey) return;
+      gradedSignature.current = gradeKey;
+      const next = reconcileCriteriaDraft(customDraft, criteriaSet.criteria, previousGrades, homework.state === "has");
+      if (JSON.stringify(next.criteria) === JSON.stringify(customDraft.criteria) && next.comment === customDraft.comment) return;
+      setCustomDraft(next);
+      void saveCustom(next, note);
+    }, [customMode, criteriaSet?.version, gradeKey, homework.state, row.status, stored, customDraft, note]);
   const rejected = useRejectedCommands().filter((item) =>
     item.type === "slip.set" && item.sessionId === session.id && item.studentId === row.student.id && isFinalRejection(item.error),
   );
@@ -122,8 +171,19 @@ export default function TicketEditor({
 
   /** Nạp lại từ phiếu đã lưu: bỏ nội dung đang soạn để blur/lưu sau đó không ghi ngược bản cũ. */
   useSessionDraftReset(session.id, () => {
-    const saved = getSessionComment(session.id, row.student.id);
-    if (!saved) return;
+      const saved = getSessionComment(session.id, row.student.id);
+      if (!saved) return;
+      if (saved.criteriaLevels) {
+        const nextCustom = { criteria: saved.criteriaLevels, comment: saved.comment ?? "", hwManual: saved.hwManual ?? false };
+        setCustomDraft(nextCustom);
+        draft.current = { ...draft.current, criteriaLevels: nextCustom.criteria, comment: nextCustom.comment, note: saved.note ?? "", hwManual: nextCustom.hwManual };
+        savedComment.current = nextCustom.comment;
+        savedNote.current = saved.note ?? "";
+        setNote(saved.note ?? "");
+        setUnsaved(false);
+        setError("");
+        return;
+      }
     const savedLevels = saved.levels ?? defaultLevels(previousGrades);
     const savedSkills = saved.skillLevels ?? defaultSkillLevels(gradedSkills);
     const next = {
@@ -173,7 +233,7 @@ export default function TicketEditor({
   }
 
   useEffect(() => {
-    if (levelMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
+    if (levelMode || customMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
     const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
     if (next === criteria) return;
     const nextComment = generatedSlipSentence(next);
@@ -278,13 +338,56 @@ export default function TicketEditor({
     void persist({ ...(levelMode ? { levels: draft.current.levels, skillLevels: draft.current.skillLevels } : { criteria: draft.current.criteria }), comment: text, note: draft.current.note, hwManual: draft.current.hwManual });
   }
 
-  function changeNote(value: string) {
+    function changeNote(value: string) {
     draft.current = { ...draft.current, note: value };
     writeDraft(session.id, row.student.id, draft.current);
     setNote(value);
     setUnsaved(hasUnsavedText());
-    setError("");
-  }
+      setError("");
+    }
+
+    async function saveCustom(next: CustomCriteriaDraft, nextNote = draft.current.note) {
+      if (!canWrite) return;
+      draft.current = { ...draft.current, criteriaLevels: next.criteria, comment: next.comment, note: nextNote, hwManual: next.hwManual };
+      writeDraft(session.id, row.student.id, draft.current);
+      setSaving(true);
+      setUnsaved(true);
+      try {
+        await saveSessionCommentDurable({ sessionId: session.id, studentId: row.student.id, criteriaLevels: next.criteria, comment: next.comment, note: nextNote, hwManual: next.hwManual });
+        savedComment.current = next.comment;
+        savedNote.current = nextNote;
+        setError("");
+        setUnsaved(false);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Không lưu được phiếu nhận xét.");
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    function updateCustomLevel(id: string, level: "good" | "ok" | "needs_work") {
+      if (!canWrite || !criteriaSet || !customDraft) return;
+      const next = updateCriteriaLevel(customDraft, id, level, criteriaSet.criteria);
+      setCustomDraft(next);
+      void saveCustom(next);
+    }
+
+    function changeCustomComment(value: string) {
+      if (!customDraft) return;
+      const next = { ...customDraft, comment: value };
+      setCustomDraft(next);
+      draft.current = { ...draft.current, criteriaLevels: next.criteria, comment: value };
+      writeDraft(session.id, row.student.id, draft.current);
+      setUnsaved(true);
+    }
+
+    function changeCustomNote(value: string) {
+      if (!customDraft) return;
+      draft.current = { ...draft.current, note: value };
+      writeDraft(session.id, row.student.id, draft.current);
+      setNote(value);
+      setUnsaved(true);
+    }
 
   return (
     <div className={s.editor}>
@@ -299,7 +402,18 @@ export default function TicketEditor({
         </Pill>
       </div>
 
-      {levelMode ? (
+        {customMode ? (criteriaSet && customDraft ? <Suspense fallback={<SlipLevelSkeleton />}><LazyCustomCriteriaFields
+          draft={customDraft}
+          homeworkGiven={homework.state === "has"}
+          sent={row.status === "sent"}
+          disabled={!canWrite}
+          note={note}
+          onLevelChange={updateCustomLevel}
+          onCommentChange={changeCustomComment}
+          onCommentBlur={() => { if (canWrite && customDraft.comment !== savedComment.current) void saveCustom(customDraft); }}
+          onNoteChange={changeCustomNote}
+          onNoteBlur={() => { if (canWrite && note !== savedNote.current) void saveCustom(customDraft, note); }}
+        /></Suspense> : <SlipLevelSkeleton />) : levelMode ? (
         <Suspense fallback={<SlipLevelSkeleton />}><LazySlipLevelFields
           levels={levels}
           skillLevels={skillLevels}

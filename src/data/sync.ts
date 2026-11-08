@@ -34,7 +34,7 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
   switch (entity) {
     case "class": return classFromApi(item as unknown as ApiClass);
     case "student": return { id: item.id, classId: item.class_id, name: item.name, parentPhone: item.parent_phone ?? "", enrolledAt: item.enrolled_at, leftAt: item.left_at, status: item.status };
-    case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status === "excused" ? "absent" : item.status, note: item.note, version: item.version, ...(Array.isArray(item.today_topics) ? { todayTopics: normalizeTopics(item.today_topics) } : {}), ...(Array.isArray(item.graded_skills) ? { gradedSkills: normalizeTopics(item.graded_skills) } : {}) };
+      case "class_session": return { id: item.id, classId: item.class_id, date: item.date, time: item.start_time, origin: item.origin, makeup: item.is_makeup, status: item.status === "excused" ? "absent" : item.status, note: item.note, version: item.version, ...(import.meta.env.VITE_CRITERIA_LEVELS === "1" ? {} : { ...(Array.isArray(item.today_topics) ? { todayTopics: normalizeTopics(item.today_topics) } : {}), ...(Array.isArray(item.graded_skills) ? { gradedSkills: normalizeTopics(item.graded_skills) } : {}) }) };
     case "attendance": return { id: `${item.session_id}:${item.student_id}`, sessionId: item.session_id, studentId: item.student_id, status: item.status, note: item.note ?? "", lateAt: item.late_at ?? null, version: item.version };
     case "test": return { id: item.id, classId: item.class_id, name: item.name, date: item.date, archived: item.archived, version: item.version };
     case "score": return { id: `${item.test_id}:${item.student_id}`, testId: item.test_id, studentId: item.student_id, value: item.value, version: item.version };
@@ -43,7 +43,7 @@ function toView(entity: EntityName, item: Record<string, any>): Record<string, a
       const levels = parseLevels(item.levels);
       const skillLevels = parseSkillLevels(item.skill_levels);
       const criteria = levels ? criteriaFromLevels(levels) : item.criteria ?? null;
-      return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, criteria, comment: item.comment ?? null, scale, ...(levels ? { levels } : {}), ...(skillLevels ? { skillLevels } : {}), stars: levels ? starsFromLevels(levels) : scale === 5 && criteria !== null ? starsFromCriteria(criteria) : item.stars ?? null, note: item.note ?? "", hwManual: item.hw_manual === true || item.hw_manual === 1, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at };
+        return { id: `${item.session_id}:${item.student_id}`, classId: "", studentId: item.student_id, sessionId: item.session_id, criteria, comment: item.comment ?? null, scale, ...(levels ? { levels } : {}), ...(skillLevels ? { skillLevels } : {}), ...(Array.isArray(item.criteria_levels) ? { criteriaLevels: item.criteria_levels } : {}), stars: levels ? starsFromLevels(levels) : scale === 5 && criteria !== null ? starsFromCriteria(criteria) : item.stars ?? null, note: item.note ?? "", hwManual: item.hw_manual === true || item.hw_manual === 1, status: item.status, sendQueued: false, sentAt: item.sent_at, updatedAt: item.updated_at, createdAt: item.updated_at };
     }
     case "homework_section": return { id: item.id, sessionId: item.session_id, kind: item.kind, title: item.title, description: item.description, version: item.version };
     case "homework_grade": return { sectionId: item.section_id, studentId: item.student_id, level: item.level ?? null, version: item.version };
@@ -73,7 +73,7 @@ function updateStoreView(entity: EntityName, item: Record<string, any>): void {
 }
 declare global { interface Window { __QLH_STATE__?: import("./types").StoreState } }
 async function applyPull(page: PullResponse, identity: string): Promise<boolean> {
-  await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
+    await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
     for (const entity of entities) for (const item of page.upserts?.[entity] ?? []) {
       if (isDeletedReportUpsert(entity, item as unknown as Record<string, unknown>, identity)) continue;
       const parts = keyParts(entity, item as unknown as Record<string, unknown>), key = `${identity}|${entity}|${parts.join("|")}`;
@@ -139,8 +139,12 @@ async function snapshot(identity: string, membershipId: string, causedBy409 = fa
         await tableFor(entity).bulkPut(acceptedRows as any);
       }
     }
-    await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
-  });
+      await db.meta.put({ key: identity, identity, cursor: header.cursor, epoch: header.epoch });
+    });
+    if (import.meta.env.VITE_CRITERIA_LEVELS === "1" && header.criteria_set_version !== undefined) {
+      const { refreshCriteriaSetIfVersion } = await import("./repositories/criteriaSet");
+      await refreshCriteriaSetIfVersion(header.criteria_set_version, identity);
+    }
   if (causedBy409) lastResyncSnapshotAt.set(identity, Date.now());
   await pull(identity, membershipId);
 }
@@ -151,7 +155,11 @@ async function pull(identity: string, membershipId: string): Promise<boolean> {
   do {
     try {
       const page: PullResponse = await api.request("GET /sync/pull", { query: { membership_id: membershipId, cursor: meta.cursor, epoch: meta.epoch, limit: 200 } }) as PullResponse;
-      changed = await applyPull(page, identity) || changed; meta = { ...meta, cursor: page.cursor, epoch: page.epoch };
+        changed = await applyPull(page, identity) || changed; meta = { ...meta, cursor: page.cursor, epoch: page.epoch };
+        if (import.meta.env.VITE_CRITERIA_LEVELS === "1" && page.criteria_set_version !== undefined) {
+          const { refreshCriteriaSetIfVersion } = await import("./repositories/criteriaSet");
+          await refreshCriteriaSetIfVersion(page.criteria_set_version, identity);
+        }
       if (!page.has_more) break;
     } catch (error) {
       if (error instanceof ApiError && error.status === 409 && ["resync_required", "snapshot_required"].includes(error.error.code)) {
@@ -168,8 +176,9 @@ async function pull(identity: string, membershipId: string): Promise<boolean> {
   return changed;
 }
 async function clearIdentityCache(identity: string): Promise<void> {
-  await db.transaction("rw", [db.meta, ...entities.map((entity) => tableFor(entity))], async () => {
-    for (const entity of entities) await tableFor(entity).where("identity").equals(identity).delete();
+    await db.transaction("rw", [db.meta, db.criteriaSets, ...entities.map((entity) => tableFor(entity))], async () => {
+      for (const entity of entities) await tableFor(entity).where("identity").equals(identity).delete();
+      await db.criteriaSets.where("identity").equals(identity).delete();
     await db.meta.delete(identity);
   });
   lastResyncSnapshotAt.delete(identity);
@@ -177,14 +186,15 @@ async function clearIdentityCache(identity: string): Promise<void> {
 }
 export async function clearUserCache(userId: string): Promise<boolean> {
   const identityPrefix = `${userId}:`;
-  const cleared = await db.transaction("rw", [db.meta, db.outbox, ...entities.map((entity) => tableFor(entity))], async () => {
+    const cleared = await db.transaction("rw", [db.meta, db.outbox, db.criteriaSets, ...entities.map((entity) => tableFor(entity))], async () => {
     const racedRows = await db.outbox.where("identity").startsWith(identityPrefix).count();
     if (racedRows) {
       await db.meta.put({ key: logoutLockKey(userId), identity: `logout:${userId}`, cursor: 0, epoch: 0, logoutState: "needs_login", updatedAt: Date.now() });
       setSaveStatus("error");
       return false;
     }
-    for (const entity of entities) await tableFor(entity).where("identity").startsWith(identityPrefix).delete();
+      for (const entity of entities) await tableFor(entity).where("identity").startsWith(identityPrefix).delete();
+      await db.criteriaSets.where("identity").startsWith(identityPrefix).delete();
     await db.meta.where("identity").startsWith(identityPrefix).delete();
     await db.outbox.where("identity").startsWith(identityPrefix).delete();
     await db.meta.delete(logoutLockKey(userId));
