@@ -1,6 +1,6 @@
 # Web P2 report
 
-**Trạng thái: xong phần code + bằng chứng; còn 1 hạn chế ghi ở mục cuối.**
+**Trạng thái: xong.**
 
 ## Đã làm
 
@@ -8,10 +8,12 @@
 - Bổ sung UI tiêu chí tùy chỉnh, model và kiểm thử offline. Ngoại lệ GL đã chốt: nếu bộ chỉ có BTVN mà buổi trước không giao, giữ tiêu chí ở mức mặc định như chỉnh tay, N=1, dòng phụ “Buổi trước không giao BTVN”. Quy tắc ở hàm thuần riêng và có test.
 - Bỏ hẳn hàng chip “Hôm nay học” và công tắc “Chấm riêng” khi cờ bật: xoá `LessonTopicsBar` (component, css, test) vì không còn nơi import; sửa lại chú thích cờ ở `src/app/featureFlags.ts`. Không đụng `src/roles/guardian/`, không đổi hành vi khác.
 - Cập nhật tài liệu kiến trúc và spec draft.
+- Sửa lỗi đúng dữ liệu: panel desktop (`TicketEditor`) và sheet mobile (`CommentTicketSheet`) mở trước khi phiếu về kịp thì dựng nháp từ mức mặc định; nay khi phiếu về mà người dùng chưa sửa gì (không có nháp trong sessionStorage) thì dựng lại nháp từ bản chụp đã lưu (giữ `criteria_levels`, `hw_manual`, ghi chú). Đã sửa tay thì giữ nguyên nháp.
+- Sửa hàng danh sách em trên desktop: `min-height` theo token (`--space-48`) thay chiều cao cố định, để dòng “N mục cần cố gắng” không bị cắt.
 
 ## Kiểm chứng
 
-- `npm test -- --maxWorkers=2`: đạt, 146 file passed, 2 skipped (148); 1088 test passed, 4 skipped (1092).
+- `npm test -- --maxWorkers=2`: đạt, 147 file passed, 2 skipped (149); 1090 test passed, 4 skipped (1094). Test mới `TicketEditor.lateSlip.test.tsx` (2 ca: phiếu về muộn nạp lại 4/8, đã sửa tay thì giữ nháp) — ca 1 đã kiểm là FAIL trước khi sửa, PASS sau khi sửa.
 - `npm run build`: đạt, gồm `tsc --noEmit`, Vite build và `check-bundle` staging.
 - `git diff --check`: đạt.
 - Ảnh + kiểm DOM bằng Playwright Chromium với dev server local, cờ `VITE_CRITERIA_LEVELS=1`, fake `GET /v1/sync/snapshot*`, `GET /v1/sync/pull`, `GET /v1/criteria-set` (không đăng nhập dev/staging). Ảnh ở `/tmp/qlh-evidence/custom-criteria-web/` (không commit), số liệu DOM ở `p2-dom-checks.json` cùng thư mục.
@@ -22,14 +24,15 @@
 |---|---|---|
 | Phiếu N=6 (bộ cô Thu), 4/6 | `p2-slip6-390.png` (+ `-bottom`) | `p2-slip6-1440.png` (+ `-bottom`) |
 | Phiếu N=1, 1/1 | `p2-slip1-390.png` | `p2-slip1-1440.png` |
-| Phiếu N=8, 5/8 | `p2-slip8-390.png` (+ `-bottom`) | `p2-slip8-1440.png` (+ `-bottom`) |
+| Phiếu N=8, 4/8 (danh sách và panel cùng 4/8) | `p2-slip8-390.png` (+ `-mid`, `-bottom`) | `p2-slip8-1440.png` (+ `-mid`, `-bottom`) |
 | Bộ chỉ BTVN, buổi trước không giao BTVN (N=1, có dòng phụ) | `p2-slip-hw-noprev-390.png` (+ `-bottom`) | `p2-slip-hw-noprev-1440.png` (+ `-bottom`) |
 | Danh sách em (“1 mục cần cố gắng”, phiếu cũ hiện như cũ) | `p2-list-390.png` | `p2-list-1440.png` |
-| Phiếu cũ (thang 3, đạt/chưa đạt) | `p2-legacy-390.png` | `p2-legacy-1440.png` |
+| Phiếu cũ (thang 5, 4/5 tiêu chí đạt) | `p2-legacy-390.png` | `p2-legacy-1440.png` |
 | P1 Cài đặt → Bộ tiêu chí (nhãn “Làm bài tập về nhà” + “Theo chấm BTVN”) | `p1-settings-390.png` | — |
 
-Kiểm DOM trên mọi ảnh phiếu/danh sách: không có chuỗi “Chấm riêng”, không có “Hôm nay học”. Số hàng tiêu chí và điểm sao đúng dữ liệu: N=6 → 6 hàng `4/6`; N=1 → 1 hàng `1/1`; N=8 → 8 hàng `5/8`; bộ chỉ BTVN không có BTVN buổi trước → 1 hàng `1/1` + “Buổi trước không giao BTVN”; phiếu cũ → khung sao kiểu cũ `/3 sao`.
+Kiểm DOM trên mọi ảnh phiếu/danh sách: không có chuỗi “Chấm riêng”, không có “Hôm nay học”. Số hàng tiêu chí và điểm sao đúng dữ liệu: N=6 → 6 hàng `4/6`; N=1 → 1 hàng `1/1`; N=8 → 8 hàng `4/8` (cả 390 và 1440); bộ chỉ BTVN không có BTVN buổi trước → 1 hàng `1/1` + “Buổi trước không giao BTVN”; phiếu cũ thang 5 → `4/5 sao`, 5 ô tick kiểu cũ.
 
-## Còn lại / hạn chế
+## Ghi chú soát ảnh
 
-- Panel desktop (`TicketEditor`) khi mở phiếu *trước khi* dữ liệu phiếu về kịp sẽ dựng nháp từ mức mặc định của bộ, nên mức đã lưu (và `hw_manual`) chỉ hiện đúng ở sheet mobile. Trong ảnh N=8 cùng một phiếu: danh sách/ snapshot hiện `4/8`, panel desktop hiện `5/8`. Cần lead quyết có sửa (dựng lại nháp khi phiếu về muộn) hay để sau; chưa sửa trong thay đổi này.
+- Phiếu cũ: fixture cũ sai (`scale: 3` kèm `criteria` 5 bit nên ra “4/3 sao”); dữ liệu thật của phiếu cũ thang 5 là `scale: 5` + 4/5 bit + `stars: 4`, đã sửa fixture và chụp lại. Code không sai: nhánh này giống `develop`.
+- Hàng danh sách em 390 vốn đã cao theo nội dung; lỗi cắt dòng chỉ ở panel desktop, đã sửa CSS bằng token.
