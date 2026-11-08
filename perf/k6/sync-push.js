@@ -3,6 +3,9 @@
 // Chuẩn bị (một lần, trong thư mục worker/):
 //   npx wrangler d1 migrations apply qlh-dev-db --local --env dev
 //   npx wrangler dev --local --env dev --port 8787
+// Mỗi lần chạy đăng ký một tài khoản mới, mà D1 local giới hạn 5 lượt đăng ký/giờ/IP; chạy lại nhiều
+// lần trong một giờ thì xoá throttle cục bộ trước (chỉ D1 local):
+//   npx wrangler d1 execute qlh-dev-db --local --env dev --command "DELETE FROM auth_throttle" 
 // Chạy gate và ramp (thư mục gốc repo):
 //   perf/k6/run-sync-push.sh                     # gate: 5 VU × 1 phút, p95 < 300 ms
 //   SCENARIO=ramp perf/k6/run-sync-push.sh       # tăng dần tới RAMP_MAX_VUS (40) VU
@@ -73,10 +76,13 @@ function call(method, path, body, token, tag) {
 export function setup() {
   // Tài khoản mới mỗi lần chạy: dữ liệu đo không lẫn với lần trước, không cần creds.
   const account = newAccount();
-  const registered = call('POST', '/auth/register', {
+  const register = http.post(`${API}/auth/register`, JSON.stringify({
     phone: account.phone, password: account.password,
     display_name: 'QA perf', workspace_name: `${PREFIX}-${today()}`,
-  }).json();
+  }), { headers: { 'content-type': 'application/json' }, tags: { name: 'setup' } });
+  if (register.status === 429) fail('D1 local đã chạm hạn mức đăng ký theo IP: xoá auth_throttle local rồi chạy lại (xem đầu file)');
+  if (register.status !== 201) fail(`đăng ký local -> ${register.status}`);
+  const registered = register.json();
   if (!registered.active_membership_id || !registered.token) fail('đăng ký local không trả token');
   const token = registered.token;
   const day = today();
