@@ -86,9 +86,10 @@ export default function TicketEditor({
   const scale = row.comment?.scale === 3 ? 3 : 5;
   const previousGrades: HomeworkGrade[] = homework.sections.flatMap((section) => section.level === null ? [] : [{ sectionId: section.id, studentId: row.student.id, level: section.level }]);
     const levelsOn = criteriaLevelsEnabled();
-    const levelMode = levelsOn && (row.comment?.levels != null || row.comment === null);
-    const criteriaSet = useCriteriaSet(levelsOn);
     const customMode = levelsOn && scale !== 3 && row.comment?.levels == null && (row.comment?.criteriaLevels != null || row.comment === null);
+    // Phiếu theo bộ tiêu chí không đi qua đường 3 mức cũ, kể cả khi chưa có phiếu lưu.
+    const levelMode = levelsOn && !customMode && (row.comment?.levels != null || row.comment === null);
+    const criteriaSet = useCriteriaSet(levelsOn);
     const [customDraft, setCustomDraft] = useState<CustomCriteriaDraft | null>(() => {
       const saved = stored?.criteriaLevels ?? row.comment?.criteriaLevels;
       return saved ? { criteria: saved, comment: stored?.comment ?? row.comment?.comment ?? "", hwManual: stored?.hwManual ?? row.comment?.hwManual ?? false } : null;
@@ -151,13 +152,18 @@ export default function TicketEditor({
         return reconcileCriteriaDraft(current, criteriaSet.criteria, previousGrades, homework.state === "has");
       });
     }, [customMode, criteriaSet?.version, gradeKey, homework.state, row.status]);
+    const gradedSignature = useRef(gradeKey);
     useEffect(() => {
-      if (!customMode || !criteriaSet || !canWrite || row.status === "sent" || stored || !row.comment?.criteriaLevels) return;
-      const current = { criteria: row.comment.criteriaLevels, comment: row.comment.comment ?? "", hwManual: row.comment.hwManual ?? false };
-      const next = reconcileCriteriaDraft(current, criteriaSet.criteria, previousGrades, homework.state === "has");
-      if (JSON.stringify(next.criteria) !== JSON.stringify(current.criteria) || next.comment !== current.comment)
-        void saveCustom(next, row.comment.note ?? "");
-    }, [customMode, criteriaSet?.version, gradeKey, homework.state, row.status, row.comment?.updatedAt]);
+      if (!customMode || !criteriaSet || !canWrite || row.status === "sent" || stored || !customDraft) return;
+      // Kết quả BTVN buổi trước vừa đổi (chấm ở thiết bị khác hoặc ở tab BTVN):
+      // hoà nháp đang mở theo kết quả mới rồi lưu, không chờ giáo viên bấm Lưu.
+      if (gradedSignature.current === gradeKey) return;
+      gradedSignature.current = gradeKey;
+      const next = reconcileCriteriaDraft(customDraft, criteriaSet.criteria, previousGrades, homework.state === "has");
+      if (JSON.stringify(next.criteria) === JSON.stringify(customDraft.criteria) && next.comment === customDraft.comment) return;
+      setCustomDraft(next);
+      void saveCustom(next, note);
+    }, [customMode, criteriaSet?.version, gradeKey, homework.state, row.status, stored, customDraft, note]);
   const rejected = useRejectedCommands().filter((item) =>
     item.type === "slip.set" && item.sessionId === session.id && item.studentId === row.student.id && isFinalRejection(item.error),
   );
@@ -227,7 +233,7 @@ export default function TicketEditor({
   }
 
   useEffect(() => {
-    if (levelMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
+    if (levelMode || customMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
     const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
     if (next === criteria) return;
     const nextComment = generatedSlipSentence(next);

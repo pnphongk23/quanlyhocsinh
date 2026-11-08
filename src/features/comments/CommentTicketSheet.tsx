@@ -86,9 +86,10 @@ export default function CommentTicketSheet({
   const scale = row.comment?.scale === 3 ? 3 : 5;
   const previousGrades: HomeworkGrade[] = homework.sections.flatMap((section) => section.level === null ? [] : [{ sectionId: section.id, studentId: row.student.id, level: section.level }]);
     const levelsOn = criteriaLevelsEnabled();
-    const levelMode = levelsOn && (row.comment?.levels != null || row.comment === null);
-    const criteriaSet = useCriteriaSet(levelsOn);
     const customMode = levelsOn && scale !== 3 && row.comment?.levels == null && (row.comment?.criteriaLevels != null || row.comment === null);
+    // Phiếu theo bộ tiêu chí không đi qua đường 3 mức cũ, kể cả khi chưa có phiếu lưu.
+    const levelMode = levelsOn && !customMode && (row.comment?.levels != null || row.comment === null);
+    const criteriaSet = useCriteriaSet(levelsOn);
     const [customDraft, setCustomDraft] = useState<CustomCriteriaDraft | null>(() => {
       const saved = stored?.criteriaLevels ?? row.comment?.criteriaLevels;
       return saved ? { criteria: saved, comment: stored?.comment ?? row.comment?.comment ?? "", hwManual: stored?.hwManual ?? row.comment?.hwManual ?? false } : null;
@@ -255,7 +256,7 @@ export default function CommentTicketSheet({
   );
   const rejectionText = rejected[0] ? localOnlyRejectionMessage(rejected[0].error) : "";
   useEffect(() => {
-    if (levelMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
+    if (levelMode || customMode || scale === 3 || slipFrozenForAutoUpdate(row.status) || manualHomework) return;
     const next = criteriaWithHomeworkResult(criteria, previousGrades, false, false, scale);
     if (next === criteria) return;
     setCriteria(next);
