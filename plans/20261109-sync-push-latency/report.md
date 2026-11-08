@@ -27,7 +27,7 @@ Gate bắt buộc: k6 `http_req_duration{name:sync_push}` p95 < 300 ms.
 |  | trước | sau |
 |---|---|---|
 | round-trip cho n lệnh điểm danh | 4n + 3 (7 / 23 / 83) | **4 hằng số** (n = 1, 5, 20, 50) |
-| statement gửi D1 cho 20 lệnh | 83 lượt | 91 statement trong 4 lượt |
+| statement gửi D1 cho 20 lệnh | 83 lượt | 93 statement trong 4 lượt (2 câu assert của nhóm là 2 trong số đó) |
 | ước tính trên mạng thật (round-trip × 21 ms) | 83 × 21 ≈ 1.74 s | 4 × 21 ≈ **84 ms** + CPU ≈ 60 ms ⇒ ~150 ms |
 | round-trip `slip.send` cả lớp, 5 em | 17 | **7** |
 | round-trip `slip.send` cả lớp, 20 em | 47 | **7** |
@@ -62,9 +62,9 @@ khác, `applied_commands` là nguồn idempotent duy nhất khi mất mạng. Lo
 **B. Preload một lần + gộp các lệnh ô vào một batch commit, giữ CAS + receipt riêng (đã chốt).**
 Đọc trước mọi thứ cần cho việc lập kế hoạch trong **một** batch `initialState`; các lệnh ô
 (`attendance.set`, `score.set`, `homework.grade.set`, `slip.set`) lập kế hoạch không cần đọc D1 nên
-gộp được vào **một** batch commit. Mỗi lệnh vẫn có statement CAS riêng và receipt riêng, xích receipt
-giữ thứ tự (mục 5); lệnh không có hiệu lực, hoặc mọi lệnh khi batch ném lỗi, chạy lại bằng đường tuần
-tự cũ (`apply`). Hợp đồng API không đổi.
+gộp được vào **một** batch commit. Mỗi lệnh vẫn có statement CAS riêng và receipt riêng; nhóm commit
+theo kiểu **tất cả hoặc không gì** (mục 5), xung đột hay lỗi thì cả nhóm chạy lại bằng đường tuần tự cũ
+(`apply`). Hợp đồng API không đổi.
 
 **C. Giữ số round-trip, chỉ tối ưu phần còn lại** (giảm CPU mỗi lượt, thêm chỉ mục, Durable Object,
 chuyển sang RPC một chiều). Không giải quyết nguyên nhân: 83 × 21 ms là chi phí đi lại, không phải CPU
@@ -87,36 +87,46 @@ chuyển sang RPC một chiều). Không giải quyết nguyên nhân: 83 × 21 
 - `planCell`/`checkCommand`/`apply`: đường tuần tự cũ, `apply` nhận cờ `preloaded` để dùng receipt đã
   đọc sẵn; `i.today` dựng formatter một lần mỗi request thay vì mỗi lệnh.
 - `slip.send`: đọc trước điểm danh và phiếu của **mọi** em trong một `db.batch` (mỗi statement
-  `workspace_id` + `session_id` + ≤98 `student_id` ⇒ ≤100 bind) thay cho 2 lượt đọc D1 cho từng em.
+  `workspace_id` + `session_id` + ≤98 `student_id` ⇒ ≤100 bind) thay cho 2 lượt đọc D1 cho từng em; chỉ
+  preload id hợp lệ, id sai vẫn đi qua `student()` để giữ nguyên mã lỗi `invalid_id` và thứ tự ưu tiên lỗi.
 
 `worker/src/db/attendance.ts`: xuất `ATTENDANCE_MISSING_SQL` (dùng chung cho assert và preload).
 
 `docs/architecture.md` (mục công nghệ, mục "Lệnh trong hàng đợi", bảng rủi ro) và
 `plans/20261021-mvp/backend/api-spec.md` (bước 3 của quy tắc xử lý push): mô tả lại việc gộp batch cho
-lệnh ô, CAS + receipt riêng từng lệnh, xích receipt giữ thứ tự, chạy lại tuần tự khi lệnh hỏng hoặc batch
-lỗi. Hợp đồng phản hồi của API không đổi.
+lệnh ô, CAS + receipt riêng từng lệnh, nhóm commit tất cả hoặc không gì, và việc cả nhóm chạy tuần tự khi
+xung đột hoặc batch lỗi. Hợp đồng phản hồi của API không đổi.
 
 `perf/k6/*`: gate chỉ chạy local, tự đăng ký tài khoản/workspace trên D1 local (mục 7).
 
 ## 5. Giữ thứ tự và tính đúng khi thiết bị khác chen vào
 
-Gộp batch làm lộ hai lỗi nếu chỉ dựa vào `predict`: (i) version dự đoán có thể trùng version do writer
+Gộp batch làm lộ hai lỗi nếu tin vào trạng thái dự đoán: (i) version dự đoán có thể trùng version do writer
 khác tạo ra nên lệnh sau vẫn commit dù lệnh trước thất bại, và (ii) receipt `rejected`/`noop` tính trên
-trạng thái dự đoán sai vẫn được chốt. Cách sửa (đã chốt, giữ đơn giản): **xích receipt trong nhóm**.
+trạng thái dự đoán sai vẫn được chốt. Cách sửa đã chốt: **nhóm commit tất cả hoặc không gì**.
 
-- Trong một nhóm, mọi lệnh từ lệnh thứ 2 trở đi chỉ có hiệu lực khi receipt của lệnh **đứng ngay trước
-  nó** trong nhóm đã tồn tại: thêm `AND EXISTS(SELECT 1 FROM applied_commands WHERE command_id=?)`
-  (bind, không nội suy) vào statement `first` của plan thường, vào statement `first` của plan `noop`, và
-  receipt của plan `rejected` đổi từ marker vô điều kiện thành marker có điều kiện đó. Lệnh đầu nhóm
-  giữ nguyên; `receiptIndex` không đổi.
-- Sau batch: **lệnh đầu tiên thiếu receipt** ⇒ nó và **mọi lệnh sau trong nhóm** chạy lại bằng `apply`
-  theo đúng thứ tự, sau khi xoá `syncState`/memo. Các lệnh trước nó đã commit theo thứ tự nên giữ kết
-  quả. Batch ném lỗi (D1 rollback) ⇒ cả nhóm chạy lại tuần tự.
-- Bất biến này được ghi thành comment ngay tại `flush`.
+Một `batch` D1 là một transaction chạy tuần tự: không writer nào chen giữa các statement, statement lỗi
+thì rollback cả batch. Vì vậy nhóm được canh hai đầu thay vì nối receipt từng lệnh:
 
-Kiểm chứng: bốn kịch bản reviewer nêu được dựng lại bằng test (writer khác ghi ngay trước batch commit
-của nhóm) và **đối chiếu trực tiếp với base `fa7b750`** (chạy cùng kịch bản trên worktree tạm của base,
-chen writer vào ngay trước batch commit của lệnh đầu):
+1. Statement **đầu** batch lỗi nếu **bất kỳ** lệnh nào của nhóm đã có receipt (do request khác tạo). Nếu
+   không canh, một receipt ngoài có thể "đứng thay" cho lệnh không chạy trong batch này và cho lệnh sau
+   vượt lên.
+2. Statement **cuối** batch lỗi nếu số receipt của n lệnh **khác n**, tức là mọi lệnh phải thắng CAS hoặc
+   ghi được receipt `noop`/`rejected` của chính nó.
+3. Assert lỗi ⇒ `db.batch` throw ⇒ dùng nhánh fallback có sẵn: xoá `syncState`/memo rồi chạy **cả nhóm**
+   tuần tự bằng `apply` theo đúng thứ tự, trên dữ liệu đọc mới. Lỗi assert và lỗi thật (trigger,
+   constraint…) đi chung một nhánh — không cần phân biệt.
+4. Marker `noop`/`rejected` trong nhóm trở lại vô điều kiện; hai câu assert chặn mọi trạng thái dự đoán sai.
+5. Cách gây lỗi trong SQL thuần (không trigger): `SELECT CASE WHEN <điều kiện> THEN json('group_receipt_violation') END`.
+   Đã kiểm trong miniflare/D1 local: statement lỗi `D1_ERROR: malformed JSON` và **rollback cả batch** (dòng
+   ghi trước đó trong cùng batch biến mất), nên không cần thêm trigger hay bảng phụ. Bind: assert đầu ≤ n
+   tham số, assert cuối ≤ n + 1; `validatePush` chặn n ≤ 50 nên ≤ 51 bind (nếu trần lệnh tăng thì phải chia lô).
+6. Chi phí: đường thuận lợi vẫn **4 round-trip** (thêm 2 statement trong batch gộp); khi có race thì cả
+   nhóm chạy tuần tự như trước khi gộp (hiếm, chấp nhận).
+
+Kiểm chứng: các kịch bản reviewer nêu được dựng lại bằng test (writer khác / request khác ghi ngay trước
+batch commit của nhóm) và **đối chiếu trực tiếp với base `fa7b750`** (chạy cùng kịch bản trên worktree tạm
+của base, chen writer vào ngay trước batch commit của lệnh đầu):
 
 | Kịch bản | base `fa7b750` | nhánh này |
 |---|---|---|
@@ -124,6 +134,9 @@ chen writer vào ngay trước batch commit của lệnh đầu):
 | (b) 2 em, writer khác huỷ buổi trước commit | rejected `session_cancelled` ×2, 0 dòng attendance, buổi `cancelled/v2` | giống hệt |
 | (c) [điểm 5 base 0, điểm 7 base 2], writer khác tạo điểm `v2` | applied v3, applied v4, cuối `7/v4`, history [9→5, 5→7] | giống hệt |
 | (d) [điểm 5, điểm 5], writer khác tạo điểm `9/v1` | applied v2, applied v2 `noop`, cuối `5/v2`, history [9→5] | giống hệt |
+| (e) [A: present ô X, B: điểm danh buổi đã huỷ, C: late ô X] + writer khác ghi `absent/v1` & `held/v2` + request khác đã chốt receipt `rejected` của **cùng id B** | applied v2 / rejected / applied v3, ô `late/v3`, buổi `held/v2`, history [absent→present v1→v2, present→late v2→v3] | giống hệt |
+| (f) receipt ngoài của **lệnh đầu** nhóm xuất hiện trước commit (không kèm dòng dữ liệu) | lệnh đó `duplicate`, lệnh sau applied, ô của lệnh đầu không được ghi | giống hệt |
+| (g) assert cuối nhóm lỗi (writer khác đã có dòng điểm) | — | batch throw, D1 rollback: ngay sau lỗi **không** còn dòng `attendance`, receipt, dòng `change_log`, `score_history`, `notifications`, buổi vẫn `planned/v1`; chạy lại tuần tự cho đúng trạng thái cuối, mỗi hiệu ứng đúng một lần |
 
 ## 6. Rà soát SQL đường push
 
@@ -148,7 +161,9 @@ Log thô: `/tmp/qlh-evidence/sync-push-latency/explain-query-plan*.txt`.
 | commit: INSERT ô (CAS) | `SEARCH class_sessions (workspace_id=? AND id=?)`, `SEARCH students (workspace_id=? AND id=?)`, `SEARCH attendance USING PRIMARY KEY`, `SEARCH applied_commands … COVERING INDEX (command_id=?)` | tốt |
 | commit: UPDATE ô (CAS version) | `SEARCH attendance USING PRIMARY KEY` + `applied_commands (command_id=?)` | tốt |
 | commit: buổi `planned` → `held` | `SEARCH class_sessions (workspace_id=? AND id=?)` | tốt |
-| receipt: INSERT có điều kiện / xích receipt | `SCAN CONSTANT ROW`, `SEARCH applied_commands (command_id=?)` | tốt |
+| receipt: INSERT có điều kiện | `SCAN CONSTANT ROW`, `SEARCH applied_commands (command_id=?)` | tốt |
+| assert đầu nhóm (chưa receipt nào của n lệnh) | `SCAN CONSTANT ROW` + `SCALAR SUBQUERY` → `SEARCH applied_commands USING COVERING INDEX (command_id=?)` | tốt, mỗi id một lần tìm |
+| assert cuối nhóm (đếm receipt của n lệnh) | `SCAN CONSTANT ROW` + `SCALAR SUBQUERY` → `SEARCH applied_commands USING COVERING INDEX (command_id=?)` | tốt |
 | notification `score_updated` (ON CONFLICT `group_key`) | 7 `SEARCH` theo PK/index, không SCAN | tốt |
 | trigger `change_log`, `attendance_history` | INSERT theo PK/autoincrement | tốt |
 
@@ -201,8 +216,7 @@ Kết quả (log thô: `/tmp/qlh-evidence/sync-push-latency/*.log`, không commi
 | Kịch bản | Code | VU | Request | p50 | p90 | p95 | p99 | exit |
 |---|---|---|---|---|---|---|---|---|
 | gate | trước `fa7b750` | 5 | 1166 | 241 ms | 305 ms | **327 ms ✗** | 398 ms | 99 |
-| gate | sau | 5 | 3054 | 87 ms | 124 ms | **145 ms ✓** | 222 ms | **0** |
-| gate | sau (2 lần lặp lại) | 5 | 3112 / 3256 | 85 / 85 ms | 128 / 112 ms | **162 / 122 ms ✓** | 277 / 157 ms | 0 |
+| gate | sau (2 lần) | 5 | 3056 / 2932 | 92 / 95 ms | 121 / 131 ms | **132 / 148 ms ✓** | 165 / 193 ms | **0** |
 | ramp | trước `fa7b750` | 1→40 | 2730 | 463 ms | 1.76 s | **2.07 s ✗** | 2.23 s | 99 |
 | ramp | sau | 1→40 | 7537 | 214 ms | 659 ms | **749 ms ✗** | 1.08 s | 99 |
 
@@ -210,15 +224,15 @@ Quét tải local trên code sau (gate 5…20 VU, cùng script, 20 lệnh/push):
 
 | VU | 6 | 7 | 8 | 9 | 10 | 12 | 14 | 16 | 20 |
 |---|---|---|---|---|---|---|---|---|---|
-| p95 | 194 ms ✓ | 279 ms ✓ | 238 ms ✓ | 228 ms ✓ | 231 ms ✓ | 299 ms ✓ | 315 ms ✗ | 361 ms ✗ | 440 ms ✗ |
+| p95 | 194 ms ✓ | 279 ms ✓ | 238 ms ✓ | 228 ms ✓ | 231 / 235 ms ✓ | 299 / 281 ms ✓ | 315 / 347 ms ✗ | 361 ms ✗ | 440 ms ✗ |
 
-⇒ **VU tối đa local còn giữ p95 < 300 ms là 12** (299 ms, sát ngưỡng); 14 VU vượt (315 ms). Biên độ
-giữa các lần lặp lại cùng mức tải khoảng ±20 % (7 VU 279 ms so với 8–10 VU 228–238 ms là nhiễu), nên
-mức 12 chỉ nên đọc là "khoảng 10–12 VU".
+⇒ **VU tối đa local còn giữ p95 < 300 ms là 12** (281–299 ms, sát ngưỡng); 14 VU vượt (315–347 ms).
+Biên độ giữa các lần lặp lại cùng mức tải khoảng ±20 % (7 VU 279 ms so với 8–10 VU 228–238 ms là nhiễu),
+nên mức 12 chỉ nên đọc là "khoảng 10–12 VU". Hai giá trị cuối của mỗi ô là lần đo lặp lại trên bản cuối.
 
 Đọc bảng:
-- **Gate 5 VU**: trước 327 ms (trượt) → sau 122–162 ms (đạt, exit 0). Thông lượng cùng 5 VU tăng
-  2,6–2,8× (1166 → 3054–3256 request/phút).
+- **Gate 5 VU**: trước 327 ms (trượt) → sau 132–148 ms (đạt, exit 0). Thông lượng cùng 5 VU tăng
+  2,5–2,6× (1166 → 2932–3056 request/phút).
 - Ramp 40 VU: 2.07 s → 749 ms (2,8×) nhưng vẫn trượt, vì `wrangler dev` local chỉ có một process
   workerd/miniflare chạy chung CPU với chính k6. Ramp chỉ dùng để so tương đối trước/sau và để tìm mức
   tải local còn đo được; trần tải thật phải đo trên dev ở bước sau.
@@ -229,7 +243,7 @@ mức 12 chỉ nên đọc là "khoảng 10–12 VU".
 
 `worker/tests/sync-push-roundtrips.test.ts` — 4 test: số round-trip là hằng số ≤ 4 cho 1/5/20/50 lệnh.
 
-`worker/tests/sync-push-batch.test.ts` — 17 test, mỗi test khoá một điểm rủi ro của việc gộp batch:
+`worker/tests/sync-push-batch.test.ts` — 21 test, mỗi test khoá một điểm rủi ro của việc gộp batch:
 
 1. 20 lệnh điểm danh: một batch, ≤ 4 round-trip, mọi lệnh `applied`, version 1, buổi `held` version 2,
    20 dòng `change_log` + dòng `class_session`, 20 receipt. Sau đó **ép batch gộp lỗi** để cả 20 lệnh
@@ -256,8 +270,17 @@ mức 12 chỉ nên đọc là "khoảng 10–12 VU".
     `event_version = 2`).
 16. Cùng command id do membership khác trong cùng workspace gửi ⇒ `rejected` `conflict` `reason=retry`.
 17. `slip.send` cả lớp 20 em: 7 round-trip, bằng đúng số của 5 em (hằng số); 19 phiếu gửi, 1 em vắng bị bỏ.
+18. (e) [A, B, C] với writer khác ghi cùng ô + buổi và request khác đã chốt receipt `rejected` của **cùng id
+    B**: cả nhóm chạy lại tuần tự, ra đúng kết quả base từng version, `attendance_history` và trạng thái buổi.
+19. (f) receipt ngoài của lệnh **đầu** nhóm xuất hiện trước commit ⇒ cả nhóm chạy tuần tự, lệnh đó
+    `duplicate` và không ghi dòng dữ liệu nào.
+20. (g) assert cuối nhóm lỗi ⇒ D1 rollback thật: ngay sau lỗi không còn dòng, receipt, `change_log`,
+    `score_history`, `notifications`, buổi vẫn `planned/v1`; chạy lại cho đúng trạng thái cuối với mỗi hiệu
+    ứng đúng một lần (`event_version` của notification = 1, không bị cộng dồn).
+21. `slip.send` với `student_ids:[{}]` ⇒ `rejected` `validation_error` `invalid_id` (không phải
+    `constraint_failed`), không ghi phiếu nào.
 
-Kết quả toàn bộ worker: `npx tsc --noEmit` 0 lỗi; `npx vitest run` **48 file / 300 test, 0 fail**
+Kết quả toàn bộ worker: `npx tsc --noEmit` 0 lỗi; `npx vitest run` **48 file / 304 test, 0 fail**
 (`slip-send-bind`, `notifications`, `sync`, `attendance`, `comments` vẫn xanh).
 
 ## 9. Backport prod
@@ -267,21 +290,24 @@ Prod hiện là `31c1942` (`hotfix/slip-send-bind-limit`), **không** có: `leve
 `CRITERIA_LEVELS`, và cổng "đủ điểm danh" trước `slip.set`/`slip.send`; đồng thời quy tắc bỏ em vắng khi
 `slip.send` cả lớp ở prod khác (prod chưa có gate `attendance_incomplete`). Vì vậy hotfix prod **không
 được chép nguyên `worker/src/db/sync.ts`**: phải port riêng phần preload (`syncIdentity`, `initialState`
-receipt + độ đủ điểm danh), phần gộp batch + xích receipt, và phần preload của `slip.send` lên đúng SQL
+receipt + độ đủ điểm danh), phần gộp batch + hai câu assert của nhóm, và phần preload của `slip.send` lên đúng SQL
 và tập cột của prod (không có 3 cột levels/criteria, không có `session.lesson.set`), rồi chạy lại test
 tương ứng của prod. Việc này nằm ngoài packet hiện tại.
 
 ## 10. Còn lại / rủi ro
 
-1. **Trần statement/batch của D1 chưa được xác nhận bằng tài liệu.** 20 lệnh → 61 statement trong batch
-   commit, 50 lệnh → 151 statement. Local chạy tốt (k6 20 lệnh, vitest 50 lệnh); cần xác nhận trên dev
-   trước phát hành, nếu có trần 100 thì phải chia nhóm (ví dụ ≤30 lệnh ô mỗi batch).
+1. **Trần statement/batch của D1 chưa được xác nhận bằng tài liệu.** 20 lệnh → 63 statement trong batch
+   commit (kể cả 2 câu assert), 50 lệnh → 153 statement. Local chạy tốt (k6 20 lệnh, vitest 50 lệnh); cần
+   xác nhận trên dev trước phát hành, nếu có trần 100 thì phải chia nhóm (ví dụ ≤30 lệnh ô mỗi batch).
 2. **Preload ô trong `initialState` vẫn là N+1 trong batch** (n statement, 0 round-trip). Gộp được bằng
    row-value `IN` (mục 6) — không bắt buộc, để sau.
 3. **Bind tối đa 100 tham số/statement**: lô id dùng 99 + `workspace_id` = 100 (đã có từ trước); preload
    `slip.send` dùng 98 + 2 = 100.
 4. **`touchSession`** sau phản hồi là 1 lượt ghi D1 qua `waitUntil`, không nằm trên đường phản hồi.
-5. Chưa đo lại trên dev (chỉ test local). Khi được duyệt, gate thật là `perf/k6/sync-push.js` chạy trên
+5. **Race hiếm thì cả nhóm chạy tuần tự**: nếu bất kỳ lệnh nào của nhóm đã có receipt từ request khác,
+   hoặc một lệnh thua CAS, cả nhóm bị rollback và chạy lại tuần tự (số round-trip như trước khi gộp cho
+   riêng request đó). Chấp nhận: hiếm, và kết quả vẫn đúng như base.
+6. Chưa đo lại trên dev (chỉ test local). Khi được duyệt, gate thật là `perf/k6/sync-push.js` chạy trên
    dev sau deploy, kỳ vọng p95 ≈ 140–160 ms.
 
 ## 11. Ghi chú môi trường local

@@ -9,17 +9,20 @@ const command=(type:string,payload:any,base_version=0)=>({id:uid(),type,payload,
 /** Câu lệnh vi phạm CHECK của bảng attendance: dùng để làm một statement trong batch gộp lỗi thật. */
 const POISON=`INSERT INTO attendance(workspace_id,class_id,session_id,student_id,status,version,created_at,updated_at)
   VALUES('0','0','0','0','bogus',1,'0','0')`;
-/** Câu SELECT cursor chỉ có trong batch gộp cuối request, nên dùng nó để nhận ra batch đó. */
-const isGroupBatch=(sqls:string[])=>sqls.some(sql=>sql.includes('change_floor) cursor FROM workspaces'));
+/** Chỉ batch gộp mới có câu assert đầu/cuối nhóm; dùng nó để nhận ra batch đó. */
+const GROUP_ASSERT="json('group_receipt_violation')";
+const isGroupBatch=(sqls:string[])=>sqls.some(sql=>sql.includes(GROUP_ASSERT));
 
 /** Mỗi lần gọi D1 (first/run/all/raw/batch) là một round-trip; bind đo trần 100 tham số của D1. */
 let stats:{trips:string[];maxBind:number};
 /** Hook chèn trước một batch: đổi danh sách statement, hoặc throw để giả lập batch hỏng. */
 let beforeBatch:((sqls:string[],statements:unknown[])=>unknown[]|void|Promise<unknown[]|void>)|null=null;
+/** Chạy ngay sau khi một batch ném lỗi (D1 đã rollback), để kiểm chứng không sót side effect. */
+let afterBatchFailure:((sqls:string[])=>Promise<void>)|null=null;
 let sqlOf=new WeakMap<object,string>();
 beforeEach(async()=>{
   await db.prepare('DELETE FROM auth_throttle').run();
-  stats={trips:[],maxBind:0};beforeBatch=null;sqlOf=new WeakMap();
+  stats={trips:[],maxBind:0};beforeBatch=null;afterBatchFailure=null;sqlOf=new WeakMap();
   const target=db as any;
   const prepare=target.prepare.bind(db),batch=target.batch.bind(db);
   const wrap=(s:any,sql:string)=>{
@@ -36,7 +39,12 @@ beforeEach(async()=>{
     const replaced=beforeBatch ? await beforeBatch(sqls,statements) : undefined;
     const list=(replaced ?? statements) as unknown[];
     stats.trips.push(`batch(${list.length})`);
-    return batch(list);
+    try {
+      return await batch(list);
+    } catch(error) {
+      if(afterBatchFailure) await afterBatchFailure(sqls);
+      throw error;
+    }
   });
 });
 afterEach(()=>vi.restoreAllMocks());
@@ -381,6 +389,127 @@ describe('sync push gộp lệnh ô',()=>{
     expect(twenty.trips).toBe(7);
     expect(twenty.sent).toBe(19);
     expect(twenty.skipped).toBe(1);
+  });
+
+  it('receipt của request khác không làm lệnh sau vượt lệnh trước: cả nhóm chạy lại như base',async()=>{
+    const f=await setup(1);
+    const student=f.students[0]!;
+    const cancelled=await insertSession(f.owner.workspaceId,f.classId,daysAgo(1),f.owner.userId,'cancelled');
+    const first=command('attendance.set',{session_id:f.sessionId,student_id:student,status:'present'});
+    const middle=command('attendance.set',{session_id:cancelled,student_id:student,status:'present'});
+    const last=command('attendance.set',{session_id:f.sessionId,student_id:student,status:'late'});
+    let injected=false;
+    beforeBatch=async(sqls)=>{
+      if(injected || !isGroupBatch(sqls)) return;
+      injected=true;
+      // Thiết bị khác ghi ô X = absent/v1 và chuyển buổi sang held/v2.
+      await insertAttendance(f.owner.workspaceId,f.classId,f.sessionId,student,'absent',f.owner.userId);
+      await db.prepare('UPDATE class_sessions SET status=?,version=version+1 WHERE workspace_id=? AND id=?')
+        .bind('held',f.owner.workspaceId,f.sessionId).run();
+      // Request đồng thời đã xử lý CÙNG id của lệnh giữa và đã chốt receipt rejected.
+      await db.prepare(`INSERT INTO applied_commands(command_id,workspace_id,membership_id,type,status,result,applied_at)
+        VALUES(?,?,?,?,?,?,?)`).bind(middle.id,f.owner.workspaceId,f.owner.membershipId,'attendance.set','rejected',
+        JSON.stringify({id:middle.id,status:'rejected',error:{code:'conflict',message:'Session is cancelled.',details:{reason:'session_cancelled'}}}),
+        new Date().toISOString()).run();
+    };
+    const res=await f.push([first,middle,last]);
+    expect(res.body.results.map((r:any)=>r.status)).toEqual(['applied','rejected','applied']);
+    expect(res.body.results.map((r:any)=>r.version)).toEqual([2,undefined,3]);
+    expect(await db.prepare('SELECT status,version FROM attendance WHERE session_id=? AND student_id=?').bind(f.sessionId,student).first<any>())
+      .toEqual({status:'late',version:3});
+    expect((await db.prepare('SELECT old_status,new_status,old_version,new_version FROM attendance_history WHERE session_id=? AND student_id=? ORDER BY id')
+      .bind(f.sessionId,student).all<any>()).results)
+      .toEqual([{old_status:'absent',new_status:'present',old_version:1,new_version:2},
+        {old_status:'present',new_status:'late',old_version:2,new_version:3}]);
+    expect(await db.prepare('SELECT status,version FROM class_sessions WHERE id=?').bind(f.sessionId).first<any>())
+      .toEqual({status:'held',version:2});
+    expect((await db.prepare('SELECT status FROM applied_commands WHERE command_id=?').bind(middle.id).first<any>())!.status).toBe('rejected');
+  });
+
+  it('receipt ngoài của lệnh đầu nhóm buộc cả nhóm chạy tuần tự: lệnh đó duplicate',async()=>{
+    const f=await setup(2);
+    const [first,second]=[f.students[0]!,f.students[1]!];
+    const commands=[
+      command('attendance.set',{session_id:f.sessionId,student_id:first,status:'present'}),
+      command('attendance.set',{session_id:f.sessionId,student_id:second,status:'present'}),
+    ];
+    let injected=false;
+    beforeBatch=async(sqls)=>{
+      if(injected || !isGroupBatch(sqls)) return;
+      injected=true;
+      await db.prepare(`INSERT INTO applied_commands(command_id,workspace_id,membership_id,type,status,result,applied_at)
+        VALUES(?,?,?,?,?,?,?)`).bind(commands[0]!.id,f.owner.workspaceId,f.owner.membershipId,'attendance.set','applied',
+        JSON.stringify({id:commands[0]!.id,status:'applied',version:1}),new Date().toISOString()).run();
+    };
+    const res=await f.push(commands);
+    expect(res.body.results.map((r:any)=>[r.status,r.original_status])).toEqual([['duplicate','applied'],['applied',undefined]]);
+    expect((await db.prepare('SELECT student_id,status,version FROM attendance WHERE workspace_id=? AND session_id=?')
+      .bind(f.owner.workspaceId,f.sessionId).all<any>()).results)
+      .toEqual([{student_id:second,status:'present',version:1}]);
+    expect(await db.prepare('SELECT status,version FROM class_sessions WHERE id=?').bind(f.sessionId).first<any>())
+      .toEqual({status:'held',version:2});
+  });
+
+  it('assert nhóm gây lỗi thật: D1 rollback nên không sót dòng, receipt, change_log, history hay notification',async()=>{
+    const f=await setup(1),first=await insertTest(f.owner.workspaceId,f.classId,f.owner.userId),second=await insertTest(f.owner.workspaceId,f.classId,f.owner.userId,'2026-10-07');
+    const student=f.students[0]!;
+    const guardianUser=await insertUser(fakePhone());
+    await insertGuardianLink(f.owner.workspaceId,guardianUser,student);
+    await insertMembership(f.owner.workspaceId,guardianUser,f.owner.roles.guardian!);
+    let leaked:any=null;
+    afterBatchFailure=async(sqls)=>{
+      if(leaked || !isGroupBatch(sqls)) return;
+      leaked={
+        attendance:(await db.prepare('SELECT COUNT(*) n FROM attendance WHERE workspace_id=?').bind(f.owner.workspaceId).first<any>())!.n,
+        scores:(await db.prepare('SELECT COUNT(*) n FROM scores WHERE workspace_id=?').bind(f.owner.workspaceId).first<any>())!.n,
+        notifications:(await db.prepare('SELECT COUNT(*) n FROM notifications WHERE workspace_id=?').bind(f.owner.workspaceId).first<any>())!.n,
+        history:(await db.prepare('SELECT COUNT(*) n FROM score_history WHERE workspace_id=?').bind(f.owner.workspaceId).first<any>())!.n,
+        // Dòng change_log của buổi/điểm còn lại chỉ được là bản ghi có sẵn trước request (buổi được tạo,
+        // điểm do writer khác chèn); mọi dòng do nhóm ghi phải biến mất.
+        changeLog:(await db.prepare("SELECT entity,COUNT(*) n FROM change_log WHERE workspace_id=? AND entity IN ('attendance','class_session','score') GROUP BY entity ORDER BY entity")
+          .bind(f.owner.workspaceId).all<any>()).results,
+        receipts:(await db.prepare('SELECT COUNT(*) n FROM applied_commands WHERE workspace_id=?').bind(f.owner.workspaceId).first<any>())!.n,
+        session:await db.prepare('SELECT status,version FROM class_sessions WHERE id=?').bind(f.sessionId).first<any>(),
+      };
+    };
+    // Lệnh cuối bị writer khác chen vào (đã có dòng điểm) nên không ghi được receipt ⇒ assert cuối nhóm lỗi.
+    beforeBatch=async(sqls)=>{
+      if(!isGroupBatch(sqls)) return;
+      beforeBatch=null;
+      await foreignScore(f,second,student,9,1);
+    };
+    const res=await f.push([
+      command('attendance.set',{session_id:f.sessionId,student_id:student,status:'present'}),
+      command('score.set',{test_id:first,student_id:student,value:5}),
+      command('score.set',{test_id:second,student_id:student,value:7}),
+    ]);
+    expect(res.body.results.map((r:any)=>r.status)).toEqual(['applied','applied','applied']);
+    // Ngay sau khi batch gộp lỗi: chưa có gì của nhóm được ghi.
+    expect(leaked).toEqual({attendance:0,scores:1,notifications:0,history:0,receipts:0,
+      changeLog:[{entity:'class_session',n:1},{entity:'score',n:1}],
+      session:{status:'planned',version:1}});
+    // Chạy lại tuần tự cho ra đúng trạng thái cuối, mỗi hiệu ứng đúng một lần.
+    expect(await db.prepare('SELECT status,version FROM attendance WHERE session_id=? AND student_id=?').bind(f.sessionId,student).first<any>())
+      .toEqual({status:'present',version:1});
+    expect(await db.prepare('SELECT status,version FROM class_sessions WHERE id=?').bind(f.sessionId).first<any>())
+      .toEqual({status:'held',version:2});
+    expect((await db.prepare('SELECT test_id,value,version FROM scores WHERE workspace_id=? ORDER BY value')
+      .bind(f.owner.workspaceId).all<any>()).results.map((r:any)=>({...r,test_id:r.test_id===first ? 'first' : 'second'})))
+      .toEqual([{test_id:'first',value:5,version:1},{test_id:'second',value:7,version:2}]);
+    expect((await db.prepare('SELECT old_value,new_value FROM score_history WHERE workspace_id=?').bind(f.owner.workspaceId).all<any>()).results)
+      .toEqual([{old_value:9,new_value:7}]);
+    expect((await db.prepare('SELECT test_id,event_version FROM notifications WHERE workspace_id=? ORDER BY id')
+      .bind(f.owner.workspaceId).all<any>()).results.map((r:any)=>({...r,test_id:r.test_id===first ? 'first' : 'second'})))
+      .toEqual([{test_id:'first',event_version:1},{test_id:'second',event_version:1}]);
+    expect((await db.prepare('SELECT COUNT(*) n FROM attendance_history WHERE workspace_id=?').bind(f.owner.workspaceId).first<any>())!.n).toBe(0);
+  });
+
+  it('slip.send với student_ids không phải UUID vẫn trả rejected invalid_id, không phải constraint_failed',async()=>{
+    const f=await setup(1);
+    for(const student of f.students) await insertAttendance(f.owner.workspaceId,f.classId,f.sessionId,student,'present',f.owner.userId);
+    const res=await f.push([command('slip.send',{session_id:f.sessionId,student_ids:[{}],defaults:[]})]);
+    expect(res.body.results[0]).toMatchObject({status:'rejected',error:{code:'validation_error',details:{reason:'invalid_id'}}});
+    expect((await db.prepare("SELECT COUNT(*) n FROM session_comments WHERE workspace_id=?").bind(f.owner.workspaceId).first<any>())!.n).toBe(0);
   });
 
   it('mọi statement ≤100 bind khi push 50 lệnh',async()=>{

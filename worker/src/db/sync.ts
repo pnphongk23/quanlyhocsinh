@@ -200,24 +200,29 @@ async function commit(db:D1Database,i:SyncIdentity,c:Command,plan:Plan):Promise<
   const results=await db.batch(statements.map(s=>stmt(db,s)));
   return (results[receiptIndex]!.meta.changes ?? 0)>0;
 }
-/** Statement of one command's commit; the receipt statement changes a row only when the command took effect.
- * `prevId` is the command immediately before it in the same group: the command may only take effect once
- * that command's receipt exists, so a command that loses its CAS cannot let a later one overtake it. */
-function commitStatements(i:SyncIdentity,c:Command,plan:Plan,prevId?:string|null):{statements:SQL[];receiptIndex:number} {
-  const chain=(s:SQL):SQL=>{if(prevId){s.sql+=' AND EXISTS(SELECT 1 FROM applied_commands WHERE command_id=?)';s.args.push(prevId);}return s;};
+/** Statement of one command's commit; the receipt statement changes a row only when the command took effect. */
+function commitStatements(i:SyncIdentity,c:Command,plan:Plan):{statements:SQL[];receiptIndex:number} {
   const statements=plan.receiptOnly
-    ? [chain(plan.first!),...(plan.guardStatements??[]),q('UPDATE applied_commands SET result=result WHERE command_id=? AND workspace_id=?',c.id,i.workspaceId)]
-    : plan.first ? [chain(plan.first),marker(i,c,plan.result,true)]
-      : [prevId ? markerAfter(i,c,plan.result,prevId) : marker(i,c,plan.result,false)];
+    ? [plan.first!,...(plan.guardStatements??[]),q('UPDATE applied_commands SET result=result WHERE command_id=? AND workspace_id=?',c.id,i.workspaceId)]
+    : plan.first ? [plan.first,marker(i,c,plan.result,true)] : [marker(i,c,plan.result,false)];
   statements.push(...plan.rest);
   const receiptIndex=plan.receiptOnly ? 1+(plan.guardStatements?.length??0) : plan.first ? 1 : 0;
   return {statements,receiptIndex};
 }
-/** Receipt of a rejected command in a group: only written when the command before it committed. */
-function markerAfter(i:SyncIdentity,c:Command,r:Result,prevId:string):SQL {
-  return q(`INSERT INTO applied_commands(command_id,workspace_id,membership_id,type,status,result,applied_at)
-    SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM applied_commands WHERE command_id=?)`,
-  c.id,i.workspaceId,i.membershipId,c.type,r.status,JSON.stringify(r),new Date().toISOString(),prevId);
+// An invalid JSON literal is the cheapest way to raise an SQLite error from a plain statement (no trigger):
+// `json('group_receipt_violation')` fails with `malformed JSON`, so `db.batch` aborts and rolls back.
+const ASSERT_JSON=`json('group_receipt_violation')`;
+const ids=(list:string[])=>list.map(()=>'?').join(',');
+/** All-or-nothing guard, first statement of a grouped batch: no command of the group may already have a
+ * receipt (created by a concurrent request), otherwise that receipt could stand in for a command that did
+ * not run in this batch. `n ≤ 50` (validatePush) so the statement binds ≤ 50 parameters. */
+function assertNoReceipt(commands:string[]):SQL {
+  return q(`SELECT CASE WHEN EXISTS(SELECT 1 FROM applied_commands WHERE command_id IN (${ids(commands)})) THEN ${ASSERT_JSON} END`,...commands);
+}
+/** All-or-nothing guard, last statement of a grouped batch: every command of the group must have written its
+ * own receipt (applied, noop or rejected) in this batch. Binds `n + 1` parameters (≤ 51). */
+function assertAllReceipts(commands:string[]):SQL {
+  return q(`SELECT CASE WHEN (SELECT COUNT(*) FROM applied_commands WHERE command_id IN (${ids(commands)}))<>? THEN ${ASSERT_JSON} END`,...commands,commands.length);
 }
 // UUID has been validated before interpolation; only the command's committed receipt permits side effects.
 function ack(c:Command):string { return `EXISTS(SELECT 1 FROM applied_commands WHERE command_id='${c.id}')`; }
@@ -430,7 +435,9 @@ function groupable(i:SyncIdentity,c:Command,seen:Set<string>):boolean {
   return true;
 }
 /** State after a grouped command commits as planned, so later commands of the batch plan against it.
- * A wrong guess only fails that command's CAS; it is then re-run alone with fresh reads. */
+ * This is only a guess: the group commit is all or nothing, so a guess that contradicts the database (row or
+ * version changed by another device) fails the group's last statement and the whole group is re-run
+ * sequentially on fresh reads. */
 function predict(i:SyncIdentity,c:Command,plan:Plan):void {
   if (plan.result.status!=='applied' || plan.result.noop) return;
   const entity=c.type==='homework.grade.set' ? 'homework_grade' : c.type.split('.')[0]!;
@@ -451,29 +458,30 @@ export async function push(db:D1Database,i:SyncIdentity,commands:Command[],reque
   const results:Result[]=new Array(commands.length),seen=new Set<string>();
   const cursorQuery=q(`SELECT MAX(COALESCE((SELECT MAX(seq) FROM change_log WHERE workspace_id=?),0),change_floor) cursor FROM workspaces WHERE id=?`,i.workspaceId,i.workspaceId);
   let group:Pending[]=[];
-  /** Commit grouped commands in one D1 batch (one transaction). A grouped command only takes effect when
-   * every command before it in the group committed (receipt chain), so the group keeps the request order.
-   * When the first receipt is missing, that command and every command after it are re-run sequentially
-   * on the per-command path (fresh reads); the commands before it already committed in order. */
+  /** Commit grouped commands in one D1 batch (one transaction), all or nothing. A D1 batch runs its
+   * statements in order with no other writer in between, so the group is guarded at both ends instead of
+   * chaining receipts: the first statement fails when any command of the group already has a receipt (a
+   * concurrent request would otherwise supply it), and the last fails when some command of the group did
+   * not write its own receipt (its CAS lost). Either failure rolls the whole batch back — no data row,
+   * receipt, history, change_log or notification of the group survives — and the whole group then runs
+   * through the per-command path in request order on fresh reads. */
   const flush=async(withCursor:boolean):Promise<number|undefined> => {
     if (!group.length) return undefined;
     const pending=group;group=[];
-    const statements:SQL[]=[],receipts:number[]=[];
-    for (const [k,{c,plan}] of pending.entries()) {
-      const built=commitStatements(i,c,plan,k===0 ? null : pending[k-1]!.c.id);
-      receipts.push(statements.length+built.receiptIndex);statements.push(...built.statements);
-    }
+    const commandIds=pending.map(({c})=>c.id),statements:SQL[]=[assertNoReceipt(commandIds)];
+    for (const {c,plan} of pending) statements.push(...commitStatements(i,c,plan).statements);
+    statements.push(assertAllReceipts(commandIds));
     if (withCursor) statements.push(cursorQuery);
-    let batch:D1Result<Row>[]|null=null;
-    try {batch=await db.batch<Row>(statements.map(s=>stmt(db,s)));} catch {batch=null;}
-    const receiptOf=(k:number)=>batch ? (batch[receipts[k]!]!.meta.changes ?? 0) : 0;
-    const failed=pending.findIndex((_,k)=>receiptOf(k)===0);
-    const committed=failed===-1 ? pending.length : failed;
-    for (const [k,{index,plan}] of pending.slice(0,committed).entries()) results[index]=plan.result;
-    if (failed===-1) return withCursor ? batch![statements.length-1]!.results[0]!.cursor : undefined;
-    i.syncState?.clear();i.attendanceCompleteness?.clear();
-    for (const {index,c} of pending.slice(failed)) results[index]=await apply(db,i,c,requestId,levelsEnabled,false);
-    return undefined;
+    let batch:D1Result<Row>[];
+    try {
+      batch=await db.batch<Row>(statements.map(s=>stmt(db,s)));
+    } catch {
+      i.syncState?.clear();i.attendanceCompleteness?.clear();
+      for (const {index,c} of pending) results[index]=await apply(db,i,c,requestId,levelsEnabled,false);
+      return undefined;
+    }
+    for (const {index,plan} of pending) results[index]=plan.result;
+    return withCursor ? batch[statements.length-1]!.results[0]!.cursor : undefined;
   };
   for (const [index,c] of commands.entries()) {
     const preloaded=!seen.has(c.id);
@@ -619,13 +627,14 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
             defaults.set(item.student_id,{criteria:item.criteria,comment,levels:null,skillLevels:null,criteriaLevels:null});
         }
       }
-        const students=[...selected] as string[];
-        // Đọc trước điểm danh và phiếu của mọi em trong một batch (mỗi statement ≤100 bind: workspace_id,
-        // session_id, ≤98 student_id) thay vì hai lượt đọc D1 cho từng em. Toàn bộ kế hoạch chỉ ghi sau
-        // khi đọc xong nên ảnh chụp dữ liệu và thứ tự xử lý không đổi.
+        // Đọc trước điểm danh và phiếu của các em có id hợp lệ trong một batch (mỗi statement ≤100 bind:
+        // workspace_id, session_id, ≤98 student_id) thay vì hai lượt đọc D1 cho từng em. Id sai định dạng
+        // không được bind vào preload: vòng lặp vẫn gọi student() theo thứ tự cũ nên mã lỗi và thứ tự ưu
+        // tiên lỗi không đổi. Toàn bộ kế hoạch chỉ ghi sau khi đọc xong nên ảnh chụp dữ liệu không đổi.
+        const preload=[...selected].filter((sid):sid is string=>typeof sid==='string' && uuid.test(sid));
         const attendance=new Map<string,Row>(),slips=new Map<string,Row>();
-        for(let offset=0;offset<students.length;offset+=98) {
-          const chunk=students.slice(offset,offset+98),marks=chunk.map(()=>'?').join(',');
+        for(let offset=0;offset<preload.length;offset+=98) {
+          const chunk=preload.slice(offset,offset+98),marks=chunk.map(()=>'?').join(',');
           const rows=await db.batch<Row>([
             db.prepare(`SELECT student_id,status,version FROM attendance WHERE workspace_id=? AND session_id=? AND student_id IN (${marks})`)
               .bind(i.workspaceId,session.id,...chunk),
@@ -636,7 +645,7 @@ async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:b
           for(const r of rows[1]!.results) slips.set(r.student_id,r);
         }
         const sent:string[]=[],skipped:Row[]=[],guards:SQL[]=[];
-      for (const sid of students) {
+      for (const sid of selected) {
         await student(db,i,sid,session,session.date);
         const att=attendance.get(sid as string);
         if (classBatch && att && !DEFAULT_SLIP_ATTENDANCE.includes(att.status)) {
