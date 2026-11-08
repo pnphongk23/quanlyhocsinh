@@ -2,6 +2,7 @@ import type { CriteriaLevel, CriteriaSetItem } from "../../data/api/types";
 import type { HomeworkGrade } from "../../data/types";
 import { homeworkLevelFromGrades } from "../../data/criteriaLevels";
 import { applyHomeworkAbsenceRule } from "../../data/criteriaSetModel";
+import { appendedCommentText, composeCriteriaComment } from "../../data/slip";
 
 export type CriteriaLevelSnapshot = import("../../data/types").CriteriaSlipLevel;
 
@@ -11,20 +12,7 @@ export interface CustomCriteriaDraft {
   hwManual: boolean;
 }
 
-export function generatedCriteriaText(criteria: readonly CriteriaLevelSnapshot[]): string {
-  return criteria.map((item) => item.text ?? "").filter(Boolean).join(" ");
-}
-
-export function appendedCommentText(comment: string, criteria: readonly CriteriaLevelSnapshot[]): string {
-  const generated = generatedCriteriaText(criteria);
-  if (!generated) return comment.trim();
-  if (comment === generated) return "";
-  return comment.startsWith(`${generated} `) ? comment.slice(generated.length + 1) : comment;
-}
-
-export function composeCriteriaComment(criteria: readonly CriteriaLevelSnapshot[], appended = ""): string {
-  return [generatedCriteriaText(criteria), appended.trim()].filter(Boolean).join(" ");
-}
+export { appendedCommentText, composeCriteriaComment, generatedCriteriaText } from "../../data/slip";
 
 export function createCriteriaDraft(
   set: readonly CriteriaSetItem[],
@@ -56,7 +44,8 @@ export function reconcileCriteriaDraft(
   const criteria = applicable.criteria.map((item) => {
     const old = oldById.get(item.id);
     const level = item.homework && applicable.hwManual
-      ? item.default_level
+      // Buổi trước không giao BTVN nhưng đây là tiêu chí duy nhất: giữ lựa chọn tay của giáo viên.
+      ? old?.level ?? item.default_level
       : item.homework && previousHomeworkGiven && !previous.hwManual
         ? homeworkLevelFromGrades(previousGrades)
       : old?.level ?? item.default_level;

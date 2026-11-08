@@ -45,7 +45,8 @@ describe("custom criteria ticket model", () => {
     expect(draft).toMatchObject({ hwManual: true, criteria: [{ id: "hw", level: "good", text: "Tốt 1." }] });
     expect(criteriaScore(draft.criteria)).toMatchObject({ total: 1, good: 1, stars: 5 });
     const reconciled = reconcileCriteriaDraft({ ...draft, criteria: [{ ...draft.criteria[0]!, level: "needs_work" }] }, [homework], [], false);
-    expect(reconciled).toMatchObject({ hwManual: true, criteria: [{ level: "good" }] });
+    // Buổi trước không giao BTVN nhưng đây là tiêu chí duy nhất: giữ lựa chọn tay của giáo viên.
+    expect(reconciled).toMatchObject({ hwManual: true, criteria: [{ level: "needs_work", text: "Cần cố gắng 1." }] });
   });
 
   it("omits homework beside other criteria when none was assigned and uses the lowest prior grade otherwise", () => {
