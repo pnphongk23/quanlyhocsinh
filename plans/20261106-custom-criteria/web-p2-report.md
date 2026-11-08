@@ -32,6 +32,16 @@
 
 Kiểm DOM trên mọi ảnh phiếu/danh sách: không có chuỗi “Chấm riêng”, không có “Hôm nay học”. Số hàng tiêu chí và điểm sao đúng dữ liệu: N=6 → 6 hàng `4/6`; N=1 → 1 hàng `1/1`; N=8 → 8 hàng `4/8` (cả 390 và 1440); bộ chỉ BTVN không có BTVN buổi trước → 1 hàng `1/1` + “Buổi trước không giao BTVN”; phiếu cũ thang 5 → `4/5 sao`, 5 ô tick kiểu cũ.
 
+## Sửa theo review R1
+
+- `planRegradedSlip` có nhánh cho phiếu `criteria_levels`: chấm lại BTVN cập nhật mức tiêu chí BTVN trong bản chụp (trừ khi chỉnh tay), dựng lại câu theo bộ hiện hành, giữ phần gõ thêm và gửi `slip.set` với `criteria_levels` (không `criteria`).
+- `TicketEditor`/`CommentTicketSheet`: `levelMode` loại trừ `customMode`, mọi effect/đường ghi `levels`/`skill_levels` cũ không chạy cho phiếu theo bộ tiêu chí.
+- Gán tất cả mặc định: tách phần gõ thêm trong ô nhận xét nhờ `text` trong bản chụp rồi nối lại sau câu mặc định.
+- Bộ chỉ có tiêu chí BTVN, buổi trước không giao BTVN: reconcile giữ mức chọn tay khi `hw_manual`; test cũ khẳng định hành vi sai đã sửa.
+- `useCriteriaSet` theo dõi hàng cache trong Dexie (`liveQuery` + hook ghi của bảng, không đọc định kỳ) nên màn đang mở nhận bộ mới ngay.
+- Test tái hiện đặt trong repo: `src/data/repositories/comments.regrade.test.ts`, `src/features/comments/TicketEditor.legacyLevels.test.tsx`, `src/features/comments/useCriteriaSet.test.tsx`, ca cập nhật ở `customCriteriaModel.test.ts` — tất cả FAIL trước khi sửa, PASS sau. Bộ tái hiện của reviewer cũng 5/5 PASS.
+- `npm test -- --maxWorkers=2`: 150 file passed, 2 skipped; 1094 test passed, 4 skipped. `npm run build` và `git diff --check` đạt. Ảnh `p2-slip6-1440`, `p2-list-1440` chụp lại không đổi giao diện.
+
 ## Ghi chú soát ảnh
 
 - Phiếu cũ: fixture cũ sai (`scale: 3` kèm `criteria` 5 bit nên ra “4/3 sao”); dữ liệu thật của phiếu cũ thang 5 là `scale: 5` + 4/5 bit + `stars: 4`, đã sửa fixture và chụp lại. Code không sai: nhánh này giống `develop`.
