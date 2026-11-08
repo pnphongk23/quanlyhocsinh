@@ -131,6 +131,20 @@ export default function CommentTicketSheet({
   const baselineSkillLevels = row.comment?.skillLevels ?? defaultSkillLevels(gradedSkills);
   const baselineLevelComment = row.comment?.comment ?? levelComment(baselineLevels, baselineSkillLevels);
     const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
+    // Phiếu có thể về sau khi sheet đã dựng nháp từ mức mặc định: chưa sửa gì thì nạp lại bản chụp đã lưu.
+    const savedSlipLevels = row.comment?.criteriaLevels;
+    const appliedSlip = useRef<string | null>(savedSlipLevels ? `${row.comment?.updatedAt ?? ""}:${savedSlipLevels.map((item) => `${item.id}:${item.level}`).join(",")}` : null);
+    useEffect(() => {
+      if (!customMode || !criteriaSet || !savedSlipLevels) return;
+      const signature = `${row.comment?.updatedAt ?? ""}:${savedSlipLevels.map((item) => `${item.id}:${item.level}`).join(",")}`;
+      if (appliedSlip.current === signature) return;
+      appliedSlip.current = signature;
+      if (readDraft(session.id, row.student.id)) return;
+      const nextCustom = { criteria: savedSlipLevels, comment: row.comment?.comment ?? "", hwManual: row.comment?.hwManual ?? false };
+      setCustomDraft(nextCustom);
+      draft.current = { ...draft.current, criteriaLevels: nextCustom.criteria, comment: nextCustom.comment, note: row.comment?.note ?? "", hwManual: nextCustom.hwManual };
+      setNote(row.comment?.note ?? "");
+    }, [customMode, criteriaSet?.version, savedSlipLevels, row.comment?.updatedAt]);
     useEffect(() => {
       if (!customMode || !criteriaSet) return;
       setCustomDraft((current) => {

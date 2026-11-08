@@ -125,6 +125,24 @@ export default function TicketEditor({
   const [saving, setSaving] = useState(false);
   const [unsaved, setUnsaved] = useState(canWrite && (!row.comment || Boolean(stored)));
     const gradeKey = previousGrades.map((grade) => `${grade.sectionId}:${grade.level}`).join("|");
+    // Phiếu có thể về sau khi panel đã dựng nháp từ mức mặc định (mở trước lúc tải xong).
+    // Người dùng chưa sửa gì thì nạp lại đúng bản chụp đã lưu, để hiện và lưu không bị đè bằng mặc định.
+    const savedSlipLevels = row.comment?.criteriaLevels;
+    const appliedSlip = useRef<string | null>(savedSlipLevels ? `${row.comment?.updatedAt ?? ""}:${savedSlipLevels.map((item) => `${item.id}:${item.level}`).join(",")}` : null);
+    useEffect(() => {
+      if (!customMode || !criteriaSet || !savedSlipLevels) return;
+      const signature = `${row.comment?.updatedAt ?? ""}:${savedSlipLevels.map((item) => `${item.id}:${item.level}`).join(",")}`;
+      if (appliedSlip.current === signature) return;
+      appliedSlip.current = signature;
+      if (readDraft(session.id, row.student.id)) return;
+      const nextCustom = { criteria: savedSlipLevels, comment: row.comment?.comment ?? "", hwManual: row.comment?.hwManual ?? false };
+      setCustomDraft(nextCustom);
+      draft.current = { ...draft.current, criteriaLevels: nextCustom.criteria, comment: nextCustom.comment, note: row.comment?.note ?? "", hwManual: nextCustom.hwManual };
+      savedComment.current = nextCustom.comment;
+      savedNote.current = row.comment?.note ?? "";
+      setNote(row.comment?.note ?? "");
+      setUnsaved(false);
+    }, [customMode, criteriaSet?.version, savedSlipLevels, row.comment?.updatedAt]);
     useEffect(() => {
       if (!customMode || !criteriaSet) return;
       setCustomDraft((current) => {
