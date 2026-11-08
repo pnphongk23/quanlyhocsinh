@@ -1,14 +1,15 @@
 import type { Identity, Permissions, PermGroup } from '../types';
 import { ApiError, notFound, validationError, conflict, forbidden, errorBody, passwordChangeRequired, featureDisabled } from '../lib/errors';
 import { assertStaffWrite, requireAccess, mapTriggerError } from './authz';
-import { assertSessionAttendanceComplete } from './attendance';
+import { ATTENDANCE_MISSING_SQL, assertSessionAttendanceComplete } from './attendance';
 
 type Row = Record<string, any>;
-type SyncIdentity = Identity & { syncState?: Map<string,Row|null>; attendanceCompleteness?: Map<string,number>; timezone?: string };
+type SyncIdentity = Identity & { syncState?: Map<string,Row|null>; attendanceCompleteness?: Map<string,number>; timezone?: string;
+  today?: string; receipts?: Map<string,Row> };
 type SQL = { sql: string; args: any[] };
 export interface Command { id: string; type: string; base_version: number; created_at: string; payload: Row }
 type Result = { id: string; status: string; [key: string]: any };
-type Plan = { result: Result; first?: SQL; rest: SQL[]; receiptOnly?: boolean; guardStatements?: SQL[] };
+type Plan = { result: Result; first?: SQL; rest: SQL[]; receiptOnly?: boolean; guardStatements?: SQL[]; values?: Row };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const types = new Set(['attendance.set','score.set','slip.set','homework.grade.set',
   'test.create','test.update','test.delete','slip.send','homework.assign',
@@ -59,24 +60,29 @@ export function validatePush(body: Row): { membership_id: string; commands: Comm
 /** The queue's membership is independent of the currently selected role. */
 export async function syncIdentity(db: D1Database,current: Identity,membershipId: unknown): Promise<Identity> {
   if (current.mustChangePassword) throw passwordChangeRequired();
-  const m=await one(db,`SELECT m.*,r.name role_name,r.system_key,r.scope_kind,w.name workspace_name
-    FROM memberships m JOIN roles r ON r.id=m.role_id JOIN workspaces w ON w.id=m.workspace_id
-    WHERE m.id=? AND m.user_id=? AND m.status='active'`,id(membershipId),current.userId);
+  const membership=id(membershipId);
+  // One round trip: the dependent reads find the membership through the same subquery inside one batch snapshot.
+  const active=`(SELECT %s FROM memberships WHERE id=? AND user_id=? AND status='active')`;
+  const of=(column:string)=>active.replace('%s',column);
+  const rows=await db.batch<Row>([
+    db.prepare(`SELECT m.*,r.name role_name,r.system_key,r.scope_kind,w.name workspace_name
+      FROM memberships m JOIN roles r ON r.id=m.role_id JOIN workspaces w ON w.id=m.workspace_id
+      WHERE m.id=? AND m.user_id=? AND m.status='active'`).bind(membership,current.userId),
+    db.prepare(`SELECT perm_group,level FROM role_permissions WHERE role_id=${of('role_id')}`).bind(membership,current.userId),
+    db.prepare(`SELECT DISTINCT s.class_id FROM guardian_student g JOIN students s ON s.id=g.student_id
+      WHERE g.workspace_id=${of('workspace_id')} AND g.user_id=?`).bind(membership,current.userId,current.userId),
+    db.prepare(`SELECT class_id FROM member_classes WHERE workspace_id=${of('workspace_id')} AND membership_id=?`).bind(membership,current.userId,membership),
+    db.prepare(`SELECT student_id FROM guardian_student WHERE workspace_id=${of('workspace_id')} AND user_id=?`).bind(membership,current.userId,current.userId),
+  ]);
+  const m=rows[0]!.results[0];
   if (!m) throw notFound();
   const guardian=m.scope_kind==='linked_students';
-  const rows=await db.batch([
-    db.prepare('SELECT perm_group,level FROM role_permissions WHERE role_id=?').bind(m.role_id),
-    guardian ? db.prepare(`SELECT DISTINCT s.class_id FROM guardian_student g JOIN students s ON s.id=g.student_id
-      WHERE g.workspace_id=? AND g.user_id=?`).bind(m.workspace_id,current.userId)
-      : db.prepare('SELECT class_id FROM member_classes WHERE workspace_id=? AND membership_id=?').bind(m.workspace_id,m.id),
-    db.prepare('SELECT student_id FROM guardian_student WHERE workspace_id=? AND user_id=?').bind(m.workspace_id,current.userId),
-  ]);
   const permissions=Object.fromEntries(['classes','students','sessions_attendance','scores','lectures','comments_reports','send_comments'].map(g=>[g,'none'])) as Permissions;
-  for (const r of rows[0]!.results as Row[]) permissions[r.perm_group as PermGroup]=r.level;
+  for (const r of rows[1]!.results) permissions[r.perm_group as PermGroup]=r.level;
   return {...current,membershipId:m.id,workspaceId:m.workspace_id,workspaceName:m.workspace_name,
     roleId:m.role_id,roleName:m.role_name,roleSystemKey:m.system_key,scopeKind:m.scope_kind,
-    scopeEpoch:m.scope_epoch,permissions,classIds:(rows[1]!.results as Row[]).map(r=>r.class_id),
-    linkedStudentIds:guardian ? (rows[2]!.results as Row[]).map(r=>r.student_id) : []};
+    scopeEpoch:m.scope_epoch,permissions,classIds:rows[guardian ? 2 : 3]!.results.map(r=>r.class_id),
+    linkedStudentIds:guardian ? rows[4]!.results.map(r=>r.student_id) : []};
 }
 /** Read all known command targets together before writes. Dependencies created by earlier commands
  * and CAS retries use fresh reads; affected tables are evicted after every committed command. */
@@ -111,6 +117,16 @@ async function initialState(db:D1Database,i:SyncIdentity,commands:Command[]):Pro
     cellQueries.push({table:def.table,k1,k2});
     queries.push(q(`SELECT * FROM ${def.table} WHERE workspace_id=? AND ${def.key}=? AND student_id=?`,i.workspaceId,k1,k2));
   }
+  // Receipts of every command id in any workspace: replaces the first per-command `prior` read.
+  const commandIds=[...new Set(commands.map(c=>c.id))],receiptStart=queries.length;
+  for(let offset=0;offset<commandIds.length;offset+=99) {
+    const chunk=commandIds.slice(offset,offset+99);
+    queries.push(q(`SELECT command_id,workspace_id,membership_id,result FROM applied_commands WHERE command_id IN (${chunk.map(()=>'?').join(',')})`,...chunk));
+  }
+  // Attendance completeness of sessions targeted by slip.set, so those commands need no read while planning.
+  const slipSessions=[...new Set(commands.filter(c=>c.type==='slip.set' && typeof c.payload.session_id==='string' && uuid.test(c.payload.session_id)).map(c=>c.payload.session_id as string))];
+  const missingStart=queries.length;
+  for(const sessionId of slipSessions) queries.push(q(ATTENDANCE_MISSING_SQL,i.workspaceId,sessionId));
   const results=await db.batch<Row>(queries.map(s=>stmt(db,s)));
   i.timezone=results[0]!.results[0]!.timezone;
   i.syncState=new Map();
@@ -119,6 +135,9 @@ async function initialState(db:D1Database,i:SyncIdentity,commands:Command[]):Pro
       for(const row of results[idx+1]!.results) i.syncState!.set(`${table}:${row.id}`,row);
     });
     cellQueries.forEach((c,idx)=>i.syncState!.set(`${c.table}:${c.k1}:${c.k2}`,results[targetChunks.length+idx+1]!.results[0]??null));
+  i.receipts=new Map();
+  for(const r of results.slice(receiptStart,missingStart)) for(const row of r.results) i.receipts.set(row.command_id,row);
+  slipSessions.forEach((sessionId,idx)=>i.attendanceCompleteness?.set(sessionId,results[missingStart+idx]!.results[0]?.missing_count ?? 0));
 }
 async function stateRow(db:D1Database,i:SyncIdentity,table:string,key:string,second?:string):Promise<Row|null> {
   const cacheKey=`${table}:${key}${second ? ':'+second : ''}`;
@@ -158,8 +177,10 @@ function version(c:Command,row:Row):void {
   if (c.base_version>row.version) throw validationError(undefined,'base_version_ahead');
 }
 async function prior(db:D1Database,i:SyncIdentity,c:Command):Promise<Result|null> {
-  const row=await one(db,'SELECT membership_id,workspace_id,result FROM applied_commands WHERE command_id=? AND workspace_id=?',c.id,i.workspaceId);
-  if (!row) return null;
+  return receiptResult(i,c,await one(db,'SELECT membership_id,workspace_id,result FROM applied_commands WHERE command_id=? AND workspace_id=?',c.id,i.workspaceId));
+}
+function receiptResult(i:SyncIdentity,c:Command,row:Row|null|undefined):Result|null {
+  if (!row || row.workspace_id!==i.workspaceId) return null;
   if (row.membership_id!==i.membershipId) return {id:c.id,status:'rejected',error:{code:'conflict',message:'Conflict.',details:{reason:'retry'}}};
   const original=JSON.parse(row.result);
   if(original.status==='rejected')return original;
@@ -175,13 +196,18 @@ function marker(i:SyncIdentity,c:Command,r:Result,conditional:boolean):SQL {
 }
 /** CAS + receipt + side effects are atomic for one command, never the whole HTTP batch. */
 async function commit(db:D1Database,i:SyncIdentity,c:Command,plan:Plan):Promise<boolean> {
+  const {statements,receiptIndex}=commitStatements(i,c,plan);
+  const results=await db.batch(statements.map(s=>stmt(db,s)));
+  return (results[receiptIndex]!.meta.changes ?? 0)>0;
+}
+/** The statements of one command's commit; the receipt statement changes a row only when the command took effect. */
+function commitStatements(i:SyncIdentity,c:Command,plan:Plan):{statements:SQL[];receiptIndex:number} {
   const statements=plan.receiptOnly
     ? [plan.first!,...(plan.guardStatements??[]),q('UPDATE applied_commands SET result=result WHERE command_id=? AND workspace_id=?',c.id,i.workspaceId)]
     : plan.first ? [plan.first,marker(i,c,plan.result,true)] : [marker(i,c,plan.result,false)];
   statements.push(...plan.rest);
-  const results=await db.batch(statements.map(s=>stmt(db,s)));
   const receiptIndex=plan.receiptOnly ? 1+(plan.guardStatements?.length??0) : plan.first ? 1 : 0;
-  return (results[receiptIndex]!.meta.changes ?? 0)>0;
+  return {statements,receiptIndex};
 }
 // UUID has been validated before interpolation; only the command's committed receipt permits side effects.
 function ack(c:Command):string { return `EXISTS(SELECT 1 FROM applied_commands WHERE command_id='${c.id}')`; }
@@ -332,8 +358,9 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string,lev
   if (entity==='attendance') {
     if (parent.status==='cancelled') throw conflict('session_cancelled');
     const timezone=i.timezone ?? (await one(db,'SELECT timezone FROM workspaces WHERE id=?',i.workspaceId))!.timezone;
-    const today=new Intl.DateTimeFormat('en-CA',{timeZone:timezone}).format(new Date());
-    if (parent.date>today) throw validationError(undefined,'session_not_started');
+    // Build the formatter once per request, not once per command.
+    i.today ??= new Intl.DateTimeFormat('en-CA',{timeZone:timezone}).format(new Date());
+    if (parent.date>i.today) throw validationError(undefined,'session_not_started');
   }
   if (entity==='score' && parent.archived) throw notFound();
   let values:Row;
@@ -375,22 +402,105 @@ async function cellPlan(db:D1Database,i:SyncIdentity,c:Command,entity:string,lev
     const rest:SQL[]=[];
   if (entity==='attendance') rest.push(q(`UPDATE class_sessions SET status='held',version=version+1,updated_at=?,updated_by=? WHERE workspace_id=? AND id=? AND status='planned' AND ${ack(c)}`,now,i.userId,i.workspaceId,parent.id));
     if (entity==='score' && values.value!==null && (!row || row.value!==values.value)) rest.push(notifications(i,c,'score_updated',parent.class_id,p.student_id,null,parent.id,now));
-    return {result,first,rest};
+    return {result,first,rest,values};
+}
+const GROUPED=new Set(['attendance.set','score.set','homework.grade.set','slip.set']);
+type Pending={index:number;c:Command;plan:Plan};
+/** A cell command can join the shared commit batch only when planning it needs no D1 read:
+ * every row it checks is in the request state and its receipt lookup was preloaded. */
+function groupable(i:SyncIdentity,c:Command,seen:Set<string>):boolean {
+  if (!GROUPED.has(c.type) || seen.has(c.id) || i.receipts?.has(c.id) || !i.syncState) return false;
+  const entity=c.type==='homework.grade.set' ? 'homework_grade' : c.type.split('.')[0]!;
+  const def=cells[entity]!,key=c.payload[def.key],sid=c.payload.student_id;
+  if (typeof key!=='string' || typeof sid!=='string') return false;
+  const parent=i.syncState.get(`${def.parent}:${key}`);
+  if (!parent || !i.syncState.has(`students:${sid}`) || !i.syncState.has(`${def.table}:${key}:${sid}`)) return false;
+  if (entity==='attendance' && !i.timezone) return false;
+  if (entity==='slip' && parent.status!=='cancelled' && !i.attendanceCompleteness?.has(key)) return false;
+  return true;
+}
+/** State after a grouped command commits as planned, so later commands of the batch plan against it.
+ * A wrong guess only fails that command's CAS; it is then re-run alone with fresh reads. */
+function predict(i:SyncIdentity,c:Command,plan:Plan):void {
+  if (plan.result.status!=='applied' || plan.result.noop) return;
+  const entity=c.type==='homework.grade.set' ? 'homework_grade' : c.type.split('.')[0]!;
+  const def=cells[entity]!,p=c.payload,cellKey=`${def.table}:${p[def.key]}:${p.student_id}`;
+  const row=i.syncState!.get(cellKey),parent=i.syncState!.get(`${def.parent}:${p[def.key]}`)!;
+  const values=Object.fromEntries(def.fields.map(f=>[f,plan.values![f]]));
+  i.syncState!.set(cellKey,row ? {...row,...values,version:row.version+1}
+    : {workspace_id:i.workspaceId,class_id:parent.class_id,[def.key]:parent.id,student_id:p.student_id,...values,
+      ...(entity==='slip' ? {status:'draft',sent_at:null} : {}),version:1});
+  if (entity==='attendance') {
+    i.attendanceCompleteness?.delete(parent.id);
+    if (parent.status==='planned') i.syncState!.set(`${def.parent}:${parent.id}`,{...parent,status:'held',version:parent.version+1});
+  }
 }
 export async function push(db:D1Database,i:SyncIdentity,commands:Command[],requestId:string,levelsEnabled=false) {
   i={...i,attendanceCompleteness:new Map()};
   await initialState(db,i,commands);
-  const results:Result[]=[];
-  for (const c of commands) {
-    let result:Result|null=await prior(db,i,c);
-    if (result) {if(result.status==='rejected') result.error.request_id ??= requestId;results.push(result);continue;}
+  const results:Result[]=new Array(commands.length),seen=new Set<string>();
+  const cursorQuery=q(`SELECT MAX(COALESCE((SELECT MAX(seq) FROM change_log WHERE workspace_id=?),0),change_floor) cursor FROM workspaces WHERE id=?`,i.workspaceId,i.workspaceId);
+  let group:Pending[]=[];
+  /** Commit grouped commands in one D1 batch (one transaction). Each command keeps its own CAS and receipt;
+   * one that did not take effect, or every command when the batch throws, is re-run on the per-command path. */
+  const flush=async(withCursor:boolean):Promise<number|undefined> => {
+    if (!group.length) return undefined;
+    const pending=group;group=[];
+    const statements:SQL[]=[],receipts:number[]=[];
+    for (const {c,plan} of pending) {
+      const built=commitStatements(i,c,plan);
+      receipts.push(statements.length+built.receiptIndex);statements.push(...built.statements);
+    }
+    if (withCursor) statements.push(cursorQuery);
+    let batch:D1Result<Row>[]|null=null;
+    try {batch=await db.batch<Row>(statements.map(s=>stmt(db,s)));} catch {batch=null;}
+    const retry=pending.filter((_,k)=>!batch || (batch[receipts[k]!]!.meta.changes ?? 0)===0);
+    for (const [k,{index,plan}] of pending.entries()) if (batch && (batch[receipts[k]!]!.meta.changes ?? 0)>0) results[index]=plan.result;
+    if (!retry.length) return withCursor ? batch![statements.length-1]!.results[0]!.cursor : undefined;
+    i.syncState?.clear();i.attendanceCompleteness?.clear();
+    for (const {index,c} of retry) results[index]=await apply(db,i,c,requestId,levelsEnabled,false);
+    return undefined;
+  };
+  for (const [index,c] of commands.entries()) {
+    const preloaded=!seen.has(c.id);
+    if (groupable(i,c,seen)) {
+      seen.add(c.id);
+      const plan=await planCell(db,i,c,requestId,levelsEnabled);
+      predict(i,c,plan);group.push({index,c,plan});
+      continue;
+    }
+    seen.add(c.id);
+    await flush(false);
+    results[index]=await apply(db,i,c,requestId,levelsEnabled,preloaded);
+  }
+  const cursor=await flush(true) ?? (await one(db,cursorQuery.sql,...cursorQuery.args))!.cursor;
+  return {epoch:i.scopeEpoch,cursor,results};
+}
+/** Plan a groupable cell command; a business rejection becomes its own unconditional receipt. */
+async function planCell(db:D1Database,i:SyncIdentity,c:Command,requestId:string,levelsEnabled:boolean):Promise<Plan> {
+  try {
+    checkCommand(i,c);
+    const entity=c.type==='homework.grade.set' ? 'homework_grade' : c.type.split('.')[0]!;
+    return await cellPlan(db,i,c,entity,levelsEnabled);
+  } catch (error) {
+    const mapped=error instanceof ApiError ? error : mapTriggerError(error,new ApiError(409,'conflict','Conflict.',{reason:'constraint_failed'}));
+    return {result:{id:c.id,status:'rejected',error:errorBody(mapped,requestId).error},rest:[]};
+  }
+}
+function checkCommand(i:SyncIdentity,c:Command):void {
+  if (Date.parse(c.created_at)<Date.now()-90*86400000) throw validationError(undefined,'command_expired');
+  assertStaffWrite(i);
+  if (c.type === 'slip.send' && i.permissions.send_comments !== 'write') {
+    throw forbidden();
+  }
+}
+/** Per-command path: CAS + receipt + side effects in one D1 batch, up to three attempts. */
+async function apply(db:D1Database,i:SyncIdentity,c:Command,requestId:string,levelsEnabled:boolean,preloaded:boolean):Promise<Result> {
+    let result:Result|null=preloaded && i.receipts ? receiptResult(i,c,i.receipts.get(c.id)) : await prior(db,i,c);
+    if (result) {if(result.status==='rejected') result.error.request_id ??= requestId;return result;}
     for (let attempt=0;attempt<3;attempt++) {
       try {
-        if (Date.parse(c.created_at)<Date.now()-90*86400000) throw validationError(undefined,'command_expired');
-        assertStaffWrite(i);
-        if (c.type === 'slip.send' && i.permissions.send_comments !== 'write') {
-          throw forbidden();
-        }
+        checkCommand(i,c);
         const entity=c.type==='homework.grade.set' ? 'homework_grade' : c.type.split('.')[0]!;
         const plan=cells[entity] && c.type.endsWith('.set') ? await cellPlan(db,i,c,entity,levelsEnabled) : await objectPlan(db,i,c,levelsEnabled);
         if (plan.result.status==='rejected') plan.result.error.request_id=requestId;
@@ -420,10 +530,7 @@ export async function push(db:D1Database,i:SyncIdentity,commands:Command[],reque
       try {await commit(db,i,c,{result,rest:[]});} catch {result=await prior(db,i,c) ?? result;}
     }
     if (result.status==='rejected') result.error.request_id ??= requestId;
-    results.push(result);
-  }
-  const row=await one(db,`SELECT MAX(COALESCE((SELECT MAX(seq) FROM change_log WHERE workspace_id=?),0),change_floor) cursor FROM workspaces WHERE id=?`,i.workspaceId,i.workspaceId);
-  return {epoch:i.scopeEpoch,cursor:row!.cursor,results};
+    return result;
 }
 
 async function objectPlan(db:D1Database,i:SyncIdentity,c:Command,levelsEnabled:boolean):Promise<Plan> {
