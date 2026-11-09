@@ -8,6 +8,15 @@ type AttendanceRow = {
   version: number; updated_at: string; date?: string; start_time?: string;
 };
 
+/** Students enrolled on the session date without a saved attendance state; binds workspace id, session id. */
+export const ATTENDANCE_MISSING_SQL = `SELECT COUNT(*) AS missing_count
+      FROM class_sessions cs
+      JOIN students s ON s.workspace_id=cs.workspace_id AND s.class_id=cs.class_id
+        AND s.enrolled_at<=cs.date AND (s.left_at IS NULL OR s.left_at>=cs.date)
+      LEFT JOIN attendance a ON a.workspace_id=s.workspace_id AND a.session_id=cs.id AND a.student_id=s.id
+        AND a.status IN ('present','late','absent')
+      WHERE cs.workspace_id=? AND cs.id=? AND a.student_id IS NULL`;
+
 /** Reject slip writes until every student enrolled on the session date has a saved attendance state. */
 export async function assertSessionAttendanceComplete(
   db: D1Database,
@@ -17,13 +26,7 @@ export async function assertSessionAttendanceComplete(
 ): Promise<void> {
   let missingCount = memo?.get(sessionId);
   if (missingCount === undefined) {
-    const row = await db.prepare(`SELECT COUNT(*) AS missing_count
-      FROM class_sessions cs
-      JOIN students s ON s.workspace_id=cs.workspace_id AND s.class_id=cs.class_id
-        AND s.enrolled_at<=cs.date AND (s.left_at IS NULL OR s.left_at>=cs.date)
-      LEFT JOIN attendance a ON a.workspace_id=s.workspace_id AND a.session_id=cs.id AND a.student_id=s.id
-        AND a.status IN ('present','late','absent')
-      WHERE cs.workspace_id=? AND cs.id=? AND a.student_id IS NULL`)
+    const row = await db.prepare(ATTENDANCE_MISSING_SQL)
       .bind(workspaceId, sessionId)
       .first<{ missing_count: number }>();
     missingCount = row?.missing_count ?? 0;
