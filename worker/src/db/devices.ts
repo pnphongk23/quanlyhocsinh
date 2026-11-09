@@ -7,6 +7,11 @@ import type { Identity } from '../types';
 
 export type DevicePlatform = 'ios' | 'web';
 
+// Từ 2026-11-08 web không còn push (quyết định bỏ FCM web/VAPID), nên `PUT /device-tokens`
+// chỉ nhận `ios`. 'web' giữ trong kiểu dữ liệu vì hàng cũ trong `device_tokens` vẫn còn
+// (không xoá dữ liệu cũ); không đường ghi mới nào tạo được 'web'.
+export type DevicePlatformInput = 'ios';
+
 export interface DeviceTokenView {
   id: string;
   registration_version: number;
@@ -28,9 +33,10 @@ interface DeviceTokenRow {
 
 export const MAX_TOKEN_LENGTH = 4096;
 
-function parsePlatform(raw: unknown): DevicePlatform {
-  if (raw === 'ios' || raw === 'web') return raw;
-  throw validationError({ platform: 'must_be_ios_or_web' });
+function parsePlatform(raw: unknown): DevicePlatformInput {
+  if (raw === 'ios') return raw;
+  // 'web' bị bỏ từ 2026-11-08 (web không push nữa); giá trị khác vẫn là sai định dạng.
+  throw validationError({ platform: raw === 'web' ? 'web_not_supported' : 'must_be_ios' });
 }
 
 function parseToken(raw: unknown): string {

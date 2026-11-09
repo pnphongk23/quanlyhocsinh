@@ -54,6 +54,20 @@ describe('sync commands and recovery',()=>{
     const resolved=await f.send([command('conflict.resolve',{conflict_id:uid(),choice:'client'})]);
     expect(resolved.body.results[0]).toMatchObject({status:'rejected',error:{details:{reason:'conflicts_not_used'}}});
   });
+  it('keeps the original rejection when the same rejected command is retried',async()=>{
+    const f=await setup();
+    await Promise.all([f.s1,f.s2].map((studentId) => insertAttendance(f.a.workspaceId,f.cls,f.ses,studentId,'present',f.a.userId)));
+    const cmd=command('slip.send',{session_id:f.ses,student_ids:Array.from({length:51},()=>f.s1)});
+    const first=await f.send([cmd]);
+    expect(first.body.results[0]).toMatchObject({status:'rejected',error:{code:'validation_error'}});
+    // m1 (review-impl-r2): gửi lại cùng command_id KHÔNG được trả "duplicate" mà mất lỗi —
+    // client phải thấy lại đúng lỗi gốc để không coi như đã nhận.
+    const retry=await f.send([cmd]);
+    expect(retry.body.results[0]).toMatchObject({status:'rejected',error:{code:'validation_error'}});
+    expect(retry.body.results[0].original_status).toBeUndefined();
+    expect(await db.prepare('SELECT COUNT(*) n FROM session_comments WHERE session_id=?').bind(f.ses).first<any>()).toEqual({n:0});
+    expect(await db.prepare('SELECT COUNT(*) n FROM notifications WHERE workspace_id=?').bind(f.a.workspaceId).first<any>()).toEqual({n:0});
+  });
   it('lets the later arrival win for every cell type and never records conflicts',async()=>{
     const f=await setup(),section=uid();
     await Promise.all([f.s1,f.s2].map((studentId) => insertAttendance(f.a.workspaceId,f.cls,f.ses,studentId,'present',f.a.userId)));
