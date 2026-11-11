@@ -48,22 +48,26 @@
   --leading-tight: 1.15;
   --leading-base: 1.5;
   --weight-regular: 400;
+  --weight-medium: 500;   /* tên học sinh/nhãn cần nhấn nhẹ (trước đây 500 ghi cứng) */
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  /* Khoảng cách: thang 4/8 (2 và 20 giữ cho chi tiết nhỏ và lề trang mobile) */
+  /* Khoảng cách: thang 4/8 (2, 14, 18, 20, 28 giữ cho chi tiết nhỏ và mật độ 3 mốc) */
   --space-2: 2px;
   --space-4: 4px;
   --space-8: 8px;
   --space-12: 12px;
+  --space-14: 14px;
   --space-16: 16px;
+  --space-18: 18px;
   --space-20: 20px;
   --space-24: 24px;
+  --space-28: 28px;
   --space-32: 32px;
   --space-48: 48px;
 
-  /* Khoảng cách theo vai trò (mobile; desktop ghi đè bên dưới) */
-  --page-x: var(--space-20);        /* lề ngang trang, header, tab lớp, danh sách */
+  /* Khoảng cách theo vai trò: MÓC MOBILE (< 640px); tablet và desktop ghi đè bên dưới */
+  --page-x: var(--space-16);        /* lề ngang trang, header, tab lớp, danh sách */
   --page-top: var(--space-12);
   --title-gap: var(--space-16);     /* tiêu đề trang -> nội dung */
   --section-gap: var(--space-24);   /* giữa khối trang */
@@ -72,9 +76,16 @@
   --page-gap: var(--space-12);      /* giữa các khối trong .page */
   --page-bottom: var(--space-16);   /* đáy vùng nội dung, trước khi cộng --fab-pad */
   --row-pad-y: var(--space-12);
-  --content-max: 1200px;
-  --form-max: 640px;
+  --page-max: 1200px;               /* cột nội dung căn TRÁI, không margin-inline:auto */
+  --content-max: var(--page-max);   /* tên cũ, giữ để không vỡ chỗ đang dùng */
+  --form-max: 640px;                /* cột form, căn trái cùng lề tiêu đề */
   --guardian-max: 960px;
+  --detail-w: 380px;                /* panel chi tiết bên phải ở desktop */
+  --rail-w: 72px;                   /* rail icon ở tablet */
+
+  /* Mốc khổ chỉ để tài liệu, KHÔNG dùng trong @media (viết số trực tiếp) */
+  --bp-tablet: 640px;
+  --bp-desktop: 1024px;
 
   /* Bo góc (giữ nguyên) */
   --radius-card: 16px;
@@ -207,11 +218,29 @@
   --fab-pad: var(--fab-clearance);
 }
 
+/* Mốc tablet: 640-1023px. Rail icon thay thanh tab dưới nên bỏ đệm tab bar. */
+@media (min-width: 640px) {
+  :root {
+    --page-x: var(--space-24);
+    --page-top: var(--space-16);
+    --page-bottom: var(--space-20);
+    --page-gap: var(--space-16);
+    --title-gap: var(--space-20);
+    --section-gap: var(--space-28);
+    --card-gap: var(--space-14);
+    --card-pad: var(--space-18);
+    --tabbar-total: 0px;
+    --fab-right: var(--space-24);
+    --fab-bottom: var(--space-24);
+  }
+}
+
+/* Mốc desktop: >= 1024px */
 @media (min-width: 1024px) {
   :root {
     --page-x: var(--space-32);
-    --page-top: 28px;
-    --page-bottom: 28px;
+    --page-top: var(--space-28);
+    --page-bottom: var(--space-28);
     --page-gap: var(--space-20);
     --title-gap: var(--space-24);
     --section-gap: var(--space-32);

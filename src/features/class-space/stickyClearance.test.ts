@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
  */
 const tokensCss = readFileSync("src/shared/styles/tokens.css", "utf8");
 const sessionDetailCss = readFileSync("src/features/class-space/sessionDetail.module.css", "utf8");
-const shellCss = readFileSync("src/app/shell.module.css", "utf8");
+const shellCss = readFileSync("src/shared/layout/layout.module.css", "utf8");
 
 describe("đệm đáy vùng cuộn của màn chi tiết buổi học", () => {
   it("token đệm = safe-area dưới của thanh dính + đệm trang", () => {

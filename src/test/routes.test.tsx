@@ -200,7 +200,7 @@ describe("foundation route integration", () => {
     const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
     expect(navigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     expect(navigation.querySelector('a[href="/lop"]')).toHaveAttribute("aria-current", "page");
-    const mobileNavigation = screen.getByRole("navigation", { name: "Điều hướng chính" });
+    const mobileNavigation = screen.getAllByRole("navigation", { name: "Điều hướng chính" }).at(-1)!;
     expect(mobileNavigation.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
     expect(mobileNavigation.querySelectorAll('[aria-disabled="true"]')).toHaveLength(0);
     expect(navigation.querySelectorAll("a")).toHaveLength(3);
@@ -238,9 +238,7 @@ describe("foundation route integration", () => {
       replaceStore(fixture);
       const router = open(url);
       const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
-      const selected = Array.from(navigation.querySelectorAll("a")).filter((link) =>
-        /staffNavActive/.test(link.className),
-      );
+      const selected = Array.from(navigation.querySelectorAll("a[aria-current='page']"));
       expect(selected.map((link) => link.textContent)).toEqual(["Lớp"]);
       router.dispose();
     },
@@ -253,9 +251,7 @@ describe("foundation route integration", () => {
     replaceStore(fixture);
     const router = open("/lop/6a/diem");
     const navigation = await screen.findByRole("navigation", { name: "Điều hướng nhân sự" });
-    const selected = Array.from(navigation.querySelectorAll("a")).filter(
-      (link) => /staffNavActive/.test(link.className),
-    );
+    const selected = Array.from(navigation.querySelectorAll("a[aria-current='page']"));
     expect(selected.map((link) => link.textContent)).toEqual(["Điểm số"]);
     router.dispose();
   });
