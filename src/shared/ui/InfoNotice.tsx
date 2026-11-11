@@ -13,17 +13,18 @@ export interface InfoNoticeProps {
 
 /**
  * Khối thông báo tông thông tin (không phải lỗi) dùng chung cho web (ux-design.md mục 3).
- * Mobile: tiêu đề + dòng phụ một khối, hành động xuống dưới và nhãn thẳng lề chữ tiêu đề.
- * Desktop (≥1024): hành động nằm cùng hàng bên phải.
+ * Nội dung xếp theo độ rộng khung: hẹp thì hành động xuống dưới; rộng thì nằm cùng hàng bên phải.
  */
 export function InfoNotice({ title, description, action, className }: InfoNoticeProps) {
   return (
     <div role="status" className={[s.infoNotice, className].filter(Boolean).join(" ")}>
-      <div className={s.infoNoticeText}>
-        <strong>{title}</strong>
-        {description ? <p>{description}</p> : null}
+      <div className={s.infoNoticeLayout}>
+        <div className={s.infoNoticeText}>
+          <strong>{title}</strong>
+          {description ? <p>{description}</p> : null}
+        </div>
+        {action}
       </div>
-      {action}
     </div>
   );
 }
