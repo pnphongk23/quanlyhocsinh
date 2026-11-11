@@ -9,7 +9,7 @@
 // - 5 inbox, 20 đăng ký thiết bị (kể cả dòng bị skip), 5 delivery.
 import { isoAt, nowIso } from '../lib/time';
 import {
-  readServiceAccount,
+  readServiceAccountResult,
   sendPushToDevice,
   type FcmEnv,
   type FcmKind,
@@ -339,8 +339,23 @@ export async function runNotificationDispatch(
     }
   }
 
-  const account = await readServiceAccount(env);
-  if (!account) return summary;
+  const config = await readServiceAccountResult(env);
+  if (!config.account) {
+    const due = await env.DB.prepare(
+      `SELECT 1 AS due FROM push_deliveries
+        WHERE status = 'pending' AND next_attempt_at <= ? LIMIT 1`,
+    )
+      .bind(now)
+      .first<{ due: number }>();
+    if (due) {
+      console.log(JSON.stringify({
+        code: 'fcm_config_unavailable',
+        reason: config.reason,
+      }));
+    }
+    return summary;
+  }
+  const account = config.account;
 
   const due = await env.DB.prepare(DUE_SQL)
     .bind(now, budget(options.deliveryBudget, DELIVERY_BUDGET))

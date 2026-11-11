@@ -163,6 +163,45 @@ describe('notification dispatch cron', () => {
     expect(row!.expansion_started_at).toBeNull();
   });
 
+  it('logs FCM config unavailability once for due deliveries without logging the secret', async () => {
+    const f = await setup();
+    const now = nowIso();
+    const deviceId = await insertDeviceToken(
+      f.workspaceId,
+      f.userId,
+      f.membershipId,
+      f.deviceSessionId,
+      'FAKE_FCM_CONFIG_LOG_DEVICE',
+    );
+    await db
+      .prepare('UPDATE device_tokens SET bound_at = ? WHERE id = ?')
+      .bind(isoAt(Date.parse(now) - 60_000), deviceId)
+      .run();
+    const notificationId = await seedNotification({ ...f, eventKey: 'missing-fcm-config', createdAt: now });
+    const secretMarker = 'TEST_SECRET_MARKER_MUST_NOT_APPEAR_IN_LOG';
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    const summary = await runNotificationDispatch({
+      DB: db,
+      FCM_SERVICE_ACCOUNT: JSON.stringify({ private_key: secretMarker }),
+    }, { now });
+
+    expect(summary.deliveries).toBe(1);
+    expect(log).toHaveBeenCalledTimes(1);
+    const line = String(log.mock.calls[0]?.[0]);
+    expect(JSON.parse(line)).toEqual({
+      code: 'fcm_config_unavailable',
+      reason: 'missing_fields',
+    });
+    expect(line).not.toContain(secretMarker);
+    const delivery = await db
+      .prepare('SELECT status, attempts FROM push_deliveries WHERE notification_id = ?')
+      .bind(notificationId)
+      .first<{ status: string; attempts: number }>();
+    expect(delivery).toEqual({ status: 'pending', attempts: 0 });
+    log.mockRestore();
+  });
+
   it('pages before filtering: skipped registrations consume the budget and advance the cursor', async () => {
     const f = await setup();
     const now = nowIso();
