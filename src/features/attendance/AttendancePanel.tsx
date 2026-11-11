@@ -83,7 +83,7 @@ export default function AttendancePanel({
   });
 
   useEffect(() => { onDirtyChange?.(touched); }, [touched, onDirtyChange]);
-  const save = () => { void action.submit(); };
+  const save = () => action.submit();
   useEffect(() => { if (saveRef) saveRef.current = save; });
 
   if (!access.can("sessions_attendance", "read")) return <NoAccess what="điểm danh" />;
@@ -125,10 +125,9 @@ export default function AttendancePanel({
         <tbody>{rows.map((row) => {
           const status = viewOnly ? storedFor(row.student.id)?.status ?? null : row.status;
           return <tr key={row.student.id} data-measure="row">
-            <td className={s.tableName}>{row.student.name}</td>
-            <td><div className={s.statusColumn} data-measure="status">
-              {status === null && <span className={s.unmarkedLabel}>Chưa điểm danh</span>}
-              <div className={s.statusGroup} role="group" aria-label={`Trạng thái của ${row.student.name}${status === null ? ": Chưa điểm danh" : ""}`}>
+            <td className={s.tableName}>{row.student.name}{status === null && <span className={s.unmarkedLabel}>Chưa điểm danh</span>}</td>
+            <td><div className={s.statusColumn}>
+              <div className={s.statusGroup} data-measure="status" role="group" aria-label={`Trạng thái của ${row.student.name}${status === null ? ": Chưa điểm danh" : ""}`}>
                 {summaryStates.map((state) => <button key={state} type="button" aria-pressed={status === state} disabled={viewOnly} className={`${s.segment} ${status === state ? s[`selected_${state}`] : ""}`} onClick={() => setRow(row.student.id, state)}>{labels[state]}</button>)}
               </div>
             </div></td>

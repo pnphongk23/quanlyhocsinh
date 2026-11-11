@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { RouterProvider, createMemoryRouter } from "react-router-dom";
+import type { MutableRefObject } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { replaceStore } from "../../data/store";
 import { createSeed } from "../../test/fixtures/seed";
@@ -22,9 +23,9 @@ beforeEach(() => {
   vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {} }));
 });
 
-function renderDesktop(onDirtyChange?: (dirty: boolean) => void) {
+function renderDesktop(onDirtyChange?: (dirty: boolean) => void, saveRef?: MutableRefObject<(() => unknown) | null>) {
   const router = createMemoryRouter(
-      [{ path: "/lop/:classId/buoi-hoc/:sessionId", element: <AttendancePanel classId="6a" sessionId={SESSION} variant="desktop" onDirtyChange={onDirtyChange} tabBar={(actions) => <div>{actions}</div>} /> }],
+        [{ path: "/lop/:classId/buoi-hoc/:sessionId", element: <AttendancePanel classId="6a" sessionId={SESSION} variant="desktop" onDirtyChange={onDirtyChange} saveRef={saveRef} tabBar={(actions) => <div>{actions}</div>} /> }],
     { initialEntries: [`/lop/6a/buoi-hoc/${SESSION}`] },
   );
   return render(<RouterProvider router={router} />);
@@ -91,6 +92,18 @@ describe("điểm danh buổi mới (desktop)", () => {
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     expect(save.mock.calls[0][0]).toHaveLength(1);
     expect(save.mock.calls[0][0][0]).toMatchObject({ status: "present" });
+  });
+
+  it("trả lỗi lưu qua saveRef và giữ nguyên nháp để thử lại", async () => {
+    const saveRef = { current: null as (() => unknown) | null };
+    save.mockRejectedValue(new Error("Lỗi ghi local"));
+    renderDesktop(undefined, saveRef);
+    const first = statusGroups()[0];
+    fireEvent.click(within(first).getByRole("button", { name: "Có mặt" }));
+    const result = await saveRef.current?.();
+    expect(result).toBe(false);
+    expect(within(statusGroups()[0]).getByRole("button", { name: "Có mặt" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent("Lỗi ghi local");
   });
 
   it("sau khi lưu một phần, mở lại buổi học không tự bật Lưu", async () => {

@@ -7,11 +7,11 @@ import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
 import { todayISO } from "../../shared/date";
 import { useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
-import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
-import { refreshNow, useInitialSyncPending } from "../../data/sync";
-import { PageShell, ResponsiveSlot } from "../../shared/layout";
+import { usePullToRefresh, type PullToRefreshController } from "../../shared/hooks/usePullToRefresh";
+import { refreshNow, useInitialSyncState, syncNow } from "../../data/sync";
+import { DesktopOnly, PageShell, ResponsiveSlot, useLayout } from "../../shared/layout";
 import { Button, EmptyState, Icon, LinkButton, NoAccess, Sheet, UnsavedChangesDialog } from "../../shared/ui";
-import { PullToRefresh } from "../../shared/ui/PullToRefresh";
+import { PullToRefresh, RefreshButton } from "../../shared/ui/PullToRefresh";
 import AttendancePanel from "../attendance/AttendancePanel";
 import CommentsPanel from "../comments/CommentsPanel";
 import CommentsDesktop from "../comments/CommentsDesktop";
@@ -49,31 +49,35 @@ export function SessionDetailFallback({ pending, backTo }: { pending: boolean; b
 
 export default function SessionDetailPage() {
   const { classId = "" } = useParams();
+  const refresh = usePullToRefresh(refreshNow);
   const [header, setHeader] = useState<SessionHeader>({ eyebrow: "Lớp học", title: "Chi tiết buổi học", sessionLabel: "Buổi học" });
   const backTo = `/lop/${classId}/buoi-hoc`;
   const breadcrumb = <><Link to="/lop">Lớp</Link><span aria-hidden="true">/</span><Link to={`/lop/${classId}`}>{header.title}</Link><span aria-hidden="true">/</span><span>{header.sessionLabel}</span></>;
-  return <PageShell className={s.page} breadcrumb={breadcrumb} backTo={backTo} eyebrow={header.eyebrow} title={header.title} actions={header.actions}>
+  const actions = <><DesktopOnly><RefreshButton controller={refresh} /></DesktopOnly>{header.actions}</>;
+  return <PageShell className={s.page} breadcrumb={breadcrumb} backTo={backTo} eyebrow={header.eyebrow} title={header.title} actions={actions}>
     <Suspense fallback={<div className={s.body}><p role="status">Đang tải buổi học…</p></div>}>
-      <SessionDetailBody onHeaderChange={setHeader} />
+      <SessionDetailBody onHeaderChange={setHeader} refresh={refresh} />
     </Suspense>
   </PageShell>;
 }
 
-function SessionDetailBody({ onHeaderChange }: { onHeaderChange: (header: SessionHeader) => void }) {
+function SessionDetailBody({ onHeaderChange, refresh }: { onHeaderChange: (header: SessionHeader) => void; refresh: PullToRefreshController }) {
   useStore();
-  const refresh = usePullToRefresh(refreshNow);
   const { classId = "", sessionId = "" } = useParams();
   const navigate = useNavigate();
   const access = useAccess();
   const klass = getSessionClass(sessionId);
   const session = getSession(sessionId);
-  const initialSyncPending = useInitialSyncPending();
+  const initialSyncState = useInitialSyncState();
+  const layout = useLayout();
   const future = session ? session.date > todayISO() : false;
   const canWrite = access.can("sessions_attendance", "write");
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = sessionTabOf(searchParams.get("tab"));
   const [attendanceDirty, setDirty] = useState(false);
-  const [homeworkDirty, setHomeworkDirty] = useState(false);
+  const [mobileHomeworkDirty, setMobileHomeworkDirty] = useState(false);
+  const [desktopHomeworkDirty, setDesktopHomeworkDirty] = useState(false);
+  const homeworkDirty = mobileHomeworkDirty || desktopHomeworkDirty;
   const dirty = attendanceDirty || homeworkDirty;
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -88,7 +92,8 @@ function SessionDetailBody({ onHeaderChange }: { onHeaderChange: (header: Sessio
 
   useEffect(() => {
     setDirty(false);
-    setHomeworkDirty(false);
+    setMobileHomeworkDirty(false);
+    setDesktopHomeworkDirty(false);
     setError("");
     setMenuOpen(false);
   }, [sessionId]);
@@ -145,36 +150,27 @@ function SessionDetailBody({ onHeaderChange }: { onHeaderChange: (header: Sessio
 
   const missingSession = hasSession(sessionId)
     ? <NoAccess what="buổi học này" />
-    : <SessionDetailFallback pending={initialSyncPending} backTo={backTo} />;
+    : initialSyncState === "error" || initialSyncState === "offline" ? <EmptyState title={initialSyncState === "offline" ? "Không có mạng" : "Không tải được buổi học"} description={initialSyncState === "offline" ? "Kết nối mạng rồi thử lại." : "Đã xảy ra lỗi khi tải dữ liệu."} action={<Button variant="secondary" onClick={() => void syncNow()}>Thử lại</Button>} /> : <SessionDetailFallback pending={initialSyncState !== "success"} backTo={backTo} />;
   const cancelledContent = session && cancelled ? <>
     <div className={s.dateCard} data-measure="block"><p className={s.dateTitle}>{formatWeekdayDate(session.date)}</p><p className={s.dateMeta}>{sessionPrefix(session)} · đã huỷ</p></div>
     <EmptyState title="Buổi này đã huỷ" description="Không cần điểm danh." action={<LinkButton variant="secondary" size="lg" to={backTo}>Về danh sách buổi</LinkButton>} />
   </> : null;
-  const mobileContent = <div className={s.body}>
-    <PullToRefresh controller={refresh} />
-    {session ? cancelled ? cancelledContent : <>
-      {tabBar()}
-      {error && <p role="alert" className={s.error}>{error}</p>}
-      <div className={s.tabPane} hidden={tab !== "diem-danh"}><AttendancePanel classId={classId} sessionId={session.id} variant="mobile" readOnly={future} onDirtyChange={setDirty} saveRef={saveRef} /></div>
-      <div className={s.tabPane} hidden={tab !== "nhan-xet"}><CommentsPanel classId={classId} sessionId={session.id} readOnly={future} /></div>
-      <div className={s.tabPane} hidden={tab !== "btvn"}><HomeworkPanel session={session} onDirtyChange={setHomeworkDirty} /></div>
-    </> : missingSession}
-  </div>;
-  const tabletContent = <div className={s.body}>
-    <PullToRefresh controller={refresh} />
-    {session ? cancelled ? cancelledContent : tab === "diem-danh" ? <AttendancePanel classId={classId} sessionId={session.id} variant="tablet" tabBar={tabBar} readOnly={future} onDirtyChange={setDirty} saveRef={saveRef} /> : <>
-      {tabBar()}
-      {error && <p role="alert" className={s.error}>{error}</p>}
-      {tab === "nhan-xet" ? <CommentsPanel classId={classId} sessionId={session.id} readOnly={future} /> : <HomeworkPanel session={session} onDirtyChange={setHomeworkDirty} />}
-    </> : missingSession}
-  </div>;
-  const desktopContent = <div className={s.body}>
-    <PullToRefresh controller={refresh} />
-    {session ? cancelled ? cancelledContent : tab === "diem-danh" ? <AttendancePanel classId={classId} sessionId={session.id} variant="desktop" tabBar={tabBar} readOnly={future} onDirtyChange={setDirty} saveRef={saveRef} /> : tab === "nhan-xet" ? <CommentsDesktop sessionId={session.id} readOnly={future} tabBar={tabBar} /> : <HomeworkDesktop session={session} tabBar={tabBar} onDirtyChange={setHomeworkDirty} saveRef={homeworkSaveRef} /> : missingSession}
-  </div>;
+  const detailContent = <div className={s.body} ref={refresh.containerRef}>
+      <PullToRefresh controller={refresh} />
+      {session ? cancelled ? cancelledContent : <>
+        {tab !== "diem-danh" || layout === "mobile" ? tabBar() : null}
+        {error && <p role="alert" className={s.error}>{error}</p>}
+        <div className={s.tabPane} hidden={tab !== "diem-danh"}><AttendancePanel classId={classId} sessionId={session.id} variant={layout} tabBar={layout === "mobile" ? undefined : tabBar} readOnly={future} onDirtyChange={setDirty} saveRef={saveRef} /></div>
+        <div className={s.tabPane} hidden={tab !== "nhan-xet"}><ResponsiveSlot mobile={<CommentsPanel classId={classId} sessionId={session.id} readOnly={future} />} tablet={<CommentsPanel classId={classId} sessionId={session.id} readOnly={future} />} desktop={<CommentsDesktop sessionId={session.id} readOnly={future} tabBar={tabBar} />} /></div>
+        <div className={s.tabPane} hidden={tab !== "btvn"}>
+          <div hidden={layout === "desktop"}><HomeworkPanel session={session} onDirtyChange={setMobileHomeworkDirty} /></div>
+          <div hidden={layout !== "desktop"}><HomeworkDesktop session={session} tabBar={tabBar} onDirtyChange={setDesktopHomeworkDirty} saveRef={homeworkSaveRef} /></div>
+        </div>
+      </> : missingSession}
+    </div>;
 
   return <>
-    <ResponsiveSlot mobile={mobileContent} tablet={tabletContent} desktop={desktopContent} />
+    {detailContent}
     {session && canShowOptions && <Sheet title="Tuỳ chọn buổi học" open={menuOpen} onClose={() => setMenuOpen(false)}>
       <div className={s.sheetActions}>
         {manualPlanned && <Button variant="secondary" onClick={() => { setMenuOpen(false); setEditOpen(true); }}>Sửa buổi lẻ</Button>}

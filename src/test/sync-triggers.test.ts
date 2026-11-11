@@ -119,6 +119,33 @@ describe("sync triggers", () => {
     expect(await device.refreshNow()).toEqual({ status: "error" });
   });
 
+  it("tracks initial sync errors, retries, logout with the same account, and offline state", async () => {
+    const device = await bootDevice(server, "t", me);
+    server.hooks.respond = (request) => request.path === "/sync/pull" ? { status: 503, code: "unavailable" } : undefined;
+    await device.syncNow();
+    expect(device.getInitialSyncState()).toBe("error");
+
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    server.hooks.respond = null;
+    server.hooks.hold = (request) => request.path === "/sync/pull" ? gate : undefined;
+    const retry = device.syncNow();
+    await vi.waitFor(() => expect(device.getInitialSyncState()).toBe("loading"));
+    server.hooks.hold = null;
+    release();
+    await retry;
+    expect(device.getInitialSyncState()).toBe("success");
+
+    await device.clearUserCache("teacher");
+    expect(device.getInitialSyncState()).toBe("not-started");
+    await device.syncNow();
+    expect(device.getInitialSyncState()).toBe("success");
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    window.dispatchEvent(new Event("offline"));
+    expect(device.getInitialSyncState()).toBe("offline");
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+  });
+
   it("keeps one sync round in flight and queues one explicit follow-up", async () => {
     const device = await bootDevice(server, "t", me);
     await device.syncNow();

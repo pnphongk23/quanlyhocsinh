@@ -1,0 +1,6 @@
+.desktopOnly { display: none; }
+.desktopOnly :global([class*="action"]) { display: inline-flex; }
+
+@media (min-width: 1024px) {
+  .desktopOnly { display: contents; }
+}

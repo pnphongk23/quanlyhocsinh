@@ -13,12 +13,31 @@ import { resolveApiBase } from "./api/baseUrl";
 import { useSyncExternalStore } from "react";
 export const api = createApiClient({ baseUrl: resolveApiBase(import.meta.env.VITE_API_BASE), getToken: () => getToken() });
 let running: Promise<void> | null = null;
-let initialSyncCompletedFor: string | null = null;
+type InitialSyncState = "not-started" | "loading" | "success" | "offline" | "error";
+let initialSyncIdentity: string | null = null;
+let initialSyncState: InitialSyncState = "not-started";
 const syncStatusListeners = new Set<() => void>();
 const emitSyncStatus = () => syncStatusListeners.forEach((listener) => listener());
-const getInitialSyncPending = () => Boolean(running && getCacheIdentity() && getToken() && initialSyncCompletedFor !== identityKey());
+const subscribeSyncStatus = (listener: () => void) => {
+  syncStatusListeners.add(listener);
+  if (typeof window !== "undefined") { window.addEventListener("online", listener); window.addEventListener("offline", listener); }
+  return () => {
+    syncStatusListeners.delete(listener);
+    if (typeof window !== "undefined") { window.removeEventListener("online", listener); window.removeEventListener("offline", listener); }
+  };
+};
+export const getInitialSyncState = (): InitialSyncState => {
+  if (!getCacheIdentity() || !getToken()) return "not-started";
+  if (initialSyncIdentity !== identityKey()) return "not-started";
+  if (typeof navigator !== "undefined" && !navigator.onLine) return "offline";
+  return initialSyncState;
+};
+export function useInitialSyncState(): InitialSyncState {
+  return useSyncExternalStore(subscribeSyncStatus, getInitialSyncState, () => "not-started");
+}
+const getInitialSyncPending = () => getInitialSyncState() === "loading";
 export function useInitialSyncPending(): boolean {
-  return useSyncExternalStore((listener) => { syncStatusListeners.add(listener); return () => syncStatusListeners.delete(listener); }, getInitialSyncPending, () => false);
+  return useSyncExternalStore(subscribeSyncStatus, getInitialSyncPending, () => false);
 }
 let timer: ReturnType<typeof setTimeout> | undefined;
 let pullWhenIdleRequested = false;
@@ -208,7 +227,10 @@ export async function clearUserCache(userId: string): Promise<boolean> {
     await db.meta.delete(logoutLockKey(userId));
     return true;
   });
-  if (cleared) for (const identity of lastResyncSnapshotAt.keys()) if (identity.startsWith(identityPrefix)) lastResyncSnapshotAt.delete(identity);
+  if (cleared) {
+    for (const identity of lastResyncSnapshotAt.keys()) if (identity.startsWith(identityPrefix)) lastResyncSnapshotAt.delete(identity);
+    if (initialSyncIdentity?.startsWith(identityPrefix)) { initialSyncIdentity = null; initialSyncState = "not-started"; emitSyncStatus(); }
+  }
   return cleared;
 }
 export const clearMembershipCache = clearIdentityCache;
@@ -218,20 +240,30 @@ function runSync(pullWhenIdle: boolean): Promise<void> {
   firstScheduledAt = null;
   if (running) { again = true; pullWhenIdleRequested ||= pullWhenIdle; return running; }
   if (!getCacheIdentity() || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) {
-    if (getCacheIdentity()) { initialSyncCompletedFor = identityKey(); emitSyncStatus(); }
+    if (getCacheIdentity()) { initialSyncIdentity = identityKey(); initialSyncState = typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "not-started"; emitSyncStatus(); }
     return Promise.resolve();
   }
+  initialSyncIdentity = identityKey(); initialSyncState = "loading"; emitSyncStatus();
   running = (async () => {
     await Promise.resolve();
+    const failuresBefore = syncFailureVersion;
+    let lastRoundIdentity = initialSyncIdentity;
     try {
       do {
         again = false;
         const cache = getCacheIdentity(); if (!cache || !getToken()) break;
         const roundPullWhenIdle = pullWhenIdle || pullWhenIdleRequested;
         pullWhenIdleRequested = false;
-        await syncRound(cache.membershipId, identityKey(), roundPullWhenIdle);
+        lastRoundIdentity = identityKey();
+        await syncRound(cache.membershipId, lastRoundIdentity, roundPullWhenIdle);
       } while (again);
-    } finally { initialSyncCompletedFor = identityKey(); running = null; emitSyncStatus(); }
+    } finally {
+      const activeIdentity = getCacheIdentity() && getToken() ? identityKey() : null;
+      initialSyncIdentity = activeIdentity;
+      if (activeIdentity !== lastRoundIdentity) initialSyncState = "not-started";
+      else initialSyncState = typeof navigator !== "undefined" && !navigator.onLine ? "offline" : syncFailureVersion === failuresBefore ? "success" : "error";
+      running = null; emitSyncStatus();
+    }
   })();
   emitSyncStatus();
   return running;
