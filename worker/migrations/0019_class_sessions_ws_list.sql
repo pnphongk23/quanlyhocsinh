@@ -1,0 +1,12 @@
+-- Liệt kê buổi học của một workspace/theo lớp đọc theo thứ tự (date, start_time, ...).
+-- Chỉ mục cũ class_sessions_ws_date chỉ là (workspace_id, date) nên phần sau của ORDER BY
+-- không đi theo chỉ mục được; với lịch nhiều lớp SQLite phải dựng TEMP B-TREE để sắp xếp
+-- ("USE TEMP B-TREE FOR LAST 3 TERMS OF ORDER BY" của GET /calendar).
+-- Chỉ mục này khớp đúng thứ tự của cả hai truy vấn đọc danh sách buổi:
+--   GET /classes/:id/sessions  ORDER BY date, start_time, id     (workspace_id, class_id bằng =)
+--   GET /calendar              ORDER BY date, start_time, class_id, id (workspace_id bằng =)
+-- nên đọc thẳng theo chỉ mục, không sắp xếp; riêng lịch workspace còn là chỉ mục phủ
+-- (không phải tra bảng cho các cột đang chọn).
+-- Chỉ thêm, không xoá/đổi cột: giữ class_sessions_ws_date (tiền tố của chỉ mục này) để
+-- không đụng lược đồ đã áp trên dev.
+CREATE INDEX class_sessions_ws_list ON class_sessions(workspace_id, date, start_time, class_id, id);

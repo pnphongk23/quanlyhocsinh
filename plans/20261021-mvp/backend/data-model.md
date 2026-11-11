@@ -217,6 +217,7 @@ CREATE TABLE class_sessions (
 );
 -- idx: UNIQUE(class_id, date, start_time) phục vụ "buổi của lớp theo khoảng ngày" và tìm buổi kế tiếp chưa hủy (BTVN)
 -- idx: CREATE INDEX class_sessions_ws_date ON class_sessions(workspace_id, date);   -- tab Lịch theo ngày/tháng nhiều lớp
+-- idx: CREATE INDEX class_sessions_ws_list ON class_sessions(workspace_id, date, start_time, class_id, id);   -- migration 0019: danh sách/lịch buổi đọc thẳng theo thứ tự (date,start_time,class_id,id), không cần TEMP B-TREE; lịch workspace còn được chỉ mục phủ
 ```
 
 - `planned` → `held` do máy chủ đặt khi lưu điểm danh đầu tiên của buổi (cùng `batch`, khớp prototype). `cancelled` chỉ từ `planned` và không đảo ngược.
@@ -640,7 +641,7 @@ Dòng `conflict` **không dùng ở MVP** (đã chốt 2026-10-21): trigger vẫ
 | Điểm danh một buổi; chỉnh một ô | `attendance` PK |
 | Vắng 2 buổi liên tiếp, thống kê chuyên cần của em | `attendance_student` JOIN `class_sessions` PK |
 | Danh sách buổi của lớp theo khoảng ngày; buổi kế tiếp chưa hủy | `class_sessions` UNIQUE(`class_id`,`date`,`start_time`) |
-| Lịch theo ngày/tháng của Admin | `class_sessions_ws_date` |
+| Lịch theo ngày/tháng của Admin và danh sách buổi theo lớp | `class_sessions_ws_list` (khớp `ORDER BY date, start_time, class_id, id` nên không dựng TEMP B-TREE); `class_sessions_ws_date` giữ lại, là tiền tố của chỉ mục trên |
 | Bảng điểm lớp | `tests_class` + `scores` PK(`test_id`,…) |
 | Điểm của một em | `scores_student` |
 | Phiếu của một buổi; phiếu đã gửi của em | `session_comments` PK; `session_comments_student` |
