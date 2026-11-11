@@ -5,6 +5,8 @@
   justify-content: center;
   gap: var(--space-8);
   min-height: var(--tap);
+  min-width: var(--button-min-w-desktop);
+  width: fit-content;
   padding: 0 var(--space-16);
   border: 0;
   border-radius: var(--radius-button);
@@ -28,19 +30,12 @@
 }
 .lg {
   min-height: var(--button-h-lg);
-  width: 100%;
+  width: auto;
   border-radius: var(--radius-control);
   font-size: var(--text-base);
 }
 .block {
   width: 100%;
-}
-/* Desktop: nút rộng theo nội dung, kể cả trong cột flex/grid (không bị stretch); chỉ `block` mới tràn ngang. */
-@media (min-width: 1024px) {
-  .button { min-width: var(--button-min-w-desktop); }
-  .lg { width: auto; }
-  .button:not(.block) { width: fit-content; }
-  .block { width: 100%; }
 }
 .secondary {
   background: var(--color-primary-soft);
@@ -77,16 +72,11 @@
 .card {
   background: var(--color-surface);
   border-radius: var(--radius-card);
-  padding: 14px var(--card-pad);
+  padding: var(--card-pad);
 }
 .cardSelected {
   background: var(--state-selected-bg);
   color: var(--state-selected-fg);
-}
-@media (min-width: 1024px) {
-  .card {
-    padding: 18px var(--card-pad);
-  }
 }
 
 /* Hàng danh sách */
@@ -115,16 +105,19 @@
 
 /* Khối thông báo tông thông tin (ux-design.md mục 3): tiêu đề + dòng phụ + hành động phụ. */
 .infoNotice {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-12);
+  container-type: inline-size;
   padding: var(--space-12) var(--space-16);
   border-radius: var(--radius-button);
   background: var(--color-primary-soft);
   color: var(--color-primary-ink);
   font-size: var(--text-md);
   text-wrap: balance;
+}
+.infoNoticeLayout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-12);
 }
 .infoNoticeText > p {
   margin: var(--space-2) 0 0;
@@ -133,18 +126,17 @@
   font-weight: var(--weight-semibold);
 }
 /* Hành động phụ dạng chữ: đệm ngang 0 để nhãn thẳng lề chữ tiêu đề, vùng chạm vẫn đủ --tap. */
-.infoNotice > .button {
+.infoNoticeLayout > .button {
   min-height: var(--tap);
   padding-inline: 0;
 }
-@media (min-width: 1024px) {
-  .infoNotice {
+@container (min-width: 30rem) {
+  .infoNoticeLayout {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
   }
-  /* Desktop: nút rời khỏi lề chữ nên trả lại đệm ngang theo nội dung. */
-  .infoNotice > .button {
+  .infoNoticeLayout > .button {
     padding-inline: var(--space-16);
   }
 }
@@ -268,6 +260,8 @@
 
 /* Đầu trang */
 .pageHeader {
+  container-type: inline-size;
+  container-name: page-header;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -285,11 +279,6 @@
 }
 .compactMain {
   --h1-size: var(--text-xl);
-}
-@media (min-width: 1024px) {
-  .pageHeaderMain:not(.compactMain) {
-    --h1-size: var(--text-3xl);
-  }
 }
 /* Có dòng phụ: nút quay lại căn theo dòng tiêu đề chính, không theo cả khối. */
 .hasEyebrow {
@@ -436,48 +425,73 @@
 .dialogFooter {
   display: flex;
   flex: none;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: flex-end;
   gap: var(--space-8);
   margin-top: var(--space-16);
   padding-top: var(--space-12);
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
 }
-/* Desktop: hàng nút của hộp thoại căn phải, không kéo dài. */
-@media (min-width: 1024px) {
-  .dialogFooter {
-    flex-direction: row;
-    justify-content: flex-end;
-  }
-}
 .sheet {
-  margin-bottom: 0;
+  inset: auto 0 0;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100dvh - var(--space-32) * 2);
+  padding-bottom: 0;
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
 }
-/* Desktop: Sheet căn giữa, bo 4 góc như Modal; chỉ mobile dính đáy. */
-@media (min-width: 1024px) {
-  .sheet {
-    margin-bottom: auto;
-    border-radius: var(--radius-card);
-  }
+.sheet[data-placement="right"] {
+  inset: 0 0 0 auto;
+  width: min(520px, 100%);
+  max-width: 100%;
+  max-height: none;
+  border-radius: var(--radius-sheet) 0 0 var(--radius-sheet);
 }
-/* Bottom sheet mobile: tràn hết chiều ngang, footer chừa safe-area. */
-@media (max-width: 1023px) {
-  .sheet {
-    width: 100%;
-    max-width: 100%;
-    padding-bottom: 0;
-    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
-  }
-  .sheet .dialogFooter {
-    padding-bottom: calc(var(--space-16) + var(--safe-bottom));
-  }
-  /* Sheet không có footer: nội dung cuối vẫn chừa safe-area, không dính mép đáy. */
-  .sheet .dialogBody:last-child {
-    padding-bottom: calc(var(--space-16) + var(--safe-bottom));
-  }
-  .sheet[open] { animation-name: sheetIn; }
-  .sheet[open][data-closing] { animation-name: sheetOut; }
+.sheet[data-placement="center"] {
+  inset: 0;
+  margin: auto;
+  width: min(520px, calc(100% - var(--space-32)));
+  max-width: none;
+  max-height: 85dvh;
+  padding-bottom: var(--space-24);
+  border-radius: var(--radius-card);
+}
+.sheet[data-placement="bottom"] .dialogFooter {
+  flex-direction: column;
+}
+.dialogFooter .actionFooterActions {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 0;
+  background: var(--color-surface);
+}
+.dialogFooter .actionHint {
+  flex: 1 0 100%;
+}
+.dialogFooter .button {
+  min-width: 0;
+  width: auto;
+}
+.sheet[data-placement="center"] .dialogFooter,
+.sheet[data-placement="right"] .dialogFooter {
+  flex-direction: row;
+  justify-content: flex-end;
+}
+.sheet[data-placement="bottom"] .dialogFooter {
+  padding-bottom: calc(var(--space-16) + var(--safe-bottom));
+}
+/* Sheet không có footer: nội dung cuối vẫn chừa safe-area, không dính mép đáy. */
+.sheet[data-placement="bottom"] .dialogBody:last-child {
+  padding-bottom: calc(var(--space-16) + var(--safe-bottom));
+}
+.sheet[data-placement="bottom"][open] { animation-name: sheetIn; }
+.sheet[data-placement="bottom"][open][data-closing] { animation-name: sheetOut; }
+.sheet[data-placement="right"][open] {
+  animation-name: dialogIn;
 }
 .dialogHeader {
   display: flex;
@@ -505,17 +519,20 @@
 
 /* Footer hành động đáy trang form */
 .actionFooter {
+  container-type: inline-size;
+  margin-top: auto;
+}
+.actionFooterActions {
   position: sticky;
   bottom: var(--sticky-bottom);
   z-index: var(--z-sticky);
   display: grid;
   gap: var(--space-8);
-  margin-top: auto;
   padding: var(--space-8) 0;
   background: var(--color-bg);
 }
-@media (min-width: 1024px) {
-  .actionFooter {
+@container (min-width: 30rem) {
+  .actionFooterActions {
     position: static;
     display: flex;
     flex-wrap: wrap;
@@ -525,7 +542,7 @@
     background: transparent;
   }
   /* Banner/thông báo dài chiếm một dòng riêng phía trên hàng nút */
-  .actionFooter > [role="alert"] {
+  .actionFooterActions > [role="alert"] {
     flex: 1 0 100%;
   }
 }

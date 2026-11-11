@@ -4,7 +4,7 @@ import type { CriteriaLevel, CriteriaSet, CriteriaSetItem } from "../../data/api
 import { criteriaSetError, getCachedCriteriaSet, getCriteriaSet, replaceCriteriaSet } from "../../data/repositories/criteriaSet";
 import { isAdmin } from "../../data/repositories/access";
 import { useOnline } from "../../shared/hooks/useOnline";
-import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
+import { useLayout } from "../../shared/layout";
 import { ActionFooter, Button, Field, InfoNotice, Input, Modal, PageHeader, Sheet } from "../../shared/ui";
 import { LevelChickMeter } from "../../shared/ui/LevelChickMeter";
 import { codePointLength, CRITERIA_LEVEL_LABELS, CRITERIA_LEVELS, toCriteriaDraft, validateCriteria, type CriteriaDraft, type CriteriaField } from "../../data/criteriaSetModel";
@@ -22,7 +22,8 @@ export default function CriteriaSetSettingsPage() {
 }
 
 function CriteriaSetSettings() {
-  const desktop = useIsDesktop();
+  const layout = useLayout();
+  const desktop = layout === "desktop";
   const online = useOnline();
   const navigate = useNavigate();
   const [set, setSet] = useState<CriteriaSet | null>(null);
@@ -261,6 +262,7 @@ function CriteriaSetSettings() {
           open={editorOpen}
           onClose={closeEditor}
           title={editorTitle}
+          placement={layout === "tablet" ? "right" : "bottom"}
           header={<header className={s.editorHeader}><h2>{editorTitle}</h2><Button variant="secondary" className={s.sheetClose} onClick={closeEditor} aria-label="Đóng">×</Button></header>}
           footer={editorFooter}
         >{editorBody}</Sheet>}

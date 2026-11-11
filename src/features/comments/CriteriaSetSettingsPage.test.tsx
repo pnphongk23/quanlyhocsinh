@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CriteriaSet, CriteriaSetItem } from "../../data/api/types";
 import CriteriaSetSettingsPage from "./CriteriaSetSettingsPage";
 
-const mocks = vi.hoisted(() => ({ admin: true, online: true, get: vi.fn(), cached: vi.fn(), replace: vi.fn() }));
+const mocks = vi.hoisted(() => ({ admin: true, online: true, layout: "mobile" as "mobile" | "tablet" | "desktop", get: vi.fn(), cached: vi.fn(), replace: vi.fn() }));
 vi.mock("../../data/repositories/access", () => ({ isAdmin: () => mocks.admin }));
 vi.mock("../../data/repositories/criteriaSet", () => ({
   getCriteriaSet: mocks.get,
@@ -17,7 +17,7 @@ vi.mock("../../data/repositories/criteriaSet", () => ({
   },
 }));
 vi.mock("../../shared/hooks/useOnline", () => ({ useOnline: () => mocks.online }));
-vi.mock("../../shared/hooks/useIsDesktop", () => ({ useIsDesktop: () => false }));
+vi.mock("../../shared/layout", () => ({ useLayout: () => mocks.layout }));
 
 const item = (index: number): CriteriaSetItem => ({
   id: `criterion-${index}`, name: `Tiêu chí ${index}`, texts: { good: "Câu tốt.", ok: "Câu đạt.", needs_work: "Câu cần cố gắng." }, default_level: "good", homework: false,
@@ -34,6 +34,7 @@ function renderPage() {
 beforeEach(() => {
   vi.stubEnv("VITE_CRITERIA_LEVELS", "1");
   mocks.admin = true; mocks.online = true;
+  mocks.layout = "mobile";
   mocks.cached.mockResolvedValue(null);
   mocks.get.mockResolvedValue(result(1));
   mocks.replace.mockReset();
@@ -100,6 +101,14 @@ describe("custom criteria settings", () => {
     expect(screen.getByLabelText("Câu mức Tốt")).toHaveValue(source[0][1]);
     expect(screen.getByRole("button", { name: "Đóng" })).toHaveTextContent("×");
     expect(screen.getByRole("button", { name: "Xoá tiêu chí" })).toBeEnabled();
+  });
+
+  it.each([["mobile", "bottom"], ["tablet", "right"]] as const)("places the editor sheet at %s viewport", async (layout, placement) => {
+    mocks.layout = layout;
+    renderPage();
+    await screen.findByText("Tiêu chí 1");
+    fireEvent.click(screen.getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" }));
+    expect(await screen.findByRole("dialog", { name: "Sửa tiêu chí" })).toHaveAttribute("data-placement", placement);
   });
 
   it("keeps deletion confirmation in the edit flow and prevents deleting the final item", async () => {

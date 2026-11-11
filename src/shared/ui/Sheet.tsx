@@ -24,11 +24,12 @@ export interface SheetProps {
   header?: ReactNode;
   /** Focus target after the native dialog opens, before keyboard navigation begins. */
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** Selects placement explicitly; the default preserves the bottom-sheet behavior. */
+  placement?: "bottom" | "right" | "center";
 }
 
 /**
- * Bottom sheet trên mobile (dùng chung `<dialog>` với Modal): tràn chiều ngang,
- * bo hai góc trên, footer chừa safe-area.
+ * Overlay dùng `<dialog>` như Modal; `placement` chọn đáy, phải hoặc giữa.
  */
 export function Sheet({
   open,
@@ -39,6 +40,7 @@ export function Sheet({
   footer,
   header,
   initialFocusRef,
+  placement = "bottom",
 }: SheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const animatedClose = useAnimatedDialog(ref, open);
@@ -52,6 +54,7 @@ export function Sheet({
       ref={ref}
       aria-label={title}
       className={s.dialog + " " + s.sheet}
+      data-placement={placement}
       onCancel={(event) => {
         event.preventDefault();
         close();

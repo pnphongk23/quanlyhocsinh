@@ -16,6 +16,8 @@ export interface ModalProps {
   beforeClose?: BeforeClose;
   /** Hàng nút chính, luôn nằm ngoài vùng cuộn nên vẫn thấy khi nội dung dài. */
   footer?: ReactNode;
+  /** Explicit overlay placement; `sheet` remains as a compatibility alias for `bottom`. */
+  placement?: "bottom" | "right" | "center";
   sheet?: boolean;
 }
 export function Modal({
@@ -25,17 +27,20 @@ export function Modal({
   children,
   beforeClose,
   footer,
+  placement,
   sheet = false,
 }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const animatedClose = useAnimatedDialog(ref, open);
   const requestClose = useGuardedClose(animatedClose, beforeClose);
   const close = () => requestClose(onClose);
+  const resolvedPlacement = placement ?? (sheet ? "bottom" : undefined);
   return (
     <dialog
       ref={ref}
       aria-label={title}
-      className={s.dialog + " " + (sheet ? s.sheet : "")}
+      className={s.dialog + " " + (resolvedPlacement ? s.sheet : "")}
+      data-placement={resolvedPlacement}
       onCancel={(event) => {
         event.preventDefault();
         close();

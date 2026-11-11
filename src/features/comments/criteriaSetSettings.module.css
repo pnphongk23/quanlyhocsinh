@@ -5,6 +5,7 @@
   margin-inline: auto;
   padding-bottom: var(--page-bottom);
 }
+.page :global(dialog[data-placement="right"]) { height: 100dvh; max-height: 100dvh; }
 .header, .mobileHeader { display: grid; gap: var(--space-4); }
 .header h1, .mobileHeader h1 { font-size: var(--text-3xl); line-height: var(--leading-tight); }
 .header h1 { margin-top: var(--space-4); }
