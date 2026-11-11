@@ -52,6 +52,7 @@ export default function SettingsPage() {
   const current = memberships.find((item) => item.id === session.activeMembershipId);
   const guardian = current?.role.scope_kind === "linked_students" || (!current && session.guardianAccount === true);
   const admin = current?.role.system_key === "admin";
+  const criteriaVisible = import.meta.env.VITE_CRITERIA_LEVELS === "1" && admin;
   const name = session.user.display_name ?? "";
   const roleLine = current
     ? `${roleBadge({
@@ -89,7 +90,7 @@ export default function SettingsPage() {
     <PageShell
       eyebrow="Tài khoản"
       title="Cài đặt"
-      subtitle="Hồ sơ, tài khoản và bộ tiêu chí dùng chung cho workspace."
+      subtitle={guardian ? "Hồ sơ và tài khoản của bạn." : criteriaVisible ? "Hồ sơ, tài khoản và bộ tiêu chí dùng chung cho workspace." : "Hồ sơ và tài khoản dùng chung cho workspace."}
       breadcrumb={guardian ? <><Link to="/ph">Phụ huynh</Link><span aria-hidden="true">/</span><span>Cài đặt</span></> : undefined}
       backTo={guardian ? "/ph" : undefined}
     >
@@ -118,7 +119,7 @@ export default function SettingsPage() {
               <span className={s.rowMain}><span className={s.rowTitle}>Nhân sự</span><span className={s.rowDescription}>Thêm trợ giảng và phân quyền trong lớp</span></span>
               <Icon name="chevron-right" />
             </Link>}
-            {import.meta.env.VITE_CRITERIA_LEVELS === "1" && admin && <Link className={s.menuRow} data-measure="row" to="/cai-dat/bo-tieu-chi">
+              {criteriaVisible && <Link className={s.menuRow} data-measure="row" to="/cai-dat/bo-tieu-chi">
               <span className={s.rowMain}><span className={s.rowTitle}>Bộ tiêu chí nhận xét</span><span className={s.rowDescription}>5 tiêu chí · áp dụng cho mọi lớp</span></span>
               <Icon name="chevron-right" />
             </Link>}
