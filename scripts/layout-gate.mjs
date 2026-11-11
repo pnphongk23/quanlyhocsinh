@@ -6,8 +6,9 @@ import { chromium } from "playwright";
 import { fixtureEntities, identity, scenarios, sessionFor, viewports } from "./layout-gate-fixtures/index.mjs";
 
 const root = process.cwd();
-const outDir = "/tmp/qlh-evidence/ql-004/gate";
-const base = "http://127.0.0.1:5194";
+const port = process.env.LAYOUT_GATE_PORT ?? "5194";
+const outDir = process.env.LAYOUT_GATE_OUT ?? "/tmp/qlh-evidence/ql-004/gate";
+const base = `http://127.0.0.1:${port}`;
 await mkdir(outDir, { recursive: true });
 let server;
 let browser;
@@ -15,10 +16,10 @@ const reports = [];
 const failures = [];
 const warnings = [];
 try {
-  server = spawn("npm", ["run", "dev", "--", "--host", "127.0.0.1", "--port", "5194", "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, VITE_CRITERIA_LEVELS: "1" } });
+  server = spawn("npm", ["run", "dev", "--", "--host", "127.0.0.1", "--port", port, "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, VITE_CRITERIA_LEVELS: "1" } });
   await new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error("Vite local server readiness timeout")), 45000);
-    const ready = (chunk) => { if (/127\.0\.0\.1:5194|localhost:5194/.test(String(chunk))) { clearTimeout(timeout); resolve(); } };
+    const ready = (chunk) => { if (String(chunk).includes(`127.0.0.1:${port}`) || String(chunk).includes(`localhost:${port}`)) { clearTimeout(timeout); resolve(); } };
     server.stdout.on("data", ready); server.stderr.on("data", ready);
     server.once("exit", () => { clearTimeout(timeout); reject(new Error("Vite local server exited")); });
   });
