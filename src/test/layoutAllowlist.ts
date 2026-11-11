@@ -2,16 +2,11 @@
 // Guardian width breakpoints are temporary legacy entries and must be removed after Pha 3.
 export const layoutAllowlist = {
   "routeTemplate": {
-    // Remove Điểm danh route after Pha 3 template migration.
-    "src/features/class-space/SessionDetailPage.tsx": 1
   },
   "media": {
-    // Remove after Điểm danh migration in Pha 3.
-    "src/features/attendance/AttendancePanel.module.css": 1,
     "src/features/auth/auth.module.css": 1,
     "src/features/class-space/classSpace.module.css": 1,
     "src/features/class-space/desktop.module.css": 1,
-    "src/features/class-space/sessionDetail.module.css": 2,
     "src/features/class-space/sessions.module.css": 1,
     "src/features/classes/classes.module.css": 1,
     "src/features/classes/classesForm.module.css": 3,
@@ -37,12 +32,8 @@ export const layoutAllowlist = {
     "src/roles/guardian/guardianShell.module.css": 1
   },
   "responsiveHook": {
-    // Remove after Điểm danh migration in Pha 3.
-    "src/features/attendance/AttendancePanel.tsx": 1,
     "src/features/class-space/ClassSpaceLayout.tsx": 1,
     "src/features/class-space/ScoreGridTab.tsx": 1,
-    // Remove Điểm danh route after Pha 3 template migration.
-    "src/features/class-space/SessionDetailPage.tsx": 1,
     "src/features/class-space/SessionsTab.tsx": 1,
     "src/features/class-space/TestsTab.tsx": 1,
     "src/features/classes/ClassListPage.tsx": 1,
@@ -57,13 +48,9 @@ export const layoutAllowlist = {
   },
   "hardcoded": {
     "src/app/shell.module.css": 2,
-    // Remove after Điểm danh migration in Pha 3.
-    "src/features/attendance/AttendanceDesktop.module.css": 9,
-    "src/features/attendance/AttendancePanel.module.css": 16,
     "src/features/auth/auth.module.css": 108,
     "src/features/class-space/classSpace.module.css": 7,
     "src/features/class-space/desktop.module.css": 54,
-    "src/features/class-space/sessionDetail.module.css": 12,
     "src/features/class-space/sessions.module.css": 15,
     "src/features/classes/classes.module.css": 8,
     "src/features/classes/classesForm.module.css": 9,

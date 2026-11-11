@@ -13,16 +13,13 @@ const detailCss = read("src/features/class-space/sessionDetail.module.css");
 const panelCss = read("src/features/comments/CommentsPanel.module.css");
 const tokensCss = read("src/shared/styles/tokens.css");
 
-function mobileBlock(css: string): string {
-  return css.match(/@media \(max-width: 1023px\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
-}
-
 describe("thanh hành động ở tab Nhận xét", () => {
-  it("mobile: màn chi tiết buổi chiếm trọn màn và tab đang mở giãn hết chỗ", () => {
-    const block = mobileBlock(detailCss);
-    expect(block).toMatch(/\.detail\s*\{\s*min-height:\s*100dvh;\s*\}/);
-    expect(block).toMatch(/\.tabPane:not\(\[hidden\]\)\s*\{[^}]*flex:\s*1 0 auto[^}]*display:\s*flex[^}]*flex-direction:\s*column/s);
-    expect(block).toMatch(/\.tabPane:not\(\[hidden\]\) > \*\s*\{\s*flex:\s*1 0 auto;\s*\}/);
+  it("PageShell content and active pane expand to keep the action footer at the screen end", () => {
+    expect(detailCss).toMatch(/\.page\s*\{[^}]*height:\s*calc\(100dvh[^}]*min-height:\s*0/s);
+    expect(detailCss).toMatch(/\.page :global\(\[class\*="pageColumn"\]\)\s*\{[^}]*flex:\s*1/s);
+    expect(detailCss).toMatch(/\.page :global\(\[data-measure="content"\]\)\s*\{[^}]*flex:\s*1/s);
+    expect(detailCss).toMatch(/\.body\s*\{[^}]*flex:\s*1[^}]*padding:\s*var\(--space-4\) 0 var\(--sticky-clearance\)/s);
+    expect(detailCss).toMatch(/\.tabPane\s*\{[^}]*flex:\s*1[^}]*flex-direction:\s*column/s);
   });
 
   it("thanh đáy luôn ở đáy khung và vẫn dính khi danh sách dài", () => {
@@ -34,6 +31,6 @@ describe("thanh hành động ở tab Nhận xét", () => {
 
   it("vùng cuộn vẫn chừa đệm đáy để hàng cuối không bị che", () => {
     expect(tokensCss).toMatch(/--sticky-clearance:\s*calc\(var\(--sticky-bottom\) \+ var\(--page-bottom\)\)/);
-    expect(detailCss).toMatch(/\.body\s*\{[^}]*padding:\s*var\(--space-4\) var\(--page-x\) var\(--sticky-clearance\)/s);
+    expect(detailCss).toMatch(/\.body\s*\{[^}]*padding:\s*var\(--space-4\) 0 var\(--sticky-clearance\)/s);
   });
 });

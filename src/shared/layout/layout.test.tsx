@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { FormPage } from "./FormPage";
 import { MasterDetailPage } from "./MasterDetailPage";
 import { PageShell } from "./PageShell";
+import { ResponsiveSlot } from "./ResponsiveSlot";
 import { navItems } from "./navItems";
 
 function setViewport(width: number) {
@@ -60,6 +61,13 @@ describe("shared layout", () => {
     expect(screen.getByText(visible)).toBeInTheDocument();
     expect(screen.queryByText(hidden)).not.toBeInTheDocument();
     expect(container.querySelector('[class*="masterDetail"]')).toBeInTheDocument();
+  });
+
+  it.each([[390, "Mobile content"], [834, "Tablet content"], [1440, "Desktop content"]] as const)("selects the %ipx responsive page slot", (width, content) => {
+    setViewport(width);
+    render(<ResponsiveSlot mobile={<p>Mobile content</p>} tablet={<p>Tablet content</p>} desktop={<p>Desktop content</p>} />);
+    expect(screen.getByText(content)).toBeInTheDocument();
+    expect(screen.getAllByText(/content/)).toHaveLength(1);
   });
 
   it("uses one navigation definition across its route groups", () => {

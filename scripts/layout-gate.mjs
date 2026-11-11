@@ -6,8 +6,9 @@ import { chromium } from "playwright";
 import { fixtureEntities, identity, scenarios, sessionFor, viewports } from "./layout-gate-fixtures/index.mjs";
 
 const root = process.cwd();
-const outDir = "/tmp/qlh-evidence/ql-004/gate";
-const base = "http://127.0.0.1:5194";
+const port = process.env.LAYOUT_GATE_PORT ?? "5194";
+const outDir = process.env.LAYOUT_GATE_OUT ?? "/tmp/qlh-evidence/ql-004/gate";
+const base = `http://127.0.0.1:${port}`;
 await mkdir(outDir, { recursive: true });
 let server;
 let browser;
@@ -15,10 +16,10 @@ const reports = [];
 const failures = [];
 const warnings = [];
 try {
-  server = spawn("npm", ["run", "dev", "--", "--host", "127.0.0.1", "--port", "5194", "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, VITE_CRITERIA_LEVELS: "1" } });
+  server = spawn("npm", ["run", "dev", "--", "--host", "127.0.0.1", "--port", port, "--strictPort"], { cwd: root, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, VITE_CRITERIA_LEVELS: "1" } });
   await new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error("Vite local server readiness timeout")), 45000);
-    const ready = (chunk) => { if (/127\.0\.0\.1:5194|localhost:5194/.test(String(chunk))) { clearTimeout(timeout); resolve(); } };
+    const ready = (chunk) => { if (String(chunk).includes(`127.0.0.1:${port}`) || String(chunk).includes(`localhost:${port}`)) { clearTimeout(timeout); resolve(); } };
     server.stdout.on("data", ready); server.stderr.on("data", ready);
     server.once("exit", () => { clearTimeout(timeout); reject(new Error("Vite local server exited")); });
   });
@@ -94,8 +95,8 @@ try {
       const clipped = [...document.querySelectorAll("p,span,h1,h2,h3,td,th,a,button,strong,dt,dd")].filter(visible).filter(e => e.textContent.trim() && !e.title && !e.closest(".table-wrap") && e.scrollWidth > e.clientWidth + 1 && !["auto","scroll"].includes(getComputedStyle(e).overflowX)).map(e => label(e));
       const blocks = [...document.querySelectorAll('[data-measure="block"]')].filter(visible).map(block => { const b=rect(block), s=getComputedStyle(block), children=[...block.querySelectorAll(":scope > *")].filter(visible).filter(e=>e.textContent.trim()||e.querySelector("img,svg,input,select,textarea,button")).map(rect); if(!children.length||!b.width)return null; const left=b.left+parseFloat(s.paddingLeft)+parseFloat(s.borderLeftWidth), right=b.right-parseFloat(s.paddingRight)-parseFloat(s.borderRightWidth), unionLeft=Math.min(...children.map(c=>c.left)), unionRight=Math.max(...children.map(c=>c.right)); return { label:label(block), ratio:(Math.max(0,unionLeft-left)+Math.max(0,right-unionRight))/b.width }; }).filter(Boolean);
       const contentBlockWidths = [...document.querySelectorAll('[data-measure="content"]')].filter(visible).flatMap(region => [...region.children].filter(el => el.getAttribute("data-measure") === "block" && visible(el) && !el.closest('[data-measure="detail"],[role="dialog"]')).map(block => ({ label: label(block), delta: Math.abs(rect(region).width - rect(block).width) })));
-      const statuses=[...document.querySelectorAll('[data-measure="status"]')].filter(visible).map(e=>rect(e).left);
-      for(const e of [...document.querySelectorAll("button")].filter(visible)){const value=(e.innerText||e.getAttribute("aria-label")||"").trim();if(/^(Chưa điểm danh|Có mặt|Muộn|Vắng)$/.test(value))statuses.push(rect(e).left);}
+        const statusMarkers=[...document.querySelectorAll('[data-measure="status"]')].filter(visible);
+        const statuses=statusMarkers.length?statusMarkers.map(e=>rect(e).left):[...document.querySelectorAll('[data-measure="row"]')].filter(visible).flatMap(row=>[...row.querySelectorAll("button")].filter(visible).filter(e=>/^(Chưa điểm danh|Có mặt|Muộn|Vắng)$/.test((e.innerText||e.getAttribute("aria-label")||"").trim())).slice(0,1).map(e=>rect(e).left));
 
       const detail=document.querySelector('[data-measure="detail"]'); const dialog=document.querySelector('dialog[open],[role="dialog"]'); const panel=detail&&visible(detail)&&["fixed","absolute"].includes(getComputedStyle(detail).position)?detail:dialog&&visible(dialog)?dialog:null; let sheet=null;
       if(panel){const footer=panel.querySelector(".detail-foot,.dialogFooter"), content=panel.querySelector(".detail-body,.dialogBody"), fr=footer?rect(footer):null;let points=0,hits=0;if(fr)for(const fy of [.25,.5,.75])for(const fx of [.2,.5,.8]){const x=fr.left+fr.width*fx,y=fr.top+fr.height*fy;if(x<0||y<0||x>innerWidth||y>innerHeight)continue;points++;const top=document.elementFromPoint(x,y);if(top&&panel.contains(top))hits++;}sheet={inside:(rect(panel).top>=-1&&rect(panel).left>=-1&&rect(panel).bottom<=innerHeight+1&&rect(panel).right<=innerWidth+1),bodyBottom:content?rect(content).bottom:null,footerTop:footer?rect(footer).top:null,points,hits};}

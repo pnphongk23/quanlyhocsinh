@@ -18,8 +18,8 @@ describe("đệm đáy vùng cuộn của màn chi tiết buổi học", () => {
 
   it("khung chi tiết buổi đệm đáy bằng token đệm sticky, không chỉ --page-bottom", () => {
     const body = sessionDetailCss.match(/\.body\s*\{[^}]*\}/s)?.[0] ?? "";
-    expect(body).toMatch(/padding:\s*var\(--space-4\) var\(--page-x\) var\(--sticky-clearance\)/);
-    expect(body).not.toMatch(/var\(--page-x\) var\(--page-bottom\)/);
+      expect(body).toMatch(/padding:\s*var\(--space-4\) 0 var\(--sticky-clearance\)/);
+      expect(body).not.toMatch(/var\(--page-x\) var\(--page-bottom\)/);
   });
 
   it("màn con mobile đặt thanh dính sát safe-area và bỏ chỗ của thanh tab dưới", () => {
