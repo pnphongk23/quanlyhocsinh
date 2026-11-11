@@ -52,7 +52,7 @@ export default function SessionDetailPage() {
   const refresh = usePullToRefresh(refreshNow);
   const [header, setHeader] = useState<SessionHeader>({ eyebrow: "Lớp học", title: "Chi tiết buổi học", sessionLabel: "Buổi học" });
   const backTo = `/lop/${classId}/buoi-hoc`;
-  const breadcrumb = <><Link to="/lop">Lớp</Link><span aria-hidden="true">/</span><Link to={`/lop/${classId}`}>{header.title}</Link><span aria-hidden="true">/</span><span>{header.sessionLabel}</span></>;
+  const breadcrumb = <><Link to="/lop">Lớp</Link><span aria-hidden="true">/</span>{header.sessionLabel !== "Buổi học" && <><Link to={`/lop/${classId}`}>{header.title}</Link><span aria-hidden="true">/</span></>}<span>{header.sessionLabel}</span></>;
   const actions = <><DesktopOnly><RefreshButton controller={refresh} /></DesktopOnly>{header.actions}</>;
   return <PageShell className={s.page} breadcrumb={breadcrumb} backTo={backTo} eyebrow={header.eyebrow} title={header.title} actions={actions}>
     <Suspense fallback={<div className={s.body}><p role="status">Đang tải buổi học…</p></div>}>
@@ -156,7 +156,7 @@ function SessionDetailBody({ onHeaderChange, refresh }: { onHeaderChange: (heade
     <EmptyState title="Buổi này đã huỷ" description="Không cần điểm danh." action={<LinkButton variant="secondary" size="lg" to={backTo}>Về danh sách buổi</LinkButton>} />
   </> : null;
   const detailContent = <div className={s.body} ref={refresh.containerRef}>
-      <PullToRefresh controller={refresh} />
+      {layout !== "desktop" && <PullToRefresh controller={refresh} />}
       {session ? cancelled ? cancelledContent : <>
         {tab !== "diem-danh" || layout === "mobile" ? tabBar() : null}
         {error && <p role="alert" className={s.error}>{error}</p>}
