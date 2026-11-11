@@ -30,14 +30,21 @@ try {
     const page = await context.newPage();
     page.setDefaultTimeout(7000);
       const session = sessionFor("staff");
-    await page.addInitScript((value) => localStorage.setItem("qlh.session.v1", JSON.stringify(value)), session);
-    const entities = fixtureEntities(scenario);
+      await page.addInitScript((value) => localStorage.setItem("qlh.session.v1", JSON.stringify(value)), session);
+      const entities = fixtureEntities(scenario);
+      let resolveServerPushFailure;
+      const serverPushFailure = new Promise((resolve) => { resolveServerPushFailure = resolve; });
+      let serverPushFailureObserved = false;
       const criteriaCount = scenario.state === "rong" ? 0 : scenario.state === "8-tieu-chi" ? 8 : 2;
     const criteriaName = scenario.state === "ten-dai" ? "Tiêu chí có tên dài để kiểm tra bố cục" : "Tập trung";
     const criteriaSet = { version: 1, criteria: Array.from({ length: criteriaCount }, (_, i) => ({ id: `criteria-${i+1}`, name: i ? `Tiêu chí ${i+1}` : criteriaName, texts: { good: "Tốt", ok: "Đạt", needs_work: "Cần cố gắng" }, default_level: "good", homework: false })) };
       await page.route("**/v1/**", async (route) => {
         const url = new URL(route.request().url());
-        if (scenario.state === "save-failure" && route.request().method() === "POST") return route.fulfill({ status: 500, json: { error: "layout_fixture_save_failure" } });
+      if (scenario.state === "server-500-save" && route.request().method() === "POST" && /sync\/push$/.test(url.pathname)) {
+        serverPushFailureObserved = true;
+        resolveServerPushFailure(true);
+        return route.fulfill({ status: 500, json: { error: "layout_fixture_server_failure" } });
+      }
       if (url.pathname.endsWith("/me")) return route.fulfill({ json: session.me });
       if (url.pathname.endsWith("/criteria-set")) { if (scenario.state === "dang-tai") await new Promise((resolve) => setTimeout(resolve, 4500)); return route.fulfill({ json: criteriaSet }); }
       if (scenario.state === "loi" && /sync\/(snapshot|pull)$/.test(url.pathname)) return route.fulfill({ status: 503, json: { error: "layout_fixture_error" } });
@@ -142,7 +149,8 @@ try {
       if(problems.length)failures.push({route:scenario.route,state:scenario.state,viewport:`${viewport.width}x${viewport.height}`,problems});
       reports.push({route:scenario.route,state:scenario.state,viewport:`${viewport.width}x${viewport.height}`,image:filePath,problems,measurements:measured});
 
-      const behaviorProblems = [];
+        const behaviorProblems = [];
+        let behaviorObserved;
       if (scenario.kind === "criteria" && scenario.state === "focus-sheet" && viewport.width < 1024) {
         const focusInsideAfterOpen = await page.evaluate(() => { const dialog=document.querySelector('dialog[open][aria-label="Sửa tiêu chí"]'); return Boolean(dialog && dialog.contains(document.activeElement)); });
         if (!focusInsideAfterOpen) behaviorProblems.push("focus did not enter the editor sheet");
@@ -199,30 +207,74 @@ try {
         }
         behaviorReports.push({route:scenario.route,state:"attendance-draft-breakpoint",viewport:"390→834→1440→390",problems:behaviorProblems});
       }
-      if (scenario.kind === "attendance" && scenario.state === "save-failure" && viewport.width === 1440) {
-        try {
-          const row = page.locator('[data-measure="row"]').first();
-          const group = row.locator('[data-measure="status"]');
-          await group.locator("button").first().click();
-          await page.getByRole("navigation", {name:"Đường dẫn"}).getByRole("link", {name:"Lớp", exact:true}).click();
-          await page.getByRole("dialog", {name:"Chưa lưu thay đổi"}).waitFor();
-          await page.getByRole("button", {name:"Lưu", exact:true}).click();
-          await page.waitForTimeout(1800);
-          const remained = new URL(page.url()).pathname === scenario.route;
-          const draft = await row.locator('[data-measure="status"] button[aria-pressed="true"]').count().catch(() => 0);
-          if (!remained) behaviorProblems.push("save failure left the session detail screen");
-          if (!draft) behaviorProblems.push("save failure cleared the unsaved attendance draft");
-        } catch (error) {
-          behaviorProblems.push(`failed-save-before-leave interaction could not complete: ${String(error)}`);
+        if (scenario.kind === "attendance" && scenario.state === "save-failure" && viewport.width === 1440) {
+          try {
+            const row = page.locator('[data-measure="row"]').first();
+            const group = row.locator('[data-measure="status"]');
+            await group.locator("button").first().click();
+            await page.getByRole("navigation", {name:"Đường dẫn"}).getByRole("link", {name:"Lớp", exact:true}).click();
+            await page.getByRole("dialog", {name:"Chưa lưu thay đổi"}).waitFor();
+            await page.evaluate(() => {
+              const storePrototype = IDBObjectStore.prototype;
+              const originalPut = storePrototype.put;
+              let triggered = false;
+              Object.defineProperty(storePrototype, "put", {
+                configurable: true,
+                writable: true,
+                value: function (...args) {
+                  const request = Reflect.apply(originalPut, this, args);
+                  if (!triggered && this.name === "attendance") {
+                    triggered = true;
+                    window.__layoutGateLocalWriteFailed = true;
+                    queueMicrotask(() => {
+                      try { request.transaction?.abort(); } catch { /* transaction already settled */ }
+                    });
+                  }
+                  return request;
+                },
+              });
+            });
+            await page.getByRole("button", {name:"Lưu", exact:true}).click();
+            await page.getByRole("alert").getByText("Không lưu được vào bộ nhớ trên thiết bị.").waitFor();
+            await page.waitForTimeout(1000); // Outlast the 800 ms save-success peek so a false success cannot pass.
+            const remained = new URL(page.url()).pathname === scenario.route;
+            const dialogRemained = await page.getByRole("dialog", {name:"Chưa lưu thay đổi"}).count() > 0;
+            const draft = await row.locator('[data-measure="status"] button[aria-pressed="true"]').count().catch(() => 0);
+            const writeFailed = await page.evaluate(() => Boolean(window.__layoutGateLocalWriteFailed));
+            behaviorObserved = { writeFailed, pathname: new URL(page.url()).pathname, dialogRemained, selectedDraftButtons: draft, error: await page.getByRole("alert").allTextContents() };
+            if (!writeFailed) behaviorProblems.push("local attendance IndexedDB write failure was not injected");
+            if (!remained) behaviorProblems.push("local write failure left the session detail screen");
+            if (!dialogRemained) behaviorProblems.push("local write failure dismissed the unsaved-changes dialog");
+            if (!draft) behaviorProblems.push("local write failure cleared the unsaved attendance draft");
+          } catch (error) {
+            behaviorProblems.push(`failed-save-before-leave interaction could not complete: ${String(error)}`);
+          }
+          behaviorReports.push({route:scenario.route,state:"failed-save-before-leave",viewport:"1440x900",problems:behaviorProblems,observed:behaviorObserved});
         }
-        behaviorReports.push({route:scenario.route,state:"failed-save-before-leave",viewport:"1440x900",problems:behaviorProblems});
-      }
+        if (scenario.kind === "attendance" && scenario.state === "server-500-save" && viewport.width === 1440) {
+          try {
+            const row = page.locator('[data-measure="row"]').first();
+            await row.locator('[data-measure="status"] button').first().click();
+            await page.getByRole("navigation", {name:"Đường dẫn"}).getByRole("link", {name:"Lớp", exact:true}).click();
+            await page.getByRole("dialog", {name:"Chưa lưu thay đổi"}).waitFor();
+            await page.getByRole("button", {name:"Lưu", exact:true}).click();
+            await page.waitForFunction((route) => location.pathname !== route, scenario.route);
+            const server500 = await Promise.race([serverPushFailure, new Promise((resolve) => setTimeout(() => resolve(false), 1500))]);
+            const dialogRemained = await page.getByRole("dialog", {name:"Chưa lưu thay đổi"}).count() > 0;
+            if (!server500 || !serverPushFailureObserved) behaviorProblems.push("fixture did not deliver the server 500 after local persistence");
+            if (dialogRemained) behaviorProblems.push("server 500 incorrectly blocked leaving after local save");
+            behaviorObserved = { pathname: new URL(page.url()).pathname, dialogRemained, server500Delivered: serverPushFailureObserved };
+          } catch (error) {
+            behaviorProblems.push(`server-500-after-local-save interaction could not complete: ${String(error)}`);
+          }
+          behaviorReports.push({route:scenario.route,state:"server-500-after-local-save",viewport:"1440x900",problems:behaviorProblems,observed:behaviorObserved});
+        }
       if (scenario.kind === "attendance" && scenario.state === "loi") {
         const notFound = await page.getByText("Không tìm thấy buổi học", {exact:true}).count();
         if (notFound) behaviorProblems.push("sync failure is shown as a missing session");
         behaviorReports.push({route:scenario.route,state:"initial-sync-error",viewport:`${viewport.width}x${viewport.height}`,problems:behaviorProblems});
       }
-      if (behaviorProblems.length) failures.push({route:scenario.route,state:scenario.state,viewport:`${viewport.width}x${viewport.height}`,problems:behaviorProblems});
+        if (behaviorProblems.length) failures.push({route:scenario.route,state:scenario.state,viewport:`${viewport.width}x${viewport.height}`,problems:behaviorProblems});
       await context.close();
   }
   await browser.close();
