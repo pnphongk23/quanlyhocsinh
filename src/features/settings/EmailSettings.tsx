@@ -66,11 +66,11 @@ export default function EmailSettingsPage() {
 
   const footer = mode === "view" ? null : (
     <>
+      <Button type="button" variant="neutral" disabled={action.saving} onClick={() => setMode("view")}>Huỷ</Button>
+      {mode === "edit" && saved && <Button type="button" variant="danger" disabled={action.saving} onClick={() => open("remove")}>Xoá email</Button>}
       <Button type="submit" form="email-settings-form" variant={mode === "remove" ? "danger" : "primary"} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
         {mode === "remove" ? "Xoá email" : "Lưu email"}
       </Button>
-      {mode === "edit" && saved && <Button type="button" variant="danger" disabled={action.saving} onClick={() => open("remove")}>Xoá email</Button>}
-      <Button type="button" variant="neutral" disabled={action.saving} onClick={() => setMode("view")}>Huỷ</Button>
     </>
   );
 

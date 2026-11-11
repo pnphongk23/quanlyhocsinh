@@ -81,7 +81,7 @@ export default function ChangePasswordPage() {
           error={mismatch}
           errorText={mismatch ? "Mật khẩu nhập lại chưa khớp." : undefined}
         />
-        <div className={a.checks}>
+        <div className={a.checks} data-measure="form-field">
           <CheckRow ok={next.length >= PASSWORD_MIN_LENGTH}>
             Tối thiểu {PASSWORD_MIN_LENGTH} ký tự
           </CheckRow>

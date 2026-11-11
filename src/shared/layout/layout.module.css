@@ -58,8 +58,8 @@
   .breadcrumb { display: flex; }
   .backLink { display: none; }
   .title { font-size: var(--text-2xl); }
-  .formBody { min-height: var(--content-min-h); }
-  .formFooter { padding-bottom: var(--page-bottom); }
+  .formBody { min-height: 0; }
+  .formFooter { position: static; padding-bottom: 0; }
   .detailPanel.tabletPanel { top: 0; right: 0; bottom: 0; width: min(50vw, var(--detail-w)); max-width: calc(100vw - var(--rail-w)); border-radius: var(--radius-sheet) 0 0 var(--radius-sheet); }
   .tabletScrim { left: 0; }
 }

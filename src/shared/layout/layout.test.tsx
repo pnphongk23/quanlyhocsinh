@@ -34,7 +34,10 @@ describe("shared layout", () => {
   it("FormPage provides a form column and optional action footer", () => {
     render(<MemoryRouter><FormPage title="Đổi mật khẩu" footer={<button>Lưu thay đổi</button>}><label>Mật khẩu mới <input /></label></FormPage></MemoryRouter>);
     expect(screen.getByRole("heading", { name: "Đổi mật khẩu" })).toBeInTheDocument();
+    const footer = screen.getByRole("contentinfo");
+    expect(footer).toHaveAttribute("data-measure", "form-footer");
     expect(screen.getByRole("button", { name: "Lưu thay đổi" })).toBeInTheDocument();
+    expect(footer.previousElementSibling).toHaveAttribute("data-measure", "form-body");
   });
 
   it.each([[834, "tablet"], [390, "mobile"]] as const)("opens a viewport detail sheet at %ipx (%s)", (width, _size) => {

@@ -74,6 +74,16 @@ try {
       for(const item of visibleNav){if(item.r.top>innerHeight-140&&item.r.height<180)nav.tabbar=true;else if(item.r.left<8&&item.r.width<150)nav.rail=true;else if(item.r.left<8&&item.r.width>=150)nav.sidebar=true;}
       const controls = [...document.querySelectorAll('button,a[href],label.checkbox,[role="button"],input,select,textarea')].filter(visible).filter(e => !(e.tagName === "INPUT" && ["checkbox","radio","hidden"].includes(e.type))).map(e => ({ label: label(e), tag:e.tagName.toLowerCase(), parentWidth:e.parentElement?rect(e.parentElement).width:0, ...rect(e), fontSize: parseFloat(getComputedStyle(e).fontSize), input: ["INPUT","TEXTAREA","SELECT"].includes(e.tagName) }));
       const pageContent = main || rootOf;
+      const formBody = rootOf.querySelector('[data-measure="form-body"]');
+      const formFooter = rootOf.querySelector('[data-measure="form-footer"]');
+      const formFields = formBody ? [...formBody.querySelectorAll('[data-measure="form-field"]')].filter(visible) : [];
+      const lastField = formFields.at(-1);
+      const formFooterGap = viewportWidth>=640 && lastField && formFooter
+        ? rect(formFooter).top - rect(lastField).bottom
+        : null;
+      const formFooterGapLimit = viewportWidth>=640
+        ? parseFloat(getComputedStyle(root).getPropertyValue("--section-gap")) + 8
+        : null;
       const wideButtons = viewportWidth>=1024?[...pageContent.querySelectorAll("button")].filter(visible).filter(e => {
         const text = (e.innerText || "").trim();
         return text && !e.closest('nav,aside,[role="navigation"],[data-measure="row"]') && (main || !e.closest("header"));
@@ -89,7 +99,7 @@ try {
 
       const detail=document.querySelector('[data-measure="detail"]'); const dialog=document.querySelector('dialog[open],[role="dialog"]'); const panel=detail&&visible(detail)&&["fixed","absolute"].includes(getComputedStyle(detail).position)?detail:dialog&&visible(dialog)?dialog:null; let sheet=null;
       if(panel){const footer=panel.querySelector(".detail-foot,.dialogFooter"), content=panel.querySelector(".detail-body,.dialogBody"), fr=footer?rect(footer):null;let points=0,hits=0;if(fr)for(const fy of [.25,.5,.75])for(const fx of [.2,.5,.8]){const x=fr.left+fr.width*fx,y=fr.top+fr.height*fy;if(x<0||y<0||x>innerWidth||y>innerHeight)continue;points++;const top=document.elementFromPoint(x,y);if(top&&panel.contains(top))hits++;}sheet={inside:(rect(panel).top>=-1&&rect(panel).left>=-1&&rect(panel).bottom<=innerHeight+1&&rect(panel).right<=innerWidth+1),bodyBottom:content?rect(content).bottom:null,footerTop:footer?rect(footer).top:null,points,hits};}
-        return { url:location.pathname, documentOverflow:Math.max(root.scrollWidth,body.scrollWidth)-root.clientWidth, edges:{breadcrumb:breadcrumb&&visible(breadcrumb)?rect(breadcrumb).left:null,title:title&&visible(title)?rect(title).left:left('[data-measure="title"]'),content:content&&visible(content)?rect(content).left:left('[data-measure="content"]')}, controls, smallTargets:controls.filter(c=>c.width<tapMin||c.height<tapMin), smallInputs:controls.filter(c=>c.input&&c.fontSize<16), wideButtons, clipped, blockVoids:blocks.filter(b=>b.ratio>0.2), contentBlockWidths, statusSpread:statuses.length>1?Math.max(...statuses)-Math.min(...statuses):0, nav, sheet };
+        return { url:location.pathname, documentOverflow:Math.max(root.scrollWidth,body.scrollWidth)-root.clientWidth, edges:{breadcrumb:breadcrumb&&visible(breadcrumb)?rect(breadcrumb).left:null,title:title&&visible(title)?rect(title).left:left('[data-measure="title"]'),content:content&&visible(content)?rect(content).left:left('[data-measure="content"]')}, controls, smallTargets:controls.filter(c=>c.width<tapMin||c.height<tapMin), smallInputs:controls.filter(c=>c.input&&c.fontSize<16), wideButtons, clipped, blockVoids:blocks.filter(b=>b.ratio>0.2), contentBlockWidths, statusSpread:statuses.length>1?Math.max(...statuses)-Math.min(...statuses):0, formFooterGap, formFooterGapLimit, nav, sheet };
     }, {tapMin:viewport.tapMin,viewportWidth:viewport.width});
     const edgeVals=Object.values(measured.edges).filter(v=>v!==null);
     const expectedNav={tabbar:"tabbar",rail:"rail",sidebar:"sidebar"}[viewport.nav];
@@ -104,6 +114,7 @@ try {
     if(measured.blockVoids.length)problems.push(`empty block area >20% (${measured.blockVoids.length})`);
     if(measured.contentBlockWidths.some(block => block.delta > 1))problems.push(`content block width differs from content column by >1px (${measured.contentBlockWidths.filter(block => block.delta > 1).map(block => `${block.label}: ${block.delta.toFixed(1)}px`).join(", ")})`);
     if(measured.statusSpread>1)problems.push(`status column spread ${measured.statusSpread}px`);
+    if((scenario.kind==="password"||scenario.kind==="email")&&viewport.width>=640&&(measured.formFooterGap===null||measured.formFooterGap>measured.formFooterGapLimit))problems.push(`form footer gap ${measured.formFooterGap===null?"unmeasured":`${measured.formFooterGap.toFixed(1)}px`} exceeds ${measured.formFooterGapLimit?.toFixed(1)}px`);
     if(measured.sheet&&(!measured.sheet.inside||measured.sheet.bodyBottom===null||measured.sheet.footerTop===null||measured.sheet.bodyBottom>measured.sheet.footerTop+1||!measured.sheet.points||measured.sheet.points!==measured.sheet.hits))problems.push("sheet/footer overlap or overflow");
     if(measured.clipped.length){warnings.push(`${scenario.kind}/${scenario.state}@${viewport.width}: clipped text: ${measured.clipped.join(", ")}`);problems.push(`${measured.clipped.length} clipped text nodes`);}
     if(!detailMobile&&!measured.nav[expectedNav])problems.push(`expected ${expectedNav} nav missing`);

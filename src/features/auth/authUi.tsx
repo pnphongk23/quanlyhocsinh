@@ -103,7 +103,7 @@ export function PasswordField({
   const inputId = id ?? generated;
   const [shown, setShown] = useState(false);
   return (
-    <div className={s.field}>
+    <div className={s.field} data-measure="form-field">
       <label htmlFor={inputId}>{label}</label>
       <div
         className={[
@@ -222,7 +222,7 @@ export function EmailField({
   const generated = useId();
   const inputId = id ?? generated;
   return (
-    <div className={s.field}>
+    <div className={s.field} data-measure="form-field">
       <label htmlFor={inputId}>{label}</label>
       <div className={[s.textBox, disabled ? s.boxDisabled : "", errorText ? s.boxError : ""].filter(Boolean).join(" ")}>
         <input
