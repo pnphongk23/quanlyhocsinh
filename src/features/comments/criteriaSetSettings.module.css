@@ -1,5 +1,4 @@
 .listPanel { display: grid; min-width: 0; gap: var(--card-gap); padding: var(--card-pad); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); box-shadow: var(--shadow-frame); }
-.emptyPanel { max-width: var(--form-max); }
 .listHead { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: var(--space-8); }
 .listHead > div { display: grid; min-width: 0; gap: var(--space-4); }
 .listHead h2 { font-size: var(--text-lg); line-height: var(--leading-tight); }
@@ -39,7 +38,6 @@
 .rowMenu { position: absolute; z-index: var(--z-menu); top: calc(100% + var(--space-4)); right: 0; display: grid; min-width: var(--space-96); gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); box-shadow: var(--shadow-menu); }
 .rowMenu button { min-height: var(--tap); padding: 0 var(--space-12); border: 0; border-radius: var(--radius-control); background: transparent; color: var(--color-text); font: inherit; text-align: left; cursor: pointer; }
 .rowMenu button:disabled { color: var(--color-muted); opacity: var(--state-disabled-opacity); cursor: default; }
-.emptyRow { padding: var(--card-pad); border-radius: var(--radius-row); background: var(--color-bg); }
 .form { display: grid; gap: var(--space-16); }
 .levelField { display: grid; min-width: 0; gap: var(--space-8); }
 .levelLabel { display: flex; align-items: center; gap: var(--space-8); font-size: var(--text-md); font-weight: var(--weight-semibold); }

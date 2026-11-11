@@ -30,7 +30,7 @@ export function PageShell({ breadcrumb, eyebrow, title, subtitle, actions, backT
           </div>
           {actions ? <div className={s.pageActions}>{actions}</div> : null}
         </header>
-        <div className={s.pageBody}>{children}</div>
+        <div className={s.pageBody} data-measure="content">{children}</div>
       </div>
     </section>
   );

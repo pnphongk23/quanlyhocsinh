@@ -248,7 +248,7 @@ function CriteriaSetSettings() {
   }
 
   const addEmptyAction = <Button onClick={openNew} disabled={!online}>Thêm tiêu chí</Button>;
-  const criteriaTable = <section className={`${s.listPanel} ${ordered.length === 0 ? s.emptyPanel : ""}`} aria-label="Danh sách tiêu chí">
+  const criteriaTable = <section className={s.listPanel} data-measure="block" aria-label="Danh sách tiêu chí">
     <div className={s.listHead}><div><h2>Tiêu chí</h2><p>Áp dụng cho mọi lớp trong workspace</p></div></div>
     {ordered.length === 0 ? <EmptyState size="compact" title="Chưa có tiêu chí" description="Thêm tiêu chí để tạo bộ nhận xét dùng chung." action={addEmptyAction} /> : <div className={s.tableWrap}>
       <table className={s.table}>
@@ -264,10 +264,10 @@ function CriteriaSetSettings() {
     </div>}
     {saved && <p className={s.success} role="status" aria-live="polite">✓ Đã lưu</p>}
   </section>;
-  const criteriaList = <section className={`${s.listPanel} ${ordered.length === 0 ? s.emptyPanel : ""}`} aria-label="Danh sách tiêu chí">
+  const criteriaList = <section className={s.listPanel} data-measure="block" aria-label="Danh sách tiêu chí">
     <div className={s.listHead}><div><h2>Tiêu chí</h2><p>Áp dụng cho mọi lớp trong workspace</p></div></div>
     <ol className={s.list}>
-      {ordered.length === 0 && <li className={s.emptyRow} data-measure="block"><EmptyState size="compact" title="Chưa có tiêu chí" description="Thêm tiêu chí để tạo bộ nhận xét dùng chung." action={addEmptyAction} /></li>}
+      {ordered.length === 0 && <li className={s.emptyRow}><EmptyState size="compact" title="Chưa có tiêu chí" description="Thêm tiêu chí để tạo bộ nhận xét dùng chung." action={addEmptyAction} /></li>}
       {ordered.map((item, index) => <li className={s.listItem} key={item.id} data-measure="row" draggable={online && !saving} onDragStart={(event) => startDrag(event, item)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => dropAt(event, index)} onDragEnd={() => setDraggedId(null)}>
         <div className={`${s.item} ${editingId === item.id ? s.selected : ""}`}>
           <button type="button" className={s.itemSelect} onClick={() => openEdit(item)} aria-label={`Sửa tiêu chí ${item.name}`} aria-pressed={editingId === item.id} disabled={!online || saving}>

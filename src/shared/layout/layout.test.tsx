@@ -26,6 +26,7 @@ describe("shared layout", () => {
     render(<MemoryRouter><PageShell breadcrumb="Cài đặt" backTo="/cai-dat" eyebrow="Quản lý" title="Tiêu chí" subtitle="Mô tả" actions={<button>Lưu</button>}><p>Nội dung</p></PageShell></MemoryRouter>);
     expect(screen.getByRole("heading", { name: "Tiêu chí" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Đường dẫn" })).toHaveTextContent("Cài đặt");
+    expect(screen.getByRole("navigation", { name: "Đường dẫn" })).toHaveClass(/breadcrumb/);
     expect(screen.getByRole("link", { name: /Quay lại/ })).toHaveAttribute("href", "/cai-dat");
     expect(screen.getByText("Nội dung")).toBeInTheDocument();
   });
@@ -40,7 +41,7 @@ describe("shared layout", () => {
     setViewport(width);
     render(<MasterDetailPage master={<p>Danh sách</p>} detail={<p>Chi tiết</p>} detailOpen onCloseDetail={vi.fn()} detailTitle="Sửa tiêu chí" footer={<button>Lưu</button>} />);
     expect(screen.getByRole("dialog", { name: "Sửa tiêu chí" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Đóng chi tiết" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Đóng chi tiết" })).toHaveTextContent("×");
   });
 
   it("marks the master-detail layout when a desktop detail panel is open", () => {
