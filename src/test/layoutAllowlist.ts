@@ -7,7 +7,6 @@ export const layoutAllowlist = {
     // Remove after Cài đặt migration in Pha 3.
     "src/features/settings/ChangePasswordPage.tsx": 1,
     "src/features/settings/EmailSettings.tsx": 1,
-    "src/features/comments/CriteriaSetSettingsPage.tsx": 1,
     // Remove Điểm danh route after Pha 3 template migration.
     "src/features/class-space/SessionDetailPage.tsx": 1
   },
@@ -29,8 +28,6 @@ export const layoutAllowlist = {
     "src/features/comments/CriteriaMode.module.css": 1,
     "src/features/comments/SlipCriteriaFields.module.css": 2,
     "src/features/comments/SlipLevelFields.module.css": 1,
-    // Remove after Cài đặt/Điểm danh migration in Pha 3.
-    "src/features/comments/criteriaSetSettings.module.css": 1,
     "src/features/comments/notesImport.module.css": 1,
     "src/features/homework/HomeworkPanel.module.css": 1,
     "src/features/pwa/pwa.module.css": 1,
@@ -89,8 +86,6 @@ export const layoutAllowlist = {
     "src/features/comments/CriteriaMode.module.css": 1,
     "src/features/comments/SlipCriteriaFields.module.css": 3,
     "src/features/comments/SlipLevelFields.module.css": 2,
-    // Remove after Cài đặt/Điểm danh migration in Pha 3.
-    "src/features/comments/criteriaSetSettings.module.css": 1,
     "src/features/comments/notesImport.module.css": 2,
     "src/features/comments/slipLevelSkeleton.module.css": 1,
     "src/features/homework/HomeworkDesktop.module.css": 40,

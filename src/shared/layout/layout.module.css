@@ -13,6 +13,7 @@
 .pageColumn { width: 100%; max-width: var(--page-max); }
 .pageMeta { min-height: var(--space-4); }
 .breadcrumb { display: none; overflow: hidden; color: var(--color-muted); font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; }
+.breadcrumb a { display: inline-flex; min-width: var(--tap); min-height: var(--tap); align-items: center; color: inherit; }
 .backLink { display: inline-flex; min-height: var(--tap); align-items: center; gap: var(--space-8); color: var(--color-primary-ink); text-decoration: none; }
 .pageHeader { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--page-gap); margin-bottom: var(--title-gap); }
 .pageHeading { min-width: 0; }
@@ -84,7 +85,7 @@
   .title { font-size: var(--text-3xl); }
   .desktopDetail { position: sticky; top: var(--page-top); display: flex; min-width: 0; height: calc(100dvh - var(--page-top) - var(--page-bottom)); flex-direction: column; overflow: auto; border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
   .desktopDetail .detailFooter { margin-top: auto; }
-  .masterDetail { grid-template-columns: minmax(0, 1fr) var(--detail-w); gap: var(--page-gap); }
+  .masterDetail.hasDetail { grid-template-columns: minmax(0, 1fr) var(--detail-w); gap: var(--page-gap); }
 }
 
 @media (hover: hover) {

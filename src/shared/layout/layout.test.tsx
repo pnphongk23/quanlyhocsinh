@@ -43,6 +43,21 @@ describe("shared layout", () => {
     expect(screen.getByRole("button", { name: "Đóng chi tiết" })).toBeInTheDocument();
   });
 
+  it("marks the master-detail layout when a desktop detail panel is open", () => {
+    setViewport(1440);
+    const { container } = render(<MasterDetailPage master={<p>Danh sách</p>} detail={<p>Chi tiết</p>} detailOpen onCloseDetail={vi.fn()} detailTitle="Sửa tiêu chí" />);
+    expect(container.querySelector('[class*="hasDetail"]')).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Sửa tiêu chí" })).toBeInTheDocument();
+  });
+
+  it.each([[834, "Criteria table", "Criteria list"], [390, "Criteria list", "Criteria table"]] as const)("selects the %ipx master slot from layout", (width, visible, hidden) => {
+    setViewport(width);
+    const { container } = render(<MasterDetailPage master={<p>Criteria table</p>} mobileMaster={<p>Criteria list</p>} detailOpen={false} onCloseDetail={vi.fn()} detailTitle="Sửa tiêu chí" />);
+    expect(screen.getByText(visible)).toBeInTheDocument();
+    expect(screen.queryByText(hidden)).not.toBeInTheDocument();
+    expect(container.querySelector('[class*="masterDetail"]')).toBeInTheDocument();
+  });
+
   it("uses one navigation definition across its route groups", () => {
     expect(navItems.map(({ id }) => id)).toEqual(["classes", "attendance", "scores", "students", "reports", "calendar", "settings"]);
     expect(navItems.filter(({ child }) => child)).toHaveLength(4);
