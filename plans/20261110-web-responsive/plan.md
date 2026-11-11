@@ -79,6 +79,16 @@
 3. Điểm danh: khung chi tiết buổi + gộp `AttendancePanel`/`AttendanceDesktop` thành một component đi qua mẫu trang.
 Mỗi bước: G1–G3. Cuối: G4 reviewer (phạm vi ảnh hưởng gồm cả màn ngoài 2 luồng dùng component bị đổi) → `lessons.md` → mở PR vào develop → handback PM.
 
+### Chủ duyệt mock (2026-11-11, "okay hết")
+- Bố cục 3 khổ như mock; sắp xếp tiêu chí: tay kéo + menu "…" Lên/Xuống.
+- Tablet: editor tiêu chí là sheet phải; Điểm danh bỏ panel Tóm tắt.
+- Lề ngang mobile 16px; cột bảng tiêu chí chỉ "Mặc định: <mức>".
+- Điểm danh mobile giữ như cũ: MỘT chip trạng thái, chạm để đổi vòng.
+
+### Ghi chú Pha 2 → Pha 3 (TL soi ảnh gộp `f3b1dbf`)
+- Tablet editor tiêu chí: sheet phải đúng, nhưng Huỷ/Lưu nhỏ và xếp dọc → sửa khi chuyển Bộ tiêu chí.
+- `src/roles/guardian/*.module.css` còn `@media` bề rộng: ngoài 2 luồng, nằm trong allowlist.
+
 ## 6. Rủi ro
 - Đổi component dùng chung ảnh hưởng mọi màn → G2 chạy toàn bộ route, G4 review phạm vi.
 - iPad cảm ứng ở 1024+ nhận sidebar nhưng vùng bấm vẫn 44 (`pointer:fine` mới 36).
