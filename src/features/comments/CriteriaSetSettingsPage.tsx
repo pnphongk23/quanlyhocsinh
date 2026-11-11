@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { Link, Navigate } from "react-router-dom";
 import type { CriteriaLevel, CriteriaSet, CriteriaSetItem } from "../../data/api/types";
 import { criteriaSetError, getCachedCriteriaSet, getCriteriaSet, replaceCriteriaSet } from "../../data/repositories/criteriaSet";
@@ -42,6 +43,9 @@ function CriteriaSetSettings() {
   const [deleteSaving, setDeleteSaving] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top?: number; bottom?: number; right: number }>({ right: 8 });
 
   async function loadSet() {
     setLoadError("");
@@ -73,6 +77,38 @@ function CriteriaSetSettings() {
   const ordered = useMemo(() => set?.criteria ?? [], [set]);
   const editorTitle = editingId ? "Sửa tiêu chí" : "Thêm tiêu chí";
   const closeEditor = () => setEditorOpen(false);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const placeMenu = () => {
+      const anchor = menuButtonRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const menuHeight = menuRef.current?.getBoundingClientRect().height ?? 152;
+      const below = rect.bottom + menuHeight + 8 <= window.innerHeight;
+      setMenuPosition({
+        ...(below ? { top: rect.bottom + 4 } : { bottom: Math.max(8, window.innerHeight - rect.top + 4) }),
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
+    };
+    placeMenu();
+    menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpenMenuId(null);
+        menuButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openMenuId]);
 
   function openNew() {
     setEditingId(null); setDraft({ ...EMPTY_DRAFT, texts: { ...EMPTY_DRAFT.texts } });
@@ -237,14 +273,21 @@ function CriteriaSetSettings() {
   }
 
   function rowMenu(item: CriteriaSetItem, index: number) {
-    return <div className={s.menuWrap}>
-      <button type="button" className={s.orderButton} aria-label={`Thao tác cho ${item.name}`} aria-haspopup="menu" aria-expanded={openMenuId === item.id} onClick={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}>•••</button>
-      {openMenuId === item.id && <div className={s.rowMenu} role="menu" aria-label={`Thao tác cho ${item.name}`}>
-        <button type="button" role="menuitem" disabled={!online || saving || index === 0} onClick={() => { setOpenMenuId(null); void move(item, -1); }}>Lên</button>
-        <button type="button" role="menuitem" disabled={!online || saving || index === ordered.length - 1} onClick={() => { setOpenMenuId(null); void move(item, 1); }}>Xuống</button>
-        <button type="button" role="menuitem" onClick={() => { setOpenMenuId(null); openEdit(item); }}>Sửa tiêu chí</button>
-      </div>}
-    </div>;
+      const menuOpen = openMenuId === item.id;
+      return <div className={s.menuWrap}>
+        <button ref={menuOpen ? menuButtonRef : null} type="button" className={s.orderButton} aria-label={`Thao tác cho ${item.name}`} aria-haspopup="menu" aria-expanded={menuOpen} onClick={(event) => {
+          if (menuOpen) { setOpenMenuId(null); return; }
+          menuButtonRef.current = event.currentTarget;
+          const rect = event.currentTarget.getBoundingClientRect();
+          setMenuPosition({ top: rect.bottom + 4, right: Math.max(8, window.innerWidth - rect.right) });
+          setOpenMenuId(item.id);
+        }}>•••</button>
+        {menuOpen && createPortal(<div ref={menuRef} className={s.rowMenu} style={menuPosition} role="menu" aria-label={`Thao tác cho ${item.name}`}>
+          <button type="button" role="menuitem" disabled={!online || saving || index === 0} onClick={() => { setOpenMenuId(null); void move(item, -1); }}>Lên</button>
+          <button type="button" role="menuitem" disabled={!online || saving || index === ordered.length - 1} onClick={() => { setOpenMenuId(null); void move(item, 1); }}>Xuống</button>
+          <button type="button" role="menuitem" onClick={() => { menuButtonRef.current?.focus(); setOpenMenuId(null); openEdit(item); }}>Sửa tiêu chí</button>
+        </div>, document.body)}
+      </div>;
   }
 
   const addEmptyAction = <Button onClick={openNew} disabled={!online}>Thêm tiêu chí</Button>;
@@ -264,10 +307,9 @@ function CriteriaSetSettings() {
     </div>}
     {saved && <p className={s.success} role="status" aria-live="polite">✓ Đã lưu</p>}
   </section>;
-  const criteriaList = <section className={s.listPanel} data-measure="block" aria-label="Danh sách tiêu chí">
-    <div className={s.listHead}><div><h2>Tiêu chí</h2><p>Áp dụng cho mọi lớp trong workspace</p></div></div>
-    <ol className={s.list}>
-      {ordered.length === 0 && <li className={s.emptyRow}><EmptyState size="compact" title="Chưa có tiêu chí" description="Thêm tiêu chí để tạo bộ nhận xét dùng chung." action={addEmptyAction} /></li>}
+    const criteriaList = <section className={s.mobileList} data-measure="block" aria-label="Danh sách tiêu chí">
+      <ol className={s.list}>
+        {ordered.length === 0 && <li className={s.emptyRow}><EmptyState size="compact" title="Chưa có tiêu chí" description="Thêm tiêu chí để tạo bộ nhận xét dùng chung." /></li>}
       {ordered.map((item, index) => <li className={s.listItem} key={item.id} data-measure="row" draggable={online && !saving} onDragStart={(event) => startDrag(event, item)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => dropAt(event, index)} onDragEnd={() => setDraggedId(null)}>
         <div className={`${s.item} ${editingId === item.id ? s.selected : ""}`}>
           <button type="button" className={s.itemSelect} onClick={() => openEdit(item)} aria-label={`Sửa tiêu chí ${item.name}`} aria-pressed={editingId === item.id} disabled={!online || saving}>
@@ -279,8 +321,9 @@ function CriteriaSetSettings() {
           {rowMenu(item, index)}
         </div>
       </li>)}
-    </ol>
-    {saved && <p className={s.success} role="status" aria-live="polite">✓ Đã lưu</p>}
+      </ol>
+      <Button className={s.mobileAdd} onClick={openNew} disabled={!online || saving || ordered.length >= 8}>Thêm tiêu chí</Button>
+      {saved && <p className={s.success} role="status" aria-live="polite">✓ Đã lưu</p>}
   </section>;
 
     const detail = editorOpen ? editorBody : null;
@@ -291,7 +334,7 @@ function CriteriaSetSettings() {
         backTo="/cai-dat"
         title="Bộ tiêu chí nhận xét"
         subtitle="Một bộ tiêu chí dùng chung cho mọi lớp trong workspace."
-        actions={<Button onClick={openNew} disabled={!online || saving || ordered.length >= 8}>Thêm tiêu chí</Button>}
+          actions={layout === "mobile" ? undefined : <Button onClick={openNew} disabled={!online || saving || ordered.length >= 8}>Thêm tiêu chí</Button>}
       >
         {!online && <InfoNotice title="Đang ngoại tuyến" description="Bạn có thể xem bộ đã lưu trên máy. Chỉnh sửa cần kết nối mạng." />}
         {loadError && <div className={s.error} role="status">{loadError}{online && <Button variant="secondary" onClick={() => void loadSet()}>Tải lại</Button>}</div>}

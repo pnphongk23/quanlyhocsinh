@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { FormPage } from "./FormPage";
 import { MasterDetailPage } from "./MasterDetailPage";
 import { PageShell } from "./PageShell";
@@ -21,6 +22,13 @@ function setViewport(width: number) {
 }
 
 afterEach(() => vi.unstubAllGlobals());
+
+beforeAll(() => {
+  if (!HTMLDialogElement.prototype.showModal) {
+    HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+    HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); this.dispatchEvent(new Event("close")); };
+  }
+});
 
 describe("shared layout", () => {
   it("PageShell aligns route content with heading and exposes breadcrumb/back slots", () => {
@@ -46,6 +54,20 @@ describe("shared layout", () => {
     render(<MasterDetailPage master={<p>Danh sách</p>} detail={<p>Chi tiết</p>} detailOpen onCloseDetail={vi.fn()} detailTitle="Sửa tiêu chí" footer={<button>Lưu</button>} />);
     expect(screen.getByRole("dialog", { name: "Sửa tiêu chí" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Đóng chi tiết" })).toHaveTextContent("×");
+  });
+
+  it("returns focus to the opening control when the detail sheet closes", () => {
+    setViewport(390);
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return <MasterDetailPage master={<button onClick={() => setOpen(true)}>Edit row</button>} detail={<p>Editor</p>} detailOpen={open} onCloseDetail={() => setOpen(false)} detailTitle="Sửa tiêu chí" footer={<button>Lưu</button>} />;
+    }
+    render(<Harness />);
+    const trigger = screen.getByRole("button", { name: "Edit row" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Sửa tiêu chí" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Đóng chi tiết" }));
+    expect(document.activeElement).toBe(trigger);
   });
 
   it("marks the master-detail layout when a desktop detail panel is open", () => {

@@ -51,6 +51,8 @@ export const layoutAllowlist = {
     "src/features/auth/auth.module.css": 108,
     "src/features/class-space/classSpace.module.css": 7,
     "src/features/class-space/desktop.module.css": 54,
+    // Existing inline styles in the legacy desktop session route discovered by the stricter JSX scan.
+    "src/features/class-space/SessionsDesktop.tsx": 6,
     "src/features/class-space/sessions.module.css": 15,
     "src/features/classes/classes.module.css": 8,
     "src/features/classes/classesForm.module.css": 9,

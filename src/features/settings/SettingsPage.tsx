@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { logout } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
 import { listMyChildren } from "../../data/repositories/guardian";
+import { getCachedCriteriaSet } from "../../data/repositories/criteriaSet";
 import { useStore } from "../../data/store";
 import { pendingCommandCount } from "../../data/outbox";
 import { scheduleSync } from "../../data/sync";
@@ -45,6 +46,15 @@ export default function SettingsPage() {
   const [blocked, setBlocked] = useState(false);
   const [blockedCount, setBlockedCount] = useState(0);
   const [error, setError] = useState("");
+  const [criteriaCount, setCriteriaCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getCachedCriteriaSet().then((cached) => {
+      if (active && cached) setCriteriaCount(cached.criteria.length);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   if (!session) return <Navigate to="/dang-nhap" replace />;
 
@@ -120,7 +130,7 @@ export default function SettingsPage() {
               <Icon name="chevron-right" />
             </Link>}
               {criteriaVisible && <Link className={s.menuRow} data-measure="row" to="/cai-dat/bo-tieu-chi">
-              <span className={s.rowMain}><span className={s.rowTitle}>Bộ tiêu chí nhận xét</span><span className={s.rowDescription}>5 tiêu chí · áp dụng cho mọi lớp</span></span>
+                <span className={s.rowMain}><span className={s.rowTitle}>Bộ tiêu chí nhận xét</span><span className={s.rowDescription}>{criteriaCount === null ? "Áp dụng cho mọi lớp" : `${criteriaCount} tiêu chí · áp dụng cho mọi lớp`}</span></span>
               <Icon name="chevron-right" />
             </Link>}
             {memberships.length > 1 && <button type="button" className={s.menuRow} data-measure="row" onClick={() => navigate("/chon-vai-tro")}>

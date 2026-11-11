@@ -12,8 +12,8 @@ const accountScenarios = [
 ];
 export const scenarios = [
   ...accountScenarios,
-  ...["thuong", "dang-sua", "rong", "ten-dai", "8-tieu-chi"].map((state) => ({ route: "/cai-dat/bo-tieu-chi", state, kind: "criteria" })),
-  ...["ngan-6-em", "dai-30-em", "ten-dai", "chua-diem-danh", "da-luu", "dang-tai", "loi"].map((state) => ({ route: "/lop/demo-6a/buoi-hoc/demo-past", state, kind: "attendance" })),
+  ...["thuong", "dang-sua", "menu-cuoi", "focus-sheet", "draft-breakpoint", "rong", "ten-dai", "8-tieu-chi"].map((state) => ({ route: "/cai-dat/bo-tieu-chi", state, kind: "criteria" })),
+  ...["ngan-6-em", "dai-30-em", "ten-dai", "chua-diem-danh", "lan-tron", "unsaved-breakpoint", "save-failure", "da-luu", "dang-tai", "loi"].map((state) => ({ route: "/lop/demo-6a/buoi-hoc/demo-past", state, kind: "attendance" })),
 ];
 export { classes, identity, sessionFor };
 
@@ -26,7 +26,9 @@ export function fixtureEntities(scenario) {
   }));
   const sessions = [{ id: "demo-past", class_id: "demo-6a", date: "2026-10-20", start_time: "17:00", origin: "recurring", is_makeup: false, status: "held", version: 1 }];
   const attendance = scenario.state === "da-luu"
-    ? students.map((student, i) => ({ session_id: "demo-past", student_id: student.id, status: i % 3 ? "present" : "absent", note: "", late_at: null, updated_at: "2026-10-20T10:00:00Z", version: 1 }))
-    : [];
+      ? students.map((student, i) => ({ session_id: "demo-past", student_id: student.id, status: i % 3 ? "present" : "absent", note: "", late_at: null, updated_at: "2026-10-20T10:00:00Z", version: 1 }))
+      : scenario.state === "lan-tron"
+        ? students.slice(0, Math.ceil(students.length / 2)).map((student, i) => ({ session_id: "demo-past", student_id: student.id, status: i % 2 ? "present" : "absent", note: "", late_at: null, updated_at: "2026-10-20T10:00:00Z", version: 1 }))
+        : [];
   return { classes, students, sessions, attendance, tests: [], scores: [], slips: [], homeworkSections: [], homeworkGrades: [], reportBatches: [], reports: [], reportPublications: [] };
 }

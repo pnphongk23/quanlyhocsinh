@@ -97,8 +97,9 @@ describe("custom criteria settings", () => {
     mocks.get.mockResolvedValue(criteria);
     renderPage();
     await screen.findByText("Độ tập trung");
-    expect(screen.getByText("Áp dụng cho mọi lớp trong workspace")).toBeInTheDocument();
     const list = screen.getByRole("region", { name: "Danh sách tiêu chí" });
+    expect(within(list).queryByRole("heading", { name: "Tiêu chí" })).not.toBeInTheDocument();
+    expect(within(list).getByRole("button", { name: "Thêm tiêu chí" })).toBeInTheDocument();
     const homeworkRow = within(list).getByRole("button", { name: "Sửa tiêu chí Làm bài tập về nhà" });
     expect(within(homeworkRow).getByText("Theo chấm BTVN")).toBeInTheDocument();
     expect(homeworkRow).toHaveTextContent("Mặc định: Tốt");
@@ -124,6 +125,21 @@ describe("custom criteria settings", () => {
     await screen.findByText("Tiêu chí 1");
     fireEvent.click(screen.getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" }));
     expect((await screen.findByRole("dialog", { name: "Sửa tiêu chí" })).className).toContain(placement);
+  });
+
+  it("renders the last-row action menu outside the scrolling table and closes it with Escape", async () => {
+    mocks.layout = "desktop";
+    setLayoutMedia();
+    renderPage();
+    await screen.findByText("Tiêu chí 1");
+    const trigger = screen.getByRole("button", { name: "Thao tác cho Tiêu chí 1" });
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole("menu", { name: "Thao tác cho Tiêu chí 1" });
+    expect(menu.closest('[class*="tableWrap"]')).toBeNull();
+    expect(menu.parentElement).toBe(document.body);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("menu", { name: "Thao tác cho Tiêu chí 1" })).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
   it("keeps deletion confirmation in the edit flow and prevents deleting the final item", async () => {
