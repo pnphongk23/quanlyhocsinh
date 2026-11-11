@@ -1,14 +1,14 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAccess } from "../../data/repositories/access";
-import { getSession, getSessionClass, hasSession, sessionPrefix } from "../../data/repositories/sessions";
+import { getSession, getSessionClass, hasSession, sessionNumber, sessionPrefix } from "../../data/repositories/sessions";
 import { useStore } from "../../data/store";
 import { formatDayMonth, formatWeekdayDate } from "../../shared/format";
 import { todayISO } from "../../shared/date";
 import { useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
-import { refreshNow } from "../../data/sync";
+import { refreshNow, useInitialSyncPending } from "../../data/sync";
 import { PageShell, ResponsiveSlot } from "../../shared/layout";
 import { Button, EmptyState, Icon, LinkButton, NoAccess, Sheet, UnsavedChangesDialog } from "../../shared/ui";
 import { PullToRefresh } from "../../shared/ui/PullToRefresh";
@@ -39,13 +39,19 @@ export function sessionTabOf(value: string | null | undefined): SessionTab {
   return found ? found.value : DEFAULT_SESSION_TAB;
 }
 
-type SessionHeader = { eyebrow: string; title: string; actions?: ReactNode };
+type SessionHeader = { eyebrow: string; title: string; sessionLabel: string; actions?: ReactNode };
+
+export function SessionDetailFallback({ pending, backTo }: { pending: boolean; backTo: string }) {
+  return pending
+    ? <p role="status">Đang tải buổi học…</p>
+    : <EmptyState title="Không tìm thấy buổi học"><LinkButton to={backTo}>Về danh sách buổi</LinkButton></EmptyState>;
+}
 
 export default function SessionDetailPage() {
   const { classId = "" } = useParams();
-  const [header, setHeader] = useState<SessionHeader>({ eyebrow: "Lớp học", title: "Chi tiết buổi học" });
+  const [header, setHeader] = useState<SessionHeader>({ eyebrow: "Lớp học", title: "Chi tiết buổi học", sessionLabel: "Buổi học" });
   const backTo = `/lop/${classId}/buoi-hoc`;
-  const breadcrumb = <><Link to={backTo}>Buổi học</Link><span aria-hidden="true">/</span><span>{header.eyebrow}</span></>;
+  const breadcrumb = <><Link to="/lop">Lớp</Link><span aria-hidden="true">/</span><Link to={`/lop/${classId}`}>{header.title}</Link><span aria-hidden="true">/</span><span>{header.sessionLabel}</span></>;
   return <PageShell className={s.page} breadcrumb={breadcrumb} backTo={backTo} eyebrow={header.eyebrow} title={header.title} actions={header.actions}>
     <Suspense fallback={<div className={s.body}><p role="status">Đang tải buổi học…</p></div>}>
       <SessionDetailBody onHeaderChange={setHeader} />
@@ -61,6 +67,7 @@ function SessionDetailBody({ onHeaderChange }: { onHeaderChange: (header: Sessio
   const access = useAccess();
   const klass = getSessionClass(sessionId);
   const session = getSession(sessionId);
+  const initialSyncPending = useInitialSyncPending();
   const future = session ? session.date > todayISO() : false;
   const canWrite = access.can("sessions_attendance", "write");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -95,9 +102,10 @@ function SessionDetailBody({ onHeaderChange }: { onHeaderChange: (header: Sessio
   const canShowOptions = Boolean(session && !cancelled && session.status === "planned" && canWrite);
   const actions = useMemo(() => canShowOptions ? <button type="button" className={s.moreButton} aria-label="Tuỳ chọn buổi học" title="Tuỳ chọn buổi học" onClick={() => { setMenuOpen(true); setError(""); }}><Icon name="more" /></button> : undefined, [canShowOptions]);
   const backTo = `/lop/${classId}/buoi-hoc`;
-  const title = session ? sessionPrefix(session) : "Chi tiết buổi học";
-  const eyebrow = klass?.name ?? "Lớp học";
-  useEffect(() => { onHeaderChange({ eyebrow, title, actions }); }, [actions, eyebrow, onHeaderChange, title]);
+  const title = klass?.name ?? "Chi tiết buổi học";
+  const eyebrow = session ? `${formatWeekdayDate(session.date)} · ${session.time}` : "Lớp học";
+  const sessionLabel = session ? `Buổi ${sessionNumber(session) ?? "học"}` : "Buổi học";
+  useEffect(() => { onHeaderChange({ eyebrow, title, sessionLabel, actions }); }, [actions, eyebrow, onHeaderChange, sessionLabel, title]);
   const tabBar = (tabActions?: ReactNode) => <div className={s.tabRow}>
     <div className={s.tabs} role="tablist" aria-label="Nội dung buổi học">
       {SESSION_TABS.map((item) => <button key={item.value} type="button" role="tab" aria-selected={tab === item.value} className={`${s.tab} ${tab === item.value ? s.tabActive : ""}`} onClick={() => openTab(item.value)}>{item.label}</button>)}
@@ -137,7 +145,7 @@ function SessionDetailBody({ onHeaderChange }: { onHeaderChange: (header: Sessio
 
   const missingSession = hasSession(sessionId)
     ? <NoAccess what="buổi học này" />
-    : <EmptyState title="Không tìm thấy buổi học"><LinkButton to={backTo}>Về danh sách buổi</LinkButton></EmptyState>;
+    : <SessionDetailFallback pending={initialSyncPending} backTo={backTo} />;
   const cancelledContent = session && cancelled ? <>
     <div className={s.dateCard} data-measure="block"><p className={s.dateTitle}>{formatWeekdayDate(session.date)}</p><p className={s.dateMeta}>{sessionPrefix(session)} · đã huỷ</p></div>
     <EmptyState title="Buổi này đã huỷ" description="Không cần điểm danh." action={<LinkButton variant="secondary" size="lg" to={backTo}>Về danh sách buổi</LinkButton>} />

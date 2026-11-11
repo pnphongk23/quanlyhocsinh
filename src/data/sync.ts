@@ -10,8 +10,16 @@ import { starsFromCriteria } from "./slip";
 import { criteriaFromLevels, normalizeTopics, parseLevels, parseSkillLevels, starsFromLevels } from "./criteriaLevels";
 import { clearReportBatchTombstones, isReportBatchDeleted, isReportDeleted } from "./reportBatchTombstones";
 import { resolveApiBase } from "./api/baseUrl";
+import { useSyncExternalStore } from "react";
 export const api = createApiClient({ baseUrl: resolveApiBase(import.meta.env.VITE_API_BASE), getToken: () => getToken() });
 let running: Promise<void> | null = null;
+let initialSyncCompletedFor: string | null = null;
+const syncStatusListeners = new Set<() => void>();
+const emitSyncStatus = () => syncStatusListeners.forEach((listener) => listener());
+const getInitialSyncPending = () => Boolean(running && getCacheIdentity() && getToken() && initialSyncCompletedFor !== identityKey());
+export function useInitialSyncPending(): boolean {
+  return useSyncExternalStore((listener) => { syncStatusListeners.add(listener); return () => syncStatusListeners.delete(listener); }, getInitialSyncPending, () => false);
+}
 let timer: ReturnType<typeof setTimeout> | undefined;
 let pullWhenIdleRequested = false;
 let syncFailureVersion = 0;
@@ -209,7 +217,10 @@ function runSync(pullWhenIdle: boolean): Promise<void> {
   if (timer) { clearTimeout(timer); timer = undefined; }
   firstScheduledAt = null;
   if (running) { again = true; pullWhenIdleRequested ||= pullWhenIdle; return running; }
-  if (!getCacheIdentity() || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) return Promise.resolve();
+  if (!getCacheIdentity() || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) {
+    if (getCacheIdentity()) { initialSyncCompletedFor = identityKey(); emitSyncStatus(); }
+    return Promise.resolve();
+  }
   running = (async () => {
     await Promise.resolve();
     try {
@@ -220,8 +231,9 @@ function runSync(pullWhenIdle: boolean): Promise<void> {
         pullWhenIdleRequested = false;
         await syncRound(cache.membershipId, identityKey(), roundPullWhenIdle);
       } while (again);
-    } finally { running = null; }
+    } finally { initialSyncCompletedFor = identityKey(); running = null; emitSyncStatus(); }
   })();
+  emitSyncStatus();
   return running;
 }
 export function syncNow(): Promise<void> { return runSync(true); }
