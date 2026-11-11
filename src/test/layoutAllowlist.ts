@@ -2,11 +2,6 @@
 // Guardian width breakpoints are temporary legacy entries and must be removed after Pha 3.
 export const layoutAllowlist = {
   "routeTemplate": {
-    // Remove Cài đặt routes after Pha 3 template migration.
-    "src/features/settings/SettingsPage.tsx": 1,
-    // Remove after Cài đặt migration in Pha 3.
-    "src/features/settings/ChangePasswordPage.tsx": 1,
-    "src/features/settings/EmailSettings.tsx": 1,
     // Remove Điểm danh route after Pha 3 template migration.
     "src/features/class-space/SessionDetailPage.tsx": 1
   },
@@ -35,8 +30,6 @@ export const layoutAllowlist = {
     "src/features/reports/reportDialog.module.css": 1,
     "src/features/schedule/schedule.module.css": 2,
     "src/features/scores/scores.module.css": 5,
-    // Remove after Cài đặt migration in Pha 3.
-    "src/features/settings/settings.module.css": 1,
     "src/features/students/importStudents.module.css": 2,
     "src/features/students/students.module.css": 2,
     // Legacy guardian breakpoints: reduce, then remove after later responsive work.
@@ -57,10 +50,6 @@ export const layoutAllowlist = {
     "src/features/reports/ReportBatchDetail.tsx": 1,
     "src/features/reports/ReportBatchList.tsx": 1,
     "src/features/scores/TestScoresPage.tsx": 1,
-    // Remove after Cài đặt migration in Pha 3.
-    "src/features/settings/ChangePasswordPage.tsx": 1,
-    // Remove Cài đặt routes after Pha 3 template migration.
-    "src/features/settings/SettingsPage.tsx": 1,
     "src/features/staff/StaffPage.tsx": 1,
     "src/features/students/StudentsPage.tsx": 1,
     "src/shared/hooks/useIsDesktop.ts": 3,
@@ -97,9 +86,6 @@ export const layoutAllowlist = {
     "src/features/scores/ScoreGridDesktop.module.css": 12,
     "src/features/scores/TestsDesktop.module.css": 18,
     "src/features/scores/scores.module.css": 47,
-    // Remove after Cài đặt migration in Pha 3.
-    "src/features/settings/emailSettings.module.css": 6,
-    "src/features/settings/settings.module.css": 89,
     "src/features/staff/staff.module.css": 1,
     "src/features/students/StudentsDesktop.module.css": 14,
     "src/features/students/importStudents.module.css": 9,

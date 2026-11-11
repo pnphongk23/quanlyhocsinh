@@ -110,7 +110,7 @@ describe("save states of account forms", () => {
     await waitFor(() => expect(calls("POST /auth/change-password")).toBe(1));
   });
 
-  it("desktop settings clears the fields after saving and returns the button to disabled", async () => {
+    it("opens the standalone password form from desktop settings and returns after saving", async () => {
     window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })) as unknown as typeof window.matchMedia;
     request.mockImplementation(async (endpoint: string) => {
       if (endpoint === "POST /auth/login") return sessionResponse();
@@ -119,15 +119,16 @@ describe("save states of account forms", () => {
       throw new Error(endpoint);
     });
     await login("+84900000001", "x");
-    render(<Harness initial="/cai-dat"/>);
-    const submit = () => screen.getByRole("button", { name: /Lưu mật khẩu mới|Đang lưu/ });
-    expect(submit()).toBeDisabled();
-    type("Mật khẩu hiện tại", "old-password"); type("Mật khẩu mới", "new-password!"); type("Nhập lại mật khẩu mới", "new-password!");
-    expect(submit()).toBeEnabled();
-    fireEvent.click(submit());
-    expect(await screen.findByText("Đã lưu mật khẩu mới.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Mật khẩu hiện tại")).toHaveValue("");
-    expect(submit()).toBeDisabled();
-    expect(calls("POST /auth/change-password")).toBe(1);
+      render(<Harness initial="/cai-dat"/>);
+      fireEvent.click(await screen.findByRole("link", { name: /Đổi mật khẩu/ }));
+      expect(await screen.findByRole("heading", { name: "Đổi mật khẩu" })).toBeInTheDocument();
+      const submit = () => screen.getByRole("button", { name: /Lưu mật khẩu mới|Đang lưu/ });
+      expect(submit()).toBeDisabled();
+      type("Mật khẩu hiện tại", "old-password"); type("Mật khẩu mới", "new-password!"); type("Nhập lại mật khẩu mới", "new-password!");
+      expect(submit()).toBeEnabled();
+      fireEvent.click(submit());
+      expect(calls("POST /auth/change-password")).toBe(1);
+      expect(await screen.findByRole("heading", { name: "Cài đặt" }, { timeout: 4000 })).toBeInTheDocument();
+      expect(screen.queryByLabelText("Mật khẩu hiện tại")).toBeNull();
   });
 });

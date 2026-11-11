@@ -35,8 +35,9 @@ export const accountRoutes: RouteObject[] = [
           if (import.meta.env.VITE_CRITERIA_LEVELS !== "1") throw redirect("/cai-dat");
           return { Component: (await import("../../features/comments/CriteriaSetSettingsPage")).default };
         } },
-      { path: "/cai-dat/nhan-su", lazy: async () => ({ Component: (await import("../../features/staff/StaffPage")).default }) },
-      { path: "/cai-dat/doi-mat-khau", lazy: async () => ({ Component: (await import("../../features/settings/ChangePasswordPage")).default }) },
+        { path: "/cai-dat/nhan-su", lazy: async () => ({ Component: (await import("../../features/staff/StaffPage")).default }) },
+        { path: "/cai-dat/doi-mat-khau", lazy: async () => ({ Component: (await import("../../features/settings/ChangePasswordPage")).default }) },
+        { path: "/cai-dat/email", lazy: async () => ({ Component: (await import("../../features/settings/EmailSettings")).default }) },
     ],
   },
 ];

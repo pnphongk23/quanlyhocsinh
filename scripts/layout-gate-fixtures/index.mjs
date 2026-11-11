@@ -5,10 +5,13 @@ export const viewports = [
   { name: "834x1112", width: 834, height: 1112, tapMin: 44, nav: "rail" },
   { name: "1440x900", width: 1440, height: 900, tapMin: 36, nav: "sidebar" },
 ];
-export const scenarios = [
+const accountScenarios = [
   { route: "/cai-dat", state: "thuong", kind: "settings" },
   { route: "/cai-dat/doi-mat-khau", state: "thuong", kind: "password" },
-  { route: "/cai-dat", state: "email", kind: "email" },
+  { route: "/cai-dat/email", state: "thuong", kind: "email" },
+];
+export const scenarios = [
+  ...accountScenarios,
   ...["thuong", "dang-sua", "rong", "ten-dai", "8-tieu-chi"].map((state) => ({ route: "/cai-dat/bo-tieu-chi", state, kind: "criteria" })),
   ...["ngan-6-em", "dai-30-em", "ten-dai", "chua-diem-danh", "da-luu", "dang-tai", "loi"].map((state) => ({ route: "/lop/demo-6a/buoi-hoc/demo-past", state, kind: "attendance" })),
 ];

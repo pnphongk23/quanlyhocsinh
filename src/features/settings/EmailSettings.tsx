@@ -1,16 +1,18 @@
 import { useState, useSyncExternalStore, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { setAccountEmail } from "../../data/auth";
 import { ApiError, rateLimitMessage } from "../../data/api/client";
 import { getSession, subscribeSession } from "../../data/auth/session";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
 import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
-import { Button } from "../../shared/ui";
+import { FormPage } from "../../shared/layout";
+import { Button, Icon } from "../../shared/ui";
 import { EmailField, PasswordField, emailFieldError, looksLikeEmail } from "../auth/authUi";
-import m from "./emailSettings.module.css";
+import settings from "./settings.module.css";
+import s from "./emailSettings.module.css";
 
 type Mode = "view" | "edit" | "remove";
 
-/** Lỗi lưu email: `password` hiện tại ô mật khẩu, `email` tại ô email, `banner` đầu form. */
 export function emailSaveFailure(error: unknown): { password: string; email: string; banner: string } {
   const none = { password: "", email: "", banner: "" };
   if (!(error instanceof ApiError)) return { ...none, banner: "Không thể kết nối. Hãy kiểm tra mạng rồi thử lại." };
@@ -21,18 +23,32 @@ export function emailSaveFailure(error: unknown): { password: string; email: str
   return { ...none, banner: "Không thể lưu email. Hãy thử lại." };
 }
 
-/** Email khôi phục: xem, thêm, sửa, xoá; mọi thay đổi cần mật khẩu hiện tại (PUT /me/email). */
-export function EmailSettings({ idPrefix }: { idPrefix: string }) {
+export function EmailSettingsSummary() {
+  const session = useSyncExternalStore(subscribeSession, getSession, getSession);
+  const email = session?.user.email ?? "";
+  return (
+    <Link className={settings.menuRow} data-measure="row" to="/cai-dat/email">
+      <span className={settings.rowMain}>
+        <span className={settings.rowTitle}>Email khôi phục</span>
+        <span className={settings.rowDescription}>{email ? `${email} · dùng để lấy lại mật khẩu` : "Chưa có email · dùng để lấy lại mật khẩu"}</span>
+      </span>
+      <Icon name="chevron-right" />
+    </Link>
+  );
+}
+
+/** Email khôi phục: xem, thêm, sửa, xoá; mọi thay đổi cần mật khẩu hiện tại. */
+export default function EmailSettingsPage() {
   const session = useSyncExternalStore(subscribeSession, getSession, getSession);
   const saved = session?.user.email ?? "";
-  const [mode, setMode] = useState<Mode>("view");
+  const [mode, setMode] = useState<Mode>("edit");
+  const [form, setForm] = useState({ email: saved, password: "" });
   const peek = useSavedPeek();
-  const [form, setForm] = useState({ email: "", password: "" });
   const action = useSaveAction({
     baseline: { email: mode === "edit" ? saved : "", password: "" },
     value: form,
-    validate: (v) => Boolean(v.password) && (mode === "remove" || looksLikeEmail(v.email)),
-    save: (v) => setAccountEmail(mode === "remove" ? null : v.email.trim(), v.password),
+    validate: (value) => Boolean(value.password) && (mode === "remove" || looksLikeEmail(value.email)),
+    save: (value) => setAccountEmail(mode === "remove" ? null : value.email.trim(), value.password),
   });
   const failure = action.error ? emailSaveFailure(action.error) : { password: "", email: "", banner: "" };
 
@@ -42,46 +58,54 @@ export function EmailSettings({ idPrefix }: { idPrefix: string }) {
     setForm({ email: next === "edit" ? saved : "", password: "" });
     setMode(next);
   }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if ((await action.submit()) && (await peek.peek())) setMode("view");
   }
 
+  const footer = mode === "view" ? null : (
+    <>
+      <Button type="submit" form="email-settings-form" variant={mode === "remove" ? "danger" : "primary"} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
+        {mode === "remove" ? "Xoá email" : "Lưu email"}
+      </Button>
+      {mode === "edit" && saved && <Button type="button" variant="danger" disabled={action.saving} onClick={() => open("remove")}>Xoá email</Button>}
+      <Button type="button" variant="neutral" disabled={action.saving} onClick={() => setMode("view")}>Huỷ</Button>
+    </>
+  );
+
   return (
-    <section className={m.block} aria-label="Email khôi phục">
-      <div className={m.head}>
-        <span className={m.label}>Email khôi phục</span>
-        <span className={`${m.value}${saved ? "" : ` ${m.empty}`}`}>{saved || "Chưa có"}</span>
-      </div>
-      <p className={m.hint}>Email chỉ dùng để lấy lại mật khẩu.</p>
+    <FormPage
+      breadcrumb={<><Link to="/cai-dat">Cài đặt</Link><span aria-hidden="true">/</span><span>Email khôi phục</span></>}
+      backTo="/cai-dat"
+      title="Email khôi phục"
+      subtitle="Email chỉ dùng để lấy lại mật khẩu, không hiện với phụ huynh."
+      footer={footer}
+    >
       {mode === "view" ? (
-        <div className={m.actions}>
-          <Button type="button" variant="secondary" size="md" onClick={() => open("edit")}>{saved ? "Sửa email" : "Thêm email"}</Button>
-          {saved && <Button type="button" variant="neutral" size="md" onClick={() => open("remove")}>Xoá email</Button>}
-        </div>
+        <section className={s.savedPanel} aria-label="Email khôi phục">
+          <p className={s.savedValue}>{saved || "Chưa có email khôi phục."}</p>
+          <div className={s.actions}>
+            <Button variant="secondary" onClick={() => open("edit")}>{saved ? "Sửa email" : "Thêm email"}</Button>
+            {saved && <Button variant="danger" onClick={() => open("remove")}>Xoá email</Button>}
+          </div>
+        </section>
       ) : (
-        <form className={m.form} onSubmit={submit} noValidate>
-          {mode === "edit" && (
-            <EmailField label="Email" value={form.email} onChange={(email) => setForm((f) => ({ ...f, email }))} id={`${idPrefix}-email`} errorText={failure.email} />
-          )}
+        <form id="email-settings-form" className={s.form} onSubmit={submit} noValidate>
+          {mode === "edit" && <EmailField label="Email" value={form.email} onChange={(email) => setForm((current) => ({ ...current, email }))} id="email-address" errorText={failure.email} />}
           <PasswordField
             label="Mật khẩu hiện tại"
             value={form.password}
-            onChange={(password) => setForm((f) => ({ ...f, password }))}
-            id={`${idPrefix}-email-password`}
+            onChange={(password) => setForm((current) => ({ ...current, password }))}
+            id="email-current-password"
             autoComplete="current-password"
             error={Boolean(failure.password)}
             errorText={failure.password || undefined}
+            hint={mode === "edit" ? "Cần mật khẩu hiện tại để đổi email." : undefined}
           />
-          {failure.banner && <p className={m.banner} role="alert">{failure.banner}</p>}
-          <div className={m.actions}>
-            <Button type="submit" size="md" variant={mode === "remove" ? "danger" : "primary"} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
-              {mode === "remove" ? "Xoá email" : "Lưu email"}
-            </Button>
-            <Button type="button" variant="neutral" size="md" disabled={action.saving} onClick={() => open("view")}>Huỷ</Button>
-          </div>
+          {failure.banner && <p className={s.banner} role="alert">{failure.banner}</p>}
         </form>
       )}
-    </section>
+    </FormPage>
   );
 }

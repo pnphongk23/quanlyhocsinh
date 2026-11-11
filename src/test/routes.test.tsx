@@ -309,11 +309,11 @@ describe("foundation route integration", () => {
     },
   );
 
-  it("shows the desktop role card only for a multi-role guardian", async () => {
+  it("offers role switching only for a multi-role guardian", async () => {
     authState.session = activeSession("guardian");
     const singleRoleRouter = open("/cai-dat");
     expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
-    expect(screen.queryByRole("region", { name: "Vai trò" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Đổi vai trò/ })).toBeNull();
     singleRoleRouter.dispose();
 
     const multiRole = multiRoleSession();
@@ -325,7 +325,7 @@ describe("foundation route integration", () => {
     };
     const multiRoleRouter = open("/cai-dat");
     expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
-    expect(await screen.findByRole("region", { name: "Vai trò" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: /Đổi vai trò/ })).toBeVisible();
     multiRoleRouter.dispose();
   });
 
@@ -348,23 +348,36 @@ describe("foundation route integration", () => {
     router.dispose();
   });
 
+  it("keeps /cai-dat/email inside the active guardian shell on mobile", async () => {
+    authState.session = activeSession("guardian");
+    vi.stubGlobal("matchMedia", (media: string) => ({ matches: false, media, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return false; } }));
+    const router = open("/cai-dat/email");
+    expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Email khôi phục" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Quay lại" })).toHaveAttribute("href", "/cai-dat");
+    expect(screen.queryByRole("navigation", { name: "Điều hướng nhân sự" })).toBeNull();
+    router.dispose();
+  });
+
   it("keeps guardian settings inside the shell with no linked children", async () => {
     authState.session = guardianAccountWithoutMembership();
     const router = open("/ph");
     expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
     expect(await screen.findByRole("link", { name: "Tài khoản và cài đặt" })).toBeVisible();
     fireEvent.click(screen.getByRole("link", { name: "Tài khoản và cài đặt" }));
-    expect(await screen.findByRole("heading", { name: "Tài khoản của tôi" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Cài đặt" })).toBeVisible();
     expect(document.querySelector('[data-role="guardian"]')).not.toBeNull();
     expect(screen.queryByRole("navigation", { name: "Điều hướng nhân sự" })).toBeNull();
     router.dispose();
   });
 
   it("switches role from guardian settings into the selected shell", async () => {
-    authState.session = multiRoleSession();
-    const router = open("/cai-dat");
-    expect(await screen.findByRole("navigation", { name: "Điều hướng nhân sự" })).toBeVisible();
-    fireEvent.click(await screen.findByRole("button", { name: /Phụ huynh/ }));
+      authState.session = multiRoleSession();
+      const router = open("/cai-dat");
+      expect(await screen.findByRole("navigation", { name: "Điều hướng nhân sự" })).toBeVisible();
+      fireEvent.click(await screen.findByRole("button", { name: /Đổi vai trò/ }));
+      expect(await screen.findByRole("heading", { name: "Chọn vai trò" })).toBeVisible();
+      fireEvent.click(await screen.findByRole("button", { name: /Phụ huynh/ }));
     expect(await screen.findByRole("navigation", { name: "Điều hướng chính" })).toBeVisible();
     expect(router.state.location.pathname).toBe("/ph");
     await vi.waitFor(() => expect(screen.queryByRole("navigation", { name: "Điều hướng nhân sự" })).toBeNull());
@@ -380,7 +393,7 @@ describe("foundation route integration", () => {
     router.dispose();
   });
 
-  it.each(["/dang-nhap", "/dang-ky", "/quen-mat-khau", "/chon-vai-tro", "/cai-dat", "/cai-dat/doi-mat-khau"])("reserves account route %s", (path) => {
+  it.each(["/dang-nhap", "/dang-ky", "/quen-mat-khau", "/chon-vai-tro", "/cai-dat", "/cai-dat/doi-mat-khau", "/cai-dat/email"])("reserves account route %s", (path) => {
     expect(matchRoutes(routes, path)?.at(-1)?.route.path).toBe(path);
   });
 
