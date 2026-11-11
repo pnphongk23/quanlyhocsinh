@@ -67,9 +67,9 @@ export default function ClassSpaceLayout() {
   const visibleTabs = tabs.filter((tab) => access.can(tab.group, "read"));
   const activeTab = tabs.find((tab) => pathname.includes(`/${tab.to}`))?.to ?? tabs[0].to;
   const indicatorReady = useSlideIndicator(subTabsRef, activeTab);
-  const detail = matches.some(
-    (match) => (match.handle as { detail?: boolean } | undefined)?.detail,
-  );
+    const detail = matches.some(
+      (match) => (match.handle as { detail?: boolean } | undefined)?.detail,
+    );
   useEffect(() => {
     if (klass && getCurrentClassId() !== classId) setCurrentClass(classId);
   }, [classId, klass]);
@@ -88,7 +88,10 @@ export default function ClassSpaceLayout() {
       behavior: "auto",
     });
   }, [pathname]);
-  if (!klass && !substituteSession)
+    // A session-detail page owns its PageShell, including its loading and
+    // missing-session states. Let it render while the class snapshot loads.
+    if (detail) return <Outlet />;
+    if (!klass && !substituteSession)
     return hasClass(classId) ? (
       <NoAccess what="lớp này" />
     ) : (
@@ -101,7 +104,7 @@ export default function ClassSpaceLayout() {
   if (desktop) return <Outlet />;
   // Buổi dạy thay chỉ mở nội dung buổi, không hiện tab của lớp và không đặt
   // lớp ngoài phạm vi làm lớp đang mở.
-  if (detail || substituteSession) return <Outlet />;
+    if (substituteSession) return <Outlet />;
   if (!klass) return <NoAccess what="lớp này" />;
   const options: ClassOption[] = [
     {

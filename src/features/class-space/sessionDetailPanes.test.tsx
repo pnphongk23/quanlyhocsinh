@@ -8,10 +8,8 @@ import { createSeed } from "../../test/fixtures/seed";
 import SessionDetailPage from "./SessionDetailPage";
 
 /**
- * `sessionDetail.module.css` giãn khung tab trên mobile để thanh hành động ghim đáy.
- * Nhánh buổi huỷ render `.dateCard` và EmptyState là con trực tiếp của `.body`; nếu selector
- * nhắm `.body > div` thì hai khối đó bị kéo giãn và EmptyState đổi từ grid sang flex (vỡ bố cục).
- * Test khoá: chỉ `.tabPane` (ba khung tab) được giãn, các khối khác của `.body` giữ nguyên.
+ * PageShell cung cấp cột nội dung, còn vùng buổi giữ ba pane trên mobile để đổi tab không mất nháp.
+ * Nhánh buổi huỷ vẫn đặt thẻ ngày và EmptyState trực tiếp trong vùng nội dung.
  */
 const detailCss = readFileSync(resolve(process.cwd(), "src/features/class-space/sessionDetail.module.css"), "utf8");
 const uiCss = readFileSync(resolve(process.cwd(), "src/shared/ui/ui.module.css"), "utf8");
@@ -23,7 +21,7 @@ function renderSession(sessionId: string) {
     { initialEntries: [`/lop/6a/buoi-hoc/${sessionId}?tab=diem-danh`] },
   );
   render(<RouterProvider router={router} />);
-  return document.querySelector<HTMLElement>("div[class*='body']");
+  return document.querySelector<HTMLElement>('[data-measure="content"] > div');
 }
 
 beforeEach(() => {
@@ -44,24 +42,26 @@ describe("khung tab của màn chi tiết buổi", () => {
     expect(panes.filter((pane) => !pane.hasAttribute("hidden"))).toHaveLength(1);
   });
 
-  it("buổi huỷ: không có tabPane, thẻ ngày và EmptyState vẫn là con trực tiếp của body", () => {
+  it("buổi huỷ: không có tabPane, thẻ ngày và EmptyState vẫn nằm trong nội dung buổi", () => {
     const body = renderSession("6a-extra-cancelled")!;
     expect(body.querySelectorAll("[class*='tabPane']")).toHaveLength(0);
     const children = [...body.children] as HTMLElement[];
     expect(children.some((child) => child.className.includes("dateCard"))).toBe(true);
-    const empty = children.find((child) => child.className.includes("empty"));
+      const empty = children.find((child) => String(child.className).includes("empty"));
     expect(empty).toBeTruthy();
     // EmptyState giữ bố cục grid, không bị rule giãn của khung tab đổi sang flex.
     expect(uiCss).toMatch(/\.empty\s*\{[^}]*display:\s*grid/s);
   });
 
-  it("CSS giãn chỉ nhắm .tabPane, không dùng selector bao quát trên .body", () => {
+  it("PageShell cung cấp cột nội dung co giãn và tab đang mở dùng flex", () => {
     expect(pageSource).toMatch(/<div className=\{s\.tabPane\} hidden=\{tab !== "diem-danh"\}>/);
     expect(pageSource).toMatch(/<div className=\{s\.tabPane\} hidden=\{tab !== "nhan-xet"\}>/);
     expect(pageSource).toMatch(/<div className=\{s\.tabPane\} hidden=\{tab !== "btvn"\}>/);
-    const mobile = detailCss.match(/@media \(max-width: 1023px\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
-    expect(mobile).toMatch(/\.tabPane:not\(\[hidden\]\)\s*\{[^}]*flex:\s*1 0 auto[^}]*display:\s*flex/s);
-    expect(mobile).toMatch(/\.tabPane:not\(\[hidden\]\) > \*\s*\{\s*flex:\s*1 0 auto;\s*\}/);
-    expect(mobile).not.toMatch(/\.body\s*>\s*(div|\*)/);
+    expect(pageSource).toMatch(/<PageShell className=\{s\.page\}/);
+    expect(pageSource).toContain("<ResponsiveSlot mobile={mobileContent} tablet={tabletContent} desktop={desktopContent} />");
+    expect(detailCss).toMatch(/\.page :global\(\[data-measure="content"\]\)\s*\{[^}]*display:\s*flex[^}]*flex:\s*1/s);
+    expect(detailCss).toMatch(/\.body\s*\{[^}]*flex:\s*1[^}]*padding:\s*var\(--space-4\) 0 var\(--sticky-clearance\)/s);
+    expect(detailCss).toMatch(/\.tabPane\s*\{[^}]*flex:\s*1[^}]*flex-direction:\s*column/s);
+    expect(detailCss).not.toMatch(/@media\s*\([^)]*(min|max)-width/);
   });
 });

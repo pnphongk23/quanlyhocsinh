@@ -2,7 +2,7 @@ import type { MutableRefObject, ReactNode } from "react";
 import type { Class, Session } from "../../data/types";
 import { EmptyState } from "../../shared/ui";
 import ClassDesktopHeader from "./ClassDesktopHeader";
-import AttendanceDesktop from "../attendance/AttendanceDesktop";
+import AttendancePanel from "../attendance/AttendancePanel";
 import CommentsDesktop from "../comments/CommentsDesktop";
 import HomeworkDesktop from "../homework/HomeworkDesktop";
 import { RefreshButton } from "../../shared/ui/PullToRefresh";
@@ -103,12 +103,13 @@ export default function SessionDetailDesktop({
         </div>
       ) : (
         // Ba tab cùng gắn sẵn (chỉ ẩn tab khác) để đổi tab không mất điểm danh
-        // hay phần BTVN đang soạn dở, giống bản mobile.
+          // hay phần BTVN đang soạn dở, giống bản mobile.
         <>
           <div hidden={tab !== "diem-danh"}>
-            <AttendanceDesktop
+            <AttendancePanel
               classId={classId}
               sessionId={session.id}
+              variant="desktop"
               readOnly={readOnly}
               onDirtyChange={onDirtyChange}
               saveRef={saveRef}
