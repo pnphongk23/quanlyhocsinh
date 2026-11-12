@@ -4,6 +4,7 @@ import { Link, Navigate } from "react-router-dom";
 import type { CriteriaLevel, CriteriaSet, CriteriaSetItem } from "../../data/api/types";
 import { criteriaSetError, getCachedCriteriaSet, getCriteriaSet, replaceCriteriaSet } from "../../data/repositories/criteriaSet";
 import { isAdmin } from "../../data/repositories/access";
+import { useDismiss } from "../../shared/hooks/useDismiss";
 import { useOnline } from "../../shared/hooks/useOnline";
 import { MasterDetailPage, PageShell, useLayout } from "../../shared/layout";
 import { ActionFooter, Button, EmptyState, Field, InfoNotice, Input, Modal } from "../../shared/ui";
@@ -45,6 +46,8 @@ function CriteriaSetSettings() {
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  // Nút ⋯ và menu (portal) không chung một nút cha: "bên trong" là cả hai.
+  const menuArea = useMemo(() => ({ current: { contains: (node: Node | null) => Boolean(menuButtonRef.current?.contains(node) || menuRef.current?.contains(node)) } as HTMLElement }), []);
   const [menuPosition, setMenuPosition] = useState<{ top?: number; bottom?: number; right: number }>({ right: 8 });
 
   async function loadSet() {
@@ -78,6 +81,7 @@ function CriteriaSetSettings() {
   const editorTitle = editingId ? "Sửa tiêu chí" : "Thêm tiêu chí";
   const closeEditor = () => setEditorOpen(false);
 
+  useDismiss(openMenuId !== null, () => setOpenMenuId(null), menuArea);
   useEffect(() => {
     if (!openMenuId) return;
     const placeMenu = () => {
@@ -94,11 +98,16 @@ function CriteriaSetSettings() {
     placeMenu();
     menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOpenMenuId(null);
-        menuButtonRef.current?.focus();
-      }
+      const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? []);
+      if (!items.length) return;
+      const at = items.indexOf(document.activeElement as HTMLButtonElement);
+      const target = event.key === "ArrowDown" ? items[(at + 1) % items.length]
+        : event.key === "ArrowUp" ? items[(at <= 0 ? items.length : at) - 1]
+        : event.key === "Home" ? items[0]
+        : event.key === "End" ? items[items.length - 1] : null;
+      if (!target) return;
+      event.preventDefault();
+      target.focus();
     };
     window.addEventListener("resize", placeMenu);
     window.addEventListener("scroll", placeMenu, true);

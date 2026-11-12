@@ -142,6 +142,25 @@ describe("custom criteria settings", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("closes the row menu on an outside press and moves focus with the arrow keys", async () => {
+    mocks.layout = "desktop";
+    setLayoutMedia();
+    renderPage();
+    await screen.findByText("Tiêu chí 1");
+    const trigger = screen.getByRole("button", { name: "Thao tác cho Tiêu chí 1" });
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole("menu", { name: "Thao tác cho Tiêu chí 1" });
+    const items = within(menu).getAllByRole("menuitem").filter((item) => !(item as HTMLButtonElement).disabled);
+    expect(items.length).toBeGreaterThan(0);
+    expect(items[0]).toHaveFocus();
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(items[items.length > 1 ? 1 : 0]).toHaveFocus();
+    fireEvent.keyDown(document, { key: "ArrowUp" });
+    expect(items[0]).toHaveFocus();
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("menu", { name: "Thao tác cho Tiêu chí 1" })).not.toBeInTheDocument();
+  });
+
   it("keeps deletion confirmation in the edit flow and prevents deleting the final item", async () => {
     renderPage();
     await screen.findByText("Tiêu chí 1");

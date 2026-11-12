@@ -9,7 +9,7 @@ import { useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
 import { useLeaveGuard } from "../../shared/hooks/useLeaveGuard";
 import { usePullToRefresh, type PullToRefreshController } from "../../shared/hooks/usePullToRefresh";
 import { refreshNow, useInitialSyncState, syncNow } from "../../data/sync";
-import { DesktopOnly, PageShell, ResponsiveSlot, useLayout } from "../../shared/layout";
+import { PageShell, ResponsiveSlot, useLayout } from "../../shared/layout";
 import { Button, EmptyState, Icon, LinkButton, NoAccess, Sheet, UnsavedChangesDialog } from "../../shared/ui";
 import { PullToRefresh, RefreshButton } from "../../shared/ui/PullToRefresh";
 import AttendancePanel from "../attendance/AttendancePanel";
@@ -17,6 +17,7 @@ import CommentsPanel from "../comments/CommentsPanel";
 import CommentsDesktop from "../comments/CommentsDesktop";
 import HomeworkPanel from "../homework/HomeworkPanel";
 import HomeworkDesktop from "../homework/HomeworkDesktop";
+import { useHomeworkSectionDraft } from "../homework/useHomeworkSectionDraft";
 import { ConfirmDialog } from "../classes/ConfirmDialog";
 import AddSessionModal from "./AddSessionModal";
 import { useCancelSession } from "./useCancelSession";
@@ -49,11 +50,12 @@ export function SessionDetailFallback({ pending, backTo }: { pending: boolean; b
 
 export default function SessionDetailPage() {
   const { classId = "" } = useParams();
+  const layout = useLayout();
   const refresh = usePullToRefresh(refreshNow);
   const [header, setHeader] = useState<SessionHeader>({ eyebrow: "Lớp học", title: "Chi tiết buổi học", sessionLabel: "Buổi học" });
   const backTo = `/lop/${classId}/buoi-hoc`;
   const breadcrumb = <><Link to="/lop">Lớp</Link><span aria-hidden="true">/</span>{header.sessionLabel !== "Buổi học" && <><Link to={`/lop/${classId}`}>{header.title}</Link><span aria-hidden="true">/</span></>}<span>{header.sessionLabel}</span></>;
-  const actions = <><DesktopOnly><RefreshButton controller={refresh} /></DesktopOnly>{header.actions}</>;
+  const actions = <>{layout === "desktop" && <RefreshButton controller={refresh} />}{header.actions}</>;
   return <PageShell className={s.page} breadcrumb={breadcrumb} backTo={backTo} eyebrow={header.eyebrow} title={header.title} actions={actions}>
     <Suspense fallback={<div className={s.body}><p role="status">Đang tải buổi học…</p></div>}>
       <SessionDetailBody onHeaderChange={setHeader} refresh={refresh} />
@@ -75,9 +77,9 @@ function SessionDetailBody({ onHeaderChange, refresh }: { onHeaderChange: (heade
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = sessionTabOf(searchParams.get("tab"));
   const [attendanceDirty, setDirty] = useState(false);
-  const [mobileHomeworkDirty, setMobileHomeworkDirty] = useState(false);
-  const [desktopHomeworkDirty, setDesktopHomeworkDirty] = useState(false);
-  const homeworkDirty = mobileHomeworkDirty || desktopHomeworkDirty;
+  const homeworkDraft = useHomeworkSectionDraft(sessionId);
+  const [gradeDirty, setGradeDirty] = useState(false);
+  const homeworkDirty = homeworkDraft.dirty || gradeDirty;
   const dirty = attendanceDirty || homeworkDirty;
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -86,16 +88,17 @@ function SessionDetailBody({ onHeaderChange, refresh }: { onHeaderChange: (heade
   const cancelling = useCancelSession(() => navigate(`/lop/${classId}/buoi-hoc`));
   const leave = useSaveAndLeave();
   const saveRef = useRef<(() => unknown) | null>(null);
-  const homeworkSaveRef = useRef<(() => unknown) | null>(null);
+  const gradeSaveRef = useRef<(() => unknown) | null>(null);
   const [leaving, setLeaving] = useState(false);
   const guard = useLeaveGuard(dirty);
 
   useEffect(() => {
     setDirty(false);
-    setMobileHomeworkDirty(false);
-    setDesktopHomeworkDirty(false);
+    setGradeDirty(false);
+    homeworkDraft.close();
     setError("");
     setMenuOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   function openTab(next: SessionTab) {
@@ -139,8 +142,8 @@ function SessionDetailBody({ onHeaderChange, refresh }: { onHeaderChange: (heade
     onSave={() => leave.run(async () => {
       setLeaving(true);
       try {
-        if (homeworkDirty && !homeworkSaveRef.current) { guard.stay(); return false; }
-        const results = [await saveRef.current?.(), await homeworkSaveRef.current?.()];
+        if (gradeDirty && !gradeSaveRef.current) { guard.stay(); return false; }
+        const results = [await saveRef.current?.(), await homeworkDraft.save(), await gradeSaveRef.current?.()];
         return results.every((result) => result !== false);
       } finally { setLeaving(false); }
     }, guard.proceed)}
@@ -158,13 +161,13 @@ function SessionDetailBody({ onHeaderChange, refresh }: { onHeaderChange: (heade
   const detailContent = <div className={s.body} ref={refresh.containerRef}>
       {layout !== "desktop" && <PullToRefresh controller={refresh} />}
       {session ? cancelled ? cancelledContent : <>
-        {tab !== "diem-danh" || layout === "mobile" ? tabBar() : null}
+        {layout === "mobile" || (layout === "tablet" && tab !== "diem-danh") ? tabBar() : null}
         {error && <p role="alert" className={s.error}>{error}</p>}
         <div className={s.tabPane} hidden={tab !== "diem-danh"}><AttendancePanel classId={classId} sessionId={session.id} variant={layout} tabBar={layout === "mobile" ? undefined : tabBar} readOnly={future} onDirtyChange={setDirty} saveRef={saveRef} /></div>
         <div className={s.tabPane} hidden={tab !== "nhan-xet"}><ResponsiveSlot mobile={<CommentsPanel classId={classId} sessionId={session.id} readOnly={future} />} tablet={<CommentsPanel classId={classId} sessionId={session.id} readOnly={future} />} desktop={<CommentsDesktop sessionId={session.id} readOnly={future} tabBar={tabBar} />} /></div>
         <div className={s.tabPane} hidden={tab !== "btvn"}>
-          <div hidden={layout === "desktop"}><HomeworkPanel session={session} onDirtyChange={setMobileHomeworkDirty} /></div>
-          <div hidden={layout !== "desktop"}><HomeworkDesktop session={session} tabBar={tabBar} onDirtyChange={setDesktopHomeworkDirty} saveRef={homeworkSaveRef} /></div>
+          <div hidden={layout === "desktop"}><HomeworkPanel session={session} draft={homeworkDraft} active={layout !== "desktop"} /></div>
+          <div hidden={layout !== "desktop"}><HomeworkDesktop session={session} tabBar={tabBar} onDirtyChange={setGradeDirty} saveRef={gradeSaveRef} draft={homeworkDraft} active={layout === "desktop"} /></div>
         </div>
       </> : missingSession}
     </div>;

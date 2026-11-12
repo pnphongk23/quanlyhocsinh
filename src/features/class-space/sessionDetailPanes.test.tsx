@@ -8,6 +8,11 @@ import { createSeed } from "../../test/fixtures/seed";
 import SessionDetailPage from "./SessionDetailPage";
 
 const saveAttendance = vi.hoisted(() => vi.fn());
+const saveHomeworkSection = vi.hoisted(() => vi.fn());
+vi.mock("../../data/repositories/homework", async (original) => ({
+  ...(await original<typeof import("../../data/repositories/homework")>()),
+  saveHomeworkSectionDurable: saveHomeworkSection,
+}));
 vi.mock("../../data/repositories/attendance", async (original) => ({
   ...(await original<typeof import("../../data/repositories/attendance")>()),
   saveAttendanceBatchDurable: saveAttendance,
@@ -21,10 +26,10 @@ const detailCss = readFileSync(resolve(process.cwd(), "src/features/class-space/
 const uiCss = readFileSync(resolve(process.cwd(), "src/shared/ui/ui.module.css"), "utf8");
 const pageSource = readFileSync(resolve(process.cwd(), "src/features/class-space/SessionDetailPage.tsx"), "utf8");
 
-function renderSession(sessionId: string) {
+function renderSession(sessionId: string, tab = "diem-danh") {
   const router = createMemoryRouter(
     [{ path: "/lop/:classId/buoi-hoc/:sessionId", element: <SessionDetailPage /> }],
-    { initialEntries: [`/lop/6a/buoi-hoc/${sessionId}?tab=diem-danh`] },
+    { initialEntries: [`/lop/6a/buoi-hoc/${sessionId}?tab=${tab}`] },
   );
   render(<RouterProvider router={router} />);
   return document.querySelector<HTMLElement>('[data-measure="content"] > div');
@@ -33,6 +38,7 @@ function renderSession(sessionId: string) {
 beforeEach(() => {
   replaceStore(createSeed());
   saveAttendance.mockReset().mockResolvedValue([]);
+  saveHomeworkSection.mockReset().mockResolvedValue({});
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-25T12:00:00"));
 });
@@ -180,5 +186,82 @@ describe("khung tab của màn chi tiết buổi", () => {
       HTMLDialogElement.prototype.showModal = originalShowModal;
       HTMLDialogElement.prototype.close = originalClose;
     }
+  });
+
+  it.each([["nhan-xet"], ["btvn"]])("chỉ vẽ một thanh tab ở desktop, tab %s", (tab) => {
+    let width = 1440;
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes("1024px") ? width >= 1024 : width >= 640,
+      media: query, onchange: null,
+      addEventListener: () => undefined, removeEventListener: () => undefined,
+      addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => true,
+    })) as unknown as typeof window.matchMedia;
+    try {
+      renderSession("6a-session-8", tab);
+      expect(screen.getAllByRole("tablist", { name: "Nội dung buổi học" })).toHaveLength(1);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  describe("nháp phần BTVN qua mốc 1024", () => {
+    let width = 390;
+    const listeners = new Set<() => void>();
+    const originalMatchMedia = window.matchMedia;
+    const originalShowModal = HTMLDialogElement.prototype.showModal;
+    const originalClose = HTMLDialogElement.prototype.close;
+    const resize = (next: number) => { width = next; act(() => listeners.forEach((listener) => listener())); };
+    beforeEach(() => {
+      HTMLDialogElement.prototype.showModal = function () { this.open = true; };
+      HTMLDialogElement.prototype.close = function () { this.open = false; };
+      window.matchMedia = ((query: string) => ({
+        matches: query.includes("1024px") ? width >= 1024 : width >= 640,
+        media: query, onchange: null,
+        addEventListener: (_type: string, listener: () => void) => { listeners.add(listener); },
+        removeEventListener: (_type: string, listener: () => void) => { listeners.delete(listener); },
+        addListener: (listener: () => void) => { listeners.add(listener); },
+        removeListener: (listener: () => void) => { listeners.delete(listener); },
+        dispatchEvent: () => true,
+      })) as unknown as typeof window.matchMedia;
+    });
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+      HTMLDialogElement.prototype.showModal = originalShowModal;
+      HTMLDialogElement.prototype.close = originalClose;
+      listeners.clear();
+    });
+
+    it("gõ ở mobile rồi sang desktop: nháp còn hiện và Lưu trong hộp lưu được", async () => {
+      width = 390;
+      renderSession("6a-session-8", "btvn");
+      fireEvent.click(screen.getByRole("tab", { name: "Bài tập hôm nay" }));
+      fireEvent.click(screen.getAllByRole("button", { name: /Thêm phần/ })[0]);
+      fireEvent.change(await screen.findByLabelText("Tiêu đề"), { target: { value: "Nháp qua mốc" } });
+      resize(1440);
+      expect(await screen.findByLabelText("Tiêu đề")).toHaveValue("Nháp qua mốc");
+      fireEvent.click(screen.getByRole("link", { name: "Lớp" }));
+      expect(await screen.findByText("Chưa lưu thay đổi")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+      await waitFor(() => expect(saveHomeworkSection).toHaveBeenCalledTimes(1));
+      expect(saveHomeworkSection.mock.calls[0][0]).toMatchObject({ title: "Nháp qua mốc" });
+    });
+
+    it("gõ ở desktop rồi sang tablet: nháp còn hiện, lưu lỗi thì ở lại", async () => {
+      width = 1440;
+      saveHomeworkSection.mockRejectedValue(new Error("Lỗi ghi local"));
+      renderSession("6a-session-8", "btvn");
+      fireEvent.click(screen.getByRole("tab", { name: "Bài tập hôm nay" }));
+      fireEvent.click((await screen.findAllByRole("button", { name: /^\+ / }))[0]);
+      fireEvent.change(await screen.findByLabelText("Tiêu đề"), { target: { value: "Nháp desktop" } });
+      resize(834);
+      expect(await screen.findByLabelText("Tiêu đề")).toHaveValue("Nháp desktop");
+      fireEvent.click(screen.getByRole("link", { name: "Lớp" }));
+      expect(await screen.findByText("Chưa lưu thay đổi")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
+      await waitFor(() => expect(saveHomeworkSection).toHaveBeenCalledTimes(1));
+      expect(screen.getByText("Chưa lưu thay đổi")).toBeInTheDocument();
+      expect(screen.getByLabelText("Tiêu đề")).toHaveValue("Nháp desktop");
+    });
   });
 });
