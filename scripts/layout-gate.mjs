@@ -129,13 +129,19 @@ try {
         const menuHits = menuItems.map(item => { const r=rect(item), top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); return Boolean(top && rowMenu.contains(top)); });
         const menu = rowMenu ? { inViewport: menuRect.left>=0 && menuRect.top>=0 && menuRect.right<=innerWidth && menuRect.bottom<=innerHeight, items: menuItems.length, hits: menuHits.filter(Boolean).length } : null;
         const sessionTablists = [...document.querySelectorAll('[role="tablist"][aria-label="Nội dung buổi học"]')].filter(visible).length;
-        return { url:location.pathname, sessionTablists, documentOverflow:Math.max(root.scrollWidth,body.scrollWidth)-root.clientWidth, edges:{breadcrumb:breadcrumb&&visible(breadcrumb)?rect(breadcrumb).left:null,title:title&&visible(title)?rect(title).left:left('[data-measure="title"]'),content:content&&visible(content)?rect(content).left:left('[data-measure="content"]')}, controls, smallTargets:controls.filter(c=>c.width<tapMin||c.height<tapMin), smallInputs:controls.filter(c=>c.input&&c.fontSize<16), wideButtons, clipped, blockVoids:blocks.filter(b=>b.ratio>0.2), contentBlockWidths, statusSpread:statuses.length>1?Math.max(...statuses)-Math.min(...statuses):0, formFooterGap, formFooterGapLimit, nav, sheet, menu };
+        const refreshButtons = [...document.querySelectorAll("button")].filter(b => /^(Tải lại|Đang tải…)$/.test((b.innerText || "").trim())).map(b => { const r = rect(b), top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { visible: visible(b), inViewport: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, clickable: Boolean(top && b.contains(top)), width: r.width, height: r.height }; });
+        return { url:location.pathname, sessionTablists, refreshButtons, documentOverflow:Math.max(root.scrollWidth,body.scrollWidth)-root.clientWidth, edges:{breadcrumb:breadcrumb&&visible(breadcrumb)?rect(breadcrumb).left:null,title:title&&visible(title)?rect(title).left:left('[data-measure="title"]'),content:content&&visible(content)?rect(content).left:left('[data-measure="content"]')}, controls, smallTargets:controls.filter(c=>c.width<tapMin||c.height<tapMin), smallInputs:controls.filter(c=>c.input&&c.fontSize<16), wideButtons, clipped, blockVoids:blocks.filter(b=>b.ratio>0.2), contentBlockWidths, statusSpread:statuses.length>1?Math.max(...statuses)-Math.min(...statuses):0, formFooterGap, formFooterGapLimit, nav, sheet, menu };
       }, {tapMin:viewport.tapMin,viewportWidth:viewport.width,scenarioKind:scenario.kind,scenarioState:scenario.state});
     const edgeVals=Object.values(measured.edges).filter(v=>v!==null);
     const expectedNav={tabbar:"tabbar",rail:"rail",sidebar:"sidebar"}[viewport.nav];
     const detailMobile=scenario.kind==="attendance"&&viewport.width===390;
     const problems=[];
     if(scenario.kind==="attendance"&&!["dang-tai","loi"].includes(scenario.state)&&measured.sessionTablists!==1)problems.push(`session detail draws ${measured.sessionTablists} tab bars, expected exactly 1`);
+    if(scenario.kind==="attendance"){
+      const shown=measured.refreshButtons.filter(b=>b.visible);
+      if(viewport.width>=1024&&!shown.some(b=>b.inViewport&&b.clickable))problems.push(`session detail has no visible clickable "Tải lại" button (${measured.refreshButtons.map(b=>`${b.width.toFixed(0)}x${b.height.toFixed(0)}`).join(",")||"none"})`);
+      if(viewport.width<1024&&shown.length)problems.push(`session detail shows ${shown.length} "Tải lại" button(s) below 1024px`);
+    }
     if(measured.documentOverflow>1)problems.push(`horizontal overflow ${measured.documentOverflow}px`);
     if(measured.edges.title===null||measured.edges.content===null)problems.push("missing title/content measurement markers");
     if(edgeVals.length>1&&Math.max(...edgeVals)-Math.min(...edgeVals)>1)problems.push(`left edge spread ${Math.max(...edgeVals)-Math.min(...edgeVals)}px`);
@@ -314,6 +320,29 @@ try {
           behaviorProblems.push(`homework draft interaction could not complete: ${String(error)}`);
         }
         behaviorReports.push({route:scenario.route,state:"homework-draft-breakpoint",viewport:`${viewport.width}→${viewport.width===834?"1194→1440":"834→1440"}`,problems:behaviorProblems});
+      }
+      if (scenario.kind === "attendance" && scenario.state === "chua-diem-danh" && viewport.width === 1440) {
+        const sizes = { 390: [390, 844], 834: [834, 1112], 1194: [1194, 834], 1440: [1440, 900] };
+        try {
+          for (const width of [1194, 1440, 834, 390]) {
+            await page.setViewportSize({width:sizes[width][0], height:sizes[width][1]});
+            await page.waitForTimeout(300);
+            const button = page.getByRole("button", {name:"Tải lại", exact:true});
+            const shown = await button.evaluateAll((nodes) => nodes.filter((node) => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(node).display !== "none"; }).length);
+            if (width < 1024) { if (shown) behaviorProblems.push(`"Tải lại" button visible at ${width}px`); continue; }
+            if (shown !== 1) { behaviorProblems.push(`expected one visible "Tải lại" button at ${width}px, found ${shown}`); continue; }
+            const box = await button.first().boundingBox();
+            if (!box || box.x < 0 || box.y < 0 || box.x + box.width > sizes[width][0] || box.y + box.height > sizes[width][1]) behaviorProblems.push(`"Tải lại" button outside the viewport at ${width}px`);
+            if (width === 1194) continue;
+            await button.first().click({timeout:3000});
+            await page.waitForFunction(() => [...document.querySelectorAll('[role="status"]')].some((node) => node.textContent.trim() && node.getBoundingClientRect().width > 0), null, {timeout:6000}).catch(() => behaviorProblems.push(`clicking "Tải lại" at ${width}px showed no status`));
+            const statuses = await page.evaluate(() => [...document.querySelectorAll('[role="status"]')].filter((node) => node.textContent.trim() && !node.closest("[hidden]") && getComputedStyle(node).display !== "none").map((node) => node.textContent.trim()));
+            if (statuses.length > 1) behaviorProblems.push(`clicking "Tải lại" at ${width}px showed ${statuses.length} statuses: ${JSON.stringify(statuses)}`);
+          }
+        } catch (error) {
+          behaviorProblems.push(`refresh button interaction could not complete: ${String(error)}`);
+        }
+        behaviorReports.push({route:scenario.route,state:"refresh-button-breakpoint",viewport:"1194→1440→834→390",problems:behaviorProblems});
       }
       if (scenario.kind === "attendance" && scenario.state === "loi") {
         const notFound = await page.getByText("Không tìm thấy buổi học", {exact:true}).count();
