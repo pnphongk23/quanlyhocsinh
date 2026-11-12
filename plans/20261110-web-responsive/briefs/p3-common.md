@@ -11,5 +11,12 @@ Luật Pha 3:
 - G2: `npm run test:layout` → các dòng route của luồng mình phải 0 vi phạm ở cả 3 khổ, mọi trạng thái. Không sửa luật đo để cho xanh; nghĩ luật đo sai thì BLOCKED kèm bằng chứng (ảnh + số đo) cho TL.
 - Thêm `data-measure` (`title`, `content`, `block`, `row`, `status`, `detail`) theo plan mục 4 khi cần để gate đo đúng.
 - Ảnh tự soi: `/tmp/qlh-evidence/ql-004/p3/<packet>/` (viewport, 3 khổ, gồm trạng thái sheet mở), nén trước khi xem, so với mock.
+- Giữ hành vi (bắt buộc, gate hình học không thấy được): trước khi sửa, liệt kê hành vi hiện có của màn; sau khi sửa, thao tác thật bằng Playwright local từng mục và có test, ghi đạt/không vào handback:
+  - lưu thành công / lưu lỗi: lỗi thì không rời màn, nháp còn, hộp "Chưa lưu thay đổi" chờ kết quả lưu thật;
+  - nháp chưa lưu không mất khi đổi khổ 390↔834↔1440 hay chuyển tab: không chọn cây component khác nhau theo khổ cho phần có trạng thái;
+  - tải lại: kéo-để-tải-lại gắn đúng vùng cuộn, desktop có nút "Tải lại" (architecture.md mục đồng bộ);
+  - đang tải / lỗi (có thử lại) / offline / không có dữ liệu là 4 trạng thái khác nhau; chỉ hiện "không tìm thấy" sau khi tải thành công;
+  - sheet/dialog: dùng Sheet/native dialog có sẵn (focus vào, giữ focus, nền inert, Escape, trả focus);
+  - menu "…" trong bảng/vùng cuộn: mở ở hàng cuối không bị cắt.
 - Nghiệm thu mỗi packet: `npm test` 0 fail, `npm run build` 0 fail, G2 dòng của luồng 0 vi phạm, `grep -nE "@media[^{]*(min|max)-width|useIsDesktop" <file của luồng>` rỗng.
 - Commit conventional tiếng Anh, không nhắc AI, không push. Tối đa ~2 giờ; kẹt 3 lần cùng lỗi → BLOCKED.
