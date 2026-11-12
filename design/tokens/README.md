@@ -5,7 +5,7 @@ Nguồn chuẩn: `tokens.css` và `tokens.json` (cùng giá trị, sửa cả ha
 ## Đồng bộ
 - Web: chép từ dòng `:root {` đến hết file của `tokens.css` sang `src/shared/styles/tokens.css`, giữ ba khối `@font-face` ở đầu file đó.
 - Prototype: chép cùng khối sang `design/prototype/src/shared/styles/tokens.css`.
-- Mốc khổ: mobile < 1024px, desktop >= 1024px (biến CSS không dùng được trong `@media`, nên viết `1024px` trực tiếp).
+- Mốc khổ: mobile < 640px, tablet 640–1023px, desktop ≥ 1024px. `:root` (mobile) là mặc định, khối `@media (min-width: 640px)` là tablet, `@media (min-width: 1024px)` là desktop. Biến CSS không dùng được trong `@media` nên số mốc viết trực tiếp; chỉ tầng token và `src/shared/layout` được dùng `@media` theo bề rộng. `--bp-tablet` / `--bp-desktop` chỉ để tài liệu. Token `tablet`/`desktop` trong `tokens.json` là bản ghi lại hai khối ghi đè đó.
 
 ## Thay đổi so với token cũ
 Màu thương hiệu, bo góc và chuyển động giữ nguyên. Trạng thái dùng nền mềm với chữ đậm; thẻ trạng thái có token nền, viền và chữ riêng. Thẻ lớp được chọn dùng token accent riêng để giữ độ tương phản.
@@ -13,7 +13,9 @@ Màu thương hiệu, bo góc và chuyển động giữ nguyên. Trạng thái 
 | Thêm | Lý do |
 |---|---|
 | `--text-*`, `--leading-*`, `--weight-*` | Thay cỡ chữ ghi cứng |
-| `--space-*` (2…48) và token theo vai trò `--page-x/top/bottom/gap`, `--title-gap`, `--section-gap`, `--card-gap`, `--card-pad`, `--row-pad-y` | Lề ngang lẫn 12/16/20/24; chốt 20 mobile / 32 desktop |
+| `--space-*` (2…48) và token theo vai trò `--page-x/top/bottom/gap`, `--title-gap`, `--section-gap`, `--card-gap`, `--card-pad`, `--row-pad-y` | Lề ngang lẫn 12/16/20/24; mật độ ba mốc: mobile 16/12/16/24/12/16, tablet 24/16/20/28/14/18, desktop 32/28/28/32/16/20 |
+| `--space-14`, `--space-18`, `--space-28` | Giá trị mật độ tablet (14/18/28) phải có trong thang trước khi dùng |
+| `--page-max` 1200px, `--detail-w` 380px, `--rail-w` 72px | Cột nội dung căn trái, panel chi tiết desktop, rail icon tablet; `--content-max` giữ làm bí danh của `--page-max` |
 | `--content-max`, `--form-max`, `--guardian-max` | Bề rộng nội dung |
 | `--radius-sheet` | Bo góc sheet 20 |
 | `--shadow-sm/menu/frame/fab`, `--focus-ring` | Bóng ghi cứng |
@@ -37,9 +39,17 @@ Màu thương hiệu, bo góc và chuyển động giữ nguyên. Trạng thái 
 
 | Đổi | Trước → sau |
 |---|---|
+| Mốc khổ | 2 mốc (mobile < 1024, desktop ≥ 1024) → 3 mốc (mobile < 640, tablet 640–1023, desktop ≥ 1024) |
+| `--page-x` mobile | 20px → 16px (tablet 24, desktop 32 như cũ) |
+| `--title-gap`, `--section-gap`, `--card-pad`, `--card-gap` | 16/24/16/12 chỉ hai mốc → ba mốc 16-20-24 / 24-28-32 / 16-18-20 / 12-14-16 |
+| `--tabbar-total` | 0 chỉ ở desktop → 0 ở tablet và desktop (tablet dùng rail, không có thanh tab dưới) |
+| `--page-top`, `--page-bottom`, `--page-gap` | 12/16/12 (mobile) và 28/28/20 (desktop) → thêm mốc tablet 16/20/16 |
+| Cột nội dung trang form | thẻ ≤ 640 căn giữa → cột `--form-max` CĂN TRÁI cùng lề tiêu đề/breadcrumb |
 | Mốc FAB đổi vị trí | 900px → 1024px |
 | z-index FAB | 9 → `--z-fab` (30) |
 | Tab dưới | `--tabbar-height` + safe-area → `--tabbar-total` |
 | `--state-selected/success/error/pending-*` | Nền mềm + chữ đậm cho trạng thái; thẻ lớp được chọn dùng `--state-selected-accent-*`; card dùng cặp token `--card-*-*` nền mềm + viền/chữ đậm |
 
 **Bản chép web và prototype đã đồng bộ trong worktree `mvp-web`; mapping iOS là tài liệu, chưa áp dụng vào `Tokens.swift`.**
+
+**QL-004 Pha 1 (2026-11-10):** ba mốc và token mật độ mới chỉ nằm ở `design/tokens/` (bản chuẩn) — chưa chép sang `src/shared/styles/tokens.css` và `design/prototype/src/shared/styles/tokens.css` vì đang chờ chủ duyệt ảnh mẫu. Pha 2 chép đúng khối `:root` + hai khối `@media` như mục "Đồng bộ" ở trên.

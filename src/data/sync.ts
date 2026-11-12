@@ -10,8 +10,35 @@ import { starsFromCriteria } from "./slip";
 import { criteriaFromLevels, normalizeTopics, parseLevels, parseSkillLevels, starsFromLevels } from "./criteriaLevels";
 import { clearReportBatchTombstones, isReportBatchDeleted, isReportDeleted } from "./reportBatchTombstones";
 import { resolveApiBase } from "./api/baseUrl";
+import { useSyncExternalStore } from "react";
 export const api = createApiClient({ baseUrl: resolveApiBase(import.meta.env.VITE_API_BASE), getToken: () => getToken() });
 let running: Promise<void> | null = null;
+type InitialSyncState = "not-started" | "loading" | "success" | "offline" | "error";
+let initialSyncIdentity: string | null = null;
+let initialSyncState: InitialSyncState = "not-started";
+const syncStatusListeners = new Set<() => void>();
+const emitSyncStatus = () => syncStatusListeners.forEach((listener) => listener());
+const subscribeSyncStatus = (listener: () => void) => {
+  syncStatusListeners.add(listener);
+  if (typeof window !== "undefined") { window.addEventListener("online", listener); window.addEventListener("offline", listener); }
+  return () => {
+    syncStatusListeners.delete(listener);
+    if (typeof window !== "undefined") { window.removeEventListener("online", listener); window.removeEventListener("offline", listener); }
+  };
+};
+export const getInitialSyncState = (): InitialSyncState => {
+  if (!getCacheIdentity() || !getToken()) return "not-started";
+  if (initialSyncIdentity !== identityKey()) return "not-started";
+  if (typeof navigator !== "undefined" && !navigator.onLine) return "offline";
+  return initialSyncState;
+};
+export function useInitialSyncState(): InitialSyncState {
+  return useSyncExternalStore(subscribeSyncStatus, getInitialSyncState, () => "not-started");
+}
+const getInitialSyncPending = () => getInitialSyncState() === "loading";
+export function useInitialSyncPending(): boolean {
+  return useSyncExternalStore(subscribeSyncStatus, getInitialSyncPending, () => false);
+}
 let timer: ReturnType<typeof setTimeout> | undefined;
 let pullWhenIdleRequested = false;
 let syncFailureVersion = 0;
@@ -200,7 +227,10 @@ export async function clearUserCache(userId: string): Promise<boolean> {
     await db.meta.delete(logoutLockKey(userId));
     return true;
   });
-  if (cleared) for (const identity of lastResyncSnapshotAt.keys()) if (identity.startsWith(identityPrefix)) lastResyncSnapshotAt.delete(identity);
+  if (cleared) {
+    for (const identity of lastResyncSnapshotAt.keys()) if (identity.startsWith(identityPrefix)) lastResyncSnapshotAt.delete(identity);
+    if (initialSyncIdentity?.startsWith(identityPrefix)) { initialSyncIdentity = null; initialSyncState = "not-started"; emitSyncStatus(); }
+  }
   return cleared;
 }
 export const clearMembershipCache = clearIdentityCache;
@@ -209,19 +239,35 @@ function runSync(pullWhenIdle: boolean): Promise<void> {
   if (timer) { clearTimeout(timer); timer = undefined; }
   firstScheduledAt = null;
   if (running) { again = true; pullWhenIdleRequested ||= pullWhenIdle; return running; }
-  if (!getCacheIdentity() || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) return Promise.resolve();
+  if (!getCacheIdentity() || !getToken() || (typeof navigator !== "undefined" && !navigator.onLine)) {
+    if (getCacheIdentity()) { initialSyncIdentity = identityKey(); initialSyncState = typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "not-started"; emitSyncStatus(); }
+    return Promise.resolve();
+  }
+  const stateBefore = initialSyncIdentity === identityKey() && initialSyncState !== "offline" ? initialSyncState : "not-started";
+  initialSyncIdentity = identityKey(); initialSyncState = "loading"; emitSyncStatus();
   running = (async () => {
     await Promise.resolve();
+    const failuresBefore = syncFailureVersion;
+    let lastRoundIdentity = initialSyncIdentity;
+    let fetched = false;
     try {
       do {
         again = false;
         const cache = getCacheIdentity(); if (!cache || !getToken()) break;
         const roundPullWhenIdle = pullWhenIdle || pullWhenIdleRequested;
         pullWhenIdleRequested = false;
-        await syncRound(cache.membershipId, identityKey(), roundPullWhenIdle);
+        lastRoundIdentity = identityKey();
+        if (await syncRound(cache.membershipId, lastRoundIdentity, roundPullWhenIdle)) fetched = true;
       } while (again);
-    } finally { running = null; }
+    } finally {
+      const activeIdentity = getCacheIdentity() && getToken() ? identityKey() : null;
+      initialSyncIdentity = activeIdentity;
+      if (activeIdentity !== lastRoundIdentity) initialSyncState = "not-started";
+      else initialSyncState = typeof navigator !== "undefined" && !navigator.onLine ? "offline" : syncFailureVersion !== failuresBefore ? "error" : fetched ? "success" : stateBefore;
+      running = null; emitSyncStatus();
+    }
   })();
+  emitSyncStatus();
   return running;
 }
 export function syncNow(): Promise<void> { return runSync(true); }
@@ -236,7 +282,8 @@ export async function refreshNow(): Promise<RefreshResult> {
   if (!getToken() || !getCacheIdentity() || identityKey() !== identityBefore) return { status: "error" };
   return syncFailureVersion === failuresBefore ? { status: "ok" } : { status: "error" };
 }
-async function syncRound(membershipId: string, identity: string, pullWhenIdle: boolean): Promise<void> {
+/** True only when the round pulled from the server successfully; a round that fetched nothing proves nothing about the cache. */
+async function syncRound(membershipId: string, identity: string, pullWhenIdle: boolean): Promise<boolean> {
   let outboxChanged = false;
   try {
     await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
@@ -287,18 +334,20 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
       for (const row of batch) if (!returned.has(row.id)) await db.outbox.update(row.id, { status: "pending" });
       if (batch.some((row) => !returned.has(row.id))) break;
     }
-    if (!outboxChanged && !pullWhenIdle) return;
+    if (!outboxChanged && !pullWhenIdle) return false;
     const changed = await pull(identity, membershipId);
     if (changed || outboxChanged) await hydrateStore();
     if (await retryLessonCommandsAhead(identity)) scheduleSync(0);
     const remaining = await db.outbox.where("identity").equals(identity).toArray();
     publishRejected(remaining);
     setSaveStatus(remaining.some((x) => x.status === "rejected") ? "error" : remaining.length ? "local" : "synced");
+    return true;
   } catch {
     syncFailureVersion++;
     if (outboxChanged) await hydrateStore();
     publishRejected(await db.outbox.where("identity").equals(identity).toArray());
     if (await db.outbox.where("identity").equals(identity).count()) setSaveStatus("error");
+    return false;
   }
 }
 /**
@@ -498,5 +547,6 @@ export function scheduleSync(delay?: number): void {
   timer = setTimeout(() => { timer = undefined; void syncNow(); }, wait);
 }
 if (typeof window !== "undefined") {
-  window.addEventListener("online", () => { void runSync(false); });
+  // After a failed load the connection coming back is a reason to try the load again; otherwise only the outbox is flushed.
+  window.addEventListener("online", () => { void runSync(initialSyncState === "error" || initialSyncState === "offline"); });
 }

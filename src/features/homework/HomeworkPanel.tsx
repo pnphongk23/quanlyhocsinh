@@ -12,7 +12,6 @@ import {
 import {
   deleteHomeworkSectionDurable,
   listHomeworkGrades,
-  saveHomeworkSectionDurable,
   setHomeworkGradeDurable,
   setHomeworkGradeForAllDurable,
 } from "../../data/repositories/homework";
@@ -50,6 +49,7 @@ import {
 } from "./homeworkModel";
 import styles from "./HomeworkPanel.module.css";
 import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
+import { useHomeworkSectionDraft, type HomeworkSectionDraft } from "./useHomeworkSectionDraft";
 
 /* ------------------------------------------------------------------ icons */
 
@@ -125,23 +125,32 @@ function weekdayDayMonth(iso: string): string {
   return `${weekday} ${formatDayMonth(iso)}`;
 }
 
-type Editor =
-  | { mode: "add"; kind: HomeworkKind }
-  | { mode: "edit"; id: string };
-
 type PanelProps = {
   session: Session;
   /** Mặc định mở "Bài tập buổi trước" (ảnh 50). Chỉ dùng cho test/deep link. */
   initialView?: HomeworkView;
-  /** Báo trang cha khi phần BTVN đang soạn dở (để hỏi trước khi rời màn/đổi tab). */
+  /** Nháp phần BTVN đang soạn, dùng chung với cây desktop; thiếu thì panel tự giữ nháp riêng. */
+  draft?: HomeworkSectionDraft;
+  /** Báo trang cha khi nháp riêng của panel còn dở (chỉ khi không truyền `draft`). */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Cây này đang là cây hiển thị; cây ẩn vẫn giữ trạng thái nhưng không dựng khung soạn (tránh hai khung cùng nghe phím). */
+  active?: boolean;
 };
 
 export default function HomeworkPanel({
   session,
   initialView = "previous",
+  draft: sharedDraft,
   onDirtyChange,
+  active = true,
 }: PanelProps) {
+  const ownDraft = useHomeworkSectionDraft(session.id);
+  const draft = sharedDraft ?? ownDraft;
+  const ownDirty = sharedDraft ? false : ownDraft.dirty;
+  useEffect(() => {
+    onDirtyChange?.(ownDirty);
+    return () => onDirtyChange?.(false);
+  }, [ownDirty, onDirtyChange]);
   const state = useStore();
   const access = useAccess();
   const save = useSaveStatus();
@@ -155,13 +164,12 @@ export default function HomeworkPanel({
   const [view, setView] = useState<HomeworkView>(initialView);
   const [selectedKind, setSelectedKind] =
     useState<HomeworkKind | null>(partFromUrl);
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const editor = draft.editor;
   const [error, setError] = useState("");
 
   useEffect(() => {
     setSelectedKind(partFromUrl);
     setView(initialView);
-    setEditor(null);
     setError("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.id]);
@@ -524,7 +532,7 @@ export default function HomeworkPanel({
                       type="button"
                       className={styles.iconButton}
                       aria-label={`Sửa phần ${HOMEWORK_KIND_LABELS[section.kind]}`}
-                      onClick={() => setEditor({ mode: "edit", id: section.id })}
+                      onClick={() => draft.openEdit(section)}
                     >
                       <Glyph size={20}>{pencilIcon}</Glyph>
                     </button>
@@ -541,7 +549,7 @@ export default function HomeworkPanel({
               className={styles.softButton}
               onClick={() => {
                 const kind = missingKinds[0];
-                if (kind) setEditor({ mode: "add", kind });
+                if (kind) draft.openAdd(kind);
               }}
             >
               + Thêm phần <span className={styles.addHint}>· {addLabel}</span>
@@ -554,7 +562,7 @@ export default function HomeworkPanel({
 
   const editingSection =
     editor?.mode === "edit"
-      ? ctx.today.sections.find((section) => section.id === editor.id)
+      ? ctx.today.sections.find((section) => section.id === editor.sectionId)
       : undefined;
   const editingGrades = editingSection
     ? listHomeworkGrades(editingSection.id)
@@ -575,19 +583,16 @@ export default function HomeworkPanel({
       )}
       {view === "previous" ? previousBody : todayBody}
 
-      {editor && (editor.mode === "add" || editingSection) && (
+      {active && editor && (editor.mode === "add" || editingSection) && (
         <SectionEditor
-          key={editor.mode === "edit" ? editor.id : `add-${editor.kind}`}
+          key={editor.mode === "edit" ? editor.sectionId : `add-${editor.kind}`}
           mode={editor.mode}
-          sessionId={session.id}
           section={editingSection}
-          initialKind={editor.mode === "add" ? editor.kind : undefined}
           existingKinds={ctx.today.sections.map((section) => section.kind)}
-          missingKinds={ctx.today.missingKinds}
           gradeCount={editingGrades.length}
           gradingTotal={gradingTotal}
-          onClose={() => setEditor(null)}
-          onDirtyChange={onDirtyChange}
+          onClose={draft.close}
+          draft={draft}
         />
       )}
     </section>
@@ -598,67 +603,40 @@ export default function HomeworkPanel({
 
 function SectionEditor({
   mode,
-  sessionId,
   section,
-  initialKind,
   existingKinds,
-  missingKinds,
   gradeCount,
   gradingTotal,
   onClose,
-  onDirtyChange,
+  draft,
 }: {
   mode: "add" | "edit";
-  sessionId: string;
   section?: HomeworkSection;
-  initialKind?: HomeworkKind;
   existingKinds: HomeworkKind[];
-  missingKinds: HomeworkKind[];
   gradeCount: number;
   gradingTotal: number;
   onClose: () => void;
-  onDirtyChange?: (dirty: boolean) => void;
+  draft: HomeworkSectionDraft;
 }) {
   const save = useSaveStatus();
-  const initialKindValue = initialKind ?? missingKinds[0] ?? null;
-  const [form, setForm] = useState<{
-    kind: HomeworkKind | null;
-    title: string;
-    description: string;
-  }>({
-    kind: initialKindValue,
-    title: section?.title ?? "",
-    description: section?.description ?? "",
-  });
+  const form = draft.form;
   const kind = form.kind;
   const title = form.title;
   const description = form.description;
-  const setKind = (next: HomeworkKind | null) => setForm((current) => ({ ...current, kind: next }));
-  const setTitle = (next: string) => setForm((current) => ({ ...current, title: next }));
-  const setDescription = (next: string) =>
-    setForm((current) => ({ ...current, description: next }));
+  const setKind = (next: HomeworkKind | null) => draft.setForm({ kind: next });
+  const setTitle = (next: string) => draft.setForm({ title: next });
+  const setDescription = (next: string) => draft.setForm({ description: next });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removeError, setRemoveError] = useState("");
   const existing = new Set(existingKinds);
   const used = form.kind;
   const deletable = canDeleteSection(gradeCount);
   const action = useSaveAction({
-    baseline: {
-      kind: mode === "edit" ? (section?.kind ?? null) : initialKindValue,
-      title: section?.title ?? "",
-      description: section?.description ?? "",
-    },
-    value: { ...form, kind: mode === "edit" ? (section?.kind ?? null) : form.kind },
+    baseline: draft.baseline,
+    value: draft.form,
     validate: (value) => value.kind !== null && value.title.trim() !== "",
-    save: async (value) => {
-      if (!value.kind) return false;
-      await saveHomeworkSectionDurable({
-        id: section?.id,
-        sessionId: section?.sessionId ?? sessionId,
-        kind: value.kind,
-        title: value.title,
-        description: value.description,
-      });
+    save: async () => {
+      if (!(await draft.save())) throw draft.lastError() ?? new Error("save_failed");
     },
   });
   const saved = useSavedPeek();
@@ -666,11 +644,6 @@ function SectionEditor({
     saved.cancel();
     onClose();
   };
-  const dirtyNow = action.dirty;
-  useEffect(() => {
-    onDirtyChange?.(dirtyNow);
-    return () => onDirtyChange?.(false);
-  }, [dirtyNow, onDirtyChange]);
   const guard = useUnsavedCloseGuard(action, { onClose: closeNow });
   const requestClose = () => {
     if (guard.beforeClose()) closeNow();

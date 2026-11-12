@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from "react";
+import { createPortal } from "react-dom";
+import { Link, Navigate } from "react-router-dom";
 import type { CriteriaLevel, CriteriaSet, CriteriaSetItem } from "../../data/api/types";
 import { criteriaSetError, getCachedCriteriaSet, getCriteriaSet, replaceCriteriaSet } from "../../data/repositories/criteriaSet";
 import { isAdmin } from "../../data/repositories/access";
+import { useDismiss } from "../../shared/hooks/useDismiss";
 import { useOnline } from "../../shared/hooks/useOnline";
-import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
-import { ActionFooter, Button, Field, InfoNotice, Input, Modal, PageHeader, Sheet } from "../../shared/ui";
+import { MasterDetailPage, PageShell, useLayout } from "../../shared/layout";
+import { ActionFooter, Button, EmptyState, Field, InfoNotice, Input, Modal } from "../../shared/ui";
 import { LevelChickMeter } from "../../shared/ui/LevelChickMeter";
 import { codePointLength, CRITERIA_LEVEL_LABELS, CRITERIA_LEVELS, toCriteriaDraft, validateCriteria, type CriteriaDraft, type CriteriaField } from "../../data/criteriaSetModel";
 import s from "./criteriaSetSettings.module.css";
@@ -22,9 +24,8 @@ export default function CriteriaSetSettingsPage() {
 }
 
 function CriteriaSetSettings() {
-  const desktop = useIsDesktop();
+  const layout = useLayout();
   const online = useOnline();
-  const navigate = useNavigate();
   const [set, setSet] = useState<CriteriaSet | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -41,6 +42,13 @@ function CriteriaSetSettings() {
   const [deleteError, setDeleteError] = useState("");
   const [deleteConflict, setDeleteConflict] = useState(false);
   const [deleteSaving, setDeleteSaving] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  // Nút ⋯ và menu (portal) không chung một nút cha: "bên trong" là cả hai.
+  const menuArea = useMemo(() => ({ current: { contains: (node: Node | null) => Boolean(menuButtonRef.current?.contains(node) || menuRef.current?.contains(node)) } as HTMLElement }), []);
+  const [menuPosition, setMenuPosition] = useState<{ top?: number; bottom?: number; right: number }>({ right: 8 });
 
   async function loadSet() {
     setLoadError("");
@@ -72,6 +80,44 @@ function CriteriaSetSettings() {
   const ordered = useMemo(() => set?.criteria ?? [], [set]);
   const editorTitle = editingId ? "Sửa tiêu chí" : "Thêm tiêu chí";
   const closeEditor = () => setEditorOpen(false);
+
+  useDismiss(openMenuId !== null, () => setOpenMenuId(null), menuArea);
+  useEffect(() => {
+    if (!openMenuId) return;
+    const placeMenu = () => {
+      const anchor = menuButtonRef.current;
+      if (!anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const menuHeight = menuRef.current?.getBoundingClientRect().height ?? 152;
+      const below = rect.bottom + menuHeight + 8 <= window.innerHeight;
+      setMenuPosition({
+        ...(below ? { top: rect.bottom + 4 } : { bottom: Math.max(8, window.innerHeight - rect.top + 4) }),
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
+    };
+    placeMenu();
+    menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? []);
+      if (!items.length) return;
+      const at = items.indexOf(document.activeElement as HTMLButtonElement);
+      const target = event.key === "ArrowDown" ? items[(at + 1) % items.length]
+        : event.key === "ArrowUp" ? items[(at <= 0 ? items.length : at) - 1]
+        : event.key === "Home" ? items[0]
+        : event.key === "End" ? items[items.length - 1] : null;
+      if (!target) return;
+      event.preventDefault();
+      target.focus();
+    };
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openMenuId]);
 
   function openNew() {
     setEditingId(null); setDraft({ ...EMPTY_DRAFT, texts: { ...EMPTY_DRAFT.texts } });
@@ -133,6 +179,16 @@ function CriteriaSetSettings() {
     const from = ordered.findIndex((row) => row.id === item.id), to = from + direction;
     if (from < 0 || to < 0 || to >= ordered.length) return;
     const next = ordered.map(toCriteriaDraft); [next[from], next[to]] = [next[to]!, next[from]!];
+    await updateWholeSet(next);
+  }
+
+  async function moveTo(item: CriteriaSetItem, targetIndex: number) {
+    if (!set || !online || saving) return;
+    const from = ordered.findIndex((row) => row.id === item.id);
+    if (from < 0 || targetIndex < 0 || targetIndex >= ordered.length || from === targetIndex) return;
+    const next = ordered.map(toCriteriaDraft);
+    const [moving] = next.splice(from, 1);
+    next.splice(targetIndex, 0, moving!);
     await updateWholeSet(next);
   }
 
@@ -208,67 +264,107 @@ function CriteriaSetSettings() {
     <Button type="submit" form="criteria-editor" loading={saving} done={saved}>{editingId ? "Lưu" : "Thêm tiêu chí"}</Button>
   </ActionFooter>;
 
+  function startDrag(event: DragEvent, item: CriteriaSetItem) {
+    setDraggedId(item.id);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", item.id);
+  }
+
+  function dropAt(event: DragEvent, index: number) {
+    event.preventDefault();
+    const moving = ordered.find((item) => item.id === draggedId);
+    if (moving) void moveTo(moving, index);
+    setDraggedId(null);
+  }
+
+  function dragHandle(item: CriteriaSetItem) {
+    return <button type="button" className={s.orderButton} aria-label={`Kéo để đổi thứ tự: ${item.name}`} disabled={!online || saving} draggable onDragStart={(event) => { event.stopPropagation(); startDrag(event, item); }} onDragEnd={() => setDraggedId(null)}>⠿</button>;
+  }
+
+  function rowMenu(item: CriteriaSetItem, index: number) {
+      const menuOpen = openMenuId === item.id;
+      return <div className={s.menuWrap}>
+        <button ref={menuOpen ? menuButtonRef : null} type="button" className={s.orderButton} aria-label={`Thao tác cho ${item.name}`} aria-haspopup="menu" aria-expanded={menuOpen} onClick={(event) => {
+          if (menuOpen) { setOpenMenuId(null); return; }
+          menuButtonRef.current = event.currentTarget;
+          const rect = event.currentTarget.getBoundingClientRect();
+          setMenuPosition({ top: rect.bottom + 4, right: Math.max(8, window.innerWidth - rect.right) });
+          setOpenMenuId(item.id);
+        }}>•••</button>
+        {menuOpen && createPortal(<div ref={menuRef} className={s.rowMenu} style={menuPosition} role="menu" aria-label={`Thao tác cho ${item.name}`}>
+          <button type="button" role="menuitem" disabled={!online || saving || index === 0} onClick={() => { setOpenMenuId(null); void move(item, -1); }}>Lên</button>
+          <button type="button" role="menuitem" disabled={!online || saving || index === ordered.length - 1} onClick={() => { setOpenMenuId(null); void move(item, 1); }}>Xuống</button>
+          <button type="button" role="menuitem" onClick={() => { menuButtonRef.current?.focus(); setOpenMenuId(null); openEdit(item); }}>Sửa tiêu chí</button>
+        </div>, document.body)}
+      </div>;
+  }
+
+  const addEmptyAction = <Button onClick={openNew} disabled={!online}>Thêm tiêu chí</Button>;
+  const criteriaTable = <section className={s.listPanel} data-measure="block" aria-label="Danh sách tiêu chí">
+    <div className={s.listHead}><div><h2>Tiêu chí</h2><p>Áp dụng cho mọi lớp trong workspace</p></div></div>
+    {ordered.length === 0 ? <EmptyState size="compact" title="Chưa có tiêu chí" description="Thêm tiêu chí để tạo bộ nhận xét dùng chung." action={addEmptyAction} /> : <div className={s.tableWrap}>
+      <table className={s.table}>
+        <thead><tr><th>Thứ tự</th><th>Tên</th><th>Mặc định</th><th>BTVN</th><th>Thao tác</th></tr></thead>
+        <tbody>{ordered.map((item, index) => <tr key={item.id} className={editingId === item.id ? s.tableRowSelected : ""} data-measure="row" draggable={online && !saving} onDragStart={(event) => startDrag(event, item)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => dropAt(event, index)} onDragEnd={() => setDraggedId(null)}>
+          <td className={s.orderCell}>{dragHandle(item)}<span>{index + 1}</span></td>
+          <td><button type="button" className={s.tableName} onClick={() => openEdit(item)} aria-label={`Sửa tiêu chí ${item.name}`} aria-pressed={editingId === item.id} disabled={!online || saving}>{item.name}</button></td>
+          <td className={s.tableMeta}>Mặc định: {CRITERIA_LEVEL_LABELS[item.default_level]}</td>
+          <td className={s.tableHomework}>{item.homework ? <span className={s.homeworkLabel}>Theo chấm BTVN</span> : <span className={s.tableMuted}>—</span>}</td>
+          <td className={s.tableActions}>{rowMenu(item, index)}</td>
+        </tr>)}</tbody>
+      </table>
+    </div>}
+    {saved && <p className={s.success} role="status" aria-live="polite">✓ Đã lưu</p>}
+  </section>;
+    const criteriaList = <section className={s.mobileList} data-measure="block" aria-label="Danh sách tiêu chí">
+      <ol className={s.list}>
+        {ordered.length === 0 && <li className={s.emptyRow}><EmptyState size="compact" title="Chưa có tiêu chí" description="Thêm tiêu chí để tạo bộ nhận xét dùng chung." /></li>}
+      {ordered.map((item, index) => <li className={s.listItem} key={item.id} data-measure="row" draggable={online && !saving} onDragStart={(event) => startDrag(event, item)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => dropAt(event, index)} onDragEnd={() => setDraggedId(null)}>
+        <div className={`${s.item} ${editingId === item.id ? s.selected : ""}`}>
+          <button type="button" className={s.itemSelect} onClick={() => openEdit(item)} aria-label={`Sửa tiêu chí ${item.name}`} aria-pressed={editingId === item.id} disabled={!online || saving}>
+            <span className={s.itemName}>{item.name}</span>
+            {item.homework && <span className={s.homeworkLabel}>Theo chấm BTVN</span>}
+            <span className={s.itemMeta}>Mặc định: {CRITERIA_LEVEL_LABELS[item.default_level]}</span>
+          </button>
+          {dragHandle(item)}
+          {rowMenu(item, index)}
+        </div>
+      </li>)}
+      </ol>
+      <Button className={s.mobileAdd} onClick={openNew} disabled={!online || saving || ordered.length >= 8}>Thêm tiêu chí</Button>
+      {saved && <p className={s.success} role="status" aria-live="polite">✓ Đã lưu</p>}
+  </section>;
+
+    const detail = editorOpen ? editorBody : null;
+    const detailFooter = editorOpen ? editorFooter : null;
     return (
-      <main className={s.page}>
-        {desktop ? (
-          <header className={s.header}>
-            <p className={s.breadcrumb}><button type="button" onClick={() => navigate("/cai-dat")}>Cài đặt</button><span aria-hidden="true">/</span><span>Bộ tiêu chí nhận xét</span></p>
-            <h1>Bộ tiêu chí nhận xét</h1>
-            <p className={s.subtitle}>Một bộ tiêu chí dùng chung cho mọi lớp trong workspace.</p>
-          </header>
-        ) : <>
-          <PageHeader backTo="/cai-dat" title="Cài đặt" compact />
-          <header className={s.mobileHeader}>
-            <h1>Bộ tiêu chí nhận xét</h1>
-            <p className={s.subtitle}>Một bộ tiêu chí dùng chung cho mọi lớp trong workspace.</p>
-          </header>
-        </>}
+      <PageShell
+        breadcrumb={<><Link to="/cai-dat">Cài đặt</Link><span aria-hidden="true">/</span><span>Bộ tiêu chí nhận xét</span></>}
+        backTo="/cai-dat"
+        title="Bộ tiêu chí nhận xét"
+        subtitle="Một bộ tiêu chí dùng chung cho mọi lớp trong workspace."
+          actions={layout === "mobile" ? undefined : <Button onClick={openNew} disabled={!online || saving || ordered.length >= 8}>Thêm tiêu chí</Button>}
+      >
         {!online && <InfoNotice title="Đang ngoại tuyến" description="Bạn có thể xem bộ đã lưu trên máy. Chỉnh sửa cần kết nối mạng." />}
         {loadError && <div className={s.error} role="status">{loadError}{online && <Button variant="secondary" onClick={() => void loadSet()}>Tải lại</Button>}</div>}
         {formError && !editorOpen && <div className={s.error} role="alert">{formError}{conflict && <Button variant="secondary" onClick={() => void loadSet()}>Tải lại</Button>}</div>}
-        {loading && !set ? <p role="status">Đang tải bộ tiêu chí…</p> : set && <div className={`${s.settingsGrid} ${desktop && editorOpen ? s.settingsGridEditing : ""}`}>
-          <section className={s.listPanel} aria-label="Danh sách tiêu chí">
-            <div className={s.listHead}>
-              <div><h2>Tiêu chí</h2><p>Áp dụng cho mọi lớp trong workspace</p></div>
-              <Button onClick={openNew} disabled={!online || saving || ordered.length >= 8}>Thêm tiêu chí</Button>
-            </div>
-            <ol className={s.list}>
-              {ordered.map((item, index) => <li className={s.listItem} key={item.id}>
-                <div className={`${s.item} ${editingId === item.id ? s.selected : ""}`}>
-                  <button type="button" className={s.itemSelect} onClick={() => openEdit(item)} aria-label={`Sửa tiêu chí ${item.name}`} aria-pressed={editingId === item.id} disabled={!online || saving}>
-                    <span className={s.itemName}>{item.name}</span>
-                    {item.homework && <span className={s.homeworkLabel}>Theo chấm BTVN</span>}
-                    <span className={s.itemMeta}>
-                      <LevelChickMeter level={item.default_level} decorative />
-                      <span>{CRITERIA_LEVEL_LABELS[item.default_level]}</span>
-                    </span>
-                  </button>
-                  <div className={s.orderTools}>
-                    <button type="button" className={s.orderButton} aria-label={`Chuyển lên: ${item.name}`} disabled={!online || saving || index === 0} onClick={() => void move(item, -1)}>↑</button>
-                    <button type="button" className={s.orderButton} aria-label={`Chuyển xuống: ${item.name}`} disabled={!online || saving || index === ordered.length - 1} onClick={() => void move(item, 1)}>↓</button>
-                  </div>
-                </div>
-              </li>)}
-            </ol>
-            {saved && <p className={s.success} role="status" aria-live="polite">✓ Đã lưu</p>}
-          </section>
-          {desktop && editorOpen && <aside className={s.editorPanel} aria-label={editorTitle}>
-            <header className={s.editorHeader}><h2>{editorTitle}</h2><Button variant="secondary" className={s.sheetClose} onClick={closeEditor} aria-label="Đóng">×</Button></header>
-            {editorBody}{editorFooter}
-          </aside>}
-        </div>}
-        {!desktop && <Sheet
-          open={editorOpen}
-          onClose={closeEditor}
-          title={editorTitle}
-          header={<header className={s.editorHeader}><h2>{editorTitle}</h2><Button variant="secondary" className={s.sheetClose} onClick={closeEditor} aria-label="Đóng">×</Button></header>}
-          footer={editorFooter}
-        >{editorBody}</Sheet>}
+        {loading && !set ? <p role="status">Đang tải bộ tiêu chí…</p> : set && <>
+          <MasterDetailPage
+            detailOpen={editorOpen}
+            onCloseDetail={closeEditor}
+            detailTitle={editorTitle}
+            detail={detail}
+            footer={detailFooter}
+            mobileDetail="sheet"
+            master={criteriaTable}
+            mobileMaster={criteriaList}
+          />
+        </>}
         <Modal
           open={deleting !== null}
           onClose={() => setDeleting(null)}
           title="Xoá tiêu chí này?"
-          sheet={!desktop}
+          sheet={layout !== "desktop"}
           footer={<div className={s.deleteActions}>
             <Button variant="secondary" onClick={() => setDeleting(null)} disabled={deleteSaving}>Huỷ</Button>
             <Button variant="danger" loading={deleteSaving} onClick={() => void confirmDelete()}>Xoá tiêu chí</Button>
@@ -278,6 +374,6 @@ function CriteriaSetSettings() {
           <p>Phiếu đã gửi không đổi.</p>
           {deleteError && <div className={s.error} role="alert">{deleteError}{deleteConflict && <Button variant="secondary" onClick={() => { setDeleting(null); void loadSet(); }}>Tải lại</Button>}</div>}
         </Modal>
-      </main>
+      </PageShell>
     );
 }

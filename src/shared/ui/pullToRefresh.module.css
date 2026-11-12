@@ -60,6 +60,10 @@
   align-items: center;
 }
 
+@container page-header (min-width: 30rem) {
+  .action { display: inline-flex; }
+}
+
 /* Nổi dưới nút để chữ trạng thái không làm hàng action rộng ra và co tiêu đề. */
 .actionStatus {
   position: absolute;
@@ -90,7 +94,7 @@
   justify-content: center;
   gap: var(--space-8);
   min-width: var(--button-min-w-desktop);
-  min-height: var(--tap-desktop);
+  min-height: var(--tap);
   padding: 0 var(--space-12);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-button);
@@ -115,9 +119,4 @@
 .button:disabled {
   opacity: var(--state-disabled-opacity);
   cursor: default;
-}
-
-@media (min-width: 1024px) {
-  .action { display: inline-flex; }
-  .mobileOnly { display: none; }
 }

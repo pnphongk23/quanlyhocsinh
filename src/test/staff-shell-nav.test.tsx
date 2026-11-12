@@ -3,7 +3,7 @@ import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { replaceStore } from "../data/store";
 import { createSeed } from "./fixtures/seed";
-import { globalCss, mediaBlocks, readCss } from "./cssMedia";
+import { globalCss, readCss } from "./cssMedia";
 
 vi.mock("../data/auth/session", () => ({
   getSession: () => ({
@@ -34,7 +34,7 @@ function open(path: string) {
 }
 
 const staffRoot = () => document.querySelector<HTMLElement>('[data-role="staff"]')!;
-const mobileTabbar = () => screen.getByRole("navigation", { name: "Điều hướng chính" });
+const mobileTabbar = () => screen.getAllByRole("navigation", { name: "Điều hướng chính" }).at(-1)!;
 
 beforeEach(() => {
   replaceStore(createSeed());
@@ -50,7 +50,7 @@ describe("staff shell hides the bottom navigation on class child screens", () =>
   ])("%s (%s) đánh dấu khung chi tiết", (path) => {
     const router = open(path);
     expect(document.documentElement).toHaveAttribute("data-staff-detail");
-    expect(staffRoot().className).toMatch(/staffDetail/);
+    expect(staffRoot().className).toMatch(/isDetail/);
     // Thanh tab vẫn nằm trong DOM; CSS ẩn nó trên mobile khi có dấu hiệu chi tiết.
     expect(mobileTabbar()).toBeInTheDocument();
     router.dispose();
@@ -59,7 +59,7 @@ describe("staff shell hides the bottom navigation on class child screens", () =>
   it.each(["/lop", "/lich", "/cai-dat"])("%s giữ thanh điều hướng dưới", (path) => {
     const router = open(path);
     expect(document.documentElement).not.toHaveAttribute("data-staff-detail");
-    expect(staffRoot().className).not.toMatch(/staffDetail/);
+    expect(staffRoot().className).not.toMatch(/isDetail/);
     expect(mobileTabbar()).toBeInTheDocument();
     expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual(expect.arrayContaining(["Lớp", "Lịch", "Cài đặt"]));
     router.dispose();
@@ -71,16 +71,16 @@ describe("staff shell hides the bottom navigation on class child screens", () =>
 
     await router.navigate("/lop");
     await waitFor(() => expect(document.documentElement).not.toHaveAttribute("data-staff-detail"));
-    expect(staffRoot().className).not.toMatch(/staffDetail/);
+    expect(staffRoot().className).not.toMatch(/isDetail/);
     router.dispose();
   });
 
-  it("hợp đồng CSS: mobile ẩn thanh tab ở màn chi tiết, desktop luôn dùng thanh bên", () => {
+  it("hợp đồng CSS: breakpoints nằm ở layout và detail ẩn tab bar", () => {
     const shell = readCss("src/app/shell.module.css");
-    const mobile = mediaBlocks(shell, "(max-width: 1023px)").join("\n");
-    expect(mobile).toMatch(/\.staffDetail \.staffTabbar\s*\{\s*display:\s*none;?\s*\}/);
-    // Ngoài media query không được ẩn thanh tab, nếu không desktop/mobile lệch nhau.
-    expect(globalCss(shell)).not.toMatch(/\.staffTabbar[^{]*\{[^}]*display:\s*none/);
-    expect(mediaBlocks(shell, "(min-width: 1024px)").join("\n")).toMatch(/\.staffTabbar\s*\{\s*display:\s*none;?\s*\}/);
+    const layout = readCss("src/shared/layout/layout.module.css");
+    expect(shell).not.toMatch(/@media\s*\([^)]*(?:min|max)-width/);
+    expect(globalCss(layout)).toMatch(/\.isDetail\s+\.tabbar\s*\{\s*display:\s*none;?\s*\}/);
+    expect(layout).toMatch(/@media\s*\(min-width:\s*640px\)/);
+    expect(layout).toMatch(/@media\s*\(min-width:\s*1024px\)/);
   });
 });

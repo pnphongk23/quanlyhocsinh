@@ -24,13 +24,6 @@
     transform: translateX(16px);
   }
 }
-/* Trang đi sâu trượt ngang chỉ có nghĩa trên mobile. */
-@media (min-width: 1024px) {
-  .pageDetail {
-    animation-name: pageIn;
-  }
-}
-
 /* Expand/collapse */
 .collapse {
   display: grid;

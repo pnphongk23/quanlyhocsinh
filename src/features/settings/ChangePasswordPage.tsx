@@ -3,11 +3,10 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { authFailureMessage, changePassword } from "../../data/auth";
 import { getSession } from "../../data/auth/session";
 import { useSaveAction } from "../../shared/hooks/useSaveAction";
-import { useIsDesktop } from "../../shared/hooks/useIsDesktop";
-import { Button, Icon } from "../../shared/ui";
+import { Button } from "../../shared/ui";
+import { FormPage } from "../../shared/layout";
 import { CheckRow, PasswordField, PasswordStrength } from "../auth/authUi";
 import a from "../auth/auth.module.css";
-import s from "./settings.module.css";
 import { useSavedPeek } from "../../shared/hooks/useSavedPeek";
 
 const PASSWORD_MIN_LENGTH = 8;
@@ -21,7 +20,6 @@ export function isPasswordFormValid(v: typeof EMPTY_PASSWORD_FORM): boolean {
 }
 
 export default function ChangePasswordPage() {
-  const desktop = useIsDesktop();
   const navigate = useNavigate();
   const saved = useSavedPeek();
   const [form, setForm] = useState(EMPTY_PASSWORD_FORM);
@@ -34,7 +32,6 @@ export default function ChangePasswordPage() {
     save: (v) => changePassword(v.current, v.next),
   });
   if (!getSession()) return <Navigate to="/dang-nhap" replace />;
-  if (desktop) return <Navigate to="/cai-dat" replace />;
 
   const mismatch = confirm.length > 0 && confirm !== next;
   const sameAsCurrent = next.length > 0 && next === current;
@@ -50,12 +47,14 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <main className={s.passwordPage}>
-      <Link to="/cai-dat" className={s.backButton} aria-label="Quay lại">
-        <Icon name="back" />
-      </Link>
-      <h1 className={s.pageTitle}>Đổi mật khẩu</h1>
-      <form className={`${a.form} ${a.formFill}`} onSubmit={submit} noValidate>
+    <FormPage
+      breadcrumb={<><Link to="/cai-dat">Cài đặt</Link><span aria-hidden="true">/</span><span>Đổi mật khẩu</span></>}
+      backTo="/cai-dat"
+      title="Đổi mật khẩu"
+      subtitle="Mật khẩu mới cần ít nhất 8 ký tự và khác mật khẩu hiện tại."
+      footer={<><Button type="button" variant="neutral" onClick={() => navigate("/cai-dat")}>Huỷ</Button><Button type="submit" form="change-password-form" size="lg" disabled={!action.canSave} loading={action.saving} done={action.justSaved}>Lưu mật khẩu mới</Button></>}
+    >
+      <form id="change-password-form" className={`${a.form} ${a.formFill}`} onSubmit={submit} noValidate>
         <PasswordField
           label="Mật khẩu hiện tại"
           value={current}
@@ -82,15 +81,12 @@ export default function ChangePasswordPage() {
           error={mismatch}
           errorText={mismatch ? "Mật khẩu nhập lại chưa khớp." : undefined}
         />
-        <div className={a.checks}>
+        <div className={a.checks} data-measure="form-field">
           <CheckRow ok={next.length >= PASSWORD_MIN_LENGTH}>
             Tối thiểu {PASSWORD_MIN_LENGTH} ký tự
           </CheckRow>
         </div>
-        <Button type="submit" size="lg" block className={a.submitSticky} disabled={!action.canSave} loading={action.saving} done={action.justSaved}>
-          Lưu mật khẩu mới
-        </Button>
       </form>
-    </main>
+    </FormPage>
   );
 }

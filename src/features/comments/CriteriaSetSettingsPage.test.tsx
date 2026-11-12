@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CriteriaSet, CriteriaSetItem } from "../../data/api/types";
 import CriteriaSetSettingsPage from "./CriteriaSetSettingsPage";
 
-const mocks = vi.hoisted(() => ({ admin: true, online: true, get: vi.fn(), cached: vi.fn(), replace: vi.fn() }));
+const mocks = vi.hoisted(() => ({ admin: true, online: true, layout: "mobile" as "mobile" | "tablet" | "desktop", get: vi.fn(), cached: vi.fn(), replace: vi.fn() }));
 vi.mock("../../data/repositories/access", () => ({ isAdmin: () => mocks.admin }));
 vi.mock("../../data/repositories/criteriaSet", () => ({
   getCriteriaSet: mocks.get,
@@ -17,7 +17,7 @@ vi.mock("../../data/repositories/criteriaSet", () => ({
   },
 }));
 vi.mock("../../shared/hooks/useOnline", () => ({ useOnline: () => mocks.online }));
-vi.mock("../../shared/hooks/useIsDesktop", () => ({ useIsDesktop: () => false }));
+vi.mock("../../shared/layout/useLayout", () => ({ useLayout: () => mocks.layout }));
 
 const item = (index: number): CriteriaSetItem => ({
   id: `criterion-${index}`, name: `Tiêu chí ${index}`, texts: { good: "Câu tốt.", ok: "Câu đạt.", needs_work: "Câu cần cố gắng." }, default_level: "good", homework: false,
@@ -31,16 +31,32 @@ function renderPage() {
   </Routes></MemoryRouter>);
 }
 
+function setLayoutMedia() {
+  const width = mocks.layout === "desktop" ? 1440 : mocks.layout === "tablet" ? 834 : 390;
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query.includes("1024px") ? width >= 1024 : query.includes("640px") ? width >= 640 : false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
+
 beforeEach(() => {
   vi.stubEnv("VITE_CRITERIA_LEVELS", "1");
   mocks.admin = true; mocks.online = true;
+  mocks.layout = "mobile";
   mocks.cached.mockResolvedValue(null);
   mocks.get.mockResolvedValue(result(1));
   mocks.replace.mockReset();
+  setLayoutMedia();
   HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) { this.removeAttribute("open"); };
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe("custom criteria settings", () => {
   it("redirects non-admin users away from the route", async () => {
@@ -81,12 +97,12 @@ describe("custom criteria settings", () => {
     mocks.get.mockResolvedValue(criteria);
     renderPage();
     await screen.findByText("Độ tập trung");
-    expect(screen.getByText("Áp dụng cho mọi lớp trong workspace")).toBeInTheDocument();
     const list = screen.getByRole("region", { name: "Danh sách tiêu chí" });
+    expect(within(list).queryByRole("heading", { name: "Tiêu chí" })).not.toBeInTheDocument();
+    expect(within(list).getByRole("button", { name: "Thêm tiêu chí" })).toBeInTheDocument();
     const homeworkRow = within(list).getByRole("button", { name: "Sửa tiêu chí Làm bài tập về nhà" });
     expect(within(homeworkRow).getByText("Theo chấm BTVN")).toBeInTheDocument();
-    expect(homeworkRow.children[1]).toHaveTextContent("Theo chấm BTVN");
-    expect(homeworkRow.children[2]).toContainElement(homeworkRow.querySelector("[data-level='good']"));
+    expect(homeworkRow).toHaveTextContent("Mặc định: Tốt");
     const firstRow = within(list).getByRole("button", { name: "Sửa tiêu chí Độ tập trung" });
     expect(within(firstRow).queryByText("Theo chấm BTVN")).not.toBeInTheDocument();
     expect(within(list).getAllByText("Theo chấm BTVN")).toHaveLength(1);
@@ -98,8 +114,51 @@ describe("custom criteria settings", () => {
       expect(textarea.previousElementSibling?.querySelector("[aria-hidden='true']")).toBeInTheDocument();
     }
     expect(screen.getByLabelText("Câu mức Tốt")).toHaveValue(source[0][1]);
-    expect(screen.getByRole("button", { name: "Đóng" })).toHaveTextContent("×");
+    expect(screen.getByRole("button", { name: "Đóng chi tiết" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Xoá tiêu chí" })).toBeEnabled();
+  });
+
+  it.each([["mobile", "mobilePanel"], ["tablet", "tabletPanel"]] as const)("places the editor sheet at %s viewport", async (layout, placement) => {
+    mocks.layout = layout;
+    setLayoutMedia();
+    renderPage();
+    await screen.findByText("Tiêu chí 1");
+    fireEvent.click(screen.getByRole("button", { name: "Sửa tiêu chí Tiêu chí 1" }));
+    expect((await screen.findByRole("dialog", { name: "Sửa tiêu chí" })).className).toContain(placement);
+  });
+
+  it("renders the last-row action menu outside the scrolling table and closes it with Escape", async () => {
+    mocks.layout = "desktop";
+    setLayoutMedia();
+    renderPage();
+    await screen.findByText("Tiêu chí 1");
+    const trigger = screen.getByRole("button", { name: "Thao tác cho Tiêu chí 1" });
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole("menu", { name: "Thao tác cho Tiêu chí 1" });
+    expect(menu.closest('[class*="tableWrap"]')).toBeNull();
+    expect(menu.parentElement).toBe(document.body);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("menu", { name: "Thao tác cho Tiêu chí 1" })).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes the row menu on an outside press and moves focus with the arrow keys", async () => {
+    mocks.layout = "desktop";
+    setLayoutMedia();
+    renderPage();
+    await screen.findByText("Tiêu chí 1");
+    const trigger = screen.getByRole("button", { name: "Thao tác cho Tiêu chí 1" });
+    fireEvent.click(trigger);
+    const menu = await screen.findByRole("menu", { name: "Thao tác cho Tiêu chí 1" });
+    const items = within(menu).getAllByRole("menuitem").filter((item) => !(item as HTMLButtonElement).disabled);
+    expect(items.length).toBeGreaterThan(0);
+    expect(items[0]).toHaveFocus();
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(items[items.length > 1 ? 1 : 0]).toHaveFocus();
+    fireEvent.keyDown(document, { key: "ArrowUp" });
+    expect(items[0]).toHaveFocus();
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("menu", { name: "Thao tác cho Tiêu chí 1" })).not.toBeInTheDocument();
   });
 
   it("keeps deletion confirmation in the edit flow and prevents deleting the final item", async () => {

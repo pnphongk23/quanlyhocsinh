@@ -9,8 +9,8 @@ export interface ActionFooterProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * Hàng nút chính ở đáy trang form. Mobile: dính trên thanh tab dưới (`bottom: var(--sticky-bottom)`),
- * các nút xếp dọc và `margin-top: auto` đẩy xuống đáy trang. Desktop: nằm trong luồng, căn phải.
+ * Hàng nút chính ở đáy trang form. Khung hẹp thì dính trên tab dưới và xếp dọc;
+ * khung rộng thì nằm trong luồng và căn phải.
  */
 export function ActionFooter({ className, hint, hintTone = "muted", children, ...props }: ActionFooterProps) {
   const hintId = useId();
@@ -21,12 +21,14 @@ export function ActionFooter({ className, hint, hintTone = "muted", children, ..
       className={[s.actionFooter, className].filter(Boolean).join(" ")}
       {...props}
     >
-      {hint ? (
-        <p id={hintId} className={[s.actionHint, hintTone === "error" ? s.actionHintError : ""].filter(Boolean).join(" ")}>
-          {hint}
-        </p>
-      ) : null}
-      {children}
+        <div className={s.actionFooterActions}>
+          {hint ? (
+            <p id={hintId} className={[s.actionHint, hintTone === "error" ? s.actionHintError : ""].filter(Boolean).join(" ")}>
+              {hint}
+            </p>
+          ) : null}
+          {children}
+        </div>
     </div>
   );
 }

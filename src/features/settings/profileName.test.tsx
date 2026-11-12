@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { MeResponse } from "../../data/api/types";
@@ -9,7 +9,7 @@ import SettingsPage from "./SettingsPage";
 import { activateSession, clearSession } from "../../data/auth/session";
 
 const perms = { classes: "write", students: "write", sessions_attendance: "write", scores: "write", lectures: "write", comments_reports: "write", send_comments: "none" } as const;
-const membership = (systemKey: string, scope: "workspace" | "assigned_classes") => ({
+const membership = (systemKey: string, scope: "workspace" | "assigned_classes" | "linked_students") => ({
   id: "m1", status: "active" as const, scope_epoch: 1, workspace: { id: "w1", name: "Lớp học" },
   role: { id: "r1", name: systemKey === "admin" ? "Admin" : "Trợ giảng", system_key: systemKey, scope_kind: scope },
   permissions: perms, class_ids: [] as string[],
@@ -25,6 +25,7 @@ const renderPage = () => render(<MemoryRouter><SettingsPage /></MemoryRouter>);
 
 describe("hồ sơ ở Cài đặt khi tên rỗng", () => {
   beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(() => { vi.unstubAllEnvs(); });
 
   it("nhân sự chưa có tên: không ghi 'Chưa đăng nhập' hay 'GV', có ghi chú Admin đặt tên", async () => {
     await startAs("", membership("assistant", "assigned_classes"));
@@ -47,5 +48,28 @@ describe("hồ sơ ở Cài đặt khi tên rỗng", () => {
     await startAs("", membership("admin", "workspace"));
     renderPage();
     expect(screen.queryByText("Admin đặt tên cho bạn")).toBeNull();
+  });
+
+  it("phụ huynh chỉ thấy phụ đề về hồ sơ và tài khoản cá nhân", async () => {
+    vi.stubEnv("VITE_CRITERIA_LEVELS", "1");
+    await startAs("", membership("guardian", "linked_students"));
+    renderPage();
+    expect(screen.getByText("Hồ sơ và tài khoản của bạn.")).toBeTruthy();
+    expect(screen.queryByText(/bộ tiêu chí|workspace/i)).toBeNull();
+  });
+
+  it("nhân sự không thấy bộ tiêu chí nên phụ đề không nhắc đến bộ tiêu chí", async () => {
+    vi.stubEnv("VITE_CRITERIA_LEVELS", "1");
+    await startAs("", membership("assistant", "assigned_classes"));
+    renderPage();
+    expect(screen.getByText("Hồ sơ và tài khoản dùng chung cho workspace.")).toBeTruthy();
+    expect(screen.queryByText(/bộ tiêu chí/i)).toBeNull();
+  });
+
+  it("Admin thấy bộ tiêu chí thì phụ đề phản ánh quyền đó", async () => {
+    vi.stubEnv("VITE_CRITERIA_LEVELS", "1");
+    await startAs("", membership("admin", "workspace"));
+    renderPage();
+    expect(screen.getByText("Hồ sơ, tài khoản và bộ tiêu chí dùng chung cho workspace.")).toBeTruthy();
   });
 });

@@ -119,6 +119,63 @@ describe("sync triggers", () => {
     expect(await device.refreshNow()).toEqual({ status: "error" });
   });
 
+  it("tracks initial sync errors, retries, logout with the same account, and offline state", async () => {
+    const device = await bootDevice(server, "t", me);
+    server.hooks.respond = (request) => request.path === "/sync/pull" ? { status: 503, code: "unavailable" } : undefined;
+    await device.syncNow();
+    expect(device.getInitialSyncState()).toBe("error");
+
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    server.hooks.respond = null;
+    server.hooks.hold = (request) => request.path === "/sync/pull" ? gate : undefined;
+    const retry = device.syncNow();
+    await vi.waitFor(() => expect(device.getInitialSyncState()).toBe("loading"));
+    server.hooks.hold = null;
+    release();
+    await retry;
+    expect(device.getInitialSyncState()).toBe("success");
+
+    await device.clearUserCache("teacher");
+    expect(device.getInitialSyncState()).toBe("not-started");
+    await device.syncNow();
+    expect(device.getInitialSyncState()).toBe("success");
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    window.dispatchEvent(new Event("offline"));
+    expect(device.getInitialSyncState()).toBe("offline");
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+  });
+
+  it("retries the failed initial load on online instead of reporting success without fetching", async () => {
+    const device = await bootDevice(server, "t", me);
+    server.hooks.respond = (request) => request.path === "/sync/pull" ? { status: 503, code: "unavailable" } : undefined;
+    await device.syncNow();
+    expect(device.getInitialSyncState()).toBe("error");
+
+    const failedPulls = pulls();
+    window.dispatchEvent(new Event("online"));
+    await vi.waitFor(() => expect(pulls()).toBe(failedPulls + 1));
+    await flush();
+    expect(device.getInitialSyncState()).toBe("error");
+
+    server.hooks.respond = null;
+    window.dispatchEvent(new Event("online"));
+    await vi.waitFor(() => expect(device.getInitialSyncState()).toBe("success"));
+    expect(pulls()).toBe(failedPulls + 2);
+  });
+
+  it("keeps the previous state when online runs a round that fetches nothing", async () => {
+    const device = await bootDevice(server, "t", me);
+    await device.syncNow();
+    expect(device.getInitialSyncState()).toBe("success");
+    const before = requests().length;
+    window.dispatchEvent(new Event("online"));
+    await vi.waitFor(() => expect(device.getInitialSyncState()).toBe("success"));
+    await flush();
+    expect(device.getInitialSyncState()).toBe("success");
+    expect(requests().length).toBe(before);
+  });
+
   it("keeps one sync round in flight and queues one explicit follow-up", async () => {
     const device = await bootDevice(server, "t", me);
     await device.syncNow();

@@ -7,8 +7,7 @@ import CommentsPanel from "./CommentsPanel";
 
 /**
  * jsdom không dàn trang: kiểm hợp đồng CSS/DOM cho khối "Điểm danh xong để nhận xét" ở tab Nhận xét.
- * Trước đây mobile xếp khối này một hàng nên tiêu đề bị ngắt giữa cụm và nút bị đệm ngang của chính nút
- * đẩy lệch lề chữ; nay khối dùng `InfoNotice` (shared/ui), mobile xếp dọc và hành động dạng chữ đệm ngang 0.
+ * Khối dùng `InfoNotice` (shared/ui): nội dung xếp theo chiều rộng vùng chứa, hành động hẹp dạng chữ đệm ngang 0.
  */
 const uiCss = readFileSync(resolve(process.cwd(), "src/shared/ui/ui.module.css"), "utf8");
 const panelCss = readFileSync(resolve(process.cwd(), "src/features/comments/CommentsPanel.module.css"), "utf8");
@@ -82,11 +81,10 @@ describe("khối Điểm danh xong để nhận xét", () => {
     expect(uiCss).not.toMatch(/margin-inline-start:\s*calc\(-1 \*/);
   });
 
-  it("mobile: hành động xuống dưới, đệm ngang 0 để nhãn thẳng lề chữ tiêu đề và vùng chạm đủ --tap", () => {
-    expect(uiCss).toMatch(/\.infoNotice\s*\{[^}]*flex-direction:\s*column[^}]*align-items:\s*flex-start/s);
-    expect(uiCss).toMatch(/\.infoNotice > \.button\s*\{[^}]*min-height:\s*var\(--tap\)[^}]*padding-inline:\s*0/s);
-    // Desktop (≥1024) hành động nằm cùng hàng bên phải nên trả lại đệm ngang theo nội dung.
-    expect(uiCss).toMatch(/@media \(min-width: 1024px\)\s*\{\s*\.infoNotice\s*\{[^}]*flex-direction:\s*row/s);
-    expect(uiCss).toMatch(/@media \(min-width: 1024px\)\s*\{[\s\S]*?\.infoNotice > \.button\s*\{[^}]*padding-inline:\s*var\(--space-16\)/);
+  it("khung hẹp xếp hành động xuống dưới, khung rộng đặt cùng hàng và giữ vùng chạm", () => {
+    expect(uiCss).toMatch(/\.infoNoticeLayout\s*\{[^}]*flex-direction:\s*column[^}]*align-items:\s*flex-start/s);
+    expect(uiCss).toMatch(/\.infoNoticeLayout > \.button\s*\{[^}]*min-height:\s*var\(--tap\)[^}]*padding-inline:\s*0/s);
+    expect(uiCss).toMatch(/@container \(min-width: 30rem\)\s*\{\s*\.infoNoticeLayout\s*\{[^}]*flex-direction:\s*row/s);
+    expect(uiCss).toMatch(/@container \(min-width: 30rem\)[\s\S]*?\.infoNoticeLayout > \.button\s*\{[^}]*padding-inline:\s*var\(--space-16\)/);
   });
 });

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { MeResponse } from "../../data/api/types";
 import { ApiError } from "../../data/api/client";
@@ -11,7 +11,7 @@ vi.mock("../../data/outbox", () => ({ beginLogout: vi.fn(), cancelLogout: vi.fn(
 import RegisterPage from "./RegisterPage";
 import ForgotPasswordPage from "./ForgotPasswordPage";
 import ResetPasswordPage from "./ResetPasswordPage";
-import SettingsPage from "../settings/SettingsPage";
+import EmailSettingsPage from "../settings/EmailSettings";
 import { clearSession, getSession } from "../../data/auth/session";
 import { login, logout } from "../../data/auth";
 import { rememberedEmailFor } from "../../data/auth/rememberedEmail";
@@ -74,23 +74,21 @@ describe("register with optional email", () => {
   });
 });
 
-describe("email in settings", () => {
-  const open = async () => {
-    await login("+84900000001", "x");
-    render(<MemoryRouter initialEntries={["/cai-dat"]}><Routes><Route path="/cai-dat" element={<SettingsPage/>}/><Route path="/dang-nhap" element={<h1>Đăng nhập</h1>}/></Routes></MemoryRouter>);
-  };
+  describe("email recovery settings page", () => {
+    const open = async () => {
+      await login("+84900000001", "x");
+      render(<MemoryRouter initialEntries={["/cai-dat/email"]}><Routes><Route path="/cai-dat/email" element={<EmailSettingsPage/>}/><Route path="/cai-dat" element={<h1>Cài đặt</h1>}/><Route path="/dang-nhap" element={<h1>Đăng nhập</h1>}/></Routes></MemoryRouter>);
+    };
 
   it("shows the saved email and why it exists", async () => {
     await open();
-    const section = screen.getByRole("region", { name: "Email khôi phục" });
-    expect(within(section).getByText("co.lan@example.com")).toBeInTheDocument();
-    expect(within(section).getByText("Email chỉ dùng để lấy lại mật khẩu.")).toBeInTheDocument();
+      expect(screen.getByLabelText("Email")).toHaveValue("co.lan@example.com");
+      expect(screen.getByText("Email chỉ dùng để lấy lại mật khẩu, không hiện với phụ huynh.")).toBeInTheDocument();
   });
 
   it("needs the current password to save and reports a wrong password at the password field", async () => {
     await open();
-    click("Sửa email");
-    type("Email", "moi@example.com");
+      type("Email", "moi@example.com");
     expect(screen.getByRole("button", { name: "Lưu email" })).toBeDisabled();
     request.mockImplementation(async (endpoint: string) => { if (endpoint === "PUT /me/email") throw apiError(401, "invalid_credentials"); return defaults(endpoint); });
     type("Mật khẩu hiện tại", "sai-mat-khau");
@@ -103,7 +101,7 @@ describe("email in settings", () => {
 
   it("tells the user to retry later on 429", async () => {
     await open();
-    click("Sửa email"); type("Email", "moi@example.com"); type("Mật khẩu hiện tại", "x");
+      type("Email", "moi@example.com"); type("Mật khẩu hiện tại", "x");
     request.mockImplementation(async (endpoint: string) => { if (endpoint === "PUT /me/email") throw apiError(429, "rate_limited"); return defaults(endpoint); });
     click("Lưu email");
     expect(await screen.findByText("Bạn thử quá nhiều lần. Hãy chờ khoảng 1 phút rồi thử lại.", {}, slow)).toBeInTheDocument();
@@ -112,7 +110,7 @@ describe("email in settings", () => {
   it("saves a new email, updates the display and the remembered email", async () => {
     await open();
     request.mockImplementation(async (endpoint: string, options?: { body?: { email: string } }) => { if (endpoint === "PUT /me/email") return { email: options?.body?.email }; return defaults(endpoint); });
-    click("Sửa email"); type("Email", "Moi@Example.com"); type("Mật khẩu hiện tại", "Matkhau!123");
+      type("Email", "Moi@Example.com"); type("Mật khẩu hiện tại", "Matkhau!123");
     click("Lưu email");
     await waitFor(() => expect(request).toHaveBeenCalledWith("PUT /me/email", { body: { email: "Moi@Example.com", current_password: "Matkhau!123" } }), slow);
     await waitFor(() => expect(getSession()?.user.email).toBe("Moi@Example.com"), slow);
@@ -123,12 +121,12 @@ describe("email in settings", () => {
   it("removes the email with the password and forgets it on this device", async () => {
     await open();
     request.mockImplementation(async (endpoint: string) => { if (endpoint === "PUT /me/email") return { email: null }; return defaults(endpoint); });
-    click("Xoá email"); expect(screen.queryByLabelText("Email")).toBeNull();
+      fireEvent.click(screen.getAllByRole("button", { name: "Xoá email" })[0]); expect(screen.queryByLabelText("Email")).toBeNull();
     type("Mật khẩu hiện tại", "Matkhau!123");
     fireEvent.click(screen.getAllByRole("button", { name: "Xoá email" })[0]);
     await waitFor(() => expect(request).toHaveBeenCalledWith("PUT /me/email", { body: { email: null, current_password: "Matkhau!123" } }), slow);
     await waitFor(() => expect(rememberedEmailFor("+84900000001")).toBe(""), slow);
-    expect(await screen.findByText("Chưa có", {}, slow)).toBeInTheDocument();
+      expect(await screen.findByText("Chưa có email khôi phục.", {}, slow)).toBeInTheDocument();
   });
 });
 

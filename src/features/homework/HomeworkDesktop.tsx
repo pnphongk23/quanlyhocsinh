@@ -16,7 +16,6 @@ import {
 import {
   deleteHomeworkSectionDurable,
   listHomeworkGrades,
-  saveHomeworkSectionDurable,
   setHomeworkGradeDurable,
 } from "../../data/repositories/homework";
 import { useAccess } from "../../data/repositories/access";
@@ -43,16 +42,13 @@ import {
 import s from "./HomeworkDesktop.module.css";
 import d from "../class-space/desktop.module.css";
 import { useSavedPeek, useSaveAndLeave } from "../../shared/hooks/useSavedPeek";
+import { useHomeworkSectionDraft, type HomeworkEditor, type HomeworkSectionDraft } from "./useHomeworkSectionDraft";
 
 const LEVEL_CLASS: Record<HomeworkLevel, string> = {
   excellent: s.levelExcellent,
   done: s.levelDone,
   not_done: s.levelNotDone,
 };
-
-type Editor =
-  | { mode: "add"; kind: HomeworkKind }
-  | { mode: "edit"; sectionId: string };
 
 const EDITOR_FORM_ID = "homework-desktop-form";
 interface EditorState {
@@ -72,28 +68,37 @@ export default function HomeworkDesktop({
   tabBar,
   onDirtyChange,
   saveRef,
+  draft: sharedDraft,
+  active = true,
 }: {
   session: Session;
   tabBar: (actions: ReactNode) => ReactNode;
-  /** Báo cho màn buổi học biết còn chấm/soạn dở chưa lưu. */
+  /** Báo cho màn buổi học biết còn chấm dở chưa lưu. */
   onDirtyChange?: (dirty: boolean) => void;
-  /** Màn buổi học gọi để lưu hết trước khi rời màn. */
+  /** Màn buổi học gọi để lưu phần chấm dở trước khi rời màn. */
   saveRef?: MutableRefObject<(() => unknown) | null>;
+  /** Nháp phần BTVN đang soạn, dùng chung với cây di động. */
+  draft?: HomeworkSectionDraft;
+  /** Cây này đang là cây hiển thị; cây ẩn không dựng khung soạn. */
+  active?: boolean;
 }) {
+  const ownDraft = useHomeworkSectionDraft(session.id);
+  const draft = sharedDraft ?? ownDraft;
   const state = useStore();
   const access = useAccess();
   const save = useSaveStatus();
   const ctx = homeworkContext(state, session.id);
   const canWrite = access.can("comments_reports", "write");
-  const [view, setView] = useState<"previous" | "today">("previous");
+  const [chosenView, setView] = useState<"previous" | "today">("previous");
   const [selectedKind, setSelectedKind] = useState<HomeworkKind | null>(null);
   const [drafts, setDrafts] = useState<Record<string, HomeworkLevel | null>>(
     {},
   );
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const editor = draft.editor;
+  // Nháp đang soạn (kể cả mở từ cây di động) luôn nằm ở "Bài tập hôm nay".
+  const view = editor ? "today" : chosenView;
   const [editorState, setEditorState] = useState<EditorState>(IDLE_EDITOR_STATE);
   const leave = useSaveAndLeave();
-  const editorSubmit = useRef<(() => Promise<boolean>) | null>(null);
   const [pendingEditor, setPendingEditor] = useState<{ apply: () => void } | null>(
     null,
   );
@@ -129,7 +134,7 @@ export default function HomeworkDesktop({
       save.clearStatus();
     },
   });
-  const dirty = gradeAction.dirty || (editor !== null && editorState.dirty);
+  const dirty = gradeAction.dirty || (sharedDraft ? false : ownDraft.dirty);
 
   useEffect(() => {
     onDirtyChange?.(dirty);
@@ -139,9 +144,7 @@ export default function HomeworkDesktop({
     if (!saveRef) return;
     saveRef.current = async () => {
       if (gradeAction.dirty && !(await gradeAction.submit())) return false;
-      if (editor !== null && editorState.dirty)
-        return (await editorSubmit.current?.()) ?? true;
-      return true;
+      return sharedDraft ? true : ownDraft.save();
     };
   });
 
@@ -187,13 +190,18 @@ export default function HomeworkDesktop({
 
   /** Đổi/đóng khung soạn phần: hỏi trước nếu đang soạn dở. */
   function guardEditor(apply: () => void) {
-    if (editor !== null && editorState.dirty) setPendingEditor({ apply });
+    if (editor !== null && draft.dirty) setPendingEditor({ apply });
     else apply();
   }
 
-  function requestEditor(next: Editor | null) {
+  function requestEditor(next: HomeworkEditor | null) {
     guardEditor(() => {
-      setEditor(next);
+      if (!next) draft.close();
+      else if (next.mode === "add") draft.openAdd(next.kind);
+      else {
+        const target = ctx?.today.sections.find((section) => section.id === next.sectionId);
+        if (target) draft.openEdit(target);
+      }
       setError("");
     });
   }
@@ -252,7 +260,7 @@ export default function HomeworkDesktop({
           }
           onClick={() =>
             guardEditor(() => {
-              setEditor(null);
+              draft.close();
               setView("previous");
             })
           }
@@ -547,7 +555,7 @@ export default function HomeworkDesktop({
           </div>
         </div>
 
-        {editor && (
+        {active && editor && (
           <div className={s.editorCard}>
             <SectionForm
               key={
@@ -555,21 +563,18 @@ export default function HomeworkDesktop({
                   ? editor.sectionId
                   : `add-${editor.kind}`
               }
-              sessionId={session.id}
               mode={editor.mode}
               section={editingSection}
-              initialKind={editor.mode === "add" ? editor.kind : undefined}
               existingKinds={ctx.today.sections.map((section) => section.kind)}
-              missingKinds={ctx.today.missingKinds}
               gradeCount={editingGrades.length}
               gradingTotal={ctx.previous.rows.length}
               onDone={() => {
-                setEditor(null);
+                draft.close();
                 setError("");
               }}
               onCancel={() => requestEditor(null)}
               onStateChange={setEditorState}
-              submitRef={editorSubmit}
+              draft={draft}
             />
           </div>
         )}
@@ -611,7 +616,7 @@ export default function HomeworkDesktop({
           onSave={() => {
             if (!pendingEditor) return;
             const { apply } = pendingEditor;
-            return leave.run(async () => Boolean(await editorSubmit.current?.()), () => {
+            return leave.run(() => draft.save(), () => {
               setPendingEditor(null);
               apply();
             });
@@ -679,64 +684,44 @@ export default function HomeworkDesktop({
 
 /** Khung sửa/thêm một phần BTVN nằm cạnh danh sách (ảnh 06). */
 function SectionForm({
-  sessionId,
   mode,
   section,
-  initialKind,
   existingKinds,
-  missingKinds,
   gradeCount,
   gradingTotal,
   onDone,
   onCancel,
   onStateChange,
-  submitRef,
+  draft,
 }: {
-  sessionId: string;
   mode: "add" | "edit";
   section?: HomeworkSection;
-  initialKind?: HomeworkKind;
   existingKinds: HomeworkKind[];
-  missingKinds: HomeworkKind[];
   gradeCount: number;
   gradingTotal: number;
   onDone: () => void;
   onCancel: () => void;
   /** Báo trạng thái cho nút "Lưu bài tập" ở đầu tab (nằm ngoài form). */
   onStateChange: (state: EditorState) => void;
-  submitRef: MutableRefObject<(() => Promise<boolean>) | null>;
+  draft: HomeworkSectionDraft;
 }) {
   const save = useSaveStatus();
-  const [kind, setKind] = useState<HomeworkKind | null>(
-    initialKind ?? section?.kind ?? missingKinds[0] ?? null,
-  );
-  const [title, setTitle] = useState(section?.title ?? "");
-  const [description, setDescription] = useState(section?.description ?? "");
+  const { kind, title, description } = draft.form;
+  const setKind = (next: HomeworkKind | null) => draft.setForm({ kind: next });
+  const setTitle = (next: string) => draft.setForm({ title: next });
+  const setDescription = (next: string) => draft.setForm({ description: next });
   const existing = new Set(existingKinds);
 
   const action = useSaveAction({
-    baseline: {
-      kind: initialKind ?? section?.kind ?? missingKinds[0] ?? null,
-      title: section?.title ?? "",
-      description: section?.description ?? "",
-    },
-    value: { kind, title, description },
+    baseline: draft.baseline,
+    value: draft.form,
     validate: (next) => next.kind !== null && next.title.trim() !== "",
-    save: async (next) => {
-      if (!next.kind) return false;
+    save: async () => {
       save.markUnsaved();
-      try {
-        await saveHomeworkSectionDurable({
-          id: section?.id,
-          sessionId: section?.sessionId ?? sessionId,
-          kind: next.kind,
-          title: next.title,
-          description: next.description,
-        });
-        save.clearStatus();
-      } catch (cause) {
+      if (await draft.save()) save.clearStatus();
+      else {
         save.setStatus("error");
-        throw cause;
+        throw draft.lastError() ?? new Error("save_failed");
       }
     },
   });
@@ -754,7 +739,6 @@ function SectionForm({
     if (ok && withPeek && (await saved.peek())) onDone();
     return ok;
   }
-  submitRef.current = () => submitForm(false);
   useEffect(() => {
     onStateChange({
       dirty: action.dirty,
