@@ -245,6 +245,7 @@ describe("khung tab của màn chi tiết buổi", () => {
       fireEvent.click(screen.getByRole("button", { name: "Lưu" }));
       await waitFor(() => expect(saveHomeworkSection).toHaveBeenCalledTimes(1));
       expect(saveHomeworkSection.mock.calls[0][0]).toMatchObject({ title: "Nháp qua mốc" });
+      await waitFor(() => expect(screen.queryByText("Chưa lưu thay đổi")).toBeNull(), { timeout: 3000 });
     });
 
     it("gõ ở desktop rồi sang tablet: nháp còn hiện, lưu lỗi thì ở lại", async () => {

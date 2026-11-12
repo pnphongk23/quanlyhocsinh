@@ -143,8 +143,11 @@ function SessionDetailBody({ onHeaderChange, refresh }: { onHeaderChange: (heade
       setLeaving(true);
       try {
         if (gradeDirty && !gradeSaveRef.current) { guard.stay(); return false; }
-        const results = [await saveRef.current?.(), await homeworkDraft.save(), await gradeSaveRef.current?.()];
-        return results.every((result) => result !== false);
+        // Chỉ lưu phần đang dở: một hàm lưu của phần sạch trả false (không có gì để lưu) và sẽ chặn việc rời màn.
+        if (attendanceDirty && (await saveRef.current?.()) === false) return false;
+        if (homeworkDraft.dirty && !(await homeworkDraft.save())) return false;
+        if (gradeDirty && (await gradeSaveRef.current?.()) === false) return false;
+        return true;
       } finally { setLeaving(false); }
     }, guard.proceed)}
     onDiscard={() => { leave.cancel(); guard.proceed(); }}
