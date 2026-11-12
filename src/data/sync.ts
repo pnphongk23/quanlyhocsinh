@@ -243,11 +243,13 @@ function runSync(pullWhenIdle: boolean): Promise<void> {
     if (getCacheIdentity()) { initialSyncIdentity = identityKey(); initialSyncState = typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "not-started"; emitSyncStatus(); }
     return Promise.resolve();
   }
+  const stateBefore = initialSyncIdentity === identityKey() && initialSyncState !== "offline" ? initialSyncState : "not-started";
   initialSyncIdentity = identityKey(); initialSyncState = "loading"; emitSyncStatus();
   running = (async () => {
     await Promise.resolve();
     const failuresBefore = syncFailureVersion;
     let lastRoundIdentity = initialSyncIdentity;
+    let fetched = false;
     try {
       do {
         again = false;
@@ -255,13 +257,13 @@ function runSync(pullWhenIdle: boolean): Promise<void> {
         const roundPullWhenIdle = pullWhenIdle || pullWhenIdleRequested;
         pullWhenIdleRequested = false;
         lastRoundIdentity = identityKey();
-        await syncRound(cache.membershipId, lastRoundIdentity, roundPullWhenIdle);
+        if (await syncRound(cache.membershipId, lastRoundIdentity, roundPullWhenIdle)) fetched = true;
       } while (again);
     } finally {
       const activeIdentity = getCacheIdentity() && getToken() ? identityKey() : null;
       initialSyncIdentity = activeIdentity;
       if (activeIdentity !== lastRoundIdentity) initialSyncState = "not-started";
-      else initialSyncState = typeof navigator !== "undefined" && !navigator.onLine ? "offline" : syncFailureVersion === failuresBefore ? "success" : "error";
+      else initialSyncState = typeof navigator !== "undefined" && !navigator.onLine ? "offline" : syncFailureVersion !== failuresBefore ? "error" : fetched ? "success" : stateBefore;
       running = null; emitSyncStatus();
     }
   })();
@@ -280,7 +282,8 @@ export async function refreshNow(): Promise<RefreshResult> {
   if (!getToken() || !getCacheIdentity() || identityKey() !== identityBefore) return { status: "error" };
   return syncFailureVersion === failuresBefore ? { status: "ok" } : { status: "error" };
 }
-async function syncRound(membershipId: string, identity: string, pullWhenIdle: boolean): Promise<void> {
+/** True only when the round pulled from the server successfully; a round that fetched nothing proves nothing about the cache. */
+async function syncRound(membershipId: string, identity: string, pullWhenIdle: boolean): Promise<boolean> {
   let outboxChanged = false;
   try {
     await db.outbox.where("identity").equals(identity).and((row) => row.status === "sending").modify({ status: "pending" });
@@ -331,18 +334,20 @@ async function syncRound(membershipId: string, identity: string, pullWhenIdle: b
       for (const row of batch) if (!returned.has(row.id)) await db.outbox.update(row.id, { status: "pending" });
       if (batch.some((row) => !returned.has(row.id))) break;
     }
-    if (!outboxChanged && !pullWhenIdle) return;
+    if (!outboxChanged && !pullWhenIdle) return false;
     const changed = await pull(identity, membershipId);
     if (changed || outboxChanged) await hydrateStore();
     if (await retryLessonCommandsAhead(identity)) scheduleSync(0);
     const remaining = await db.outbox.where("identity").equals(identity).toArray();
     publishRejected(remaining);
     setSaveStatus(remaining.some((x) => x.status === "rejected") ? "error" : remaining.length ? "local" : "synced");
+    return true;
   } catch {
     syncFailureVersion++;
     if (outboxChanged) await hydrateStore();
     publishRejected(await db.outbox.where("identity").equals(identity).toArray());
     if (await db.outbox.where("identity").equals(identity).count()) setSaveStatus("error");
+    return false;
   }
 }
 /**
@@ -542,5 +547,6 @@ export function scheduleSync(delay?: number): void {
   timer = setTimeout(() => { timer = undefined; void syncNow(); }, wait);
 }
 if (typeof window !== "undefined") {
-  window.addEventListener("online", () => { void runSync(false); });
+  // After a failed load the connection coming back is a reason to try the load again; otherwise only the outbox is flushed.
+  window.addEventListener("online", () => { void runSync(initialSyncState === "error" || initialSyncState === "offline"); });
 }
