@@ -3,7 +3,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
-import { fixtureEntities, identity, scenarios, sessionFor, viewports } from "./layout-gate-fixtures/index.mjs";
+import { fixtureEntities, identity, scenarios as allScenarios, sessionFor, viewports } from "./layout-gate-fixtures/index.mjs";
+// LAYOUT_GATE_ONLY: regex over scenario states, for re-running a few scenarios; unset runs everything.
+const only = process.env.LAYOUT_GATE_ONLY ? new RegExp(process.env.LAYOUT_GATE_ONLY) : null;
+const scenarios = only ? allScenarios.filter((scenario) => only.test(scenario.state)) : allScenarios;
 
 const root = process.cwd();
 const port = process.env.LAYOUT_GATE_PORT ?? "5194";
@@ -60,7 +63,7 @@ try {
       return route.fulfill({ status: 200, json: {} });
     });
     const routePath = scenario.route;
-    await page.goto(`${base}${routePath}`, { waitUntil: "domcontentloaded" }).catch(() => {});
+    await page.goto(`${base}${scenario.url ?? routePath}`, { waitUntil: "domcontentloaded" }).catch(() => {});
     await page.waitForTimeout(scenario.state === "dang-tai" ? 700 : 900);
     if (scenario.kind === "email") await page.getByRole("button", { name: /Thêm email/ }).click().catch(() => {});
       let behaviorTrigger;
@@ -125,12 +128,14 @@ try {
         const menuRect = rowMenu ? rect(rowMenu) : null;
         const menuHits = menuItems.map(item => { const r=rect(item), top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); return Boolean(top && rowMenu.contains(top)); });
         const menu = rowMenu ? { inViewport: menuRect.left>=0 && menuRect.top>=0 && menuRect.right<=innerWidth && menuRect.bottom<=innerHeight, items: menuItems.length, hits: menuHits.filter(Boolean).length } : null;
-        return { url:location.pathname, documentOverflow:Math.max(root.scrollWidth,body.scrollWidth)-root.clientWidth, edges:{breadcrumb:breadcrumb&&visible(breadcrumb)?rect(breadcrumb).left:null,title:title&&visible(title)?rect(title).left:left('[data-measure="title"]'),content:content&&visible(content)?rect(content).left:left('[data-measure="content"]')}, controls, smallTargets:controls.filter(c=>c.width<tapMin||c.height<tapMin), smallInputs:controls.filter(c=>c.input&&c.fontSize<16), wideButtons, clipped, blockVoids:blocks.filter(b=>b.ratio>0.2), contentBlockWidths, statusSpread:statuses.length>1?Math.max(...statuses)-Math.min(...statuses):0, formFooterGap, formFooterGapLimit, nav, sheet, menu };
+        const sessionTablists = [...document.querySelectorAll('[role="tablist"][aria-label="Nội dung buổi học"]')].filter(visible).length;
+        return { url:location.pathname, sessionTablists, documentOverflow:Math.max(root.scrollWidth,body.scrollWidth)-root.clientWidth, edges:{breadcrumb:breadcrumb&&visible(breadcrumb)?rect(breadcrumb).left:null,title:title&&visible(title)?rect(title).left:left('[data-measure="title"]'),content:content&&visible(content)?rect(content).left:left('[data-measure="content"]')}, controls, smallTargets:controls.filter(c=>c.width<tapMin||c.height<tapMin), smallInputs:controls.filter(c=>c.input&&c.fontSize<16), wideButtons, clipped, blockVoids:blocks.filter(b=>b.ratio>0.2), contentBlockWidths, statusSpread:statuses.length>1?Math.max(...statuses)-Math.min(...statuses):0, formFooterGap, formFooterGapLimit, nav, sheet, menu };
       }, {tapMin:viewport.tapMin,viewportWidth:viewport.width,scenarioKind:scenario.kind,scenarioState:scenario.state});
     const edgeVals=Object.values(measured.edges).filter(v=>v!==null);
     const expectedNav={tabbar:"tabbar",rail:"rail",sidebar:"sidebar"}[viewport.nav];
     const detailMobile=scenario.kind==="attendance"&&viewport.width===390;
     const problems=[];
+    if(scenario.kind==="attendance"&&!["dang-tai","loi"].includes(scenario.state)&&measured.sessionTablists!==1)problems.push(`session detail draws ${measured.sessionTablists} tab bars, expected exactly 1`);
     if(measured.documentOverflow>1)problems.push(`horizontal overflow ${measured.documentOverflow}px`);
     if(measured.edges.title===null||measured.edges.content===null)problems.push("missing title/content measurement markers");
     if(edgeVals.length>1&&Math.max(...edgeVals)-Math.min(...edgeVals)>1)problems.push(`left edge spread ${Math.max(...edgeVals)-Math.min(...edgeVals)}px`);
@@ -165,13 +170,25 @@ try {
       }
       if (scenario.kind === "criteria" && scenario.state === "menu-cuoi") {
         try {
-          const open = await page.getByRole("menu", {name:"Thao tác cho Tiêu chí 2"}).count();
-          if (!open) behaviorProblems.push("Enter did not open the last-row action menu");
+          const menuByName = page.getByRole("menu", {name:"Thao tác cho Tiêu chí 2"});
+          const focusedItem = () => page.evaluate(() => { const el=document.activeElement; return el?.getAttribute("role")==="menuitem" ? el.textContent?.trim() : null; });
+          if (!await menuByName.count()) behaviorProblems.push("Enter did not open the last-row action menu");
+          const first = await focusedItem();
+          if (!first) behaviorProblems.push("opening the menu did not focus a menu item");
+          await page.keyboard.press("ArrowDown");
+          const second = await focusedItem();
+          if (!second || second === first) behaviorProblems.push(`ArrowDown did not move focus to the next menu item (${first} → ${second})`);
+          await page.keyboard.press("ArrowUp");
+          if (await focusedItem() !== first) behaviorProblems.push("ArrowUp did not return focus to the previous menu item");
           await page.keyboard.press("Escape");
-          const closed = await page.getByRole("menu", {name:"Thao tác cho Tiêu chí 2"}).count() === 0;
+          const closed = await menuByName.count() === 0;
           if (!closed) behaviorProblems.push("Escape did not close the last-row action menu");
           const restored = await page.evaluate(() => document.activeElement?.getAttribute("aria-label") === "Thao tác cho Tiêu chí 2");
           if (!restored) behaviorProblems.push("Escape did not restore focus to the menu trigger");
+          await page.keyboard.press("Enter");
+          if (!await menuByName.count()) behaviorProblems.push("Enter did not reopen the last-row action menu");
+          await page.locator("h1").first().click();
+          if (await menuByName.count() !== 0) behaviorProblems.push("pressing outside did not close the last-row action menu");
         } catch (error) {
           behaviorProblems.push(`last-row menu keyboard interaction could not complete: ${String(error)}`);
         }
@@ -269,9 +286,44 @@ try {
           }
           behaviorReports.push({route:scenario.route,state:"server-500-after-local-save",viewport:"1440x900",problems:behaviorProblems,observed:behaviorObserved});
         }
+      if (scenario.kind === "attendance" && scenario.state === "homework-draft-breakpoint" && (viewport.width === 834 || viewport.width === 1440)) {
+        const sizes = { 834: [834, 1112], 1194: [1194, 834], 1440: [1440, 900] };
+        const draftText = "Nháp BTVN qua mốc 1024";
+        const titleInput = () => page.locator("#hw-title:visible, #hw-desktop-title:visible");
+        try {
+          await page.getByRole("tab", {name:"Bài tập hôm nay"}).click();
+          if (viewport.width === 834) await page.getByRole("button", {name:/Thêm phần/}).first().click();
+          else await page.getByRole("button", {name:/^\+ /}).first().click();
+          await titleInput().fill(draftText);
+          const sequence = viewport.width === 834 ? [1194, 1440] : [834, 1440];
+          for (const width of sequence) {
+            await page.setViewportSize({width:sizes[width][0], height:sizes[width][1]});
+            await page.waitForTimeout(300);
+            const shown = await titleInput().count() ? await titleInput().inputValue() : null;
+            if (shown !== draftText) behaviorProblems.push(`homework draft not shown at ${width}px: ${JSON.stringify(shown)}`);
+          }
+          if (viewport.width === 834) {
+            const pushed = page.waitForRequest((request) => /sync\/push$/.test(request.url()) && (request.postData() || "").includes(draftText), {timeout:6000}).then(() => true, () => false);
+            await page.getByRole("navigation", {name:"Đường dẫn"}).getByRole("link", {name:"Lớp", exact:true}).click();
+            await page.getByRole("dialog", {name:"Chưa lưu thay đổi"}).waitFor();
+            await page.getByRole("button", {name:"Lưu", exact:true}).click();
+            await page.waitForFunction((route) => location.pathname !== route, scenario.route);
+            if (!await pushed) behaviorProblems.push("saving from the unsaved-changes dialog did not write the homework draft");
+          }
+        } catch (error) {
+          behaviorProblems.push(`homework draft interaction could not complete: ${String(error)}`);
+        }
+        behaviorReports.push({route:scenario.route,state:"homework-draft-breakpoint",viewport:`${viewport.width}→${viewport.width===834?"1194→1440":"834→1440"}`,problems:behaviorProblems});
+      }
       if (scenario.kind === "attendance" && scenario.state === "loi") {
         const notFound = await page.getByText("Không tìm thấy buổi học", {exact:true}).count();
         if (notFound) behaviorProblems.push("sync failure is shown as a missing session");
+        await page.evaluate(() => window.dispatchEvent(new Event("online")));
+        for (let i = 0; i < 6; i++) {
+          await page.waitForTimeout(250);
+          if (await page.getByText("Không tìm thấy buổi học", {exact:true}).count()) { behaviorProblems.push("online after the initial load error showed a missing session"); break; }
+        }
+        if (!await page.getByRole("button", {name:"Thử lại"}).count()) behaviorProblems.push("online after the initial load error removed the retry button");
         behaviorReports.push({route:scenario.route,state:"initial-sync-error",viewport:`${viewport.width}x${viewport.height}`,problems:behaviorProblems});
       }
         if (behaviorProblems.length) failures.push({route:scenario.route,state:scenario.state,viewport:`${viewport.width}x${viewport.height}`,problems:behaviorProblems});

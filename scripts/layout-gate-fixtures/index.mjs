@@ -14,6 +14,9 @@ export const scenarios = [
   ...accountScenarios,
   ...["thuong", "dang-sua", "menu-cuoi", "focus-sheet", "draft-breakpoint", "rong", "ten-dai", "8-tieu-chi"].map((state) => ({ route: "/cai-dat/bo-tieu-chi", state, kind: "criteria" })),
     ...["ngan-6-em", "dai-30-em", "ten-dai", "chua-diem-danh", "lan-tron", "unsaved-breakpoint", "save-failure", "server-500-save", "da-luu", "dang-tai", "loi"].map((state) => ({ route: "/lop/demo-6a/buoi-hoc/demo-past", state, kind: "attendance" })),
+    { route: "/lop/demo-6a/buoi-hoc/demo-past", url: "/lop/demo-6a/buoi-hoc/demo-past?tab=nhan-xet", state: "tab-nhan-xet", kind: "attendance" },
+    { route: "/lop/demo-6a/buoi-hoc/demo-past", url: "/lop/demo-6a/buoi-hoc/demo-past?tab=btvn", state: "tab-btvn", kind: "attendance" },
+    { route: "/lop/demo-6a/buoi-hoc/demo-past", url: "/lop/demo-6a/buoi-hoc/demo-past?tab=btvn", state: "homework-draft-breakpoint", kind: "attendance" },
 ];
 export { classes, identity, sessionFor };
 
